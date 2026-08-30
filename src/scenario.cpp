@@ -1,7 +1,8 @@
-#include "catalua_platform_content.h"
-
-#include "scenario.h"
-
+#include <calendar.h>
+#include <coordinates.h>
+#include <ret_val.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 #include <ostream>
@@ -12,12 +13,14 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "mission.h"
 #include "mutation.h"
 #include "options.h"
 #include "past_achievements_info.h"
 #include "profession.h"
 #include "rng.h"
+#include "scenario.h"
 #include "start_location.h"
 #include "translations.h"
 
@@ -857,6 +860,21 @@ const std::vector<mission_type_id> &scenario::missions() const
 const std::vector<effect_on_condition_id> &scenario::eoc() const
 {
     return _eoc;
+}
+
+bool scenario::has_platform_start_handler() const noexcept
+{
+    return !lua_platform_mod.empty() && !lua_platform_start_handler.empty();
+}
+
+const std::string &scenario::platform_start_mod() const noexcept
+{
+    return lua_platform_mod;
+}
+
+const std::string &scenario::platform_start_handler() const noexcept
+{
+    return lua_platform_start_handler;
 }
 const std::vector<std::pair<mongroup_id, float>> &scenario::surround_groups() const
 {

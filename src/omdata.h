@@ -255,6 +255,7 @@ class overmap_land_use_code
 };
 
 struct overmap_spawns {
+        friend class cata::lua_platform::world_content_transaction;
         overmap_spawns() : group( mongroup_id::NULL_ID() ) {}
 
         string_id<MonsterGroup> group;
@@ -419,7 +420,7 @@ class oter_vision
 };
 
 struct oter_type_t {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     public:
         static const oter_type_t null_type;
 
@@ -780,7 +781,7 @@ struct special_placement_result;
 
 class overmap_special
 {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     public:
         overmap_special() = default;
         overmap_special( const overmap_special_id &, const overmap_special_terrain & );

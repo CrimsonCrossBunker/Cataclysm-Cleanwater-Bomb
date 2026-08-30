@@ -1,17 +1,20 @@
 #include "event_statistics.h"
 
+#include <clone_ptr.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "cata_assert.h"
 #include "cata_variant.h"
-#include "catalua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
@@ -20,6 +23,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "hash_utils.h"
+#include "lua_platform_content.h"
 #include "output.h"
 #include "stats_tracker.h"
 #include "string_formatter.h"
@@ -63,6 +67,17 @@ generic_factory<score> score_factory( "score" );
 generic_factory<score> &cata::lua_platform::detail::score_registry()
 {
     return score_factory;
+}
+
+generic_factory<event_transformation> &
+cata::lua_platform::detail::event_transformation_registry()
+{
+    return event_transformation_factory;
+}
+
+generic_factory<event_statistic> &cata::lua_platform::detail::event_statistic_registry()
+{
+    return event_statistic_factory;
 }
 
 template<>
@@ -1310,6 +1325,225 @@ monotonically event_statistic::monotonicity() const
 {
     return impl_->monotonicity();
 }
+
+namespace
+{
+std::unique_ptr<event_source> make_platform_event_source(
+    const cata::lua_platform::detail::event_source_native_definition &definition )
+{
+    if( definition.kind == "event_type" ) {
+        return std::make_unique<event_type_event_source>(
+                   io::string_to_enum<event_type>( definition.id ) );
+    }
+    if( definition.kind == "event_transformation" ) {
+        return std::make_unique<event_transformation_event_source>(
+                   string_id<event_transformation>( definition.id ) );
+    }
+    throw std::runtime_error( "event source must use event_type or event_transformation" );
+}
+} // namespace
+
+event_transformation cata::lua_platform::detail::make_event_transformation(
+    const event_transformation_native_definition &definition )
+{
+    std::map<std::string, new_field> new_fields;
+    for( const event_new_field_native_definition &source : definition.new_fields ) {
+        const auto found = event_field_transformations.find( source.transformation );
+        if( found == event_field_transformations.end() ) {
+            throw std::runtime_error( "unknown event field transformation '" +
+                                      source.transformation + "'" );
+        }
+        new_field field;
+        field.transformation = found->second;
+        field.input_field = source.input_field;
+        if( !new_fields.emplace( source.field, std::move( field ) ).second ) {
+            throw std::runtime_error( "duplicate transformed event field '" + source.field + "'" );
+        }
+    }
+
+    std::map<std::string, value_constraint> constraints;
+    for( const event_value_constraint_native_definition &source : definition.constraints ) {
+        value_constraint constraint;
+        if( source.kind == "equals_statistic" ) {
+            constraint.equals_statistic_ = event_statistic_id( source.statistic );
+        } else if( source.kind == "equals" || source.kind == "equals_any" ) {
+            const cata_variant_type value_type =
+                io::string_to_enum<cata_variant_type>( source.value_type );
+            for( const std::string &value : source.values ) {
+                constraint.equals_any_.push_back(
+                    cata_variant::from_string( value_type, std::string( value ) ) );
+            }
+        } else {
+            value_constraint::comparator comparator;
+            if( source.kind == "lt" ) {
+                comparator = value_constraint::comparator::lt;
+            } else if( source.kind == "lteq" ) {
+                comparator = value_constraint::comparator::lteq;
+            } else if( source.kind == "gteq" ) {
+                comparator = value_constraint::comparator::gteq;
+            } else if( source.kind == "gt" ) {
+                comparator = value_constraint::comparator::gt;
+            } else {
+                throw std::runtime_error( "unknown event value constraint '" + source.kind + "'" );
+            }
+            if( source.values.size() != 1 ) {
+                throw std::runtime_error( "ordered event value constraints require one integer" );
+            }
+            constraint.val_comp_ = std::make_pair(
+                                       comparator,
+                                       cata_variant::from_string(
+                                           cata_variant_type::int_,
+                                           std::string( source.values.front() ) ) );
+        }
+        if( !constraints.emplace( source.field, std::move( constraint ) ).second ) {
+            throw std::runtime_error( "duplicate event value constraint for field '" +
+                                      source.field + "'" );
+        }
+    }
+
+    event_transformation result;
+    result.id = string_id<event_transformation>( definition.id );
+    result.src.emplace_back( result.id, mod_id( "lua_platform" ) );
+    result.was_loaded = true;
+    result.impl_ = std::make_unique<event_transformation_impl>(
+                       result.id, make_platform_event_source( definition.source ),
+                       new_fields, constraints, definition.drop_fields );
+    return result;
+}
+
+event_statistic cata::lua_platform::detail::make_event_statistic(
+    const event_statistic_native_definition &definition )
+{
+    event_statistic result;
+    result.id = event_statistic_id( definition.id );
+    result.src.emplace_back( result.id, mod_id( "lua_platform" ) );
+    result.was_loaded = true;
+    if( !definition.description.empty() || !definition.description_plural.empty() ) {
+        const std::string plural = definition.description_plural.empty() ?
+                                   definition.description : definition.description_plural;
+        result.description_ = pl_translation( definition.description, plural );
+    } else {
+        result.description_.make_plural();
+    }
+
+    std::unique_ptr<event_source> source = make_platform_event_source( definition.source );
+    if( definition.statistic_type == "count" ) {
+        result.impl_ = std::make_unique<event_statistic_count>( result.id, std::move( source ) );
+    } else if( definition.statistic_type == "total" ) {
+        result.impl_ = std::make_unique<event_statistic_total>(
+                           result.id, std::move( source ), definition.field );
+    } else if( definition.statistic_type == "minimum" ) {
+        result.impl_ = std::make_unique<event_statistic_minimum>(
+                           result.id, std::move( source ), definition.field );
+    } else if( definition.statistic_type == "maximum" ) {
+        result.impl_ = std::make_unique<event_statistic_maximum>(
+                           result.id, std::move( source ), definition.field );
+    } else if( definition.statistic_type == "unique_value" ) {
+        result.impl_ = std::make_unique<event_statistic_unique_value>(
+                           result.id, std::move( source ), definition.field );
+    } else if( definition.statistic_type == "first_value" ) {
+        result.impl_ = std::make_unique<event_statistic_first_value>(
+                           result.id, std::move( source ), definition.field );
+    } else if( definition.statistic_type == "last_value" ) {
+        result.impl_ = std::make_unique<event_statistic_last_value>(
+                           result.id, std::move( source ), definition.field );
+    } else {
+        throw std::runtime_error( "unknown event statistic type '" +
+                                  definition.statistic_type + "'" );
+    }
+    return result;
+}
+
+namespace cata::lua_platform::detail
+{
+
+struct event_transformation_snapshot {
+    std::optional<event_transformation> value;
+};
+
+struct event_statistic_snapshot {
+    std::optional<event_statistic> value;
+};
+
+std::shared_ptr<event_transformation_snapshot> snapshot_event_transformation(
+    const std::string &id )
+{
+    auto snapshot = std::make_shared<event_transformation_snapshot>();
+    const string_id<event_transformation> native_id( id );
+    if( native_id.is_valid() ) {
+        snapshot->value = event_transformation_factory.obj( native_id );
+    }
+    return snapshot;
+}
+
+void register_event_transformation(
+    const event_transformation_native_definition &definition,
+    const std::string &owner )
+{
+    event_transformation native = make_event_transformation( definition );
+    const string_id<event_transformation> id( definition.id );
+    native.src.clear();
+    native.src.emplace_back( id, mod_id( owner ) );
+    event_transformation_factory.insert( native );
+}
+
+void restore_event_transformation(
+    const std::string &id,
+    const std::shared_ptr<event_transformation_snapshot> &snapshot )
+{
+    const string_id<event_transformation> native_id( id );
+    if( snapshot != nullptr && snapshot->value ) {
+        event_transformation_factory.restore( *snapshot->value );
+    } else {
+        event_transformation_factory.erase( native_id );
+    }
+}
+
+void finalize_event_transformations()
+{
+    event_transformation_factory.finalize();
+}
+
+std::shared_ptr<event_statistic_snapshot> snapshot_event_statistic(
+    const std::string &id )
+{
+    auto snapshot = std::make_shared<event_statistic_snapshot>();
+    const event_statistic_id native_id( id );
+    if( native_id.is_valid() ) {
+        snapshot->value = event_statistic_factory.obj( native_id );
+    }
+    return snapshot;
+}
+
+void register_event_statistic(
+    const event_statistic_native_definition &definition,
+    const std::string &owner )
+{
+    event_statistic native = make_event_statistic( definition );
+    const event_statistic_id id( definition.id );
+    native.src.clear();
+    native.src.emplace_back( id, mod_id( owner ) );
+    event_statistic_factory.insert( native );
+}
+
+void restore_event_statistic(
+    const std::string &id,
+    const std::shared_ptr<event_statistic_snapshot> &snapshot )
+{
+    const event_statistic_id native_id( id );
+    if( snapshot != nullptr && snapshot->value ) {
+        event_statistic_factory.restore( *snapshot->value );
+    } else {
+        event_statistic_factory.erase( native_id );
+    }
+}
+
+void finalize_event_statistics()
+{
+    event_statistic_factory.finalize();
+}
+
+} // namespace cata::lua_platform::detail
 
 std::string score::description( stats_tracker &stats ) const
 {

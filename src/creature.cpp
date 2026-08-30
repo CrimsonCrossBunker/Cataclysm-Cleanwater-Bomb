@@ -1,5 +1,18 @@
 #include "creature.h"
 
+#include <bodypart.h>
+#include <cata_lazy.h>
+#include <compatibility.h>
+#include <coordinates.h>
+#include <effect_source.h>
+#include <global_vars.h>
+#include <math_parser_diag_value.h>
+#include <pimpl.h>
+#include <safe_reference.h>
+#include <type_id.h>
+#include <veh_type.h>
+#include <viewer.h>
+#include <weakpoint.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,7 +33,6 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -36,9 +48,9 @@
 #include "event_bus.h"
 #include "explosion.h"
 #include "field.h"
+#include "flag.h"
 #include "flat_set.h"
 #include "flexbuffer_json.h"
-#include "flag.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
@@ -47,6 +59,7 @@
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -77,8 +90,8 @@
 #include "vpart_position.h"
 
 #if defined(TILES)
-    #include "sdltiles.h"
     #include "cata_tiles.h"
+    #include "sdltiles.h"
 #endif
 
 struct mutation_branch;
@@ -2012,12 +2025,12 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
     const bool dispatch_character_hook =
         type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
         as_character() != nullptr &&
-        cata::lua_ui::has_native_hook(
+        cata::lua_platform::has_native_hook(
             "on_character_effect_removed" );
     const bool dispatch_monster_hook =
         type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
         as_monster() != nullptr &&
-        cata::lua_ui::has_native_hook( "on_mon_effect_removed" );
+        cata::lua_platform::has_native_hook( "on_mon_effect_removed" );
     std::vector<std::string> removed_body_parts;
     if( dispatch_character_hook || dispatch_monster_hook ) {
         if( bp == bodypart_str_id::NULL_ID() ) {
@@ -2054,14 +2067,14 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
                             "on_character_effect_removed" :
                             "on_mon_effect_removed";
     for( const std::string &body_part : removed_body_parts ) {
-        cata::lua_ui::native_callback_arguments payload = {
+        cata::lua_platform::native_callback_arguments payload = {
             {
-                "effect", cata::lua_ui::native_callback_id {
+                "effect", cata::lua_platform::native_callback_id {
                     "effect", eff_id.str()
                 }
             },
             {
-                "body_part", cata::lua_ui::native_callback_id {
+                "body_part", cata::lua_platform::native_callback_id {
                     "body_part", body_part
                 }
             }
@@ -2077,7 +2090,7 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
                 static_cast<const Creature *>( this )
             } );
         }
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             hook_name, payload );
     }
 

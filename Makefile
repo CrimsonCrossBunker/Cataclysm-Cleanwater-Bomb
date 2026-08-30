@@ -173,10 +173,10 @@ IMGUI_DIR = $(SRC_DIR)/third-party/imgui
 IMTUI_DIR = $(SRC_DIR)/third-party/imtui
 LOCALIZE = 1
 ASTYLE_BINARY = astyle
-CATA_ENABLE_LUA_UI ?= 1
+CATA_ENABLE_LUA_PLATFORM ?= 1
 
-ifneq ($(filter $(CATA_ENABLE_LUA_UI),0 1),$(CATA_ENABLE_LUA_UI))
-  $(error CATA_ENABLE_LUA_UI must be 0 or 1)
+ifneq ($(filter $(CATA_ENABLE_LUA_PLATFORM),0 1),$(CATA_ENABLE_LUA_PLATFORM))
+  $(error CATA_ENABLE_LUA_PLATFORM must be 0 or 1)
 endif
 
 # Disable stale game data warning by default
@@ -334,14 +334,14 @@ endif
 # Appears that the default value of $LD is unsuitable on most systems
 
 # when preprocessor defines change, but the source doesn't
-LUA_UI_OBJECT_SUFFIX = $(if $(filter 1,$(CATA_ENABLE_LUA_UI)),-lua)
-ODIR = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)
-ODIRTILES = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)/tiles
-W32ODIR = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)
-W32ODIRTILES = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)/tiles
+LUA_PLATFORM_OBJECT_SUFFIX = $(if $(filter 1,$(CATA_ENABLE_LUA_PLATFORM)),-lua)
+ODIR = $(BUILD_PREFIX)obj$(LUA_PLATFORM_OBJECT_SUFFIX)
+ODIRTILES = $(BUILD_PREFIX)obj$(LUA_PLATFORM_OBJECT_SUFFIX)/tiles
+W32ODIR = $(BUILD_PREFIX)objwin$(LUA_PLATFORM_OBJECT_SUFFIX)
+W32ODIRTILES = $(BUILD_PREFIX)objwin$(LUA_PLATFORM_OBJECT_SUFFIX)/tiles
 # The final executable and test archive keep their conventional names, so
 # switching Lua modes must explicitly invalidate their link steps.
-LUA_UI_LINK_MODE_STAMP = $(BUILD_PREFIX)obj/.lua-ui-link-mode
+LUA_PLATFORM_LINK_MODE_STAMP = $(BUILD_PREFIX)obj/.lua-platform-link-mode
 
 ifdef AUTO_BUILD_PREFIX
   BUILD_PREFIX = $(if $(RELEASE),release-)$(if $(DEBUG_SYMBOLS),symbol-)$(if $(TILES),tiles-)$(if $(SOUND),sound-)$(if $(LOCALIZE),local-)$(if $(BACKTRACE),back-$(if $(LIBBACKTRACE),libbacktrace-))$(if $(SANITIZE),sanitize-)$(if $(USE_XDG_DIR),xdg-)$(if $(USE_HOME_DIR),home-)$(if $(DYNAMIC_LINKING),dynamic-)$(if $(MSYS2),msys2-)
@@ -1105,11 +1105,13 @@ endif
 
 CFLAGS += $(C_STD) $(WARNINGS) -fvisibility=hidden
 CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden
-ifeq ($(CATA_ENABLE_LUA_UI),1)
-  DEFINES += -DCATA_ENABLE_LUA_UI=1
+ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
+  DEFINES += -DCATA_ENABLE_LUA_PLATFORM=1
   CXXFLAGS += -I$(SRC_DIR)/lua
 else
-  DEFINES += -DCATA_ENABLE_LUA_UI=0
+  DEFINES += -DCATA_ENABLE_LUA_PLATFORM=0
+  # The disabled stub still exposes sol::table in linkable declarations.
+  CXXFLAGS += -I$(SRC_DIR)/lua
 endif
 
 # Enumerations of all the source files and headers.
@@ -1154,23 +1156,14 @@ LUA_C_SOURCE_NAMES := \
   lvm.c \
   lzio.c
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
-LUA_UI_ENABLED_SOURCES := \
-  $(SRC_DIR)/catalua_dialogue_common.cpp \
-  $(SRC_DIR)/catalua_ui.cpp \
-  $(SRC_DIR)/catalua_ui_actions.cpp \
-  $(SRC_DIR)/catalua_ui_events.cpp \
-  $(SRC_DIR)/catalua_ui_game.cpp \
-  $(SRC_DIR)/catalua_ui_i18n.cpp \
-  $(SRC_DIR)/catalua_ui_imgui.cpp \
-  $(SRC_DIR)/catalua_ui_manifest.cpp \
-  $(SRC_DIR)/catalua_ui_modules.cpp \
-  $(SRC_DIR)/catalua_ui_navigation.cpp \
-  $(SRC_DIR)/catalua_ui_renderer.cpp \
-  $(SRC_DIR)/catalua_ui_registry.cpp \
-  $(SRC_DIR)/catalua_ui_scheduler.cpp \
-  $(SRC_DIR)/catalua_ui_services.cpp \
-  $(SRC_DIR)/catalua_ui_state.cpp \
-  $(SRC_DIR)/catalua_ui_values.cpp
+LUA_PLATFORM_ENABLED_SOURCES := \
+  $(SRC_DIR)/lua_platform_dialogue.cpp \
+  $(SRC_DIR)/lua_platform_mapgen_dispatch.cpp \
+  $(SRC_DIR)/lua_platform_snapshots.cpp \
+  $(SRC_DIR)/lua_platform_registry.cpp \
+  $(SRC_DIR)/lua_platform_services.cpp \
+  $(SRC_DIR)/lua_platform_state.cpp \
+  $(SRC_DIR)/lua_platform_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1199,12 +1192,11 @@ ASTYLE_SOURCES := $(sort \
   $(CLANG_TIDY_PLUGIN_HEADERS))
 
 # Third party sources should not be astyle'd
-ifeq ($(CATA_ENABLE_LUA_UI),0)
-  SOURCES := $(filter-out $(LUA_UI_ENABLED_SOURCES),$(SOURCES))
-  TESTSRC := $(filter-out tests/catalua_ui_test.cpp,$(TESTSRC))
+ifeq ($(CATA_ENABLE_LUA_PLATFORM),0)
+  SOURCES := $(filter-out $(LUA_PLATFORM_ENABLED_SOURCES),$(SOURCES))
   LUA_C_SOURCES :=
 else
-  SOURCES := $(filter-out $(SRC_DIR)/catalua_ui_disabled.cpp,$(SOURCES))
+  SOURCES := $(filter-out $(SRC_DIR)/lua_platform_disabled.cpp,$(SOURCES))
 endif
 SOURCES += $(THIRD_PARTY_SOURCES)
 C_SOURCES += $(THIRD_PARTY_C_SOURCES) $(LUA_C_SOURCES)
@@ -1331,7 +1323,7 @@ $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 	python3 tools/build_shaders.py --shader-dir $(SHADERS_DIR) --formats $(BUILD_SHADER_FORMATS) --stamp $@
 endif
 
-$(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_UI_LINK_MODE_STAMP)
+$(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_PLATFORM_LINK_MODE_STAMP)
 	+$(LD) $(W32FLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 ifeq ($(RELEASE), 1)
   ifndef DEBUG_SYMBOLS
@@ -1346,17 +1338,17 @@ endif
 $(PCH_P): $(PCH_H)
 	-$(COMPILE.cc) $(OUTPUT_OPTION) -MMD -MP -Wno-error $<
 
-$(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS) $(LUA_UI_LINK_MODE_STAMP)
+$(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS) $(LUA_PLATFORM_LINK_MODE_STAMP)
 	$(RM) $@
 	$(AR) $(AR_FLAGS) rcs $(BUILD_PREFIX)$(TARGET_NAME).a $(filter-out $(ODIR)/main.o $(ODIR)/messages.o,$(OBJS))
 
-.PHONY: FORCE_LUA_UI_LINK_MODE version prefix
-FORCE_LUA_UI_LINK_MODE:
+.PHONY: FORCE_LUA_PLATFORM_LINK_MODE version prefix
+FORCE_LUA_PLATFORM_LINK_MODE:
 
-$(LUA_UI_LINK_MODE_STAMP): FORCE_LUA_UI_LINK_MODE
+$(LUA_PLATFORM_LINK_MODE_STAMP): FORCE_LUA_PLATFORM_LINK_MODE
 	@mkdir -p $(@D)
-	@if [ ! -f "$@" ] || [ "$$(cat "$@")" != "$(CATA_ENABLE_LUA_UI)" ]; then \
-		printf '%s\n' "$(CATA_ENABLE_LUA_UI)" > "$@"; \
+	@if [ ! -f "$@" ] || [ "$$(cat "$@")" != "$(CATA_ENABLE_LUA_PLATFORM)" ]; then \
+		printf '%s\n' "$(CATA_ENABLE_LUA_PLATFORM)" > "$@"; \
 	fi
 
 version:
@@ -1503,7 +1495,7 @@ install: version $(TARGET) $(ZZIP_BIN)
 	cp -R --no-preserve=ownership data/motd $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/credits $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/title $(DATA_PREFIX)
-ifeq ($(CATA_ENABLE_LUA_UI),1)
+ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
 	cp -R --no-preserve=ownership data/lua $(DATA_PREFIX)
 endif
 ifeq ($(TILES), 1)
@@ -1605,7 +1597,7 @@ endif
 	cp -R data/motd $(APPDATADIR)
 	cp -R data/credits $(APPDATADIR)
 	cp -R data/title $(APPDATADIR)
-ifeq ($(CATA_ENABLE_LUA_UI),1)
+ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
 	cp -R data/lua $(APPDATADIR)
 endif
 ifdef LANGUAGES
@@ -1676,7 +1668,7 @@ endif
 	$(BINDIST_CMD)
 
 export ODIR _OBJS LDFLAGS CXX W32FLAGS DEFINES CXXFLAGS TARGETSYSTEM CLANG PCH PCHFLAGS
-export CATA_ENABLE_LUA_UI
+export CATA_ENABLE_LUA_PLATFORM
 
 ctags: $(ASTYLE_SOURCES)
 	ctags $^

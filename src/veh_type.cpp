@@ -1,5 +1,12 @@
 #include "veh_type.h"
 
+#include <calendar.h>
+#include <coordinates.h>
+#include <hsv_color.h>
+#include <lightmap.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -14,7 +21,6 @@
 #include "ammo.h"
 #include "cata_assert.h"
 #include "catacharset.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
@@ -32,6 +38,7 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "output.h"
@@ -946,7 +953,8 @@ void vpart_info::check() const
         debugmsg( "vehicle part %s can't have both CARGO and FLUIDTANK flags at the same time", id.str() );
     }
     if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && !cargo_passable_size ) {
-        debugmsg( "vehicle part %s has CARGO_PASSABLE_BY_STORED flag but no cargo_passable_size", id.str() );
+        debugmsg( "vehicle part %s has CARGO_PASSABLE_BY_STORED flag but no cargo_passable_size",
+                  id.str() );
     }
     if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
         *cargo_passable_size > size ) {
@@ -1109,8 +1117,9 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
         if( spoil_multiplier != 1.0f ) {
             if( spoil_multiplier != 0.0f ) {
                 const int percent = static_cast<int>( std::lround( spoil_multiplier * 100 ) );
-                append_desc( string_format( _( "Stored items spoil at <neutral>%d%%</neutral> their original rate." ),
-                                            percent ) );
+                append_desc( string_format(
+                                 _( "Stored items spoil at <neutral>%d%%</neutral> their original rate." ),
+                                 percent ) );
             } else {
                 append_desc( _( "Stored items <info>won't spoil</info>." ) );
             }
@@ -1119,7 +1128,7 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
     if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
         *cargo_passable_size < size ) {
         append_desc( string_format( _( "Becomes impassable when stored volume exceeds <info>%s</info>." ),
-                                      format_volume( *cargo_passable_size ) ) );
+                                    format_volume( *cargo_passable_size ) ) );
     }
     if( has_flag( "TURRET" ) ) {
         class::item base( base_item );

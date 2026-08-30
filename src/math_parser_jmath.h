@@ -31,6 +31,7 @@ struct jmath_func {
 
     mutable std::string _str;
     mutable math_exp _exp;
+    bool _finalized = false;
 };
 
 #endif // CATA_SRC_MATH_PARSER_JMATH_H

@@ -3,7 +3,7 @@
 #define CATA_SRC_BUILTIN_MODS_H
 
 #if __has_include( "builtin_mods_generated.h" )
-#include "builtin_mods_generated.h"
+#include "builtin_mods_generated.h" // IWYU pragma: export
 #else
 #include <array>
 #include <string_view>

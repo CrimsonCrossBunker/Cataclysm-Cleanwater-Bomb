@@ -129,6 +129,11 @@ struct item_category_spawn_rates {
             return instance;
         }
         void set_spawn_rate( const item_category_id &id, const float &rate );
+        // Apply a prevalidated group of updates atomically.  The snapshot is
+        // captured before the first write so an allocation failure during the
+        // commit cannot leave the shared rate store partially updated.
+        void set_spawn_rates(
+            const std::vector<std::pair<item_category_id, float>> &updates );
         float get_spawn_rate( const item_category_id &id );
     private:
         std::map<item_category_id, float> spawn_rates;

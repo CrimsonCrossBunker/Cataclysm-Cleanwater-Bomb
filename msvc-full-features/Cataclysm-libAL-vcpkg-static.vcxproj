@@ -192,7 +192,7 @@
     </ClCompile>
     <ClCompile Include="..\src\a*.cpp;..\src\b*.cpp;..\src\c*.cpp;..\src\d*.cpp;..\src\e*.cpp;..\src\f*.cpp;..\src\g*.cpp;..\src\h*.cpp;..\src\i*.cpp;..\src\j*.cpp;..\src\k*.cpp;..\src\l*.cpp" />
     <!-- The Lua runtime owns the facade symbols in every checked-in MSVC build. -->
-    <ClCompile Remove="..\src\catalua_ui_disabled.cpp" />
+    <ClCompile Remove="..\src\lua_platform_disabled.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="flatbuffers.vcxproj">

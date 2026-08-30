@@ -1,9 +1,11 @@
 #include "vehicle_part_location.h"
 
-#include "catalua_platform_content.h"
-#include "generic_factory.h"
+#include <string_id.h>
+#include <translation.h>
 
-class JsonObject;
+#include "flexbuffer_json.h"
+#include "generic_factory.h"
+#include "lua_platform_content.h"
 
 void vpart_location::load( const JsonObject &jo, const std::string_view & )
 {

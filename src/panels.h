@@ -142,7 +142,6 @@ class panel_manager
         void show_adm();
 
         void init();
-        void sync_lua_panels();
 
     private:
         bool save();

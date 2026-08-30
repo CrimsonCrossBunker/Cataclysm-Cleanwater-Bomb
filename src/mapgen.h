@@ -13,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include "cata_variant.h"
 #include "coordinates.h"
 #include "dialogue_helpers.h"
 #include "enum_bitset.h"
@@ -411,6 +410,10 @@ struct jmapgen_objects {
 
         void add_placement_coords_to( std::unordered_set<point_rel_ms> & ) const;
 
+        bool empty() const {
+            return objects.empty();
+        }
+
         bool has_terrain_placements( const mapgen_parameters &params ) const;
         bool any_nested_has_unguarded_terrain_for_furniture(
             const mapgen_parameters &params, int depth_limit ) const;
@@ -464,6 +467,8 @@ class mapgen_function_json_base
 
         bool has_furniture_clearing_flags() const;
         bool reliably_clears_furniture() const;
+        /** Prove this parsed operator is bounded, map-only, and local. */
+        bool platform_transaction_safe( std::string &error ) const;
         point_rel_ms get_mapgensize() const;
         bool has_unguarded_terrain_for_furniture( int depth_limit = 10 ) const;
         void collect_terrain_coords( std::set<point_rel_ms> &coords,
@@ -564,6 +569,12 @@ class update_mapgen_function_json : public mapgen_function_json_base
             const tripoint_abs_omt &omt_pos, const mapgen_arguments &, const tripoint_rel_ms &offset,
             mission *miss, bool verify = false, bool mirror_horizontal = false,
             bool mirror_vertical = false, int rotation = 0 ) const;
+        /** Apply only the map-local portion; no player/cache/roof side effects. */
+        ret_val<void> update_map_platform_transaction(
+            const tripoint_abs_omt &omt_pos, const mapgen_arguments &,
+            const tripoint_rel_ms &offset, mission *miss, bool verify = false,
+            bool mirror_horizontal = false, bool mirror_vertical = false,
+            int rotation = 0 ) const;
         // Returns an empty string on success and the name of a colliding "vehicle" on failure.
         ret_val<void> update_map( const mapgendata &md,
                                   const tripoint_rel_ms &offset = tripoint_rel_ms::zero,
@@ -572,6 +583,13 @@ class update_mapgen_function_json : public mapgen_function_json_base
     protected:
         bool setup_internal( const JsonObject &/*jo*/ ) override;
         cata::value_ptr<mapgen_value<ter_id>> fill_ter;
+
+    private:
+        ret_val<void> update_map_internal(
+            const tripoint_abs_omt &omt_pos, const mapgen_arguments &,
+            const tripoint_rel_ms &offset, mission *miss, bool verify,
+            bool mirror_horizontal, bool mirror_vertical, int rotation,
+            bool platform_transaction ) const;
 };
 
 class mapgen_function_json_nested : public mapgen_function_json_base

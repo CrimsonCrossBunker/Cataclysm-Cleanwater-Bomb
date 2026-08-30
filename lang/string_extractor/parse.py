@@ -1,6 +1,38 @@
 import json
+from pathlib import Path
 
 from .parser import parsers
+
+
+NON_GAME_DATA_SUFFIXES = (".schema.json",)
+NON_GAME_DATA_DIRECTORIES = (
+    Path(__file__).resolve().parents[2] / "data" / "lua" / "reference",
+)
+
+
+def _is_under_directory(path, directory):
+    try:
+        path.relative_to(directory)
+    except ValueError:
+        return False
+    return True
+
+
+def is_non_game_data_json(file_path):
+    """Return whether *file_path* is not a translatable game-data JSON file.
+
+    JSON Schema documents and the generated Platform reference snapshots are
+    repository metadata, not game data.  They are classified here before JSON
+    type dispatch so that an unknown JSON Schema ``type`` cannot be mistaken
+    for a missing game-data parser.  Keep this classification explicit instead
+    of catching unknown-type errors: ordinary game JSON must still fail closed
+    when its type is not registered in ``parsers``.
+    """
+    path = Path(file_path).resolve()
+    return path.name.endswith(NON_GAME_DATA_SUFFIXES) or any(
+        _is_under_directory(path, directory)
+        for directory in NON_GAME_DATA_DIRECTORIES
+    )
 
 
 def parse_json_object(json, origin):
@@ -24,6 +56,9 @@ def parse_json_object(json, origin):
 
 def parse_json_file(file_path):
     """Extract strings from the specified JSON file."""
+    if is_non_game_data_json(file_path):
+        return
+
     with open(file_path, encoding="utf-8") as fp:
         json_data = json.load(fp)
 

@@ -1,18 +1,21 @@
 #include "iexamine_actors.h"
 
+#include <iexamine.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <memory>
-#include <utility>
-#include <cmath>
 #include <set>
+#include <utility>
 
 #include "ammo_effect.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
-#include "coordinates.h"
 #include "condition.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -21,13 +24,13 @@
 #include "explosion.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "generic_factory.h"
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -405,6 +408,7 @@ void mortar_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) 
 
     }
 
+    const std::string ammunition_id = loc->typeId().str();
     loc->charges--;
     if( loc->charges <= 0 ) {
         loc.remove_item();
@@ -416,6 +420,32 @@ void mortar_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) 
     for( const effect_on_condition_id &eoc : eocs ) {
         eoc->activate( d );
     }
+    const tripoint_abs_ms source_abs_ms = here.get_abs( examp );
+    cata::lua_platform::dispatch_native_hook( "on_mortar_fired", {
+        { "character", static_cast<const Character *>( &you ) },
+        {
+            "source", cata::lua_platform::native_callback_point {
+                "abs_ms", tripoint_rel_ms(
+                    source_abs_ms.x(), source_abs_ms.y(), source_abs_ms.z() )
+            }
+        },
+        {
+            "target", cata::lua_platform::native_callback_point {
+                "abs_ms", tripoint_rel_ms(
+                    target_abs_ms.x(), target_abs_ms.y(), target_abs_ms.z() )
+            }
+        },
+        {
+            "furniture", cata::lua_platform::native_callback_id {
+                "furniture", here.furn( examp ).id().str()
+            }
+        },
+        {
+            "ammunition", cata::lua_platform::native_callback_id {
+                "item", ammunition_id
+            }
+        }
+    } );
 }
 
 void mortar_examine_actor::load( const JsonObject &jo, const std::string &src )

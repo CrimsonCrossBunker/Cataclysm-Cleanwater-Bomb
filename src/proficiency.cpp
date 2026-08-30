@@ -1,5 +1,10 @@
 #include "proficiency.h"
 
+#include <calendar.h>
+#include <color.h>
+#include <flat_set.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -7,12 +12,12 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "options.h"
 
 const float book_proficiency_bonus::default_time_factor = 0.5f;

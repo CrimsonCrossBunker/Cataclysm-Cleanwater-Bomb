@@ -83,22 +83,6 @@ struct profile {
 profile make_profile( input_mode input );
 profile current_profile();
 
-// The platform profile is an early, isolated Lua data file.  It has no standard
-// libraries or game bindings and must return one schema-checked table.  Failure
-// is non-fatal: reload_profile installs the compiled C++ fallback and reports
-// the diagnostic through error/profile_last_error.
-bool reload_profile( std::string &error );
-std::string profile_last_error();
-
-// Public for focused parser tests and developer tooling.  This never changes
-// the active profile.
-bool load_profile_from_lua( std::string_view source, std::string_view source_name,
-                            const profile &fallback, profile &result, std::string &error );
-
-// Tests that change PATH_INFO may clear the lazy cache without reaching into
-// the loader's internal state.
-void reset_profile_cache_for_tests();
-
 std::string_view input_mode_name( input_mode input );
 std::string_view density_mode_name( density_mode density );
 std::string_view layout_breakpoint_name( layout_breakpoint breakpoint );

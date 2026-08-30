@@ -15,15 +15,15 @@ from build_context_pack import build_pack  # noqa: E402
 class ContextPackTests(unittest.TestCase):
     def test_lua_route_contains_contract_and_validation(self) -> None:
         pack = build_pack(
-            "Change Lua manifest capabilities",
+            "Change Lua-first Platform services",
             [],
-            ["data/lua/manifest.schema.json"],
+            ["data/lua/types/ccb_platform_v1.d.lua"],
             4000,
         )
         self.assertIn("lua-api", pack["selected_routes"])
-        self.assertIn("api.lua.v5.reference.modules", pack["documentation_ids"])
+        self.assertIn("architecture.lua-first-platform", pack["documentation_ids"])
         self.assertIn("lua-contract", {entry["id"] for entry in pack["tests"]})
-        self.assertIn("src/main.cpp", pack["source_paths"])
+        self.assertIn("src/lua_platform_loader.cpp", pack["source_paths"])
         self.assertIn("src/game_io.cpp", pack["source_paths"])
         self.assertLessEqual(pack["estimated_tokens"], 4000)
 

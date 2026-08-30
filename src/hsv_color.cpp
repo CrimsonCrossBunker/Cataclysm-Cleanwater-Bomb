@@ -13,7 +13,7 @@
 #include <sstream>
 #include <vector>
 
-#include "catalua_platform_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "rng.h"
 #include "string_formatter.h"

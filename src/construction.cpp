@@ -1,7 +1,7 @@
 #include "construction.h"
 
-#include "catalua_platform_content.h"
-
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -32,8 +32,8 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
-#include "flag.h"
 #include "finite_water.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -46,6 +46,7 @@
 #include "item_group.h"
 #include "iteminfo_query.h"
 #include "iuse.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -56,8 +57,6 @@
 #include "npc.h"
 #include "options.h"
 #include "output.h"
-#include "overmap.h"
-#include "overmapbuffer.h"
 #include "panels.h"
 #include "player_activity.h"
 #include "point.h"

@@ -88,7 +88,7 @@ function content.register(ccb)
         { id = "aspirin", count = 2 },
     }
     recipe_tonic:tool_any {
-        { id = "chem_set", count = 1 },
+        { id = "chemistry_set", count = 1 },
         { id = "pot", count = 1 },
     }
     ccb.content.add(recipe_tonic)

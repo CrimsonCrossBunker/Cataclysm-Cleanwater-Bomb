@@ -38,7 +38,6 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "generic_factory.h"
 #include "global_vars.h"
 #include "inventory.h"
@@ -51,10 +50,10 @@
 #include "mapdata.h"
 #include "martialarts.h"
 #include "math_parser.h"
+#include "math_parser_diag_value.h"
 #include "math_parser_type.h"
 #include "memory_fast.h"
 #include "messages.h"
-#include "math_parser_diag_value.h"
 #include "mission.h"
 #include "mtype.h"
 #include "mutation.h"
@@ -187,19 +186,19 @@ std::string get_talk_var_basename( const JsonObject &jo, std::string_view member
 namespace
 {
 
-template<typename valueT, typename funcT>
-value_or_var_pair<valueT, funcT> get_value_or_var_pair( const JsonValue &jv )
+template<typename valueT, typename... funcT>
+value_or_var_pair<valueT, funcT...> get_value_or_var_pair( const JsonValue &jv )
 {
-    value_or_var_pair<valueT, funcT> ret_val;
+    value_or_var_pair<valueT, funcT...> ret_val;
     ret_val.deserialize( jv );
     return ret_val;
 }
 
-template<typename retT, typename funcT>
-value_or_var_pair<retT, funcT> get_value_or_var_pair( const JsonObject &jo,
+template<typename retT, typename... funcT>
+value_or_var_pair<retT, funcT...> get_value_or_var_pair( const JsonObject &jo,
         std::string_view member, bool required, retT default_val )
 {
-    value_or_var_pair<retT, funcT> ret_val;
+    value_or_var_pair<retT, funcT...> ret_val;
     if( required ) {
         mandatory( jo, false, member, ret_val );
     } else {
@@ -213,14 +212,16 @@ value_or_var_pair<retT, funcT> get_value_or_var_pair( const JsonObject &jo,
 dbl_or_var get_dbl_or_var( const JsonObject &jo, std::string_view member, bool required,
                            double default_val )
 {
-    return get_value_or_var_pair<double, eoc_math>( jo, member, required, default_val );
+    return get_value_or_var_pair<double, eoc_math, runtime_dbl_provider>(
+               jo, member, required, default_val );
 }
 
 duration_or_var get_duration_or_var( const JsonObject &jo, std::string_view member,
                                      bool required,
                                      time_duration default_val )
 {
-    return get_value_or_var_pair<time_duration, eoc_math>( jo, member, required, default_val );
+    return get_value_or_var_pair<time_duration, eoc_math, runtime_duration_provider>(
+               jo, member, required, default_val );
 }
 
 str_or_var get_str_or_var( const JsonValue &jv, std::string_view /* member */, bool /* required */,

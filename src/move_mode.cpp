@@ -1,14 +1,18 @@
 #include "move_mode.h"
 
+#include <color.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
 #include <algorithm>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
 
 #include "debug.h"
-#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "translations.h"
 
 static std::vector<move_mode_id> move_modes_sorted;

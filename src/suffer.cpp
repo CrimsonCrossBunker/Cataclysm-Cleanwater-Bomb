@@ -1,6 +1,9 @@
+#include <subbodypart.h>
+#include <weakpoint.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <list>
 #include <map>
@@ -20,16 +23,14 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_lua_call.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
-#include "debug.h"
 #include "damage.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
@@ -44,6 +45,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "lightmap.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -329,12 +331,12 @@ void suffer::mutation_power( Character &you, const trait_id &mut_id )
             d.set_value( "this", mut_id.str() );
             eoc->activate_activation_only( d, "a mutation process", "mutation being activated", "mutation" );
         }
-        for( const cata::lua_ui::lua_call &call : mut_id->processed_luas ) {
-            cata::lua_ui::invoke_lua_call( call, "mutation_processed", {
-                { "character", static_cast<const Character *>( &you ) },
-                { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut_id.str() } }
-            } );
-        }
+        cata::lua_platform::dispatch_native_hook( "on_mutation_processed", {
+            { "character", static_cast<const Character *>( &you ) },
+            { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut_id.str() } },
+            { "activation_cost", static_cast<std::int64_t>( mut_id->cost ) },
+            { "cooldown_turns", static_cast<std::int64_t>( to_turns<int>( mut_id->cooldown ) ) }
+        } );
     }
 }
 
@@ -430,11 +432,12 @@ void suffer::while_grabbed( Character &you )
             pressure_absorbed = false;
         }
     };
-    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount ) {
+    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp,
+    float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
         you.absorb_hit( sbp, pressure, false );
         if( pressure.total_damage() > 0.0f ) {
-            if ( sbp == sub_body_part_head_throat.id() ) {
+            if( sbp == sub_body_part_head_throat.id() ) {
                 you.absorb_hit( sub_body_part_torso_neck.id(), pressure, false );
                 if( pressure.total_damage() > 0.0f ) {
                     pressure_absorbed = false;
@@ -1781,8 +1784,7 @@ void Character::suffer()
             suffer::water_damage( *this );
         }
         if( has_active_mutation( mut_id ) || ( !mut_id->activated &&
-                                               ( !mut_id->processed_eocs.empty() ||
-                                                       !mut_id->processed_luas.empty() ) ) ) {
+                                               !mut_id->processed_eocs.empty() ) ) {
             suffer::mutation_power( *this, mut_id );
         }
     }
@@ -2150,7 +2152,7 @@ void Character::apply_wetness_morale( units::temperature temperature )
 
     // Sensitivity scales how much being wet affects morale, ±50% across 0..500.
     const double sens_mult = clamp( 1.0 + 0.5 * std::log( std::clamp( get_sensitive(), 1,
-                                           500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
+                                    500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
     const int scaled_effect = round( morale_effect * sens_mult );
     if( scaled_effect != 0 || morale_effect == 0 ) {
         morale_effect = scaled_effect;

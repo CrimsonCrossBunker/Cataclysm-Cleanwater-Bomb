@@ -31,11 +31,11 @@ cases:
     expected_documentation_ids: [reference.eoc-conditions, reference.eoc-effects]
     expected_validation_ids: [json-load]
   - id: lua-api
-    task: Extend the Lua API contract and keep headless Mod validation working.
-    files: [data/lua/manifest.schema.json, src/main.cpp]
+    task: Extend the Lua-first Platform contract and keep headless Mod validation working.
+    files: [data/lua/types/ccb_platform_v1.d.lua, src/lua_platform_loader.cpp]
     expected_routes: [lua-api]
-    expected_paths: [data/lua/, src/main.cpp, src/game_io.cpp]
-    expected_documentation_ids: [api.lua.v5.reference.modules]
+    expected_paths: [data/lua/, src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp]
+    expected_documentation_ids: [architecture.lua-first-platform]
     expected_validation_ids: [lua-contract]
   - id: upstream-port
     task: Port an upstream CBN fix while preserving CCB differences.

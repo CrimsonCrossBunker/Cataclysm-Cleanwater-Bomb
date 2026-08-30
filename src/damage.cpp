@@ -1,5 +1,10 @@
 #include "damage.h"
 
+#include <calendar.h>
+#include <color.h>
+#include <flat_set.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -9,8 +14,6 @@
 
 #include "bodypart.h"
 #include "cata_utility.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -19,6 +22,8 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "json.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "monster.h"
 #include "mtype.h"
 #include "subbodypart.h"

@@ -37,7 +37,7 @@ class DocumentationRegistryTest(unittest.TestCase):
     def test_generated_and_third_party_boundaries_are_explicit(self):
         legacy = registry.load_inventory()
         generated = registry.classify(
-            "data/lua/reference/ccb_native_inventory.json",
+            "data/lua/reference/ccb_platform_native_inventory.json",
             legacy,
         )
         third_party = registry.classify(
@@ -50,6 +50,29 @@ class DocumentationRegistryTest(unittest.TestCase):
         self.assertEqual(generated["status"], "generated")
         self.assertFalse(third_party["include_in_ai_index"])
         self.assertEqual(third_party["status"], "third_party")
+
+    def test_current_platform_docs_override_stale_migration_metadata(self):
+        legacy = registry.load_inventory()
+        current = registry.classify("data/lua/README.md", legacy)
+        self.assertEqual(current["status"], "active")
+        self.assertEqual(
+            current["stable_document_id"],
+            "lua.platform.overview",
+        )
+        self.assertIn(
+            "architecture.lua-first-platform",
+            current["ccb_docs_ids"],
+        )
+
+    def test_retired_platform_docs_are_historical_and_not_indexed(self):
+        legacy = registry.load_inventory()
+        retired = registry.classify(
+            "data/lua/reference/ccb_public_api_" + "v" + "5.json",
+            legacy,
+        )
+        self.assertEqual(retired["status"], "historical")
+        self.assertFalse(retired["source_of_truth"])
+        self.assertFalse(retired["include_in_ai_index"])
 
     def test_ccb_docs_ids_prefer_reviewed_merge_target(self):
         legacy = {

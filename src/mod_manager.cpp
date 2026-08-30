@@ -1,6 +1,12 @@
 #include "mod_manager.h"
 
+#include <cata_path.h>
+#include <pimpl.h>
+#include <translation.h>
+#include <translations.h>
+#include <type_id.h>
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <functional>
 #include <iterator>
@@ -9,9 +15,8 @@
 #include <queue>
 #include <system_error>
 
-#include "builtin_mods.h"
+#include "builtin_mods.h" // IWYU pragma: keep
 #include "cached_options.h"
-#include "catalua_platform.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "dependency_tree.h"
@@ -22,6 +27,7 @@
 #include "input_context.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_loader.h"
 #include "output.h"
 #include "path_info.h"
 #include "string_formatter.h"

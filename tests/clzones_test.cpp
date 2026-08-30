@@ -1,11 +1,15 @@
+#include <flexbuffer_json.h>
 #include <climits>
 #include <functional>
 #include <initializer_list>
 #include <list>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "activity_actor.h"
@@ -21,10 +25,11 @@
 #include "clzones.h"
 #include "coordinates.h"
 #include "enums.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "npc.h"
@@ -105,6 +110,257 @@ void create_tile_zone( const std::string &name, const zone_type_id &zone_type, t
 }
 
 } // namespace
+
+TEST_CASE( "zone_manager_remove_invalidates_area_cache", "[zones]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    const tripoint_bub_ms zone_pos( 60, 60, 0 );
+    dummy.setpos( here, zone_pos );
+    const tripoint_abs_ms zone_abs = here.get_abs( zone_pos );
+    zone_data *zone = zm.add( "Cache test", zone_type_LOOT_FOOD,
+                              faction_your_followers, false, true,
+                              zone_abs, zone_abs, nullptr, true, nullptr, false );
+    REQUIRE( zone != nullptr );
+    REQUIRE( zm.has_terrain( zone_type_LOOT_FOOD, zone_abs,
+                             faction_your_followers ) );
+
+    REQUIRE( zm.remove( *zone ) );
+    CHECK_FALSE( zm.has_terrain( zone_type_LOOT_FOOD, zone_abs,
+                                 faction_your_followers ) );
+
+    const tripoint_rel_ms personal_pos( 1, 0, 0 );
+    zone_data *personal_zone = zm.add( "Personal cache test", zone_type_LOOT_FOOD,
+                                       faction_your_followers, false, true,
+                                       personal_pos, personal_pos, nullptr );
+    REQUIRE( personal_zone != nullptr );
+    const tripoint_abs_ms personal_abs = personal_zone->get_start_point();
+    REQUIRE( zm.has_terrain( zone_type_LOOT_FOOD, personal_abs,
+                             faction_your_followers ) );
+
+    REQUIRE( zm.remove( *personal_zone ) );
+    CHECK_FALSE( zm.has_terrain( zone_type_LOOT_FOOD, personal_abs,
+                                 faction_your_followers ) );
+}
+
+TEST_CASE( "zone_manager_personal_zone_count_resets_on_reload", "[zones]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    dummy.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_rel_ms personal_pos( 1, 0, 0 );
+    REQUIRE( zm.add( "Personal reload test", zone_type_LOOT_FOOD,
+                     faction_your_followers, false, true,
+                     personal_pos, personal_pos, nullptr ) != nullptr );
+    REQUIRE( zm.has_personal_zones() );
+
+    std::ostringstream serialized;
+    {
+        JsonOut json( serialized );
+        zm.serialize( json );
+    }
+    const JsonValue saved_zones = json_loader::from_string( serialized.str() );
+
+    zm.clear();
+    zm.deserialize( saved_zones );
+    REQUIRE( zm.has_personal_zones() );
+    zm.deserialize( saved_zones );
+    zm.deserialize( json_loader::from_string( "[]" ) );
+    CHECK_FALSE( zm.has_personal_zones() );
+
+    REQUIRE( zm.add( "Personal failed reload test", zone_type_LOOT_FOOD,
+                     faction_your_followers, false, true,
+                     personal_pos, personal_pos, nullptr ) != nullptr );
+    REQUIRE( zm.has_personal_zones() );
+    zm.load_zones( "clzones_test_missing_personal_zones" );
+    CHECK_FALSE( zm.has_personal_zones() );
+}
+
+TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
+           "[zones][vehicle]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    const tripoint_bub_ms vehicle_pos( 60, 60, 0 );
+    dummy.setpos( here, vehicle_pos );
+    here.ter_set( vehicle_pos, ter_t_floor );
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart,
+                                      vehicle_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart != nullptr );
+    const std::optional<vpart_reference> cargo = here.veh_at( vehicle_pos ).cargo();
+    REQUIRE( cargo.has_value() );
+
+    const tripoint_abs_ms zone_abs = here.get_abs( vehicle_pos );
+    zone_data first_data( "First", zone_type_LOOT_FOOD, faction_your_followers,
+                          false, true, zone_abs, zone_abs );
+    cart->zones_dirty = true;
+    zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), first_data,
+                       &here );
+    REQUIRE( first != nullptr );
+
+    bool returned_pointer_is_current = false;
+    for( auto &entry : cart->loot_zones ) {
+        if( &entry.second == first ) {
+            returned_pointer_is_current = true;
+        }
+    }
+    CHECK( returned_pointer_is_current );
+
+    zone_data second_data( "Second", zone_type_LOOT_FOOD, faction_your_followers,
+                           false, true, zone_abs, zone_abs );
+    zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), second_data,
+                        &here );
+    REQUIRE( second != nullptr );
+
+    REQUIRE( zm.remove( *first, &here ) );
+    int remaining_zones = 0;
+    bool second_zone_remains = false;
+    for( const auto &entry : cart->loot_zones ) {
+        remaining_zones++;
+        second_zone_remains = second_zone_remains || entry.second.get_name() == "Second";
+    }
+    CHECK( remaining_zones == 1 );
+    CHECK( second_zone_remains );
+}
+
+TEST_CASE( "vehicle_zone_identity_survives_shift_and_refresh", "[zones][vehicle]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    const tripoint_bub_ms vehicle_pos( 60, 60, 0 );
+    dummy.setpos( here, vehicle_pos );
+    here.ter_set( vehicle_pos, ter_t_floor );
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart,
+                                      vehicle_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart != nullptr );
+    const std::optional<vpart_reference> cargo = here.veh_at( vehicle_pos ).cargo();
+    REQUIRE( cargo.has_value() );
+
+    const point_rel_ms old_mount = cargo->mount_pos();
+    const tripoint_abs_ms zone_abs = here.get_abs( vehicle_pos );
+    zone_data stable_zone( "Stable", zone_type_LOOT_FOOD, faction_your_followers,
+                           false, true, zone_abs, zone_abs );
+    stable_zone.set_is_vehicle( true );
+    cart->loot_zones.emplace( old_mount, stable_zone );
+    here.register_vehicle_zone( cart, here.get_abs_sub().z() );
+    cart->zones_dirty = true;
+    zm.cache_vzones( &here );
+
+    zone_data *edited = nullptr;
+    for( auto &entry : cart->loot_zones ) {
+        if( entry.second.get_name() == "Stable" ) {
+            edited = &entry.second;
+        }
+    }
+    REQUIRE( edited != nullptr );
+    edited->set_enabled( false );
+    CHECK_FALSE( edited->get_enabled() );
+
+    cart->shift_parts( here, point_rel_ms( 1, 0 ) );
+    zm.cache_vzones( &here );
+
+    zone_data *shifted = nullptr;
+    bool mount_changed = false;
+    for( auto &entry : cart->loot_zones ) {
+        if( entry.second.get_name() == "Stable" ) {
+            shifted = &entry.second;
+            mount_changed = entry.first != old_mount;
+        }
+    }
+    REQUIRE( shifted != nullptr );
+    CHECK( mount_changed );
+    CHECK_FALSE( shifted->get_enabled() );
+
+    zm.revert_vzones();
+    zone_data *reverted = nullptr;
+    for( auto &entry : cart->loot_zones ) {
+        if( entry.second.get_name() == "Stable" ) {
+            reverted = &entry.second;
+        }
+    }
+    REQUIRE( reverted != nullptr );
+    CHECK( reverted->get_enabled() );
+}
+
+TEST_CASE( "vehicle_zone_remove_uses_non_global_map_context", "[zones][vehicle]" )
+{
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    tinymap other_map;
+    const tripoint_abs_omt other_location =
+        tripoint_abs_omt( project_to<coords::omt>( here.get_abs_sub().xy() ), 0 ) +
+        tripoint_rel_omt( 10, 10, 0 );
+    other_map.load( other_location, false );
+    const tripoint_omt_ms vehicle_pos( 14, 14, 0 );
+    other_map.ter_set( vehicle_pos, ter_t_floor );
+    vehicle *cart = other_map.add_vehicle( vehicle_prototype_test_shopping_cart,
+                                           vehicle_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart != nullptr );
+    const std::optional<vpart_reference> cargo = other_map.veh_at( vehicle_pos ).cargo();
+    REQUIRE( cargo.has_value() );
+
+    const tripoint_abs_ms zone_abs = other_map.get_abs( vehicle_pos );
+    zone_data new_zone( "Outside reality bubble", zone_type_LOOT_FOOD,
+                        faction_your_followers, false, true, zone_abs, zone_abs );
+    zone_data *created = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), new_zone,
+                         other_map.cast_to_map() );
+    REQUIRE( created != nullptr );
+    created->set_enabled( false );
+    CHECK_FALSE( created->get_enabled() );
+
+    REQUIRE( zm.remove( *created, other_map.cast_to_map() ) );
+    CHECK( cart->loot_zones.empty() );
+    other_map.delete_unmerged_submaps();
+}
+
+TEST_CASE( "vehicle_zone_edit_snapshot_failure_is_fail_closed", "[zones][vehicle]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager &zm = zone_manager::get_manager();
+    zm.clear();
+
+    zone_data detached_zone( "Detached", zone_type_LOOT_FOOD, faction_your_followers,
+                             false, true, tripoint_abs_ms::zero, tripoint_abs_ms::zero );
+    detached_zone.set_is_vehicle( true );
+    CHECK_FALSE( zm.zone_edited( detached_zone ) );
+
+    CHECK_FALSE( detached_zone.set_name( "Must stay detached" ) );
+    CHECK( detached_zone.get_name() == "Detached" );
+    detached_zone.set_enabled( false );
+    CHECK( detached_zone.get_enabled() );
+}
 
 TEST_CASE( "zone_unloading_ammo_belts", "[zones][items][ammo_belt][activities][unload]" )
 {

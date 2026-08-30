@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccb.local/schema/ccb_platform_api_v1.schema.json",
+  "title": "CCB Lua-first Platform v1 public contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "contract_id",
+    "source",
+    "entrypoint",
+    "lua_luals",
+    "public_root",
+    "native"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "contract_id": { "const": "ccb_platform_api_v1" },
+    "schema": { "type": "string" },
+    "source": { "type": "object" },
+    "entrypoint": {
+      "type": "object",
+      "required": ["module", "require_expression", "root_class", "global_tables"],
+      "properties": {
+        "module": { "const": "ccb" },
+        "require_expression": { "const": "require(\"ccb\")" },
+        "root_class": { "const": "CcbPlatformV1" },
+        "global_tables": { "type": "array", "maxItems": 0 }
+      },
+      "additionalProperties": false
+    },
+    "lua_luals": { "type": "object" },
+    "public_root": { "type": "object" },
+    "native": { "type": "object" }
+  },
+  "additionalProperties": false
+}

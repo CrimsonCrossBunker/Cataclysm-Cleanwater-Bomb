@@ -1,5 +1,3 @@
-#include "item.h"
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -20,12 +18,10 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
 #include "ammo.h"
-#include "bionics.h"
+#include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -39,11 +35,13 @@
 #include "faction.h"
 #include "flag.h"
 #include "flat_set.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "generic_factory.h"
 #include "gun_mode.h"
 #include "inventory.h"
+#include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_factory.h"
@@ -82,8 +80,6 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
-
-class JsonObject;
 
 static const std::string GUN_MODE_VAR_NAME( "item::mode" );
 static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
@@ -779,13 +775,6 @@ void item::on_wield( Character &you, bool combat )
     you.flag_encumbrance();
     you.calc_discomfort();
     you.on_item_acquire( *this );
-    cata::lua_ui::dispatch_native_callback(
-    "iwieldable", typeId().str(), "on_wield", {
-        { "character", static_cast<const Character *>( &you ) },
-        { "item", static_cast<const item *>( this ) },
-        { "move_cost", std::int64_t { wield_cost } },
-        { "combat", combat }
-    } );
 }
 
 std::string item::dirt_symbol() const
@@ -3531,13 +3520,6 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         return false;
     }
     const auto reload_finished = [&]() {
-        cata::lua_ui::dispatch_native_callback(
-        "iranged", typeId().str(), "on_reload", {
-            { "character", static_cast<const Character *>( &u ) },
-            { "item", static_cast<const item *>( this ) },
-            { "quantity", std::int64_t { qty } },
-            { "pocket_index", std::int64_t { pocket_index } }
-        } );
         return true;
     };
 
@@ -3568,17 +3550,6 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         if( !target_pocket->can_reload_with( *ammo.get_item(), true ) ) {
             return false;
         }
-        if( !cata::lua_ui::dispatch_native_callback(
-        "iranged", typeId().str(), "can_reload", {
-        { "character", static_cast<const Character *>( &u ) },
-            { "item", static_cast<const item *>( this ) },
-            { "ammo", static_cast<const item *>( ammo.get_item() ) },
-            { "quantity", std::int64_t { qty } },
-            { "pocket_index", std::int64_t { pocket_index } }
-        } ) ) {
-            return false;
-        }
-
         const bool ammo_from_map = !ammo.held_by( u );
         if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
             ammo = item_location( ammo, &ammo->first_ammo() );
@@ -3642,17 +3613,6 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
     if( !can_reload_with( *ammo.get_item(), true ) ) {
         return false;
     }
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iranged", typeId().str(), "can_reload", {
-    { "character", static_cast<const Character *>( &u ) },
-        { "item", static_cast<const item *>( this ) },
-        { "ammo", static_cast<const item *>( ammo.get_item() ) },
-        { "quantity", std::int64_t { qty } },
-        { "pocket_index", std::int64_t { pocket_index } }
-    } ) ) {
-        return false;
-    }
-
     bool ammo_from_map = !ammo.held_by( u );
     if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
         // if the thing passed in is a speed loader, we want the ammo

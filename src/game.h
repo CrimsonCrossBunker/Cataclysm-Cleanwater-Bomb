@@ -732,6 +732,10 @@ class game
         void reset_light_level();
         character_id assign_npc_id();
         int64_t assign_item_uid();
+        int64_t assign_monster_uid();
+        void observe_monster_uid( int64_t uid );
+        int64_t assign_vehicle_uid();
+        void observe_vehicle_uid( int64_t uid );
         Creature *is_hostile_nearby();
         Creature *is_hostile_very_close( bool dangerous = false );
         field_entry *is_in_dangerous_field();
@@ -1340,6 +1344,8 @@ class game
         character_id next_npc_id; // NOLINT(cata-serialize)
         int next_mission_id = 0; // NOLINT(cata-serialize)
         int64_t next_item_uid = 1; // NOLINT(cata-serialize)
+        int64_t next_monster_uid = 1; // NOLINT(cata-serialize)
+        int64_t next_vehicle_uid = 1; // NOLINT(cata-serialize)
 
         std::chrono::seconds time_played_at_last_load; // NOLINT(cata-serialize)
         // NOLINTNEXTLINE(cata-serialize)

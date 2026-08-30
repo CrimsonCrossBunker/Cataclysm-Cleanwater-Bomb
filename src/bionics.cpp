@@ -1,7 +1,7 @@
-#include "catalua_platform_content.h"
-
-#include "bionics.h"
-
+#include <flat_set.h>
+#include <magic.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -23,11 +23,10 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "ballistics.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_lua_call.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -58,6 +57,8 @@
 #include "item_location.h"
 #include "itype.h"
 #include "json.h"
+#include "lua_platform_content.h"
+#include "lua_platform_hooks.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -195,6 +196,22 @@ namespace
 generic_factory<bionic_data> bionic_factory( "bionic" );
 std::vector<bionic_id> faulty_bionics;
 } //namespace
+
+generic_factory<bionic_data> &cata::lua_platform::detail::bionic_registry()
+{
+    return bionic_factory;
+}
+
+void cata::lua_platform::detail::refresh_bionic_registry_cache()
+{
+    static const json_character_flag faulty( "BIONIC_FAULTY" );
+    faulty_bionics.clear();
+    for( const bionic_data &value : bionic_factory.get_all() ) {
+        if( value.has_flag( faulty ) ) {
+            faulty_bionics.push_back( value.id );
+        }
+    }
+}
 
 void bionic::initialize_pseudo_items( bool create_weapon )
 {
@@ -378,28 +395,12 @@ void bionic_data::load( const JsonObject &jsobj, std::string_view src )
     for( JsonValue jv : jsobj.get_array( "activated_eocs" ) ) {
         activated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
-    for( JsonObject lua : jsobj.get_array( "activated_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        activated_luas.push_back( std::move( call ) );
-    }
-
     for( JsonValue jv : jsobj.get_array( "processed_eocs" ) ) {
         processed_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
-    }
-    for( JsonObject lua : jsobj.get_array( "processed_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        processed_luas.push_back( std::move( call ) );
     }
 
     for( JsonValue jv : jsobj.get_array( "deactivated_eocs" ) ) {
         deactivated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
-    }
-    for( JsonObject lua : jsobj.get_array( "deactivated_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        deactivated_luas.push_back( std::move( call ) );
     }
 
     int enchant_num = 0;
@@ -772,18 +773,6 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
     }
 
     if( !eff_only && bio.info().activate_remove_cbm ) {
-        const bionic_id activated_id = bio.id;
-        cata::lua_ui::dispatch_native_callback(
-        "bionic", activated_id.str(), "on_activate", {
-            { "character", static_cast<const Character *>( this ) },
-            {
-                "bionic", cata::lua_ui::native_callback_id {
-                    "bionic", activated_id.str()
-                }
-            },
-            { "effect_only", false }
-        } );
-
         // Close bionics UI if caller requested it
         if( close_bionics_ui ) {
             *close_bionics_ui = true;
@@ -860,13 +849,15 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
                          units::to_millijoule( bio.info().power_activate ) );
         eoc->activate_activation_only( d, "a bionic activation", "bionic being activated", "bionic" );
     }
-    for( const cata::lua_ui::lua_call &call : bio.id->activated_luas ) {
-        cata::lua_ui::invoke_lua_call( call, "bionic_activated", {
-            { "character", this },
-            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
-            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
-        } );
-    }
+    cata::lua_platform::dispatch_native_hook( "on_bionic_activated", {
+        { "character", this },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        {
+            "activation_cost_millijoules",
+            units::to_millijoule( bio.info().power_activate )
+        }
+    } );
 
     item tmp_item;
     avatar &player_character = get_avatar();
@@ -1252,17 +1243,6 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
                     if( it.powered ) {
                         it.powered = false;
                         add_msg_if_player( m_info, _( "Your %s automatically turn off." ), it.info().name );
-                        cata::lua_ui::dispatch_native_callback(
-                        "bionic", it.id.str(), "on_deactivate", {
-                            { "character", static_cast<const Character *>( this ) },
-                            {
-                                "bionic", cata::lua_ui::native_callback_id {
-                                    "bionic", it.id.str()
-                                }
-                            },
-                            { "effect_only", false },
-                            { "automatic", true }
-                        } );
                     }
                 }
             }
@@ -1277,17 +1257,6 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         invalidate_pseudo_items();
         invalidate_crafting_inventory();
     }
-
-    cata::lua_ui::dispatch_native_callback(
-    "bionic", bio.id.str(), "on_activate", {
-        { "character", static_cast<const Character *>( this ) },
-        {
-            "bionic", cata::lua_ui::native_callback_id {
-                "bionic", bio.id.str()
-            }
-        },
-        { "effect_only", eff_only }
-    } );
 
     return true;
 }
@@ -1348,13 +1317,15 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic deactivation", "bionic being activated", "bionic" );
     }
-    for( const cata::lua_ui::lua_call &call : bio.id->deactivated_luas ) {
-        cata::lua_ui::invoke_lua_call( call, "bionic_deactivated", {
-            { "character", this },
-            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
-            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
-        } );
-    }
+    cata::lua_platform::dispatch_native_hook( "on_bionic_deactivated", {
+        { "character", this },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        {
+            "deactivation_cost_millijoules",
+            units::to_millijoule( bio.info().power_deactivate )
+        }
+    } );
 
     if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
         if( bio.get_uid() == get_weapon_bionic_uid() ) {
@@ -1393,18 +1364,6 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
         invalidate_pseudo_items();
         invalidate_crafting_inventory();
     }
-
-    cata::lua_ui::dispatch_native_callback(
-    "bionic", bio.id.str(), "on_deactivate", {
-        { "character", static_cast<const Character *>( this ) },
-        {
-            "bionic", cata::lua_ui::native_callback_id {
-                "bionic", bio.id.str()
-            }
-        },
-        { "effect_only", eff_only },
-        { "automatic", false }
-    } );
 
     return true;
 }
@@ -1758,13 +1717,15 @@ void Character::process_bionic( bionic &bio )
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic process", "bionic being activated", "bionic" );
     }
-    for( const cata::lua_ui::lua_call &call : bio.id->processed_luas ) {
-        cata::lua_ui::invoke_lua_call( call, "bionic_processed", {
-            { "character", this },
-            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
-            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
-        } );
-    }
+    cata::lua_platform::dispatch_native_hook( "on_bionic_processed", {
+        { "character", this },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        {
+            "over_time_energy_millijoules",
+            units::to_millijoule( bio.info().power_over_time )
+        }
+    } );
 
     // Bionic effects on every turn they are active go here.
     if( bio.id == bio_remote ) {
@@ -3039,18 +3000,6 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
     }
     effect_on_conditions::process_reactivate( *this );
 
-    cata::lua_ui::dispatch_native_callback(
-    "bionic", b.str(), "on_installed", {
-        { "character", static_cast<const Character *>( this ) },
-        {
-            "bionic", cata::lua_ui::native_callback_id {
-                "bionic", b.str()
-            }
-        },
-        { "uid", std::int64_t { bio_uid } },
-        { "parent_uid", std::int64_t { parent_uid } }
-    } );
-
     return bio_uid;
 }
 
@@ -3088,13 +3037,11 @@ void Character::remove_bionic( const bionic &bio )
     }
 
     bionic_collection new_my_bionics;
-    std::vector<std::pair<bionic_id, bionic_uid>> removed_bionics;
     // any spells you should not forget due to still having a bionic installed that has it.
     std::set<spell_id> cbm_spells;
     for( bionic &i : *my_bionics ) {
         // Linked bionics: if either is removed, the other is removed as well.
         if( i.get_uid() == bio_uid || i.get_parent_uid() == bio_uid ) {
-            removed_bionics.emplace_back( i.id, i.get_uid() );
             continue;
         }
 
@@ -3136,18 +3083,6 @@ void Character::remove_bionic( const bionic &bio )
     // clean up any changes from bionic limbs
     recalculate_bodyparts();
     effect_on_conditions::process_reactivate( *this );
-    for( const std::pair<bionic_id, bionic_uid> &removed : removed_bionics ) {
-        cata::lua_ui::dispatch_native_callback(
-        "bionic", removed.first.str(), "on_removed", {
-            { "character", static_cast<const Character *>( this ) },
-            {
-                "bionic", cata::lua_ui::native_callback_id {
-                    "bionic", removed.first.str()
-                }
-            },
-            { "uid", std::int64_t { removed.second } }
-        } );
-    }
 }
 
 int Character::num_bionics() const

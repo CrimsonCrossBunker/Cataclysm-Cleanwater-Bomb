@@ -21,6 +21,7 @@
 #include "map_scale_constants.h"
 #include "memory_fast.h"
 #include "point.h"
+#include "safe_reference.h"
 #include "translation.h"
 #include "type_id.h"
 
@@ -37,6 +38,7 @@ class JsonValue;
 class input_context;
 class item;
 class map;
+class vehicle;
 class talker;
 class const_talker;
 struct construction;
@@ -401,6 +403,10 @@ class study_zone_options : public zone_options
 class zone_data
 {
     private:
+        friend class map;
+        friend class vehicle;
+        friend class zone_manager;
+
         std::string name;
         zone_type_id type;
         faction_id faction;
@@ -424,6 +430,10 @@ class zone_data
         // constructed or deserialized zone receives a distinct identity.
         std::shared_ptr<const void> lifetime_identity =
             std::make_shared<unsigned char>( 0 ); // NOLINT(cata-serialize)
+        safe_reference<vehicle> vehicle_owner; // NOLINT(cata-serialize)
+
+        void set_vehicle_owner( vehicle &owner );
+        safe_reference<vehicle> get_vehicle_owner() const;
 
     public:
         zone_data() {
@@ -613,12 +623,32 @@ class zone_manager
 
     private:
         static const int MAX_DISTANCE = MAX_VIEW_DISTANCE;
+
+        struct vehicle_zone_locator {
+            safe_reference<vehicle> owner;
+            std::weak_ptr<const void> identity;
+
+            bool operator==( const vehicle_zone_locator &rhs ) const {
+                vehicle *lhs_owner = owner.get();
+                vehicle *rhs_owner = rhs.owner.get();
+                return lhs_owner != nullptr && lhs_owner == rhs_owner &&
+                       !identity.expired() && !rhs.identity.expired() &&
+                       !identity.owner_before( rhs.identity ) &&
+                       !rhs.identity.owner_before( identity );
+            }
+        };
+
+        struct changed_vehicle_zone {
+            vehicle_zone_locator locator;
+            zone_data original;
+        };
+
         std::vector<zone_data> zones;
         //Containers for Revert functionality for Vehicle Zones
-        //Pointer to added zone to be removed
-        std::vector<zone_data *> added_vzones; // NOLINT(cata-serialize)
-        //Copy of original data, pointer to the zone
-        std::vector<std::pair<zone_data, zone_data *>> changed_vzones; // NOLINT(cata-serialize)
+        //Locator for added zone to be removed
+        std::vector<vehicle_zone_locator> added_vzones; // NOLINT(cata-serialize)
+        //Locator and copy of original data
+        std::vector<changed_vehicle_zone> changed_vzones; // NOLINT(cata-serialize)
         //copy of original data to be re-added
         std::vector<zone_data> removed_vzones; // NOLINT(cata-serialize)
 
@@ -637,6 +667,13 @@ class zone_manager
                 const faction_id &fac = your_fac ) const;
         std::unordered_set<tripoint_abs_ms> get_vzone_set( const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
+        static bool same_lifetime_identity( const std::weak_ptr<const void> &lhs,
+                                            const std::weak_ptr<const void> &rhs );
+        static zone_data *find_vehicle_zone( const vehicle_zone_locator &locator );
+        static bool erase_vehicle_zone( const vehicle_zone_locator &locator );
+        static std::optional<vehicle_zone_locator> make_vehicle_zone_locator( zone_data &zone,
+                map *pmap );
+        bool rebind_vehicle_zone_locators( const vehicle_zone_locator &locator );
     public:
         zone_manager();
         ~zone_manager() = default;
@@ -653,17 +690,18 @@ class zone_manager
         void clear();
 
         // For addition of regular and vehicle zones
-        void add( const std::string &name, const zone_type_id &type, const faction_id &faction,
-                  bool invert, bool enabled,
-                  const tripoint_abs_ms &start, const tripoint_abs_ms &end,
-                  const shared_ptr_fast<zone_options> &options = nullptr,
-                  bool silent = false, map *pmap = nullptr );
+        zone_data *add( const std::string &name, const zone_type_id &type, const faction_id &faction,
+                        bool invert, bool enabled,
+                        const tripoint_abs_ms &start, const tripoint_abs_ms &end,
+                        const shared_ptr_fast<zone_options> &options = nullptr,
+                        bool silent = false, map *pmap = nullptr,
+                        bool allow_vehicle_binding = true );
 
         // For addition of personal zones
-        void add( const std::string &name, const zone_type_id &type, const faction_id &faction,
-                  bool invert, bool enabled,
-                  const tripoint_rel_ms &start, const tripoint_rel_ms &end,
-                  const shared_ptr_fast<zone_options> &options = nullptr );
+        zone_data *add( const std::string &name, const zone_type_id &type, const faction_id &faction,
+                        bool invert, bool enabled,
+                        const tripoint_rel_ms &start, const tripoint_rel_ms &end,
+                        const shared_ptr_fast<zone_options> &options = nullptr );
 
         // get first matching zone
         const zone_data *get_zone_at( const tripoint_abs_ms &where, const zone_type_id &type,
@@ -671,10 +709,10 @@ class zone_manager
         // get all matching zones (useful for LOOT_CUSTOM and LOOT_ITEM_GROUP)
         std::vector<zone_data const *> get_zones_at( const tripoint_abs_ms &where, const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
-        void create_vehicle_loot_zone( class vehicle &vehicle, const point_rel_ms &mount_point,
-                                       zone_data &new_zone, map *pmap = nullptr );
+        zone_data *create_vehicle_loot_zone( vehicle &vehicle, const point_rel_ms &mount_point,
+                                             zone_data &new_zone, map *pmap = nullptr );
 
-        bool remove( zone_data &zone );
+        bool remove( zone_data &zone, map *pmap = nullptr );
 
         unsigned int size() const {
             return zones.size();
@@ -746,7 +784,7 @@ class zone_manager
         bool save_world_zones( std::string const &suffix = {} );
         void load_zones( std::string const &suffix = {} );
         void load_world_zones( std::string const &suffix = {} );
-        void zone_edited( zone_data &zone );
+        bool zone_edited( zone_data &zone );
         void revert_vzones();
         void serialize( JsonOut &json ) const;
         void deserialize( const JsonValue &jv );

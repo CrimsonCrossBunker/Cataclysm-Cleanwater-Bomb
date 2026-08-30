@@ -1,6 +1,14 @@
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
+#include <color.h>
+#include <enum_bitset.h>
+#include <enum_conversions.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <cstring>
 #include <optional>
 #include <ostream>
@@ -10,11 +18,11 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_platform.h"
-#include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_loader.h"
 #include "mapgen.h"
 #include "output.h"
 #include "string_formatter.h"

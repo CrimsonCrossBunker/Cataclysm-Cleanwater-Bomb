@@ -1,5 +1,10 @@
 #include "material.h"
 
+#include <damage.h>
+#include <fire.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -7,10 +12,10 @@
 #include <unordered_map>
 
 #include "debug.h"
-#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 
 static const damage_type_id damage_heat( "heat" );
 

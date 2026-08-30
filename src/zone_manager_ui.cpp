@@ -1,5 +1,10 @@
 #include "clzones.h" // IWYU pragma: associated
 
+#include <coordinates.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 
 #include "avatar.h"
@@ -10,8 +15,8 @@
 #include "debug.h"
 #include "faction.h"
 #include "game.h"
-#include "line.h"
 #include "input_context.h"
+#include "line.h"
 #include "map.h"
 #include "options.h"
 #include "output.h"
@@ -21,8 +26,8 @@
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 
 static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
 
@@ -687,6 +692,9 @@ void zone_manager_ui::display_zone_manager()
                         }
                         break;
                     case 3:
+                        if( zone.get_is_vehicle() && !mgr.zone_edited( zone ) ) {
+                            break;
+                        }
                         if( zone.get_options().query() ) {
                             stuff_changed = true;
                         }

@@ -1,14 +1,17 @@
 #include "effect_on_condition.h"
 
+#include <dialogue.h>
+#include <dialogue_helpers.h>
+#include <global_vars.h>
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <iterator>
 #include <list>
 #include <memory>
-#include <unordered_map>
 #include <ostream>
 #include <queue>
+#include <unordered_map>
 
 #include "avatar.h"
 #include "calendar.h"
@@ -25,6 +28,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "lua_platform_runtime.h"
 #include "math_parser_diag_value.h"
 #include "mod_tracker.h"
 #include "npc.h"
@@ -160,11 +164,21 @@ void effect_on_conditions::load_new_character( Character &you )
     const scenario *scen = get_scenario();
     if( scen ) {
         you.queue_effects( scen->eoc() );
+        if( scen->has_platform_start_handler() ) {
+            cata::lua_platform::invoke_character_start_handler(
+                "scenario", scen->ident().str(), scen->platform_start_mod(),
+                scen->platform_start_handler(), you );
+        }
     }
 
     const profession *prof = you.get_profession();
     if( prof ) {
         you.queue_effects( prof->get_eocs() );
+        if( prof->has_platform_start_handler() ) {
+            cata::lua_platform::invoke_character_start_handler(
+                "profession", prof->ident().str(), prof->platform_start_mod(),
+                prof->platform_start_handler(), you );
+        }
     }
 
     for( const effect_on_condition &eoc : get_all() ) {

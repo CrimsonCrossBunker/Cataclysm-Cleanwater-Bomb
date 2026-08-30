@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MONGROUP_H
 #define CATA_SRC_MONGROUP_H
 
+#include <cstdint>
 #include <map>
 #include <set>
 #include <string>
@@ -16,8 +17,8 @@
 #include "point.h"
 #include "type_id.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-    #include "catalua_ui_identity.h"
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    #include "lua_platform_identity.h"
 #endif
 
 class JsonObject;
@@ -185,7 +186,7 @@ struct mongroup {
         type( ptype ), abs_pos( ppos ), population( ppop ), target( ptarget ),
         interest( pint ), dying( pdie ), horde( phorde ) { }
     mongroup() = default;
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     std::uint64_t lua_identity() const noexcept {
         return lua_identity_.value();
     }
@@ -248,8 +249,8 @@ struct mongroup {
     void deserialize_legacy( const JsonObject &jo );
     void serialize( JsonOut &json ) const;
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-    cata::lua_ui::native_object_identity lua_identity_;
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::native_object_identity lua_identity_;
 #endif
 };
 

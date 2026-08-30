@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -241,6 +242,18 @@ bool is_plant_overgrown( map &here, const tripoint_bub_ms &p );
 // Run plant lifecycle EOCs with standard context variables.
 void run_plant_eocs(
     const std::vector<effect_on_condition_id> &eocs,
+    Character &alpha,
+    map &here,
+    const tripoint_bub_ms &plant_pos,
+    const item &seed,
+    const std::string &old_stage,
+    const std::string &new_stage,
+    const std::map<std::string, std::string> &string_context = {},
+    const std::map<std::string, double> &num_context = {} );
+
+// Run one complete plant lifecycle phase: furniture EOCs, seed EOCs, then Lua-first handlers.
+void run_plant_lifecycle_event(
+    std::string_view phase,
     Character &alpha,
     map &here,
     const tripoint_bub_ms &plant_pos,

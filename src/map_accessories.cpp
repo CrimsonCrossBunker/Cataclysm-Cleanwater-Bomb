@@ -1,11 +1,13 @@
 #include "map_accessories.h"
 
+#include <type_id.h>
 #include <algorithm>
 
-#include "catalua_platform_content.h"
 #include "damage.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 namespace
 {

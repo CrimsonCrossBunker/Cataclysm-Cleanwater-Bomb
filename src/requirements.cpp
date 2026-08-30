@@ -1,5 +1,8 @@
 #include "requirements.h"
 
+#include <crafting.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
@@ -17,7 +20,6 @@
 #include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -25,7 +27,6 @@
 #include "debug_menu.h"
 #include "enum_traits.h"
 #include "flexbuffer_json.h"
-#include "game_constants.h"
 #include "generic_factory.h"
 #include "inventory.h"
 #include "item.h"
@@ -35,6 +36,7 @@
 #include "itype.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "output.h"
 #include "pocket_type.h"
 #include "string_formatter.h"

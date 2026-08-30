@@ -1,15 +1,18 @@
 #include "character_modifier.h"
 
+#include <enums.h>
+#include <pimpl.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
 
 #include "bodypart.h"
 #include "character.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
 #include "debug.h"
 #include "effect.h"
 #include "enum_conversions.h"
@@ -17,6 +20,8 @@
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "messages.h"
 #include "move_mode.h"

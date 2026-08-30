@@ -1,6 +1,7 @@
 #include "explosion.h" // IWYU pragma: associated
 #include "fragment_cloud.h" // IWYU pragma: associated
 
+#include <safe_reference.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -19,7 +20,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -40,6 +40,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -577,14 +578,14 @@ void explosion( const Creature *source, map *here, const tripoint_bub_ms &p,
 void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
                       const explosion_data &ex )
 {
-    if( cata::lua_ui::has_native_hook(
+    if( cata::lua_platform::has_native_hook(
             "on_explosion_start" ) ) {
         const tripoint_abs_ms position = m->get_abs( p );
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_explosion_start", {
             {
                 "position",
-                cata::lua_ui::native_callback_point {
+                cata::lua_platform::native_callback_point {
                     "abs_ms", tripoint_rel_ms( position.x(), position.y(), position.z() )
                 }
             },

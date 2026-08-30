@@ -1,16 +1,20 @@
 #include "climbing.h"
 
+#include <coordinates.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <cstdint>
 #include <optional>
 #include <utility>
 
 #include "cata_utility.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "creature_tracker.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "veh_type.h"
 #include "vpart_position.h"

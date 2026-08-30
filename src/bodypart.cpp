@@ -1,5 +1,11 @@
 #include "bodypart.h"
 
+#include <damage.h>
+#include <enums.h>
+#include <flat_set.h>
+#include <translation.h>
+#include <units.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <memory>
 #include <set>
@@ -10,7 +16,6 @@
 
 #include "body_part_set.h"
 #include "calendar.h"
-#include "catalua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -18,6 +23,7 @@
 #include "generic_factory.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "messages.h"
 #include "pimpl.h"

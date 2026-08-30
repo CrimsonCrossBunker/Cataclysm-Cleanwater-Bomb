@@ -1,5 +1,8 @@
 #include "projectile.h"
 
+#include <compatibility.h>
+#include <coordinates.h>
+#include <damage.h>
 #include <algorithm>
 #include <limits>
 #include <list>
@@ -8,7 +11,6 @@
 #include <vector>
 
 #include "ammo_effect.h"
-#include "catalua_platform_runtime.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
@@ -26,6 +28,7 @@
 #include "field_type.h"
 #include "item.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "map.h"
 #include "map_iterator.h"

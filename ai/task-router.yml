@@ -47,16 +47,16 @@ entries:
     upstream_differences:
       - EOC syntax may differ when CCB registrations lag or diverge from upstream.
   - id: lua-api
-    keywords: [Lua, LuaLS, manifest, capability, callback, hook, 脚本, 能力]
-    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/catalua*.cpp', 'src/catalua*.h']
+    keywords: [Lua, LuaLS, Platform, callback, hook, 脚本, 能力]
+    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h']
     project_ids: [lua-api]
-    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference.modules]
-    source_symbols: [ccb_api_v5]
+    documentation_ids: [architecture.lua-first-platform, architecture.lua-first-glossary]
+    source_symbols: [platform_version]
     validation_ids: [lua-contract]
     compatibility:
-      - Keep manifest, LuaLS, native registration, inventory, examples, and runtime validation in parity.
+      - Keep Platform metadata, LuaLS, native registration, native inventory, public contract, synchronization coverage, examples, and runtime validation in parity.
     upstream_differences:
-      - CCB Lua v5 is a CCB contract and is not inferred from CBN or CDDA APIs.
+      - CCB Platform v1 is a CCB contract and is not inferred from CBN or CDDA APIs.
   - id: lua-first-platform
     keywords: [Lua-first, Platform v1, pure Lua, main.lua, mod.lua, zero-config, JSON replacement, EOC replacement, 纯 Lua, 零配置, 替代 JSON, 替代 EOC]
     paths: [data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, data/lua/, data/mods/Lua_First_Example/, tools/lua_api/, tools/agent/*lua_first*, tools/create_lua_mod.py, tools/migrate_lua_first.py, src/]
@@ -66,7 +66,7 @@ entries:
     validation_ids: [agent-context, lua-contract]
     compatibility:
       - Treat roadmap status as planning data; only matching runtime source and tests establish implemented behaviour.
-      - Preserve stable content ids, saves, and hybrid Mod compatibility during incremental migration.
+      - Preserve stable content ids and saves during incremental migration.
     upstream_differences:
       - Platform v1 is a CCB-native architecture and must not be inferred from Lua v5, CBN, CDDA, JSON keys, or EOC keys.
   - id: upstream-port

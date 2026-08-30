@@ -1,11 +1,13 @@
 #include "emit.h"
 
+#include <type_id.h>
 #include <map>
 #include <utility>
 
-#include "catalua_platform_content.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 static std::map<emit_id, emit> emits_all;
 

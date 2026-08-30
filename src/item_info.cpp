@@ -28,7 +28,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_platform_runtime.h"
+#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_martial_arts.h"

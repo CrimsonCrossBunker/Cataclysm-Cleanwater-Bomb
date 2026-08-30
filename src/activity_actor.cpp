@@ -1,5 +1,8 @@
 #include "activity_actor.h"
 
+#include <activity_type.h>
+#include <clone_ptr.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <array>
@@ -7388,12 +7391,9 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
             const std::map<std::string, double> num_ctx = {
                 { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }
             };
-            if( new_furn.plant ) {
-                iexamine::run_plant_eocs( new_furn.plant->eoc_on_plant, who, here, examp, *planted_seed,
-                                          seed_stage, seed_stage, {}, num_ctx );
-            }
-            iexamine::run_plant_eocs( planted_seed->type->seed->eoc_on_plant, who, here, examp,
-                                      *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+            iexamine::run_plant_lifecycle_event(
+                "plant", who, here, examp, *planted_seed,
+                seed_stage, seed_stage, {}, num_ctx );
         }
 
         who.add_msg_player_or_npc( _( "You plant some %s." ), _( "<npcname> plants some %s." ),
@@ -10609,12 +10609,9 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
             { "reduction_turns", static_cast<double>( to_turns<int>( reduction ) ) },
             { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }
         };
-        if( furn.plant ) {
-            iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, who, here, plant_position,
-                                      *fertilized_seed, stage, stage, string_ctx, num_ctx );
-        }
-        iexamine::run_plant_eocs( fertilized_seed->type->seed->eoc_on_fertilize, who, here, plant_position,
-                                  *fertilized_seed, stage, stage, string_ctx, num_ctx );
+        iexamine::run_plant_lifecycle_event(
+            "fertilize", who, here, plant_position, *fertilized_seed,
+            stage, stage, string_ctx, num_ctx );
     }
 
     //~ %1$s: plant name, %2$s: fertilizer name

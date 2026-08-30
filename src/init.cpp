@@ -1,7 +1,10 @@
 #include "init.h"
 
+#include <cata_path.h>
+#include <memory_fast.h>
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <filesystem>
 #include <memory>
 #include <sstream>
@@ -49,7 +52,6 @@
 #include "faction_camp.h"
 #include "fault.h"
 #include "field_type.h"
-#include "mapgen_post_process.h"
 #include "filesystem.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -74,6 +76,7 @@
 #include "map_extras.h"
 #include "mapdata.h"
 #include "mapgen.h"
+#include "mapgen_post_process.h"
 #include "martialarts.h"
 #include "material.h"
 #include "math_parser_jmath.h"
@@ -547,9 +550,6 @@ void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::s
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file == path / "lua" / "manifest.json" ) {
-            continue;
-        }
         scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it
@@ -586,9 +586,6 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file == path / "lua" / "manifest.json" ) {
-            continue;
-        }
         scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it

@@ -1,6 +1,9 @@
 #include "addiction.h"
 
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -9,15 +12,16 @@
 #include <utility>
 
 #include "calendar.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "rng.h"
 #include "talker.h"
 #include "text_snippets.h"

@@ -1,23 +1,27 @@
 #include "weather_gen.h"
 
-#include "catalua_platform_content.h"
-
+#include <calendar.h>
+#include <coordinates.h>
+#include <type_id.h>
+#include <units.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <random>
 #include <string>
 
 #include "avatar.h"
 #include "cata_utility.h"
-#include "catalua_platform_runtime.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "math_defines.h"
 #include "pimpl.h"
 #include "point.h"

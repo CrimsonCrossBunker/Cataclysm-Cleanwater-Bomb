@@ -18,27 +18,30 @@ def validate_cmake_contract(
     """Return actionable errors for broken bundled-Lua
     build/runtime contracts."""
     errors: list[str] = []
-    signature = "function(configure_lua_ui TARGET)"
+    signature = "function(configure_lua_platform TARGET)"
     start = engine_source.find(signature)
     if start == -1:
-        errors.append("src/CMakeLists.txt: missing configure_lua_ui helper")
+        errors.append(
+            "src/CMakeLists.txt: missing configure_lua_platform "
+            "helper"
+        )
     else:
         end = engine_source.find("endfunction()", start)
         if end == -1:
             errors.append(
-                "src/CMakeLists.txt: configure_lua_ui is "
+                "src/CMakeLists.txt: configure_lua_platform is "
                 "unterminated"
             )
         else:
             helper = engine_source[start:end]
-            if "if (CATA_ENABLE_LUA_UI)" not in helper:
+            if "if (CATA_ENABLE_LUA_PLATFORM)" not in helper:
                 errors.append(
                     "src/CMakeLists.txt: Lua linking must remain optional"
                 )
             if "target_link_libraries(${TARGET} PUBLIC libsol)" not in helper:
                 errors.append(
-                    "src/CMakeLists.txt: configure_lua_ui must propagate "
-                    "libsol"
+                    "src/CMakeLists.txt: configure_lua_platform must "
+                    "propagate libsol"
                 )
 
     normalized_lua = " ".join(lua_source.split())

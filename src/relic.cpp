@@ -1,5 +1,8 @@
 #include "relic.h"
 
+#include <item.h>
+#include <translation.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <cstdlib>
 #include <initializer_list>
@@ -15,6 +18,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -92,6 +96,11 @@ namespace
 {
 generic_factory<relic_procgen_data> relic_procgen_data_factory( "relic_procgen_data" );
 } // namespace
+
+generic_factory<relic_procgen_data> &cata::lua_platform::detail::relic_procgen_registry()
+{
+    return relic_procgen_data_factory;
+}
 
 template<>
 const relic_procgen_data &string_id<relic_procgen_data>::obj() const

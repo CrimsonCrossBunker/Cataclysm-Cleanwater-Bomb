@@ -1,16 +1,20 @@
 #include "vehicle_group.h"
 
+#include <mapgen_primitives.h>
+#include <rng.h>
+#include <type_id.h>
+#include <weighted_list.h>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "point.h"
 #include "units.h"
@@ -40,6 +44,42 @@ void cata::lua_platform::detail::vehicle_group_registry_set(
 void cata::lua_platform::detail::vehicle_group_registry_erase( const std::string &id )
 {
     vgroups.erase( vgroup_id( id ) );
+}
+
+const VehiclePlacement *cata::lua_platform::detail::vehicle_placement_registry_find(
+    const std::string &id )
+{
+    const auto found = vplacements.find( vplacement_id( id ) );
+    return found == vplacements.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::vehicle_placement_registry_set(
+    const std::string &id, const VehiclePlacement &value )
+{
+    vplacements[vplacement_id( id )] = value;
+}
+
+void cata::lua_platform::detail::vehicle_placement_registry_erase( const std::string &id )
+{
+    vplacements.erase( vplacement_id( id ) );
+}
+
+const VehicleSpawn *cata::lua_platform::detail::vehicle_spawn_registry_find(
+    const std::string &id )
+{
+    const auto found = vspawns.find( vspawn_id( id ) );
+    return found == vspawns.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::vehicle_spawn_registry_set(
+    const std::string &id, const VehicleSpawn &value )
+{
+    vspawns[vspawn_id( id )] = value;
+}
+
+void cata::lua_platform::detail::vehicle_spawn_registry_erase( const std::string &id )
+{
+    vspawns.erase( vspawn_id( id ) );
 }
 
 std::vector<std::pair<std::string, int>>
@@ -173,6 +213,14 @@ VehicleFunction_json::VehicleFunction_json( const JsonObject &jo )
     }
 }
 
+VehicleFunction_json::VehicleFunction_json(
+    const vgroup_id &vehicle, const jmapgen_int &number, const int fuel,
+    const int status, std::string placement,
+    std::optional<VehicleLocation> location )
+    : vehicle( vehicle ), number( number ), fuel( fuel ), status( status ),
+      placement( std::move( placement ) ), location( std::move( location ) )
+{}
+
 void VehicleFunction_json::apply( map &m, const std::string &terrain_name ) const
 {
     for( int i = number.get(); i > 0; i-- ) {
@@ -243,6 +291,20 @@ void VehicleSpawn::load( const JsonObject &jo )
 void VehicleSpawn::reset()
 {
     vspawns.clear();
+}
+
+bool VehicleSpawn::has_builtin( const std::string &id )
+{
+    return builtin_functions.count( id ) != 0;
+}
+
+std::shared_ptr<VehicleFunction> VehicleSpawn::make_builtin( const std::string &id )
+{
+    const auto found = builtin_functions.find( id );
+    if( found == builtin_functions.end() ) {
+        return nullptr;
+    }
+    return std::make_shared<VehicleFunction_builtin>( found->second );
 }
 
 void VehicleSpawn::apply( map &m, const std::string &terrain_name ) const

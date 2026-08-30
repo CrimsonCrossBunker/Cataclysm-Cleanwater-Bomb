@@ -844,6 +844,9 @@ std::string convert_talk_topic( talk_topic_enum old_value );
 
 class npc_template;
 
+/** Reserve a persisted NPC identity generation before the next allocation. */
+void reserve_platform_npc_identity_generation( std::uint64_t id );
+
 class npc : public Character
 {
     public:
@@ -1085,8 +1088,12 @@ class npc : public Character
 
         bool wants_to_sell( const item_location &it ) const;
         ret_val<void> wants_to_sell( const item_location &it, int at_price ) const;
+        ret_val<void> wants_to_sell( const item_location &it, int at_price,
+                                     const Character &buyer ) const;
         bool wants_to_buy( const item &it ) const;
         ret_val<void> wants_to_buy( const item &/*it*/, int at_price ) const;
+        ret_val<void> wants_to_buy( const item &it, int at_price,
+                                    const Character &seller ) const;
 
         bool will_exchange_items_freely() const;
         int max_credit_extended() const;
@@ -1694,6 +1701,8 @@ class npc : public Character
         attitude_group get_attitude_group( npc_attitude att ) const;
         void set_unique_id( const std::string &id );
         std::string get_unique_id() const;
+        /** Stable persisted identity generation for Platform task ownership. */
+        std::uint64_t platform_identity_generation() const noexcept;
     protected:
         void store( JsonOut &json ) const;
         void load( const JsonObject &data );
@@ -1717,6 +1726,7 @@ class npc : public Character
         npc_companion_mission comp_mission;
 
         std::string unique_id;
+        std::uint64_t platform_identity_generation_ = 0; // NOLINT(cata-serialize)
 };
 
 /** An NPC with standard stats */

@@ -1,3 +1,10 @@
+#include <cuboid_rectangle.h>
+#include <point.h>
+#include <type_id.h>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "coordinates.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -5,16 +12,13 @@
 #include "game.h"
 #include "generic_factory.h"
 #include "imgui/imgui.h"
+#include "lua_platform_content.h"
 #include "map_iterator.h"
 #include "output.h"
-#include "overmapbuffer.h"
 #include "overmap_worldgen.h"
+#include "overmapbuffer.h"
 #include "string_formatter.h"
 #include "translations.h"
-
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 struct region_settings;
 
@@ -103,6 +107,40 @@ namespace
 generic_factory<dimension_region_layout> dimension_regions_factory( "dimension_region_layout" );
 generic_factory<dimension_world> dimension_factory( "dimension" );
 } // namespace
+
+generic_factory<dimension_world> &cata::lua_platform::detail::dimension_registry()
+{
+    return dimension_factory;
+}
+
+generic_factory<dimension_region_layout> &
+cata::lua_platform::detail::dimension_region_layout_registry()
+{
+    return dimension_regions_factory;
+}
+
+dimension_world cata::lua_platform::detail::make_dimension_native(
+    const dimension_native_definition &definition )
+{
+    dimension_world result;
+    result.id = dimension_id( definition.id );
+    result.region_layout = dimension_region_layout_id( definition.region_layout );
+    result.was_loaded = true;
+    return result;
+}
+
+dimension_region_layout cata::lua_platform::detail::make_dimension_region_layout_native(
+    const dimension_region_layout_native_definition &definition )
+{
+    dimension_region_layout result;
+    result.id = dimension_region_layout_id( definition.id );
+    result.generation_mode = regions_generation_mode::UNIFORM;
+    auto generator = std::make_shared<dimension_region_layout_generator_uniform>();
+    generator->uniform_region = region_settings_id( definition.uniform_region );
+    result.layout_generator = std::move( generator );
+    result.was_loaded = true;
+    return result;
+}
 
 template<>
 const dimension_region_layout &string_id<dimension_region_layout>::obj() const

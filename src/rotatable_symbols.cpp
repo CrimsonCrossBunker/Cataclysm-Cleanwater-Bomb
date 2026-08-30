@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "catacharset.h"
-#include "catalua_platform_content.h"
+#include "lua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "string_formatter.h"

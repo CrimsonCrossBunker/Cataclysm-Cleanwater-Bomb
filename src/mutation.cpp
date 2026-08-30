@@ -1,5 +1,11 @@
 #include "mutation.h"
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <damage.h>
+#include <translation.h>
+#include <type_id.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -13,8 +19,6 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "cata_utility.h"
-#include "catalua_lua_call.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -29,6 +33,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -36,8 +41,8 @@
 #include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
-#include "omdata.h"
 #include "npc.h"
+#include "omdata.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -670,15 +675,6 @@ void Character::mutation_effect( const trait_id &mut, const bool worn_destroyed_
         }
     }
     on_mutation_gain( mut );
-    cata::lua_ui::dispatch_native_callback(
-    "mutation", mut.str(), "on_gain", {
-        { "character", static_cast<const Character *>( this ) },
-        {
-            "mutation", cata::lua_ui::native_callback_id {
-                "mutation", mut.str()
-            }
-        }
-    } );
 }
 
 void Character::mutation_loss_effect( const trait_id &mut )
@@ -715,15 +711,6 @@ void Character::mutation_loss_effect( const trait_id &mut )
     }
 
     on_mutation_loss( mut );
-    cata::lua_ui::dispatch_native_callback(
-    "mutation", mut.str(), "on_loss", {
-        { "character", static_cast<const Character *>( this ) },
-        {
-            "mutation", cata::lua_ui::native_callback_id {
-                "mutation", mut.str()
-            }
-        }
-    } );
 }
 
 bool Character::has_active_mutation( const trait_id &b ) const
@@ -908,15 +895,6 @@ void Character::activate_cached_mutation( const trait_id &mut )
     }
 
     if( !was_powered && tdata.powered ) {
-        cata::lua_ui::dispatch_native_callback(
-        "mutation", mut.str(), "on_activate", {
-            { "character", static_cast<const Character *>( this ) },
-            {
-                "mutation", cata::lua_ui::native_callback_id {
-                    "mutation", mut.str()
-                }
-            }
-        } );
     }
 
     if( !mut->enchantments.empty() ) {
@@ -932,12 +910,10 @@ void Character::activate_cached_mutation( const trait_id &mut )
         // if the activation EOCs are not just setup for processing then turn the mutation off
         tdata.powered = mut->activated_is_setup;
     }
-    for( const cata::lua_ui::lua_call &call : mut->activated_luas ) {
-        cata::lua_ui::invoke_lua_call( call, "mutation_activated", {
-            { "character", static_cast<const Character *>( this ) },
-            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
-        } );
-    }
+    cata::lua_platform::dispatch_native_hook( "on_mutation_activated", {
+        { "character", static_cast<const Character *>( this ) },
+        { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut.str() } }
+    } );
 
     if( mdata.transform ) {
         const cata::value_ptr<mut_transform> trans = mdata.transform;
@@ -1082,26 +1058,14 @@ void Character::deactivate_mutation( const trait_id &mut )
         eoc->activate_activation_only( d, "a mutation deactivation", "mutation being activated",
                                        "mutation" );
     }
-    for( const cata::lua_ui::lua_call &call : mut->deactivated_luas ) {
-        cata::lua_ui::invoke_lua_call( call, "mutation_deactivated", {
-            { "character", static_cast<const Character *>( this ) },
-            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
-        } );
-    }
-
     if( mdata.transform && !mdata.transform->msg_transform.empty() ) {
         add_msg_if_player( m_neutral, mdata.transform->msg_transform );
     }
 
     if( was_powered ) {
-        cata::lua_ui::dispatch_native_callback(
-        "mutation", mut.str(), "on_deactivate", {
+        cata::lua_platform::dispatch_native_hook( "on_mutation_deactivated", {
             { "character", static_cast<const Character *>( this ) },
-            {
-                "mutation", cata::lua_ui::native_callback_id {
-                    "mutation", mut.str()
-                }
-            }
+            { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut.str() } }
         } );
     }
 }

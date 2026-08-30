@@ -7,7 +7,9 @@
 
 #include "cata_assert.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "string_id.h"
 
 // "Placeholder map data" is a set of map_data_summary objects that are used when
@@ -17,6 +19,11 @@ namespace
 {
 generic_factory<map_data_summary> placeholder_map_data( "placeholder map data" );
 } // namespace
+
+generic_factory<map_data_summary> &cata::lua_platform::detail::omt_placeholder_registry()
+{
+    return placeholder_map_data;
+}
 
 template<>
 const map_data_summary &string_id<map_data_summary>::obj() const

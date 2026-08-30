@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:101a4990275bfa3a8352b078f98021e7d278b6b3776caa590659d2d957d0ff9f",
+    "source_fingerprint": "sha256:462f7c9380cbffcb50edae3e9b8d428705dce494fe16a39c177a286e8d52cabf",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,9 +29,9 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6735,
+    "tracked_json_files": 6734,
     "top_level_objects": 94388,
-    "top_level_objects_without_string_type": 1,
+    "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
   "policy": {
@@ -52,7 +52,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 277,
+            "line": 280,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -106,7 +106,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 374,
+            "line": 377,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -165,7 +165,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 456,
+            "line": 459,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -219,7 +219,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 375,
+            "line": 378,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -273,7 +273,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 393,
+            "line": 396,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -332,7 +332,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 377,
+            "line": 380,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -391,7 +391,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 470,
+            "line": 473,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -450,7 +450,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 385,
+            "line": 388,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -509,7 +509,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 324,
+            "line": 327,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -563,7 +563,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 478,
+            "line": 481,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -622,7 +622,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 325,
+            "line": 328,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -676,7 +676,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 330,
+            "line": 333,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -730,7 +730,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 388,
+            "line": 391,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -789,7 +789,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 504,
+            "line": 507,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -848,7 +848,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 459,
+            "line": 462,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -897,7 +897,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 463,
+            "line": 466,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -956,7 +956,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 276,
+            "line": 279,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1005,7 +1005,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 512,
+            "line": 515,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1064,7 +1064,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 297,
+            "line": 300,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1123,7 +1123,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 298,
+            "line": 301,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1182,7 +1182,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 293,
+            "line": 296,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1241,7 +1241,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 327,
+            "line": 330,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1300,7 +1300,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 502,
+            "line": 505,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1359,7 +1359,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 338,
+            "line": 341,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1418,7 +1418,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 407,
+            "line": 410,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1477,7 +1477,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 302,
+            "line": 305,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1536,7 +1536,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 476,
+            "line": 479,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1595,7 +1595,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 303,
+            "line": 306,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1654,7 +1654,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 304,
+            "line": 307,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1713,7 +1713,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 501,
+            "line": 504,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1772,7 +1772,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 499,
+            "line": 502,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1831,7 +1831,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 489,
+            "line": 492,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1885,7 +1885,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 411,
+            "line": 414,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1939,7 +1939,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 498,
+            "line": 501,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1998,7 +1998,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 381,
+            "line": 384,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2057,7 +2057,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 421,
+            "line": 424,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2116,7 +2116,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 424,
+            "line": 427,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2175,7 +2175,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 406,
+            "line": 409,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2234,7 +2234,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 507,
+            "line": 510,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2293,7 +2293,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 468,
+            "line": 471,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2342,7 +2342,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 513,
+            "line": 516,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2401,7 +2401,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 282,
+            "line": 285,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2460,7 +2460,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 416,
+            "line": 419,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2519,7 +2519,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 414,
+            "line": 417,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2573,7 +2573,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 415,
+            "line": 418,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2627,7 +2627,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 517,
+            "line": 520,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2686,7 +2686,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 516,
+            "line": 519,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2745,7 +2745,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 453,
+            "line": 456,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2804,7 +2804,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 454,
+            "line": 457,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2863,7 +2863,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 337,
+            "line": 340,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2922,7 +2922,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 316,
+            "line": 319,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2981,7 +2981,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 409,
+            "line": 412,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3040,7 +3040,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 288,
+            "line": 291,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3086,7 +3086,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 110,
+              "line": 114,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3097,7 +3097,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 106,
+              "line": 110,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3108,7 +3108,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 114,
+              "line": 118,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3119,7 +3119,7 @@
             "default_expression": "eoc_type::NUM_EOC_TYPES",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 94,
+              "line": 98,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3130,7 +3130,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 116,
+              "line": 120,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3141,7 +3141,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 122,
+              "line": 126,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3152,7 +3152,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 93,
+              "line": 97,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3163,7 +3163,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 100,
+              "line": 104,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3174,7 +3174,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 128,
+              "line": 132,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3185,7 +3185,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 121,
+              "line": 125,
               "symbol": "effect_on_condition::load"
             }
           }
@@ -3209,7 +3209,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 408,
+            "line": 411,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3268,7 +3268,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 295,
+            "line": 298,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3327,7 +3327,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 334,
+            "line": 337,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3386,7 +3386,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 339,
+            "line": 342,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3445,7 +3445,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 510,
+            "line": 513,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3504,7 +3504,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 509,
+            "line": 512,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3563,7 +3563,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 294,
+            "line": 297,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3617,7 +3617,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 472,
+            "line": 475,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3676,7 +3676,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 521,
+            "line": 524,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3735,7 +3735,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 283,
+            "line": 286,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3794,7 +3794,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 285,
+            "line": 288,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3853,7 +3853,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 286,
+            "line": 289,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3884,7 +3884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 864
+            "line": 865
           }
         ],
         "confidence": "lexical_only"
@@ -3912,7 +3912,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 289,
+            "line": 292,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3971,7 +3971,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 290,
+            "line": 293,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4030,7 +4030,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 446,
+            "line": 449,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4089,7 +4089,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 448,
+            "line": 451,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4148,7 +4148,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 320,
+            "line": 323,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4207,7 +4207,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 484,
+            "line": 487,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4266,7 +4266,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 491,
+            "line": 494,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4325,7 +4325,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 490,
+            "line": 493,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4384,7 +4384,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 296,
+            "line": 299,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4443,7 +4443,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 335,
+            "line": 338,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4497,7 +4497,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 352,
+            "line": 355,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4551,7 +4551,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 346,
+            "line": 349,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4610,7 +4610,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 280,
+            "line": 283,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4669,7 +4669,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 279,
+            "line": 282,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4728,7 +4728,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 497,
+            "line": 500,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4787,7 +4787,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 506,
+            "line": 509,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4846,7 +4846,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 425,
+            "line": 428,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4905,7 +4905,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 450,
+            "line": 453,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4964,7 +4964,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 417,
+            "line": 420,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5023,7 +5023,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 405,
+            "line": 408,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5082,7 +5082,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 301,
+            "line": 304,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5141,14 +5141,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 486,
+            "line": 489,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 604,
+        "occurrences": 606,
         "examples": [
           {
             "path": "data/json/npcs/Backgrounds/OtherSurvivorStories/Brigitte_LaCroix_Background.json",
@@ -5200,7 +5200,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 520,
+            "line": 523,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5261,7 +5261,7 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 523,
+            "line": 526,
             "symbol": "DynamicDataLoader::initialize"
           }
         },
@@ -5276,7 +5276,7 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 526,
+            "line": 529,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5335,7 +5335,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 394,
+            "line": 397,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5389,7 +5389,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 492,
+            "line": 495,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5448,7 +5448,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 391,
+            "line": 394,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5507,7 +5507,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 323,
+            "line": 326,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5566,7 +5566,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 313,
+            "line": 316,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5625,7 +5625,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 503,
+            "line": 506,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5684,7 +5684,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 299,
+            "line": 302,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5743,7 +5743,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 319,
+            "line": 322,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5802,7 +5802,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 317,
+            "line": 320,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5861,7 +5861,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 318,
+            "line": 321,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5915,7 +5915,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 366,
+            "line": 369,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5969,7 +5969,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 399,
+            "line": 402,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6028,7 +6028,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 473,
+            "line": 476,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6087,7 +6087,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 474,
+            "line": 477,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6146,7 +6146,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 426,
+            "line": 429,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6200,7 +6200,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 278,
+            "line": 281,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6259,7 +6259,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 410,
+            "line": 413,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6318,7 +6318,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 413,
+            "line": 416,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6377,7 +6377,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 485,
+            "line": 488,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6436,7 +6436,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 419,
+            "line": 422,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6495,7 +6495,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 418,
+            "line": 421,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6549,7 +6549,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 420,
+            "line": 423,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6608,7 +6608,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 422,
+            "line": 425,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6667,7 +6667,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 423,
+            "line": 426,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6726,7 +6726,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 412,
+            "line": 415,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6785,7 +6785,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 495,
+            "line": 498,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6844,7 +6844,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 482,
+            "line": 485,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6898,7 +6898,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 284,
+            "line": 287,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6957,7 +6957,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 398,
+            "line": 401,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7016,7 +7016,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 305,
+            "line": 308,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7075,7 +7075,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 306,
+            "line": 309,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7129,7 +7129,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 307,
+            "line": 310,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7188,7 +7188,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 308,
+            "line": 311,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7247,7 +7247,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 309,
+            "line": 312,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7306,7 +7306,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 310,
+            "line": 313,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7365,7 +7365,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 311,
+            "line": 314,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7424,14 +7424,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 396,
+            "line": 399,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8178,
+        "occurrences": 8177,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -7483,7 +7483,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 395,
+            "line": 398,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7537,7 +7537,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 400,
+            "line": 403,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7596,7 +7596,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 452,
+            "line": 455,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7655,7 +7655,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 436,
+            "line": 439,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7714,7 +7714,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 432,
+            "line": 435,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7773,7 +7773,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 442,
+            "line": 445,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7832,7 +7832,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 434,
+            "line": 437,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7891,7 +7891,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 433,
+            "line": 436,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7950,7 +7950,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 429,
+            "line": 432,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8009,7 +8009,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 444,
+            "line": 447,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8068,7 +8068,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 430,
+            "line": 433,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8127,7 +8127,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 431,
+            "line": 434,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8186,7 +8186,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 428,
+            "line": 431,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8245,7 +8245,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 438,
+            "line": 441,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8304,7 +8304,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 440,
+            "line": 443,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8363,7 +8363,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 287,
+            "line": 290,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8422,7 +8422,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 368,
+            "line": 371,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8481,7 +8481,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 496,
+            "line": 499,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8535,7 +8535,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 329,
+            "line": 332,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8594,7 +8594,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 336,
+            "line": 339,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8653,7 +8653,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 511,
+            "line": 514,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8712,7 +8712,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 331,
+            "line": 334,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8771,7 +8771,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 333,
+            "line": 336,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8830,7 +8830,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 332,
+            "line": 335,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8889,7 +8889,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 314,
+            "line": 317,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8948,7 +8948,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 315,
+            "line": 318,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9002,7 +9002,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 343,
+            "line": 346,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9061,7 +9061,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 480,
+            "line": 483,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9120,7 +9120,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 481,
+            "line": 484,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9169,7 +9169,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 326,
+            "line": 329,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9228,7 +9228,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 312,
+            "line": 315,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9287,7 +9287,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 505,
+            "line": 508,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9341,7 +9341,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 328,
+            "line": 331,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9400,7 +9400,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 500,
+            "line": 503,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9459,7 +9459,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 475,
+            "line": 478,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9518,7 +9518,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 403,
+            "line": 406,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9577,7 +9577,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 382,
+            "line": 385,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9636,7 +9636,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 322,
+            "line": 325,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9695,7 +9695,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 508,
+            "line": 511,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9754,7 +9754,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 321,
+            "line": 324,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9813,7 +9813,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 383,
+            "line": 386,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9867,7 +9867,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 402,
+            "line": 405,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9898,7 +9898,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1395
+            "line": 1396
           }
         ],
         "confidence": "lexical_only"
@@ -9926,7 +9926,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 349,
+            "line": 352,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9980,7 +9980,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 371,
+            "line": 374,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10039,7 +10039,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 372,
+            "line": 375,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10098,7 +10098,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 397,
+            "line": 400,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10157,7 +10157,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 281,
+            "line": 284,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10216,7 +10216,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 360,
+            "line": 363,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10275,7 +10275,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 365,
+            "line": 368,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10329,7 +10329,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 361,
+            "line": 364,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10388,7 +10388,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 356,
+            "line": 359,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10447,7 +10447,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 357,
+            "line": 360,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10501,7 +10501,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 358,
+            "line": 361,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10560,7 +10560,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 359,
+            "line": 362,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10619,7 +10619,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 362,
+            "line": 365,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10678,7 +10678,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 363,
+            "line": 366,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10737,7 +10737,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 300,
+            "line": 303,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10796,7 +10796,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 515,
+            "line": 518,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10855,7 +10855,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 404,
+            "line": 407,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10914,7 +10914,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 292,
+            "line": 295,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10973,7 +10973,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 291,
+            "line": 294,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11032,7 +11032,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 514,
+            "line": 517,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11086,7 +11086,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 518,
+            "line": 521,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11140,7 +11140,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 519,
+            "line": 522,
             "symbol": "DynamicDataLoader::initialize"
           }
         }

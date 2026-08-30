@@ -4,11 +4,8 @@
 # As each test will have a main function we need to handle this file by file.
 # We're using the fairly typical convention that any file ending in _test.cpp
 # is a test executable.
-CATA_ENABLE_LUA_UI ?= 0
+CATA_ENABLE_LUA_PLATFORM ?= 0
 SOURCES = $(wildcard *.cpp)
-ifeq ($(CATA_ENABLE_LUA_UI),0)
-  SOURCES := $(filter-out catalua_ui_test.cpp,$(SOURCES))
-endif
 OBJS = $(sort $(SOURCES:%.cpp=$(ODIR)/%.o))
 
 CATA_LIB=../$(BUILD_PREFIX)cataclysm.a

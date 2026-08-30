@@ -13,10 +13,9 @@
 #include <vector>
 
 #include "calendar.h"
+#include "flexbuffer_json.h"
 #include "translation.h"
 
-class JsonObject;
-class JsonValue;
 class math_exp;
 class npc;
 enum class math_type_t : int;
@@ -68,6 +67,22 @@ struct eoc_math {
 
     template<typename D>
     double act( D &d ) const;
+};
+
+struct runtime_dbl_provider {
+    std::function<double( const const_dialogue & )> callback;
+
+    double operator()( const const_dialogue &d ) const {
+        return callback ? callback( d ) : 0.0;
+    }
+};
+
+struct runtime_duration_provider {
+    std::function<time_duration( const const_dialogue & )> callback;
+
+    time_duration operator()( const const_dialogue &d ) const {
+        return callback ? callback( d ) : time_duration();
+    }
 };
 
 template<typename valueT, typename... funcT>
@@ -133,13 +148,13 @@ struct string_mutator {
     void deserialize( JsonValue const &jsin );
 };
 
-extern template struct value_or_var<double, eoc_math>;
-extern template struct value_or_var_pair<double, eoc_math>;
-using dbl_or_var = value_or_var_pair<double, eoc_math>;
+extern template struct value_or_var<double, eoc_math, runtime_dbl_provider>;
+extern template struct value_or_var_pair<double, eoc_math, runtime_dbl_provider>;
+using dbl_or_var = value_or_var_pair<double, eoc_math, runtime_dbl_provider>;
 
-extern template struct value_or_var<time_duration, eoc_math>;
-extern template struct value_or_var_pair<time_duration, eoc_math>;
-using duration_or_var = value_or_var_pair<time_duration, eoc_math>;
+extern template struct value_or_var<time_duration, eoc_math, runtime_duration_provider>;
+extern template struct value_or_var_pair<time_duration, eoc_math, runtime_duration_provider>;
+using duration_or_var = value_or_var_pair<time_duration, eoc_math, runtime_duration_provider>;
 
 extern template struct value_or_var<std::string, string_mutator<std::string>>;
 extern template struct value_or_var<translation, string_mutator<translation>>;

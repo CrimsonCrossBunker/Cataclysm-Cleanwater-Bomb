@@ -1,5 +1,10 @@
 #include "magic_enchantment.h"
 
+#include <body_part_set.h>
+#include <color.h>
+#include <magic.h>
+#include <translation.h>
+#include <type_id.h>
 #include <memory>
 #include <set>
 #include <string>
@@ -19,6 +24,7 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "mod_tracker.h"
 #include "monster.h"
@@ -196,6 +202,11 @@ namespace
 {
 generic_factory<enchantment> spell_factory( "enchantment" );
 } // namespace
+
+generic_factory<enchantment> &cata::lua_platform::detail::enchantment_registry()
+{
+    return spell_factory;
+}
 
 template<>
 const enchantment &string_id<enchantment>::obj() const
@@ -1215,9 +1226,49 @@ void enchant_cache::force_add_with_dialogue( const enchantment &rhs, const const
          rhs.extra_damage_multiply ) {
         extra_damage_multiply[pair_values.first] += pair_values.second.evaluate( d );
     }
+    for( const enchantment::platform_modifier &modifier : rhs.platform_modifiers ) {
+        const double add = modifier.add ? modifier.add( d ) : 0.0;
+        const double multiply = modifier.multiply ? modifier.multiply( d ) : 0.0;
+        if( modifier.kind == "value" ) {
+            const enchant_vals::mod key = io::string_to_enum<enchant_vals::mod>( modifier.target );
+            values_add[key] += add;
+            values_multiply[key] += multiply;
+        } else if( modifier.kind == "skill" ) {
+            skill_values_add[skill_id( modifier.target )] += add;
+            skill_values_multiply[skill_id( modifier.target )] += multiply;
+        } else if( modifier.kind == "custom" ) {
+            custom_values_add[modifier.target] += add;
+            custom_values_multiply[modifier.target] += multiply;
+        } else if( modifier.kind == "encumbrance" ) {
+            encumbrance_values_add[bodypart_str_id( modifier.target )] += add;
+            encumbrance_values_multiply[bodypart_str_id( modifier.target )] += multiply;
+        } else if( modifier.kind == "max_hp" ) {
+            max_hp_values_add[bodypart_str_id( modifier.target )] += add;
+            max_hp_values_multiply[bodypart_str_id( modifier.target )] += multiply;
+        } else if( modifier.kind == "limb_score" ) {
+            const limb_score_id score( modifier.target );
+            const bodypart_str_id part( modifier.part );
+            if( modifier.part.empty() || part.is_null() ) {
+                limb_score_add[score] += add;
+                limb_score_multiply[score] += multiply;
+            } else {
+                limb_score_bp_add[ { part, score }] += add;
+                limb_score_bp_multiply[ { part, score }] += multiply;
+            }
+        } else if( modifier.kind == "melee_damage" ) {
+            damage_values_add[damage_type_id( modifier.target )] += add;
+            damage_values_multiply[damage_type_id( modifier.target )] += multiply;
+        } else if( modifier.kind == "incoming_damage" ) {
+            armor_values_add[damage_type_id( modifier.target )] += add;
+            armor_values_multiply[damage_type_id( modifier.target )] += multiply;
+        } else if( modifier.kind == "post_armor_damage" ) {
+            extra_damage_add[damage_type_id( modifier.target )] += add;
+            extra_damage_multiply[damage_type_id( modifier.target )] += multiply;
+        }
+    }
     for( const enchantment::special_vision &struc : rhs.special_vision_vector ) {
         special_vision_vector.emplace_back( special_vision{
-            struc.special_vision_descriptions_vector, struc.condition, struc.range.evaluate( d ),
+            struc.special_vision_descriptions_vector, struc.condition, struc.range_value( d ),
             struc.precise, struc.ignores_aiming_cone } );
     }
 
@@ -1277,21 +1328,31 @@ void enchant_cache::add_hit_you( const fake_spell &sp )
 double enchantment::get_value_add( const enchant_vals::mod value, const Character &guy ) const
 {
     const auto found = values_add.find( value );
-    if( found == values_add.cend() ) {
-        return 0;
-    }
     const_dialogue d( get_const_talker_for( guy ), nullptr );
-    return found->second.evaluate( d );
+    double result = found == values_add.cend() ? 0.0 : found->second.evaluate( d );
+    for( const platform_modifier &modifier : platform_modifiers ) {
+        if( modifier.kind == "value" &&
+            modifier.target == io::enum_to_string<enchant_vals::mod>( value ) &&
+            modifier.add ) {
+            result += modifier.add( d );
+        }
+    }
+    return result;
 }
 
 double enchantment::get_value_multiply( const enchant_vals::mod value, const Character &guy ) const
 {
     const auto found = values_multiply.find( value );
-    if( found == values_multiply.cend() ) {
-        return 0;
-    }
     const_dialogue d( get_const_talker_for( guy ), nullptr );
-    return found->second.evaluate( d );
+    double result = found == values_multiply.cend() ? 0.0 : found->second.evaluate( d );
+    for( const platform_modifier &modifier : platform_modifiers ) {
+        if( modifier.kind == "value" &&
+            modifier.target == io::enum_to_string<enchant_vals::mod>( value ) &&
+            modifier.multiply ) {
+            result += modifier.multiply( d );
+        }
+    }
+    return result;
 }
 
 enchantment::special_vision enchantment::get_vision( const const_dialogue &d ) const
@@ -1312,13 +1373,13 @@ enchantment::special_vision enchantment::get_vision( const const_dialogue &d ) c
     // to prevent cata_tiles::draw_critter_at() from picking texture
     // that cannot be rendered because it's behind you while you are aiming
     for( const special_vision &struc : special_vision_vector ) {
-        if( struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
+        if( struc.ignores_aiming_cone && struc.range_value( d ) >= distance &&  struc.condition( d ) ) {
             return struc;
         }
     }
 
     for( const special_vision &struc : special_vision_vector ) {
-        if( !struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
+        if( !struc.ignores_aiming_cone && struc.range_value( d ) >= distance &&  struc.condition( d ) ) {
             return struc;
         }
     }

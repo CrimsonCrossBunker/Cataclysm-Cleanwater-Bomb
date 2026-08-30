@@ -27,7 +27,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
+#include "lua_platform_hooks.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
@@ -507,7 +507,7 @@ void Character::die( map *, Creature *nkiller )
     }
     mission::on_creature_death( *this );
 
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_character_death", {
         { "character", static_cast<const Character *>( this ) },
         { "killer", static_cast<const Creature *>( nkiller ) }
@@ -2305,7 +2305,7 @@ int Character::get_sensitive_mod_total() const
 
     // Stimulants raise equilibrium sensitivity, depressants lower it.
     double stim_effect = 25.0 * std::copysign( std::log( 1.0 + std::abs( stim ) / 25.0 ),
-                           stim );
+                         stim );
 
     // Painkillers dull sensitivity, saturating at -15 around 200 pkill.
     double pkill_effect = -std::min( 15.0, 18.0 * std::log( 1.0 + get_painkiller() / 150.0 ) );
@@ -2320,7 +2320,7 @@ int Character::get_sensitive_mod_total() const
 
     // Sleep deprivation dulls sensitivity, saturating at -10.
     const double sleep_effect = -10.0 * std::min( 1.0, std::log( 1.0 + get_sleep_deprivation() /
-            1000.0 ) / std::log( 21.0 ) );
+                                1000.0 ) / std::log( 21.0 ) );
 
     double total = sensitive_mod + stim_effect + pkill_effect + sleep_effect;
 

@@ -420,6 +420,13 @@ atlas_upload_interrupt tileset_cache::loader::load( const std::string &tileset_i
                            << tileset_id << "\".";
             continue;
         }
+        if( mts.is_native() ) {
+            dbg( D_INFO ) << "Attempting to Load Lua-first Mod tileset '"
+                          << mts.native_definition().id << "'";
+            parse_native_atlases(
+                mts.native_definition(), tileset_root, pump_events );
+            continue;
+        }
         dbg( D_INFO ) << "Attempting to Load JSON file " << json_path;
         std::optional<JsonValue> mod_config_json_opt = json_loader::from_path_opt( json_path );
 
@@ -616,6 +623,123 @@ void tileset_cache::loader::parse_atlases( const JsonObject &config,
     // offset should be the total number of sprites loaded from every tileset image
     // eliminate any sprite references that are too high to exist
     // also eliminate negative sprite references
+}
+
+void tileset_cache::loader::load_native_sprite_variations(
+    const std::vector<mod_tileset_sprite_variation> &source,
+    weighted_int_list<std::vector<int>> &target ) const
+{
+    for( const mod_tileset_sprite_variation &variation : source ) {
+        std::vector<int> sprites;
+        sprites.reserve( variation.sprites.size() );
+        for( const int sprite : variation.sprites ) {
+            const int sprite_id = sprite + sprite_id_offset;
+            if( sprite_id >= 0 ) {
+                sprites.push_back( sprite_id );
+            }
+        }
+        target.add( sprites, variation.weight );
+    }
+}
+
+tile_type &tileset_cache::loader::load_native_tile(
+    const mod_tileset_tile_definition &entry, const std::string &id )
+{
+    if( ts.find_tile_type( id ) ) {
+        ts.duplicate_ids.insert( id );
+    }
+    tile_type tile;
+    load_native_sprite_variations( entry.foreground, tile.fg );
+    load_native_sprite_variations( entry.background, tile.bg );
+    return ts.create_tile_type( id, std::move( tile ) );
+}
+
+void tileset_cache::loader::parse_native_mappings(
+    const mod_tileset_atlas_definition &atlas )
+{
+    for( const mod_tileset_tile_definition &entry : atlas.tiles ) {
+        for( const std::string &id : entry.ids ) {
+            tile_type &tile = load_native_tile( entry, id );
+            tile.offset = sprite_offset;
+            tile.offset_retracted = sprite_offset_retracted;
+            tile.pixelscale = sprite_pixelscale;
+            if( entry.multitile ) {
+                for( const mod_tileset_tile_definition &subentry :
+                     entry.additional_tiles ) {
+                    for( const std::string &subtile_id : subentry.ids ) {
+                        const std::string id_with_parent = id + "_" + subtile_id;
+                        tile_type &subtile = load_native_tile(
+                                                 subentry, id_with_parent );
+                        subtile.offset = sprite_offset;
+                        subtile.offset_retracted = sprite_offset_retracted;
+                        subtile.pixelscale = sprite_pixelscale;
+                        subtile.rotates = true;
+                        subtile.height_3d = entry.height_3d;
+                        subtile.animated = subentry.animated;
+                        tile.available_subtiles.push_back( subtile_id );
+                    }
+                }
+            }
+            tile.multitile = entry.multitile;
+            tile.rotates = entry.rotates.value_or( entry.multitile );
+            tile.height_3d = entry.height_3d;
+            tile.animated = entry.animated;
+        }
+    }
+    dbg( D_INFO ) << "Tile Width: " << ts.tile_width << " Tile Height: " << ts.tile_height <<
+                  " Tile Definitions: " << ts.tile_ids.size();
+}
+
+void tileset_cache::loader::parse_native_atlases(
+    const mod_tileset_definition &definition,
+    const cata_path &tileset_root, const bool pump_events )
+{
+    for( const mod_tileset_atlas_definition &atlas : definition.atlases ) {
+        const cata_path image_path = tileset_root / atlas.file;
+        R = atlas.transparency_r;
+        G = atlas.transparency_g;
+        B = atlas.transparency_b;
+        sprite_width = atlas.sprite_width > 0 ? atlas.sprite_width : ts.tile_width;
+        sprite_height = atlas.sprite_height > 0 ? atlas.sprite_height : ts.tile_height;
+        sprite_offset = point( atlas.sprite_offset_x, atlas.sprite_offset_y );
+        sprite_offset_retracted = point(
+                                      atlas.sprite_offset_x_retracted,
+                                      atlas.sprite_offset_y_retracted );
+        sprite_pixelscale = atlas.pixelscale;
+        ts.max_tile_extent = half_open_rectangle<point> {
+            {
+                std::min( {
+                    ts.max_tile_extent.p_min.x, sprite_offset.x,
+                    sprite_offset_retracted.x } ),
+                std::min( {
+                    ts.max_tile_extent.p_min.y, sprite_offset.y,
+                    sprite_offset_retracted.y } ),
+            }, {
+                std::max( ts.max_tile_extent.p_max.x,
+                          sprite_width + std::max( sprite_offset.x,
+                                                   sprite_offset_retracted.x ) ),
+                std::max( ts.max_tile_extent.p_max.y,
+                          sprite_height + std::max( sprite_offset.y,
+                                                    sprite_offset_retracted.y ) ),
+            }
+        };
+        dbg( D_INFO ) << "Attempting to Load Lua-first Mod tileset file " << image_path;
+        read_image_dimensions( image_path, R, G, B );
+        parse_native_mappings( atlas );
+        for( const mod_tileset_ascii_definition &entry : atlas.ascii ) {
+            load_native_ascii_set( entry );
+        }
+        offset += size;
+        if( pump_events ) {
+            inp_mngr.pump_events();
+        }
+    }
+    for( const mod_tileset_overlay_ordering &ordering :
+         definition.overlay_ordering ) {
+        for( const std::string &id : ordering.ids ) {
+            tileset_mutation_overlay_ordering[id] = ordering.order;
+        }
+    }
 }
 
 void tileset_cache::loader::load_layers( const JsonObject &config )
@@ -818,6 +942,53 @@ void tileset_cache::loader::load_ascii_set( const JsonObject &entry )
     // this mimics it). bold does not apply to default color.
     if( FG != -1 && entry.get_bool( "bold", false ) ) {
         FG += 8;
+    }
+    load_ascii_set( in_image_offset, FG );
+}
+
+void tileset_cache::loader::load_native_ascii_set(
+    const mod_tileset_ascii_definition &entry )
+{
+    int foreground = -1;
+    switch( entry.color ) {
+        case mod_tileset_ascii_color::default_color:
+            break;
+        case mod_tileset_ascii_color::black:
+            foreground = catacurses::black;
+            break;
+        case mod_tileset_ascii_color::red:
+            foreground = catacurses::red;
+            break;
+        case mod_tileset_ascii_color::green:
+            foreground = catacurses::green;
+            break;
+        case mod_tileset_ascii_color::yellow:
+            foreground = catacurses::yellow;
+            break;
+        case mod_tileset_ascii_color::blue:
+            foreground = catacurses::blue;
+            break;
+        case mod_tileset_ascii_color::magenta:
+            foreground = catacurses::magenta;
+            break;
+        case mod_tileset_ascii_color::cyan:
+            foreground = catacurses::cyan;
+            break;
+        case mod_tileset_ascii_color::white:
+            foreground = catacurses::white;
+            break;
+    }
+    if( foreground != -1 && entry.bold ) {
+        foreground += 8;
+    }
+    load_ascii_set( entry.offset, foreground );
+}
+
+void tileset_cache::loader::load_ascii_set( const int in_image_offset,
+        const int FG )
+{
+    if( in_image_offset >= size ) {
+        throw std::runtime_error( "Lua-first tileset ASCII offset is outside its atlas" );
     }
     const int base_offset = offset + in_image_offset;
     // Finally load all 256 ASCII chars (actually extended ASCII)

@@ -1,9 +1,11 @@
 #include "faction_camp.h" // IWYU pragma: associated
 
+#include <veh_type.h>
 #include <algorithm>
 #include <array>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <map>
@@ -11,7 +13,6 @@
 #include <numeric>
 #include <optional>
 #include <set>
-#include <cstddef>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -21,6 +22,9 @@
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "basecamp.h"
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    #include "lua_platform_handle.h"
+#endif
 #include "build_reqs.h"
 #include "cached_options.h"
 #include "calendar.h"
@@ -98,8 +102,8 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "vehicle.h"
@@ -1984,8 +1988,18 @@ void basecamp::start_upgrade( const mission_id &miss_id )
     }
 }
 
-void basecamp::remove_camp( bool remove_from_overmap ) const
+void basecamp::remove_camp( bool remove_from_overmap )
 {
+    std::string removal_error;
+    if( !platform_can_remove( removal_error ) ) {
+        return;
+    }
+    if( !platform_retire_tasks_for_camp() ) {
+        return;
+    }
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::retire_camp_handle_identity( *this );
+#endif
     std::set<tripoint_abs_omt> &known_camps = get_player_character().camps;
     known_camps.erase( omt_pos );
 
@@ -3588,13 +3602,9 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                                     { "actor_is_npc", 1.0 }
                                 };
                                 Character &actor = *comp;
-                                const furn_t &current_furn = farm_map.furn( pos ).obj();
-                                if( current_furn.plant ) {
-                                    iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, actor,
-                                                              *farm_map_ptr, bub_pos, *seed, stage, stage, {}, num_ctx );
-                                }
-                                iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, actor, *farm_map_ptr,
-                                                          bub_pos, *seed, stage, stage, {}, num_ctx );
+                                iexamine::run_plant_lifecycle_event(
+                                    "harvest", actor, *farm_map_ptr, bub_pos, *seed,
+                                    stage, stage, {}, num_ctx );
 
                                 for( item &i : iexamine::get_harvest_items( seed_type, plant_count,
                                         seed_cnt, true ) ) {
@@ -4541,11 +4551,16 @@ bool basecamp::survey_return( const mission_id &miss_id )
         const recipe_id expansion_type = base_camps::select_camp_option( pos_expansions,
                                          _( "Select an expansion:" ) );
 
+        std::string placement_error;
+        const bool placement_is_valid =
+            expansion_type != recipe_id::NULL_ID() &&
+            platform_validate_expansion_placement( expansion_type.str(), where, placement_error );
+
         bool mirror_horizontal;
         bool mirror_vertical;
         int rotation;
 
-        if( expansion_type == recipe_id::NULL_ID() ||
+        if( !placement_is_valid ||
             !extract_and_check_orientation_flags( expansion_type,
                     dir,
                     mirror_horizontal,

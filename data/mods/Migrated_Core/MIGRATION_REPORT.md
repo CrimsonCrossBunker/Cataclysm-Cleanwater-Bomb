@@ -6,6 +6,7 @@ No JSON loader, EOC runner, or raw legacy object was emitted.
 - Fully translated skeletons: 4286
 - Partial skeletons: 0
 - Explicit TODOs: 0
+- Classified source/safety boundaries: 0
 
 ## Fully translated skeletons
 
@@ -4301,5 +4302,9 @@ No JSON loader, EOC runner, or raw legacy object was emitted.
 - None
 
 ## Required manual decisions
+
+- None
+
+## Classified source and safety boundaries
 
 - None

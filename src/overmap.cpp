@@ -1,9 +1,22 @@
-#include "catalua_platform_content.h"
-
 #include "cube_direction.h" // IWYU pragma: associated
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
+#include <basecamp.h>
+#include <cata_variant.h>
+#include <city.h>
+#include <color.h>
+#include <common_types.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <horde_map.h>
+#include <map_scale_constants.h>
+#include <mapgendata.h>
+#include <mdarray.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <exception>
@@ -32,6 +45,9 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "line.h"
+#include "lua_platform_content.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_extras.h"
 #include "map_iterator.h"
@@ -369,6 +385,50 @@ void overmap::ter_set( const tripoint_om_omt &p, const oter_id &id )
     current_oter = id;
 }
 
+bool overmap::platform_terrain_set_preflight( const tripoint_om_omt &p,
+        const oter_id &id, std::string &error )
+{
+    if( !inbounds( p ) ) {
+        error = "Platform terrain publication target is outside the loaded overmap";
+        return false;
+    }
+    if( !id.is_valid() ) {
+        error = "Platform terrain publication has an invalid terrain";
+        return false;
+    }
+
+    // ter_set() updates passability in-place.  A placeholder summary would
+    // require a copy allocation after the map transaction, which is not a
+    // no-fail terminal operation, so reject it before mapgen instead.
+    std::shared_ptr<map_data_summary> &summary =
+        layer[p.z() + OVERMAP_DEPTH].map_cache[p.xy()];
+    if( !summary ) {
+        error = "Platform terrain publication has no authoritative passability summary";
+        return false;
+    }
+    if( summary->placeholder ) {
+        error = "Platform terrain publication would allocate a passability summary";
+        return false;
+    }
+
+    const oter_id &current = layer[p.z() + OVERMAP_DEPTH].terrain[p.xy()];
+    if( !current.is_valid() ) {
+        error = "Platform terrain publication has no authoritative current terrain";
+        return false;
+    }
+    // ter_set() also mutates the predecessor history for these terrains.  The
+    // Platform transaction has no post-commit allocation or hidden history
+    // mutation, so reject that side-effecting class rather than pretending a
+    // scalar terrain restore is a complete rollback.
+    if( current->has_flag( oter_flags::requires_predecessor ) ||
+        id->has_flag( oter_flags::requires_predecessor ) ) {
+        error = "Platform terrain publication has an unsafe predecessor side effect";
+        return false;
+    }
+    error.clear();
+    return true;
+}
+
 const oter_id &overmap::ter( const tripoint_om_omt &p ) const
 {
     if( !inbounds( p ) ) {
@@ -478,8 +538,36 @@ bool overmap::mongroup_check( const mongroup &candidate ) const
 
 void overmap::insert_npc( const shared_ptr_fast<npc> &who )
 {
+    if( !who ) {
+        return;
+    }
+    for( auto iter = npcs.begin(); iter != npcs.end(); ++iter ) {
+        if( !( *iter ) || ( *iter )->getID() != who->getID() ) {
+            continue;
+        }
+        if( iter->get() == who.get() ) {
+            return;
+        }
+
+        // A different object with the same stable id is an explicit
+        // replacement, not an ordinary overmap relocation.  Retire the old
+        // task records before publishing the replacement instance.
+        const shared_ptr_fast<npc> replaced = *iter;
+        overmap_buffer.foreach_loaded_camp( [&replaced]( basecamp & camp ) {
+            camp.platform_retire_tasks_for_worker( *replaced );
+        } );
+        overmap_buffer.platform_unregister_npc( replaced );
+        cata::lua_platform::retire_npc_handle_identity( *replaced );
+        *iter = who;
+        overmap_buffer.platform_register_npc( who );
+        g->set_npcs_dirty();
+        overmap_buffer.reconcile_platform_camp_tasks();
+        return;
+    }
     npcs.push_back( who );
+    overmap_buffer.platform_register_npc( who );
     g->set_npcs_dirty();
+    overmap_buffer.reconcile_platform_camp_tasks();
 }
 
 shared_ptr_fast<npc> overmap::erase_npc( const character_id &id )
@@ -493,6 +581,7 @@ shared_ptr_fast<npc> overmap::erase_npc( const character_id &id )
     }
     auto ptr = *iter;
     npcs.erase( iter );
+    overmap_buffer.platform_unregister_npc( ptr );
     g->set_npcs_dirty();
     return ptr;
 }
@@ -1504,7 +1593,9 @@ void mongroup::wander( const overmap &om )
 
 horde_entity &overmap::spawn_monster( const tripoint_abs_ms &p, mtype_id id )
 {
-    return ( *hordes.spawn_entity( p, id ) )->second;
+    const horde_map::spawn_result spawned =
+        hordes.spawn_entity( p, id );
+    return ( *spawned.position )->second;
 }
 
 // Seeks through the submap looking for open areas.
@@ -3009,6 +3100,17 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
             return false;
         }
     }
+    const point_abs_omt base = coords::project_to<coords::omt>( this->pos() );
+    const tripoint_abs_omt absolute_position =
+        tripoint_abs_omt{ base, p.z() } + point_rel_omt{ p.x(), p.y() };
+    const city &nearest_city = get_nearest_city( p );
+    const std::optional<bool> lua_condition =
+        cata::lua_platform::invoke_overmap_special_condition_handler(
+            special.id.str(), absolute_position, static_cast<int>( dir ),
+            nearest_city.name, nearest_city.size, nearest_city.population );
+    if( lua_condition && !*lua_condition ) {
+        return false;
+    }
 
     // Don't spawn monster areas over locations designated as safe.
     // We're using the maximum radius rather than the generated one, as the latter hasn't been
@@ -3931,12 +4033,24 @@ shared_ptr_fast<npc> overmap::find_npc_by_unique_id( const std::string &id ) con
 
 void overmap::add_camp( const point_abs_omt &p, const basecamp &camp )
 {
-    //TODO: After 0.I stable this should debugmsg on failed emplace
-    //auto it = camps.emplace( p, camp );
-    //if( !it.second ) {
-    //  debugmsg( "Tried to add a basecamp %s at %s when basecamp %s is already present", camp.camp_name(), p.to_string(), it.first->second.camp_name() );
-    //}
-    camps.emplace( p, camp );
+    const auto inserted = camps.emplace( p, camp );
+    if( inserted.second ) {
+        cata::lua_platform::register_camp_handle_identity( inserted.first->second );
+        return;
+    }
+    if( inserted.first->second.platform_id() == camp.platform_id() ) {
+        return;
+    }
+    std::string removal_error;
+    if( !inserted.first->second.platform_can_remove( removal_error ) ) {
+        return;
+    }
+    if( !inserted.first->second.platform_retire_tasks_for_camp() ) {
+        return;
+    }
+    cata::lua_platform::retire_camp_handle_identity( inserted.first->second );
+    inserted.first->second = camp;
+    cata::lua_platform::register_camp_handle_identity( inserted.first->second );
 }
 
 std::optional<basecamp *> overmap::find_camp( const point_abs_omt &p )
@@ -3952,6 +4066,14 @@ void overmap::remove_camp( const point_abs_omt &p )
 {
     const auto it = camps.find( p );
     if( it != camps.end() ) {
+        std::string removal_error;
+        if( !it->second.platform_can_remove( removal_error ) ) {
+            return;
+        }
+        if( !it->second.platform_retire_tasks_for_camp() ) {
+            return;
+        }
+        cata::lua_platform::retire_camp_handle_identity( it->second );
         camps.erase( it );
     }
 }
@@ -3960,6 +4082,18 @@ void overmap::clear_camps()
 {
     auto iter = camps.begin();
     while( iter != camps.end() ) {
+        // A Platform recipe escrow is an owned Item value.  The camp removal
+        // boundary refuses until an explicit holder has claimed/refunded it;
+        // retain a refused entry instead of erasing its only durable owner.
+        std::string removal_error;
+        if( !iter->second.platform_can_remove( removal_error ) ) {
+            ++iter;
+            continue;
+        }
+        if( !iter->second.platform_retire_tasks_for_camp() ) {
+            ++iter;
+            continue;
+        }
         iter->second.remove_camp( false );
         iter = camps.erase( iter );
     }

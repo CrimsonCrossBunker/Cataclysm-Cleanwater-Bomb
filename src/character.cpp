@@ -1,5 +1,28 @@
 #include "character.h"
 
+#include <activity_tracker.h>
+#include <body_part_set.h>
+#include <bodypart.h>
+#include <character_id.h>
+#include <compatibility.h>
+#include <craft_command.h>
+#include <creature.h>
+#include <damage.h>
+#include <flat_set.h>
+#include <global_vars.h>
+#include <item.h>
+#include <memory_fast.h>
+#include <pimpl.h>
+#include <player_activity.h>
+#include <pocket_type.h>
+#include <point.h>
+#include <ranged.h>
+#include <sleep.h>
+#include <subbodypart.h>
+#include <type_id.h>
+#include <visitable.h>
+#include <weighted_list.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <array>
@@ -18,7 +41,6 @@
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "addiction.h"
-#include "clone_ptr.h"
 #include "anatomy.h"
 #include "avatar.h"
 #include "avatar_action.h"
@@ -27,10 +49,10 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "city.h"
+#include "clone_ptr.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -62,6 +84,8 @@
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -1938,7 +1962,7 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
             }
         }
     }
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_creature_dodged", {
         { "creature", static_cast<const Character *>( this ) },
         { "source", static_cast<const Creature *>( source ) },
@@ -2451,6 +2475,9 @@ void Character::process_turn()
         }
     }
     effect_on_conditions::process_effect_on_conditions( *this );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::runtime_process_character_recurring( *this );
+#endif
 }
 
 // This must be called when any of the following change:
@@ -3158,9 +3185,9 @@ void Character::reset_stats()
         mod_dodge_bonus( 1 );   // Bonus if we're small
     }
 
-    if( cata::lua_ui::has_native_hook(
+    if( cata::lua_platform::has_native_hook(
             "on_character_reset_stats" ) ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_character_reset_stats", {
             {
                 "character",
@@ -4662,25 +4689,13 @@ bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
                              int pre_obtain_moves )
 {
     if( used == nullptr ||
-        !cata::lua_ui::has_native_callback(
-            "iuse", used->typeId().str(), "on_use" ) ) {
+        !cata::lua_platform::has_platform_item_use_handler( used->typeId().str() ) ) {
         return false;
     }
-    const cata::lua_ui::native_callback_arguments payload = {
-        { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( used ) },
-        { "action", std::string( "lua" ) },
-        { "tick", false },
-        {
-            "position", cata::lua_ui::native_callback_point {
-                "bub_ms", tripoint_rel_ms( pt.x(), pt.y(), pt.z() )
-            }
-        }
-    };
-    if( !cata::lua_ui::dispatch_native_callback(
-            "iuse", used->typeId().str(), "can_use", payload ) ||
-        !cata::lua_ui::dispatch_native_callback(
-            "iuse", used->typeId().str(), "on_use", payload ) ) {
+    const std::optional<int> result =
+        cata::lua_platform::invoke_platform_item_use_handler(
+            this, *used, &get_map(), pt );
+    if( !result ) {
         if( pre_obtain_moves >= 0 ) {
             set_moves( pre_obtain_moves );
         }
@@ -4744,27 +4759,6 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
         set_moves( pre_obtain_moves );
         return false;
     }
-    const cata::lua_ui::native_callback_arguments callback_payload = {
-        { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( actually_used ) },
-        { "action", method },
-        { "tick", false },
-        {
-            "position", cata::lua_ui::native_callback_point {
-                "bub_ms", tripoint_rel_ms( pt.x(), pt.y(), pt.z() )
-            }
-        }
-    };
-    if( !cata::lua_ui::dispatch_native_callback(
-            "iuse", actually_used->typeId().str(),
-            "can_use", callback_payload ) ||
-        !cata::lua_ui::dispatch_native_callback(
-            "iuse", actually_used->typeId().str(),
-            "on_use", callback_payload ) ) {
-        set_moves( pre_obtain_moves );
-        return false;
-    }
-
     std::optional<int> charges_used = actually_used->type->invoke( this, *actually_used,
                                       pt, method );
     if( !charges_used.has_value() ) {
@@ -7162,15 +7156,15 @@ void Character::process_one_effect( effect &it, bool is_new )
     const std::string body_part =
         it.get_bp() == bodypart_str_id::NULL_ID() ?
         std::string() : it.get_bp().id().str();
-    const cata::lua_ui::native_callback_arguments payload = {
+    const cata::lua_platform::native_callback_arguments payload = {
         { "character", static_cast<const Character *>( this ) },
         {
-            "effect", cata::lua_ui::native_callback_id {
+            "effect", cata::lua_platform::native_callback_id {
                 "effect", it.get_id().str()
             }
         },
         {
-            "body_part", cata::lua_ui::native_callback_id {
+            "body_part", cata::lua_platform::native_callback_id {
                 "body_part", body_part
             }
         },
@@ -7178,17 +7172,17 @@ void Character::process_one_effect( effect &it, bool is_new )
     };
     const bool dispatch_added =
         it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
-        cata::lua_ui::has_native_hook(
+        cata::lua_platform::has_native_hook(
             "on_character_effect_added" );
     const bool dispatch_tick =
         it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
-        cata::lua_ui::has_native_hook( "on_character_effect" );
+        cata::lua_platform::has_native_hook( "on_character_effect" );
     if( dispatch_added ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             "on_character_effect_added", payload );
     }
     if( dispatch_tick ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             "on_character_effect", payload );
     }
 }
@@ -7252,7 +7246,7 @@ void Character::process_effects()
         int intensity;
     };
     const bool has_lua_effect_hook =
-        cata::lua_ui::has_native_hook( "on_character_effect" );
+        cata::lua_platform::has_native_hook( "on_character_effect" );
     std::vector<lua_effect_tick> lua_effect_ticks;
     //Human only effects
     for( std::pair<const efftype_id, std::map<bodypart_id, effect>> &elem : *effects ) {
@@ -7273,19 +7267,19 @@ void Character::process_effects()
         }
     }
     for( const lua_effect_tick &tick : lua_effect_ticks ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_character_effect", {
             {
                 "character",
                 static_cast<const Character *>( this )
             },
             {
-                "effect", cata::lua_ui::native_callback_id {
+                "effect", cata::lua_platform::native_callback_id {
                     "effect", tick.effect
                 }
             },
             {
-                "body_part", cata::lua_ui::native_callback_id {
+                "body_part", cata::lua_platform::native_callback_id {
                     "body_part", tick.body_part
                 }
             },
@@ -7989,9 +7983,9 @@ bool Character::avoid_trap( const tripoint_bub_ms &pos, const trap &tr ) const
     /** @EFFECT_DODGE increases chance to avoid traps */
     // Sensitivity slightly shifts trap avoidance, ±10% across 0..400.
     const double sens_mult = clamp( 1.0 + 0.1 * std::log( std::clamp( get_sensitive(), 1,
-                                           400 ) / 100.0 ) / std::log( 4.0 ), 0.9, 1.1 );
+                                    400 ) / 100.0 ) / std::log( 4.0 ), 0.9, 1.1 );
     int myroll = dice( 3, round( ( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) *
-                                  sens_mult ) );
+                                 sens_mult ) );
     int traproll;
     if( tr.can_see( pos, *this ) ) {
         traproll = dice( 3, tr.get_avoidance() );

@@ -37,8 +37,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
-#include "catalua_platform.h"
-#include "catalua_ui.h"
+#include "lua_platform_loader.h"
 #include "char_validity_check.h"
 #include "character.h"
 #include "character_id.h"
@@ -249,22 +248,6 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
                                           platform_error );
             }
 
-            std::vector<std::string> lua_mod_ids;
-            lua_mod_ids.reserve( dep_vector.size() + 1 );
-            std::set<std::string> seen_lua_mod_ids;
-            for( const mod_id &dep : dep_vector ) {
-                if( seen_lua_mod_ids.insert( dep.str() ).second ) {
-                    lua_mod_ids.push_back( dep.str() );
-                }
-            }
-            if( seen_lua_mod_ids.insert( mod.ident.str() ).second ) {
-                lua_mod_ids.push_back( mod.ident.str() );
-            }
-            std::string lua_error;
-            if( !cata::lua_ui::validate_mod_scripts( lua_mod_ids, lua_error ) ) {
-                std::cerr << "Error loading Lua Mod scripts: " << lua_error << std::endl;
-                mod_valid = false;
-            }
         } catch( const std::exception &err ) {
             std::cerr << "Error loading data: " << err.what() << std::endl;
             mod_valid = false;
@@ -537,10 +520,6 @@ bool game::load( const save_t &name )
                     u.enchantment_cache->activate_passive( u );
                     if constexpr( cata::lua_platform::is_enabled() ) {
                         cata::lua_platform::on_world_ready( false );
-                    }
-                    if constexpr( cata::lua_ui::is_enabled() ) {
-                        cata::lua_ui::on_world_ready(
-                            cata::lua_ui::world_ready_kind::loaded_game );
                     }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
@@ -848,9 +827,6 @@ bool game::save()
     if constexpr( cata::lua_platform::is_enabled() ) {
         cata::lua_platform::before_save();
     }
-    if constexpr( cata::lua_ui::is_enabled() ) {
-        cata::lua_ui::on_game_save();
-    }
     events().send<event_type::game_save>( time_since_load, total_time_played );
     try {
         if( !save_player_data() ||
@@ -883,13 +859,6 @@ bool game::save()
                     add_msg( m_warning,
                              _( "Game saved, but Lua-first Platform state could not be saved: %s" ),
                              platform_state_error );
-                }
-            }
-            if constexpr( cata::lua_ui::is_enabled() ) {
-                std::string lua_state_error;
-                if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
-                    add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
-                             lua_state_error );
                 }
             }
             world_generator->last_world_name = world_generator->active_world->world_name;

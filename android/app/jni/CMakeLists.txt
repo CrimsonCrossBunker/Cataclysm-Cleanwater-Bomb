@@ -72,32 +72,23 @@ add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})
 
 option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
-option(CATA_ENABLE_LUA_UI "Enable the experimental Lua Mod API" ON)
+option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" ON)
 
 set(
-  CATALUA_UI_ENABLED_SOURCES
-  ${CATA_REPO_ROOT}/src/catalua_ui.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_actions.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_events.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_i18n.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_imgui.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_manifest.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_modules.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_navigation.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_renderer.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_registry.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_scheduler.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_services.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_values.cpp)
-if(CATA_ENABLE_LUA_UI)
+  LUA_PLATFORM_ENABLED_SOURCES
+  ${CATA_REPO_ROOT}/src/lua_platform_mapgen_dispatch.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_snapshots.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_registry.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_services.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_state.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_values.cpp)
+if(CATA_ENABLE_LUA_PLATFORM)
   add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
   add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
   list(REMOVE_ITEM CATA_SOURCES
-       ${CATA_REPO_ROOT}/src/catalua_ui_disabled.cpp)
+       ${CATA_REPO_ROOT}/src/lua_platform_disabled.cpp)
 else()
-  list(REMOVE_ITEM CATA_SOURCES ${CATALUA_UI_ENABLED_SOURCES})
+  list(REMOVE_ITEM CATA_SOURCES ${LUA_PLATFORM_ENABLED_SOURCES})
 endif()
 
 add_library(main SHARED ${CATA_SOURCES})
@@ -150,7 +141,7 @@ target_compile_definitions(
           SDL_SOUND
           USE_SDL3
           CCB_ANDROID_NEW_UI=$<BOOL:${CCB_ANDROID_NEW_UI}>
-          CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>
+          CATA_ENABLE_LUA_PLATFORM=$<BOOL:${CATA_ENABLE_LUA_PLATFORM}>
           CMAKE
           BACKTRACE
           LOCALIZE
@@ -171,6 +162,6 @@ target_link_libraries(
           GLESv1_CM
           z)
 
-if(CATA_ENABLE_LUA_UI)
+if(CATA_ENABLE_LUA_PLATFORM)
   target_link_libraries(main PRIVATE libsol)
 endif()

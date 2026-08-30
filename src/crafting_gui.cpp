@@ -22,7 +22,7 @@
 
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "catalua_platform_content.h"
+#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"

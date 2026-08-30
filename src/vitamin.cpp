@@ -1,11 +1,15 @@
 #include "vitamin.h"
 
+#include <stomach.h>
+#include <translation.h>
+#include <type_id.h>
+
 #include "calendar.h"
-#include "catalua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "options.h"
 #include "units.h"
 #include "units_utility.h"

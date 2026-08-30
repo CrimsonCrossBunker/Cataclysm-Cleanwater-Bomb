@@ -1,12 +1,16 @@
 #include "city.h"
 
+#include <point.h>
+#include <string_id.h>
 #include <algorithm>
 #include <climits>
 #include <vector>
 
 #include "coordinates.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "options.h"
 #include "rng.h"
 #include "text_snippets.h"
@@ -15,6 +19,12 @@ generic_factory<city> &get_city_factory()
 {
     static generic_factory<city> city_factory( "city" );
     return city_factory;
+}
+
+generic_factory<city> &
+cata::lua_platform::detail::city_registry()
+{
+    return get_city_factory();
 }
 
 /** @relates string_id */

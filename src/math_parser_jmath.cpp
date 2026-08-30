@@ -1,5 +1,6 @@
 #include "math_parser_jmath.h"
 
+#include <string_id.h>
 #include <map>
 #include <string>
 #include <string_view>
@@ -7,50 +8,52 @@
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "math_parser.h"
 #include "math_parser_diag.h"
 #include "string_formatter.h"
 
-namespace
+namespace cata::lua_platform::detail
 {
-generic_factory<jmath_func> &get_all_jmath_func()
+generic_factory<jmath_func> &jmath_func_registry()
 {
     static generic_factory<jmath_func> jmath_func_factory( "jmath_function" );
     return jmath_func_factory;
 }
-} // namespace
+} // namespace cata::lua_platform::detail
 
 /** @relates string_id */
 template <>
 jmath_func const &string_id<jmath_func>::obj() const
 {
-    return get_all_jmath_func().obj( *this );
+    return cata::lua_platform::detail::jmath_func_registry().obj( *this );
 }
 
 /** @relates string_id */
 template <>
 bool string_id<jmath_func>::is_valid() const
 {
-    return get_all_jmath_func().is_valid( *this );
+    return cata::lua_platform::detail::jmath_func_registry().is_valid( *this );
 }
 
 void jmath_func::reset()
 {
-    get_all_jmath_func().reset();
+    cata::lua_platform::detail::jmath_func_registry().reset();
 }
 
 std::vector<jmath_func> const &jmath_func::get_all()
 {
-    return get_all_jmath_func().get_all();
+    return cata::lua_platform::detail::jmath_func_registry().get_all();
 }
 
 void jmath_func::load_func( const JsonObject &jo, std::string const &src )
 {
-    get_all_jmath_func().load( jo, src );
+    cata::lua_platform::detail::jmath_func_registry().load( jo, src );
 }
 
 void jmath_func::load( JsonObject const &jo, std::string_view /*src*/ )
 {
+    _finalized = false;
     optional( jo, was_loaded, "num_args", num_params );
     optional( jo, was_loaded, "return", _str );
 
@@ -65,13 +68,17 @@ void jmath_func::load( JsonObject const &jo, std::string_view /*src*/ )
 
 void jmath_func::finalize_all()
 {
-    get_all_jmath_func().finalize();
+    cata::lua_platform::detail::jmath_func_registry().finalize();
 }
 
 void jmath_func::finalize()
 {
+    if( _finalized ) {
+        return;
+    }
     _exp.parse( _str );
     _str.clear();
+    _finalized = true;
 }
 
 double jmath_func::eval( const_dialogue const &d ) const

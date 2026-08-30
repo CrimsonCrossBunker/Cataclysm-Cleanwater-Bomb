@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:101a4990275bfa3a8352b078f98021e7d278b6b3776caa590659d2d957d0ff9f",
+    "source_fingerprint": "sha256:462f7c9380cbffcb50edae3e9b8d428705dce494fe16a39c177a286e8d52cabf",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -16,9 +16,9 @@
     "string_parser": "src/npctalk.cpp#talk_effect_t::parse_string_effect"
   },
   "summary": {
-    "object_parser_registrations": 137,
+    "object_parser_registrations": 136,
     "string_parser_registrations": 117,
-    "public_keys": 310,
+    "public_keys": 309,
     "keys_with_example_candidates": 229,
     "fully_classified_keys": 0
   },
@@ -64,14 +64,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 166,
+          "registration_order": 165,
           "alias_role": "alpha",
           "alias_group": [
             "abandon_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8964,
+            "line": 8990,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -160,7 +160,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8898,
+            "line": 8925,
             "symbol": "parsers"
           }
         }
@@ -248,7 +248,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8847,
+            "line": 8874,
             "symbol": "parsers"
           }
         }
@@ -336,7 +336,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8866,
+            "line": 8893,
             "symbol": "parsers"
           }
         }
@@ -422,14 +422,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 165,
+          "registration_order": 164,
           "alias_role": "alpha",
           "alias_group": [
             "assign_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8963,
+            "line": 8989,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -511,14 +511,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 164,
+          "registration_order": 163,
           "alias_role": "alpha",
           "alias_group": [
             "assign_guard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8962,
+            "line": 8988,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -615,19 +615,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8877,
+            "line": 8904,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 137,
+          "registration_order": 136,
           "alias_role": "alpha",
           "alias_group": [
             "assign_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8935,
+            "line": 8961,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -715,14 +715,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 183,
+          "registration_order": 182,
           "alias_role": "alpha",
           "alias_group": [
             "barber_beard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8981,
+            "line": 9007,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -809,14 +809,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 184,
+          "registration_order": 183,
           "alias_role": "alpha",
           "alias_group": [
             "barber_hair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8982,
+            "line": 9008,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -903,14 +903,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 173,
+          "registration_order": 172,
           "alias_role": "alpha",
           "alias_group": [
             "basecamp_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8971,
+            "line": 8997,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -997,14 +997,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 188,
+          "registration_order": 187,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_install"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8986,
+            "line": 9012,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1091,14 +1091,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 189,
+          "registration_order": 188,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_install_allies"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8987,
+            "line": 9013,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1180,14 +1180,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 190,
+          "registration_order": 189,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_remove"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8988,
+            "line": 9014,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1274,14 +1274,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 191,
+          "registration_order": 190,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_remove_allies"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8989,
+            "line": 9015,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1363,14 +1363,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 171,
+          "registration_order": 170,
           "alias_role": "alpha",
           "alias_group": [
             "buy_chicken"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8969,
+            "line": 8995,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1447,14 +1447,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 170,
+          "registration_order": 169,
           "alias_role": "alpha",
           "alias_group": [
             "buy_cow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8968,
+            "line": 8994,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1531,14 +1531,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 185,
+          "registration_order": 184,
           "alias_role": "alpha",
           "alias_group": [
             "buy_haircut"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8983,
+            "line": 9009,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1625,14 +1625,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 172,
+          "registration_order": 171,
           "alias_role": "alpha",
           "alias_group": [
             "buy_horse"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8970,
+            "line": 8996,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1709,14 +1709,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 186,
+          "registration_order": 185,
           "alias_role": "alpha",
           "alias_group": [
             "buy_shave"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8984,
+            "line": 9010,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1810,7 +1810,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8864,
+            "line": 8891,
             "symbol": "parsers"
           }
         }
@@ -1896,14 +1896,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 140,
+          "registration_order": 139,
           "alias_role": "alpha",
           "alias_group": [
             "clear_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8938,
+            "line": 8964,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1997,7 +1997,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8858,
+            "line": 8885,
             "symbol": "parsers"
           }
         }
@@ -2083,14 +2083,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 222,
+          "registration_order": 221,
           "alias_role": "alpha",
           "alias_group": [
             "clear_overrides"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9020,
+            "line": 9046,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2174,7 +2174,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8842,
+            "line": 8869,
             "symbol": "parsers"
           }
         }
@@ -2262,7 +2262,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8837,
+            "line": 8864,
             "symbol": "parsers"
           }
         }
@@ -2355,7 +2355,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8868,
+            "line": 8895,
             "symbol": "parsers"
           }
         }
@@ -2436,14 +2436,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 219,
+          "registration_order": 218,
           "alias_role": "alpha",
           "alias_group": [
             "copy_npc_rules"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9017,
+            "line": 9043,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2527,7 +2527,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8838,
+            "line": 8865,
             "symbol": "parsers"
           }
         }
@@ -2621,7 +2621,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8888,
+            "line": 8915,
             "symbol": "parsers"
           }
         }
@@ -2708,14 +2708,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 198,
+          "registration_order": 197,
           "alias_role": "alpha",
           "alias_group": [
             "deny_equipment"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8996,
+            "line": 9022,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2792,14 +2792,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 196,
+          "registration_order": 195,
           "alias_role": "alpha",
           "alias_group": [
             "deny_follow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8994,
+            "line": 9020,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2886,14 +2886,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 197,
+          "registration_order": 196,
           "alias_role": "alpha",
           "alias_group": [
             "deny_lead"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8995,
+            "line": 9021,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2975,14 +2975,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 200,
+          "registration_order": 199,
           "alias_role": "alpha",
           "alias_group": [
             "deny_personal_info"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8998,
+            "line": 9024,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3064,14 +3064,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 199,
+          "registration_order": 198,
           "alias_role": "alpha",
           "alias_group": [
             "deny_train"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8997,
+            "line": 9023,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3160,7 +3160,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8785,
+            "line": 8812,
             "symbol": "parsers"
           }
         }
@@ -3246,14 +3246,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 145,
+          "registration_order": 144,
           "alias_role": "alpha",
           "alias_group": [
             "dismount"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8943,
+            "line": 8969,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3335,14 +3335,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 225,
+          "registration_order": 224,
           "alias_role": "alpha",
           "alias_group": [
             "distribute_food_auto"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9023,
+            "line": 9049,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3429,14 +3429,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 162,
+          "registration_order": 161,
           "alias_role": "alpha",
           "alias_group": [
             "do_butcher"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8960,
+            "line": 8986,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3518,14 +3518,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 146,
+          "registration_order": 145,
           "alias_role": "alpha",
           "alias_group": [
             "do_chop_plank"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8944,
+            "line": 8970,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3607,14 +3607,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 152,
+          "registration_order": 151,
           "alias_role": "alpha",
           "alias_group": [
             "do_chop_trees"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8950,
+            "line": 8976,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3696,14 +3696,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 154,
+          "registration_order": 153,
           "alias_role": "alpha",
           "alias_group": [
             "do_construction"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8952,
+            "line": 8978,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3785,14 +3785,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 161,
+          "registration_order": 160,
           "alias_role": "alpha",
           "alias_group": [
             "do_craft"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8959,
+            "line": 8985,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3874,14 +3874,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 224,
+          "registration_order": 223,
           "alias_role": "alpha",
           "alias_group": [
             "do_disassembly"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9022,
+            "line": 9048,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3963,14 +3963,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 158,
+          "registration_order": 157,
           "alias_role": "alpha",
           "alias_group": [
             "do_eread"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8956,
+            "line": 8982,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4052,14 +4052,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 163,
+          "registration_order": 162,
           "alias_role": "alpha",
           "alias_group": [
             "do_farming"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8961,
+            "line": 8987,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4141,14 +4141,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 153,
+          "registration_order": 152,
           "alias_role": "alpha",
           "alias_group": [
             "do_fishing"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8951,
+            "line": 8977,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4230,14 +4230,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 155,
+          "registration_order": 154,
           "alias_role": "alpha",
           "alias_group": [
             "do_mining"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8953,
+            "line": 8979,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4319,14 +4319,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 156,
+          "registration_order": 155,
           "alias_role": "alpha",
           "alias_group": [
             "do_mopping"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8954,
+            "line": 8980,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4408,14 +4408,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 157,
+          "registration_order": 156,
           "alias_role": "alpha",
           "alias_group": [
             "do_read"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8955,
+            "line": 8981,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4497,14 +4497,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 159,
+          "registration_order": 158,
           "alias_role": "alpha",
           "alias_group": [
             "do_read_repeatedly"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8957,
+            "line": 8983,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4586,14 +4586,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 160,
+          "registration_order": 159,
           "alias_role": "alpha",
           "alias_group": [
             "do_study"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8958,
+            "line": 8984,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4675,14 +4675,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 147,
+          "registration_order": 146,
           "alias_role": "alpha",
           "alias_group": [
             "do_vehicle_deconstruct"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8945,
+            "line": 8971,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4764,14 +4764,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 148,
+          "registration_order": 147,
           "alias_role": "alpha",
           "alias_group": [
             "do_vehicle_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8946,
+            "line": 8972,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4853,14 +4853,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 193,
+          "registration_order": 192,
           "alias_role": "alpha",
           "alias_group": [
             "drop_items_in_place"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8991,
+            "line": 9017,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4942,14 +4942,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 211,
+          "registration_order": 210,
           "alias_role": "alpha",
           "alias_group": [
             "drop_stolen_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9009,
+            "line": 9035,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5031,14 +5031,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 210,
+          "registration_order": 209,
           "alias_role": "alpha",
           "alias_group": [
             "drop_weapon"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9008,
+            "line": 9034,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5125,14 +5125,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 176,
+          "registration_order": 175,
           "alias_role": "alpha",
           "alias_group": [
             "end_conversation"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8974,
+            "line": 9000,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5219,14 +5219,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 144,
+          "registration_order": 143,
           "alias_role": "alpha",
           "alias_group": [
             "find_mount"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8942,
+            "line": 8968,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5315,7 +5315,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8878,
+            "line": 8905,
             "symbol": "parsers"
           }
         }
@@ -5401,14 +5401,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 202,
+          "registration_order": 201,
           "alias_role": "alpha",
           "alias_group": [
             "flee"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9000,
+            "line": 9026,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5495,14 +5495,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 194,
+          "registration_order": 193,
           "alias_role": "alpha",
           "alias_group": [
             "follow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8992,
+            "line": 9018,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5589,14 +5589,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 195,
+          "registration_order": 194,
           "alias_role": "alpha",
           "alias_group": [
             "follow_only"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8993,
+            "line": 9019,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5690,7 +5690,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8886,
+            "line": 8913,
             "symbol": "parsers"
           }
         }
@@ -5783,7 +5783,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8876,
+            "line": 8903,
             "symbol": "parsers"
           }
         }
@@ -5869,14 +5869,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 181,
+          "registration_order": 180,
           "alias_role": "alpha",
           "alias_group": [
             "give_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8979,
+            "line": 9005,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5963,14 +5963,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 182,
+          "registration_order": 181,
           "alias_role": "alpha",
           "alias_group": [
             "give_all_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8980,
+            "line": 9006,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6062,19 +6062,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8891,
+            "line": 8918,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 178,
+          "registration_order": 177,
           "alias_role": "alpha",
           "alias_group": [
             "give_equipment"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8976,
+            "line": 9002,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6162,14 +6162,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 206,
+          "registration_order": 205,
           "alias_role": "alpha",
           "alias_group": [
             "goto_location"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9004,
+            "line": 9030,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6251,14 +6251,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 201,
+          "registration_order": 200,
           "alias_role": "alpha",
           "alias_group": [
             "hostile"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8999,
+            "line": 9025,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6352,7 +6352,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8884,
+            "line": 8911,
             "symbol": "parsers"
           }
         }
@@ -6438,14 +6438,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 177,
+          "registration_order": 176,
           "alias_role": "alpha",
           "alias_group": [
             "insult_combat"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8975,
+            "line": 9001,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6532,14 +6532,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 215,
+          "registration_order": 214,
           "alias_role": "alpha",
           "alias_group": [
             "lead_to_safety"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9013,
+            "line": 9039,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6626,14 +6626,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 203,
+          "registration_order": 202,
           "alias_role": "alpha",
           "alias_group": [
             "leave"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9001,
+            "line": 9027,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6720,14 +6720,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 179,
+          "registration_order": 178,
           "alias_role": "alpha",
           "alias_group": [
             "lesser_give_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8977,
+            "line": 9003,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6814,14 +6814,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 180,
+          "registration_order": 179,
           "alias_role": "alpha",
           "alias_group": [
             "lesser_give_all_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8978,
+            "line": 9004,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6901,14 +6901,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 233,
+          "registration_order": 232,
           "alias_role": "alpha",
           "alias_group": [
             "lightning"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9042,
+            "line": 9068,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -7002,7 +7002,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8871,
+            "line": 8898,
             "symbol": "parsers"
           }
         }
@@ -7095,7 +7095,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8863,
+            "line": 8890,
             "symbol": "parsers"
           }
         }
@@ -7188,7 +7188,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8865,
+            "line": 8892,
             "symbol": "parsers"
           }
         }
@@ -7281,7 +7281,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8887,
+            "line": 8914,
             "symbol": "parsers"
           }
         }
@@ -7367,7 +7367,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 136,
+          "registration_order": 135,
           "alias_role": "alpha",
           "alias_group": [
             "message",
@@ -7375,12 +7375,12 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8907,
+            "line": 8933,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 136,
+          "registration_order": 135,
           "alias_role": "beta",
           "alias_group": [
             "message",
@@ -7388,7 +7388,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8907,
+            "line": 8933,
             "symbol": "parsers"
           }
         }
@@ -7481,7 +7481,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8889,
+            "line": 8916,
             "symbol": "parsers"
           }
         }
@@ -7567,14 +7567,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 139,
+          "registration_order": 138,
           "alias_role": "alpha",
           "alias_group": [
             "mission_failure"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8937,
+            "line": 8963,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7661,14 +7661,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 141,
+          "registration_order": 140,
           "alias_role": "alpha",
           "alias_group": [
             "mission_reward"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8939,
+            "line": 8965,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7755,14 +7755,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 138,
+          "registration_order": 137,
           "alias_role": "alpha",
           "alias_group": [
             "mission_success"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8936,
+            "line": 8962,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7849,14 +7849,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 187,
+          "registration_order": 186,
           "alias_role": "alpha",
           "alias_group": [
             "morale_chat_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8985,
+            "line": 9011,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7936,14 +7936,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 240,
+          "registration_order": 239,
           "alias_role": "alpha",
           "alias_group": [
             "next_weather"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9078,
+            "line": 9104,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -8030,14 +8030,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 226,
+          "registration_order": 225,
           "alias_role": "alpha",
           "alias_group": [
             "nothing"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9024,
+            "line": 9050,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -8133,7 +8133,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8826,
+            "line": 8853,
             "symbol": "parsers"
           }
         }
@@ -8223,7 +8223,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8777,
+            "line": 8804,
             "symbol": "parsers"
           }
         }
@@ -8313,7 +8313,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8809,
+            "line": 8836,
             "symbol": "parsers"
           }
         }
@@ -8403,7 +8403,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8769,
+            "line": 8796,
             "symbol": "parsers"
           }
         }
@@ -8498,7 +8498,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8807,
+            "line": 8834,
             "symbol": "parsers"
           }
         }
@@ -8593,7 +8593,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8773,
+            "line": 8800,
             "symbol": "parsers"
           }
         }
@@ -8688,7 +8688,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8771,
+            "line": 8798,
             "symbol": "parsers"
           }
         }
@@ -8784,7 +8784,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8797,
+            "line": 8824,
             "symbol": "parsers"
           }
         }
@@ -8875,7 +8875,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8853,
+            "line": 8880,
             "symbol": "parsers"
           }
         }
@@ -8965,7 +8965,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8798,
+            "line": 8825,
             "symbol": "parsers"
           }
         }
@@ -9060,7 +9060,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8811,
+            "line": 8838,
             "symbol": "parsers"
           }
         }
@@ -9152,32 +9152,32 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8832,
+            "line": 8859,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 230,
+          "registration_order": 229,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9035,
+            "line": 9061,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
         },
         {
-          "registration_order": 232,
+          "registration_order": 231,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9036,
+            "line": 9062,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9271,32 +9271,32 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8830,
+            "line": 8857,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 228,
+          "registration_order": 227,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9034,
+            "line": 9060,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
         },
         {
-          "registration_order": 231,
+          "registration_order": 230,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9036,
+            "line": 9062,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9377,14 +9377,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 237,
+          "registration_order": 236,
           "alias_role": "alpha",
           "alias_group": [
             "npc_cancel_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9062,
+            "line": 9088,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9475,7 +9475,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8833,
+            "line": 8860,
             "symbol": "parsers"
           }
         }
@@ -9568,7 +9568,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8845,
+            "line": 8872,
             "symbol": "parsers"
           }
         }
@@ -9656,7 +9656,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8844,
+            "line": 8871,
             "symbol": "parsers"
           }
         }
@@ -9751,7 +9751,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8790,
+            "line": 8817,
             "symbol": "parsers"
           }
         }
@@ -9846,7 +9846,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8827,
+            "line": 8854,
             "symbol": "parsers"
           }
         }
@@ -9941,7 +9941,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8828,
+            "line": 8855,
             "symbol": "parsers"
           }
         }
@@ -10031,7 +10031,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8776,
+            "line": 8803,
             "symbol": "parsers"
           }
         }
@@ -10121,7 +10121,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8831,
+            "line": 8858,
             "symbol": "parsers"
           }
         }
@@ -10218,19 +10218,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8812,
+            "line": 8839,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 235,
+          "registration_order": 234,
           "alias_role": "alpha",
           "alias_group": [
             "npc_die"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9052,
+            "line": 9078,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10327,7 +10327,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8819,
+            "line": 8846,
             "symbol": "parsers"
           }
         }
@@ -10422,7 +10422,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8787,
+            "line": 8814,
             "symbol": "parsers"
           }
         }
@@ -10510,7 +10510,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8874,
+            "line": 8901,
             "symbol": "parsers"
           }
         }
@@ -10605,7 +10605,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8783,
+            "line": 8810,
             "symbol": "parsers"
           }
         }
@@ -10695,7 +10695,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8795,
+            "line": 8822,
             "symbol": "parsers"
           }
         }
@@ -10774,14 +10774,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 241,
+          "registration_order": 240,
           "alias_role": "alpha",
           "alias_group": [
             "npc_gets_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9083,
+            "line": 9109,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10866,6 +10866,19 @@
       ],
       "parser_registrations": [
         {
+          "registration_order": 241,
+          "alias_role": "alpha",
+          "alias_group": [
+            "npc_gets_item_to_use"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9109,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        },
+        {
           "registration_order": 242,
           "alias_role": "alpha",
           "alias_group": [
@@ -10873,20 +10886,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9083,
-            "symbol": "talk_effect_t::parse_string_effect"
-          },
-          "registration_kind": "explicit_branch"
-        },
-        {
-          "registration_order": 243,
-          "alias_role": "alpha",
-          "alias_group": [
-            "npc_gets_item_to_use"
-          ],
-          "source": {
-            "path": "src/npctalk.cpp",
-            "line": 9084,
+            "line": 9110,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10982,7 +10982,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8890,
+            "line": 8917,
             "symbol": "parsers"
           }
         }
@@ -11072,7 +11072,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8782,
+            "line": 8809,
             "symbol": "parsers"
           }
         }
@@ -11162,7 +11162,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8794,
+            "line": 8821,
             "symbol": "parsers"
           }
         }
@@ -11252,7 +11252,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8793,
+            "line": 8820,
             "symbol": "parsers"
           }
         }
@@ -11342,7 +11342,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8784,
+            "line": 8811,
             "symbol": "parsers"
           }
         }
@@ -11437,7 +11437,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8810,
+            "line": 8837,
             "symbol": "parsers"
           }
         }
@@ -11527,7 +11527,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8775,
+            "line": 8802,
             "symbol": "parsers"
           }
         }
@@ -11617,7 +11617,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8770,
+            "line": 8797,
             "symbol": "parsers"
           }
         }
@@ -11712,7 +11712,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8808,
+            "line": 8835,
             "symbol": "parsers"
           }
         }
@@ -11802,7 +11802,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8774,
+            "line": 8801,
             "symbol": "parsers"
           }
         }
@@ -11897,7 +11897,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8772,
+            "line": 8799,
             "symbol": "parsers"
           }
         }
@@ -11981,14 +11981,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 250,
+          "registration_order": 249,
           "alias_role": "alpha",
           "alias_group": [
             "npc_make_radio_representative"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9115,
+            "line": 9141,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -12079,7 +12079,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8799,
+            "line": 8826,
             "symbol": "parsers"
           }
         }
@@ -12174,7 +12174,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8834,
+            "line": 8861,
             "symbol": "parsers"
           }
         }
@@ -12264,7 +12264,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8835,
+            "line": 8862,
             "symbol": "parsers"
           }
         }
@@ -12354,7 +12354,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8796,
+            "line": 8823,
             "symbol": "parsers"
           }
         }
@@ -12450,7 +12450,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8778,
+            "line": 8805,
             "symbol": "parsers"
           }
         }
@@ -12541,7 +12541,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8779,
+            "line": 8806,
             "symbol": "parsers"
           }
         }
@@ -12636,7 +12636,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8780,
+            "line": 8807,
             "symbol": "parsers"
           }
         }
@@ -12726,7 +12726,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8852,
+            "line": 8879,
             "symbol": "parsers"
           }
         }
@@ -12816,7 +12816,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8836,
+            "line": 8863,
             "symbol": "parsers"
           }
         }
@@ -12895,14 +12895,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 239,
+          "registration_order": 238,
           "alias_role": "alpha",
           "alias_group": [
             "npc_prevent_death"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9073,
+            "line": 9099,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -12993,7 +12993,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8789,
+            "line": 8816,
             "symbol": "parsers"
           }
         }
@@ -13083,7 +13083,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8788,
+            "line": 8815,
             "symbol": "parsers"
           }
         }
@@ -13162,14 +13162,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 245,
+          "registration_order": 244,
           "alias_role": "alpha",
           "alias_group": [
             "npc_ranged_attack"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9094,
+            "line": 9120,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -13255,7 +13255,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8855,
+            "line": 8882,
             "symbol": "parsers"
           }
         }
@@ -13345,7 +13345,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8829,
+            "line": 8856,
             "symbol": "parsers"
           }
         }
@@ -13440,7 +13440,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8854,
+            "line": 8881,
             "symbol": "parsers"
           }
         }
@@ -13530,7 +13530,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8805,
+            "line": 8832,
             "symbol": "parsers"
           }
         }
@@ -13609,14 +13609,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 253,
+          "registration_order": 252,
           "alias_role": "alpha",
           "alias_group": [
             "npc_rules_menu"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9127,
+            "line": 9153,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -13707,7 +13707,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8803,
+            "line": 8830,
             "symbol": "parsers"
           }
         }
@@ -13797,7 +13797,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8804,
+            "line": 8831,
             "symbol": "parsers"
           }
         }
@@ -13892,7 +13892,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8801,
+            "line": 8828,
             "symbol": "parsers"
           }
         }
@@ -13987,7 +13987,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8800,
+            "line": 8827,
             "symbol": "parsers"
           }
         }
@@ -14077,7 +14077,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8802,
+            "line": 8829,
             "symbol": "parsers"
           }
         }
@@ -14162,7 +14162,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8806,
+            "line": 8833,
             "symbol": "parsers"
           }
         }
@@ -14252,7 +14252,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8824,
+            "line": 8851,
             "symbol": "parsers"
           }
         }
@@ -14347,7 +14347,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8818,
+            "line": 8845,
             "symbol": "parsers"
           }
         }
@@ -14442,7 +14442,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8822,
+            "line": 8849,
             "symbol": "parsers"
           }
         }
@@ -14537,7 +14537,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8791,
+            "line": 8818,
             "symbol": "parsers"
           }
         }
@@ -14627,7 +14627,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8792,
+            "line": 8819,
             "symbol": "parsers"
           }
         }
@@ -14717,7 +14717,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8825,
+            "line": 8852,
             "symbol": "parsers"
           }
         }
@@ -14807,7 +14807,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8899,
+            "line": 8926,
             "symbol": "parsers"
           }
         }
@@ -14897,7 +14897,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8781,
+            "line": 8808,
             "symbol": "parsers"
           }
         }
@@ -14987,7 +14987,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8813,
+            "line": 8840,
             "symbol": "parsers"
           }
         }
@@ -15082,7 +15082,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8814,
+            "line": 8841,
             "symbol": "parsers"
           }
         }
@@ -15172,7 +15172,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8820,
+            "line": 8847,
             "symbol": "parsers"
           }
         }
@@ -15258,14 +15258,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 221,
+          "registration_order": 220,
           "alias_role": "alpha",
           "alias_group": [
             "npc_thankful"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9019,
+            "line": 9045,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -15362,7 +15362,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8786,
+            "line": 8813,
             "symbol": "parsers"
           }
         }
@@ -15458,7 +15458,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8823,
+            "line": 8850,
             "symbol": "parsers"
           }
         }
@@ -15542,14 +15542,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 252,
+          "registration_order": 251,
           "alias_role": "alpha",
           "alias_group": [
             "npc_wants_to_talk"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9123,
+            "line": 9149,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -15634,7 +15634,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8880,
+            "line": 8907,
             "symbol": "parsers"
           }
         }
@@ -15730,19 +15730,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8895,
+            "line": 8922,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 246,
+          "registration_order": 245,
           "alias_role": "alpha",
           "alias_group": [
             "open_dialogue"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9099,
+            "line": 9125,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -15830,14 +15830,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 223,
+          "registration_order": 222,
           "alias_role": "alpha",
           "alias_group": [
             "pick_style"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9021,
+            "line": 9047,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -15926,7 +15926,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8869,
+            "line": 8896,
             "symbol": "parsers"
           }
         }
@@ -16012,14 +16012,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 209,
+          "registration_order": 208,
           "alias_role": "alpha",
           "alias_group": [
             "player_leaving"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9007,
+            "line": 9033,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16101,14 +16101,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 213,
+          "registration_order": 212,
           "alias_role": "alpha",
           "alias_group": [
             "player_weapon_away"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9011,
+            "line": 9037,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16195,14 +16195,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 214,
+          "registration_order": 213,
           "alias_role": "alpha",
           "alias_group": [
             "player_weapon_drop"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9012,
+            "line": 9038,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16296,7 +16296,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8850,
+            "line": 8877,
             "symbol": "parsers"
           }
         }
@@ -16377,14 +16377,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 150,
+          "registration_order": 149,
           "alias_role": "alpha",
           "alias_group": [
             "quote_vehicle_full_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8948,
+            "line": 8974,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16473,7 +16473,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8879,
+            "line": 8906,
             "symbol": "parsers"
           }
         }
@@ -16559,14 +16559,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 212,
+          "registration_order": 211,
           "alias_role": "alpha",
           "alias_group": [
             "remove_stolen_status"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9010,
+            "line": 9036,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16648,14 +16648,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 192,
+          "registration_order": 191,
           "alias_role": "alpha",
           "alias_group": [
             "repair_bionic_limbs"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8990,
+            "line": 9016,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16742,14 +16742,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 168,
+          "registration_order": 167,
           "alias_role": "alpha",
           "alias_group": [
             "return_to_camp_duties"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8966,
+            "line": 8992,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16838,7 +16838,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8840,
+            "line": 8867,
             "symbol": "parsers"
           }
         }
@@ -16931,7 +16931,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8841,
+            "line": 8868,
             "symbol": "parsers"
           }
         }
@@ -17017,14 +17017,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 175,
+          "registration_order": 174,
           "alias_role": "alpha",
           "alias_group": [
             "reveal_stats"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8973,
+            "line": 8999,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17111,14 +17111,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 205,
+          "registration_order": 204,
           "alias_role": "alpha",
           "alias_group": [
             "revert_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9003,
+            "line": 9029,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17207,7 +17207,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8867,
+            "line": 8894,
             "symbol": "parsers"
           }
         }
@@ -17300,7 +17300,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8882,
+            "line": 8909,
             "symbol": "parsers"
           }
         }
@@ -17394,7 +17394,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8881,
+            "line": 8908,
             "symbol": "parsers"
           }
         }
@@ -17466,94 +17466,6 @@
       }
     },
     {
-      "key": "run_lua",
-      "syntaxes": [
-        "object_member"
-      ],
-      "accepted_json_shapes": [
-        "object"
-      ],
-      "handlers": [
-        "talk_effect_fun::f_run_lua"
-      ],
-      "aliases": [
-        "run_lua"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 135,
-          "alias_role": "alpha",
-          "alias_group": [
-            "run_lua"
-          ],
-          "source": {
-            "path": "src/npctalk.cpp",
-            "line": 8904,
-            "symbol": "parsers"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "object"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "unknown",
-        "talkers": [],
-        "note": "Concrete talker compatibility is not inferred from the parser key."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "effect",
-      "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5953
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
       "key": "sample_range",
       "syntaxes": [
         "object_member"
@@ -17576,7 +17488,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8839,
+            "line": 8866,
             "symbol": "parsers"
           }
         }
@@ -17657,14 +17569,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 149,
+          "registration_order": 148,
           "alias_role": "alpha",
           "alias_group": [
             "select_vehicle_part_service"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8947,
+            "line": 8973,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17753,7 +17665,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8903,
+            "line": 8930,
             "symbol": "parsers"
           }
         }
@@ -17841,7 +17753,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8893,
+            "line": 8920,
             "symbol": "parsers"
           }
         }
@@ -17934,7 +17846,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8817,
+            "line": 8844,
             "symbol": "parsers"
           }
         }
@@ -18023,7 +17935,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8894,
+            "line": 8921,
             "symbol": "parsers"
           }
         }
@@ -18112,7 +18024,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8860,
+            "line": 8887,
             "symbol": "parsers"
           }
         }
@@ -18200,7 +18112,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8862,
+            "line": 8889,
             "symbol": "parsers"
           }
         }
@@ -18283,7 +18195,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8861,
+            "line": 8888,
             "symbol": "parsers"
           }
         }
@@ -18366,7 +18278,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8859,
+            "line": 8886,
             "symbol": "parsers"
           }
         }
@@ -18447,14 +18359,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 220,
+          "registration_order": 219,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_pickup"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9018,
+            "line": 9044,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -18543,7 +18455,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8857,
+            "line": 8884,
             "symbol": "parsers"
           }
         }
@@ -18637,7 +18549,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8892,
+            "line": 8919,
             "symbol": "parsers"
           }
         }
@@ -18731,7 +18643,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8816,
+            "line": 8843,
             "symbol": "parsers"
           }
         }
@@ -18819,7 +18731,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8815,
+            "line": 8842,
             "symbol": "parsers"
           }
         }
@@ -18912,7 +18824,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8902,
+            "line": 8929,
             "symbol": "parsers"
           }
         }
@@ -18998,14 +18910,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 143,
+          "registration_order": 142,
           "alias_role": "alpha",
           "alias_group": [
             "sort_loot"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8941,
+            "line": 8967,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19094,7 +19006,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8875,
+            "line": 8902,
             "symbol": "parsers"
           }
         }
@@ -19180,14 +19092,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 169,
+          "registration_order": 168,
           "alias_role": "alpha",
           "alias_group": [
             "start_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8967,
+            "line": 8993,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19274,14 +19186,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 208,
+          "registration_order": 207,
           "alias_role": "alpha",
           "alias_group": [
             "start_mugging"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9006,
+            "line": 9032,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19368,14 +19280,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 142,
+          "registration_order": 141,
           "alias_role": "alpha",
           "alias_group": [
             "start_trade"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8940,
+            "line": 8966,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19462,14 +19374,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 216,
+          "registration_order": 215,
           "alias_role": "alpha",
           "alias_group": [
             "start_training"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9014,
+            "line": 9040,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19556,14 +19468,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 217,
+          "registration_order": 216,
           "alias_role": "alpha",
           "alias_group": [
             "start_training_npc"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9015,
+            "line": 9041,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19650,14 +19562,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 218,
+          "registration_order": 217,
           "alias_role": "alpha",
           "alias_group": [
             "start_training_seminar"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9016,
+            "line": 9042,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19744,14 +19656,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 151,
+          "registration_order": 150,
           "alias_role": "alpha",
           "alias_group": [
             "start_vehicle_full_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8949,
+            "line": 8975,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19833,14 +19745,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 204,
+          "registration_order": 203,
           "alias_role": "alpha",
           "alias_group": [
             "stop_following"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9002,
+            "line": 9028,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19927,14 +19839,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 167,
+          "registration_order": 166,
           "alias_role": "alpha",
           "alias_group": [
             "stop_guard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8965,
+            "line": 8991,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -20021,14 +19933,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 207,
+          "registration_order": 206,
           "alias_role": "alpha",
           "alias_group": [
             "stranger_neutral"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9005,
+            "line": 9031,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -20122,7 +20034,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8885,
+            "line": 8912,
             "symbol": "parsers"
           }
         }
@@ -20217,19 +20129,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8896,
+            "line": 8923,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 247,
+          "registration_order": 246,
           "alias_role": "alpha",
           "alias_group": [
             "take_control"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9103,
+            "line": 9129,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -20315,14 +20227,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 248,
+          "registration_order": 247,
           "alias_role": "alpha",
           "alias_group": [
             "take_control_menu"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9107,
+            "line": 9133,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -20416,7 +20328,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8856,
+            "line": 8883,
             "symbol": "parsers"
           }
         }
@@ -20504,7 +20416,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8901,
+            "line": 8928,
             "symbol": "parsers"
           }
         }
@@ -20597,7 +20509,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8870,
+            "line": 8897,
             "symbol": "parsers"
           }
         }
@@ -20690,7 +20602,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8897,
+            "line": 8924,
             "symbol": "parsers"
           }
         }
@@ -20778,7 +20690,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8900,
+            "line": 8927,
             "symbol": "parsers"
           }
         }
@@ -20873,7 +20785,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8826,
+            "line": 8853,
             "symbol": "parsers"
           }
         }
@@ -20968,7 +20880,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8777,
+            "line": 8804,
             "symbol": "parsers"
           }
         }
@@ -21063,7 +20975,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8809,
+            "line": 8836,
             "symbol": "parsers"
           }
         }
@@ -21158,7 +21070,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8769,
+            "line": 8796,
             "symbol": "parsers"
           }
         }
@@ -21252,7 +21164,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8873,
+            "line": 8900,
             "symbol": "parsers"
           }
         }
@@ -21348,7 +21260,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8807,
+            "line": 8834,
             "symbol": "parsers"
           }
         }
@@ -21443,7 +21355,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8773,
+            "line": 8800,
             "symbol": "parsers"
           }
         }
@@ -21538,7 +21450,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8771,
+            "line": 8798,
             "symbol": "parsers"
           }
         }
@@ -21634,7 +21546,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8797,
+            "line": 8824,
             "symbol": "parsers"
           }
         }
@@ -21730,7 +21642,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8853,
+            "line": 8880,
             "symbol": "parsers"
           }
         }
@@ -21820,7 +21732,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8798,
+            "line": 8825,
             "symbol": "parsers"
           }
         }
@@ -21915,7 +21827,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8811,
+            "line": 8838,
             "symbol": "parsers"
           }
         }
@@ -22012,19 +21924,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8832,
+            "line": 8859,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 229,
+          "registration_order": 228,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9035,
+            "line": 9061,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22123,19 +22035,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8830,
+            "line": 8857,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 227,
+          "registration_order": 226,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9034,
+            "line": 9060,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22230,7 +22142,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8849,
+            "line": 8876,
             "symbol": "parsers"
           }
         }
@@ -22323,7 +22235,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8872,
+            "line": 8899,
             "symbol": "parsers"
           }
         }
@@ -22407,14 +22319,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 236,
+          "registration_order": 235,
           "alias_role": "alpha",
           "alias_group": [
             "u_cancel_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9057,
+            "line": 9083,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22510,7 +22422,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8833,
+            "line": 8860,
             "symbol": "parsers"
           }
         }
@@ -22605,7 +22517,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8790,
+            "line": 8817,
             "symbol": "parsers"
           }
         }
@@ -22700,7 +22612,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8827,
+            "line": 8854,
             "symbol": "parsers"
           }
         }
@@ -22795,7 +22707,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8828,
+            "line": 8855,
             "symbol": "parsers"
           }
         }
@@ -22890,7 +22802,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8776,
+            "line": 8803,
             "symbol": "parsers"
           }
         }
@@ -22985,7 +22897,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8831,
+            "line": 8858,
             "symbol": "parsers"
           }
         }
@@ -23082,19 +22994,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8812,
+            "line": 8839,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 234,
+          "registration_order": 233,
           "alias_role": "alpha",
           "alias_group": [
             "u_die"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9047,
+            "line": 9073,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -23191,7 +23103,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8819,
+            "line": 8846,
             "symbol": "parsers"
           }
         }
@@ -23286,7 +23198,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8787,
+            "line": 8814,
             "symbol": "parsers"
           }
         }
@@ -23380,7 +23292,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8846,
+            "line": 8873,
             "symbol": "parsers"
           }
         }
@@ -23476,7 +23388,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8783,
+            "line": 8810,
             "symbol": "parsers"
           }
         }
@@ -23571,7 +23483,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8795,
+            "line": 8822,
             "symbol": "parsers"
           }
         }
@@ -23666,7 +23578,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8890,
+            "line": 8917,
             "symbol": "parsers"
           }
         }
@@ -23761,7 +23673,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8782,
+            "line": 8809,
             "symbol": "parsers"
           }
         }
@@ -23856,7 +23768,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8794,
+            "line": 8821,
             "symbol": "parsers"
           }
         }
@@ -23951,7 +23863,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8793,
+            "line": 8820,
             "symbol": "parsers"
           }
         }
@@ -24046,7 +23958,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8784,
+            "line": 8811,
             "symbol": "parsers"
           }
         }
@@ -24141,7 +24053,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8810,
+            "line": 8837,
             "symbol": "parsers"
           }
         }
@@ -24236,7 +24148,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8775,
+            "line": 8802,
             "symbol": "parsers"
           }
         }
@@ -24331,7 +24243,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8770,
+            "line": 8797,
             "symbol": "parsers"
           }
         }
@@ -24426,7 +24338,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8808,
+            "line": 8835,
             "symbol": "parsers"
           }
         }
@@ -24521,7 +24433,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8774,
+            "line": 8801,
             "symbol": "parsers"
           }
         }
@@ -24616,7 +24528,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8772,
+            "line": 8799,
             "symbol": "parsers"
           }
         }
@@ -24700,14 +24612,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 249,
+          "registration_order": 248,
           "alias_role": "alpha",
           "alias_group": [
             "u_make_radio_representative"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9111,
+            "line": 9137,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -24798,7 +24710,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8799,
+            "line": 8826,
             "symbol": "parsers"
           }
         }
@@ -24893,7 +24805,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8834,
+            "line": 8861,
             "symbol": "parsers"
           }
         }
@@ -24988,7 +24900,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8835,
+            "line": 8862,
             "symbol": "parsers"
           }
         }
@@ -25083,7 +24995,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8796,
+            "line": 8823,
             "symbol": "parsers"
           }
         }
@@ -25179,7 +25091,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8778,
+            "line": 8805,
             "symbol": "parsers"
           }
         }
@@ -25275,7 +25187,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8779,
+            "line": 8806,
             "symbol": "parsers"
           }
         }
@@ -25370,7 +25282,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8780,
+            "line": 8807,
             "symbol": "parsers"
           }
         }
@@ -25465,7 +25377,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8852,
+            "line": 8879,
             "symbol": "parsers"
           }
         }
@@ -25555,7 +25467,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8836,
+            "line": 8863,
             "symbol": "parsers"
           }
         }
@@ -25634,14 +25546,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 238,
+          "registration_order": 237,
           "alias_role": "alpha",
           "alias_group": [
             "u_prevent_death"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9068,
+            "line": 9094,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -25737,7 +25649,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8789,
+            "line": 8816,
             "symbol": "parsers"
           }
         }
@@ -25832,7 +25744,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8788,
+            "line": 8815,
             "symbol": "parsers"
           }
         }
@@ -25916,14 +25828,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 244,
+          "registration_order": 243,
           "alias_role": "alpha",
           "alias_group": [
             "u_ranged_attack"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9089,
+            "line": 9115,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -26014,7 +25926,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8855,
+            "line": 8882,
             "symbol": "parsers"
           }
         }
@@ -26104,7 +26016,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8829,
+            "line": 8856,
             "symbol": "parsers"
           }
         }
@@ -26199,7 +26111,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8854,
+            "line": 8881,
             "symbol": "parsers"
           }
         }
@@ -26289,7 +26201,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8805,
+            "line": 8832,
             "symbol": "parsers"
           }
         }
@@ -26384,7 +26296,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8803,
+            "line": 8830,
             "symbol": "parsers"
           }
         }
@@ -26479,7 +26391,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8804,
+            "line": 8831,
             "symbol": "parsers"
           }
         }
@@ -26574,7 +26486,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8801,
+            "line": 8828,
             "symbol": "parsers"
           }
         }
@@ -26669,7 +26581,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8800,
+            "line": 8827,
             "symbol": "parsers"
           }
         }
@@ -26764,7 +26676,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8802,
+            "line": 8829,
             "symbol": "parsers"
           }
         }
@@ -26852,7 +26764,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8848,
+            "line": 8875,
             "symbol": "parsers"
           }
         }
@@ -26947,7 +26859,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8806,
+            "line": 8833,
             "symbol": "parsers"
           }
         }
@@ -27042,7 +26954,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8824,
+            "line": 8851,
             "symbol": "parsers"
           }
         }
@@ -27132,7 +27044,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8818,
+            "line": 8845,
             "symbol": "parsers"
           }
         }
@@ -27227,7 +27139,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8822,
+            "line": 8849,
             "symbol": "parsers"
           }
         }
@@ -27317,7 +27229,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8791,
+            "line": 8818,
             "symbol": "parsers"
           }
         }
@@ -27412,7 +27324,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8792,
+            "line": 8819,
             "symbol": "parsers"
           }
         }
@@ -27507,7 +27419,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8825,
+            "line": 8852,
             "symbol": "parsers"
           }
         }
@@ -27602,7 +27514,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8899,
+            "line": 8926,
             "symbol": "parsers"
           }
         }
@@ -27697,7 +27609,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8781,
+            "line": 8808,
             "symbol": "parsers"
           }
         }
@@ -27790,7 +27702,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8851,
+            "line": 8878,
             "symbol": "parsers"
           }
         }
@@ -27885,7 +27797,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8813,
+            "line": 8840,
             "symbol": "parsers"
           }
         }
@@ -27980,7 +27892,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8814,
+            "line": 8841,
             "symbol": "parsers"
           }
         }
@@ -28074,7 +27986,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8843,
+            "line": 8870,
             "symbol": "parsers"
           }
         }
@@ -28170,7 +28082,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8820,
+            "line": 8847,
             "symbol": "parsers"
           }
         }
@@ -28266,7 +28178,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8786,
+            "line": 8813,
             "symbol": "parsers"
           }
         }
@@ -28360,7 +28272,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8821,
+            "line": 8848,
             "symbol": "parsers"
           }
         }
@@ -28455,7 +28367,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8823,
+            "line": 8850,
             "symbol": "parsers"
           }
         }
@@ -28534,14 +28446,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 251,
+          "registration_order": 250,
           "alias_role": "alpha",
           "alias_group": [
             "u_wants_to_talk"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9119,
+            "line": 9145,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -28623,14 +28535,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 174,
+          "registration_order": 173,
           "alias_role": "alpha",
           "alias_group": [
             "wake_up"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8972,
+            "line": 8998,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -28724,7 +28636,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8883,
+            "line": 8910,
             "symbol": "parsers"
           }
         }

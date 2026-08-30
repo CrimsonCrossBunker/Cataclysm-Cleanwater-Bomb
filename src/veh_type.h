@@ -285,7 +285,7 @@ class vpart_category
 
 class vpart_variant
 {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     public:
         std::string id;
         std::array<char32_t, 8> symbols;
@@ -316,7 +316,7 @@ class vpart_variant
 
 class vpart_info
 {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     public:
         vpart_id id;
 
@@ -581,7 +581,7 @@ struct vehicle_item_spawn {
  * is a nullptr. Creating a new vehicle copies the blueprint vehicle.
  */
 struct vehicle_prototype {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     public:
         struct part_def {
             point_rel_ms pos;

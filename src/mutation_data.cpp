@@ -1,5 +1,14 @@
 #include "mutation.h" // IWYU pragma: associated
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <damage.h>
+#include <point.h>
+#include <sleep.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cstdlib>
 #include <map>
@@ -10,8 +19,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "catalua_lua_call.h"
-#include "catalua_platform_content.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
@@ -22,6 +29,7 @@
 #include "generic_factory.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "memory_fast.h"
 #include "npc.h"
@@ -54,6 +62,11 @@ namespace
 {
 generic_factory<mutation_branch> trait_factory( "trait" );
 } // namespace
+
+generic_factory<mutation_branch> &cata::lua_platform::detail::mutation_registry()
+{
+    return trait_factory;
+}
 
 std::vector<dream> dreams;
 
@@ -466,28 +479,12 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
     for( JsonValue jv : jo.get_array( "activated_eocs" ) ) {
         activated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
-    for( JsonObject lua : jo.get_array( "activated_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        activated_luas.push_back( std::move( call ) );
-    }
-
     for( JsonValue jv : jo.get_array( "processed_eocs" ) ) {
         processed_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
-    }
-    for( JsonObject lua : jo.get_array( "processed_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        processed_luas.push_back( std::move( call ) );
     }
 
     for( JsonValue jv : jo.get_array( "deactivated_eocs" ) ) {
         deactivated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
-    }
-    for( JsonObject lua : jo.get_array( "deactivated_luas" ) ) {
-        cata::lua_ui::lua_call call;
-        call.load( lua );
-        deactivated_luas.push_back( std::move( call ) );
     }
 
     optional( jo, was_loaded, "activated_is_setup", activated_is_setup, false );
@@ -623,6 +620,33 @@ int mutation_branch::bionic_slot_bonus( const bodypart_str_id &part ) const
     } else {
         return iter->second;
     }
+}
+
+void mutation_branch::set_platform_text( const std::string &name,
+        const std::string &description )
+{
+    raw_name = no_translation( name );
+    raw_desc = no_translation( description );
+}
+
+void mutation_branch::set_platform_spawn_item( const std::string &item,
+        const std::string &message )
+{
+    spawn_item = itype_id( item );
+    raw_spawn_item_message = no_translation( message );
+}
+
+void mutation_branch::set_platform_ranged_mutation( const std::string &item,
+        const std::string &message )
+{
+    ranged_mutation = itype_id( item );
+    raw_ranged_mutation_message = no_translation( message );
+}
+
+void mutation_branch::set_platform_bionic_slot_bonus( const bodypart_str_id &part,
+        const int amount )
+{
+    bionic_slot_bonuses[part] = amount;
 }
 
 std::string mutation_branch::spawn_item_message() const
@@ -1042,7 +1066,14 @@ void mutation_branch::finalize()
 void mutation_branch::finalize_all()
 {
     trait_factory.finalize();
-    for( const mutation_branch &branch : get_all() ) {
+    cata::lua_platform::detail::refresh_mutation_registry_cache();
+    finalize_trait_blacklist();
+}
+
+void cata::lua_platform::detail::refresh_mutation_registry_cache()
+{
+    mutations_category.clear();
+    for( const mutation_branch &branch : mutation_branch::get_all() ) {
         for( const mutation_category_id &cat : branch.category ) {
             mutations_category[cat].emplace_back( branch.id );
         }
@@ -1052,7 +1083,6 @@ void mutation_branch::finalize_all()
             mutations_category[mutation_category_ANY].emplace_back( branch.id );
         }
     }
-    finalize_trait_blacklist();
 }
 
 void mutation_branch::finalize_trait_blacklist()

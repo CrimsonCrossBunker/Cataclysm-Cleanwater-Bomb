@@ -1,15 +1,103 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-replacement-ledger-v1.json",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-replacement-ledger-v2.json",
   "title": "CCB Lua-first replacement ledger",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema_version", "kind", "contract", "sources", "summary", "entries"],
+  "required": ["$schema", "schema_version", "kind", "contract", "migration_todo_policy", "sources", "summary", "entries"],
   "properties": {
     "$schema": { "const": "lua-first-replacement-ledger.schema.json" },
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "kind": { "const": "lua_first_replacement_ledger" },
     "contract": { "type": "string", "minLength": 1 },
+    "migration_todo_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "orthogonal_to", "unclassified", "platform_core_input", "classifications"],
+      "properties": {
+        "scope": { "const": "individual_migration_todo" },
+        "orthogonal_to": { "const": "selector_disposition_and_verification_status" },
+        "unclassified": { "const": "error" },
+        "platform_core_input": { "const": "platform_gap" },
+        "classifications": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "platform_core_input", "definition"],
+            "properties": {
+              "id": { "enum": ["auto_fix", "manual_rewrite", "platform_gap", "semantic_choice"] },
+              "platform_core_input": { "type": "boolean" },
+              "definition": { "type": "string", "minLength": 1 }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": ["id"],
+                  "properties": { "id": { "const": "platform_gap" } }
+                },
+                "then": {
+                  "properties": { "platform_core_input": { "const": true } }
+                }
+              },
+              {
+                "if": {
+                  "required": ["id"],
+                  "properties": {
+                    "id": {
+                      "enum": ["auto_fix", "manual_rewrite", "semantic_choice"]
+                    }
+                  }
+                },
+                "then": {
+                  "properties": { "platform_core_input": { "const": false } }
+                }
+              }
+            ]
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "const": "auto_fix" } }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "const": "manual_rewrite" } }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "const": "platform_gap" } }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "const": "semantic_choice" } }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ]
+        }
+      }
+    },
     "sources": {
       "type": "array",
       "minItems": 3,
@@ -49,7 +137,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["inventory", "selector", "target_kind", "target", "status", "legacy_dependency", "evidence"],
+        "required": ["inventory", "selector", "target_kind", "target", "status", "legacy_dependency", "evidence", "verification"],
         "properties": {
           "inventory": { "enum": ["json-object-types", "eoc-conditions", "eoc-effects"] },
           "selector": { "type": "string", "minLength": 1 },
@@ -57,8 +145,41 @@
           "target": { "type": "string", "minLength": 1 },
           "status": { "enum": ["implemented_verified", "implemented_unverified", "bounded_implemented_verified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"] },
           "legacy_dependency": { "enum": ["none", "private_adapter", "public_legacy"] },
-          "evidence": { "type": "array", "items": { "type": "string" } }
-        }
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "not": {
+                "pattern": "(c[a]talua|ccb_[n]ative_inventory|generate_[c]cb_inventory|check_[c]cb_inventory|public_[a]pi_v5|c[b]n_)"
+              }
+            },
+            "uniqueItems": true
+          },
+          "verification": { "enum": ["not_run", "source_only", "final_semantic_gate"] }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": ["implemented_verified", "bounded_implemented_verified"]
+                }
+              }
+            },
+            "then": { "properties": { "verification": { "const": "final_semantic_gate" } } }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": ["implemented_unverified", "bounded_implemented_unverified", "primitive_available_unverified"]
+                }
+              }
+            },
+            "then": { "properties": { "verification": { "const": "source_only" } } }
+          }
+        ]
       }
     }
   }

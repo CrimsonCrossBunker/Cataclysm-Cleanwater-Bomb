@@ -1,5 +1,9 @@
 #include "horde_map.h"
 
+#include <coordinates.h>
+#include <horde_entity.h>
+#include <point.h>
+#include <type_id.h>
 #include <memory>
 #include <optional>
 #include <string>
@@ -131,10 +135,10 @@ static bool is_alert( const mtype &type )
 }
 
 // These have no goal so they can't go in the active map.
-std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde_map::spawn_entity(
+horde_map::spawn_result horde_map::spawn_entity(
     const tripoint_abs_ms &p, mtype_id id )
 {
-    std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> result;
+    spawn_result result;
     if( id.is_null() || !id.is_valid() ) {
         return result; // Bail out, blacklisted monster or something's wrong.
     }
@@ -145,14 +149,19 @@ std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde
     point_abs_om omp;
     tripoint_om_sm sm;
     std::tie( omp, sm ) = project_remain<coords::om>( project_to<coords::sm>( p ) );
-    bool inserted;
     // The [] operator creates a nested std::map if not present already.
-    std::tie( result, inserted ) = target_map[sm].emplace( p, id );
+    auto [submap, submap_inserted] = target_map.try_emplace( sm );
+    auto [entry, inserted] = submap->second.emplace( p, id );
+    result.inserted = inserted;
+    result.position = entry;
+    if( !inserted && submap_inserted && submap->second.empty() ) {
+        target_map.erase( submap );
+    }
     return result;
 }
 
 // TODO: check for a goal in horde_entity and put in active vs idle.
-std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde_map::spawn_entity(
+horde_map::spawn_result horde_map::spawn_entity(
     const tripoint_abs_ms &p, const monster &mon )
 {
     std::unordered_map <tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>> &target_map =
@@ -160,18 +169,23 @@ std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde
                 !is_alert( *mon.type ) ? immobile_monster_map :
                 ( mon.has_dest() || mon.wandf > 0 ) ? active_monster_map :
                 idle_monster_map;
-    std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> result;
+    spawn_result result;
     point_abs_om omp;
     tripoint_om_sm sm;
     std::tie( omp, sm ) = project_remain<coords::om>( project_to<coords::sm>( p ) );
-    bool inserted;
     // The [] operator creates a nested std::map if not present already.
-    std::tie( result, inserted ) = target_map[sm].emplace( p, mon );
+    auto [submap, submap_inserted] = target_map.try_emplace( sm );
+    auto [entry, inserted] = submap->second.emplace( p, mon );
+    result.inserted = inserted;
+    result.position = entry;
     if( inserted ) {
-        ( *result )->second.monster_data->set_pos_abs_only( p );
+        entry->second.monster_data->set_pos_abs_only( p );
     } else {
         debugmsg( "Attempted to insert a %s at %s, but there's already a %s there!",
-                  mon.name(), p.to_string(), ( *result )->second.get_type()->nname() );
+                  mon.name(), p.to_string(), entry->second.get_type()->nname() );
+        if( submap_inserted && submap->second.empty() ) {
+            target_map.erase( submap );
+        }
     }
     return result;
 }
@@ -234,8 +248,13 @@ void horde_map::signal_entities( const tripoint_abs_ms &origin, int volume )
     }
 }
 
-void horde_map::insert( std::unordered_map<tripoint_abs_ms, horde_entity>::node_type &&node )
+horde_map::insert_result horde_map::insert_with_result(
+    std::unordered_map<tripoint_abs_ms, horde_entity>::node_type &&node )
 {
+    insert_result result;
+    if( node.empty() ) {
+        return result;
+    }
     std::unordered_map <tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>> &target_map =
                 node.mapped().get_type()->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
                 node.mapped().is_active() ? active_monster_map :
@@ -244,8 +263,23 @@ void horde_map::insert( std::unordered_map<tripoint_abs_ms, horde_entity>::node_
     point_abs_om omp;
     tripoint_om_sm sm;
     std::tie( omp, sm ) = project_remain<coords::om>( project_to<coords::sm> ( node.key() ) );
-    // The [] operator creates a nested std::map if not present already.
-    target_map[sm].insert( std::move( node ) );
+    auto [submap, submap_inserted] = target_map.try_emplace( sm );
+    auto inserted = submap->second.insert( std::move( node ) );
+    result.inserted = inserted.inserted;
+    if( result.inserted ) {
+        result.position = iterator(
+                              *this, target_map, submap,
+                              inserted.position );
+    } else if( submap_inserted && submap->second.empty() ) {
+        target_map.erase( submap );
+    }
+    result.node = std::move( inserted.node );
+    return result;
+}
+
+void horde_map::insert( std::unordered_map<tripoint_abs_ms, horde_entity>::node_type &&node )
+{
+    insert_with_result( std::move( node ) );
 }
 
 void horde_map::clear()

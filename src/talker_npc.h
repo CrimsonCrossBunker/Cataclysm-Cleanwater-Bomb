@@ -10,6 +10,8 @@
 #include "talker_character.h"
 #include "type_id.h"
 
+class item_location;
+
 /*
  */
 class talker_npc_const : public const_talker_cloner<talker_npc_const, talker_character_const>
@@ -98,6 +100,7 @@ class talker_npc : virtual public talker_npc_const,
                                     const spell_id &c_spell, const proficiency_id &c_proficiency ) override;
         void add_debt( int cost ) override;
         std::string give_item_to( bool to_use ) override;
+        std::string give_item_to( item_location offered, bool to_use );
         bool buy_from( int amount ) override;
         void select_mission( mission *selected ) override;
         void check_missions() override;

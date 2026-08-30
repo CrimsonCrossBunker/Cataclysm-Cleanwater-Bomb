@@ -1,10 +1,11 @@
 #include "profession_group.h"
 
-#include "catalua_platform_content.h"
-#include "debug.h"
-#include "generic_factory.h"
+#include <type_id.h>
 
-class JsonObject;
+#include "debug.h"
+#include "flexbuffer_json.h"
+#include "generic_factory.h"
+#include "lua_platform_content.h"
 
 namespace
 {

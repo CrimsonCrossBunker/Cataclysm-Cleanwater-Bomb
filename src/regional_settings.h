@@ -487,6 +487,7 @@ struct region_settings {
 
 
     region_settings_map_extras_id region_extras;
+    bool finalized = false;
 
     region_settings() : id( "null" ) {
         default_groundcover.add( t_null, 0 );

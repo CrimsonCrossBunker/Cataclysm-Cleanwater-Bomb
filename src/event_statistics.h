@@ -16,16 +16,27 @@
 class JsonObject;
 class cata_variant;
 class event_multiset;
+class event_statistic;
+class event_transformation;
 class stats_tracker;
 class stats_tracker_state;
 enum class cata_variant_type : int;
 enum class monotonically : int;
-template<typename T>
-class generic_factory;
 
 namespace cata::lua_platform
 {
 class content_transaction;
+
+namespace detail
+{
+struct event_statistic_native_definition;
+struct event_transformation_native_definition;
+
+::event_statistic make_event_statistic(
+    const event_statistic_native_definition &definition );
+::event_transformation make_event_transformation(
+    const event_transformation_native_definition &definition );
+} // namespace detail
 }
 
 using event_fields_type = std::unordered_map<std::string, cata_variant_type>;
@@ -69,6 +80,8 @@ class event_transformation
         class impl;
 
     private:
+        friend event_transformation cata::lua_platform::detail::make_event_transformation(
+            const cata::lua_platform::detail::event_transformation_native_definition &definition );
         cata::clone_ptr<impl> impl_;
 };
 
@@ -101,6 +114,8 @@ class event_statistic
         class impl;
 
     private:
+        friend event_statistic cata::lua_platform::detail::make_event_statistic(
+            const cata::lua_platform::detail::event_statistic_native_definition &definition );
         translation description_;
         cata::clone_ptr<impl> impl_;
 };

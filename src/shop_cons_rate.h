@@ -16,6 +16,7 @@ class JsonObject;
 class JsonValue;
 class item;
 class npc;
+class Character;
 struct const_dialogue;
 
 namespace cata::lua_platform
@@ -35,9 +36,14 @@ struct icg_entry {
     translation message;
 
     std::function<bool( const_dialogue const & )> condition;
+    std::function<bool( item const &, npc const & )> platform_condition;
 
     bool operator==( icg_entry const &rhs ) const;
     bool matches( item const &it, npc const &beta ) const;
+    // The legacy overload keeps its native player/avatar semantics.  Platform
+    // trade supplies the exact other Character through this overload.
+    bool matches( item const &it, npc const &beta,
+                  const Character &counterparty ) const;
 };
 
 class icg_entry_reader : public generic_typed_reader<icg_entry_reader>
@@ -92,6 +98,8 @@ struct shopkeeper_blacklist {
     static void finalize_all();
     void load( const JsonObject &jo, std::string_view src );
     icg_entry const *matches( item const &it, npc const &beta ) const;
+    icg_entry const *matches( item const &it, npc const &beta,
+                              const Character &counterparty ) const;
 };
 
 struct shopkeeper_whitelist {
@@ -108,6 +116,8 @@ struct shopkeeper_whitelist {
     static void finalize_all();
     void load( const JsonObject &jo, std::string_view src );
     icg_entry const *matches( item const &it, npc const &beta ) const;
+    icg_entry const *matches( item const &it, npc const &beta,
+                              const Character &counterparty ) const;
 };
 
 #endif // CATA_SRC_SHOP_CONS_RATE_H

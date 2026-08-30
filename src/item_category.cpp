@@ -1,12 +1,16 @@
 #include "item_category.h"
 
+#include <flat_set.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <utility>
 #include <vector>
 
-#include "catalua_platform_content.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 
 namespace
 {
@@ -189,6 +193,45 @@ void item_category_spawn_rates::set_spawn_rate( const item_category_id &id, cons
         it->second = rate;
     } else {
         spawn_rates.insert( std::make_pair( id, rate ) );
+    }
+}
+
+void item_category_spawn_rates::set_spawn_rates(
+    const std::vector<std::pair<item_category_id, float>> &updates )
+{
+    std::map<item_category_id, std::optional<float>> snapshot;
+    for( const auto &update : updates ) {
+        const auto it = spawn_rates.find( update.first );
+        const std::optional<float> previous =
+            it == spawn_rates.end() ? std::nullopt :
+            std::optional<float>( it->second );
+        snapshot.emplace( update.first, previous );
+    }
+
+    try {
+        for( const auto &update : updates ) {
+            auto it = spawn_rates.find( update.first );
+            if( it != spawn_rates.end() ) {
+                it->second = update.second;
+            } else {
+                spawn_rates.emplace( update.first, update.second );
+            }
+        }
+    } catch( ... ) {
+        // find/assignment/erase do not allocate here: every entry that was
+        // present in the snapshot remains present during the commit, and an
+        // entry absent from it can only be a newly committed map node.
+        for( const auto &entry : snapshot ) {
+            if( entry.second ) {
+                auto it = spawn_rates.find( entry.first );
+                if( it != spawn_rates.end() ) {
+                    it->second = *entry.second;
+                }
+            } else {
+                spawn_rates.erase( entry.first );
+            }
+        }
+        throw;
     }
 }
 

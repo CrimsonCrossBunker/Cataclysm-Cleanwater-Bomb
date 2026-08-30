@@ -1,5 +1,3 @@
-#include "faction_camp.h"
-
 #include <functional>
 #include <map>
 #include <string>
@@ -10,8 +8,11 @@
 #include "cata_utility.h"
 #include "debug.h"
 #include "display.h"
+#include "faction_camp.h"
+#include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "skill.h"
 #include "string_formatter.h"
 #include "translation.h"
@@ -35,8 +36,6 @@ static std::map<risk_diff_level, translation> risk_diff_to_diff_name( {
     { risk_diff_level::HIGH,                 to_translation( "difficulty level", "Difficulty: Hard" ) },
     { risk_diff_level::VERY_HIGH,            to_translation( "difficulty level", "Difficulty: Very Hard" ) }
 } );
-
-class JsonObject;
 
 void faction_mission::load( const JsonObject &jo, const std::string_view & )
 {
@@ -69,6 +68,12 @@ namespace
 generic_factory<faction_mission> faction_mission_factory( "faction_mission" );
 
 } // namespace
+
+generic_factory<faction_mission> &
+cata::lua_platform::detail::faction_mission_registry()
+{
+    return faction_mission_factory;
+}
 
 /** @relates string_id */
 template<>

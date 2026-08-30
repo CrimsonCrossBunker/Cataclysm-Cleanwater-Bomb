@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_platform_content.h"
+#include "lua_platform_content.h" // IWYU pragma: keep
 #include "enum_bitset.h"
 #include "mattack_common.h"
 #include "mtype.h"

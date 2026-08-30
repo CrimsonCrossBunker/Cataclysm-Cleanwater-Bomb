@@ -1,7 +1,13 @@
 #include "mission.h"
 
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
-#include <cstdlib>
+#include <cstddef>
 #include <istream>
 #include <iterator>
 #include <list>
@@ -13,7 +19,6 @@
 
 #include "avatar.h"
 #include "character.h"
-#include "catalua_ui.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -25,6 +30,7 @@
 #include "item_group.h"
 #include "item_stack.h"
 #include "kill_tracker.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "monster.h"
@@ -78,12 +84,24 @@ std::string mission_type::tname() const
 }
 
 static std::unordered_map<int, mission> world_missions;
+static std::size_t next_mission_identity_generation = 1;
+
+static std::size_t issue_mission_identity_generation()
+{
+    const std::size_t result = next_mission_identity_generation;
+    ++next_mission_identity_generation;
+    if( next_mission_identity_generation == 0 ) {
+        next_mission_identity_generation = 1;
+    }
+    return result;
+}
 
 mission *mission::reserve_new( const mission_type_id &type, const character_id &npc_id )
 {
     const mission tmp = mission_type::get( type )->create( npc_id );
     // TODO: Warn about overwrite?
     mission &miss = world_missions[tmp.uid] = tmp;
+    miss.identity_generation_ = issue_mission_identity_generation();
     return &miss;
 }
 
@@ -135,6 +153,8 @@ void mission::remove_active_world_mission( mission &cur_mission )
 void mission::add_existing( const mission &m )
 {
     world_missions[ m.uid ] = m;
+    world_missions[ m.uid ].identity_generation_ =
+        issue_mission_identity_generation();
 }
 
 void mission::process_all()
@@ -345,11 +365,13 @@ void mission::assign( avatar &u )
         }
         type->start( this );
         status = mission_status::in_progress;
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_mission_start", {
             {
                 "mission",
-                cata::lua_ui::native_callback_mission { uid }
+                cata::lua_platform::native_callback_mission {
+                    uid, identity_generation_
+                }
             }
         } );
     }
@@ -357,8 +379,12 @@ void mission::assign( avatar &u )
 
 void mission::fail()
 {
+    fail( get_avatar() );
+}
+
+void mission::fail( avatar &player_character )
+{
     status = mission_status::failure;
-    avatar &player_character = get_avatar();
     if( player_character.getID() == player_id ) {
         player_character.on_mission_finished( *this );
     }
@@ -366,11 +392,13 @@ void mission::fail()
     deadline = calendar::turn;
 
     type->fail( this );
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_mission_end", {
         {
             "mission",
-            cata::lua_ui::native_callback_mission { uid }
+            cata::lua_platform::native_callback_mission {
+                uid, identity_generation_
+            }
         },
         { "success", false }
     } );
@@ -409,7 +437,11 @@ void mission::step_complete( const int _step )
 
 void mission::wrap_up()
 {
-    avatar &player_character = get_avatar();
+    wrap_up( get_avatar() );
+}
+
+void mission::wrap_up( avatar &player_character )
+{
     if( player_character.getID() != player_id ) {
         // This is called from npctalk.cpp, the npc should only offer the option to wrap up mission
         // that have been assigned to the current player.
@@ -504,11 +536,13 @@ void mission::wrap_up()
     deadline = calendar::turn;
 
     type->end( this );
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_mission_end", {
         {
             "mission",
-            cata::lua_ui::native_callback_mission { uid }
+            cata::lua_platform::native_callback_mission {
+                uid, identity_generation_
+            }
         },
         { "success", true }
     } );
@@ -516,11 +550,16 @@ void mission::wrap_up()
 
 bool mission::is_complete( const character_id &_npc_id ) const
 {
+    return is_complete( _npc_id, get_avatar() );
+}
+
+bool mission::is_complete( const character_id &_npc_id,
+                           avatar &player_character ) const
+{
     if( status == mission_status::success ) {
         return true;
     }
 
-    avatar &player_character = get_avatar();
     switch( type->goal ) {
         case MGOAL_GO_TO: {
             const tripoint_abs_omt cur_pos = player_character.pos_abs_omt();
@@ -811,6 +850,11 @@ bool mission::in_progress() const
     return status == mission_status::in_progress;
 }
 
+std::size_t mission::identity_generation() const noexcept
+{
+    return identity_generation_;
+}
+
 void mission::process()
 {
     if( !in_progress() ) {
@@ -837,6 +881,16 @@ const talk_effect_fun_t::likely_rewards_t &mission::get_likely_rewards() const
 bool mission::has_generic_rewards() const
 {
     return type->has_generic_rewards;
+}
+
+bool mission::generic_reward_claimed() const noexcept
+{
+    return generic_reward_claimed_;
+}
+
+void mission::commit_generic_reward_claim() noexcept
+{
+    generic_reward_claimed_ = true;
 }
 
 void mission::set_deadline( time_point new_deadline )
@@ -949,6 +1003,7 @@ mission::mission()
     monster_kill_goal = -1;
     npc_id = character_id();
     good_fac_id = -1;
+    generic_reward_claimed_ = false;
     bad_fac_id = -1;
     step = 0;
     player_id = character_id();

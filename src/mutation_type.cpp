@@ -1,7 +1,9 @@
 #include "mutation.h" // IWYU pragma: associated
 
-#include "catalua_platform_content.h"
+#include <type_id.h>
+
 #include "flexbuffer_json.h"
+#include "lua_platform_content.h"
 
 namespace
 {

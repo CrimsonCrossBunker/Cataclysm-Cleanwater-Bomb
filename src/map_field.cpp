@@ -19,7 +19,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_platform_runtime.h"
+#include "lua_platform_runtime.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"

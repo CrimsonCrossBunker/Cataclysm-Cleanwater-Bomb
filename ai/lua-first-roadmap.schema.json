@@ -1,9 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-roadmap-v1.json",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-roadmap-v2.json",
   "title": "CCB Lua-first Platform roadmap",
   "type": "object",
+  "additionalProperties": false,
   "required": [
+    "$schema",
     "schema_version",
     "kind",
     "direction_status",
@@ -11,102 +13,167 @@
     "authority_path",
     "current_contract",
     "target",
-    "legacy_inventories",
+    "current_phase",
+    "verification_policy",
+    "corpus_sources",
     "status_definitions",
     "milestones",
     "capabilities"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "$schema": { "const": "lua-first-roadmap.schema.json" },
+    "schema_version": { "const": 2 },
     "kind": { "const": "lua_first_roadmap" },
-    "direction_status": { "enum": [ "proposal", "accepted", "retired" ] },
-    "platform_version": { "type": "integer", "minimum": 1 },
-    "authority_path": { "type": "string", "minLength": 1 },
-    "current_contract": { "type": "string", "minLength": 1 },
+    "direction_status": { "enum": ["proposal", "accepted", "retired"] },
+    "platform_version": { "const": 1 },
+    "authority_path": { "const": "data/lua/LUA_FIRST_PLATFORM.md" },
+    "current_contract": { "const": "ccb Platform v1" },
     "target": { "type": "string", "minLength": 1 },
-    "legacy_inventories": {
+    "current_phase": { "type": "string", "minLength": 1 },
+    "verification_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementation_loop",
+        "acceptance_gate",
+        "forbidden_before_gate",
+        "verified_requires",
+        "bounded_means",
+        "complete_means"
+      ],
+      "properties": {
+        "implementation_loop": { "enum": ["source_and_test_writes_only"] },
+        "acceptance_gate": { "enum": ["one_final_gate_after_all_source_batches"] },
+        "forbidden_before_gate": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "cxx_build",
+              "catch2",
+              "python_suite",
+              "contract_generation",
+              "ledger_refresh",
+              "full_corpus_audit"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "verified_requires": { "const": "final_semantic_gate_with_native_and_real_corpus_evidence" },
+        "bounded_means": { "type": "string", "minLength": 1 },
+        "complete_means": { "type": "string", "minLength": 1 }
+      }
+    },
+    "corpus_sources": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 3,
       "items": {
         "type": "object",
-        "required": [ "id", "path", "selector", "entry_count" ],
+        "additionalProperties": false,
+        "required": ["id", "path", "selector", "role"],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-          "path": { "type": "string", "minLength": 1 },
-          "selector": { "type": "string", "minLength": 1 },
-          "entry_count": { "type": "integer", "minimum": 0 }
-        },
-        "additionalProperties": false
+          "id": { "enum": ["json-object-types", "eoc-conditions", "eoc-effects"] },
+          "path": { "$ref": "#/$defs/currentPath" },
+          "selector": { "enum": ["type", "key"] },
+          "role": { "enum": ["real_json_inventory", "real_eoc_inventory"] }
+        }
       }
     },
     "status_definitions": {
       "type": "object",
-      "required": [ "milestone", "capability", "legacy_dependency" ],
+      "additionalProperties": false,
+      "required": ["milestone", "capability", "verification"],
       "properties": {
-        "milestone": { "const": [ "planned", "in_progress", "complete", "blocked" ] },
-        "capability": { "const": [ "absent", "legacy_only", "partial", "available" ] },
-        "legacy_dependency": { "const": [ "none", "private_adapter", "public_legacy" ] }
-      },
-      "additionalProperties": false
+        "milestone": { "const": ["planned", "in_progress", "source_complete_unverified", "pending_generation", "complete", "blocked"] },
+        "capability": { "const": ["planned", "in_progress", "source_complete_unverified", "pending_generation", "complete", "blocked", "not_applicable"] },
+        "verification": { "const": ["not_run", "pending_generation", "pending_final_gate", "passed"] }
+      }
     },
     "milestones": {
       "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [ "id", "title", "status", "depends_on", "exit_criteria", "evidence" ],
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-          "title": { "type": "string", "minLength": 1 },
-          "status": { "enum": [ "planned", "in_progress", "complete", "blocked" ] },
-          "depends_on": {
-            "type": "array",
-            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-            "uniqueItems": true
-          },
-          "exit_criteria": {
-            "type": "array",
-            "minItems": 1,
-            "items": { "type": "string", "minLength": 1 }
-          },
-          "evidence": {
-            "type": "array",
-            "items": { "type": "string", "minLength": 1 },
-            "uniqueItems": true
-          }
-        },
-        "additionalProperties": false
-      }
+      "minItems": 10,
+      "items": { "$ref": "#/$defs/milestone" }
     },
     "capabilities": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "id", "phase", "status", "legacy_dependency", "target_surface",
-          "evidence", "next_actions"
-        ],
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-          "phase": { "type": "string", "minLength": 1 },
-          "status": { "enum": [ "absent", "legacy_only", "partial", "available" ] },
-          "legacy_dependency": { "enum": [ "none", "private_adapter", "public_legacy" ] },
-          "target_surface": { "type": "string", "minLength": 1 },
-          "evidence": {
-            "type": "array",
-            "items": { "type": "string", "minLength": 1 },
-            "uniqueItems": true
-          },
-          "next_actions": {
-            "type": "array",
-            "minItems": 1,
-            "items": { "type": "string", "minLength": 1 }
-          }
-        },
-        "additionalProperties": false
-      }
+      "items": { "$ref": "#/$defs/capability" }
     }
   },
-  "additionalProperties": false
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "currentPath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "(c[a]talua|ccb_[n]ative_inventory|generate_[c]cb_inventory|check_[c]cb_inventory|public_[a]pi_v5|c[b]n_)"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/currentPath" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "kind"],
+            "properties": {
+              "path": { "$ref": "#/$defs/currentPath" },
+              "kind": { "enum": ["source", "declaration", "test_source", "documentation", "schema", "real_inventory", "generated_output"] },
+              "state": { "enum": ["current", "pending_generation", "pending_final_gate"] }
+            }
+          }
+        ]
+      },
+      "uniqueItems": true
+    },
+    "verification": {
+      "enum": ["not_run", "pending_generation", "pending_final_gate", "passed"]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status", "depends_on", "scope", "exit_criteria", "evidence", "verification"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["planned", "in_progress", "source_complete_unverified", "pending_generation", "complete", "blocked"] },
+        "depends_on": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "scope": { "type": "string", "minLength": 1 },
+        "exit_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "verification": { "$ref": "#/$defs/verification" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "complete" } } },
+          "then": { "properties": { "verification": { "const": "passed" } } }
+        }
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "phase", "status", "target_surface", "legacy_dependency", "evidence", "next_actions"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "phase": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["planned", "in_progress", "source_complete_unverified", "pending_generation", "complete", "blocked", "not_applicable"] },
+        "target_surface": { "type": "string", "minLength": 1 },
+        "legacy_dependency": { "enum": ["none", "private_adapter", "public_legacy"] },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "verification": { "$ref": "#/$defs/verification" },
+        "next_actions": { "type": "array", "minItems": 0, "items": { "type": "string", "minLength": 1 } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "complete" } } },
+          "then": { "properties": { "next_actions": { "maxItems": 0 } } }
+        }
+      ]
+    }
+  }
 }

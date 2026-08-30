@@ -1751,11 +1751,12 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
             rebuild = true;
         }
         for( auto &zone : veh->loot_zones ) {
+            zone.second.set_vehicle_owner( *veh );
             veh_zones.emplace_back( &zone.second );
         }
     }
     if( rebuild ) {
-        zone_manager::get_manager().cache_vzones();
+        zone_manager::get_manager().cache_vzones( this );
     }
     return veh_zones;
 }
@@ -1768,6 +1769,22 @@ void map::register_vehicle_zone( vehicle *veh, const int zlev )
 
 bool map::deregister_vehicle_zone( zone_data &zone ) const
 {
+    vehicle *owner = zone.get_vehicle_owner().get();
+    for( const wrapped_vehicle &wrapped : const_cast<map *>( this )->get_vehicles() ) {
+        if( wrapped.v == nullptr || ( owner != nullptr && wrapped.v != owner ) ) {
+            continue;
+        }
+        for( auto it = wrapped.v->loot_zones.begin(); it != wrapped.v->loot_zones.end(); ++it ) {
+            if( &zone == &it->second ) {
+                wrapped.v->loot_zones.erase( it );
+                return true;
+            }
+        }
+        if( owner != nullptr ) {
+            return false;
+        }
+    }
+
     const tripoint_bub_ms pos = get_bub( zone.get_start_point() );
     if( const std::optional<vpart_reference> vp = veh_at( pos ).cargo() ) {
         vehicle &veh = vp->vehicle();
@@ -10634,33 +10651,20 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
         const std::string old_stage = growth_stages[old_stage_idx].first.str();
         const std::string new_stage = growth_stages[new_stage_idx].first.str();
-        const furn_t &new_furn = this->furn( p ).obj();
 
-        if( new_furn.plant ) {
-            iexamine::run_plant_eocs( new_furn.plant->eoc_on_grow, alpha, *this, p, *current_seed,
-                                      old_stage, new_stage );
-        }
-        iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_grow, alpha, *this, p, *current_seed,
-                                  old_stage, new_stage );
+        iexamine::run_plant_lifecycle_event(
+            "grow", alpha, *this, p, *current_seed, old_stage, new_stage );
 
         if( mature_stage_idx >= 0 && old_stage_idx < mature_stage_idx &&
             new_stage_idx >= mature_stage_idx ) {
-            if( new_furn.plant ) {
-                iexamine::run_plant_eocs( new_furn.plant->eoc_on_mature, alpha, *this, p, *current_seed,
-                                          old_stage, new_stage );
-            }
-            iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_mature, alpha, *this, p,
-                                      *current_seed, old_stage, new_stage );
+            iexamine::run_plant_lifecycle_event(
+                "mature", alpha, *this, p, *current_seed, old_stage, new_stage );
         }
 
         if( overgrown_stage_idx >= 0 && old_stage_idx < overgrown_stage_idx &&
             new_stage_idx >= overgrown_stage_idx ) {
-            if( new_furn.plant ) {
-                iexamine::run_plant_eocs( new_furn.plant->eoc_on_overgrow, alpha, *this, p, *current_seed,
-                                          old_stage, new_stage );
-            }
-            iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_overgrow, alpha, *this, p,
-                                      *current_seed, old_stage, new_stage );
+            iexamine::run_plant_lifecycle_event(
+                "overgrow", alpha, *this, p, *current_seed, old_stage, new_stage );
         }
     }
 }

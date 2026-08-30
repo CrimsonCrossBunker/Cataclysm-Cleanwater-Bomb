@@ -1,8 +1,18 @@
-#include "catalua_platform_content.h"
-
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
+#include <city.h>
+#include <common_types.h>
+#include <flat_set.h>
+#include <flexbuffer_json.h>
+#include <map_scale_constants.h>
+#include <mapgen_parameter.h>
+#include <mapgendata.h>
+#include <memory_fast.h>
+#include <overmap_location.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <memory>
 #include <numeric>
@@ -17,6 +27,8 @@
 #include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "mod_tracker.h"
 #include "string_formatter.h"
 #include "talker.h"
@@ -300,6 +312,12 @@ special_placement_result overmap_special::place(
         dialogue d( get_talker_for( get_avatar() ), nullptr );
         get_eoc()->apply_true_effects( d );
     }
+    const tripoint_abs_omt absolute_position =
+        tripoint_abs_omt{ om.global_base_point(), origin.z() } +
+        point_rel_omt{ origin.x(), origin.y() };
+    cata::lua_platform::invoke_overmap_special_placement_handler(
+        id.str(), absolute_position, static_cast<int>( dir ),
+        cit.name, cit.size, cit.population );
     const bool blob = has_flag( "BLOB" );
     return data_->place( om, origin, dir, blob, cit, must_be_unexplored );
 }

@@ -1,7 +1,6 @@
 #include "gates.h"
 
-#include "catalua_platform_content.h"
-
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -9,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "activity_actor_definitions.h"
@@ -27,6 +25,7 @@
 #include "iexamine.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "mapdata.h"
 #include "messages.h"
@@ -50,8 +49,6 @@ static const furn_str_id furn_f_safe_o( "f_safe_o" );
 static const material_id material_glass( "glass" );
 
 // Gates namespace
-
-struct gate_data;
 
 static gate_id get_gate_id( const tripoint_bub_ms &pos )
 {

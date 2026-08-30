@@ -1,6 +1,12 @@
 #include "mapgen.h"
-#include "mapgen_post_process.h"
 
+#include <cata_variant.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <flexbuffer_json.h>
+#include <mapgen_parameter.h>
+#include <mapgen_primitives.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -10,13 +16,14 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <typeinfo>
 #include <unordered_map>
+#include <vector>
 
 #include "all_enum_values.h"
 #include "avatar.h"
@@ -24,7 +31,6 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
 #include "character_id.h"
 #include "city.h"
 #include "clzones.h"
@@ -52,9 +58,14 @@
 #include "item_group.h"
 #include "itype.h"
 #include "jmapgen_flags.h"
+#include "json.h"
+#include "json_loader.h"
 #include "level_cache.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_mapgen_dispatch.h"
+#include "magic_teleporter_list.h"
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_extras.h"
@@ -63,6 +74,7 @@
 #include "mapbuffer.h"
 #include "mapdata.h"
 #include "mapgen_functions.h"
+#include "mapgen_post_process.h"
 #include "mapgendata.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -100,7 +112,6 @@
 #include "weather_gen.h"
 #include "weighted_dbl_or_var_list.h"
 #include "weighted_list.h"
-#include "magic_teleporter_list.h"
 
 static const furn_str_id furn_f_ash( "f_ash" );
 static const furn_str_id furn_f_console( "f_console" );
@@ -378,7 +389,8 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                 }
             }
             if( any_missing || !save_results ) {
-                cata::lua_ui::dispatch_mapgen_postprocess( dat );
+                cata::lua_platform::dispatch_mapgen_postprocess( dat );
+                set_queued_points();
             }
         }
     }
@@ -601,7 +613,7 @@ class mapgen_factory
             const std::vector<std::string> candidates(
                 result.begin(), result.end() );
             const std::vector<std::string> script_usages =
-                cata::lua_ui::collect_native_mapgen_factory_usages(
+                cata::lua_platform::collect_native_mapgen_factory_usages(
                     candidates );
             result.insert( script_usages.begin(), script_usages.end() );
             return result;
@@ -683,6 +695,190 @@ static mapgen_factory oter_mapgen;
 std::map<nested_mapgen_id, nested_mapgen> nested_mapgens;
 std::map<update_mapgen_id, update_mapgen> update_mapgens;
 static std::unordered_map<std::string, tripoint_abs_ms> queued_points;
+
+namespace
+{
+std::string serialize_callback_submap( const submap &value )
+{
+    std::ostringstream output;
+    JsonOut json( output );
+    json.start_object();
+    value.store( json );
+    json.end_object();
+    return output.str();
+}
+} // namespace
+
+struct platform_mapgen_callback_transaction::impl {
+    struct submap_snapshot {
+        submap *target = nullptr;
+        std::string serialized;
+        bool reverted = false;
+        bool player_adjusted_map = false;
+    };
+
+    mapgendata *data = nullptr;
+    platform_mapgen_transaction_report *report = nullptr;
+    std::array<submap_snapshot, 4> snapshots;
+    std::array<int, 8> directions{};
+    std::unordered_map<std::string, tripoint_abs_ms> queued_points_preimage;
+    bool prepared = false;
+    bool active = false;
+};
+
+platform_mapgen_callback_transaction::platform_mapgen_callback_transaction(
+    mapgendata &data, platform_mapgen_transaction_report *const report )
+{
+    if( report != nullptr ) {
+        *report = {};
+        report->footprint.min_submap_x = 0;
+        report->footprint.max_submap_x = 1;
+        report->footprint.min_submap_y = 0;
+        report->footprint.max_submap_y = 1;
+        report->footprint.min_z = data.zlevel();
+        report->footprint.max_z = data.zlevel();
+        report->footprint.complete_omt_z_stack = false;
+    }
+
+    const auto reject = [report]( const std::string & message ) {
+        if( report != nullptr ) {
+            report->state = platform_mapgen_transaction_state::rejected;
+            report->code = "prepare_failed";
+            report->message = message;
+        }
+    };
+
+    try {
+        pimpl_ = std::make_unique<impl>();
+        pimpl_->data = &data;
+        pimpl_->report = report;
+
+        std::size_t snapshot_index = 0;
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                submap *const target = data.m.maptile_at(
+                                           tripoint_bub_ms{ x * SEEX, y * SEEY,
+                                                   data.zlevel() } ).wrapped_submap();
+                if( target == nullptr ) {
+                    throw std::runtime_error(
+                        "Platform mapgen callback transaction target submap is missing" );
+                }
+                if( !target->vehicles.empty() || target->camp ) {
+                    throw std::runtime_error(
+                        "Platform mapgen callback transaction rejects vehicles or camps" );
+                }
+
+                impl::submap_snapshot &snapshot = pimpl_->snapshots[snapshot_index++];
+                snapshot.target = target;
+                snapshot.serialized = serialize_callback_submap( *target );
+                snapshot.reverted = target->reverted;
+                snapshot.player_adjusted_map = target->player_adjusted_map;
+            }
+        }
+
+        for( int index = 0; index < 8; ++index ) {
+            pimpl_->directions[static_cast<std::size_t>( index )] = data.dir( index );
+        }
+        pimpl_->queued_points_preimage = queued_points;
+        pimpl_->prepared = true;
+        pimpl_->active = true;
+    } catch( const std::exception &exception ) {
+        pimpl_.reset();
+        reject( exception.what() );
+    } catch( ... ) {
+        pimpl_.reset();
+        reject( "Platform mapgen callback transaction preparation failed" );
+    }
+}
+
+platform_mapgen_callback_transaction::~platform_mapgen_callback_transaction() noexcept
+{
+    if( pimpl_ != nullptr && pimpl_->active ) {
+        try {
+            rollback( "callback_aborted",
+                      "Platform mapgen callback transaction was aborted" );
+        } catch( ... ) {
+        }
+    }
+}
+
+bool platform_mapgen_callback_transaction::ready() const noexcept
+{
+    return pimpl_ != nullptr && pimpl_->prepared;
+}
+
+void platform_mapgen_callback_transaction::commit() noexcept
+{
+    if( pimpl_ == nullptr || !pimpl_->prepared || !pimpl_->active ) {
+        return;
+    }
+    pimpl_->active = false;
+    try {
+        if( pimpl_->report != nullptr ) {
+            pimpl_->report->state = platform_mapgen_transaction_state::committed;
+            pimpl_->report->code = "committed";
+            pimpl_->report->message.clear();
+        }
+    } catch( ... ) {
+    }
+}
+
+bool platform_mapgen_callback_transaction::rollback(
+    const std::string &code, const std::string &message ) noexcept
+{
+    if( pimpl_ == nullptr || !pimpl_->prepared || !pimpl_->active ) {
+        return false;
+    }
+
+    bool restored = true;
+    try {
+        for( int index = 0; index < 8; ++index ) {
+            pimpl_->data->dir( index ) = pimpl_->directions[static_cast<std::size_t>( index )];
+        }
+        queued_points.swap( pimpl_->queued_points_preimage );
+
+        for( const impl::submap_snapshot &snapshot : pimpl_->snapshots ) {
+            try {
+                JsonValue parsed = json_loader::from_string( snapshot.serialized );
+                const JsonObject object = parsed.get_object();
+                submap fresh;
+                for( JsonMember member : object ) {
+                    fresh.load( member, member.name(), savegame_version );
+                }
+                *snapshot.target = std::move( fresh );
+                snapshot.target->reverted = snapshot.reverted;
+                snapshot.target->player_adjusted_map = snapshot.player_adjusted_map;
+                if( serialize_callback_submap( *snapshot.target ) != snapshot.serialized ) {
+                    restored = false;
+                }
+            } catch( ... ) {
+                restored = false;
+            }
+        }
+    } catch( ... ) {
+        restored = false;
+    }
+
+    pimpl_->active = false;
+    try {
+        if( pimpl_->report != nullptr ) {
+            if( restored ) {
+                pimpl_->report->state = platform_mapgen_transaction_state::rolled_back;
+                pimpl_->report->code = code;
+                pimpl_->report->message = message;
+            } else {
+                pimpl_->report->state = platform_mapgen_transaction_state::rollback_failed;
+                pimpl_->report->code = "rollback_failed";
+                pimpl_->report->message = string_format(
+                                              "Platform mapgen callback transaction rollback failed (code=%s, message=%s)",
+                                              code, message );
+            }
+        }
+    } catch( ... ) {
+        return false;
+    }
+    return restored;
+}
 
 template<>
 bool string_id<nested_mapgen>::is_valid() const
@@ -5113,6 +5309,91 @@ bool mapgen_function_json_base::has_furniture_clearing_flags() const
     return flags_clear_furniture( flags_ );
 }
 
+bool mapgen_function_json_base::platform_transaction_safe( std::string &error ) const
+{
+    if( !is_ready ) {
+        error = "mapgen update operator has not completed static setup";
+        return false;
+    }
+    if( mapgensize.x() != SEEX * 2 || mapgensize.y() != SEEY * 2 ) {
+        error = "mapgen update operator does not have the complete OMT footprint";
+        return false;
+    }
+    if( !objects.empty() ) {
+        error = "mapgen update operator contains an object with unclassified side effects";
+        return false;
+    }
+    if( !parameters.map.empty() ) {
+        error = "mapgen update operator has unresolved parameter-dependent behavior";
+        return false;
+    }
+
+    // These flags either inspect or mutate entities, items, furniture
+    // ownership, or other state outside a plain terrain/furniture write.  The
+    // rotation-only flag is intentionally allowed: it changes only how the
+    // already-bounded map values are addressed.
+    static constexpr std::array<jmapgen_flags, 13> unsafe_flags = {
+        jmapgen_flags::allow_terrain_under_other_data,
+        jmapgen_flags::dismantle_all_before_placing_terrain,
+        jmapgen_flags::erase_all_before_placing_terrain,
+        jmapgen_flags::allow_terrain_under_furniture,
+        jmapgen_flags::dismantle_furniture_before_placing_terrain,
+        jmapgen_flags::erase_furniture_before_placing_terrain,
+        jmapgen_flags::allow_terrain_under_trap,
+        jmapgen_flags::dismantle_trap_before_placing_terrain,
+        jmapgen_flags::erase_trap_before_placing_terrain,
+        jmapgen_flags::allow_terrain_under_items,
+        jmapgen_flags::erase_items_before_placing_terrain,
+        jmapgen_flags::avoid_creatures,
+        jmapgen_flags::skip_on_open_air
+    };
+    for( const jmapgen_flags flag : unsafe_flags ) {
+        if( flags_.test( flag ) ) {
+            error = "mapgen update operator has an unsafe entity or side-effect flag";
+            return false;
+        }
+    }
+    if( setmap_points.empty() ) {
+        error = "mapgen update operator has no statically visible map-only operation";
+        return false;
+    }
+
+    const auto bounded = []( const jmapgen_int & value, const int upper ) {
+        return value.val >= 0 && value.valmax >= value.val && value.valmax < upper;
+    };
+    for( const jmapgen_setmap &setmap : setmap_points ) {
+        if( setmap.chance < 1 || setmap.repeat.val < 1 ||
+            setmap.repeat.valmax < setmap.repeat.val ||
+            setmap.z.val != setmap.z.valmax ||
+            setmap.z.val < -OVERMAP_DEPTH || setmap.z.val > OVERMAP_HEIGHT ||
+            !bounded( setmap.x, mapgensize.x() ) ||
+            !bounded( setmap.y, mapgensize.y() ) ) {
+            error = "mapgen update operator has an unbounded setmap footprint";
+            return false;
+        }
+
+        switch( setmap.op ) {
+            case JMAPGEN_SETMAP_TER:
+            case JMAPGEN_SETMAP_FURN:
+            case JMAPGEN_SETMAP_LINE_TER:
+            case JMAPGEN_SETMAP_LINE_FURN:
+            case JMAPGEN_SETMAP_SQUARE_TER:
+            case JMAPGEN_SETMAP_SQUARE_FURN:
+                if( !bounded( setmap.x2, mapgensize.x() ) ||
+                    !bounded( setmap.y2, mapgensize.y() ) ) {
+                    error = "mapgen update operator has an out-of-footprint setmap endpoint";
+                    return false;
+                }
+                break;
+            default:
+                error = "mapgen update operator is not a map-only terrain/furniture operation";
+                return false;
+        }
+    }
+    error.clear();
+    return true;
+}
+
 // Like flags_clear_furniture but returns false for "dismantle" -- unbashable
 // furniture (e.g. f_rubble) survives dismantling and still triggers errors.
 static bool flags_reliably_clear_furniture( const enum_bitset<jmapgen_flags> &flags )
@@ -6558,7 +6839,7 @@ void map::draw_map( mapgendata &dat )
     const std::string function_key = terrain_type->get_mapgen_id();
 
     if( !run_mapgen_func( function_key, dat ) &&
-        !cata::lua_ui::dispatch_mapgen_generate( dat ) ) {
+        !cata::lua_platform::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );
         // Fallback to the default mapgen for this z-level or just a grass fill if something has gone horribly wrong
@@ -7598,6 +7879,24 @@ ret_val<void> update_mapgen_function_json::update_map(
     const tripoint_abs_omt &omt_pos, const mapgen_arguments &args, const tripoint_rel_ms &offset,
     mission *miss, bool verify, bool mirror_horizontal, bool mirror_vertical, int rotation ) const
 {
+    return update_map_internal( omt_pos, args, offset, miss, verify, mirror_horizontal,
+                                mirror_vertical, rotation, false );
+}
+
+ret_val<void> update_mapgen_function_json::update_map_platform_transaction(
+    const tripoint_abs_omt &omt_pos, const mapgen_arguments &args,
+    const tripoint_rel_ms &offset, mission *miss, bool verify, bool mirror_horizontal,
+    bool mirror_vertical, int rotation ) const
+{
+    return update_map_internal( omt_pos, args, offset, miss, verify, mirror_horizontal,
+                                mirror_vertical, rotation, true );
+}
+
+ret_val<void> update_mapgen_function_json::update_map_internal(
+    const tripoint_abs_omt &omt_pos, const mapgen_arguments &args,
+    const tripoint_rel_ms &offset, mission *miss, bool verify, bool mirror_horizontal,
+    bool mirror_vertical, int rotation, const bool platform_transaction ) const
+{
     if( omt_pos.is_invalid() ) {
         debugmsg( "Mapgen update function called with invalid tripoint" );
         return ret_val<void>::make_failure( _( "invalid position (not vehicle/appliance)" ) );
@@ -7617,7 +7916,7 @@ ret_val<void> update_mapgen_function_json::update_map(
     update_smap.mirror( mirror_horizontal, mirror_vertical );
     update_smap.rotate( rotation );
 
-    if( reality_bubble().inbounds( project_to<coords::ms>( omt_pos ) ) ) {
+    if( !platform_transaction && reality_bubble().inbounds( project_to<coords::ms>( omt_pos ) ) ) {
         // trigger main map cleanup
         p_update_smap.reset();
         // trigger new traps, etc
@@ -7625,7 +7924,7 @@ ret_val<void> update_mapgen_function_json::update_map(
     }
 
     // Trigger magic to add roofs (within load) if needed.
-    if( omt_pos.z() < OVERMAP_HEIGHT ) {
+    if( !platform_transaction && omt_pos.z() < OVERMAP_HEIGHT ) {
         std::unique_ptr<smallmap> p_roof_smap = std::make_unique<smallmap>();
         smallmap &roof_smap = *p_roof_smap;
         // The loading of the Z level above is not necessary, but looks better.
@@ -7638,7 +7937,7 @@ ret_val<void> update_mapgen_function_json::update_map(
                                     flags_.test( jmapgen_flags::erase_all_before_placing_terrain ) ||
                                     flags_.test( jmapgen_flags::dismantle_furniture_before_placing_terrain ) ||
                                     flags_.test( jmapgen_flags::erase_furniture_before_placing_terrain );
-    if( is_original_furn_removed ) {
+    if( !platform_transaction && is_original_furn_removed ) {
         // Magic teleporters are special furniture. If furniture are deleted in mapgen, the corresponding translocator must also be deleted.
         avatar &player_character = get_avatar();
         player_character.translocators.remove_translocator( omt_pos );
@@ -7731,6 +8030,270 @@ ret_val<void> run_mapgen_update_func(
                mirror_vertical, rotation );
 }
 
+bool platform_transaction_safe(
+    const update_mapgen_id &update_mapgen_id, const tripoint_abs_omt &omt_pos,
+    platform_mapgen_transaction_footprint &footprint, std::string &error )
+{
+    footprint = {};
+    if( omt_pos.is_invalid() ) {
+        error = "Platform mapgen transaction requires a valid target OMT";
+        return false;
+    }
+
+    const auto update_function = update_mapgens.find( update_mapgen_id );
+    if( update_function == update_mapgens.end() || update_function->second.funcs().empty() ) {
+        error = "Platform mapgen transaction has no known update operator";
+        return false;
+    }
+    if( update_function->second.funcs().size() != 1 ) {
+        error = "Platform mapgen transaction rejects an ambiguous update operator set";
+        return false;
+    }
+    if( !update_function->second.funcs().front()->platform_transaction_safe( error ) ) {
+        return false;
+    }
+
+    // The platform-only update wrapper loads exactly the target OMT's 2x2
+    // submaps over the complete vertical stack.  Do not let it generate or
+    // load a missing submap: an incomplete footprint is not transactional.
+    footprint.min_submap_x = 0;
+    footprint.max_submap_x = 1;
+    footprint.min_submap_y = 0;
+    footprint.max_submap_y = 1;
+    footprint.min_z = -OVERMAP_DEPTH;
+    footprint.max_z = OVERMAP_HEIGHT;
+    footprint.complete_omt_z_stack = true;
+    const tripoint_abs_sm base = project_to<coords::sm>( omt_pos );
+    for( int z = footprint.min_z; z <= footprint.max_z; ++z ) {
+        for( int x = footprint.min_submap_x; x <= footprint.max_submap_x; ++x ) {
+            for( int y = footprint.min_submap_y; y <= footprint.max_submap_y; ++y ) {
+                const tripoint_abs_sm position{ base.x() + x, base.y() + y, z };
+                if( !MAPBUFFER.submap_exists( position ) ||
+                    MAPBUFFER.lookup_submap( position ) == nullptr ) {
+                    error = "Platform mapgen transaction target footprint is not fully loaded";
+                    footprint = {};
+                    return false;
+                }
+            }
+        }
+    }
+    error.clear();
+    return true;
+}
+
+ret_val<void> run_mapgen_update_func_transactional(
+    const update_mapgen_id &update_mapgen_id, const tripoint_abs_omt &omt_pos,
+    const mapgen_arguments &args, mission *miss, const bool cancel_on_collision,
+    const bool mirror_horizontal, const bool mirror_vertical, const int rotation,
+    const std::optional<oter_id> &expected_terrain,
+    const std::optional<oter_id> &terrain_publication,
+    platform_mapgen_transaction_report *report )
+{
+    if( report != nullptr ) {
+        *report = {};
+    }
+    const auto set_report = [report]( const platform_mapgen_transaction_state state,
+    const std::string & code, const std::string & message ) {
+        if( report != nullptr ) {
+            report->state = state;
+            report->code = code;
+            report->message = message;
+        }
+    };
+    const auto reject = [&set_report]( const std::string & code, const std::string & message ) {
+        set_report( platform_mapgen_transaction_state::rejected, code, message );
+        return ret_val<void>::make_failure( message );
+    };
+
+    if( miss != nullptr ) {
+        return reject( "invalid_context",
+                       "Platform mapgen transaction cannot carry a mission context" );
+    }
+    if( !cancel_on_collision ) {
+        return reject( "invalid_context",
+                       "Platform mapgen transaction requires collision cancellation" );
+    }
+    if( rotation < 0 || rotation > 3 ) {
+        return reject( "invalid_context",
+                       "Platform mapgen transaction received an invalid rotation" );
+    }
+    if( mirror_horizontal || mirror_vertical || rotation != 0 ) {
+        return reject( "unsupported_transform",
+                       "Platform mapgen transaction does not support mirroring or rotation" );
+    }
+
+    platform_mapgen_transaction_footprint footprint;
+    std::string safety_error;
+    if( !platform_transaction_safe( update_mapgen_id, omt_pos, footprint, safety_error ) ) {
+        return reject( "unsafe_operator", safety_error );
+    }
+    if( report != nullptr ) {
+        report->footprint = footprint;
+    }
+
+    if( !expected_terrain && terrain_publication ) {
+        return reject( "terrain_mismatch",
+                       "Platform terrain transaction requires an expected terrain" );
+    }
+
+    struct terrain_snapshot {
+        overmap *om = nullptr;
+        tripoint_om_omt local;
+        oter_id previous;
+        bool publication_attempted = false;
+    };
+    std::optional<terrain_snapshot> terrain;
+    if( expected_terrain ) {
+        if( !expected_terrain->is_valid() ||
+            ( terrain_publication && !terrain_publication->is_valid() ) ) {
+            return reject( "terrain_mismatch",
+                           "Platform terrain transaction received an invalid terrain" );
+        }
+        const overmap_with_local_coords target =
+            overmap_buffer.get_existing_om_global( omt_pos );
+        if( !target.om ) {
+            return reject( "terrain_mismatch",
+                           "Platform terrain transaction target overmap is not loaded" );
+        }
+        const oter_id previous = target.om->ter( target.local );
+        if( !previous.is_valid() || previous != *expected_terrain ) {
+            return reject( "terrain_mismatch",
+                           "Platform terrain transaction target terrain changed before apply" );
+        }
+        std::string terrain_error;
+        if( !target.om->platform_terrain_set_preflight(
+                target.local, *expected_terrain, terrain_error ) ||
+            ( terrain_publication &&
+              !target.om->platform_terrain_set_preflight(
+                  target.local, *terrain_publication, terrain_error ) ) ) {
+            return reject( "terrain_mismatch", terrain_error );
+        }
+        terrain = terrain_snapshot{ target.om, target.local, previous, false };
+    }
+
+    struct submap_snapshot {
+        tripoint_abs_sm position;
+        submap value;
+    };
+
+    const tripoint_abs_sm base = project_to<coords::sm>( omt_pos );
+    const std::size_t z_count = static_cast<std::size_t>( footprint.max_z - footprint.min_z + 1 );
+    const std::size_t x_count = static_cast<std::size_t>(
+                                    footprint.max_submap_x - footprint.min_submap_x + 1 );
+    const std::size_t y_count = static_cast<std::size_t>(
+                                    footprint.max_submap_y - footprint.min_submap_y + 1 );
+    const std::size_t snapshot_count = x_count * y_count * z_count;
+    std::vector<submap_snapshot> snapshots;
+    try {
+        snapshots.reserve( snapshot_count );
+        for( int z = footprint.min_z; z <= footprint.max_z; ++z ) {
+            for( int x = footprint.min_submap_x; x <= footprint.max_submap_x; ++x ) {
+                for( int y = footprint.min_submap_y; y <= footprint.max_submap_y; ++y ) {
+                    const tripoint_abs_sm position{ base.x() + x, base.y() + y, z };
+                    submap *source = MAPBUFFER.lookup_submap( position );
+                    if( source == nullptr ) {
+                        return reject( "prepare_failed",
+                                       "Platform mapgen transaction target submap disappeared" );
+                    }
+                    snapshots.push_back( { position, source->get_revert_submap() } );
+                }
+            }
+        }
+    } catch( const std::exception &exception ) {
+        return reject( "prepare_failed", string_format(
+                           _( "could not prepare transactional map update: %s" ), exception.what() ) );
+    }
+
+    std::unordered_map<std::string, tripoint_abs_ms> queued_points_preimage;
+    try {
+        queued_points_preimage = queued_points;
+    } catch( const std::exception &exception ) {
+        return reject( "prepare_failed", string_format(
+                           _( "could not prepare transactional map update: %s" ), exception.what() ) );
+    }
+
+    ret_val<void> outcome = ret_val<void>::make_success();
+    try {
+        const auto update_function = update_mapgens.find( update_mapgen_id );
+        if( update_function == update_mapgens.end() ||
+            update_function->second.funcs().size() != 1 ) {
+            outcome = ret_val<void>::make_failure(
+                          "Platform mapgen transaction operator changed after preflight" );
+        } else {
+            outcome = update_function->second.funcs().front()->update_map_platform_transaction(
+                          omt_pos, args, tripoint_rel_ms::zero, nullptr, cancel_on_collision,
+                          mirror_horizontal, mirror_vertical, rotation );
+        }
+    } catch( const std::exception &exception ) {
+        outcome = ret_val<void>::make_failure( string_format(
+                "Platform mapgen transaction threw while applying: %s", exception.what() ) );
+    } catch( ... ) {
+        outcome = ret_val<void>::make_failure(
+                      "Platform mapgen transaction threw while applying" );
+    }
+    if( outcome.success() && terrain && terrain_publication ) {
+        // Terrain publication is part of the same transaction.  The preflight
+        // above proved the exact loaded tile and all no-allocation setter
+        // state, so a successful call is the only path that can expose the
+        // mapgen result to the overmap.
+        terrain->publication_attempted = true;
+        try {
+            terrain->om->ter_set( terrain->local, *terrain_publication );
+            if( terrain->om->ter( terrain->local ) != *terrain_publication ) {
+                outcome = ret_val<void>::make_failure(
+                              "Platform terrain publication did not update the exact tile" );
+            }
+        } catch( const std::exception &exception ) {
+            outcome = ret_val<void>::make_failure( string_format(
+                    "Platform terrain publication threw: %s", exception.what() ) );
+        } catch( ... ) {
+            outcome = ret_val<void>::make_failure(
+                          "Platform terrain publication threw" );
+        }
+    }
+    if( outcome.success() ) {
+        set_report( platform_mapgen_transaction_state::committed, "committed", "" );
+        return outcome;
+    }
+
+    queued_points.swap( queued_points_preimage );
+
+    bool restored = true;
+    if( terrain && terrain->publication_attempted ) {
+        try {
+            terrain->om->ter_set( terrain->local, terrain->previous );
+            if( terrain->om->ter( terrain->local ) != terrain->previous ) {
+                restored = false;
+            }
+        } catch( ... ) {
+            restored = false;
+        }
+    }
+    for( submap_snapshot &snapshot : snapshots ) {
+        submap *target = MAPBUFFER.lookup_submap( snapshot.position );
+        if( target == nullptr ) {
+            restored = false;
+            continue;
+        }
+        try {
+            target->revert_submap( snapshot.value );
+        } catch( ... ) {
+            restored = false;
+        }
+    }
+    reality_bubble().invalidate_map_cache( omt_pos.z() );
+    const std::string outcome_message = outcome.str();
+    if( !restored ) {
+        const std::string rollback_message = string_format(
+                _( "%s; transactional map update rollback failed" ), outcome_message );
+        set_report( platform_mapgen_transaction_state::rollback_failed, "rollback_failed",
+                    rollback_message );
+        return ret_val<void>::make_failure( rollback_message );
+    }
+    set_report( platform_mapgen_transaction_state::rolled_back, "apply_failed", outcome_message );
+    return outcome;
+}
+
 ret_val<void> run_mapgen_update_func( const update_mapgen_id &update_mapgen_id, mapgendata &dat,
                                       const bool cancel_on_collision )
 {
@@ -7749,6 +8312,11 @@ void set_queued_points()
         globvars.set_global_value( queued_point.first, queued_point.second );
     }
     queued_points.clear();
+}
+
+void queue_mapgen_point( const std::string &name, const tripoint_abs_ms &point )
+{
+    queued_points[name] = point;
 }
 
 bool apply_construction_marker( const update_mapgen_id &update_mapgen_id,

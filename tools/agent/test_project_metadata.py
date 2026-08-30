@@ -71,7 +71,7 @@ class ProjectMetadataTest(unittest.TestCase):
 
     def test_lua_first_replacement_ledger_is_exact(self):
         result = check_lua_first_replacement_ledger()
-        self.assertEqual(result["total"], 775)
+        self.assertEqual(result["total"], 774)
 
     def test_lua_first_roadmap_rejects_dependency_cycles(self):
         path = ROOT / "ai/lua-first-roadmap.yml"
@@ -84,11 +84,11 @@ class ProjectMetadataTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cycle"):
             validate_lua_first_roadmap(roadmap)
 
-    def test_available_lua_first_capability_cannot_require_public_legacy(self):
+    def test_implemented_lua_first_capability_cannot_require_public_legacy(self):
         path = ROOT / "ai/lua-first-roadmap.yml"
         roadmap = yaml.safe_load(path.read_text(encoding="utf-8"))
         roadmap = copy.deepcopy(roadmap)
-        roadmap["capabilities"][0]["status"] = "available"
+        roadmap["capabilities"][0]["status"] = "source_complete_unverified"
         roadmap["capabilities"][0]["legacy_dependency"] = "public_legacy"
 
         with self.assertRaisesRegex(ValueError, "public legacy"):

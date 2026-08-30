@@ -2,15 +2,16 @@
 #ifndef CATA_SRC_HORDE_ENTITY_H
 #define CATA_SRC_HORDE_ENTITY_H
 
+#include <cstdint>
 #include <memory>
 
 #include "calendar.h"
 #include "coordinates.h"
-#include "type_id.h"
 #include "monster.h"
+#include "type_id.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-    #include "catalua_ui_identity.h"
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    #include "lua_platform_identity.h"
 #endif
 
 struct mtype;
@@ -27,7 +28,7 @@ struct horde_entity {
     // Retrieve the mtype whether it's a light or heavy entity.
     const mtype *get_type() const;
     bool is_active() const;
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     std::uint64_t lua_identity() const noexcept {
         return lua_identity_.value();
     }
@@ -51,8 +52,8 @@ struct horde_entity {
     // meaning they don't have this member populated.
     // This could be a 16-bit index instead of a 32-to-64-bit+ unique_pointer
     std::unique_ptr<monster> monster_data;
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-    cata::lua_ui::native_object_identity lua_identity_;
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::native_object_identity lua_identity_;
 #endif
 };
 

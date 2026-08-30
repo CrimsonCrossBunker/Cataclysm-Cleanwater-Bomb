@@ -380,7 +380,7 @@ android {
             externalNativeBuild {
                 cmake {
                     arguments "-DCCB_ANDROID_NEW_UI=OFF",
-                              "-DCATA_ENABLE_LUA_UI=ON"
+                              "-DCATA_ENABLE_LUA_PLATFORM=ON"
                 }
             }
         }
@@ -392,7 +392,7 @@ android {
             externalNativeBuild {
                 cmake {
                     arguments "-DCCB_ANDROID_NEW_UI=OFF",
-                              "-DCATA_ENABLE_LUA_UI=ON"
+                              "-DCATA_ENABLE_LUA_PLATFORM=ON"
                 }
             }
         }
@@ -405,7 +405,7 @@ android {
             externalNativeBuild {
                 cmake {
                     arguments "-DCCB_ANDROID_NEW_UI=ON",
-                              "-DCATA_ENABLE_LUA_UI=ON"
+                              "-DCATA_ENABLE_LUA_PLATFORM=ON"
                 }
             }
         }

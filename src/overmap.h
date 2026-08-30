@@ -491,6 +491,9 @@ class overmap
         std::vector<point_abs_omt> find_terrain( std::string_view term, int zlevel ) const;
 
         void ter_set( const tripoint_om_omt &p, const oter_id &id );
+        /** Reserve the local overmap state needed by a Platform terrain commit. */
+        bool platform_terrain_set_preflight( const tripoint_om_omt &p,
+                                             const oter_id &id, std::string &error );
         // ter has bounds checking, and returns ot_null when out of bounds.
         const oter_id &ter( const tripoint_om_omt &p ) const;
         // ter_unsafe is UB when out of bounds.

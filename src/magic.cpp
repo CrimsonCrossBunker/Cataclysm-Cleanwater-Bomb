@@ -1,5 +1,12 @@
 #include "magic.h"
 
+#include <body_part_set.h>
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <magic_type.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -14,8 +21,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "catalua_lua_call.h"
-#include "catalua_platform_runtime.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -43,6 +48,8 @@
 #include "item_location.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -293,6 +300,11 @@ namespace
 generic_factory<spell_type> spell_factory( "spell" );
 } // namespace
 
+generic_factory<spell_type> &cata::lua_platform::detail::spell_registry()
+{
+    return spell_factory;
+}
+
 template<>
 const spell_type &string_id<spell_type>::obj() const
 {
@@ -339,14 +351,6 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "sound_id", sound_id, sound_id_default );
     optional( jo, was_loaded, "sound_variant", sound_variant, sound_variant_default );
     mandatory( jo, was_loaded, "effect", effect_name );
-    if( effect_name == "lua" ) {
-        if( jo.has_member( "lua" ) || !was_loaded ) {
-            lua_effect.emplace();
-            lua_effect->load( jo, "lua" );
-        }
-    } else {
-        lua_effect.reset();
-    }
     const auto found_effect = spell_effect::effect_map.find( effect_name );
     if( found_effect == spell_effect::effect_map.cend() ) {
         effect = spell_effect::none;
@@ -607,6 +611,25 @@ void spell_type::reset_all()
 bool spell_type::is_valid() const
 {
     return spell_factory.is_valid( this->id );
+}
+
+void spell_type::set_platform_energy_source(
+    const std::optional<magic_energy_type> source, const std::optional<vitamin_id> vitamin,
+    const std::optional<nc_color> color )
+{
+    energy_source = source;
+    vitamin_energy_source_ = vitamin;
+    energy_color_ = color;
+}
+
+void spell_type::set_platform_progression(
+    const std::optional<jmath_func_id> get_level,
+    const std::optional<jmath_func_id> exp_for_level,
+    const std::optional<int> maximum_book_level )
+{
+    get_level_formula_id = get_level;
+    exp_for_level_formula_id = exp_for_level;
+    max_book_level = maximum_book_level;
 }
 
 // spell

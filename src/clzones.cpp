@@ -1,5 +1,12 @@
 #include "clzones.h"
 
+#include <coordinates.h>
+#include <cuboid_rectangle.h>
+#include <map_scale_constants.h>
+#include <point.h>
+#include <safe_reference.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <functional>
@@ -20,7 +27,6 @@
 #include "debug.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
-#include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "iexamine.h"
 #include "input_popup.h"
@@ -34,6 +40,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_selector.h"
@@ -770,7 +777,9 @@ bool zone_data::set_name( const std::string &new_name )
     if( name == new_name ) {
         return false;
     }
-    zone_manager::get_manager().zone_edited( *this );
+    if( !zone_manager::get_manager().zone_edited( *this ) ) {
+        return false;
+    }
     name = new_name;
     return true;
 }
@@ -781,7 +790,9 @@ bool zone_data::set_type()
     if( maybe_type.has_value() && maybe_type.value() != type ) {
         shared_ptr_fast<zone_options> new_options = zone_options::create( maybe_type.value() );
         if( new_options->query_at_creation() ) {
-            zone_manager::get_manager().zone_edited( *this );
+            if( !zone_manager::get_manager().zone_edited( *this ) ) {
+                return false;
+            }
             type = maybe_type.value();
             options = new_options;
             zone_manager::get_manager().cache_data();
@@ -857,7 +868,9 @@ void zone_data::set_position( const std::pair<tripoint_rel_ms, tripoint_rel_ms> 
 
 void zone_data::set_enabled( const bool enabled_arg )
 {
-    zone_manager::get_manager().zone_edited( *this );
+    if( !zone_manager::get_manager().zone_edited( *this ) ) {
+        return;
+    }
     enabled = enabled_arg;
 }
 
@@ -992,6 +1005,19 @@ void zone_data::toggle_display()
 void zone_data::set_is_vehicle( const bool is_vehicle_arg )
 {
     is_vehicle = is_vehicle_arg;
+    if( !is_vehicle ) {
+        vehicle_owner = safe_reference<vehicle>();
+    }
+}
+
+void zone_data::set_vehicle_owner( vehicle &owner )
+{
+    vehicle_owner = owner.get_safe_reference();
+}
+
+safe_reference<vehicle> zone_data::get_vehicle_owner() const
+{
+    return vehicle_owner;
 }
 
 tripoint_abs_ms zone_data::get_center_point() const
@@ -1579,40 +1605,49 @@ const zone_data *zone_manager::get_bottom_zone(
 // which constructor of the key-value pair we use which depends on new_zone being an rvalue or lvalue and constness.
 // If you are passing new_zone from a non-const iterator, be prepared for a move! This
 // may break some iterators like map iterators if you are less specific!
-void zone_manager::create_vehicle_loot_zone( vehicle &vehicle, const point_rel_ms &mount_point,
+zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle,
+        const point_rel_ms &mount_point,
         zone_data &new_zone, map *pmap )
 {
     //create a vehicle loot zone
+    auto *previous_owner = new_zone.get_vehicle_owner().get();
     new_zone.set_is_vehicle( true );
+    new_zone.set_vehicle_owner( vehicle );
     auto nz = vehicle.loot_zones.emplace( mount_point, new_zone );
+    const vehicle_zone_locator locator{ vehicle.get_safe_reference(), nz->second.get_lifetime_identity() };
     map &here = pmap == nullptr ? get_map() : *pmap;
     here.register_vehicle_zone( &vehicle, here.get_abs_sub().z() );
-    added_vzones.push_back( &nz->second );
+    if( !rebind_vehicle_zone_locators( locator ) && previous_owner == nullptr ) {
+        added_vzones.push_back( locator );
+    }
     cache_vzones( pmap );
+    return find_vehicle_zone( locator );
 }
 
-void zone_manager::add( const std::string &name, const zone_type_id &type, const faction_id &fac,
-                        const bool invert, const bool enabled, const tripoint_abs_ms &start,
-                        const tripoint_abs_ms &end, const shared_ptr_fast<zone_options> &options,
-                        bool silent, map *pmap )
+zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
+                              const faction_id &fac,
+                              const bool invert, const bool enabled, const tripoint_abs_ms &start,
+                              const tripoint_abs_ms &end, const shared_ptr_fast<zone_options> &options,
+                              bool silent, map *pmap, bool allow_vehicle_binding )
 {
     map &here = pmap == nullptr ? get_map() : *pmap;
     zone_data new_zone = zone_data( name, type, fac, invert, enabled, start, end, options );
     // only non personal zones can be vehicle zones
-    optional_vpart_position const vp = here.veh_at( here.get_bub( start ) );
-    if( vp && vp->vehicle().get_owner() == fac && vp.cargo() ) {
-        // TODO:Allow for loot zones on vehicles to be larger than 1x1
-        if( start == end &&
-            ( silent || query_yn( _( "Bind this zone to the cargo part here?" ) ) ) ) {
-            // TODO: refactor zone options for proper validation code
-            if( !silent &&
-                ( type == zone_type_FARM_PLOT || type == zone_type_CONSTRUCTION_BLUEPRINT ) ) {
-                popup( _( "You cannot add that type of zone to a vehicle." ), PF_NONE );
-                return;
-            }
+    if( allow_vehicle_binding ) {
+        optional_vpart_position const vp = here.veh_at( here.get_bub( start ) );
+        if( vp && vp->vehicle().get_owner() == fac && vp.cargo() ) {
+            // TODO:Allow for loot zones on vehicles to be larger than 1x1
+            if( start == end &&
+                ( silent || query_yn( _( "Bind this zone to the cargo part here?" ) ) ) ) {
+                // TODO: refactor zone options for proper validation code
+                if( !silent &&
+                    ( type == zone_type_FARM_PLOT || type == zone_type_CONSTRUCTION_BLUEPRINT ) ) {
+                    popup( _( "You cannot add that type of zone to a vehicle." ), PF_NONE );
+                    return nullptr;
+                }
 
-            create_vehicle_loot_zone( vp->vehicle(), vp->mount_pos(), new_zone, pmap );
-            return;
+                return create_vehicle_loot_zone( vp->vehicle(), vp->mount_pos(), new_zone, pmap );
+            }
         }
     }
 
@@ -1620,11 +1655,13 @@ void zone_manager::add( const std::string &name, const zone_type_id &type, const
     zones.push_back( new_zone );
 
     cache_data();
+    return &zones.back();
 }
 
-void zone_manager::add( const std::string &name, const zone_type_id &type, const faction_id &fac,
-                        const bool invert, const bool enabled, const tripoint_rel_ms &start,
-                        const tripoint_rel_ms &end, const shared_ptr_fast<zone_options> &options )
+zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
+                              const faction_id &fac,
+                              const bool invert, const bool enabled, const tripoint_rel_ms &start,
+                              const tripoint_rel_ms &end, const shared_ptr_fast<zone_options> &options )
 {
     zone_data new_zone = zone_data( name, type, fac, invert, enabled, start, end, options );
 
@@ -1632,9 +1669,10 @@ void zone_manager::add( const std::string &name, const zone_type_id &type, const
     zones.push_back( new_zone );
     num_personal_zones++;
     cache_data();
+    return &zones.back();
 }
 
-bool zone_manager::remove( zone_data &zone )
+bool zone_manager::remove( zone_data &zone, map *pmap )
 {
     for( auto it = zones.begin(); it != zones.end(); ++it ) {
         if( &zone == &*it ) {
@@ -1646,38 +1684,59 @@ bool zone_manager::remove( zone_data &zone )
                 num_personal_zones--;
             }
             zones.erase( it );
+            cache_data();
             return true;
         }
     }
-    zone_data old_zone = zone_data( zone );
+
+    map &here = pmap == nullptr ? get_map() : *pmap;
+    const std::optional<vehicle_zone_locator> maybe_locator = make_vehicle_zone_locator( zone, &here );
+    if( !maybe_locator ) {
+        return false;
+    }
+    const vehicle_zone_locator locator = *maybe_locator;
+    zone_data *current_zone = find_vehicle_zone( locator );
+    if( current_zone == nullptr ) {
+        return false;
+    }
+
+    zone_data old_zone = zone_data( *current_zone );
+    std::optional<std::size_t> changed_index;
     //If the zone was previously edited this session
     //Move original data out of changed
-    for( auto it = changed_vzones.begin(); it != changed_vzones.end(); ++it ) {
-        if( it->second == &zone ) {
-            old_zone = zone_data( it->first );
-            changed_vzones.erase( it );
+    for( std::size_t i = 0; i < changed_vzones.size(); ++i ) {
+        if( changed_vzones[i].locator == locator ) {
+            old_zone = zone_data( changed_vzones[i].original );
+            changed_index = i;
             break;
         }
     }
     bool added = false;
+    std::optional<std::size_t> added_index;
     //If the zone was added this session
     //remove from added, and don't add to removed
-    for( auto it = added_vzones.begin(); it != added_vzones.end(); ++it ) {
-        if( *it == &zone ) {
+    for( std::size_t i = 0; i < added_vzones.size(); ++i ) {
+        if( added_vzones[i] == locator ) {
             added = true;
-            added_vzones.erase( it );
+            added_index = i;
             break;
         }
+    }
+
+    if( !here.deregister_vehicle_zone( *current_zone ) ) {
+        debugmsg( "Tried to remove a zone from an unloaded vehicle" );
+        return false;
+    }
+    if( changed_index ) {
+        changed_vzones.erase( changed_vzones.begin() + *changed_index );
+    }
+    if( added_index ) {
+        added_vzones.erase( added_vzones.begin() + *added_index );
     }
     if( !added ) {
         removed_vzones.push_back( old_zone );
     }
-
-    if( !get_map().deregister_vehicle_zone( zone ) ) {
-        debugmsg( "Tried to remove a zone from an unloaded vehicle" );
-        return false;
-    }
-    cache_vzones();
+    cache_vzones( pmap );
     return true;
 }
 
@@ -1827,12 +1886,9 @@ void zone_manager::serialize( JsonOut &json ) const
 
 void zone_manager::deserialize( const JsonValue &jv )
 {
+    num_personal_zones = 0;
     jv.read( zones );
     for( auto it = zones.begin(); it != zones.end(); ) {
-        // need to keep track of number of personal zones on reload
-        if( it->get_is_personal() ) {
-            num_personal_zones++;
-        }
         const zone_type_id zone_type = it->get_type();
 
         if( !has_type( zone_type ) ) {
@@ -1844,6 +1900,10 @@ void zone_manager::deserialize( const JsonValue &jv )
             ++it;
         }
     }
+    num_personal_zones = static_cast<int>( std::count_if( zones.begin(), zones.end(),
+    []( const zone_data & zone ) {
+        return zone.get_is_personal();
+    } ) );
 }
 
 void zone_data::serialize( JsonOut &json ) const
@@ -1873,6 +1933,7 @@ void zone_data::serialize( JsonOut &json ) const
 void zone_data::deserialize( const JsonObject &data )
 {
     lifetime_identity = std::make_shared<unsigned char>( 0 );
+    vehicle_owner = safe_reference<vehicle>();
     data.allow_omitted_members();
     data.read( "name", name );
     // handle legacy zone types
@@ -1976,6 +2037,7 @@ void zone_manager::load_zones( std::string const &suffix )
     };
     if( !read_from_file_optional_json( savefile, reader ) ) {
         // If no such file or failed to load, clear zones.
+        num_personal_zones = 0;
         zones.clear();
     }
     load_world_zones( suffix );
@@ -2022,18 +2084,30 @@ void zone_manager::load_world_zones( std::string const &suffix )
     } );
 }
 
-void zone_manager::zone_edited( zone_data &zone )
+bool zone_manager::zone_edited( zone_data &zone )
 {
-    if( zone.get_is_vehicle() ) {
-        //Check if this zone has already been stored
-        for( auto &changed_vzone : changed_vzones ) {
-            if( &zone == changed_vzone.second ) {
-                return;
-            }
-        }
-        //Add it to the list of changed zones
-        changed_vzones.emplace_back( zone_data( zone ), &zone );
+    if( !zone.get_is_vehicle() ) {
+        return true;
     }
+
+    const std::optional<vehicle_zone_locator> maybe_locator = make_vehicle_zone_locator( zone,
+            &get_map() );
+    if( !maybe_locator || find_vehicle_zone( *maybe_locator ) == nullptr ) {
+        debugmsg( "Could not snapshot vehicle zone before editing" );
+        return false;
+    }
+    const vehicle_zone_locator &locator = *maybe_locator;
+
+    //Check if this zone has already been stored
+    for( auto &changed_vzone : changed_vzones ) {
+        if( changed_vzone.locator == locator ) {
+            return true;
+        }
+    }
+
+    //Add it to the list of changed zones
+    changed_vzones.push_back( { locator, zone_data( zone ) } );
+    return true;
 }
 
 void zone_manager::revert_vzones()
@@ -2044,17 +2118,129 @@ void zone_manager::revert_vzones()
         const tripoint_bub_ms pos = here.get_bub( zone.get_start_point() );
         if( const std::optional<vpart_reference> vp = here.veh_at( pos ).cargo() ) {
             zone.set_is_vehicle( true );
+            zone.set_vehicle_owner( vp->vehicle() );
             vp->vehicle().loot_zones.emplace( vp->mount_pos(), zone );
             here.register_vehicle_zone( &vp->vehicle(), here.get_abs_sub().z() );
             cache_vzones();
         }
     }
-    for( const auto &zpair : changed_vzones ) {
-        *( zpair.second ) = zpair.first;
+    for( const auto &changed_vzone : changed_vzones ) {
+        zone_data *zone = find_vehicle_zone( changed_vzone.locator );
+        if( zone == nullptr ) {
+            continue;
+        }
+        *zone = changed_vzone.original;
+        if( vehicle *owner = changed_vzone.locator.owner.get() ) {
+            owner->zones_dirty = true;
+        }
     }
-    for( zone_data *zone : added_vzones ) {
-        remove( *zone );
+    for( const vehicle_zone_locator &locator : added_vzones ) {
+        erase_vehicle_zone( locator );
     }
+    cache_vzones();
+}
+
+bool zone_manager::same_lifetime_identity( const std::weak_ptr<const void> &lhs,
+        const std::weak_ptr<const void> &rhs )
+{
+    return !lhs.expired() && !rhs.expired() &&
+           !lhs.owner_before( rhs ) && !rhs.owner_before( lhs );
+}
+
+std::optional<zone_manager::vehicle_zone_locator> zone_manager::make_vehicle_zone_locator(
+    zone_data &zone, map *pmap )
+{
+    if( !zone.get_is_vehicle() ) {
+        return std::nullopt;
+    }
+
+    const std::weak_ptr<const void> identity = zone.get_lifetime_identity();
+    if( identity.expired() ) {
+        return std::nullopt;
+    }
+
+    safe_reference<vehicle> owner_reference = zone.get_vehicle_owner();
+    if( vehicle *owner = owner_reference.get() ) {
+        return vehicle_zone_locator{ owner->get_safe_reference(), identity };
+    }
+
+    if( pmap == nullptr ) {
+        return std::nullopt;
+    }
+
+    for( const wrapped_vehicle &wrapped : pmap->get_vehicles() ) {
+        vehicle *owner = wrapped.v;
+        if( owner == nullptr ) {
+            continue;
+        }
+        for( auto &entry : owner->loot_zones ) {
+            if( &entry.second == &zone ) {
+                zone.set_vehicle_owner( *owner );
+                return vehicle_zone_locator{ owner->get_safe_reference(), identity };
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+bool zone_manager::rebind_vehicle_zone_locators( const vehicle_zone_locator &locator )
+{
+    vehicle *owner = locator.owner.get();
+    if( owner == nullptr || locator.identity.expired() ) {
+        return false;
+    }
+
+    bool rebound = false;
+    for( vehicle_zone_locator &existing : added_vzones ) {
+        if( same_lifetime_identity( existing.identity, locator.identity ) ) {
+            existing.owner = locator.owner;
+            rebound = true;
+        }
+    }
+    for( changed_vehicle_zone &existing : changed_vzones ) {
+        if( same_lifetime_identity( existing.locator.identity, locator.identity ) ) {
+            existing.locator.owner = locator.owner;
+            existing.original.set_vehicle_owner( *owner );
+            rebound = true;
+        }
+    }
+    return rebound;
+}
+
+zone_data *zone_manager::find_vehicle_zone( const vehicle_zone_locator &locator )
+{
+    vehicle *owner = locator.owner.get();
+    if( owner == nullptr || locator.identity.expired() ) {
+        return nullptr;
+    }
+
+    for( auto &entry : owner->loot_zones ) {
+        const std::weak_ptr<const void> entry_identity = entry.second.get_lifetime_identity();
+        if( same_lifetime_identity( locator.identity, entry_identity ) ) {
+            return &entry.second;
+        }
+    }
+
+    return nullptr;
+}
+
+bool zone_manager::erase_vehicle_zone( const vehicle_zone_locator &locator )
+{
+    vehicle *owner = locator.owner.get();
+    if( owner == nullptr || locator.identity.expired() ) {
+        return false;
+    }
+
+    for( auto it = owner->loot_zones.begin(); it != owner->loot_zones.end(); ++it ) {
+        const std::weak_ptr<const void> entry_identity = it->second.get_lifetime_identity();
+        if( same_lifetime_identity( locator.identity, entry_identity ) ) {
+            owner->loot_zones.erase( it );
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void mapgen_place_zone( tripoint_abs_ms const &start, tripoint_abs_ms const &end,

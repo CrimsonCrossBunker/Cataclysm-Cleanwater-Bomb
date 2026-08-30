@@ -1,5 +1,10 @@
 #include "mattack_actors.h"
 
+#include <damage.h>
+#include <magic.h>
+#include <mattack_common.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
@@ -35,6 +40,7 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -1168,6 +1174,12 @@ bool melee_actor::call( monster &z ) const
         dialogue d( get_talker_for( z ), get_talker_for( target ) );
         write_var_value( var_type::context, "damage", &d, damage_total );
         eoc->activate( d );
+    }
+    const auto handler = z.type->lua_platform_attack_handlers.find( id );
+    if( handler != z.type->lua_platform_attack_handlers.end() ) {
+        cata::lua_platform::invoke_monster_attack_result_handler(
+            z.type->id.str(), id, z.type->lua_platform_attack_mod,
+            handler->second, z, target, damage_total );
     }
 
     return true;

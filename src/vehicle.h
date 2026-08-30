@@ -49,6 +49,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -980,6 +981,7 @@ class vehicle
          * @param where Location of the other vehicle's origin tile.
          */
         static vehicle *find_vehicle( const map &here, const tripoint_abs_ms &where );
+        static vehicle *find_vehicle_by_uid( map &here, int64_t uid );
         // find_vehicle, but it compares the provided position to the position of
         // every vehicle part instead of just the vehicle's position
         static vehicle *find_vehicle_using_parts( const map &here,  const tripoint_abs_ms &where );
@@ -1004,6 +1006,12 @@ class vehicle
         vehicle( const vehicle & ) = delete;
         ~vehicle();
         vehicle &operator=( vehicle && ) = default;
+
+        /** Persistent unique identifier for this vehicle instance. */
+        const vehicle_uid &uid() const {
+            return uid_;
+        }
+        void ensure_uid();
 
     private:
         vehicle &operator=( const vehicle & ) = default;
@@ -2519,6 +2527,7 @@ class vehicle
         bool has_tag( const std::string &tag ) const;
 
     private:
+        vehicle_uid uid_; // persistent unique identifier, survives save/load
         safe_reference_anchor anchor; // NOLINT(cata-serialize)
         mutable units::mass mass_cache; // NOLINT(cata-serialize)
         // cached pivot point

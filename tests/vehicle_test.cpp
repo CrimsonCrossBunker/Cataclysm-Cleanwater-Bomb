@@ -1,7 +1,9 @@
+#include <vehicle_uid.h>
 #include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -70,6 +72,49 @@ static const vproto_id vehicle_prototype_unicycle_armored_wheel( "unicycle_armor
 static const vproto_id vehicle_prototype_unicycle_bike_wheel( "unicycle_bike_wheel" );
 static const vproto_id vehicle_prototype_unicycle_normal_wheel( "unicycle_normal_wheel" );
 static const vproto_id vehicle_prototype_wheelchair( "wheelchair" );
+
+TEST_CASE( "vehicle_uid_construction_and_move_assignment", "[vehicle]" )
+{
+    vehicle source( vehicle_prototype_bicycle );
+    vehicle target( vehicle_prototype_bicycle );
+    REQUIRE( source.uid().is_valid() );
+    const auto source_uid = source.uid().get_value();
+
+    target = std::move( source );
+
+    CHECK( target.uid().get_value() == source_uid );
+    CHECK( source.uid().get_value() == 0 );
+}
+
+TEST_CASE( "vehicle_uid_lookup_lifecycle", "[vehicle]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms first_origin( 60, 60, 0 );
+    const tripoint_bub_ms second_origin( 70, 70, 0 );
+    vehicle *first = here.add_vehicle( vehicle_prototype_bicycle, first_origin, 0_degrees, 0,
+                                       veh_spawn_status::UNDAMAGED );
+    vehicle *second = here.add_vehicle( vehicle_prototype_bicycle, second_origin, 0_degrees, 0,
+                                        veh_spawn_status::UNDAMAGED );
+    REQUIRE( first != nullptr );
+    REQUIRE( second != nullptr );
+    REQUIRE( first->uid().is_valid() );
+    REQUIRE( second->uid().is_valid() );
+
+    const auto first_uid = first->uid().get_value();
+    const auto second_uid = second->uid().get_value();
+    CHECK( first_uid != second_uid );
+    CHECK( vehicle::find_vehicle_by_uid( here, first_uid ) == first );
+    CHECK( vehicle::find_vehicle_by_uid( here, 0 ) == nullptr );
+    CHECK( vehicle::find_vehicle_by_uid( here, -1 ) == nullptr );
+
+    const std::unique_ptr<vehicle> detached = here.detach_vehicle( first );
+    REQUIRE( detached != nullptr );
+    CHECK( vehicle::find_vehicle_by_uid( here, first_uid ) == nullptr );
+
+    here.destroy_vehicle( second );
+    CHECK( vehicle::find_vehicle_by_uid( here, second_uid ) == nullptr );
+}
 
 TEST_CASE( "detaching_vehicle_unboards_passengers", "[vehicle]" )
 {

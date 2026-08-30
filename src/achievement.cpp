@@ -1,8 +1,9 @@
 #include "achievement.h"
 
-#include "catalua_platform_content.h"
-
-#include <cstdlib>
+#include <calendar.h>
+#include <cata_variant.h>
+#include <translation.h>
+#include <type_id.h>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -18,6 +19,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "past_achievements_info.h"
 #include "stats_tracker.h"
 #include "string_formatter.h"

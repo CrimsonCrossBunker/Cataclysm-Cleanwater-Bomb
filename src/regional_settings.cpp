@@ -1,5 +1,7 @@
 #include "regional_settings.h"
 
+#include <type_id.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -10,12 +12,12 @@
 #include <utility>
 #include <variant>
 
-#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
-#include "mapdata.h"
+#include "lua_platform_content.h"
 #include "map_extras.h"
+#include "mapdata.h"
 #include "omdata.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -62,6 +64,96 @@ generic_factory<map_extra_collection> &
 cata::lua_platform::detail::map_extra_collection_registry()
 {
     return map_extra_collection_factory;
+}
+
+generic_factory<region_settings_ravine> &
+cata::lua_platform::detail::region_settings_ravine_registry()
+{
+    return region_settings_ravine_factory;
+}
+
+generic_factory<region_settings_lake> &
+cata::lua_platform::detail::region_settings_lake_registry()
+{
+    return region_settings_lake_factory;
+}
+
+generic_factory<region_settings_ocean> &
+cata::lua_platform::detail::region_settings_ocean_registry()
+{
+    return region_settings_ocean_factory;
+}
+
+generic_factory<region_settings_forest> &
+cata::lua_platform::detail::region_settings_forest_registry()
+{
+    return region_settings_forest_factory;
+}
+
+generic_factory<region_settings_river> &
+cata::lua_platform::detail::region_settings_river_registry()
+{
+    return region_settings_river_factory;
+}
+
+generic_factory<region_settings_forest_mapgen> &
+cata::lua_platform::detail::region_settings_forest_mapgen_registry()
+{
+    return region_settings_forest_mapgen_factory;
+}
+
+generic_factory<region_settings_map_extras> &
+cata::lua_platform::detail::region_settings_map_extras_registry()
+{
+    return region_settings_map_extras_factory;
+}
+
+generic_factory<region_settings_terrain_furniture> &
+cata::lua_platform::detail::region_settings_terrain_furniture_registry()
+{
+    return region_settings_terrain_furniture_factory;
+}
+
+generic_factory<region_settings_forest_trail> &
+cata::lua_platform::detail::region_settings_forest_trail_registry()
+{
+    return region_settings_forest_trail_factory;
+}
+
+generic_factory<region_settings_highway> &
+cata::lua_platform::detail::region_settings_highway_registry()
+{
+    return region_settings_highway_factory;
+}
+
+generic_factory<region_terrain_furniture> &
+cata::lua_platform::detail::region_terrain_furniture_registry()
+{
+    return region_terrain_furniture_factory;
+}
+
+generic_factory<forest_biome_component> &
+cata::lua_platform::detail::forest_biome_component_registry()
+{
+    return forest_biome_feature_factory;
+}
+
+generic_factory<region_settings_city> &
+cata::lua_platform::detail::region_settings_city_registry()
+{
+    return region_settings_city_factory;
+}
+
+generic_factory<forest_biome_mapgen> &
+cata::lua_platform::detail::forest_biome_mapgen_registry()
+{
+    return forest_biome_mapgen_factory;
+}
+
+generic_factory<region_settings> &
+cata::lua_platform::detail::region_settings_registry()
+{
+    return region_settings_factory;
 }
 
 /** OBJ */
@@ -615,6 +707,7 @@ void map_extra_collection::load( const JsonObject &jo, std::string_view )
 
 void region_settings::load( const JsonObject &jo, std::string_view )
 {
+    finalized = false;
     optional( jo, was_loaded, "default_oter", default_oter );
 
     optional( jo, was_loaded, "default_groundcover", default_groundcover, ter_reader );
@@ -647,8 +740,12 @@ void region_settings::load( const JsonObject &jo, std::string_view )
 
 void region_settings::finalize()
 {
+    if( finalized ) {
+        return;
+    }
     // So the data definition goes from z = OVERMAP_HEIGHT to z = OVERMAP_DEPTH
     std::reverse( default_oter.begin(), default_oter.end() );
+    finalized = true;
 }
 
 void region_settings::finalize_all()

@@ -1,15 +1,16 @@
 #include "behavior.h"
 
+#include <string_id.h>
 #include <unordered_map>
 #include <utility>
 
 #include "behavior_oracle.h"
 #include "behavior_strategy.h"
 #include "cata_assert.h"
-#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "monstergenerator.h"
 
 using namespace behavior;

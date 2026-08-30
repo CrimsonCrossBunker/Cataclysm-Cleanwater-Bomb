@@ -1,7 +1,9 @@
 #include "map_extras.h"
 
-#include "catalua_platform_content.h"
-
+#include <catacharset.h>
+#include <color.h>
+#include <flat_set.h>
+#include <translation.h>
 #include <array>
 #include <cstdlib>
 #include <functional>
@@ -27,6 +29,7 @@
 #include "generic_factory.h"
 #include "item_group.h"
 #include "line.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

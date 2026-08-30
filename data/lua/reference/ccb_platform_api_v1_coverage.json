@@ -1,0 +1,1087 @@
+{
+  "coverage_id": "ccb_platform_api_v1_coverage",
+  "coverage_kind": "platform_luals_native_registration_public_contract_synchronization",
+  "entries": [
+    {
+      "declared_class": "AchievementDefinition",
+      "in_public_contract": true,
+      "native_name": "AchievementDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ActivityTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "ActivityTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AddictionTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "AddictionTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AmmoEffectDefinition",
+      "in_public_contract": true,
+      "native_name": "AmmoEffectDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AmmunitionTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "AmmunitionTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AnatomyDefinition",
+      "in_public_contract": true,
+      "native_name": "AnatomyDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AsciiArtDefinition",
+      "in_public_contract": true,
+      "native_name": "AsciiArtDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "AttackVectorDefinition",
+      "in_public_contract": true,
+      "native_name": "AttackVectorDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BashDamageProfileDefinition",
+      "in_public_contract": true,
+      "native_name": "BashDamageProfileDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BehaviorDefinition",
+      "in_public_contract": true,
+      "native_name": "BehaviorDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BionicDefinition",
+      "in_public_contract": true,
+      "native_name": "BionicDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BlacklistDefinition",
+      "in_public_contract": true,
+      "native_name": "BlacklistDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BodyGraphDefinition",
+      "in_public_contract": true,
+      "native_name": "BodyGraphDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "BodyPartDefinition",
+      "in_public_contract": true,
+      "native_name": "BodyPartDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ButcheryRequirementDefinition",
+      "in_public_contract": true,
+      "native_name": "ButcheryRequirementDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "CampExpansionToken",
+      "in_public_contract": true,
+      "native_name": "CampExpansionToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "CampTaskToken",
+      "in_public_contract": true,
+      "native_name": "CampTaskToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "CharacterModifierDefinition",
+      "in_public_contract": true,
+      "native_name": "CharacterModifierDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "CityDefinition",
+      "in_public_contract": true,
+      "native_name": "CityDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ClimbingAidDefinition",
+      "in_public_contract": true,
+      "native_name": "ClimbingAidDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ClothingModDefinition",
+      "in_public_contract": true,
+      "native_name": "ClothingModDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ComputerAccessContext",
+      "in_public_contract": true,
+      "native_name": "ComputerAccessContext",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ConnectGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "ConnectGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ConstructionCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "ConstructionCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ConstructionDefinition",
+      "in_public_contract": true,
+      "native_name": "ConstructionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ConstructionGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "ConstructionGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DamageInfoOrderDefinition",
+      "in_public_contract": true,
+      "native_name": "DamageInfoOrderDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DamageTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "DamageTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DimensionDefinition",
+      "in_public_contract": true,
+      "native_name": "DimensionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DimensionRegionLayoutDefinition",
+      "in_public_contract": true,
+      "native_name": "DimensionRegionLayoutDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DiseaseTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "DiseaseTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "DreamDefinition",
+      "in_public_contract": true,
+      "native_name": "DreamDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EffectTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "EffectTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EmissionDefinition",
+      "in_public_contract": true,
+      "native_name": "EmissionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EnchantmentDefinition",
+      "in_public_contract": true,
+      "native_name": "EnchantmentDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EndScreenDefinition",
+      "in_public_contract": true,
+      "native_name": "EndScreenDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EventStatisticDefinition",
+      "in_public_contract": true,
+      "native_name": "EventStatisticDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "EventTransformationDefinition",
+      "in_public_contract": true,
+      "native_name": "EventTransformationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ExplosionLightDefinition",
+      "in_public_contract": true,
+      "native_name": "ExplosionLightDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FactionDefinition",
+      "in_public_contract": true,
+      "native_name": "FactionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FactionMissionDefinition",
+      "in_public_contract": true,
+      "native_name": "FactionMissionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FaultDefinition",
+      "in_public_contract": true,
+      "native_name": "FaultDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FaultFixDefinition",
+      "in_public_contract": true,
+      "native_name": "FaultFixDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FaultGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "FaultGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FieldTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "FieldTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ForestBiomeComponentDefinition",
+      "in_public_contract": true,
+      "native_name": "ForestBiomeComponentDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ForestBiomeMapgenDefinition",
+      "in_public_contract": true,
+      "native_name": "ForestBiomeMapgenDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "FurnitureDefinition",
+      "in_public_contract": true,
+      "native_name": "FurnitureDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "GameEnum",
+      "in_public_contract": true,
+      "native_name": "GameEnum",
+      "synchronized": true
+    },
+    {
+      "declared_class": "GameHandle",
+      "in_public_contract": true,
+      "native_name": "GameHandle",
+      "synchronized": true
+    },
+    {
+      "declared_class": "GameId",
+      "in_public_contract": true,
+      "native_name": "GameId",
+      "synchronized": true
+    },
+    {
+      "declared_class": "GateDefinition",
+      "in_public_contract": true,
+      "native_name": "GateDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "HarvestDefinition",
+      "in_public_contract": true,
+      "native_name": "HarvestDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "HarvestDropTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "HarvestDropTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "HelpTopicDefinition",
+      "in_public_contract": true,
+      "native_name": "HelpTopicDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "HitRangeDefinition",
+      "in_public_contract": true,
+      "native_name": "HitRangeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "HordeEntityToken",
+      "in_public_contract": true,
+      "native_name": "HordeEntityToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ItemActionDefinition",
+      "in_public_contract": true,
+      "native_name": "ItemActionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ItemCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "ItemCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ItemDefinition",
+      "in_public_contract": true,
+      "native_name": "ItemDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ItemGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "ItemGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ItemUseContext",
+      "in_public_contract": true,
+      "native_name": "ItemUseContext",
+      "synchronized": true
+    },
+    {
+      "declared_class": "JsonFlagDefinition",
+      "in_public_contract": true,
+      "native_name": "JsonFlagDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "LegacyHordeToken",
+      "in_public_contract": true,
+      "native_name": "LegacyHordeToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "LimbScoreDefinition",
+      "in_public_contract": true,
+      "native_name": "LimbScoreDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MagicTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "MagicTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MapExtraCollectionDefinition",
+      "in_public_contract": true,
+      "native_name": "MapExtraCollectionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MapExtraDefinition",
+      "in_public_contract": true,
+      "native_name": "MapExtraDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MapTileToken",
+      "in_public_contract": true,
+      "native_name": "MapTileToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MapgenUpdateToken",
+      "in_public_contract": true,
+      "native_name": "MapgenUpdateToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MartialArtDefinition",
+      "in_public_contract": true,
+      "native_name": "MartialArtDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MaterialDefinition",
+      "in_public_contract": true,
+      "native_name": "MaterialDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MathFunctionDefinition",
+      "in_public_contract": true,
+      "native_name": "MathFunctionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MigrationDefinition",
+      "in_public_contract": true,
+      "native_name": "MigrationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MissionDefinition",
+      "in_public_contract": true,
+      "native_name": "MissionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MissionToken",
+      "in_public_contract": true,
+      "native_name": "MissionToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ModDefinition",
+      "in_public_contract": true,
+      "native_name": "ModDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterAdjustmentDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterAdjustmentDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterAttackDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterAttackDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterFactionDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterFactionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterFlagDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterFlagDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MonsterGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "MonsterGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MoodFaceDefinition",
+      "in_public_contract": true,
+      "native_name": "MoodFaceDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MoraleTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "MoraleTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MovementModeDefinition",
+      "in_public_contract": true,
+      "native_name": "MovementModeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MutationCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "MutationCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MutationDefinition",
+      "in_public_contract": true,
+      "native_name": "MutationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "MutationTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "MutationTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "NamedColorDefinition",
+      "in_public_contract": true,
+      "native_name": "NamedColorDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "NestedRecipeCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "NestedRecipeCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "NpcClassDefinition",
+      "in_public_contract": true,
+      "native_name": "NpcClassDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "NpcDefinition",
+      "in_public_contract": true,
+      "native_name": "NpcDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OmtPlaceholderDefinition",
+      "in_public_contract": true,
+      "native_name": "OmtPlaceholderDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OptionSliderDefinition",
+      "in_public_contract": true,
+      "native_name": "OptionSliderDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OverlayOrderDefinition",
+      "in_public_contract": true,
+      "native_name": "OverlayOrderDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapConnectionDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapConnectionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapLandUseCodeDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapLandUseCodeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapLocationDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapLocationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapSpecialDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapSpecialDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapTerrainDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapTerrainDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapTileToken",
+      "in_public_contract": true,
+      "native_name": "OvermapTileToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "OvermapVisionDefinition",
+      "in_public_contract": true,
+      "native_name": "OvermapVisionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "PlantLifecycleDefinition",
+      "in_public_contract": true,
+      "native_name": "PlantLifecycleDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "PlatformDialogueContext",
+      "in_public_contract": true,
+      "native_name": "PlatformDialogueContext",
+      "synchronized": true
+    },
+    {
+      "declared_class": "PlaylistDefinition",
+      "in_public_contract": true,
+      "native_name": "PlaylistDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "PointCoord",
+      "in_public_contract": true,
+      "native_name": "PointCoord",
+      "synchronized": true
+    },
+    {
+      "declared_class": "PostProcessGeneratorDefinition",
+      "in_public_contract": true,
+      "native_name": "PostProcessGeneratorDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProfessionDefinition",
+      "in_public_contract": true,
+      "native_name": "ProfessionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProfessionGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "ProfessionGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProfessionItemBonusDefinition",
+      "in_public_contract": true,
+      "native_name": "ProfessionItemBonusDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProfessionItemSubstitutionDefinition",
+      "in_public_contract": true,
+      "native_name": "ProfessionItemSubstitutionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProficiencyCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "ProficiencyCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ProficiencyDefinition",
+      "in_public_contract": true,
+      "native_name": "ProficiencyDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RecipeCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "RecipeCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RecipeDefinition",
+      "in_public_contract": true,
+      "native_name": "RecipeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RecipeGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "RecipeGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsCityDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsCityDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsForestDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsForestDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsForestMapgenDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsForestMapgenDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsForestTrailDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsForestTrailDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsHighwayDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsHighwayDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsLakeDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsLakeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsMapExtrasDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsMapExtrasDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsOceanDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsOceanDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsRavineDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsRavineDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsRiverDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsRiverDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionSettingsTerrainFurnitureDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionSettingsTerrainFurnitureDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RegionTerrainFurnitureDefinition",
+      "in_public_contract": true,
+      "native_name": "RegionTerrainFurnitureDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RelicProcgenDefinition",
+      "in_public_contract": true,
+      "native_name": "RelicProcgenDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RequirementDefinition",
+      "in_public_contract": true,
+      "native_name": "RequirementDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "RotatableSymbolDefinition",
+      "in_public_contract": true,
+      "native_name": "RotatableSymbolDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ScenarioDefinition",
+      "in_public_contract": true,
+      "native_name": "ScenarioDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ScentTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "ScentTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ScoreDefinition",
+      "in_public_contract": true,
+      "native_name": "ScoreDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ScriptMapgenContext",
+      "in_public_contract": true,
+      "native_name": "ScriptMapgenContext",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ShopkeeperDefinition",
+      "in_public_contract": true,
+      "native_name": "ShopkeeperDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SkillDefinition",
+      "in_public_contract": true,
+      "native_name": "SkillDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SkillDisplayDefinition",
+      "in_public_contract": true,
+      "native_name": "SkillDisplayDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SnippetCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "SnippetCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SoundEffectDefinition",
+      "in_public_contract": true,
+      "native_name": "SoundEffectDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SpeciesDefinition",
+      "in_public_contract": true,
+      "native_name": "SpeciesDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SpeechPoolDefinition",
+      "in_public_contract": true,
+      "native_name": "SpeechPoolDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SpeedDescriptionDefinition",
+      "in_public_contract": true,
+      "native_name": "SpeedDescriptionDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SpellDefinition",
+      "in_public_contract": true,
+      "native_name": "SpellDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "StartLocationDefinition",
+      "in_public_contract": true,
+      "native_name": "StartLocationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "SubBodyPartDefinition",
+      "in_public_contract": true,
+      "native_name": "SubBodyPartDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TechniqueDefinition",
+      "in_public_contract": true,
+      "native_name": "TechniqueDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TerrainDefinition",
+      "in_public_contract": true,
+      "native_name": "TerrainDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TerrainTransformDefinition",
+      "in_public_contract": true,
+      "native_name": "TerrainTransformDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TimeDuration",
+      "in_public_contract": true,
+      "native_name": "TimeDuration",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TimePoint",
+      "in_public_contract": true,
+      "native_name": "TimePoint",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ToolQualityDefinition",
+      "in_public_contract": true,
+      "native_name": "ToolQualityDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TradeQuoteToken",
+      "in_public_contract": true,
+      "native_name": "TradeQuoteToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TraitGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "TraitGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TrapDefinition",
+      "in_public_contract": true,
+      "native_name": "TrapDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "TripointCoord",
+      "in_public_contract": true,
+      "native_name": "TripointCoord",
+      "synchronized": true
+    },
+    {
+      "declared_class": "UnitValue",
+      "in_public_contract": true,
+      "native_name": "UnitValue",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehicleColorPaletteDefinition",
+      "in_public_contract": true,
+      "native_name": "VehicleColorPaletteDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehicleDefinition",
+      "in_public_contract": true,
+      "native_name": "VehicleDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehicleGroupDefinition",
+      "in_public_contract": true,
+      "native_name": "VehicleGroupDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehiclePartCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "VehiclePartCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehiclePartDefinition",
+      "in_public_contract": true,
+      "native_name": "VehiclePartDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehiclePartLocationDefinition",
+      "in_public_contract": true,
+      "native_name": "VehiclePartLocationDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehiclePlacementDefinition",
+      "in_public_contract": true,
+      "native_name": "VehiclePlacementDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VehicleSpawnDefinition",
+      "in_public_contract": true,
+      "native_name": "VehicleSpawnDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "VitaminDefinition",
+      "in_public_contract": true,
+      "native_name": "VitaminDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WeakpointSetDefinition",
+      "in_public_contract": true,
+      "native_name": "WeakpointSetDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WeaponCategoryDefinition",
+      "in_public_contract": true,
+      "native_name": "WeaponCategoryDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WeatherGeneratorDefinition",
+      "in_public_contract": true,
+      "native_name": "WeatherGeneratorDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WeatherTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "WeatherTypeDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WidgetDefinition",
+      "in_public_contract": true,
+      "native_name": "WidgetDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WoundDefinition",
+      "in_public_contract": true,
+      "native_name": "WoundDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "WoundFixDefinition",
+      "in_public_contract": true,
+      "native_name": "WoundFixDefinition",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ZoneToken",
+      "in_public_contract": true,
+      "native_name": "ZoneToken",
+      "synchronized": true
+    },
+    {
+      "declared_class": "ZoneTypeDefinition",
+      "in_public_contract": true,
+      "native_name": "ZoneTypeDefinition",
+      "synchronized": true
+    }
+  ],
+  "platform_sync": {
+    "contract_export_roots_missing_from_inventory": [],
+    "luals_class_count": 664,
+    "luals_function_count": 1217,
+    "native_export_root_count": 177,
+    "native_export_roots_declared": 177,
+    "native_export_roots_in_public_contract": 177,
+    "native_registration_file_count": 104,
+    "public_contract_export_root_count": 177,
+    "synchronized": true,
+    "unmatched_native_export_roots": []
+  },
+  "schema": "data/lua/reference/ccb_platform_api_v1_coverage.schema.json",
+  "schema_version": 1,
+  "source": {
+    "declarations": "data/lua/types/ccb_platform_v1.d.lua",
+    "native_inventory": "data/lua/reference/ccb_platform_native_inventory.json",
+    "public_contract": "data/lua/reference/ccb_platform_api_v1.json"
+  }
+}

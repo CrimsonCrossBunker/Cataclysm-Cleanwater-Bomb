@@ -1,5 +1,9 @@
 #include "mission.h" // IWYU pragma: associated
 
+#include <coords_fwd.h>
+#include <dialogue_helpers.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 
 #include "condition.h"
@@ -8,6 +12,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 #include "rng.h"
 
 static const std::map<std::string, std::function<void( mission * )>> mission_function_map = {{
@@ -85,6 +90,11 @@ std::string enum_to_string<mission_goal>( mission_goal data )
 } // namespace io
 
 static generic_factory<mission_type> mission_type_factory( "mission_type" );
+
+generic_factory<mission_type> &cata::lua_platform::detail::mission_type_registry()
+{
+    return mission_type_factory;
+}
 
 /** @relates string_id */
 template<>
@@ -238,6 +248,11 @@ const mission_type *mission_type::get( const mission_type_id &id )
 const std::vector<mission_type> &mission_type::get_all()
 {
     return mission_type_factory.get_all();
+}
+
+void mission_type::set_platform_name( const std::string &value )
+{
+    name = no_translation( value );
 }
 
 mission_type_id mission_type::get_random_id( const mission_origin origin,

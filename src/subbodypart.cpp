@@ -1,11 +1,13 @@
 #include "subbodypart.h"
 
+#include <damage.h>
+#include <translation.h>
 #include <unordered_map>
 #include <vector>
 
-#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "type_id.h"
 
 namespace

@@ -24,9 +24,11 @@ This file is generated from `markdown-inventory.yml`; do not edit it by hand.
 
 | Value | Count |
 | --- | ---: |
+| `active` | 2 |
 | `archived` | 7 |
-| `stubbed` | 104 |
-| `verified` | 64 |
+| `historical` | 1 |
+| `stubbed` | 102 |
+| `verified` | 63 |
 
 ## Domains
 
@@ -76,8 +78,8 @@ This file is generated from `markdown-inventory.yml`; do not edit it by hand.
 | `data/json/LOADING_ORDER.md` | `legacy.data-json-loading-order` | `merge_into` | `stubbed` | `P1` | `phase-1-json` | `docs/zh_CN/reference/json/loading-order.md` |
 | `data/json/npcs/godco/NECC_INFO.md` | `content.npc.godco-roster` | `keep_in_repo` | `verified` | `P2` | `phase-2-content` | `data/json/npcs/godco/NECC_INFO.md` |
 | `data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md` | `content.npc.free-merchants-economy` | `keep_in_repo` | `verified` | `P2` | `phase-2-content` | `data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md` |
-| `data/lua/README.md` | `lua.v5.overview` | `migrate_rewrite` | `stubbed` | `P0` | `phase-0-lua` | `docs/zh_CN/api/lua/v5/overview.md` |
-| `data/lua/examples/api_v5_mod/README.md` | `lua.v5.example-mod` | `migrate_rewrite` | `stubbed` | `P0` | `phase-0-lua` | `docs/zh_CN/api/lua/v5/example-mod.md` |
+| `data/lua/README.md` | `lua.platform.overview` | `keep_in_repo` | `active` | `P0` | `phase-0-lua` | `data/lua/README.md` |
+| `data/lua/examples/api_v5_mod/README.md` | `lua.v5.example-mod` | `historical` | `historical` | `P0` | `phase-0-lua` | `historical-only` |
 | `data/mods/Backrooms/README.md` | `mods.backrooms.overview` | `keep_in_repo` | `verified` | `P2` | `phase-2-mods` | `data/mods/Backrooms/README.md` |
 | `data/mods/BombasticPerks/docs/contributing.md` | `mods.bombastic-perks.contributing` | `keep_in_repo` | `verified` | `P1` | `phase-1-mods` | `data/mods/BombasticPerks/docs/contributing.md` |
 | `data/mods/BombasticPerks/docs/expanding_with_mods.md` | `mods.bombastic-perks.extension-contract` | `keep_in_repo` | `verified` | `P1` | `phase-1-mods` | `data/mods/BombasticPerks/docs/expanding_with_mods.md` |
@@ -241,4 +243,4 @@ This file is generated from `markdown-inventory.yml`; do not edit it by hand.
 | `src/third-party/snmalloc/stl/gnu/README.md` | `third-party.src-third-party-snmalloc-stl-gnu-readme` | `retain_third_party` | `verified` | `P3` | `—` | `src/third-party/snmalloc/stl/gnu/README.md` |
 | `src/third-party/zstd/README.md` | `third-party.src-third-party-zstd-readme` | `retain_third_party` | `verified` | `P3` | `—` | `src/third-party/zstd/README.md` |
 | `tools/llama/README.md` | `tool-llama-build-acceleration` | `keep_in_repo` | `verified` | `P2` | `phase-2-tooling` | `tools/llama/README.md` |
-| `tools/lua_api/README.md` | `tool-lua-api-coverage` | `keep_in_repo` | `verified` | `P0` | `phase-0-lua` | `tools/lua_api/README.md` |
+| `tools/lua_api/README.md` | `tool-lua-platform-contract` | `keep_in_repo` | `active` | `P0` | `phase-0-lua` | `tools/lua_api/README.md` |

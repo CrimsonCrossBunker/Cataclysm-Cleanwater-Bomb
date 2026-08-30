@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccb.local/schema/ccb_platform_api_v1_coverage.schema.json",
+  "title": "CCB Lua-first Platform v1 synchronization coverage",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "coverage_id",
+    "coverage_kind",
+    "source",
+    "platform_sync",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "coverage_id": { "const": "ccb_platform_api_v1_coverage" },
+    "schema": { "type": "string" },
+    "coverage_kind": {
+      "const": "platform_luals_native_registration_public_contract_synchronization"
+    },
+    "source": { "type": "object" },
+    "platform_sync": {
+      "type": "object",
+      "required": [
+        "luals_class_count",
+        "luals_function_count",
+        "native_registration_file_count",
+        "native_export_root_count",
+        "native_export_roots_declared",
+        "public_contract_export_root_count",
+        "native_export_roots_in_public_contract",
+        "unmatched_native_export_roots",
+        "contract_export_roots_missing_from_inventory",
+        "synchronized"
+      ],
+      "properties": {
+        "luals_class_count": { "type": "integer", "minimum": 0 },
+        "luals_function_count": { "type": "integer", "minimum": 0 },
+        "native_registration_file_count": { "type": "integer", "minimum": 0 },
+        "native_export_root_count": { "type": "integer", "minimum": 0 },
+        "native_export_roots_declared": { "type": "integer", "minimum": 0 },
+        "public_contract_export_root_count": { "type": "integer", "minimum": 0 },
+        "native_export_roots_in_public_contract": { "type": "integer", "minimum": 0 },
+        "unmatched_native_export_roots": { "type": "array", "items": { "type": "string" } },
+        "contract_export_roots_missing_from_inventory": { "type": "array", "items": { "type": "string" } },
+        "synchronized": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "native_name",
+          "declared_class",
+          "in_public_contract",
+          "synchronized"
+        ],
+        "properties": {
+          "native_name": { "type": "string", "minLength": 1 },
+          "declared_class": { "type": ["string", "null"] },
+          "in_public_contract": { "type": "boolean" },
+          "synchronized": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

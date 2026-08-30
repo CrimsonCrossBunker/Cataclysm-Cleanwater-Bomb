@@ -1,5 +1,8 @@
 #include "start_location.h"
 
+#include <common_types.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <functional>
@@ -9,7 +12,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_variant.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "city.h"
 #include "clzones.h"
@@ -22,6 +24,7 @@
 #include "field_type.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_extras.h"
 #include "map_iterator.h"

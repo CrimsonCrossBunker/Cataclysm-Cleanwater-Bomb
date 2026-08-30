@@ -1,6 +1,11 @@
 // Monster movement code; essentially, the AI
 #include "monster.h" // IWYU pragma: associated
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <creature.h>
 #include <algorithm>
 #include <cfloat>
 #include <climits>
@@ -16,7 +21,6 @@
 #include "bionics.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -29,6 +33,7 @@
 #include "gates.h"
 #include "item.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -2080,22 +2085,22 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
 
-    if( cata::lua_ui::has_native_hook( "on_monster_try_move" ) ) {
-        const cata::lua_ui::native_callback_arguments payload = {
+    if( cata::lua_platform::has_native_hook( "on_monster_try_move" ) ) {
+        const cata::lua_platform::native_callback_arguments payload = {
             { "monster", static_cast<const Creature *>( this ) },
             {
-                "from", cata::lua_ui::native_callback_point {
+                "from", cata::lua_platform::native_callback_point {
                     "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
                 }
             },
             {
-                "to", cata::lua_ui::native_callback_point {
+                "to", cata::lua_platform::native_callback_point {
                     "bub_ms", tripoint_rel_ms( p.x(), p.y(), p.z() )
                 }
             },
             { "force", force }
         };
-        if( !cata::lua_ui::dispatch_native_hook(
+        if( !cata::lua_platform::dispatch_native_hook(
                 "on_monster_try_move", payload ) ) {
             return false;
         }

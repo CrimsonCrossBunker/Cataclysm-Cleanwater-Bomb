@@ -1,5 +1,7 @@
 #include "weakpoint.h"
 
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -8,7 +10,6 @@
 #include <utility>
 
 #include "calendar.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -19,10 +20,12 @@
 #include "effect_source.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
-#include "map.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
+#include "map.h"
 #include "messages.h"
 #include "monster.h"
 #include "mtype.h"
@@ -320,6 +323,10 @@ void weakpoint_effect::apply_to( Creature &target, int total_damage,
                     get_talker_for( target ) );
         eoc->activate( d );
     }
+    cata::lua_platform::invoke_weakpoint_effect_handler(
+        lua_platform_set_id, lua_platform_weakpoint_id,
+        lua_platform_mod, lua_platform_handler,
+        target, total_damage, attack );
 
     if( x_in_y( rng( instant_death_chance.first, instant_death_chance.second ), 100 ) ) {
         target.die( &get_map(), attack.source == nullptr ? nullptr : attack.source );

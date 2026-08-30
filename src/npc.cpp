@@ -1,13 +1,32 @@
 #include "npc.h"
 
+#include <calendar.h>
+#include <color.h>
+#include <compatibility.h>
+#include <coordinates.h>
+#include <inventory.h>
+#include <item_location.h>
+#include <lru_cache.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <mission_companion.h>
+#include <npc_opinion.h>
+#include <pimpl.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
+
 #define MP_ENABLED
 #include <algorithm>
+#include <atomic>
 #include <climits>
 #include <cmath>
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <ostream>
 
@@ -19,7 +38,6 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -51,6 +69,9 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "map.h"
 #ifdef MP_ENABLED
@@ -94,7 +115,36 @@
 #include "vpart_position.h"
 #include "weather.h"
 
+enum class direction : unsigned int;
+
 static const activity_id ACT_TRY_SLEEP( "ACT_TRY_SLEEP" );
+
+static std::atomic<std::uint64_t> next_platform_npc_identity_generation { 1 };
+
+static std::uint64_t allocate_platform_npc_identity_generation()
+{
+    const std::uint64_t result = next_platform_npc_identity_generation.fetch_add(
+                                     1, std::memory_order_relaxed );
+    if( result == 0 || result == std::numeric_limits<std::uint64_t>::max() ) {
+        std::terminate();
+    }
+    return result;
+}
+
+void reserve_platform_npc_identity_generation( const std::uint64_t id )
+{
+    if( id == 0 ) {
+        return;
+    }
+    if( id == std::numeric_limits<std::uint64_t>::max() ) {
+        std::terminate();
+    }
+    std::uint64_t next = next_platform_npc_identity_generation.load(
+                             std::memory_order_relaxed );
+    while( next <= id && !next_platform_npc_identity_generation.compare_exchange_weak(
+               next, id + 1, std::memory_order_relaxed ) ) {
+    }
+}
 
 static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_controlled( "controlled" );
@@ -266,6 +316,7 @@ npc::npc()
     , companion_mission_time( calendar::before_time_starts )
     , companion_mission_time_ret( calendar::before_time_starts )
 {
+    platform_identity_generation_ = allocate_platform_npc_identity_generation();
     last_updated = calendar::turn;
     last_player_seen_pos = std::nullopt;
     last_seen_player_turn = 999;
@@ -621,6 +672,8 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
         add_new_mission( mission::reserve_new( miss_id, getID() ) );
     }
     death_eocs = tguy.death_eocs;
+    lua_platform_death_mod = tguy.lua_platform_death_mod;
+    lua_platform_death_handler = tguy.lua_platform_death_handler;
 }
 
 npc::~npc() = default;
@@ -2151,6 +2204,13 @@ bool npc::wants_to_sell( const item_location &it ) const
 
 ret_val<void> npc::wants_to_sell( const item_location &it, int at_price ) const
 {
+    return wants_to_sell( it, at_price, get_player_character() );
+}
+
+ret_val<void> npc::wants_to_sell( const item_location &it, const int at_price,
+                                  const Character &buyer ) const
+{
+    static_cast<void>( buyer );
     if( will_exchange_items_freely() ) {
         return ret_val<void>::make_success();
     }
@@ -2185,6 +2245,12 @@ bool npc::wants_to_buy( const item &it ) const
 
 ret_val<void> npc::wants_to_buy( const item &it, int at_price ) const
 {
+    return wants_to_buy( it, at_price, get_player_character() );
+}
+
+ret_val<void> npc::wants_to_buy( const item &it, const int at_price,
+                                 const Character &seller ) const
+{
     if( it.has_flag( flag_DANGEROUS ) || ( it.has_flag( flag_BOMB ) && it.active ) ) {
         return ret_val<void>::make_failure();
     }
@@ -2204,7 +2270,8 @@ ret_val<void> npc::wants_to_buy( const item &it, int at_price ) const
 
     if( myclass->has_whitelist() ) {
         const shopkeeper_whitelist &wl = myclass->get_shopkeeper_whitelist();
-        icg_entry const *wl_icg = myclass->get_shopkeeper_whitelist().matches( it, *this );
+        icg_entry const *wl_icg = myclass->get_shopkeeper_whitelist().matches(
+                                      it, *this, seller );
         if( wl_icg != nullptr ) {
             return ret_val<void>::make_success();
         } else {
@@ -2212,7 +2279,8 @@ ret_val<void> npc::wants_to_buy( const item &it, int at_price ) const
         }
     }
 
-    icg_entry const *bl = myclass->get_shopkeeper_blacklist().matches( it, *this );
+    icg_entry const *bl = myclass->get_shopkeeper_blacklist().matches(
+                              it, *this, seller );
     if( bl != nullptr ) {
         return ret_val<void>::make_failure( bl->message.translated() );
     }
@@ -3253,6 +3321,9 @@ void npc::die( map *here, Creature *nkiller )
         return;
     }
     prevent_death_reminder = false;
+    if( !cata::lua_platform::dispatch_npc_fatal( *this, nkiller ) ) {
+        return;
+    }
     dialogue d( get_talker_for( this ), nkiller == nullptr ? nullptr : get_talker_for( nkiller ) );
     for( effect_on_condition_id &eoc : death_eocs ) {
         if( eoc->type == eoc_type::NPC_DEATH ) {
@@ -3260,6 +3331,13 @@ void npc::die( map *here, Creature *nkiller )
         } else {
             debugmsg( "Tried to use non NPC_DEATH eoc_type %s for an NPC death.", eoc.c_str() );
         }
+    }
+    const std::optional<bool> continue_death =
+        cata::lua_platform::invoke_npc_death_handler(
+            idz.str(), lua_platform_death_mod, lua_platform_death_handler,
+            *this, nkiller, pos_abs() );
+    if( continue_death && !*continue_death ) {
+        return;
     }
     get_event_bus().send<event_type::character_dies>( getID() );
     // Check if npc doesn't die due to EoC as a result
@@ -3302,6 +3380,11 @@ void npc::die( map *here, Creature *nkiller )
         }
     }
     dead = true;
+    overmap_buffer.foreach_loaded_camp( [this]( basecamp & camp ) {
+        camp.platform_retire_tasks_for_worker( *this );
+    } );
+    overmap_buffer.platform_unregister_npc( *this );
+    cata::lua_platform::retire_npc_handle_identity( *this );
     Character::die( here, nkiller );
 
     if( !quiet_death ) {
@@ -3478,6 +3561,15 @@ void npc::add_new_mission( class mission *miss )
 
 void npc::on_unload()
 {
+    // The overmap keeps the same shared NPC object while it is outside the
+    // active map.  Retire the actor-bound handle lifetime and release only
+    // the ephemeral live reservation; the durable Platform task record must
+    // survive until this stable NPC id is reconciled after load.
+    overmap_buffer.foreach_loaded_camp( [this]( basecamp & camp ) {
+        camp.platform_release_worker_reservation( *this );
+    } );
+    overmap_buffer.platform_unregister_npc( *this );
+    cata::lua_platform::retire_npc_handle_identity( *this );
 }
 
 void npc::update_bodytemp_and_wetness()
@@ -3630,16 +3722,25 @@ void npc::on_load( map *here )
     reconcile_schedule_on_load();
     shop_restock();
 
-    const cata::lua_ui::native_callback_arguments payload = {
+    // An unloaded NPC may retain its native address and stable id.  Register
+    // the new active lifetime before publishing any Platform load payload.
+    if( !getID().is_valid() || is_dead() ) {
+        return;
+    }
+    cata::lua_platform::register_npc_handle_identity( *this );
+    overmap_buffer.platform_register_npc( *this );
+    overmap_buffer.reconcile_platform_camp_tasks();
+
+    const cata::lua_platform::native_callback_arguments payload = {
         { "creature", static_cast<const Creature *>( this ) },
         { "npc", static_cast<const Character *>( this ) }
     };
-    if( cata::lua_ui::has_native_hook( "on_creature_loaded" ) ) {
-        cata::lua_ui::dispatch_native_hook(
+    if( cata::lua_platform::has_native_hook( "on_creature_loaded" ) ) {
+        cata::lua_platform::dispatch_native_hook(
             "on_creature_loaded", payload );
     }
-    if( cata::lua_ui::has_native_hook( "on_npc_loaded" ) ) {
-        cata::lua_ui::dispatch_native_hook(
+    if( cata::lua_platform::has_native_hook( "on_npc_loaded" ) ) {
+        cata::lua_platform::dispatch_native_hook(
             "on_npc_loaded", payload );
     }
 }
@@ -4021,6 +4122,11 @@ std::string npc::get_unique_id() const
     return unique_id;
 }
 
+std::uint64_t npc::platform_identity_generation() const noexcept
+{
+    return platform_identity_generation_;
+}
+
 void npc::set_mission( npc_mission new_mission )
 {
     if( new_mission != mission ) {
@@ -4354,4 +4460,3 @@ std::unique_ptr<talker> get_talker_for( npc *guy )
 {
     return std::make_unique<talker_npc>( guy );
 }
-

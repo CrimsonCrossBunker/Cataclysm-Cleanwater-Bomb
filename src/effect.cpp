@@ -1,5 +1,8 @@
 #include "effect.h"
 
+#include <calendar.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -8,7 +11,6 @@
 
 #include "bodypart.h"
 #include "cata_assert.h"
-#include "catalua_platform_content.h"
 #include "character.h"
 #include "color.h"
 #include "debug.h"
@@ -19,6 +21,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "messages.h"
 #include "mod_manager.h"

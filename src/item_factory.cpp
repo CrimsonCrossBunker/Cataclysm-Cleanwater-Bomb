@@ -1,7 +1,5 @@
-#include "catalua_platform_content.h"
-
-#include "item_factory.h"
-
+#include <iuse.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -43,11 +41,13 @@
 #include "input.h"
 #include "item.h"
 #include "item_contents.h"
+#include "item_factory.h"
 #include "item_group.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "iuse_actor.h"
+#include "lua_platform_content.h"
 #include "mapdata.h"
 #include "material.h"
 #include "math_parser_diag_value.h"

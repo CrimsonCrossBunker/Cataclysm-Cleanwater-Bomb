@@ -286,11 +286,11 @@ struct dialogue: public const_dialogue {
 
         talk_topic opt( dialogue_window &d_win, const talk_topic &topic );
         dialogue() = default;
-        ~dialogue() = default;
+        ~dialogue() noexcept;
         dialogue( const dialogue &d );
-        dialogue( dialogue && ) = default;
+        dialogue( dialogue &&d );
         dialogue &operator=( const dialogue & );
-        dialogue &operator=( dialogue && ) = default;
+        dialogue &operator=( dialogue &&d );
         dialogue( std::unique_ptr<talker> alpha_in, std::unique_ptr<talker> beta_in,
                   const std::unordered_map<std::string, std::function<bool( const_dialogue const & )>> &cond = {},
                   global_variables::impl_t const &ctx = {} );

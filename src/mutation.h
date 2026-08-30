@@ -14,7 +14,6 @@
 
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_lua_call.h"
 #include "damage.h"
 #include "enums.h"
 #include "memory_fast.h"
@@ -295,15 +294,12 @@ struct mutation_branch {
         std::map<mtype_id, int> moncams;
         /** effect_on_conditions triggered when this mutation activates */
         std::vector<effect_on_condition_id> activated_eocs;
-        std::vector<cata::lua_ui::lua_call> activated_luas;
         // if the above activated eocs should be run without turning on the mutation
         bool activated_is_setup = false;
         /** effect_on_conditions triggered while this mutation is active */
         std::vector<effect_on_condition_id> processed_eocs;
-        std::vector<cata::lua_ui::lua_call> processed_luas;
         /** effect_on_conditions triggered when this mutation deactivates */
         std::vector<effect_on_condition_id> deactivated_eocs;
-        std::vector<cata::lua_ui::lua_call> deactivated_luas;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
 
@@ -414,6 +410,10 @@ struct mutation_branch {
          * Returns bionic slot bonus on a given body part granted by this mutation
          */
         int bionic_slot_bonus( const bodypart_str_id &part ) const;
+        void set_platform_text( const std::string &name, const std::string &description );
+        void set_platform_spawn_item( const std::string &item, const std::string &message );
+        void set_platform_ranged_mutation( const std::string &item, const std::string &message );
+        void set_platform_bionic_slot_bonus( const bodypart_str_id &part, int amount );
         /**
          * All known mutations. Key is the mutation id, value is the mutation_branch that you would
          * also get by calling @ref get.

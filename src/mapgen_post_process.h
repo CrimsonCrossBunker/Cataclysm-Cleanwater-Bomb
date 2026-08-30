@@ -17,6 +17,11 @@ class map;
 template<typename E> struct enum_traits;
 template<typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 // Sub-generator type enum: each value corresponds to a C++ executor function.
 enum class sub_generator_type : int {
     bash_damage = 0,
@@ -113,6 +118,7 @@ class pp_generator
                       std::vector<pp_sub_decision> *decisions = nullptr ) const;
 
     private:
+        friend class cata::lua_platform::content_transaction;
         void load( const JsonObject &jo, std::string_view src );
         void check() const;
         bool was_loaded = false;

@@ -1,5 +1,12 @@
 #include "player_activity.h"
 
+#include <activity_actor.h>
+#include <clone_ptr.h>
+#include <coordinates.h>
+#include <enums.h>
+#include <item_location.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <memory>
 
@@ -9,7 +16,6 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -21,6 +27,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_runtime.h"
 #include "messages.h"
 #include "rng.h"
 #include "skill.h"

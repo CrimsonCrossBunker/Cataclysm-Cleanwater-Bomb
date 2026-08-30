@@ -15,7 +15,6 @@
 
 #include "body_part_set.h"
 #include "bodypart.h"
-#include "catalua_lua_call.h"
 #include "color.h"
 #include "coordinates.h"
 #include "damage.h"
@@ -226,7 +225,6 @@ class spell_type
         std::string sound_variant;
         // spell effect string. used to look up spell function
         std::string effect_name;
-        std::optional<cata::lua_ui::lua_call> lua_effect;
         bool teachable;
         // NOLINTNEXTLINE(cata-serialize)
         std::function<void( const spell &, Creature &, const tripoint_bub_ms & )> effect;
@@ -420,6 +418,14 @@ class spell_type
         std::optional<int> get_max_book_level() const;
         // the base difficulty of the spell, unmodified by character specific spell adjustments
         int get_difficulty( const Creature &caster ) const;
+        void set_platform_energy_source(
+            std::optional<magic_energy_type> source,
+            std::optional<vitamin_id> vitamin = std::nullopt,
+            std::optional<nc_color> color = std::nullopt );
+        void set_platform_progression(
+            std::optional<jmath_func_id> get_level,
+            std::optional<jmath_func_id> exp_for_level,
+            std::optional<int> maximum_book_level );
     private:
         // default values
         static const skill_id skill_default;
@@ -909,7 +915,6 @@ void emit( const spell &sp, Creature &caster, const tripoint_bub_ms &target );
 void fungalize( const spell &sp, Creature &caster, const tripoint_bub_ms &target );
 void remove_field( const spell &sp, Creature &caster, const tripoint_bub_ms &center );
 void effect_on_condition( const spell &sp, Creature &caster, const tripoint_bub_ms &target );
-void lua( const spell &sp, Creature &caster, const tripoint_bub_ms &target );
 void pickup( const spell &sp, Creature &caster, const tripoint_bub_ms &target );
 void none( const spell &sp, Creature &, const tripoint_bub_ms &target );
 void slime_split_on_death( const spell &sp, Creature &, const tripoint_bub_ms &target );
@@ -963,7 +968,6 @@ effect_map{
     { "fungalize", spell_effect::fungalize },
     { "remove_field", spell_effect::remove_field },
     { "effect_on_condition", spell_effect::effect_on_condition },
-    { "lua", spell_effect::lua },
     { "pickup", spell_effect::pickup },
     { "slime_split", spell_effect::slime_split_on_death },
     { "none", spell_effect::none }

@@ -1,16 +1,20 @@
 #include "scent_map.h"
 
+#include <coordinates.h>
+#include <map_scale_constants.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 
 #include "calendar.h"
 #include "cata_assert.h"
-#include "catalua_platform_content.h"
 #include "color.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "output.h"
 #include "point.h"

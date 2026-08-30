@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CHARACTER_H
 #define CATA_SRC_CHARACTER_H
 
+#include <item_components.h>
 #include <algorithm>
 #include <bitset>
 #include <climits>
@@ -45,7 +46,6 @@
 #include "item_pocket.h"
 #include "memory_fast.h"
 #include "monster.h"
-#include "options.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "pocket_type.h"
@@ -2896,6 +2896,8 @@ class Character : public Creature, public visitable
         bool male = false;
 
         std::vector<effect_on_condition_id> death_eocs;
+        std::string lua_platform_death_mod;
+        std::string lua_platform_death_handler;
         outfit worn;
         bool nv_cached = false;
         // Means player sit inside vehicle on the tile he is now

@@ -1,3 +1,4 @@
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -461,6 +462,19 @@ std::string talker_npc::give_item_to( const bool to_use )
                         _( "You have no items to offer." ) );
     if( !loc ) {
         return me_npc->chat_snippets().snip_give_cancel.translated();
+    }
+    return give_item_to( std::move( loc ), to_use );
+}
+
+std::string talker_npc::give_item_to(
+    item_location loc, const bool to_use )
+{
+    avatar &player_character = get_avatar();
+    if( me_npc->is_hallucination() ) {
+        return me_npc->chat_snippets().snip_give_to_hallucination.translated();
+    }
+    if( !loc || !loc.held_by( player_character ) ) {
+        return _( "You are not carrying that item." );
     }
     item &given = *loc;
 
