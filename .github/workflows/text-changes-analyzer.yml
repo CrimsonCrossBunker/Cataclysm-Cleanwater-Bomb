@@ -47,12 +47,22 @@ jobs:
         with:
           ref: ${{ steps.get-commit-hash.outputs.base_commit }}
           persist-credentials: false
-      - name: "Use PR's update_pot.sh for base pot generation"
-        # base 分支可能带有过期的 update_pot.sh（如遗漏的 schema 排除），
-        # 用 PR 分支的脚本生成 base.pot（内容仍来自 base 数据，语义不变）。
+      - name: "Use PR's translation extractor for base pot generation"
+        # The base POT must use one complete extractor implementation from the
+        # PR.  Overlay only the extractor runtime; all data remains checked out
+        # from base so the comparison stays base-vs-test-merge.
         run: |
           git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-head
-          git checkout pr-head -- lang/update_pot.sh
+          git checkout pr-head -- \
+            lang/update_pot.sh \
+            lang/extract_json_strings.py \
+            lang/string_extractor \
+            lang/unicode_check.py
+          git diff --no-ext-diff --quiet pr-head -- \
+            lang/update_pot.sh \
+            lang/extract_json_strings.py \
+            lang/string_extractor \
+            lang/unicode_check.py
       - name: "Generate translation template on base commit"
         run: |
           rm -f lang/po/cataclysm-dda.pot
