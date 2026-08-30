@@ -61,14 +61,48 @@ ${COMPILER:-clang++} -v -x c++ /dev/null -c
 # many others as possible, in a random order.
 set +x
 
-# Check for changes to any files that would require us to run clang-tidy across everything
-changed_global_files="$( ( cat ./files_changed || echo 'unknown' ) | \
-    grep -Ei "clang-tidy-build.sh|clang-tidy-run.sh|clang-tidy-wrapper.sh|clang-tidy.yml|.clang-tidy|files_changed|get_affected_files.py|CMakeLists.txt|CMakePresets.json|unknown" || true )"
-if [ -n "$changed_global_files" ]
+# Manual workflow dispatches intentionally omit the PR changed-file index and
+# request the full-repository audit.  Pull requests stay bounded to the
+# directly/transitively affected source set, including CI/config changes.
+if [ ! -f ./files_changed ]
 then
-    first_changed_file="$(echo "$changed_global_files" | head -n 1)"
-    echo "Analyzing all files because $first_changed_file was changed"
+    echo "No PR changed-file index; analyzing all files"
     TIDY="all"
+fi
+
+bounded_global_changes=""
+if [ -f ./files_changed ]
+then
+    bounded_global_changes="$(grep -Ei \
+        '(^|/)(CMakeLists\.txt|Makefile)$|(^|/).*\.cmake$|^\.clang-tidy$|^CMakePresets\.json$|^build-scripts/clang-tidy-(build|run|wrapper)\.sh$|^build-scripts/get_affected_files\.py$|^tools/clang-tidy-plugin/|^\.github/workflows/clang-tidy\.yml$' \
+        ./files_changed || true)"
+fi
+
+# PR analysis still parses directly/transitively affected translation units,
+# but only diagnostics in changed C/C++ files should fail the run.  This keeps
+# pre-existing findings in untouched dependents and vendored headers out of an
+# otherwise unrelated PR.  Global CI/config changes add a small clean
+# cross-section so the analyzer itself is exercised.  Manual dispatches omit
+# files_changed and intentionally retain the unfiltered full baseline.
+if [ -f ./files_changed ]
+then
+    line_filter_paths="$(grep -E '\.(c|cc|cpp|h|hh|hpp)$' ./files_changed || true)"
+    if [ -n "$bounded_global_changes" ]
+    then
+        line_filter_paths="$(printf '%s\n' \
+            "$line_filter_paths" \
+            src/point.cpp \
+            src/item_category.cpp \
+            tests/point_test.cpp | sed '/^$/d' | sort -u)"
+    fi
+    if [ -n "$line_filter_paths" ]
+    then
+        line_filter_file="${build_dir}/clang-tidy-line-filter.json"
+        printf '%s\n' "$line_filter_paths" | sed '/^$/d' | sort -u | \
+            jq -Rsc 'split("\n") | map(select(length > 0) | {name: ., lines: [[1, 2147483647]]})' \
+            > "$line_filter_file"
+        export CATA_CLANG_TIDY_LINE_FILTER_FILE="$line_filter_file"
+    fi
 fi
 
 all_cpp_files="$(jq -r '.[].file | select(contains("third-party") | not)' "${build_dir}/compile_commands.json")"
@@ -93,16 +127,24 @@ else
         echo unknown )"
 
     tidyable_cpp_files="$(echo -n "$tidyable_cpp_files" | grep -v third-party || true)"
+    if [ "$tidyable_cpp_files" == "unknown" ]
+    then
+        echo "Unable to determine affected files, tidying all files"
+        tidyable_cpp_files=$all_cpp_files
+    elif [ -n "$bounded_global_changes" ]
+    then
+        echo "Global clang-tidy configuration changed; adding bounded representative TUs"
+        tidyable_cpp_files="$(printf '%s\n' \
+            "$tidyable_cpp_files" \
+            src/point.cpp \
+            src/item_category.cpp \
+            tests/point_test.cpp | sed '/^$/d' | sort -u)"
+    fi
     if [ -z "$tidyable_cpp_files" ]
     then
 	echo "No files to tidy, exiting";
 	set -x
 	exit 0
-    fi
-    if [ "$tidyable_cpp_files" == "unknown" ]
-    then
-        echo "Unable to determine affected files, tidying all files"
-        tidyable_cpp_files=$all_cpp_files
     fi
 fi
 

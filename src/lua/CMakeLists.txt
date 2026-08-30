@@ -35,11 +35,10 @@ list(TRANSFORM LUA_SOURCE_NAMES
     PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/"
     OUTPUT_VARIABLE LUA_SOURCES)
 
-# Make compiles the bundled Lua .c sources as C++.  sol2 and the native Lua
-# bridge therefore reference C++-mangled lua_* symbols; keep CMake on the same
-# ABI so every generator links the same runtime contract.
+# Keep the bundled runtime on Lua's standard C ABI.  Make also compiles these
+# files as C, while C++ callers and sol2 include the Lua headers with C linkage.
 set_source_files_properties(${LUA_SOURCES}
-    PROPERTIES LANGUAGE CXX)
+    PROPERTIES LANGUAGE C)
 
 file(GLOB LUA_HEADERS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -47,14 +46,10 @@ file(GLOB LUA_HEADERS CONFIGURE_DEPENDS
 
 # Add both sources and headers to the library (headers for IDE visibility)
 add_library(liblua ${LUA_SOURCES} ${LUA_HEADERS})
-# sol is configured (via src/sol/config.hpp, SOL_USE_CXX_LUA) to reference
-# Lua symbols with C++ linkage, so the Lua sources must be compiled as C++
-# too, or linking fails with undefined Lua references on CMake builds.
-set_source_files_properties(${LUA_SOURCES} PROPERTIES LANGUAGE CXX)
 target_include_directories(liblua SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Lua is third-party code.  Keep its diagnostics isolated from the game's
-# warning-as-error policy while compiling it with the required C++ ABI.
+# warning-as-error policy while preserving its standard C ABI.
 if(MSVC)
     target_compile_options(liblua PRIVATE /w)
 else()

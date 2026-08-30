@@ -9,11 +9,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ENGINE_CMAKE_PATH = ROOT / "src" / "CMakeLists.txt"
 LUA_CMAKE_PATH = ROOT / "src" / "lua" / "CMakeLists.txt"
+SOL_CONFIG_PATH = ROOT / "src" / "sol" / "config.hpp"
 MAIN_PATH = ROOT / "src" / "main.cpp"
 
 
 def validate_cmake_contract(
-    engine_source: str, lua_source: str, main_source: str
+    engine_source: str,
+    lua_source: str,
+    sol_config_source: str,
+    main_source: str,
 ) -> list[str]:
     """Return actionable errors for broken bundled-Lua
     build/runtime contracts."""
@@ -47,11 +51,15 @@ def validate_cmake_contract(
     normalized_lua = " ".join(lua_source.split())
     if (
         "set_source_files_properties(${LUA_SOURCES} "
-        "PROPERTIES LANGUAGE CXX)"
+        "PROPERTIES LANGUAGE C)"
         not in normalized_lua
     ):
         errors.append(
-            "src/lua/CMakeLists.txt: bundled Lua sources must use LANGUAGE CXX"
+            "src/lua/CMakeLists.txt: bundled Lua sources must use LANGUAGE C"
+        )
+    if "#define SOL_USE_CXX_LUA" in sol_config_source:
+        errors.append(
+            "src/sol/config.hpp: sol must use the bundled Lua C ABI"
         )
 
     normalized_main = " ".join(main_source.split())
@@ -79,6 +87,7 @@ def main() -> int:
     errors = validate_cmake_contract(
         ENGINE_CMAKE_PATH.read_text(encoding="utf-8"),
         LUA_CMAKE_PATH.read_text(encoding="utf-8"),
+        SOL_CONFIG_PATH.read_text(encoding="utf-8"),
         MAIN_PATH.read_text(encoding="utf-8"),
     )
     if errors:

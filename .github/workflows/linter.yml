@@ -30,6 +30,7 @@ jobs:
         persist-credentials: false
 
     - name: determine changed files
+      id: changed-files
       if: ${{ github.event_name == 'pull_request' }}
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
       with:
@@ -46,18 +47,41 @@ jobs:
           for (const path of files) {
             console.log(path);
           }
+          const workflowPath = '.github/workflows/linter.yml';
+          const hasWorkflowChange = files.includes(workflowPath);
+          const hasCpp = hasWorkflowChange || files.some(path =>
+            !path.startsWith('src/third-party/') &&
+            (path === 'Makefile' || path === '.astylerc' || path.endsWith('.c') ||
+              path.endsWith('.cpp') || path.endsWith('.h'))
+          );
+          const hasJson = hasWorkflowChange || files.some(path => path.endsWith('.json'));
+          core.setOutput('has_cpp', hasCpp ? 'true' : 'false');
+          core.setOutput('has_json', hasJson ? 'true' : 'false');
           fs.writeFileSync("files_changed", files.join('\n') + '\n');
 
-    - run: sudo apt-get install astyle
+    - name: install astyle
+      if: ${{ steps.changed-files.outputs.has_cpp == 'true' }}
+      run: sudo apt-get install astyle
 
-    - run: make -k astyle-fast style-all-json-parallel; git diff --quiet
+    - name: run astyle
+      if: ${{ steps.changed-files.outputs.has_cpp == 'true' }}
+      run: make -k astyle-fast
+
+    - name: run JSON formatter
+      if: ${{ steps.changed-files.outputs.has_json == 'true' }}
+      run: make -k style-all-json-parallel
+
+    - name: check formatting
+      run: git diff --quiet
 
     - name: Create pr comment artifacts
       if: ${{ failure() }}
       run: |
         set +e
         cat files_changed | while read f; do
-          git add $f
+          if [ -e "$f" ]; then
+            git add -- "$f"
+          fi
         done
         git checkout .
         git reset

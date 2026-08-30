@@ -509,9 +509,6 @@ void finalize_event_statistics();
 
 generic_factory<event_transformation> &event_transformation_registry();
 generic_factory<event_statistic> &event_statistic_registry();
-event_transformation make_event_transformation(
-    const event_transformation_native_definition &definition );
-event_statistic make_event_statistic( const event_statistic_native_definition &definition );
 generic_factory<item_category> &item_category_registry();
 generic_factory<crafting_category> &crafting_category_registry();
 generic_factory<weapon_category> &weapon_category_registry();

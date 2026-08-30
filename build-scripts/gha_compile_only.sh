@@ -26,7 +26,7 @@ then
     exit 0  # no fallthrough
 fi
 
-num_jobs=3
+num_jobs=${NUM_BUILD_JOBS:-3}
 
 # We might need binaries installed via pip, so ensure that our personal bin dir is on the PATH
 export PATH=$HOME/.local/bin:$PATH
@@ -80,6 +80,7 @@ then
         ${COMPILER:+-DCMAKE_CXX_COMPILER=$COMPILER} \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DCMAKE_BUILD_TYPE="$build_type" \
+        -DCATA_ENABLE_LUA_PLATFORM="${CATA_ENABLE_LUA_PLATFORM:-1}" \
         -DTILES=${TILES:-0} \
         -DSOUND=${SOUND:-0} \
         ${SDL3:+-DUSE_SDL3=${SDL3}} \

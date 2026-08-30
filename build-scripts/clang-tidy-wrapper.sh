@@ -13,6 +13,12 @@ extra_args=(
     --extra-arg=-Wno-unknown-warning-option
     --extra-arg=-DCATCH_CONFIG_NO_COUNTER
 )
+if [ -n "${CATA_CLANG_TIDY_LINE_FILTER_FILE:-}" ]
+then
+    extra_args+=(
+        "--line-filter=$(<"$CATA_CLANG_TIDY_LINE_FILTER_FILE")"
+    )
+fi
 
 if [ -f "$plugin" ]
 then

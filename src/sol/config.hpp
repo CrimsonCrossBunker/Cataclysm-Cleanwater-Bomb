@@ -50,12 +50,9 @@ the build system, or the command line options of your compiler.
 
 // end of sol/config.hpp
 
-// We compile Lua parts with C++ compiler, so sol doesn't need to use extern "C"
+// sol itself is consumed by C++ code, while the bundled Lua runtime keeps its
+// standard C ABI on every build system.
 #define SOL_BUILD_CXX_MODE 1
-// Ugly hack so non-CMake builds work
-#if defined(CMAKE)
-#  define SOL_USE_CXX_LUA 1
-#endif
 
 // Be helpful and verbose, even at the cost of speed
 #define SOL_ALL_SAFETIES_ON 1
