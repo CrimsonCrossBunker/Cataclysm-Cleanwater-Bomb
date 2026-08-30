@@ -5,8 +5,11 @@
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
+#include <flat_set.h>
+#include <game.h>
 #include <inventory_ui.h>
 #include <item_uid.h>
+
 extern "C" {
 #include <lua.h>
 }
