@@ -218,6 +218,8 @@ static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
+static const efftype_id effect_leashed( "leashed" );
+static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_masked_scent( "masked_scent" );
 static const efftype_id effect_mech_recon_vision( "mech_recon_vision" );
 static const efftype_id effect_melatonin( "melatonin" );
@@ -1565,6 +1567,8 @@ void Character::mount_creature( monster &z )
     z.add_effect( effect_ridden, 1_turns, true );
     if( z.has_effect( effect_tied ) ) {
         z.remove_effect( effect_tied );
+        z.remove_effect( effect_led_by_leash );
+        z.remove_effect( effect_leashed );
         if( z.tied_item ) {
             i_add( *z.tied_item );
             z.tied_item.reset();

@@ -40,6 +40,7 @@
 #include "options_helpers.h"
 #include "overmap_map_data_cache.h"
 #include "overmapbuffer.h"
+#include "player_helpers.h"
 #include "point.h"
 #include "rng.h"
 #include "sounds.h"
@@ -52,9 +53,16 @@ using move_statistics = statistics<int>;
 
 static const furn_str_id furn_f_null( "f_null" );
 
+static const efftype_id effect_leashed( "leashed" );
+static const efftype_id effect_led_by_leash( "led_by_leash" );
+static const efftype_id effect_monster_saddled( "monster_saddled" );
+static const efftype_id effect_tied( "tied" );
+
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
+
+static const itype_id itype_rope_30( "rope_30" );
 
 static const oter_str_id oter_field( "field" );
 
@@ -614,6 +622,33 @@ TEST_CASE( "monster_extend_flags", "[monster]" )
     const mtype &m = *mon_dog_zombie_brute;
     CHECK( m.has_flag( mon_flag_SEES ) );
     CHECK( m.has_flag( mon_flag_PUSH_VEH ) );
+}
+
+TEST_CASE( "mounting_a_tied_mount_clears_its_leash_state", "[monster][mount]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+
+    avatar &player = get_avatar();
+    const tripoint_bub_ms horse_pos = player.pos_bub() + tripoint::east;
+    monster &horse = spawn_test_monster( "mon_horse_police", horse_pos );
+    horse.friendly = -1;
+    horse.add_effect( effect_tied, 1_turns, true );
+    horse.add_effect( effect_led_by_leash, 1_turns, true );
+
+    REQUIRE( horse.tied_item );
+    REQUIRE( horse.has_effect( effect_leashed ) );
+    REQUIRE( horse.has_effect( effect_monster_saddled ) );
+
+    player.mount_creature( horse );
+    player.forced_dismount();
+
+    CHECK( player.has_amount( itype_rope_30, 1 ) );
+    CHECK_FALSE( horse.tied_item );
+    CHECK_FALSE( horse.has_effect( effect_leashed ) );
+    CHECK_FALSE( horse.has_effect( effect_led_by_leash ) );
+    CHECK( horse.has_effect( effect_monster_saddled ) );
 }
 
 TEST_CASE( "monster_broken_verify", "[monster]" )
