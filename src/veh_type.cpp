@@ -146,6 +146,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "CURTAIN", VPFLAG_CURTAIN },
     { "CARGO", VPFLAG_CARGO },
     { "CARGO_PASSABLE", VPFLAG_CARGO_PASSABLE },
+    { "CARGO_PASSABLE_BY_STORED", VPFLAG_CARGO_PASSABLE_BY_STORED },
     { "INTERNAL", VPFLAG_INTERNAL },
     { "SOLAR_PANEL", VPFLAG_SOLAR_PANEL },
     { "WIND_TURBINE", VPFLAG_WIND_TURBINE },
@@ -279,6 +280,7 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "default_ammo", default_ammo, itype_id::NULL_ID() );
     optional( jo, was_loaded, "folded_volume", folded_volume, std::nullopt );
     optional( jo, was_loaded, "size", size, 0_ml );
+    optional( jo, was_loaded, "cargo_passable_size", cargo_passable_size, std::nullopt );
     optional( jo, was_loaded, "bonus", bonus, 0 );
     if( jo.has_array( "light_color" ) ) {
         JsonArray jarr = jo.get_array( "light_color" );
@@ -943,6 +945,17 @@ void vpart_info::check() const
     if( has_flag( "CARGO" ) && has_flag( "FLUIDTANK" ) ) {
         debugmsg( "vehicle part %s can't have both CARGO and FLUIDTANK flags at the same time", id.str() );
     }
+    if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && !cargo_passable_size ) {
+        debugmsg( "vehicle part %s has CARGO_PASSABLE_BY_STORED flag but no cargo_passable_size", id.str() );
+    }
+    if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
+        *cargo_passable_size > size ) {
+        debugmsg( "vehicle part %s has cargo_passable_size %s greater than size %s", id.str(),
+                  format_volume( *cargo_passable_size ), format_volume( size ) );
+    }
+    if( cargo_passable_size && *cargo_passable_size < 0_ml ) {
+        debugmsg( "vehicle part %s has negative cargo_passable_size", id.str() );
+    }
     if( !item::type_is_defined( base_item ) ) {
         debugmsg( "vehicle part %s uses undefined item %s", id.str(), base_item.str() );
     }
@@ -1096,12 +1109,17 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
         if( spoil_multiplier != 1.0f ) {
             if( spoil_multiplier != 0.0f ) {
                 const int percent = static_cast<int>( std::lround( spoil_multiplier * 100 ) );
-                append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
+                append_desc( string_format( _( "Stored items spoil at <neutral>%d%%</neutral> their original rate." ),
                                             percent ) );
             } else {
-                append_desc( _( "Stored items won't spoil." ) );
+                append_desc( _( "Stored items <info>won't spoil</info>." ) );
             }
         }
+    }
+    if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
+        *cargo_passable_size < size ) {
+        append_desc( string_format( _( "Becomes impassable when stored volume exceeds <info>%s</info>." ),
+                                      format_volume( *cargo_passable_size ) ) );
     }
     if( has_flag( "TURRET" ) ) {
         class::item base( base_item );
@@ -1858,7 +1876,7 @@ void cata::lua_platform::detail::erase_platform_vpart_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::vehicle_part_migration_snapshot()
+        cata::lua_platform::detail::vehicle_part_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( vpart_migrations.size() );

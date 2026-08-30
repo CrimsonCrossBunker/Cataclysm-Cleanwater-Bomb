@@ -95,8 +95,8 @@ cata::lua_platform::detail::start_location_snapshot()
         result.emplace_back( std::move( entry ) );
     }
     std::sort( result.begin(), result.end(),
-    []( const start_location_snapshot_entry &left,
-        const start_location_snapshot_entry &right ) {
+               []( const start_location_snapshot_entry & left,
+    const start_location_snapshot_entry & right ) {
         return left.id < right.id;
     } );
     return result;

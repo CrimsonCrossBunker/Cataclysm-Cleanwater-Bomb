@@ -227,12 +227,11 @@
     "symbol": "=",
     "color": "brown",
     "description": "A baked clay sling bullet, shaped for stable flight.  It will likely shatter on impact.",
-    "material": [ "clay", "glass" ],
+    "material": [ "clay", "stone" ],
     "volume": "140 ml",
     "weight": "250 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 12 } ],
-    "count": 20,
     "recovery_chance": 10,
     "flags": [ "NPC_THROWN" ]
   },
@@ -244,12 +243,11 @@
     "symbol": "=",
     "color": "brown",
     "description": "A baked clay sling bullet, shaped for stable flight.  It will likely shatter on impact.",
-    "material": [ "clay", "glass" ],
+    "material": [ "clay", "stone" ],
     "volume": "275 ml",
     "weight": "500 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ],
-    "count": 10,
     "recovery_chance": 5,
     "flags": [ "NPC_THROWN" ]
   },
@@ -261,12 +259,11 @@
     "symbol": "=",
     "color": "brown",
     "description": "A baked clay sling bullet, shaped for stable flight.  It will likely shatter on impact.",
-    "material": [ "clay", "glass" ],
+    "material": [ "clay", "stone" ],
     "volume": "400 ml",
     "weight": "750 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 18 } ],
-    "count": 5,
     "recovery_chance": 0,
     "flags": [ "NPC_THROWN" ]
   },
@@ -284,7 +281,6 @@
     "weight": "250 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 10 } ],
-    "count": 20,
     "recovery_chance": 80,
     "flags": [ "NPC_THROWN" ]
   },
@@ -302,7 +298,6 @@
     "weight": "500 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 12 } ],
-    "count": 10,
     "recovery_chance": 70,
     "flags": [ "NPC_THROWN" ]
   },
@@ -320,7 +315,6 @@
     "weight": "750 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 14 } ],
-    "count": 5,
     "recovery_chance": 60,
     "flags": [ "NPC_THROWN" ]
   },
@@ -338,7 +332,6 @@
     "weight": "250 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 12, "armor_penetration": 5 } ],
-    "count": 20,
     "recovery_chance": 95,
     "flags": [ "NPC_THROWN" ]
   },
@@ -356,7 +349,6 @@
     "weight": "500 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 16, "armor_penetration": 9 } ],
-    "count": 10,
     "recovery_chance": 90,
     "flags": [ "NPC_THROWN" ]
   },
@@ -374,7 +366,6 @@
     "weight": "750 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 20, "armor_penetration": 12 } ],
-    "count": 5,
     "recovery_chance": 85,
     "flags": [ "NPC_THROWN" ]
   },
@@ -391,7 +382,6 @@
     "weight": "250 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ],
-    "count": 20,
     "recovery_chance": 50,
     "flags": [ "NPC_THROWN" ]
   },
@@ -408,7 +398,6 @@
     "weight": "500 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 19 } ],
-    "count": 10,
     "recovery_chance": 40,
     "flags": [ "NPC_THROWN" ]
   },
@@ -425,7 +414,6 @@
     "weight": "750 g",
     "ammo_type": "pebble",
     "thrown_damage": [ { "damage_type": "bash", "amount": 23 } ],
-    "count": 5,
     "recovery_chance": 30,
     "flags": [ "NPC_THROWN" ]
   }

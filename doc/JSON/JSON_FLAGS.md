@@ -715,6 +715,7 @@ Can also be used as `pre_flags` for `construction`.
 - ```HARVESTED``` Marks the harvested version of a terrain type (e.g. harvesting an apple tree turns it into a harvested tree, which later becomes an apple tree again).
 - ```HIDE_PLACE``` Creatures on this tile can't be seen by creatures not standing on adjacent tiles.
 - ```INDOORS``` Has a roof over it; blocks rain, sunlight, etc.
+- ```INDOOR_GROWTH``` Allows planting without sunlight. Bypasses has_sunlight_access; does not bypass cold-temperature check.
 - ```LADDER``` This piece of furniture that makes climbing easy.
 - ```LIQUIDCONT``` Furniture that contains liquid, allows for contents to be accessed in some checks even if `SEALED`.
 - ```LIQUID``` Terrain is liquid (e.g. water, lava, etc.), blocking movement without being a wall.
@@ -725,6 +726,7 @@ Can also be used as `pre_flags` for `construction`.
 - ```NATURAL_UNDERGROUND``` This terrain occurs naturally underground and is not man made.
 - ```NOCOLLIDE``` Feature that simply doesn't collide with vehicles at all.
 - ```NOITEM``` Items cannot be added here but may overflow to adjacent tiles.  See also `DESTROY_ITEM`.
+- ```NO_CROP_OVERGROWTH``` Furniture with this flag prevents plants growing on it from becoming overgrown. Crops can still reach and remain at the harvest stage.
 - ```NO_FLOOR``` Things should fall when placed on this tile.
 - ```NO_FLOOR_WATER``` This tile has no floor, but there is water so it doesn't free fall.
 - ```NO_PICKUP_ON_EXAMINE``` Examining this tile (<kbd>e</kbd> by default) won't open Pick Up menu even if there are items here.
@@ -741,7 +743,6 @@ Can also be used as `pre_flags` for `construction`.
 - ```PLACE_ITEM``` Valid terrain for `place_item()` to put items on.
 - ```PLANTABLE``` This terrain or furniture can have seeds planted in it.
 - ```PLANT``` A 'furniture' that grows and fruits.
-- ```NO_CROP_OVERGROWTH``` Furniture with this flag prevents plants growing on it from becoming overgrown. Crops can still reach and remain at the harvest stage.
 - ```PLOWABLE``` Terrain can be plowed.
 - ```RAIL``` This is a railroad, railroad vehicles can use it to move.
 - ```RAMP_DOWN``` The end of a ramp that leads down, walking into this moves you one z-level down.  Overrides `WALL`, while still displaying the tile as Impassable.
@@ -1729,6 +1730,7 @@ Note: Vehicle parts requiring other parts is defined by setting a `requires_flag
 - ```CAPTURE_MONSTER_VEH``` Can be used to capture monsters when mounted on a vehicle.
 - ```CARGO_LOCKING``` This cargo area is inaccessible to NPCs.  Can only be installed on a part with `LOCKABLE_CARGO` flag.
 - ```CARGO_PASSABLE``` Items stored in vehicle part with this flag won't hinder passenger's ability to fit in comfortably into a given tile.
+- ```CARGO_PASSABLE_BY_STORED``` When present, the part becomes impassable when stored volume exceeds `cargo_passable_size` (requires `cargo_passable_size < size`; `cargo_passable_size > size` is a json error). Cramped check uses `cargo_passable_size` instead of `size`. Without this flag, `cargo_passable_size` if present only affects cramped check using `max(cargo_passable_size, size)`.
 - ```CARGO``` Cargo holding area.
 - ```CHIMES``` Generates continuous noise when used.
 - ```CIRCLE_LIGHT``` Projects a circular radius of light when turned on.

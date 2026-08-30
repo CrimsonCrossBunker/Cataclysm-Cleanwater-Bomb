@@ -219,6 +219,8 @@ static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
+static const efftype_id effect_leashed( "leashed" );
+static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_masked_scent( "masked_scent" );
 static const efftype_id effect_mech_recon_vision( "mech_recon_vision" );
 static const efftype_id effect_melatonin( "melatonin" );
@@ -792,6 +794,10 @@ void Character::mod_stat( const std::string &stat, float modifier )
         mod_int_bonus( modifier );
     } else if( stat == "healthy" ) {
         mod_livestyle( modifier );
+    } else if( stat == "sensitive" ) {
+        mod_sensitive( static_cast<int>( modifier ) );
+    } else if( stat == "sensitive_mod" ) {
+        mod_sensitive_mod( static_cast<int>( modifier ) );
     } else if( stat == "hunger" ) {
         mod_hunger( modifier );
     } else {
@@ -1562,6 +1568,8 @@ void Character::mount_creature( monster &z )
     z.add_effect( effect_ridden, 1_turns, true );
     if( z.has_effect( effect_tied ) ) {
         z.remove_effect( effect_tied );
+        z.remove_effect( effect_led_by_leash );
+        z.remove_effect( effect_leashed );
         if( z.tied_item ) {
             i_add( *z.tied_item );
             z.tied_item.reset();
@@ -2658,7 +2666,16 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
             // Base reduction on the larger of 1% of total, or practice amount.
             // The latter kicks in when long actions like crafting
             // apply many turns of gains at once.
-            int focus_drain = std::max( focus_pool / 100, amount );
+            double focus_drain = std::max( focus_pool / 100.0, static_cast<double>( amount ) );
+
+            // Low sensitivity speeds focus burnout by up to +50%,
+            // high sensitivity slows it down to -50%.
+            const int s = get_sensitive();
+            if( s < 50 ) {
+                focus_drain *= 1.0 + std::min( 0.5, ( 50 - s ) * 0.01 );
+            } else if( s > 200 ) {
+                focus_drain *= 1.0 - std::min( 0.5, ( s - 200 ) * 0.001 );
+            }
 
             // The purpose of having this squared is that it makes focus drain dramatically slower
             // as it approaches zero. As such, the square function would not be used if the drain is
@@ -2875,7 +2892,7 @@ units::mass Character::best_nearby_lifting_assist( const tripoint_bub_ms &world_
         }
     }
     int lift_quality = std::max( { this->max_quality( qual_LIFT ), mech_lift,
-                                   map_selector( this->pos_bub(), PICKUP_RANGE ).max_quality( qual_LIFT ),
+                                   map_selector( this->pos_bub(), pickup_range ).max_quality( qual_LIFT ),
                                    vehicle_selector( here, world_pos, 4, true, true ).max_quality( qual_LIFT )
                                  } );
     return lifting_quality_to_mass( lift_quality );
@@ -3132,6 +3149,7 @@ void Character::reset_stats()
     if( calendar::once_every( 1_minutes ) ) {
         update_mental_focus();
     }
+    update_sensitive_per_effects();
 
     mod_dodge_bonus( enchantment_cache->modify_value( enchant_vals::mod::DODGE_CHANCE, 0 ) );
 
@@ -6896,6 +6914,28 @@ void Character::process_one_effect( effect &it, bool is_new )
         }
     }
 
+    // Handle sensitivity current value
+    val = get_effect( "SENSITIVE", reduced );
+    if( val != 0 ) {
+        mod = 1;
+        if( is_new || it.activated( calendar::turn, "SENSITIVE", val, reduced, mod ) ) {
+            mod_sensitive( bound_mod_to_vals( get_sensitive(), val,
+                                              it.get_max_val( "SENSITIVE", reduced ),
+                                              it.get_min_val( "SENSITIVE", reduced ) ) );
+        }
+    }
+
+    // Handle sensitivity equilibrium mod
+    val = get_effect( "SEN_MOD", reduced );
+    if( val != 0 ) {
+        mod = 1;
+        if( is_new || it.activated( calendar::turn, "SEN_MOD", val, reduced, mod ) ) {
+            mod_sensitive_mod( bound_mod_to_vals( get_sensitive_mod(), val,
+                                                  it.get_max_val( "SEN_MOD", reduced ),
+                                                  it.get_min_val( "SEN_MOD", reduced ) ) );
+        }
+    }
+
     // Handle hunger
     val = get_effect( "HUNGER", reduced );
     if( val != 0 ) {
@@ -7918,7 +7958,11 @@ bool Character::avoid_trap( const tripoint_bub_ms &pos, const trap &tr ) const
     /** @EFFECT_DEX increases chance to avoid traps */
 
     /** @EFFECT_DODGE increases chance to avoid traps */
-    int myroll = dice( 3, round( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) );
+    // Sensitivity slightly shifts trap avoidance, ±10% across 0..400.
+    const double sens_mult = clamp( 1.0 + 0.1 * std::log( std::clamp( get_sensitive(), 1,
+                                           400 ) / 100.0 ) / std::log( 4.0 ), 0.9, 1.1 );
+    int myroll = dice( 3, round( ( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) *
+                                  sens_mult ) );
     int traproll;
     if( tr.can_see( pos, *this ) ) {
         traproll = dice( 3, tr.get_avoidance() );

@@ -56,8 +56,8 @@
       [ "gasoline_lantern", 10 ],
       [ "electric_lantern", 10 ],
       [ "oil_lamp", 10 ],
-      [ "jackhammer", 5 ],
-      [ "elec_jackhammer", 5 ]
+      [ "jackhammer_mining", 5 ],
+      [ "elec_jackhammer_mining", 5 ]
     ]
   },
   {

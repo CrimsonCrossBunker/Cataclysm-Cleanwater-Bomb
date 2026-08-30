@@ -31,7 +31,8 @@ template<typename T> struct enum_traits;
 
 enum class om_vision_level : int8_t;
 
-enum class map_extra_method : int {    null = 0,
+enum class map_extra_method : int {
+    null = 0,
     map_extra_function,
     mapgen,
     update_mapgen,

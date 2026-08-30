@@ -2009,7 +2009,7 @@ void cata::lua_platform::detail::erase_platform_var_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::var_migration_snapshot()
+        cata::lua_platform::detail::var_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     const std::map<std::string, std::string> &migrations =

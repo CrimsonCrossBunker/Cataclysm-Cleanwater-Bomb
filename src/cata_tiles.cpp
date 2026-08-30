@@ -64,6 +64,7 @@
 #include "mapdata.h"
 #include "maptile_fwd.h"
 #include "mdarray.h"
+#include "mod_tileset.h"
 #include "monster.h"
 #include "monstergenerator.h"
 #include "mtype.h"
@@ -449,12 +450,17 @@ void cata_tiles::load_tileset( const std::string &tileset_id, const bool prechec
                                const bool force, const bool pump_events, const bool terrain )
 {
     renderer_texture_generations gens = renderer_coordinator.texture_generations();
+    const uint64_t current_platform_sprite_sheet_generation = platform_sprite_sheet_generation();
+    const bool platform_sprite_sheets_changed =
+        platform_sprite_sheet_generation_at_load != current_platform_sprite_sheet_generation;
     // Skip the reload only when the same tileset is already bound against the
-    // current renderer and texture generations; a generation bump from a
-    // device reset or loss invalidates the bundle and must reload.
+    // current renderer, texture, and Platform sprite-sheet generations; a
+    // generation bump from a device reset, loss, or mod content update
+    // invalidates the bundle and must reload.
     if( tileset_ptr && tileset_ptr->get_tileset_id() == tileset_id && !force
         && tileset_ptr->get_renderer_instance_generation_at_upload() == gens.instance
-        && tileset_ptr->get_gpu_textures_generation_at_upload() == gens.textures ) {
+        && tileset_ptr->get_gpu_textures_generation_at_upload() == gens.textures
+        && !platform_sprite_sheets_changed ) {
         return;
     }
     // Snapshot the global mutation-overlay ordering before the candidate parse
@@ -482,13 +488,15 @@ void cata_tiles::load_tileset( const std::string &tileset_id, const bool prechec
             // Gate drains across the upload (see atlas_upload_scope). A precheck
             // does no GPU upload, so it is neither gated nor polled.
             atlas_upload_scope upload_guard( !precheck );
-            loaded = cache.load_tileset( tileset_id, renderer, precheck, force, pump_events, terrain,
+            loaded = cache.load_tileset( tileset_id, renderer, precheck,
+                                         force || platform_sprite_sheets_changed, pump_events, terrain,
                                          memory_map_mode, gens.instance, gens.textures,
                                          precheck ? atlas_upload_poll{} : poll,
                                          precheck ? nullptr : &quarantine, &interrupt );
         }
         if( interrupt == atlas_upload_interrupt::none ) {
             tileset_ptr = loaded;
+            platform_sprite_sheet_generation_at_load = current_platform_sprite_sheet_generation;
             published = true;
             break;
         }
@@ -537,6 +545,23 @@ void cata_tiles::reinit()
         return;
     }
     RenderClear( renderer );
+}
+
+const texture *cata_tiles::ui_sprite( const std::string &id ) const
+{
+    if( !tileset_ptr ) {
+        return nullptr;
+    }
+    const tile_type *tile = tileset_ptr->find_tile_type( id );
+    if( tile == nullptr ) {
+        return nullptr;
+    }
+    const std::vector<int> *sprites = tile->fg.pick( 0 );
+    if( sprites == nullptr || sprites->empty() ) {
+        sprites = tile->bg.pick( 0 );
+    }
+    return sprites == nullptr || sprites->empty() ? nullptr :
+           tileset_ptr->get_tile( static_cast<std::size_t>( sprites->front() ) );
 }
 
 void cata_tiles::set_draw_scale( int scale )

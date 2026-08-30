@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "activity_actor_definitions.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
 #include "crafting.h"
@@ -151,7 +152,7 @@ void craft_command::execute( bool only_cache_comps )
 
     bool need_selections = true;
     inventory map_inv;
-    map_inv.form_from_map( crafter->pos_bub(), PICKUP_RANGE, crafter );
+    map_inv.form_from_map( crafter->pos_bub(), pickup_range, crafter );
 
     if( has_cached_selections() ) {
         std::vector<comp_selection<item_comp>> missing_items = check_item_components_missing( map_inv );
@@ -346,7 +347,7 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
         for( int i = 0; i < 2 && real_count > 0; i++ ) {
             if( it.use_from & usage_from::map ) {
                 const tripoint_bub_ms &loc = crafter->pos_bub();
-                for( int radius = 0; radius <= PICKUP_RANGE && real_count > 0; radius++ ) {
+                for( int radius = 0; radius <= pickup_range && real_count > 0; radius++ ) {
                     for( const tripoint_bub_ms &p : m.points_in_radius( loc, radius ) ) {
                         if( rl_dist( loc, p ) >= radius ) {
                             // "Simulate" consuming items and put them back
@@ -423,7 +424,7 @@ static std::list<item> sane_consume_items( const comp_selection<item_comp> &it, 
     for( int i = 0; i < 2 && real_count > 0; i++ ) {
         if( it.use_from & usage_from::map ) {
             const tripoint_bub_ms &loc = crafter->pos_bub();
-            for( int radius = 0; radius <= PICKUP_RANGE && real_count > 0; radius++ ) {
+            for( int radius = 0; radius <= pickup_range && real_count > 0; radius++ ) {
                 for( const tripoint_bub_ms &p : m.points_in_radius( loc, radius ) ) {
                     if( rl_dist( loc, p ) >= radius ) {
                         std::list<item> tmp = m.use_amount_square( p, it.comp.type, real_count,
@@ -613,7 +614,7 @@ item craft_command::create_in_progress_craft()
     }
 
     inventory map_inv;
-    map_inv.form_from_map( crafter->pos_bub(), PICKUP_RANGE, crafter );
+    map_inv.form_from_map( crafter->pos_bub(), pickup_range, crafter );
 
     if( !check_item_components_missing( map_inv ).empty() ) {
         debugmsg( "Aborting crafting: couldn't find cached components" );

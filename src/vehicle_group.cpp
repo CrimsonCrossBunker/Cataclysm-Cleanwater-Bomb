@@ -79,7 +79,7 @@ void cata::lua_platform::detail::vehicle_spawn_registry_erase( const std::string
 }
 
 std::vector<std::pair<std::string, int>>
-cata::lua_platform::detail::vehicle_group_weighted_entries( const vgroup_id &id )
+                                      cata::lua_platform::detail::vehicle_group_weighted_entries( const vgroup_id &id )
 {
     std::vector<std::pair<std::string, int>> result;
     const auto found = vgroups.find( id );

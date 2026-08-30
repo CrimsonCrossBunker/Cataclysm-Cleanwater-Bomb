@@ -53,7 +53,7 @@
   {
     "type": "talk_topic",
     "id": "SKYISLAND_EXPLAIN5",
-    "dynamic_line": "This statue offers a variety of services.  You can be instantly healed, check your current statistics and progress, and tweak your expedition difficulty settings.\n\nHealing is free until you have survived 10 expeditions.  After this point, healing costs 4 warp shards per treatment.\n\nExpedition difficulty is set to default when you start a new game, but here you can change many finer details to suit your own playstyle.",
+    "dynamic_line": "This statue offers a variety of services.  You can be instantly healed, dispel an ongoing portal storm, check your current statistics and progress, and tweak your expedition difficulty settings.\n\nHealing is free until you have survived 10 expeditions.  After this point, healing costs 4 warp shards per treatment.\n\nExpedition difficulty is set to default when you start a new game, but here you can change many finer details to suit your own playstyle.",
     "responses": [ { "text": "Interesting…", "topic": "SKYISLAND_QUESTIONS" } ]
   },
   {
@@ -98,6 +98,14 @@
         "text": "Heal me.  (Costs 4 Warp Shards)",
         "condition": { "math": [ "islandrank != 0" ] },
         "effect": [ { "run_eocs": [ "EOC_HEAL_NEWBIE" ] } ],
+        "topic": "SKYISLAND_SERVICES"
+      },
+      {
+        "text": "End an active portal storm.",
+        "effect": [
+          { "run_eocs": [ "EOC_CANCEL_PORTAL_STORM" ] },
+          { "u_message": "The air crackles with static electricity, then stabilizes.", "popup": true }
+        ],
         "topic": "SKYISLAND_SERVICES"
       },
       {
@@ -168,7 +176,11 @@
       {
         "text": "Unlock Start Location: Basements",
         "condition": {
-          "and": [ { "not": { "u_has_mission": "SKYISLAND_UPGRADE_basementsunlock" } }, { "math": [ "basementsunlocked == 0" ] } ]
+          "and": [
+            { "not": { "u_has_mission": "SKYISLAND_UPGRADE_basementsunlock" } },
+            { "math": [ "basementsunlocked == 0" ] },
+            { "not": { "mod_is_loaded": "backrooms" } }
+          ]
         },
         "effect": [ { "assign_mission": "SKYISLAND_UPGRADE_basementsunlock" } ],
         "topic": "SKYISLAND_UPGRADES_RAIDS"
@@ -179,7 +191,8 @@
           "and": [
             { "not": { "u_has_mission": "SKYISLAND_UPGRADE_roofsunlock" } },
             { "math": [ "roofsunlocked == 0" ] },
-            { "math": [ "islandrank >= 2" ] }
+            { "math": [ "islandrank >= 2" ] },
+            { "not": { "mod_is_loaded": "backrooms" } }
           ]
         },
         "effect": [ { "assign_mission": "SKYISLAND_UPGRADE_roofsunlock" } ],
@@ -191,7 +204,8 @@
           "and": [
             { "not": { "u_has_mission": "SKYISLAND_UPGRADE_labsunlock" } },
             { "math": [ "labsunlocked == 0" ] },
-            { "math": [ "islandrank >= 4" ] }
+            { "math": [ "islandrank >= 4" ] },
+            { "not": { "mod_is_loaded": "backrooms" } }
           ]
         },
         "effect": [ { "assign_mission": "SKYISLAND_UPGRADE_labsunlock" } ],
@@ -260,7 +274,8 @@
             { "math": [ "bonusmissions >= 5" ] },
             { "math": [ "hardestmissions > 0" ] },
             { "math": [ "bonuspulses >= 6" ] },
-            { "math": [ "islandrank >= 4" ] }
+            { "math": [ "islandrank >= 4" ] },
+            { "not": { "mod_is_loaded": "backrooms" } }
           ]
         },
         "effect": [ { "assign_mission": "SKYISLAND_UPGRADE_challenge_mode" } ],

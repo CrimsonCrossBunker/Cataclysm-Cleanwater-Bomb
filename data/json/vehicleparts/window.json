@@ -1,0 +1,38 @@
+[
+  {
+    "id": "door_window",
+    "type": "vehicle_part",
+    "name": { "str": "door window" },
+    "description": "A sheet of glass fitted into a vehicle door.",
+    "item": "glass_sheet",
+    "location": "on_door",
+    "durability": 50,
+    "damage_modifier": 70,
+    "damage_reduction": { "all": 2 },
+    "flags": [ "WINDOW", "WINDOW_MOUNT", "FRAGILE_COMPONENTS" ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "adhesive", 2 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
+    },
+    "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
+    "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
+  },
+  {
+    "id": "strong_door_window",
+    "type": "vehicle_part",
+    "name": { "str": "strong door window" },
+    "description": "A sheet of tempered glass fitted into a vehicle door.",
+    "item": "tempered_glass_sheet",
+    "location": "on_door",
+    "durability": 50,
+    "damage_modifier": 70,
+    "damage_reduction": { "all": 20 },
+    "flags": [ "WINDOW", "WINDOW_MOUNT", "FRAGILE_COMPONENTS" ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "adhesive", 2 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
+    },
+    "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
+    "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
+  }
+]

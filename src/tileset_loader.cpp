@@ -465,6 +465,35 @@ atlas_upload_interrupt tileset_cache::loader::load( const std::string &tileset_i
         }
     }
 
+    // Lua-first Platform Mods provide validated atlas descriptors rather than
+    // author-maintained mod_tileset JSON.  Keep their images on this exact
+    // loader path so atlas upload, device-reset replay, and duplicate-id
+    // reporting remain shared with every other tileset source.
+    for( const platform_sprite_sheet &sheet : platform_sprite_sheets() ) {
+        sprite_id_offset = offset;
+        sprite_width = sheet.frame_width;
+        sprite_height = sheet.frame_height;
+        sprite_offset = point::zero;
+        sprite_offset_retracted = point::zero;
+        sprite_pixelscale = sheet.pixelscale;
+        R = -1;
+        G = -1;
+        B = -1;
+        dbg( D_INFO ) << "Attempting to load Platform sprite sheet " << sheet.image_path;
+        read_image_dimensions( sheet.image_path, R, G, B );
+        if( size < static_cast<int>( sheet.frame_ids.size() ) ) {
+            throw std::runtime_error( "Platform sprite sheet '" + sheet.id +
+                                      "' does not contain every declared frame" );
+        }
+        for( std::size_t frame = 0; frame < sheet.frame_ids.size(); ++frame ) {
+            tile_type tile;
+            tile.pixelscale = sprite_pixelscale;
+            tile.fg.add( std::vector<int>( { sprite_id_offset + static_cast<int>( frame ) } ), 1 );
+            ts.create_tile_type( sheet.frame_ids[frame], std::move( tile ) );
+        }
+        offset += size;
+    }
+
     // loop through all tile ids and eliminate empty/invalid things
     for( auto it = ts.tile_ids.begin(); it != ts.tile_ids.end(); ) {
         // second is the tile_type describing that id

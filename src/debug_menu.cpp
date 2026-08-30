@@ -3875,6 +3875,7 @@ static void spawn_npc_follower()
     temp->form_opinion( player_character );
     temp->set_attitude( NPCATT_FOLLOW );
     temp->set_fac( faction_your_followers );
+    g->add_npc_follower( temp->getID() );
     temp->mission = NPC_MISSION_NULL;
     temp->add_new_mission( mission::reserve_random( ORIGIN_ANY_NPC, temp->pos_abs_omt(),
                            temp->getID() ) );

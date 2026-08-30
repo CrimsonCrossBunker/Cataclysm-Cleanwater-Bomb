@@ -49,6 +49,7 @@
       }
     },
     "size": "40 L",
+    "cargo_passable_size": "100 L",
     "type": "vehicle_part",
     "variants_bases": [ { "id": "windshield", "label": "Windshield" }, { "id": "swivel_chair", "label": "Swivel Chair" } ],
     "variants": [

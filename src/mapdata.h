@@ -418,6 +418,7 @@ enum class ter_furn_flag : int {
     TFLAG_ONE_DIMENSIONAL_Z,
     TFLAG_CD_DELIGHT_PADDY,
     TFLAG_CD_DELIGHT_TRELLIS,
+    TFLAG_INDOOR_GROWTH,
 
     NUM_TFLAG_FLAGS
 };
@@ -608,8 +609,9 @@ struct map_data_common_t {
         int comfort = 0;
         //flat damage reduction (increase if negative) on fall (some logic may apply)
         int fall_damage_reduction = 0;
+
         // Maximal volume of items that can be stored in/on this furniture/terrain
-        units::volume max_volume = DEFAULT_TILE_VOLUME;
+        units::volume max_volume;
 
         itype_id liquid_source_item_id = itype_id::NULL_ID(); // id of a liquid this tile provides
         double liquid_source_min_temp = 4; // in centigrades, cold water as default value

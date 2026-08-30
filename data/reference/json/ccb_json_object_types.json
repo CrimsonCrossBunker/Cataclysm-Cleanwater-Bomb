@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:f03d328ac36933e18432633f75bbc1cc79480a2bf6d9c89f4eb1cc0b16193158",
+    "source_fingerprint": "sha256:798fac3c7523c19c2c5dff770cea5c06ab4fae98f6a43516547416d90464ab1b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6730,
-    "top_level_objects": 94373,
+    "tracked_json_files": 6734,
+    "top_level_objects": 94388,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -59,7 +59,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 163,
+        "occurrences": 164,
         "examples": [
           {
             "path": "data/core/damage_indicators.json",
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15046,
+        "occurrences": 15048,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2752,7 +2752,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 25,
+        "occurrences": 26,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/dimensions.json",
@@ -2811,7 +2811,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 25,
+        "occurrences": 26,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/dimension_regions.json",
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5519,
+        "occurrences": 5521,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1656,
+        "occurrences": 1658,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3884,7 +3884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 864
+            "line": 865
           }
         ],
         "confidence": "lexical_only"
@@ -4356,7 +4356,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3202
+            "line": 3203
           }
         ],
         "confidence": "lexical_only"
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 914,
+        "occurrences": 918,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4478
+            "line": 4479
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4679
+            "line": 4680
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4442
+            "line": 4443
           }
         ],
         "confidence": "lexical_only"
@@ -7431,7 +7431,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8178,
+        "occurrences": 8177,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9372,7 +9372,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4321
+            "line": 4322
           }
         ],
         "confidence": "lexical_only"
@@ -9898,7 +9898,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1395
+            "line": 1396
           }
         ],
         "confidence": "lexical_only"
@@ -10360,7 +10360,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3058
+            "line": 3059
           }
         ],
         "confidence": "lexical_only"
@@ -10395,7 +10395,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 596,
+        "occurrences": 598,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
@@ -10508,7 +10508,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 21,
+        "occurrences": 22,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -10532,7 +10532,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3007
+            "line": 3008
           }
         ],
         "confidence": "lexical_only"
@@ -10650,7 +10650,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3059
+            "line": 3060
           }
         ],
         "confidence": "lexical_only"
@@ -10709,7 +10709,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3053
+            "line": 3054
           }
         ],
         "confidence": "lexical_only"
@@ -10827,7 +10827,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3093
+            "line": 3094
           }
         ],
         "confidence": "lexical_only"
@@ -11004,7 +11004,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4638
+            "line": 4639
           }
         ],
         "confidence": "lexical_only"

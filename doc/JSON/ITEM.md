@@ -697,6 +697,7 @@ CBMs can be defined like this:
 "spoils_in" : 0,            // A time duration: how long a comestible is good for. 0 = no spoilage.
 "use_action" : [ "CRACK" ], // What effects a comestible has when used, see special definitions below
 "stim" : 40,                // Stimulant effect
+"sensitive": 5,             // Immediate change to the character's sensitivity; positive sharpens and negative dulls it. Gains that push further away from the equilibrium past the high/low thresholds are halved (and quartered at the extremes). Drifts back toward equilibrium over time.
 "sleepiness_mod": 3,        // How much sleepiness this comestible removes. (Negative values add sleepiness)
 "comestible_type" : "MED",  // Comestible type, used for inventory sorting. One of 'FOOD', 'DRINK', 'MED', or 'INVALID' (consider using a different "type" than COMESTIBLE instead of using INVALID)
 "consumption_effect_on_conditions" : [ "EOC_1" ],  // Effect on conditions to run after consuming.  Inline or string id supported

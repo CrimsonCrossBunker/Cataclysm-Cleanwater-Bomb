@@ -196,7 +196,7 @@ class outfit
         void absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
                             std::list<item> &worn_remains, bool &armor_destroyed,
                             const std::optional<sub_bodypart_id> &forced_sbp = std::nullopt,
-                            bool allow_torso_neck_fallback = false );
+                            bool damage_armor = true );
         /** Draws the UI and handles player input for the armor re-ordering window */
         void sort_armor( Character &guy );
         /*

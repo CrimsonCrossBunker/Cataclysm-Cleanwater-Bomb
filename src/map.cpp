@@ -6616,7 +6616,7 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
     auto how_many_copies_fit = [&]( const tripoint_bub_ms & e ) {
         return std::min( { copies_remaining,
                            obj.volume() == 0_ml ? INT_MAX : free_volume( e ) / obj.volume(),
-                           static_cast<int>( MAX_ITEM_IN_SQUARE - i_at( e ).size() ) } );
+                           static_cast<int>( max_item_in_square - i_at( e ).size() ) } );
     };
 
     // Performs the actual insertion of the object onto the map
@@ -6667,7 +6667,7 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
                     return true;
                 }
             }
-            return static_cast<int>( i_at( e ).size() ) < MAX_ITEM_IN_SQUARE;
+            return static_cast<int>( i_at( e ).size() ) < max_item_in_square;
         };
 
         // Place up to qty charges of obj on tile e, merging into an existing

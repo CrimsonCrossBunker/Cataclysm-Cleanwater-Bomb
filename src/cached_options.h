@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include "units.h"
 
 // A collection of options which are accessed frequently enough that we don't
 // want to pay the overhead of a string lookup each time one is tested.
@@ -29,6 +30,9 @@ extern int pixel_minimap_r;
 extern int pixel_minimap_g;
 extern int pixel_minimap_b;
 extern int pixel_minimap_a;
+extern int max_item_in_square;
+extern units::volume default_tile_volume;
+extern int pickup_range;
 
 namespace cata::options
 {

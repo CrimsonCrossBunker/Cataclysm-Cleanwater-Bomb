@@ -1437,7 +1437,7 @@ void cata::lua_platform::detail::erase_platform_oter_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::oter_migration_snapshot()
+        cata::lua_platform::detail::oter_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( oter_id_migrations.size() );

@@ -115,6 +115,7 @@ class scenario
 
         std::vector<std::pair<mongroup_id, float>> _surround_groups;
 
+        void initialize_default_calendar();
         void load( const JsonObject &jo, std::string_view src );
         bool scenario_traits_conflict_with_profession_traits( const profession &p ) const;
 

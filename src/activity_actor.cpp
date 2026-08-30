@@ -4315,7 +4315,7 @@ item_location efile_activity_actor::find_external_transfer_estorage( Character &
                it->remaining_ememory() >= largest_efile_size &&
                it->is_tool();
     };
-    std::vector<item_location> nearby_etds = p.nearby( func, PICKUP_RANGE );
+    std::vector<item_location> nearby_etds = p.nearby( func, pickup_range );
     for( item_location &loc : nearby_etds ) {
         if( loc->type->tool->etransfer_rate > fastest_rate ) {
             fastest_edevice = loc;
@@ -5695,8 +5695,7 @@ requirement_check_result multi_zone_activity_actor::check_requirements( Characte
             loot_zone_spots.emplace_back( elem );
             combined_spots.emplace_back( elem );
         }
-        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, PICKUP_RANGE,
-                PICKUP_RANGE ) ) {
+        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, pickup_range, pickup_range ) ) {
             combined_spots.push_back( elem );
         }
         multi_activity_actor::add_basecamp_storage_to_loot_zone_list( mgr, src_loc, you, loot_zone_spots,
@@ -5774,7 +5773,7 @@ requirement_check_result multi_zone_activity_actor::fetch_requirements( Characte
     }
     std::vector<tripoint_bub_ms> candidates;
     for( const tripoint_bub_ms &point_elem :
-         here.points_in_radius( src_loc, PICKUP_RANGE - 1, 0 ) ) {
+         here.points_in_radius( src_loc, pickup_range - 1, 0 ) ) {
         // we don't want to place the components where they could interfere with our ( or someone else's ) construction spots
         if( ( std::find( local_src_set.begin(), local_src_set.end(),
                          point_elem ) != local_src_set.end() ) || !here.can_put_items_ter_furn( point_elem ) ) {
@@ -6649,7 +6648,7 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
                 break;
             }
             if( !crafter.verify_step_tools( craft, craft.get_current_step(),
-                                            crafter.pos_bub(), PICKUP_RANGE, /*pin_to_map=*/false ) ) {
+                                            crafter.pos_bub(), pickup_range, /*pin_to_map=*/false ) ) {
                 rewind_turn();
                 return;
             }
@@ -6662,7 +6661,7 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
         const int closing_step = rec.has_steps()
                                  ? static_cast<int>( rec.steps().size() ) - 1 : 0;
         if( !crafter.verify_step_tools( craft, closing_step,
-                                        crafter.pos_bub(), PICKUP_RANGE, /*pin_to_map=*/false ) ) {
+                                        crafter.pos_bub(), pickup_range, /*pin_to_map=*/false ) ) {
             rewind_turn();
             return;
         }
@@ -10955,7 +10954,7 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
     act.set_to_null();
     act.values.clear();
 
-    if( who.is_avatar() ) {
+    if( who.is_avatar() && patient->is_avatar() ) {
         uistate.open_menu = []() {
             avatar_action::eat_or_use( get_avatar(),
                                        game_menus::inv::consume( uistate.consume_uistate.consume_menu_comestype ) );
@@ -12717,14 +12716,14 @@ void heat_activity_actor::finish( player_activity &act, Character &p )
                 cold_item.remove_item();
             }
             if( copy.made_of( phase_id::LIQUID ) ) {
-                liquid_handler::handle_all_liquid( copy, PICKUP_RANGE );
+                liquid_handler::handle_all_liquid( copy, pickup_range );
             } else {
                 p.i_add_or_drop( copy );
             }
         } else {
             cold_item->heat_up();
             if( cold_item.get_item()->made_of( phase_id::LIQUID ) ) {
-                liquid_handler::handle_all_liquid( *cold_item, PICKUP_RANGE );
+                liquid_handler::handle_all_liquid( *cold_item, pickup_range );
             } else {
                 p.i_add_or_drop( *cold_item );
                 cold_item.remove_item();
@@ -12824,7 +12823,7 @@ void fire_start_activity_actor::do_turn( player_activity &act, Character &who )
                 return loc->has_flag( flag_TINDER );
             } );
             inventory_pick_selector inv_s( who, preset );
-            inv_s.add_nearby_items( PICKUP_RANGE );
+            inv_s.add_nearby_items( pickup_range );
             inv_s.add_character_items( who );
 
             inv_s.set_title( _( "Select tinder to use for lighting a fire" ) );
@@ -14347,7 +14346,7 @@ void vehicle_part_install_service_activity_actor::settle_failed_order( Character
                 if( mechanic->is_shopkeeper() ) {
                     zone_manager &zones = zone_manager::get_manager();
                     const std::unordered_set<tripoint_bub_ms> shop_tiles =
-                        zones.get_point_set_loot( mechanic->pos_abs(), PICKUP_RANGE,
+                        zones.get_point_set_loot( mechanic->pos_abs(), pickup_range,
                                                   mechanic->get_fac_id() );
                     if( !shop_tiles.empty() ) {
                         get_map().add_item_or_charges( *shop_tiles.begin(), reserved_part );

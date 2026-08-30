@@ -966,7 +966,8 @@ ret_val<void> warm_enough_to_plant( const tripoint_bub_ms &pos, const itype_id &
 {
     std::map<time_point, units::temperature> planting_times;
 
-    if( !has_sunlight_access( pos ) ) {
+    if( !has_sunlight_access( pos ) &&
+        !get_map().has_flag( ter_furn_flag::TFLAG_INDOOR_GROWTH, pos ) ) {
         return ret_val<void>::make_failure( _( "Plants need sunlight to grow!  You can't plant there." ) );
     }
 

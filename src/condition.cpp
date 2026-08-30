@@ -20,6 +20,7 @@
 #include "avatar.h"
 #include "basecamp.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
 #include "character_id.h"
@@ -744,7 +745,7 @@ conditional_t::func f_has_items_sum( const JsonObject &jo, std::string_view memb
         double charges_present;
         double total_present;
         const Character *you = d.const_actor( is_npc )->get_const_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(), PICKUP_RANGE );
+        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(), pickup_range );
 
         for( const auto &pair : item_and_amount ) {
             item_to_find = itype_id( pair.first.evaluate( d ) );
@@ -2300,6 +2301,8 @@ std::unordered_map<std::string_view, int ( const_talker::* )() const> const f_ge
     { "stamina", &const_talker::get_stamina },
     { "stamina_max", &const_talker::get_stamina_max },
     { "stim", &const_talker::get_stim },
+    { "sensitive", &const_talker::get_sensitive },
+    { "sensitive_mod", &const_talker::get_sensitive_mod },
     { "strength_base", &const_talker::get_str_max },
     { "strength_bonus", &const_talker::get_str_bonus },
     { "strength", &const_talker::str_cur },
@@ -2389,6 +2392,8 @@ std::unordered_map<std::string_view, void ( talker::* )( int )> const f_set_vals
     { "sleep_deprivation", &talker::set_sleep_deprivation },
     { "stamina", &talker::set_stamina },
     { "stim", &talker::set_stim },
+    { "sensitive", &talker::set_sensitive },
+    { "sensitive_mod", &talker::set_sensitive_mod },
     { "strength_base", &talker::set_str_max },
     { "strength_bonus", &talker::set_str_bonus },
     { "thirst", &talker::set_thirst },

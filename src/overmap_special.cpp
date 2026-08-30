@@ -54,7 +54,7 @@ cata::lua_platform::detail::overmap_special_migration_registry()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::overmap_special_migration_snapshot()
+        cata::lua_platform::detail::overmap_special_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( migrations.size() );

@@ -2267,7 +2267,8 @@ class exosuit_interact
             for( item *i : c.items_with( filter ) ) {
                 candidates.emplace_back( c, i );
             }
-            for( const tripoint_bub_ms &p : here.points_in_radius( c.pos_bub(), PICKUP_RANGE ) ) {
+            for( const tripoint_bub_ms &p : here.points_in_radius( c.pos_bub(),
+                    pickup_range ) ) {
                 for( item &i : here.i_at( p ) ) {
                     if( filter( i ) ) {
                         candidates.emplace_back( map_cursor( p ), &i );
@@ -2380,7 +2381,7 @@ std::optional<int> iuse::pack_cbm( Character *p, item *it, const tripoint_bub_ms
 {
     item_location bionic = g->inv_map_splice( []( const item & e ) {
         return e.is_bionic() && e.has_flag( flag_NO_PACKED );
-    }, _( "Choose CBM to pack" ), PICKUP_RANGE, _( "You don't have any CBMs." ) );
+    }, _( "Choose CBM to pack" ), pickup_range, _( "You don't have any CBMs." ) );
 
     if( !bionic ) {
         return std::nullopt;
@@ -2502,7 +2503,8 @@ std::optional<int> iuse::purify_water( Character *p, item *purifier, item_locati
         p->add_msg_if_player( m_info, _( "Purifying %d water using %d %s" ), charges_of_water,
                               to_consume, purifier->tname( to_consume ) );
         // Pull from surrounding map first because it will update to_consume
-        get_map().use_amount( p->pos_bub(), PICKUP_RANGE, itype_pur_tablets, to_consume );
+        get_map().use_amount( p->pos_bub(), pickup_range, itype_pur_tablets,
+                              to_consume );
         // Then pull from inventory
         if( to_consume > 0 ) {
             p->use_amount( itype_pur_tablets, to_consume );
@@ -3103,13 +3105,19 @@ static std::optional<int> dig_tool( Character *p, item *it, const tripoint_bub_m
     }
 
     const bool using_jackhammer = it->type->can_use( "JACKHAMMER" );
-    if( using_jackhammer && here.has_flag_ter( ter_furn_flag::TFLAG_WALL, pnt ) ) {
+    if( using_jackhammer && here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_WALL, pnt ) &&
+        !it->has_flag( flag_MULTI_DRILL ) ) {
         p->add_msg_if_player( _( "You can't mine a wall with a %s!" ), it->tname() );
         return std::nullopt;
     }
 
     // FIXME: Activity is interruptable but progress is not saved!
     time_duration digging_time = 30_minutes;
+    if( activity == ACT_PICKAXE ) {
+        /** @EFFECT_STR decreases time to dig with a pickaxe */
+        digging_time += ( ( CHARACTER_STAT_MAX + 4 ) -
+                          std::min( p->get_arm_str(), CHARACTER_STAT_MAX ) ) * 5_minutes;
+    }
 
     if( here.has_flag( ter_furn_flag::TFLAG_FLAT, pnt ) ) {
         // We're breaking up some flat surface like pavement, which is much easier
@@ -7680,7 +7688,7 @@ std::optional<int> iuse::multicooker( Character *p, item *it, const tripoint_bub
 
                 return 0;
             }
-            liquid_handler::handle_all_liquid( dish, PICKUP_RANGE );
+            liquid_handler::handle_all_liquid( dish, pickup_range );
         } else {
             p->i_add( dish );
         }
@@ -8535,7 +8543,7 @@ static bool heat_items( Character *p, item *it, bool liquid_items, bool solid_it
         inventory_multiselector inv_s( *p, preset, _( "ITEMS TO HEAT" ),
                                        make_raw_stats, /*allow_select_contained=*/true );
         inv_s.add_character_items( *p );
-        inv_s.add_nearby_items( PICKUP_RANGE );
+        inv_s.add_nearby_items( pickup_range );
         inv_s.set_title( _( "Heat menu" ) );
         inv_s.set_hint( _( "To heat x items, type a number before selecting." ) );
         if( inv_s.empty() ) {
@@ -8786,7 +8794,7 @@ std::optional<int> iuse::wash_items( Character *p, bool soft_items, bool hard_it
     inventory_multiselector inv_s( *p, preset, _( "ITEMS TO CLEAN" ),
                                    make_raw_stats, /*allow_select_contained=*/true );
     inv_s.add_character_items( *p );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( pickup_range );
     inv_s.set_title( _( "Multiclean" ) );
     inv_s.set_hint( _( "To clean x items, type a number before selecting." ) );
     if( inv_s.empty() ) {

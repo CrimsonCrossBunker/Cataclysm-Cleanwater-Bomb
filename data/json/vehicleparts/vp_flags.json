@@ -80,6 +80,15 @@
     "requires_flag": "WINDOW"
   },
   {
+    "id": "WINDOW_MOUNT",
+    "type": "json_flag",
+    "requires_flag": "WINDOW_MOUNTABLE"
+  },
+  {
+    "id": "WINDOW_MOUNTABLE",
+    "type": "json_flag"
+  },
+  {
     "id": "DOOR",
     "type": "json_flag",
     "info": "When open, this part lets you move from inside the vehicle to outside or vice versa.  When closed, it prevents people from entering or leaving the vehicle."
@@ -719,6 +728,11 @@
     "id": "CARGO_PASSABLE",
     "type": "json_flag",
     "info": "Items stored here won't get in the way of any passengers."
+  },
+  {
+    "id": "CARGO_PASSABLE_BY_STORED",
+    "type": "json_flag",
+    "info": "Items stored here can obstruct passage if there are too many of them."
   },
   {
     "id": "HUGE_OK",

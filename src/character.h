@@ -24,6 +24,7 @@
 #include "activity_tracker.h"
 #include "body_part_set.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character_attire.h"
@@ -44,6 +45,7 @@
 #include "item_pocket.h"
 #include "memory_fast.h"
 #include "monster.h"
+#include "options.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "pocket_type.h"
@@ -665,6 +667,22 @@ class Character : public Creature, public visitable
         void set_lifestyle( int nhealthy );
         void set_daily_health( int nhealthy_mod );
 
+        /** Getters for sensitivity values exclusive to characters */
+        int get_sensitive() const;
+        int get_sensitive_mod() const;
+        /** Equilibrium sensitivity after stim, painkillers, sleep deprivation and enchantments */
+        int get_sensitive_mod_total() const;
+        /** Multiplier applied to pain gained, driven by current sensitivity */
+        double sensitive_pain_multiplier() const;
+
+        /** Modifiers for sensitivity values exclusive to characters */
+        void mod_sensitive( int nsensitive );
+        void mod_sensitive_mod( int nsensitive_mod );
+
+        /** Setters for sensitivity values exclusive to characters */
+        void set_sensitive( int nsensitive );
+        void set_sensitive_mod( int nsensitive_mod );
+
         /** Getter for need values exclusive to characters */
         int get_stored_kcal() const;
         int get_healthy_kcal() const;
@@ -951,6 +969,10 @@ class Character : public Creature, public visitable
         bool needs_food() const;
         /** Increases hunger, thirst, sleepiness and stimulants wearing off. `rate_multiplier` is for retroactive updates. */
         void update_needs( int rate_multiplier );
+        /** Move sensitivity one tick towards its equilibrium */
+        void update_sensitive();
+        /** Refresh threshold-based perception effects driven by sensitivity */
+        void update_sensitive_per_effects();
         needs_rates calc_needs_rates() const;
         void calc_sleep_recovery_rate( needs_rates &rates ) const;
         /** Kills the player if too hungry, stimmed up etc., forces tired player to sleep and prints warnings. */
@@ -1311,12 +1333,16 @@ class Character : public Creature, public visitable
         /** Runs through all bionics and armor on a part and reduces damage through their armor_absorb */
         const weakpoint *absorb_hit( const weakpoint_attack &attack, const bodypart_id &bp,
                                      damage_instance &dam, const weakpoint &wp = weakpoint() ) override;
+        // Overload for non-durability cases: when damage_armor is false, mitigation still applies but durability is not damaged
+        const weakpoint *absorb_hit( const weakpoint_attack &attack, const bodypart_id &bp,
+                                     damage_instance &dam, const weakpoint &wp,
+                                     bool damage_armor );
         /** Runs through all bionics and armor on a specific sub-body part without damaging the character. */
         void absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
-                         bool allow_torso_neck_fallback = false );
+                         bool damage_armor = true );
     protected:
         void absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                            damage_instance &dam, bool allow_torso_neck_fallback = false );
+                            damage_instance &dam, bool damage_armor = true );
         float generic_weakpoint_skill( skill_id skill_1, skill_id skill_2,
                                        limb_score_id limb_score_1, limb_score_id limb_score_2 ) const;
     public:
@@ -1331,20 +1357,22 @@ class Character : public Creature, public visitable
          * Requires a roll out of 100
          * @return true if the armor was completely destroyed (and the item must be deleted).
          */
-        bool armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll ) const;
+        bool armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll,
+                           bool damage_armor = true ) const;
         /**
          * Reduces and mutates du, prints messages about armor taking damage.
          * Requires a roll out of 100
          * @return true if the armor was completely destroyed (and the item must be deleted).
          */
         bool armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, const sub_bodypart_id &sbp,
-                           int roll ) const;
+                           int roll, bool damage_armor = true ) const;
         /**
          * Reduces and mutates du, prints messages about armor taking damage.
          * If the armor is fully destroyed it is replaced
          * @return true if the armor was completely destroyed.
          */
-        bool ablative_armor_absorb( damage_unit &du, item &armor, const sub_bodypart_id &bp, int roll );
+        bool ablative_armor_absorb( damage_unit &du, item &armor, const sub_bodypart_id &bp, int roll,
+                                    bool damage_armor = true );
         // prints a message related to an item if an item is damaged
         void describe_damage( damage_unit &du, item &armor ) const;
         /**
@@ -3550,6 +3578,8 @@ class Character : public Creature, public visitable
 
         /** Used to apply stimulation modifications from food and medication **/
         void modify_stimulation( const islot_comestible &comest );
+        /** Used to apply immediate sensitivity modifications from food and medication **/
+        void modify_sensitive( const islot_comestible &comest );
         /** Used to apply sleepiness modifications from food and medication **/
         /** Used to apply radiation from food and medication **/
         void modify_sleepiness( const islot_comestible &comest );
@@ -3654,15 +3684,16 @@ class Character : public Creature, public visitable
         * @returns Craftable inventory items found.
         * */
         const inventory &crafting_inventory( const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = PICKUP_RANGE, bool clear_path = true ) const;
+                                             int radius = pickup_range, bool clear_path = true ) const;
         const inventory &crafting_inventory( map *here,
                                              const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = PICKUP_RANGE, bool clear_path = true ) const;
+                                             int radius = pickup_range, bool clear_path = true ) const;
         void invalidate_crafting_inventory();
         // Efficiently query book proficiency bonuses from nearby items
         // without rebuilding the full crafting inventory.
         // Walks map tiles and vehicle cargo in range, plus character inventory.
-        book_proficiency_bonuses book_bonuses_nearby( int radius = PICKUP_RANGE ) const;
+        book_proficiency_bonuses book_bonuses_nearby( int radius = pickup_range )
+        const;
 
         /** Returns a value from 1.0 to 11.0 that acts as a multiplier
          * for the time taken to perform tasks that require detail vision,
@@ -3906,7 +3937,7 @@ class Character : public Creature, public visitable
                                 const tripoint_bub_ms &origin, int radius, bool pin_to_map );
         void consume_tools( const comp_selection<tool_comp> &tool, int batch );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
-                            const tripoint_bub_ms &origin = tripoint_bub_ms::zero, int radius = PICKUP_RANGE,
+                            const tripoint_bub_ms &origin = tripoint_bub_ms::zero, int radius = pickup_range,
                             basecamp *bcp = nullptr );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
                             const std::vector<tripoint_bub_ms> &reachable_pts = {},   basecamp *bcp = nullptr );
@@ -4140,6 +4171,10 @@ class Character : public Creature, public visitable
         int lifestyle = 0;
         int daily_health = 0;
         int health_tally = 0;
+
+        /** Sensitivity to external stimuli, and its equilibrium target. */
+        int sensitive = 100;
+        int sensitive_mod = 100;
 
         // Our bmr at no activity level
         int base_bmr() const;

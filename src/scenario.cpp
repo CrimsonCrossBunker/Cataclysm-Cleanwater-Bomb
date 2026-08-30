@@ -26,6 +26,32 @@ static const achievement_id achievement_achievement_arcade_mode( "achievement_ar
 namespace
 {
 generic_factory<scenario> all_scenarios( "scenario" );
+
+constexpr int default_start_of_cataclysm_hour = 0;
+constexpr season_type default_start_of_cataclysm_season = SPRING;
+constexpr int default_start_of_cataclysm_year = 1;
+constexpr int default_start_of_game_hour = 8;
+constexpr season_type default_start_of_game_season = SPRING;
+constexpr int default_start_of_game_year = 1;
+
+int default_start_of_game_day()
+{
+    return 1 + get_option<int>( "SEASON_LENGTH" ) / 3 * 2;
+}
+
+int default_start_of_cataclysm_day()
+{
+    // The cataclysm started five days before game start.
+    return default_start_of_game_day() - 5;
+}
+
+time_point scenario_start_time( const int hour, const int day, const season_type season,
+                                const int year )
+{
+    return calendar::turn_zero + 1_hours * hour + 1_days * ( day - 1 ) +
+           1_days * get_option<int>( "SEASON_LENGTH" ) * season +
+           calendar::year_length() * ( year - 1 );
+}
 } // namespace
 
 generic_factory<scenario> &cata::lua_platform::detail::scenario_registry()
@@ -91,7 +117,7 @@ cata::lua_platform::detail::scenario_registry_snapshot()
         result.emplace_back( std::move( entry ) );
     }
     std::sort( result.begin(), result.end(),
-    []( const scenario_snapshot_entry &left, const scenario_snapshot_entry &right ) {
+    []( const scenario_snapshot_entry & left, const scenario_snapshot_entry & right ) {
         return left.id < right.id;
     } );
     return result;
@@ -104,6 +130,18 @@ scenario::scenario()
       _description_male( no_translation( "null" ) ),
       _description_female( no_translation( "null" ) )
 {
+}
+
+void scenario::initialize_default_calendar()
+{
+    _default_start_of_cataclysm = scenario_start_time( default_start_of_cataclysm_hour,
+                                  default_start_of_cataclysm_day(),
+                                  default_start_of_cataclysm_season,
+                                  default_start_of_cataclysm_year );
+    _default_start_of_game = scenario_start_time( default_start_of_game_hour,
+                             default_start_of_game_day(), default_start_of_game_season,
+                             default_start_of_game_year );
+    reset_calendar();
 }
 
 void scenario::load_scenario( const JsonObject &jo, const std::string &src )
@@ -174,11 +212,10 @@ void scenario::load( const JsonObject &jo, std::string_view )
 
     if( !was_loaded ) {
 
-        int _start_of_cataclysm_hour = 0;
-        // The cataclysm started 5 days before game start
-        int _start_of_cataclysm_day = ( 1 + get_option<int>( "SEASON_LENGTH" ) / 3 * 2 ) - 5;
-        season_type _start_of_cataclysm_season = SPRING;
-        int _start_of_cataclysm_year = 1;
+        int _start_of_cataclysm_hour = default_start_of_cataclysm_hour;
+        int _start_of_cataclysm_day = default_start_of_cataclysm_day();
+        season_type _start_of_cataclysm_season = default_start_of_cataclysm_season;
+        int _start_of_cataclysm_year = default_start_of_cataclysm_year;
         if( jo.has_member( "start_of_cataclysm" ) ) {
             JsonObject jocid = jo.get_member( "start_of_cataclysm" );
             optional( jocid, was_loaded, "hour", _start_of_cataclysm_hour );
@@ -186,17 +223,14 @@ void scenario::load( const JsonObject &jo, std::string_view )
             optional( jocid, was_loaded, "season", _start_of_cataclysm_season );
             optional( jocid, was_loaded, "year", _start_of_cataclysm_year );
         }
-        _default_start_of_cataclysm = calendar::turn_zero +
-                                      1_hours * _start_of_cataclysm_hour +
-                                      1_days * ( _start_of_cataclysm_day - 1 ) +
-                                      1_days * get_option<int>( "SEASON_LENGTH" ) * _start_of_cataclysm_season +
-                                      calendar::year_length() * ( _start_of_cataclysm_year - 1 )
-                                      ;
+        _default_start_of_cataclysm = scenario_start_time( _start_of_cataclysm_hour,
+                                      _start_of_cataclysm_day, _start_of_cataclysm_season,
+                                      _start_of_cataclysm_year );
 
-        int _start_of_game_hour = 8;
-        int _start_of_game_day = 1 + get_option<int>( "SEASON_LENGTH" ) / 3 * 2;
-        season_type _start_of_game_season = SPRING;
-        int _start_of_game_year = 1;
+        int _start_of_game_hour = default_start_of_game_hour;
+        int _start_of_game_day = default_start_of_game_day();
+        season_type _start_of_game_season = default_start_of_game_season;
+        int _start_of_game_year = default_start_of_game_year;
         if( jo.has_member( "start_of_game" ) ) {
             JsonObject jocid = jo.get_member( "start_of_game" );
             optional( jocid, was_loaded, "hour", _start_of_game_hour );
@@ -204,12 +238,8 @@ void scenario::load( const JsonObject &jo, std::string_view )
             optional( jocid, was_loaded, "season", _start_of_game_season );
             optional( jocid, was_loaded, "year", _start_of_game_year );
         }
-        _default_start_of_game = calendar::turn_zero +
-                                 1_hours * _start_of_game_hour +
-                                 1_days * ( _start_of_game_day - 1 ) +
-                                 1_days * get_option<int>( "SEASON_LENGTH" ) * _start_of_game_season +
-                                 calendar::year_length() * ( _start_of_game_year - 1 )
-                                 ;
+        _default_start_of_game = scenario_start_time( _start_of_game_hour, _start_of_game_day,
+                                 _start_of_game_season, _start_of_game_year );
 
         reset_calendar();
     }

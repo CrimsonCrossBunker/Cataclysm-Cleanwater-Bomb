@@ -829,6 +829,10 @@ void Character::load( const JsonObject &data )
     data.read( "healthy_mod", daily_health );
     data.read( "health_tally", health_tally );
 
+    // sensitivity
+    data.read( "sensitive", sensitive );
+    data.read( "sensitive_mod", sensitive_mod );
+
     data.read( "proficiencies", _proficiencies );
 
     _proficiencies->migrate_proficiencies();
@@ -1458,6 +1462,10 @@ void Character::store( JsonOut &json ) const
     json.member( "healthy", lifestyle );
     json.member( "healthy_mod", daily_health );
     json.member( "health_tally", health_tally );
+
+    // sensitivity
+    json.member( "sensitive", sensitive );
+    json.member( "sensitive_mod", sensitive_mod );
 
     //sleep
     json.member( "daily_sleep", daily_sleep );
@@ -6338,7 +6346,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::terrain_migration_snapshot()
+        cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -6350,7 +6358,7 @@ cata::lua_platform::detail::terrain_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::furniture_migration_snapshot()
+        cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -6362,7 +6370,7 @@ cata::lua_platform::detail::furniture_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::trap_migration_snapshot()
+        cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );

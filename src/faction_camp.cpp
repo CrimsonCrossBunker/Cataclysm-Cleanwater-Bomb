@@ -25,6 +25,7 @@
 #include "lua_platform_handle.h"
 #endif
 #include "build_reqs.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
@@ -5192,7 +5193,7 @@ drop_locations basecamp::give_equipment( Character *pc, const inventory_filter_p
                                    make_raw_stats, /*allow_select_contained =*/ true );
 
     inv_s.add_character_items( *pc );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( pickup_range );
     inv_s.set_title( title );
     inv_s.set_hint( _( "To select items, type a number before selecting." ) );
 

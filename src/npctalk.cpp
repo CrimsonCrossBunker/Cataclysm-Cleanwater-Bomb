@@ -28,6 +28,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_lazy.h"
 #include "cata_path.h"
@@ -4473,7 +4474,8 @@ talk_effect_fun_t::func f_consume_item_sum( const JsonObject &jo, std::string_vi
         double amount_desired = 0.0f;
         int count_present = 0;
         Character *you = d.actor( is_npc )->get_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(), PICKUP_RANGE );
+        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
+                                         pickup_range );
         std::vector<item_comp> items_to_remove_vector;
 
         for( const auto &pair : item_and_amount ) {

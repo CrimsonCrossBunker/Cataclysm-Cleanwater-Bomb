@@ -191,6 +191,31 @@ void health_ass( double val, dialogue &d, char scope, std::vector<diag_value> co
     d.actor( is_beta( scope ) )->mod_livestyle( val - current_health );
 }
 
+double sensitive_eval( const_dialogue const &d, char scope,
+                       std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    return d.const_actor( is_beta( scope ) )->get_sensitive();
+}
+
+void sensitive_ass( double val, dialogue &d, char scope,
+                    std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    d.actor( is_beta( scope ) )->set_sensitive( val );
+}
+
+double sensitive_mod_eval( const_dialogue const &d, char scope,
+                           std::vector<diag_value> const & /* params */,
+                           diag_kwargs const & /* kwargs */ )
+{
+    return d.const_actor( is_beta( scope ) )->get_sensitive_mod();
+}
+
+void sensitive_mod_ass( double val, dialogue &d, char scope,
+                        std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    d.actor( is_beta( scope ) )->set_sensitive_mod( val );
+}
+
 double armor_eval( const_dialogue const &d, char scope, std::vector<diag_value> const &params,
                    diag_kwargs const & /* kwargs */ )
 {
@@ -2083,6 +2108,8 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "effect_duration", { "un", 1, effect_duration_eval, {}, { "bodypart", "unit" } } },
     { "limb_score", { "un", 1, limb_score_eval, {}, { "type" } } },
     { "health", { "un", 0, health_eval, health_ass } },
+    { "sensitive", { "un", 0, sensitive_eval, sensitive_ass } },
+    { "sensitive_mod", { "un", 0, sensitive_mod_eval, sensitive_mod_ass } },
     { "enchant_val", { "un", -1, enchant_val_eval } },
     { "encumbrance", { "un", 1, encumbrance_eval } },
     { "energy", { "g", 1, energy_eval } },

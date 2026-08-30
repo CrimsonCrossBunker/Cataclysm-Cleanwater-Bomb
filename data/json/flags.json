@@ -312,6 +312,11 @@
     "info": "You could probably use this to get into a secure military facility."
   },
   {
+    "id": "INDOOR_GROWTH",
+    "type": "json_flag",
+    "info": "It allows planting indoors without sunlight."
+  },
+  {
     "id": "INDUSTRIAL_CARD",
     "type": "json_flag",
     "info": "You could probably use this to get into a secure industrial facility."

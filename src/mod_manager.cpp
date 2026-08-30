@@ -911,37 +911,50 @@ bool mod_manager::check_mods_list( WORLD *world ) const
 #endif
     }
 
-    for( auto check_it = amo.begin(); check_it != amo.end(); check_it++ ) {
+    for( auto check_it = amo.begin(); check_it != amo.end(); ) {
         if( !check_it->is_valid() ) {
-            if( const auto replace_it = migrated_mods.find( *check_it ); replace_it != migrated_mods.end() &&
-                std::find( amo.begin(), amo.end(), replace_it->second ) == amo.end() ) {
-                amo.insert( check_it, replace_it->second );
-                amo.erase( check_it );
-                changed = true;
-            } else {
-                input_context dummy_ctxt( "YESNOQUIT" );
-                const std::string cancel_option_name = dummy_ctxt.get_action_name( "QUIT" );
-                query_ynq_result res;
-                if( const auto it = removed_mods.find( *check_it ); it != removed_mods.end() ) {
-                    res = query_ynq(
-                              _( "Mod %s has been removed with reason: %s\nRemove it from this world's active mods?  (%s aborts load)" ),
-                              check_it->c_str(), it->second.translated(), cancel_option_name );
+            if( const auto replace_it = migrated_mods.find( *check_it );
+                replace_it != migrated_mods.end() ) {
+                const mod_id &new_id = replace_it->second;
+                if( !new_id.is_valid() ) {
+                    debugmsg( "mod_migration from '%s' specifies invalid new_id '%s'", check_it->c_str(),
+                              new_id.c_str() );
+                } else if( std::find( amo.begin(), amo.end(), new_id ) != amo.end() ) {
+                    check_it = amo.erase( check_it );
+                    changed = true;
+                    continue;
                 } else {
-                    res = query_ynq(
-                              _( "Mod %s not found in mods folder, remove it from this world's active mods?  (%s aborts load)" ),
-                              check_it->c_str(), cancel_option_name );
-                }
-                switch( res ) {
-                    case query_ynq_result::quit:
-                        return false;
-                    case query_ynq_result::no:
-                        break;
-                    case query_ynq_result::yes:
-                        amo.erase( check_it-- );
-                        changed = true;
-                        break;
+                    *check_it = new_id;
+                    changed = true;
+                    ++check_it;
+                    continue;
                 }
             }
+            input_context dummy_ctxt( "YESNOQUIT" );
+            const std::string cancel_option_name = dummy_ctxt.get_action_name( "QUIT" );
+            query_ynq_result res;
+            if( const auto it = removed_mods.find( *check_it ); it != removed_mods.end() ) {
+                res = query_ynq(
+                          _( "Mod %s has been removed with reason: %s\nRemove it from this world's active mods?  (%s aborts load)" ),
+                          check_it->c_str(), it->second.translated(), cancel_option_name );
+            } else {
+                res = query_ynq(
+                          _( "Mod %s not found in mods folder, remove it from this world's active mods?  (%s aborts load)" ),
+                          check_it->c_str(), cancel_option_name );
+            }
+            switch( res ) {
+                case query_ynq_result::quit:
+                    return false;
+                case query_ynq_result::no:
+                    ++check_it;
+                    break;
+                case query_ynq_result::yes:
+                    check_it = amo.erase( check_it );
+                    changed = true;
+                    break;
+            }
+        } else {
+            ++check_it;
         }
     }
     // If we migrated or the player chose to remove a mod, overwrite the mod list.

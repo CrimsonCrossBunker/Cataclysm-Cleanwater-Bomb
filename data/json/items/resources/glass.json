@@ -47,6 +47,7 @@
       "practice": 2,
       "done_message": "You break the pane and place the shards on the ground, ready to be cracked by something passing by."
     },
+    "faults": [ { "fault": "fault_broken_window" } ],
     "flags": [ "SINGLE_USE", "PUNCTURE_VEHICLE_WHEELS" ],
     "melee_damage": { "bash": 4 }
   },
@@ -97,6 +98,7 @@
     "weight": "17514 g",
     "volume": "7070 ml",
     "longest_side": "122 cm",
+    "faults": [ { "fault": "fault_broken_window" } ],
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
     "melee_damage": { "bash": 6 }
   }

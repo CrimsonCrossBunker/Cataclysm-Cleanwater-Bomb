@@ -2059,6 +2059,7 @@ void sfx::playlist_registry_erase( const std::string_view id )
 
 /** Dummy implementations for builds without sound */
 /*@{*/
+void sfx::play_sound_file( std::string_view, int, bool ) { }
 void sfx::load_sound_effects( const JsonObject & ) { }
 void sfx::load_sound_effect_preload( const JsonObject & ) { }
 void sfx::load_playlist( const JsonObject & ) { }

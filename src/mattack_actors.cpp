@@ -889,7 +889,12 @@ bool melee_actor::call( monster &z ) const
         }
     }
 
-    z.mod_moves( -move_cost );
+    // Grab attacks minimum default move cost
+    int eff_cost = move_cost;
+    if( is_grab && eff_cost < 100 ) {
+        eff_cost = 100;
+    }
+    z.mod_moves( -eff_cost );
 
     const std::string mon_name = get_player_character().sees( here, z.pos_bub( here ) ) ?
                                  z.disp_name( false, true ) : _( "Something" );

@@ -5909,5 +5909,33 @@
     "desc": [ "" ],
     "int_decay_step": 1,
     "int_decay_tick": 120
+  },
+  {
+    "type": "effect_type",
+    "id": "dulled_senses",
+    "name": [ { "str": "Dulled senses" }, { "str": "Numbing world" } ],
+    "desc": [
+      { "str": "The world feels muffled and far away.  Your perception is reduced." },
+      { "str": "Everything feels distant and muted, as if behind thick glass.  Your perception is greatly reduced." }
+    ],
+    "rating": "bad",
+    "max_intensity": 2,
+    "int_dur_factor": "5 m",
+    "scaling_mods": { "per_mod": [ -1 ] },
+    "show_in_info": true
+  },
+  {
+    "type": "effect_type",
+    "id": "heightened_senses",
+    "name": [ { "str": "Heightened senses" }, { "str": "Vivid world" } ],
+    "desc": [
+      { "str": "Every sensation feels crisp and clear.  Your perception is enhanced." },
+      { "str": "Every sensation burns vivid and sharp, almost overwhelming.  Your perception is greatly enhanced." }
+    ],
+    "rating": "good",
+    "max_intensity": 2,
+    "int_dur_factor": "5 m",
+    "scaling_mods": { "per_mod": [ 1 ] },
+    "show_in_info": true
   }
 ]

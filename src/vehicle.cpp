@@ -24,6 +24,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_bitset.h"
 #include "cata_utility.h"
@@ -216,7 +217,7 @@ void vehicle_stack::insert( map &here, const item &newitem )
 
 int vehicle_stack::count_limit() const
 {
-    return MAX_ITEM_IN_VEHICLE_STORAGE;
+    return max_item_in_square;
 }
 
 units::volume vehicle_stack::max_volume() const
@@ -226,7 +227,7 @@ units::volume vehicle_stack::max_volume() const
         return 0_ml;
     }
     // Set max volume for vehicle cargo to prevent integer overflow
-    return std::min( vpi.size, 10000_liter );
+    return std::min( vpi.size, units::volume::max() );
 }
 
 units::volume vehicle_stack::stored_volume() const
@@ -2879,6 +2880,27 @@ std::vector<int> vehicle::parts_at_relative( const point_rel_ms &dp, const bool 
 
 std::optional<vpart_reference> vpart_position::obstacle_at_part() const
 {
+    for( const int idx : vehicle().parts_at_relative( mount_pos(), false ) ) {
+        const vehicle_part &vp = vehicle().part( idx );
+        if( vp.is_broken() ) {
+            continue;
+        }
+        if( !vp.info().has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) ) {
+            continue;
+        }
+        if( !vp.info().cargo_passable_size ) {
+            continue;
+        }
+        const units::volume thr = *vp.info().cargo_passable_size;
+        if( thr >= vp.info().size ) {
+            continue;
+        }
+        const vpart_reference ref( vehicle(), idx );
+        if( ref.items().stored_volume() > thr ) {
+            return ref;
+        }
+    }
+
     std::optional<vpart_reference> part = part_with_feature( VPFLAG_OBSTACLE, true, true );
     if( !part ) {
         return std::nullopt; // No obstacle here
@@ -3308,9 +3330,14 @@ int vehicle::next_part_to_unlock( int p, bool outside ) const
     if( !part_has_lock( p ) ) {
         return -1;
     }
-    for( const int elem : parts_at_relative( parts[p].mount, true, true ) ) {
+    const std::vector<int> parts_here = parts_at_relative( parts[p].mount, true, true );
+    const bool accessible_lock = !outside || std::any_of( parts_here.begin(), parts_here.end(),
+    [this]( const int elem ) {
         const vehicle_part &vp = part( elem );
-        const bool accessible_lock = !outside || vp.has_fault( fault_broken_window );
+        return vp.info().has_flag( VPFLAG_WINDOW ) && vp.has_fault( fault_broken_window );
+    } );
+    for( const int elem : parts_here ) {
+        const vehicle_part &vp = part( elem );
         if( vp.info().has_flag( "LOCKABLE_DOOR" ) && vp.is_available() && vp.locked && accessible_lock ) {
             return elem;
         }

@@ -179,6 +179,10 @@ class texture
         const std::shared_ptr<SDL_Texture> &get_texture_ptr() const {
             return sdl_texture_ptr;
         }
+        /// Source rectangle inside the shared atlas texture.
+        const SDL_Rect &get_source_rect() const {
+            return srcrect;
+        }
         /// Interface to @ref SDL_RenderCopyEx, using this as the texture, and
         /// the stored source rectangle. Other parameters are simply passed through.
         int render_copy_ex( const SDL_Renderer_Ptr &renderer, const SDL_Rect *const dstrect,
@@ -612,6 +616,13 @@ class cata_tiles
         bool is_valid() {
             return tileset_ptr != nullptr;
         }
+
+        /**
+         * Resolve one already-loaded tile sprite for native UI presentation.
+         * The returned texture remains owned by this tile context and must not
+         * escape the current UI frame.
+         */
+        const texture *ui_sprite( const std::string &id ) const;
 
         /** Draw to screen */
         void draw( const point &dest, const tripoint_bub_ms &center, int width, int height,
@@ -1164,6 +1175,10 @@ class cata_tiles
         // Consumers reach it via get_shared_variant_pass in sdltiles.h.
 #endif
         std::shared_ptr<const tileset> tileset_ptr;
+        // Platform-owned sprite descriptors are populated during mod loading.
+        // Keep the bound descriptor revision alongside the renderer revisions so
+        // a cached atlas cannot outlive a descriptor change.
+        uint64_t platform_sprite_sheet_generation_at_load = 0;
 
         // the scaled default sprite width and height. in non-isometric mode,
         // the basic tile width and height equal the default sprite width and

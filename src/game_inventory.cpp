@@ -21,6 +21,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
@@ -695,7 +696,7 @@ class disassemble_inventory_preset : public inventory_selector_preset
 item_location game_menus::inv::disassemble( Character &you )
 {
     return inv_internal( you, disassemble_inventory_preset( you, you.crafting_inventory() ),
-                         _( "Disassemble item" ), PICKUP_RANGE,
+                         _( "Disassemble item" ), pickup_range,
                          _( "You don't have any items you could disassemble." ) );
 }
 
@@ -1716,7 +1717,7 @@ drop_locations game_menus::inv::ebooksave( Character &who, item_location &ereade
     inventory_multiselector inv_s( who, preset, _( "SELECT BOOKS TO SCAN" ),
                                    make_raw_stats, /*allow_select_contained=*/true );
     inv_s.add_character_items( who );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( pickup_range );
     inv_s.remove_duplicate_itypes( true );
     inv_s.set_title( _( "Scan which books?" ) );
     if( inv_s.empty() ) {
@@ -1778,7 +1779,7 @@ drop_locations game_menus::inv::edevice_select( Character &who, item_location &u
     if( action == EF_READ || efile_activity_actor::efile_action_is_from( action ) ) {
         inventory_pick_selector select_one_edevice( who, preset );
         select_one_edevice.add_character_items( who );
-        select_one_edevice.add_nearby_items( PICKUP_RANGE );
+        select_one_edevice.add_nearby_items( pickup_range );
         select_one_edevice.set_title( inv_title );
         if( select_one_edevice.empty() ) {
             popup( string_format( _( "You have no eligible devices to %s." ), action_name ), PF_GET_KEY );
@@ -1794,7 +1795,7 @@ drop_locations game_menus::inv::edevice_select( Character &who, item_location &u
         inventory_multiselector inv_s( who, preset, string_format( _( "Select devices to %s" ),
                                        action_name ) );
         inv_s.add_character_items( who );
-        inv_s.add_nearby_items( PICKUP_RANGE );
+        inv_s.add_nearby_items( pickup_range );
         inv_s.set_title( inv_title );
         if( inv_s.empty() ) {
             popup( string_format( _( "You have no eligible devices to %s." ), action_name ), PF_GET_KEY );
@@ -2612,7 +2613,7 @@ drop_locations game_menus::inv::smoke_food( Character &you, units::volume total_
 
     inventory_multiselector smoke_s( you, preset, _( "FOOD TO SMOKE" ), make_raw_stats );
 
-    smoke_s.add_nearby_items( PICKUP_RANGE );
+    smoke_s.add_nearby_items( pickup_range );
     smoke_s.add_character_items( you );
 
     smoke_s.set_title( _( "Insert food into smoking rack" ) );
