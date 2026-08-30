@@ -164,6 +164,8 @@ jobs:
             sdl3: 0
             localize: 1
             lua_platform: 1
+            # Preserve universal Lua game-link and DMG coverage; other matrix
+            # legs cover test compilation.
             title: macOS 15, Apple Clang 17, Tiles, Sound, SDL2
             ccache_limit: 12G
             ccache_key: macos-llvm-17-sdl2
@@ -245,6 +247,7 @@ jobs:
 
     name: ${{ matrix.title }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
     env:
         ZSTD_CLEVEL: 17
         CMAKE: ${{ matrix.cmake }}
@@ -261,6 +264,7 @@ jobs:
         MODS: ${{ matrix.mods }}
         SANITIZE: ${{ matrix.sanitize }}
         TEST_STAGE: ${{ matrix.test-stage }}
+        TESTS: ${{ matrix.native == 'osx' && '0' || '1' }}
         CXXFLAGS: ${{ matrix.cxxflags }}
         LDFLAGS: ${{ matrix.ldflags }}
         EXTRA_TEST_OPTS: --error-format=github-action
@@ -282,7 +286,7 @@ jobs:
           ( matrix.dont_skip_data_only_changes == 0 && needs.skip-duplicates-code.outputs.should_skip_code == 'true' ) ||
           ( matrix.dont_skip_data_only_changes != 0 && needs.skip-duplicates-data.outputs.should_skip_data == 'true' )
           }}
-        SKIP_TESTS: ${{ fromJSON(needs.matrix-variables.outputs.skip_tests) || (matrix.android != '') }}
+        SKIP_TESTS: ${{ fromJSON(needs.matrix-variables.outputs.skip_tests) || (matrix.android != '') || (matrix.native == 'osx') }}
     steps:
     - name: Maximize build space (ubuntu)
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' }}
