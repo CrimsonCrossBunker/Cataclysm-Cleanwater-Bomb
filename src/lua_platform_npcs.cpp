@@ -2119,13 +2119,15 @@ sol::table list_npc_destinations(
 
     if( player.pos_abs_omt() != npc_position ) {
         destinations.push_back( {
-            "player_current", "player", _( "My current location" ),
+            "player_current", "player",
+            to_translation( "My current location" ).translated(),
             player.pos_abs_omt()
         } );
     }
     if( !player.omt_path.empty() ) {
         destinations.push_back( {
-            "player_destination", "player", _( "My destination" ),
+            "player_destination", "player",
+            to_translation( "My destination" ).translated(),
             player.omt_path.front()
         } );
     }

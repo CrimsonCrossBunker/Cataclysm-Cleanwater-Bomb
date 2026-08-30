@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "android_ui_mode.h"
+#include "android_ui_mode.h" // IWYU pragma: keep
 
 namespace cata::ui
 {

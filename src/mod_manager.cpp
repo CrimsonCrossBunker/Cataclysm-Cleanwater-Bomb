@@ -15,7 +15,7 @@
 #include <queue>
 #include <system_error>
 
-#include "builtin_mods.h"
+#include "builtin_mods.h" // IWYU pragma: keep
 #include "cached_options.h"
 #include "cata_utility.h"
 #include "debug.h"

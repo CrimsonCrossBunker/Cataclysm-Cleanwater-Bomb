@@ -12,7 +12,7 @@
 #include <tuple>
 #include <utility>
 
-#include "android_ui_mode.h"
+#include "android_ui_mode.h" // IWYU pragma: keep
 #include "avatar.h"
 #include "cached_options.h"
 #include "cata_imgui.h"  // IWYU pragma: keep

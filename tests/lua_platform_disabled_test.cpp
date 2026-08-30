@@ -1,6 +1,6 @@
-#include "cata_catch.h"
+#include "cata_catch.h" // IWYU pragma: keep
 
-#include "lua_platform_loader.h"
+#include "lua_platform_loader.h" // IWYU pragma: keep
 
 #if !defined(CATA_ENABLE_LUA_PLATFORM) || !CATA_ENABLE_LUA_PLATFORM
 
