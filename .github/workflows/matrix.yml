@@ -20,11 +20,11 @@ permissions:
   actions: read
   contents: read
 
-# We only care about the latest revision of a PR, so cancel all previous instances.
-# Allow running master builds to complete to help with ccache refreshes.
+# PR runs share their PR number, so only the latest head remains active.
+# Push and workflow_dispatch runs use a unique run ID, so each can complete.
 concurrency:
-  group: general-build-${{ github.event.pull_request.number || github.ref_name }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: general-build-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 # Overall strategy for what sorts of builds to include:
 # We want a build for the newest and oldest supported version of each compiler.
