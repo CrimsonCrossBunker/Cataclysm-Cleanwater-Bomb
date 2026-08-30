@@ -1,3 +1,5 @@
+#include <subbodypart.h>
+#include <weakpoint.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -21,15 +23,14 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
-#include "debug.h"
 #include "damage.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
@@ -44,6 +45,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "lightmap.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

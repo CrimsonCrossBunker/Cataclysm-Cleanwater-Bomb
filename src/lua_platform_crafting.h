@@ -2,13 +2,14 @@
 #ifndef CATA_SRC_LUA_PLATFORM_CRAFTING_H
 #define CATA_SRC_LUA_PLATFORM_CRAFTING_H
 
+#include <cstddef>
 #include <functional>
 
-#include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {
+class game_handle_runtime;
 
 // Install detached, bounded recipe and requirement queries.
 void install_crafting_api(

@@ -1,5 +1,12 @@
 #include "clzones.h"
 
+#include <coordinates.h>
+#include <cuboid_rectangle.h>
+#include <map_scale_constants.h>
+#include <point.h>
+#include <safe_reference.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <functional>
@@ -20,7 +27,6 @@
 #include "debug.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
-#include "lua_platform_content.h"
 #include "generic_factory.h"
 #include "iexamine.h"
 #include "input_popup.h"
@@ -34,6 +40,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_selector.h"

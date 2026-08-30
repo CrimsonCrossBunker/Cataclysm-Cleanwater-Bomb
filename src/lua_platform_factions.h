@@ -2,13 +2,14 @@
 #ifndef CATA_SRC_LUA_PLATFORM_FACTIONS_H
 #define CATA_SRC_LUA_PLATFORM_FACTIONS_H
 
+#include <cstddef>
 #include <functional>
 
-#include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {
+class game_handle_runtime;
 
 // Install native faction catalogs and active-world faction services.
 void install_faction_api(

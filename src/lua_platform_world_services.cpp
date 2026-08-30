@@ -2,42 +2,56 @@
 
 #include "lua_platform_world_services.h"
 
+#include <enums.h>
+#include <item_uid.h>
+extern "C" {
+#include <lua.h>
+}
+#include <map_iterator.h>
+#include <map_selector.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
+#include <player_activity.h>
+#include <veh_type.h>
+#include <vpart_position.h>
+#include <vpart_range.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_path.h"
+#include "character.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "creature.h"
+#include "creature_tracker.h"
+#include "current_map.h"
+#include "game.h"
+#include "item.h"
+#include "item_location.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_overmap.h"
 #include "lua_platform_world.h"
-#include "cata_path.h"
-#include "character.h"
-#include "character_id.h"
-#include "coordinates.h"
-#include "current_map.h"
-#include "creature.h"
-#include "creature_tracker.h"
-#include "game.h"
-#include "game_constants.h"
-#include "item_location.h"
-#include "item_wakeup.h"
-#include "line.h"
-#include "item.h"
 #include "map.h"
+#include "mongroup.h"
 #include "monster.h"
 #include "mp_gamestate.h"
-#include "mongroup.h"
 #include "mtype.h"
 #include "npc.h"
 #include "path_info.h"
@@ -45,8 +59,8 @@
 #include "submap.h"
 #include "teleport.h"
 #include "type_id.h"
-#include "visitable.h"
 #include "vehicle.h"
+#include "visitable.h"
 
 namespace cata::lua_platform
 {

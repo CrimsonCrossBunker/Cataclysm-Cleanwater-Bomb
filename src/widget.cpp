@@ -1,5 +1,9 @@
 #include "widget.h"
 
+#include <bodypart.h>
+#include <dialogue_helpers.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -24,6 +28,7 @@
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "npc.h"
@@ -35,7 +40,6 @@
 #include "talker.h"
 #include "translations.h"
 #include "units.h"
-#include "lua_platform_content.h"
 
 const static flag_id json_flag_W_DISABLED_BY_DEFAULT( "W_DISABLED_BY_DEFAULT" );
 const static flag_id json_flag_W_DISABLED_WHEN_EMPTY( "W_DISABLED_WHEN_EMPTY" );

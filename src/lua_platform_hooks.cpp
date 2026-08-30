@@ -2,21 +2,28 @@
 
 #include "lua_platform_hooks.h"
 
+#include <character_id.h>
+#include <coordinates.h>
+#include <creature.h>
+#include <dialogue.h>
+#include <item_uid.h>
+#include <safe_reference.h>
 #include <algorithm>
 #include <exception>
+#include <ostream>
 #include <stdexcept>
-#include <utility>
 
 #include "character.h"
-#include "lua_platform_dialogue.h"
 #include "debug.h"
 #include "item.h"
 #include "item_location.h"
+#include "lua_platform_dialogue.h"
 #include "lua_platform_runtime.h"
-#include "npc.h"
 #include "talker.h"
 #include "thread_pool.h"
 #include "vehicle.h"
+
+class npc;
 
 namespace cata::lua_platform
 {

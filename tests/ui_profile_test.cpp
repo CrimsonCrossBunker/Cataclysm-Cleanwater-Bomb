@@ -1,5 +1,7 @@
-#include "catch/catch.hpp"
+#include <string>
+#include <string_view>
 
+#include "catch/catch.hpp"
 #include "ui_profile.h"
 
 TEST_CASE( "adaptive_ui_profiles_only_change_layout_policy", "[ui][profile]" )

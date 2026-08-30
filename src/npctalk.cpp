@@ -1,4 +1,5 @@
 
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -34,7 +35,6 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "city.h"
@@ -67,7 +67,6 @@
 #include "flat_set.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "generic_factory.h"
 #include "global_vars.h"
@@ -87,6 +86,7 @@
 #include "kill_tracker.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_teleporter_list.h"
 #include "map.h"
@@ -104,8 +104,8 @@
 #include "mission.h"
 #include "mongroup.h"
 #include "monster.h"
-#include "mp_gamestate.h"
 #include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"

@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CHARACTER_H
 #define CATA_SRC_CHARACTER_H
 
+#include <item_components.h>
 #include <algorithm>
 #include <bitset>
 #include <climits>
@@ -45,7 +46,6 @@
 #include "item_pocket.h"
 #include "memory_fast.h"
 #include "monster.h"
-#include "options.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "pocket_type.h"

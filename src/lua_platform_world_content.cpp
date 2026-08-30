@@ -1,5 +1,21 @@
 #include "lua_platform_world_content.h"
 
+#include <common_types.h>
+#include <cube_direction.h>
+#include <flat_set.h>
+#include <lightmap.h>
+#include <plf/list.h>
+#include <point.h>
+#include <stomach.h>
+#include <translation.h>
+#include <exception>
+#include <functional>
+#include <initializer_list>
+#include <unordered_map>
+
+class item;
+struct map_data_summary;
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
@@ -9,6 +25,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+extern "C" {
+#include <lua.h>
+}
 #include <limits>
 #include <map>
 #include <optional>
@@ -22,8 +41,6 @@
 
 #include "calendar.h"
 #include "catacharset.h"
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
 #include "color.h"
 #include "coordinates.h"
 #include "dialogue_chatbin.h"
@@ -31,15 +48,13 @@
 #include "enum_conversions.h"
 #include "faction.h"
 #include "generic_factory.h"
-#include "item_group.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "memory_fast.h"
-#include "mod_manager.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "omdata.h"
-#include "requirements.h"
 #include "shop_cons_rate.h"
-#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"

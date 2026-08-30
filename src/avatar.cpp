@@ -1,5 +1,10 @@
 #include "avatar.h"
 
+#include <coordinates.h>
+#include <magic_teleporter_list.h>
+#include <mdarray.h>
+#include <memory_fast.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <array>
@@ -26,8 +31,6 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_hooks.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -52,6 +55,8 @@
 #include "itype.h"
 #include "iuse.h"
 #include "json.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"

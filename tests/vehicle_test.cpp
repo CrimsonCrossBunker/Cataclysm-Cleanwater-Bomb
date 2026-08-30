@@ -1,3 +1,4 @@
+#include <vehicle_uid.h>
 #include <algorithm>
 #include <cstddef>
 #include <functional>

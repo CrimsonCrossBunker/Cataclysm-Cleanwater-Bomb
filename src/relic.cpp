@@ -1,12 +1,14 @@
 #include "relic.h"
 
+#include <item.h>
+#include <translation.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <cstdlib>
 #include <initializer_list>
 #include <string>
 
 #include "calendar.h"
-#include "lua_platform_content.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -16,6 +18,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

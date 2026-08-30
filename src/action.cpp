@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <climits>
-#include <cstdint>
 #include <istream>
 #include <iterator>
 #include <memory>
@@ -27,7 +26,6 @@
 #include "debug.h"
 #include "flag.h"
 #include "game.h"
-#include "game_constants.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "inventory.h"

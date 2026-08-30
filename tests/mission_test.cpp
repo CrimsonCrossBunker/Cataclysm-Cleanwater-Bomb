@@ -1,12 +1,14 @@
 #include <functional>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "item.h"
 #include "json.h"

@@ -3,10 +3,11 @@
 #define CATA_SRC_LUA_PLATFORM_ITEMS_H
 
 #include <cstddef>
-#include <functional>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "lua_platform_handle.h"
@@ -17,7 +18,6 @@ struct basecamp_platform_recipe_escrow_item;
 namespace cata::lua_platform
 {
 
-class game_handle_runtime;
 
 /** Rollback handle for a staged, all-or-nothing Platform item transaction. */
 struct platform_item_transaction {

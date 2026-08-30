@@ -1,5 +1,8 @@
 #include "activity_actor.h"
 
+#include <activity_type.h>
+#include <clone_ptr.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <array>

@@ -1,5 +1,14 @@
 #include "mutation.h" // IWYU pragma: associated
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <damage.h>
+#include <point.h>
+#include <sleep.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cstdlib>
 #include <map>
@@ -10,7 +19,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lua_platform_content.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
@@ -21,6 +29,7 @@
 #include "generic_factory.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "memory_fast.h"
 #include "npc.h"

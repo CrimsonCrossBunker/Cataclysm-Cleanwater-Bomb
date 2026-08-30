@@ -1,6 +1,11 @@
 #include "martialarts.h"
 
+#include <bonuses.h>
+#include <calendar.h>
+#include <flat_set.h>
 #include <imgui/imgui.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
@@ -12,8 +17,6 @@
 
 #include "bodypart.h"
 #include "cata_imgui.h"
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
@@ -36,6 +39,8 @@
 #include "item_location.h"
 #include "itype.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "messages.h"
 #include "output.h"
 #include "pimpl.h"

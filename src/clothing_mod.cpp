@@ -1,16 +1,18 @@
 #include "clothing_mod.h"
 
+#include <string_id.h>
+#include <translation.h>
 #include <cmath>
 #include <map>
 #include <string>
 #include <utility>
 
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 
 namespace
 {

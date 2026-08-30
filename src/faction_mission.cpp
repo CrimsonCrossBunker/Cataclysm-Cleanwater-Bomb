@@ -1,5 +1,3 @@
-#include "faction_camp.h"
-
 #include <functional>
 #include <map>
 #include <string>
@@ -7,12 +5,14 @@
 #include <utility>
 #include <vector>
 
-#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "display.h"
+#include "faction_camp.h"
+#include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "skill.h"
 #include "string_formatter.h"
 #include "translation.h"

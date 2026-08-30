@@ -1,19 +1,21 @@
 #include "iexamine_actors.h"
 
+#include <iexamine.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <memory>
-#include <utility>
-#include <cmath>
 #include <set>
+#include <utility>
 
 #include "ammo_effect.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
-#include "coordinates.h"
 #include "condition.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -22,13 +24,13 @@
 #include "explosion.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "generic_factory.h"
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

@@ -1,5 +1,7 @@
 #include "crafting.h"
 
+#include <item_wakeup.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <climits>
@@ -24,8 +26,6 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -56,6 +56,8 @@
 #include "itype.h"
 #include "iuse.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"

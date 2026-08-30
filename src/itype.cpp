@@ -1,5 +1,16 @@
 #include "itype.h"
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <coords_fwd.h>
+#include <damage.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <iuse.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -7,7 +18,6 @@
 
 #include "ammo.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "debug.h"
 #include "generic_factory.h"

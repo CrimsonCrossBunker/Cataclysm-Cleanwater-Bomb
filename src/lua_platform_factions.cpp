@@ -2,6 +2,13 @@
 
 #include "lua_platform_factions.h"
 
+#include <calendar.h>
+#include <character.h>
+#include <character_id.h>
+#include <pimpl.h>
+#include <stomach.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <bitset>
 #include <cctype>
@@ -10,17 +17,17 @@
 #include <iterator>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "faction.h"
 #include "game.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 
 namespace cata::lua_platform
 {

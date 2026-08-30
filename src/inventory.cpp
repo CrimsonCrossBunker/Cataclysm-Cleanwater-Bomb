@@ -1,5 +1,7 @@
 #include "inventory.h"
 
+#include <item.h>
+#include <visitable.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>

@@ -1,5 +1,12 @@
 #include "magic.h"
 
+#include <body_part_set.h>
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <magic_type.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -14,8 +21,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -43,6 +48,8 @@
 #include "item_location.h"
 #include "json.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"

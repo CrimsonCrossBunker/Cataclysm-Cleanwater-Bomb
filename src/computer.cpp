@@ -1,5 +1,10 @@
 #include "computer.h"
 
+#include <calendar.h>
+#include <coordinates.h>
+#include <global_vars.h>
+#include <math_parser_diag_value.h>
+#include <type_id.h>
 #include <locale>
 #include <sstream>
 #include <utility>

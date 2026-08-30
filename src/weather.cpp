@@ -1,5 +1,9 @@
 #include "weather.h"
 
+#include <color.h>
+#include <pimpl.h>
+#include <type_id.h>
+#include <weather_type.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -15,7 +19,6 @@
 #include "calendar.h"
 #include "character.h"
 #include "character_attire.h"
-#include "lua_platform_hooks.h"
 #include "city.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -28,6 +31,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"

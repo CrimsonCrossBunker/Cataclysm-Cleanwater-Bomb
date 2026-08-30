@@ -1,10 +1,11 @@
 #include "lua_platform_registry.h"
 
+#include <translation.h>
+#include <translation_cache.h>
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -14,11 +15,11 @@
 
 #include "bionics.h"
 #include "bodypart.h"
-#include "lua_platform_bindings_values.h"
 #include "enum_conversions.h"
 #include "flag.h"
 #include "item_factory.h"
 #include "itype.h"
+#include "lua_platform_bindings_values.h"
 #include "mapdata.h"
 #include "monstergenerator.h"
 #include "mtype.h"
@@ -26,7 +27,6 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "skill.h"
-#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 

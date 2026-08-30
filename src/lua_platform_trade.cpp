@@ -2,9 +2,15 @@
 
 #include "lua_platform_trade.h"
 
-#include <cmath>
+#include <character_id.h>
+#include <item_uid.h>
+extern "C" {
+#include <lua.h>
+}
+#include <npc_opinion.h>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -16,22 +22,15 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
 #include "calendar.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_items.h"
 #include "character.h"
-#include "creature.h"
 #include "faction.h"
-#include "flag.h"
 #include "item.h"
 #include "item_location.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_items.h"
 #include "npc.h"
 #include "npctrade.h"
-#include "output.h"
-#include "talker.h"
-#include "translations.h"
 #include "type_id.h"
 
 namespace cata::lua_platform

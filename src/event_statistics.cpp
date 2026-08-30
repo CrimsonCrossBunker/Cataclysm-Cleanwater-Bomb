@@ -1,17 +1,20 @@
 #include "event_statistics.h"
 
+#include <clone_ptr.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "cata_assert.h"
 #include "cata_variant.h"
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
@@ -20,6 +23,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "hash_utils.h"
+#include "lua_platform_content.h"
 #include "output.h"
 #include "stats_tracker.h"
 #include "string_formatter.h"

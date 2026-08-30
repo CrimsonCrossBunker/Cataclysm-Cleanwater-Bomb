@@ -2,11 +2,17 @@
 
 #include "lua_platform_overmap.h"
 
+extern "C" {
+#include <lua.h>
+}
+#include <map_scale_constants.h>
+#include <translation.h>
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <exception>
 #include <limits>
 #include <map>
 #include <memory>
@@ -18,19 +24,21 @@
 #include <vector>
 
 #include "catacharset.h"
+#include "city.h"
+#include "coordinates.h"
+#include "enums.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "city.h"
-#include "coordinates.h"
-#include "enums.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "point.h"
 #include "recipe_groups.h"
 #include "type_id.h"
+
+struct mapgen_arguments;
 
 namespace cata::lua_platform
 {

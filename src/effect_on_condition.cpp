@@ -1,21 +1,23 @@
 #include "effect_on_condition.h"
 
+#include <dialogue.h>
+#include <dialogue_helpers.h>
+#include <global_vars.h>
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <iterator>
 #include <list>
 #include <memory>
-#include <unordered_map>
 #include <ostream>
 #include <queue>
+#include <unordered_map>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
@@ -26,6 +28,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "lua_platform_runtime.h"
 #include "math_parser_diag_value.h"
 #include "mod_tracker.h"
 #include "npc.h"

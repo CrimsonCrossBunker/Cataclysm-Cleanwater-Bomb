@@ -1,5 +1,9 @@
 #include "npc_class.h"
 
+#include <calendar.h>
+#include <faction.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <iterator>
 #include <optional>
@@ -8,7 +12,6 @@
 #include <utility>
 
 #include "avatar.h"
-#include "lua_platform_content.h"
 #include "condition.h"
 #include "creature.h"
 #include "debug.h"
@@ -16,6 +19,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item_group.h"
+#include "lua_platform_content.h"
 #include "mutation.h"
 #include "npc.h"
 #include "rng.h"

@@ -1,5 +1,6 @@
 #include "mod_tileset.h"
 
+#include <cata_path.h>
 #include <algorithm>
 #include <map>
 #include <string>

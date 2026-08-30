@@ -1,6 +1,7 @@
 #include "explosion.h" // IWYU pragma: associated
 #include "fragment_cloud.h" // IWYU pragma: associated
 
+#include <safe_reference.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -19,7 +20,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -40,6 +40,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

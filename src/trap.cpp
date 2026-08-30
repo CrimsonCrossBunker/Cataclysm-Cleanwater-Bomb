@@ -1,14 +1,16 @@
 #include "trap.h"
 
-#include "lua_platform_content.h"
-
+#include <color.h>
+#include <flat_set.h>
+#include <magic.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
 #include <cmath>
 #include <typeinfo>
 #include <vector>
 
 #include "bodypart.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -19,6 +21,8 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "messages.h"

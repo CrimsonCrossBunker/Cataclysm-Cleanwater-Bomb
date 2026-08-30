@@ -1,5 +1,28 @@
 #include "character.h"
 
+#include <activity_tracker.h>
+#include <body_part_set.h>
+#include <bodypart.h>
+#include <character_id.h>
+#include <compatibility.h>
+#include <craft_command.h>
+#include <creature.h>
+#include <damage.h>
+#include <flat_set.h>
+#include <global_vars.h>
+#include <item.h>
+#include <memory_fast.h>
+#include <pimpl.h>
+#include <player_activity.h>
+#include <pocket_type.h>
+#include <point.h>
+#include <ranged.h>
+#include <sleep.h>
+#include <subbodypart.h>
+#include <type_id.h>
+#include <visitable.h>
+#include <weighted_list.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <array>
@@ -18,7 +41,6 @@
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "addiction.h"
-#include "clone_ptr.h"
 #include "anatomy.h"
 #include "avatar.h"
 #include "avatar_action.h"
@@ -27,11 +49,10 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "city.h"
+#include "clone_ptr.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -63,6 +84,8 @@
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

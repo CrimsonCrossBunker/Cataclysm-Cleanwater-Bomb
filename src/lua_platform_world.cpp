@@ -2,13 +2,30 @@
 
 #include "lua_platform_world.h"
 
+#include <enums.h>
+#include <item_uid.h>
+extern "C" {
+#include <lua.h>
+}
+#include <magic_teleporter_list.h>
+#include <map_iterator.h>
+#include <mapdata.h>
+#include <memory_fast.h>
+#include <pocket_type.h>
+#include <stdlib.h>
+#include <veh_type.h>
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
+#include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -21,26 +38,22 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_missions.h"
 #include "clzones.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
-#include "emit.h"
 #include "field.h"
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
 #include "item_category.h"
-#include "item_location.h"
 #include "item_group.h"
-#include "line.h"
+#include "item_location.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapbuffer.h"
-#include "mission.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"

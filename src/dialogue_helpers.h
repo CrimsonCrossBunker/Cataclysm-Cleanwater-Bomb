@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "flexbuffer_json.h"
 #include "translation.h"
 
 class JsonObject;

@@ -1,7 +1,5 @@
-#include "lua_platform_content.h"
-
-#include "profession.h"
-
+#include <ret_val.h>
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -25,6 +23,7 @@
 #include "item_group.h"
 #include "itype.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "magic.h"
 #include "mission.h"
 #include "mutation.h"
@@ -32,6 +31,7 @@
 #include "output.h"
 #include "past_achievements_info.h"
 #include "pimpl.h"
+#include "profession.h"
 #include "trait_group.h"
 #include "translations.h"
 #include "type_id.h"

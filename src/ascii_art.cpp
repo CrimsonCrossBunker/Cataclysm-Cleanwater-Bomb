@@ -1,11 +1,13 @@
 #include "ascii_art.h"
 
+#include <string_id.h>
 #include <string>
 
 #include "catacharset.h"
-#include "lua_platform_content.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "output.h"
 
 static const int ascii_art_width = 41;

@@ -2,43 +2,58 @@
 
 #include "lua_platform_items.h"
 
+#include <character_attire.h>
+#include <character_id.h>
+#include <enums.h>
+#include <flat_set.h>
+#include <game.h>
+#include <inventory_ui.h>
+#include <item_uid.h>
+extern "C" {
+#include <lua.h>
+}
+#include <map_selector.h>
+#include <pimpl.h>
+#include <pocket_type.h>
+#include <point.h>
+#include <ret_val.h>
+#include <stomach.h>
+#include <translation.h>
+#include <value_ptr.h>
+#include <veh_type.h>
+#include <visitable.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <functional>
-#include <list>
+#include <iterator>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "activity_handlers.h"
-#include "avatar.h"
 #include "basecamp.h"
-#include "bionics.h"
-#include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_world.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
 #include "coordinates.h"
-#include "creature.h"
 #include "damage.h"
-#include "dialogue.h"
 #include "faction.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "game_inventory.h"
 #include "inventory.h"
 #include "item.h"
@@ -50,9 +65,11 @@
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_world.h"
 #include "map.h"
-#include "math_parser.h"
-#include "math_parser_type.h"
 #include "math_parser_diag_value.h"
 #include "requirements.h"
 #include "string_formatter.h"
@@ -60,6 +77,8 @@
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+
+struct bionic;
 
 namespace cata::lua_platform
 {
@@ -4185,12 +4204,12 @@ sol::table hand_in_inventory_items(
                                   1, requested_count ) );
     if( display_count == 1 ) {
         value["notice"] = string_format(
-                              _( "You give %1$s a %2$s." ),
+                              to_translation( "You give %1$s a %2$s." ).translated(),
                               recipient->get_name(),
                               item::nname( native_type ) );
     } else {
         value["notice"] = string_format(
-                              _( "You give %1$s %2$d %3$s." ),
+                              to_translation( "You give %1$s %2$d %3$s." ).translated(),
                               recipient->get_name(), display_count,
                               item::nname( native_type, display_count ) );
     }

@@ -1,8 +1,17 @@
 #include "lua_platform_dialogue.h"
 
-#include <algorithm>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue.h>
+#include <item_uid.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_hooks.h>
+#include <point.h>
+#include <safe_reference.h>
+#include <talker.h>
+#include <translation.h>
+#include <type_id.h>
 #include <stdexcept>
-#include <system_error>
 #include <unordered_map>
 #include <utility>
 #include <vector>

@@ -1,21 +1,24 @@
+#include <cuboid_rectangle.h>
+#include <point.h>
+#include <type_id.h>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "coordinates.h"
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
 #include "imgui/imgui.h"
+#include "lua_platform_content.h"
 #include "map_iterator.h"
 #include "output.h"
-#include "overmapbuffer.h"
 #include "overmap_worldgen.h"
+#include "overmapbuffer.h"
 #include "string_formatter.h"
 #include "translations.h"
-
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 struct region_settings;
 

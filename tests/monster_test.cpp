@@ -1,5 +1,7 @@
+#include <monster_uid.h>
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -7,9 +9,9 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -20,8 +22,8 @@
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
-#include "debug.h"
 #include "creature_tracker.h"
+#include "debug.h"
 #include "game.h"
 #include "horde_entity.h"
 #include "item.h"

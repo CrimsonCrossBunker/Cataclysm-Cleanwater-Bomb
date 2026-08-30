@@ -2,10 +2,12 @@
 
 #include "lua_platform_variables.h"
 
+#include <coordinates.h>
+#include <point.h>
+#include <talker.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -13,20 +15,13 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
-#include "avatar.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "creature.h"
-#include "dialogue.h"
 #include "dialogue_helpers.h"
-#include "effect_on_condition.h"
-#include "enum_conversions.h"
-#include "event.h"
 #include "global_vars.h"
 #include "item.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_handle.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 

@@ -1,5 +1,12 @@
 #include "monster.h"
 
+#include <calendar.h>
+#include <character_id.h>
+#include <color.h>
+#include <compatibility.h>
+#include <creature.h>
+#include <monster_uid.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -18,8 +25,6 @@
 #include "cached_options.h"
 #include "cata_imgui.h"
 #include "catacharset.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -50,6 +55,8 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

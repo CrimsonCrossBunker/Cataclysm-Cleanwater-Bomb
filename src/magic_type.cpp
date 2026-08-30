@@ -1,11 +1,15 @@
 #include "magic_type.h"
 
-#include "lua_platform_content.h"
+#include <color.h>
+#include <dialogue_helpers.h>
+#include <type_id.h>
+
 #include "debug.h"
 #include "effect_on_condition.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "math_parser_jmath.h"
 
 // LOADING

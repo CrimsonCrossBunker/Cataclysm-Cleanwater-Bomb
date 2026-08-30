@@ -1,16 +1,26 @@
-#include "lua_platform_content.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_runtime.h"
-
 #include "cube_direction.h" // IWYU pragma: associated
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
+#include <basecamp.h>
+#include <cata_variant.h>
+#include <city.h>
+#include <color.h>
+#include <common_types.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <horde_map.h>
+#include <map_scale_constants.h>
+#include <mapgendata.h>
+#include <mdarray.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <exception>
 #include <filesystem>
-#include <limits>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -35,6 +45,9 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "line.h"
+#include "lua_platform_content.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_extras.h"
 #include "map_iterator.h"

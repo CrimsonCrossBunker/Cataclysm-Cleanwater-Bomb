@@ -2,11 +2,22 @@
 
 #include "lua_platform_weather.h"
 
+#include <character.h>
+extern "C" {
+#include <lua.h>
+}
+#include <npc.h>
+#include <overmap_ui.h>
+#include <pimpl.h>
+#include <string_id.h>
+#include <translation.h>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <list>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -16,12 +27,11 @@
 
 #include "avatar.h"
 #include "calendar.h"
+#include "coordinates.h"
+#include "game.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "coordinates.h"
-#include "enum_conversions.h"
-#include "game.h"
 #include "point.h"
 #include "timed_event.h"
 #include "units.h"

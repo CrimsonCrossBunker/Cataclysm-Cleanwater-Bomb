@@ -2,6 +2,7 @@
 
 #include "lua_platform_bindings_enums.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <cstdint>
 #include <initializer_list>
@@ -15,9 +16,7 @@
 #include "addiction.h"
 #include "calendar.h"
 #include "damage.h"
-#include "enum_conversions.h"
 #include "enums.h"
-#include "field_type.h"
 #include "line.h"
 #include "mission.h"
 #include "move_mode.h"

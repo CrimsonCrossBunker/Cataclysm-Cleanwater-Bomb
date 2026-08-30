@@ -1,8 +1,12 @@
 #include "disease.h"
 
-#include "lua_platform_content.h"
+#include <calendar.h>
+#include <type_id.h>
+
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 namespace
 {

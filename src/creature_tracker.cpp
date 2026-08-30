@@ -1,5 +1,10 @@
 #include "creature_tracker.h"
 
+#include <coordinates.h>
+#include <creature.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
 #include <algorithm>
 #include <functional>
 #include <limits>

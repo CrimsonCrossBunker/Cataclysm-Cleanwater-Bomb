@@ -42,7 +42,6 @@
 #endif
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -63,7 +62,6 @@
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "end_screen.h"
-#include "enum_conversions.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -86,6 +84,7 @@
 #include "json.h"
 #include "list.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "map.h"
 #include "map_extras.h"

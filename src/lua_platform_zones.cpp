@@ -2,6 +2,8 @@
 
 #include "lua_platform_zones.h"
 
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -14,11 +16,11 @@
 #include <utility>
 #include <vector>
 
+#include "clzones.h"
+#include "coordinates.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "clzones.h"
-#include "coordinates.h"
 
 namespace cata::lua_platform
 {

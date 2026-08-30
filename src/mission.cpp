@@ -1,8 +1,13 @@
 #include "mission.h"
 
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
-#include <cstdlib>
 #include <istream>
 #include <iterator>
 #include <list>
@@ -14,7 +19,6 @@
 
 #include "avatar.h"
 #include "character.h"
-#include "lua_platform_hooks.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -26,6 +30,7 @@
 #include "item_group.h"
 #include "item_stack.h"
 #include "kill_tracker.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "monster.h"

@@ -1,5 +1,17 @@
 #include "item.h"
 
+#include <cata_lazy.h>
+#include <crafting_enums.h>
+#include <global_vars.h>
+#include <item_components.h>
+#include <item_contents.h>
+#include <item_location.h>
+#include <item_pocket.h>
+#include <item_uid.h>
+#include <math_parser_diag_value.h>
+#include <safe_reference.h>
+#include <type_id.h>
+#include <visitable.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -21,7 +33,6 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"

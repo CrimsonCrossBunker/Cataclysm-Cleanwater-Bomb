@@ -2,11 +2,22 @@
 
 #include "lua_platform_magic.h"
 
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+extern "C" {
+#include <lua.h>
+}
+#include <magic_type.h>
+#include <pimpl.h>
+#include <point.h>
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -15,12 +26,11 @@
 #include <vector>
 
 #include "calendar.h"
+#include "character.h"
+#include "enum_conversions.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "character.h"
-#include "creature.h"
-#include "enum_conversions.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

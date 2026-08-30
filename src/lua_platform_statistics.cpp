@@ -2,11 +2,18 @@
 
 #include "lua_platform_statistics.h"
 
+#include <character_id.h>
+#include <hash_utils.h>
+extern "C" {
+#include <lua.h>
+}
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstddef>
-#include <optional>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -14,12 +21,12 @@
 #include <vector>
 
 #include "cata_variant.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "enum_conversions.h"
 #include "enums.h"
 #include "event.h"
 #include "event_statistics.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "point.h"
 #include "stats_tracker.h"
 

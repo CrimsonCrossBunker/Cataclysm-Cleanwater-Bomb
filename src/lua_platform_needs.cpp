@@ -2,6 +2,11 @@
 
 #include "lua_platform_needs.h"
 
+extern "C" {
+#include <lua.h>
+}
+#include <stomach.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -13,13 +18,10 @@
 #include <utility>
 
 #include "avatar.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "calendar.h"
 #include "character.h"
-#include "creature.h"
-#include "morale_types.h"
-#include "vitamin.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 
 namespace cata::lua_platform
 {

@@ -1,5 +1,12 @@
 #include "faction.h"
 
+#include <character_id.h>
+#include <color.h>
+#include <generic_factory.h>
+#include <plf/list.h>
+#include <shop_cons_rate.h>
+#include <stomach.h>
+#include <translation.h>
 #include <algorithm>
 #include <bitset>
 #include <map>
@@ -9,11 +16,11 @@
 #include <utility>
 
 #include "calendar.h"
-#include "lua_platform_content.h"
 #include "character.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "lua_platform_content.h"
 #include "pimpl.h"
 #include "string_formatter.h"
 #include "translations.h"

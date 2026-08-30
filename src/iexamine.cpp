@@ -1,5 +1,7 @@
 #include "iexamine.h"
 
+#include <ret_val.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -23,8 +25,6 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "condition.h"
@@ -47,8 +47,8 @@
 #include "event_bus.h"
 #include "faction.h"
 #include "field_type.h"
-#include "flag.h"
 #include "finite_water.h"
+#include "flag.h"
 #include "flat_set.h" // IWYU pragma: keep
 #include "fungal_effects.h"
 #include "game.h"
@@ -66,6 +66,8 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic_teleporter_list.h"
 #include "map.h"
 #include "map_iterator.h"

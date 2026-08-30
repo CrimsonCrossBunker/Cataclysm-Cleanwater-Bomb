@@ -2,13 +2,18 @@
 
 #include "lua_platform_interaction.h"
 
+extern "C" {
+#include <lua.h>
+}
+#include <stdlib.h>
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -17,13 +22,13 @@
 
 #include "action.h"
 #include "avatar.h"
-#include "lua_platform_bindings_coords.h"
 #include "coordinates.h"
 #include "game.h"
 #include "input_popup.h"
+#include "lua_platform_bindings_coords.h"
 #include "map.h"
-#include "overmap_ui.h"
 #include "output.h"
+#include "overmap_ui.h"
 #include "point.h"
 #include "popup.h"
 #include "ranged.h"
@@ -672,7 +677,7 @@ sol::object choose_area(
     static_popup popup;
     popup.on_top( true );
     popup.message(
-        "%s (%s)", message, _( "Select first point." ) );
+        "%s (%s)", message, to_translation( "Select first point." ).translated() );
     const look_around_result first = g->look_around(
                                          false, center, center, false, true, false,
                                          false, tripoint_bub_ms::zero,
@@ -683,7 +688,7 @@ sol::object choose_area(
     }
 
     popup.message(
-        "%s (%s)", message, _( "Select second point." ) );
+        "%s (%s)", message, to_translation( "Select second point." ).translated() );
     const look_around_result second = g->look_around(
                                           false, center, *first.position, true, true, false,
                                           false, tripoint_bub_ms::zero,
@@ -952,7 +957,7 @@ sol::table input_interaction_number(
         description, "description",
         "services.interaction.input_number" );
     number_input_popup<int> popup( 55, default_value );
-    popup.set_label( _( "Input a value:" ) );
+    popup.set_label( to_translation( "Input a value:" ).translated() );
     popup.set_description( description );
     const int entered = popup.query();
     const bool accepted = !popup.cancelled();

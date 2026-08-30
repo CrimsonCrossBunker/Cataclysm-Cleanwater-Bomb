@@ -1,5 +1,7 @@
 #include "mission_companion.h"
 
+#include <mapgendata.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -41,6 +43,7 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "horde_map.h"
+#include "iexamine.h"
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
@@ -51,16 +54,15 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
-#include "iexamine.h"
 #include "mapdata.h"
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
-#include "options.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
 #include "npctrade_utils.h"
+#include "options.h"
 #include "output.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
@@ -71,8 +73,8 @@
 #include "string_formatter.h"
 #include "translation.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "value_ptr.h"
 #include "weather.h"
 #include "weighted_list.h"

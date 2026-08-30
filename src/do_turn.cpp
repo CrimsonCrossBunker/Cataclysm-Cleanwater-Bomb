@@ -27,8 +27,8 @@
 #include "bionics.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "lua_platform_loader.h"
 #include "lua_platform_hooks.h"
+#include "lua_platform_loader.h"
 #ifdef TILES
     #include "cata_imgui.h"
 #endif
@@ -90,6 +90,8 @@
 #include "vpart_position.h"
 #include "weather.h"
 #include "worldfactory.h"
+
+class Creature;
 
 static const activity_id ACT_AUTODRIVE( "ACT_AUTODRIVE" );
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );

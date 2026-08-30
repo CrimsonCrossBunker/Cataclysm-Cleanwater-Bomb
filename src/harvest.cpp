@@ -1,17 +1,19 @@
 #include "harvest.h"
 
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <optional>
 #include <string>
 
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
 #include "item_group.h"
+#include "lua_platform_content.h"
 #include "output.h"
 #include "string_formatter.h"
 #include "text_snippets.h"

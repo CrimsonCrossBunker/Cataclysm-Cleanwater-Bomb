@@ -2,30 +2,39 @@
 
 #include "lua_platform_crafting.h"
 
+#include <calendar.h>
+#include <crafting.h>
+extern "C" {
+#include <lua.h>
+}
+#include <translation.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <utility>
+#include <vector>
 
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
 #include "crafting_gui.h"
 #include "creature.h"
 #include "inventory.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "requirements.h"
 #include "type_id.h"
+
+class read_only_visitable;
 
 namespace cata::lua_platform
 {

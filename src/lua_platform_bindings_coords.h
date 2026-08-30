@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_LUA_PLATFORM_BINDINGS_COORDS_H
 #define CATA_SRC_LUA_PLATFORM_BINDINGS_COORDS_H
 
+#include <point.h>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -9,8 +10,8 @@
 #include <tuple>
 #include <vector>
 
-#include "lua_platform_sol.h"
 #include "coords_fwd.h"
+#include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {

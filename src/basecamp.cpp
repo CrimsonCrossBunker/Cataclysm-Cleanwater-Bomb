@@ -1,5 +1,21 @@
 #include "basecamp.h"
 
+#include <cata_variant.h>
+#include <coordinates.h>
+#include <craft_command.h>
+#include <enums.h>
+#include <game_constants.h>
+#include <item_components.h>
+#include <item_uid.h>
+#include <mapgendata.h>
+#include <mission_companion.h>
+#include <pimpl.h>
+#include <plf/list.h>
+#include <point.h>
+#include <ret_val.h>
+#include <safe_reference.h>
+#include <stomach.h>
+#include <translation.h>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -30,6 +46,7 @@
 #include "event_bus.h"
 #include "faction.h"
 #include "faction_camp.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "input_popup.h"
 #include "inventory.h"

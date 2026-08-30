@@ -2,8 +2,6 @@
 * For item damage, durability, degradation, age, rot
 */
 
-#include "item.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -25,7 +23,6 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -39,6 +36,7 @@
 #include "game.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "item.h"
 #include "item_category.h"
 #include "item_components.h"
 #include "item_contents.h"

@@ -1,5 +1,14 @@
 #include "character_attire.h"
 
+#include <body_part_set.h>
+#include <bodypart.h>
+#include <color.h>
+#include <item.h>
+#include <item_location.h>
+#include <ret_val.h>
+#include <subbodypart.h>
+#include <type_id.h>
+#include <units.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -14,7 +23,6 @@
 #include "bodygraph.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"

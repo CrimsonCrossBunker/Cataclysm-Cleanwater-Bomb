@@ -1,5 +1,13 @@
 #include "mapdata.h"
 
+#include <clone_ptr.h>
+#include <coords_fwd.h>
+#include <enum_bitset.h>
+#include <lightmap.h>
+#include <requirements.h>
+#include <translation.h>
+#include <units.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <exception>
 #include <iterator>
@@ -12,13 +20,12 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
-#include "lua_platform_content.h"
 #include "color.h"
 #include "debug.h"
 #include "effect_on_condition.h"
 #include "enum_conversions.h"
-#include "flexbuffer_json.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "harvest.h"
 #include "iexamine.h"
@@ -26,6 +33,7 @@
 #include "item.h"
 #include "item_group.h"
 #include "iteminfo_query.h"
+#include "lua_platform_content.h"
 #include "mod_manager.h"
 #include "output.h"
 #include "rng.h"

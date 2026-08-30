@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -17,7 +19,31 @@
 
 #include "debug.h"
 
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+#if defined(__GNUC__) && !defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+extern "C" {
+#include <lauxlib.h>
+#include <lua.h>
+}
+#ifdef __clang__
+    #pragma clang diagnostic pop
+#endif
+#if defined(__GNUC__) && !defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif
 
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"

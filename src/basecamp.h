@@ -40,7 +40,6 @@ class Character;
 class JsonObject;
 class JsonOut;
 class basecamp;
-class character_id;
 class faction;
 class inventory_filter_preset;
 class item;

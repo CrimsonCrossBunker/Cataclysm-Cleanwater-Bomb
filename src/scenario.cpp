@@ -1,7 +1,8 @@
-#include "lua_platform_content.h"
-
-#include "scenario.h"
-
+#include <calendar.h>
+#include <coordinates.h>
+#include <ret_val.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 #include <ostream>
@@ -12,12 +13,14 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "mission.h"
 #include "mutation.h"
 #include "options.h"
 #include "past_achievements_info.h"
 #include "profession.h"
 #include "rng.h"
+#include "scenario.h"
 #include "start_location.h"
 #include "translations.h"
 

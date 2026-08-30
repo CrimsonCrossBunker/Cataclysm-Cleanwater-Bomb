@@ -1,6 +1,12 @@
 #include "mapgen.h"
-#include "mapgen_post_process.h"
 
+#include <cata_variant.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <flexbuffer_json.h>
+#include <mapgen_parameter.h>
+#include <mapgen_primitives.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -10,7 +16,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -26,8 +31,6 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_hooks.h"
-#include "lua_platform_mapgen_dispatch.h"
 #include "character_id.h"
 #include "city.h"
 #include "clzones.h"
@@ -55,9 +58,14 @@
 #include "item_group.h"
 #include "itype.h"
 #include "jmapgen_flags.h"
+#include "json.h"
+#include "json_loader.h"
 #include "level_cache.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_mapgen_dispatch.h"
+#include "magic_teleporter_list.h"
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_extras.h"
@@ -66,6 +74,7 @@
 #include "mapbuffer.h"
 #include "mapdata.h"
 #include "mapgen_functions.h"
+#include "mapgen_post_process.h"
 #include "mapgendata.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -82,8 +91,6 @@
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
-#include "json.h"
-#include "json_loader.h"
 #include "string_formatter.h"
 #include "submap.h"
 #include "talker.h"
@@ -105,7 +112,6 @@
 #include "weather_gen.h"
 #include "weighted_dbl_or_var_list.h"
 #include "weighted_list.h"
-#include "magic_teleporter_list.h"
 
 static const furn_str_id furn_f_ash( "f_ash" );
 static const furn_str_id furn_f_console( "f_console" );

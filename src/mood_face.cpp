@@ -1,11 +1,13 @@
 #include "mood_face.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <optional>
 
 #include "avatar.h"
-#include "lua_platform_content.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "mutation.h"
 #include "options.h"
 

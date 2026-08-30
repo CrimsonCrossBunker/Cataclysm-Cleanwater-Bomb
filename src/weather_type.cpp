@@ -1,10 +1,17 @@
 #include "weather_type.h"
 
+#include <calendar.h>
+#include <color.h>
+#include <field_type.h>
+#include <translation.h>
+#include <type_id.h>
+#include <units.h>
+
 #include "condition.h"
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 namespace
 {

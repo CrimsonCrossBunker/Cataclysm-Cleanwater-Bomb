@@ -2,12 +2,13 @@
 #ifndef CATA_SRC_HORDE_ENTITY_H
 #define CATA_SRC_HORDE_ENTITY_H
 
+#include <cstdint>
 #include <memory>
 
 #include "calendar.h"
 #include "coordinates.h"
-#include "type_id.h"
 #include "monster.h"
+#include "type_id.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_identity.h"

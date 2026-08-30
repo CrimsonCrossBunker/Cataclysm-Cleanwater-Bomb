@@ -12,6 +12,7 @@
 
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_sol.h"
 #include "type_id.h"
 
 class mapgendata;
@@ -206,6 +207,7 @@ class script_mapgen_context
 
     private:
         struct context_state;
+
         std::shared_ptr<context_state> state_;
 
         context_state &require_state() const;

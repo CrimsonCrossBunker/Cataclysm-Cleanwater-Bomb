@@ -1,12 +1,14 @@
 #include "flag.h"
 
+#include <translation.h>
 #include <algorithm>
 #include <utility>
 #include <vector>
 
-#include "lua_platform_content.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "type_id.h"
 
 const flag_id flag_ABLATIVE_LARGE( "ABLATIVE_LARGE" );

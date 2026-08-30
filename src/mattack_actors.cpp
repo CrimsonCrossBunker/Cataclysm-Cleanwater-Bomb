@@ -1,5 +1,10 @@
 #include "mattack_actors.h"
 
+#include <damage.h>
+#include <magic.h>
+#include <mattack_common.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
@@ -13,7 +18,6 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "character_attire.h"
 #include "condition.h"
@@ -36,6 +40,7 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

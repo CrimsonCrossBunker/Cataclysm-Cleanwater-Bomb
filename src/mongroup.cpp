@@ -1,7 +1,9 @@
 #include "mongroup.h"
 
-#include "lua_platform_content.h"
-
+#include <enums.h>
+#include <mapgen_primitives.h>
+#include <monster.h>
+#include <type_id.h>
 #include <algorithm>
 #include <string>
 #include <utility>

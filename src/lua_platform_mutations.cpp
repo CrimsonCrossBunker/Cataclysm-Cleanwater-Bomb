@@ -2,24 +2,27 @@
 
 #include "lua_platform_mutations.h"
 
+#include <enums.h>
+extern "C" {
+#include <lua.h>
+}
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <map>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
-#include "creature.h"
 #include "event.h"
 #include "event_bus.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "mutation.h"
 #include "type_id.h"
 #include "units.h"

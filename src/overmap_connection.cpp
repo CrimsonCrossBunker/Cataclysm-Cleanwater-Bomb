@@ -1,14 +1,17 @@
 #include "overmap_connection.h"
 
+#include <omdata.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
 
 #include "cata_assert.h"
-#include "lua_platform_content.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "overmap_location.h"
 
 namespace

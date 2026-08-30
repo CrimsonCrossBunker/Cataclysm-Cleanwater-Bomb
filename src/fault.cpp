@@ -1,14 +1,19 @@
 #include "fault.h"
 
+#include <calendar.h>
+#include <math_parser_diag_value.h>
+#include <translation.h>
+#include <type_id.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <utility>
 #include <vector>
 
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 #include "requirements.h"
 #include "rng.h"
 

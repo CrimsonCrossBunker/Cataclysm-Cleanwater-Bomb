@@ -3,7 +3,6 @@
 #define CATA_SRC_MAPGEN_FUNCTIONS_H
 
 #include <array>
-#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
@@ -106,6 +105,7 @@ class platform_mapgen_callback_transaction
 
     private:
         struct impl;
+
         std::unique_ptr<impl> pimpl_;
 };
 

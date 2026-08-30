@@ -2,25 +2,33 @@
 
 #include "lua_platform_bionics.h"
 
+#include <calendar.h>
+extern "C" {
+#include <lua.h>
+}
+#include <pimpl.h>
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "bionics.h"
 #include "bodypart.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
 #include "creature.h"
 #include "damage.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "type_id.h"
 #include "units.h"
 

@@ -1,16 +1,20 @@
 #include "vehicle_group.h"
 
+#include <mapgen_primitives.h>
+#include <rng.h>
+#include <type_id.h>
+#include <weighted_list.h>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "lua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "point.h"
 #include "units.h"

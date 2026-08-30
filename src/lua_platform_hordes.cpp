@@ -2,11 +2,17 @@
 
 #include "lua_platform_hordes.h"
 
+#include <enums.h>
+extern "C" {
+#include <lua.h>
+}
+#include <map_scale_constants.h>
 #include <algorithm>
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -19,12 +25,12 @@
 #include <utility>
 #include <vector>
 
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "coordinates.h"
 #include "horde_entity.h"
 #include "horde_map.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"

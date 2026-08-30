@@ -2,6 +2,9 @@
 
 #include "lua_platform_effects.h"
 
+extern "C" {
+#include <lua.h>
+}
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -15,10 +18,10 @@
 
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "creature.h"
 #include "effect.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "type_id.h"
 
 namespace cata::lua_platform

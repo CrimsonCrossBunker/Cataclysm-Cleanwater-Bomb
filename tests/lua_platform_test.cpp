@@ -1036,7 +1036,11 @@ struct platform_equipment_fixture {
         item value( id, calendar::turn_zero );
         const auto worn = actor.wear_item(
                               value, false, false, true, true );
-        return worn ? &**worn : nullptr;
+        if( !worn ) {
+            return nullptr;
+        }
+        const auto worn_iterator = *worn;
+        return std::addressof( *worn_iterator );
     }
 
     cata::lua_platform::game_handle item_handle(
@@ -3933,7 +3937,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
         [runtime]() {
         return runtime;
     },
-    [world_generation]() {
+    []() {
         return world_generation;
     }, []() {} );
     cata::lua_platform::install_npc_api(
@@ -3941,7 +3945,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
         [runtime]() {
         return runtime;
     },
-    [world_generation]() {
+    []() {
         return world_generation;
     }, []() {}, []() {}, []() {} );
 
@@ -7663,10 +7667,10 @@ TEST_CASE( "lua_platform_recipe_work_refund_pending_rejects_stale_holder_and_rec
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
         lua, services, [runtime]() { return runtime; },
-        [world_generation]() { return world_generation; }, []() {} );
+        []() { return world_generation; }, []() {} );
     cata::lua_platform::install_camp_api(
         services, [runtime]() { return runtime; },
-    [world_generation]() { return world_generation; }, []() {}, []() {} );
+    []() { return world_generation; }, []() {}, []() {} );
     const sol::protected_function resolve = services["camps"]["tasks"]["resolve"];
     const sol::table invalid_destination = make_platform_recipe_holder_table(
                                                lua, cata::lua_platform::game_handle{} );
@@ -9077,24 +9081,24 @@ TEST_CASE( "lua_platform_trade_quote_returns_a_detached_snapshot_without_mutatio
     CHECK( token.buyer_identity_generation() == fixture.buyer_handle.identity_generation() );
     CHECK( token.holder_mutation_generation() ==
            cata::lua_platform::item_holder_mutation_generation() );
-    CHECK( token.pricing_generation() == snapshot["pricing_generation"].get<lua_Integer>() );
-    CHECK( token.faction_generation() == snapshot["faction_generation"].get<lua_Integer>() );
-    CHECK( token.debt_generation() == snapshot["debt_generation"].get<lua_Integer>() );
-    CHECK( token.opinion_generation() == snapshot["opinion_generation"].get<lua_Integer>() );
+    CHECK( token.pricing_generation() == snapshot["pricing_generation"].get<std::uint64_t>() );
+    CHECK( token.faction_generation() == snapshot["faction_generation"].get<std::uint64_t>() );
+    CHECK( token.debt_generation() == snapshot["debt_generation"].get<std::uint64_t>() );
+    CHECK( token.opinion_generation() == snapshot["opinion_generation"].get<std::uint64_t>() );
     CHECK( token.issued_turn() == snapshot["issued_turn"].get<lua_Integer>() );
     CHECK( token.expires_turn() == snapshot["expires_turn"].get<lua_Integer>() );
     CHECK( token.expires_turn() > token.issued_turn() );
 
     CHECK( quoted_line["item_uid"].get<lua_Integer>() == fixture.live_item->uid().get_value() );
-    CHECK( quoted_line["item_identity_generation"].get<lua_Integer>() ==
+    CHECK( quoted_line["item_identity_generation"].get<std::size_t>() ==
            fixture.item_handle.identity_generation() );
     CHECK( quoted_line["quantity"].get<lua_Integer>() == 3 );
     CHECK( quoted_line["charges_at_quote"].get<lua_Integer>() == item_charges_before );
     CHECK( quoted_line["unit_price"].is<lua_Integer>() );
     CHECK( quoted_line["total"].is<lua_Integer>() );
-    CHECK( quoted_line["source_holder_mutation_generation"].get<lua_Integer>() ==
+    CHECK( quoted_line["source_holder_mutation_generation"].get<std::uint64_t>() ==
            token.holder_mutation_generation() );
-    CHECK( quoted_line["destination_holder_mutation_generation"].get<lua_Integer>() ==
+    CHECK( quoted_line["destination_holder_mutation_generation"].get<std::uint64_t>() ==
            token.holder_mutation_generation() );
     CHECK( quoted_line["source_holder"].get<sol::table>()["locator"]
            .get<sol::table>()["scope"].get<std::string>() == "avatar" );
@@ -10251,7 +10255,7 @@ struct platform_vehicle_relocation_fixture {
                                  runtime, active_world_generation );
             vehicle_identity_generation = vehicle_handle.identity_generation();
 
-            for( std::size_t part_index = 0;
+            for( int part_index = 0;
                  part_index < test_vehicle->part_count(); ++part_index ) {
                 vehicle_part &candidate = test_vehicle->part( part_index );
                 if( candidate.removed ) {
@@ -10866,8 +10870,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     const sol::table before_envelope = before_result.get<sol::table>();
     REQUIRE( before_envelope["ok"].get<bool>() );
     const sol::table before_snapshot = before_envelope["value"].get<sol::table>();
-    const std::uint64_t before_revision =
-        before_snapshot["revision"].get<lua_Integer>();
+    const std::size_t before_revision =
+        before_snapshot["revision"].get<std::size_t>();
     const bool before_explored = before_snapshot["explored"].get<bool>();
 
     sol::table changes = fixture.lua.create_table();
@@ -10886,12 +10890,12 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     const sol::table committed_value = committed_envelope["value"].get<sol::table>();
     CHECK( committed_value["accepted"].get<bool>() );
     CHECK( committed_value["changed"].get<bool>() );
-    const std::uint64_t committed_revision =
-        committed_value["revision"].get<lua_Integer>();
+    const std::size_t committed_revision =
+        committed_value["revision"].get<std::size_t>();
     CHECK( committed_revision == before_revision + 1 );
     const sol::table committed_snapshot =
         committed_value["snapshot"].get<sol::table>();
-    CHECK( committed_snapshot["revision"].get<lua_Integer>() == committed_revision );
+    CHECK( committed_snapshot["revision"].get<std::size_t>() == committed_revision );
     CHECK( committed_snapshot["explored"].get<bool>() == !before_explored );
     CHECK( committed_snapshot["note"].get<std::string>() == "platform edit" );
     CHECK( committed_snapshot["note_dangerous"].get<bool>() );
@@ -10913,7 +10917,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     REQUIRE( after_stale_envelope["ok"].get<bool>() );
     const sol::table after_stale_snapshot =
         after_stale_envelope["value"].get<sol::table>();
-    CHECK( after_stale_snapshot["revision"].get<lua_Integer>() == committed_revision );
+    CHECK( after_stale_snapshot["revision"].get<std::size_t>() == committed_revision );
     CHECK( after_stale_snapshot["explored"].get<bool>() ==
            committed_snapshot["explored"].get<bool>() );
     CHECK( after_stale_snapshot["note"].get<std::string>() ==
@@ -10931,8 +10935,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     const sol::table repeated_value = repeated_envelope["value"].get<sol::table>();
     CHECK( repeated_value["accepted"].get<bool>() );
     CHECK_FALSE( repeated_value["changed"].get<bool>() );
-    CHECK( repeated_value["previous_revision"].get<lua_Integer>() == committed_revision );
-    CHECK( repeated_value["revision"].get<lua_Integer>() == committed_revision );
+    CHECK( repeated_value["previous_revision"].get<std::size_t>() == committed_revision );
+    CHECK( repeated_value["revision"].get<std::size_t>() == committed_revision );
 }
 
 TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
@@ -10957,8 +10961,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
     const sol::table before_envelope = before_result.get<sol::table>();
     REQUIRE( before_envelope["ok"].get<bool>() );
     const sol::table before_snapshot = before_envelope["value"].get<sol::table>();
-    const std::uint64_t before_revision =
-        before_snapshot["revision"].get<lua_Integer>();
+    const std::size_t before_revision =
+        before_snapshot["revision"].get<std::size_t>();
 
     const om_vision_level before_native =
         fixture.source_overmap->seen( fixture.source_local );
@@ -10978,8 +10982,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
     REQUIRE( committed_envelope["ok"].get<bool>() );
     const sol::table committed_value = committed_envelope["value"].get<sol::table>();
     CHECK( committed_value["changed"].get<bool>() );
-    const std::uint64_t committed_revision =
-        committed_value["revision"].get<lua_Integer>();
+    const std::size_t committed_revision =
+        committed_value["revision"].get<std::size_t>();
     CHECK( committed_revision == before_revision + 1 );
     CHECK( fixture.source_overmap->seen( fixture.source_local ) == target );
 }
@@ -11008,8 +11012,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table before_envelope = before_result.get<sol::table>();
         REQUIRE( before_envelope["ok"].get<bool>() );
         const sol::table before_snapshot = before_envelope["value"].get<sol::table>();
-        const std::uint64_t before_revision =
-            before_snapshot["revision"].get<lua_Integer>();
+        const std::size_t before_revision =
+            before_snapshot["revision"].get<std::size_t>();
         const bool before_has_note = before_snapshot["note"].is<std::string>();
         const std::string before_note = before_has_note ?
                                         before_snapshot["note"].get<std::string>() :
@@ -11039,7 +11043,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table after_envelope = after_result.get<sol::table>();
         REQUIRE( after_envelope["ok"].get<bool>() );
         const sol::table after_snapshot = after_envelope["value"].get<sol::table>();
-        CHECK( after_snapshot["revision"].get<lua_Integer>() == before_revision );
+        CHECK( after_snapshot["revision"].get<std::size_t>() == before_revision );
         CHECK( after_snapshot["note"].is<std::string>() == before_has_note );
         if( before_has_note ) {
             CHECK( after_snapshot["note"].get<std::string>() == before_note );
@@ -11071,8 +11075,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table before_envelope = before_result.get<sol::table>();
         REQUIRE( before_envelope["ok"].get<bool>() );
         const sol::table before_snapshot = before_envelope["value"].get<sol::table>();
-        const std::uint64_t before_revision =
-            before_snapshot["revision"].get<lua_Integer>();
+        const std::size_t before_revision =
+            before_snapshot["revision"].get<std::size_t>();
         const std::string before_terrain =
             before_snapshot["terrain"].get<
                 cata::lua_platform::script_game_id>().value();
@@ -11094,7 +11098,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table after_envelope = after_result.get<sol::table>();
         REQUIRE( after_envelope["ok"].get<bool>() );
         const sol::table after_snapshot = after_envelope["value"].get<sol::table>();
-        CHECK( after_snapshot["revision"].get<lua_Integer>() == before_revision );
+        CHECK( after_snapshot["revision"].get<std::size_t>() == before_revision );
         CHECK( after_snapshot["terrain"].get<
                    cata::lua_platform::script_game_id>().value() == before_terrain );
     }
@@ -11157,8 +11161,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table before_envelope = before_result.get<sol::table>();
         REQUIRE( before_envelope["ok"].get<bool>() );
         const sol::table before_snapshot = before_envelope["value"].get<sol::table>();
-        const std::uint64_t before_revision =
-            before_snapshot["revision"].get<lua_Integer>();
+        const std::size_t before_revision =
+            before_snapshot["revision"].get<std::size_t>();
         const cata::lua_platform::script_game_id current_terrain =
             before_snapshot["terrain"].get<cata::lua_platform::script_game_id>();
         const oter_id before_native_terrain =
@@ -11193,7 +11197,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table after_envelope = after_result.get<sol::table>();
         REQUIRE( after_envelope["ok"].get<bool>() );
         const sol::table after_snapshot = after_envelope["value"].get<sol::table>();
-        CHECK( after_snapshot["revision"].get<lua_Integer>() == before_revision );
+        CHECK( after_snapshot["revision"].get<std::size_t>() == before_revision );
         CHECK( after_snapshot["terrain"].get<
                    cata::lua_platform::script_game_id>().value() ==
                current_terrain.value() );
@@ -11388,7 +11392,7 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
     const sol::table snapshot_envelope = snapshot_result.get<sol::table>();
     REQUIRE( snapshot_envelope["ok"].get<bool>() );
     const std::uint64_t revision = snapshot_envelope["value"].get<sol::table>()
-                                   ["revision"].get<lua_Integer>();
+                                   ["revision"].get<std::uint64_t>();
     const ter_id original_terrain = here.ter( fixture.local );
 
     const ter_str_id floor_id( "t_floor" );

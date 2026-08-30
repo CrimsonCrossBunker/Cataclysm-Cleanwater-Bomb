@@ -1,5 +1,11 @@
 #include "mutation.h"
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <damage.h>
+#include <translation.h>
+#include <type_id.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -13,7 +19,6 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -28,6 +33,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -35,8 +41,8 @@
 #include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
-#include "omdata.h"
 #include "npc.h"
+#include "omdata.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"

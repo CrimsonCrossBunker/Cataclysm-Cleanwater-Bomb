@@ -1,14 +1,18 @@
-#include "cata_catch.h"
+#include <cata_path.h>
+#include <type_id.h>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "cached_options.h"
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "lua_platform_loader.h"
 #include "mod_manager.h"
 #include "path_info.h"
 #include "worldfactory.h"
-
-#include <string>
-#include <vector>
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
 static const mod_id MOD_INFORMATION_test_third_party_mod( "test_third_party_mod" );

@@ -1,7 +1,11 @@
 #include "vehicle_part_location.h"
 
-#include "lua_platform_content.h"
+#include <string_id.h>
+#include <translation.h>
+
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 class JsonObject;
 

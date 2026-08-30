@@ -2,22 +2,25 @@
 
 #include "lua_platform_martial_arts.h"
 
+#include <pimpl.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <memory>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
 #include "character_martial_arts.h"
 #include "creature.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "martialarts.h"
 
 namespace cata::lua_platform

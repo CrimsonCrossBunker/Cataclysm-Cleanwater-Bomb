@@ -1,9 +1,17 @@
 #include "lua_platform_values.h"
 
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+extern "C" {
+#include <lua.h>
+}
+#endif
+#include <lua_platform_state.h>
 #include <cmath>
 #include <cstdint>
+#include <map>
 #include <stdexcept>
 #include <utility>
+#include <variant>
 
 namespace cata::lua_platform
 {

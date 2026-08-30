@@ -1,5 +1,7 @@
 #include "weakpoint.h"
 
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -8,8 +10,6 @@
 #include <utility>
 
 #include "calendar.h"
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -20,10 +20,12 @@
 #include "effect_source.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
-#include "map.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
+#include "map.h"
 #include "messages.h"
 #include "monster.h"
 #include "mtype.h"

@@ -10,6 +10,8 @@
 #include "talker_character.h"
 #include "type_id.h"
 
+class item_location;
+
 /*
  */
 class talker_npc_const : public const_talker_cloner<talker_npc_const, talker_character_const>

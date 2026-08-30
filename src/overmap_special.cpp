@@ -1,9 +1,18 @@
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
-
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
+#include <city.h>
+#include <common_types.h>
+#include <flat_set.h>
+#include <flexbuffer_json.h>
+#include <map_scale_constants.h>
+#include <mapgen_parameter.h>
+#include <mapgendata.h>
+#include <memory_fast.h>
+#include <overmap_location.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <memory>
 #include <numeric>
@@ -18,6 +27,8 @@
 #include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "mod_tracker.h"
 #include "string_formatter.h"
 #include "talker.h"

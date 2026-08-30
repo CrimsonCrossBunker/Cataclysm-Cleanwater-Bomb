@@ -1,8 +1,11 @@
 #include "profession_group.h"
 
-#include "lua_platform_content.h"
+#include <type_id.h>
+
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 class JsonObject;
 

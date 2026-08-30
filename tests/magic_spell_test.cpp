@@ -1,3 +1,6 @@
+#include <calendar.h>
+#include <player_activity.h>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -12,7 +15,6 @@
 #include "dialogue_helpers.h"
 #include "game.h"
 #include "item.h"
-#include "json_loader.h"
 #include "magic.h"
 #include "magic_type.h"
 #include "map.h"

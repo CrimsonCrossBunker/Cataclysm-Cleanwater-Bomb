@@ -10,29 +10,32 @@
 #include <vector>
 
 #include "clone_ptr.h"
-#include "lua_platform_content.h"
 #include "translation.h"
 #include "type_id.h"
 
 class JsonObject;
 class cata_variant;
+class event_multiset;
 class event_statistic;
 class event_transformation;
-class event_multiset;
 class stats_tracker;
 class stats_tracker_state;
 enum class cata_variant_type : int;
 enum class monotonically : int;
-template<typename T>
-class generic_factory;
 
 namespace cata::lua_platform
 {
 class content_transaction;
+
 namespace detail
 {
 struct event_statistic_native_definition;
 struct event_transformation_native_definition;
+
+::event_statistic make_event_statistic(
+    const event_statistic_native_definition &definition );
+::event_transformation make_event_transformation(
+    const event_transformation_native_definition &definition );
 } // namespace detail
 }
 

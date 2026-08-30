@@ -1,5 +1,6 @@
 #include "monfaction.h"
 
+#include <type_id.h>
 #include <list>
 #include <map>
 #include <set>
@@ -7,8 +8,9 @@
 
 #include "debug.h"
 #include "debug_menu.h"
-#include "lua_platform_content.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 // for legacy reasons "monfaction::id" is called "name" in json
 static generic_factory<monfaction> faction_factory( "MONSTER_FACTION", "name" );

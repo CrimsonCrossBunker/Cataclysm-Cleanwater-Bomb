@@ -1,20 +1,21 @@
 #include "butchery_requirements.h"
 
+#include <type_id.h>
 #include <cstddef>
 #include <functional>
 #include <optional>
 #include <string>
 
+#include "butchery.h"
 #include "cata_utility.h"
-#include "lua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 #include "requirements.h"
-#include "butchery.h"
 
 namespace
 {

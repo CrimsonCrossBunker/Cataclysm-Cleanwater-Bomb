@@ -1,5 +1,3 @@
-#include "item.h"
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -20,12 +18,10 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
 #include "ammo.h"
-#include "bionics.h"
+#include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -39,11 +35,13 @@
 #include "faction.h"
 #include "flag.h"
 #include "flat_set.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "generic_factory.h"
 #include "gun_mode.h"
 #include "inventory.h"
+#include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_factory.h"

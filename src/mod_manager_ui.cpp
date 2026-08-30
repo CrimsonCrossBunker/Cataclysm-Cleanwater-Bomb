@@ -1,12 +1,15 @@
 #include "mod_manager.h" // IWYU pragma: associated
 
+#include <translation.h>
+#include <translations.h>
+#include <type_id.h>
 #include <algorithm>
 #include <exception>
 
 #include "color.h"
-#include "lua_platform_loader.h"
 #include "debug.h"
 #include "dependency_tree.h"
+#include "lua_platform_loader.h"
 #include "output.h"
 #include "string_formatter.h"
 

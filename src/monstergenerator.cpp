@@ -1,7 +1,13 @@
 #include "mattack_common.h" // IWYU pragma: associated
 #include "monstergenerator.h" // IWYU pragma: associated
 
+#include <clone_ptr.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <pimpl.h>
+#include <translation.h>
 #include <algorithm>
+#include <cstddef>
 #include <optional>
 #include <set>
 #include <string>
@@ -10,7 +16,6 @@
 
 #include "cached_options.h"
 #include "calendar.h"
-#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "color.h"
 #include "condition.h"
@@ -24,6 +29,7 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "item_group.h"
+#include "lua_platform_content.h"
 #include "magic.h"
 #include "mattack_actors.h"
 #include "monattack.h"

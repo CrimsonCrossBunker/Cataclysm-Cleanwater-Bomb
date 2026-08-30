@@ -1,5 +1,6 @@
 #include "vehicle_uid.h"
 
+#include <memory>
 #include <ostream>
 
 #include "game.h"

@@ -2,12 +2,21 @@
 
 #include "lua_platform_vehicles.h"
 
+#include <character.h>
+#include <creature.h>
+#include <item.h>
+#include <item_uid.h>
+#include <point.h>
+#include <tileray.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -17,11 +26,10 @@
 #include <vector>
 
 #include "avatar.h"
+#include "coordinates.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "coordinates.h"
-#include "game.h"
 #include "map.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
@@ -31,6 +39,8 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_price.h"
+
+enum class veh_spawn_status : int;
 
 namespace cata::lua_platform
 {

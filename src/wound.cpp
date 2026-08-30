@@ -1,5 +1,10 @@
 #include "wound.h"
 
+#include <calendar.h>
+#include <requirements.h>
+#include <translation.h>
+#include <type_id.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cstddef>
 #include <limits>
@@ -7,11 +12,11 @@
 #include <set>
 
 #include "bodypart.h"
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "rng.h"
 
 enum class bp_type;

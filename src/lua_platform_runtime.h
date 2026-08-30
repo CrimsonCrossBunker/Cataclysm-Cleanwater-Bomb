@@ -16,17 +16,15 @@
 #include "lua_platform_hooks.h"
 
 class Character;
-class computer;
 class Creature;
+class computer;
 class item;
 class map;
 class mapgendata;
 class npc;
 class player_activity;
-class recipe;
 class vehicle;
 struct dialogue;
-struct itype;
 struct talk_topic;
 struct vehicle_part;
 struct w_point;
@@ -154,6 +152,7 @@ class content_transaction
 
     private:
         struct impl;
+
         std::unique_ptr<impl> pimpl_;
 };
 

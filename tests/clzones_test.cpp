@@ -1,3 +1,4 @@
+#include <flexbuffer_json.h>
 #include <climits>
 #include <functional>
 #include <initializer_list>
@@ -6,7 +7,9 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "activity_actor.h"
@@ -22,7 +25,6 @@
 #include "clzones.h"
 #include "coordinates.h"
 #include "enums.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"

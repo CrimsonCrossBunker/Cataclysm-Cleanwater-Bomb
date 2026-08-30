@@ -1,5 +1,6 @@
 #include "panels.h"
 
+#include <translation.h>
 #include <algorithm>
 #include <cstddef>
 #include <iosfwd>

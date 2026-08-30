@@ -2,6 +2,22 @@
 #include "vpart_position.h" // IWYU pragma: associated
 #include "vpart_range.h" // IWYU pragma: associated
 
+#include <active_item_cache.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <effect.h>
+#include <global_vars.h>
+#include <item_location.h>
+#include <item_stack.h>
+#include <line.h>
+#include <magic_enchantment.h>
+#include <point.h>
+#include <safe_reference.h>
+#include <talker.h>
+#include <tileray.h>
+#include <type_id.h>
+#include <units.h>
+#include <vehicle_uid.h>
 #include <algorithm>
 #include <array>
 #include <cmath>

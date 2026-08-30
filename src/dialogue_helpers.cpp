@@ -1,5 +1,7 @@
 #include "dialogue_helpers.h"
 
+#include <calendar.h>
+#include <translation.h>
 #include <cstddef>
 #include <string>
 #include <type_traits>

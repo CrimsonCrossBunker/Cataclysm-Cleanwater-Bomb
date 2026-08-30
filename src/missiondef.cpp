@@ -1,14 +1,18 @@
 #include "mission.h" // IWYU pragma: associated
 
+#include <coords_fwd.h>
+#include <dialogue_helpers.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 
 #include "condition.h"
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "lua_platform_content.h"
 #include "rng.h"
 
 static const std::map<std::string, std::function<void( mission * )>> mission_function_map = {{

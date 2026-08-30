@@ -1,5 +1,6 @@
 #include "item_action.h"
 
+#include <translation.h>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -11,8 +12,6 @@
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
-
-#include "lua_platform_content.h"
 
 #include "avatar.h"
 #include "character.h"

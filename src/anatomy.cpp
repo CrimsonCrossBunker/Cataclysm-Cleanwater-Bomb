@@ -1,18 +1,20 @@
 #include "anatomy.h"
 
+#include <bodypart.h>
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <unordered_set>
 
 #include "ballistics.h"
-#include "lua_platform_content.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
 #include "enums.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "messages.h"
 #include "output.h"
 #include "rng.h"

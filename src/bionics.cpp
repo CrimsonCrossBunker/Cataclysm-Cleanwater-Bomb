@@ -1,7 +1,7 @@
-#include "lua_platform_content.h"
-
-#include "bionics.h"
-
+#include <flat_set.h>
+#include <magic.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -23,10 +23,10 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "ballistics.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -57,6 +57,8 @@
 #include "item_location.h"
 #include "itype.h"
 #include "json.h"
+#include "lua_platform_content.h"
+#include "lua_platform_hooks.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"

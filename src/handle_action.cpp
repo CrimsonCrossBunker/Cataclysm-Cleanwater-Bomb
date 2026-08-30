@@ -1,9 +1,17 @@
 #include "game.h" // IWYU pragma: associated
 
-#include <cstdlib>
+#include <coordinates.h>
+#include <creature.h>
+#include <enums.h>
+#include <item_location.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <pimpl.h>
+#include <type_id.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <map>

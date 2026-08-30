@@ -1,6 +1,5 @@
 #include "monexamine.h"
 
-#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
@@ -14,7 +13,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -30,6 +28,7 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "mapdata.h"
 #include "messages.h"

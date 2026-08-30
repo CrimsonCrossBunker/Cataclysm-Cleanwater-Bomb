@@ -2,8 +2,9 @@
 #ifndef CATA_SRC_LUA_PLATFORM_HOOKS_H
 #define CATA_SRC_LUA_PLATFORM_HOOKS_H
 
-#include <cstdint>
+#include <point.h>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include "coordinates.h"
-#include "lua_platform_state.h"
 #include "safe_reference.h"
 
 class Character;
@@ -21,7 +21,6 @@ class Creature;
 class const_talker;
 class item;
 class vehicle;
-class mapgendata;
 struct dialogue;
 struct talk_topic;
 

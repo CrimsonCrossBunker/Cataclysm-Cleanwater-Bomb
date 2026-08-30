@@ -1,14 +1,16 @@
 #include "overmap_location.h"
 
+#include <flat_set.h>
+#include <type_id.h>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "omdata.h"
 #include "rng.h"
 

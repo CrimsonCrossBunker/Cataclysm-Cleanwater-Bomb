@@ -6,9 +6,10 @@
 #include <string>
 
 #include "cata_assert.h"
-#include "lua_platform_content.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "string_id.h"
 
 // "Placeholder map data" is a set of map_data_summary objects that are used when

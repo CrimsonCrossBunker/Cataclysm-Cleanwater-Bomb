@@ -2,6 +2,10 @@
 
 #include "lua_platform_handle.h"
 
+#include <item_uid.h>
+#include <monster_uid.h>
+#include <safe_reference.h>
+#include <vehicle_uid.h>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>

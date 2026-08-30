@@ -1,5 +1,3 @@
-#include "item.h"
-
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -17,7 +15,6 @@
 
 #include "body_part_set.h"
 #include "bodypart.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "clothing_mod.h"
@@ -28,6 +25,7 @@
 #include "enums.h"
 #include "fault.h"
 #include "flag.h"
+#include "item.h"
 #include "item_contents.h"
 #include "item_pocket.h"
 #include "itype.h"

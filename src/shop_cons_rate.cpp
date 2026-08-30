@@ -1,7 +1,7 @@
-#include "lua_platform_content.h"
-
-#include "shop_cons_rate.h"
-
+#include <character.h>
+#include <string_id.h>
+#include <translation.h>
+#include <units.h>
 #include <algorithm>
 
 #include "avatar.h"
@@ -15,7 +15,9 @@
 #include "item_category.h"
 #include "item_group.h"
 #include "itype.h"
+#include "lua_platform_content.h"
 #include "npc.h"
+#include "shop_cons_rate.h"
 
 namespace
 {

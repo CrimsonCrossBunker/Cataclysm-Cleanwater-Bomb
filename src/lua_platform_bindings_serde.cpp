@@ -2,6 +2,9 @@
 
 #include "lua_platform_bindings_serde.h"
 
+extern "C" {
+#include <lua.h>
+}
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -13,11 +16,12 @@
 #include <utility>
 #include <vector>
 
+#include "flexbuffer_json.h"
+#include "json.h"
+#include "json_loader.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
-#include "json.h"
-#include "json_loader.h"
 
 namespace cata::lua_platform
 {

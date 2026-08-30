@@ -1,5 +1,8 @@
 #include "text_snippets.h"
 
+#include <dialogue.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <functional>

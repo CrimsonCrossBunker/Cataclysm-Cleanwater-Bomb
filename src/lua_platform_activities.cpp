@@ -2,37 +2,47 @@
 
 #include "lua_platform_activities.h"
 
+#include <activity_actor.h>
+#include <activity_handlers.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <enums.h>
+#include <item_uid.h>
+#include <map_selector.h>
+#include <point.h>
+#include <translation.h>
+#include <visitable.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <list>
+#include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "activity_actor_definitions.h"
 #include "activity_type.h"
-#include "basecamp.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
-#include "creature.h"
-#include "enum_conversions.h"
 #include "game.h"
 #include "item.h"
 #include "item_location.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "map.h"
 #include "monster.h"
 #include "npc.h"
 #include "npctalk.h"
-#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "type_id.h"
-#include "units.h"
 
 namespace cata::lua_platform
 {

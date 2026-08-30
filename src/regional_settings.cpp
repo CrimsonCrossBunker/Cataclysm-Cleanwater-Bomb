@@ -1,5 +1,7 @@
 #include "regional_settings.h"
 
+#include <type_id.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -10,12 +12,12 @@
 #include <utility>
 #include <variant>
 
-#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
-#include "mapdata.h"
+#include "lua_platform_content.h"
 #include "map_extras.h"
+#include "mapdata.h"
 #include "omdata.h"
 #include "rng.h"
 #include "string_formatter.h"

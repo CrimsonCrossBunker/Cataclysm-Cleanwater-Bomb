@@ -1,7 +1,10 @@
 #include "magic_enchantment.h"
 
-#include "lua_platform_content.h"
-
+#include <body_part_set.h>
+#include <color.h>
+#include <magic.h>
+#include <translation.h>
+#include <type_id.h>
 #include <memory>
 #include <set>
 #include <string>
@@ -21,6 +24,7 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "map.h"
 #include "mod_tracker.h"
 #include "monster.h"

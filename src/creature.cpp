@@ -1,5 +1,18 @@
 #include "creature.h"
 
+#include <bodypart.h>
+#include <cata_lazy.h>
+#include <compatibility.h>
+#include <coordinates.h>
+#include <effect_source.h>
+#include <global_vars.h>
+#include <math_parser_diag_value.h>
+#include <pimpl.h>
+#include <safe_reference.h>
+#include <type_id.h>
+#include <veh_type.h>
+#include <viewer.h>
+#include <weakpoint.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,7 +33,6 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -36,9 +48,9 @@
 #include "event_bus.h"
 #include "explosion.h"
 #include "field.h"
+#include "flag.h"
 #include "flat_set.h"
 #include "flexbuffer_json.h"
-#include "flag.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
@@ -47,6 +59,7 @@
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
+#include "lua_platform_hooks.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -77,8 +90,8 @@
 #include "vpart_position.h"
 
 #if defined(TILES)
-    #include "sdltiles.h"
     #include "cata_tiles.h"
+    #include "sdltiles.h"
 #endif
 
 struct mutation_branch;

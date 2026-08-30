@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_LUA_PLATFORM_OVERMAP_H
 #define CATA_SRC_LUA_PLATFORM_OVERMAP_H
 
+#include <point.h>
 #include <cstddef>
 #include <functional>
 #include <memory>

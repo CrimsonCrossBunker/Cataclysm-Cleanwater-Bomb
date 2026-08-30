@@ -2,12 +2,21 @@
 
 #include "lua_platform_npc_services.h"
 
+#include <character_id.h>
+#include <dialogue_chatbin.h>
+extern "C" {
+#include <lua.h>
+}
+#include <npc_opinion.h>
+#include <pimpl.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -15,20 +24,17 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
 #include "auto_pickup.h"
+#include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_missions.h"
 #include "character.h"
 #include "character_martial_arts.h"
 #include "creature.h"
-#include "effect.h"
 #include "faction.h"
-#include "item.h"
-#include "item_location.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_missions.h"
 #include "mission.h"
 #include "npc.h"
 #include "npctalk.h"

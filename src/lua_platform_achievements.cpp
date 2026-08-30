@@ -2,6 +2,11 @@
 
 #include "lua_platform_achievements.h"
 
+extern "C" {
+#include <lua.h>
+}
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -13,9 +18,9 @@
 #include <vector>
 
 #include "achievement.h"
+#include "enum_conversions.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "enum_conversions.h"
 
 namespace cata::lua_platform
 {

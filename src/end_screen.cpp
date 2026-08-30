@@ -1,21 +1,25 @@
 #include <imgui/imgui.h>
+#include <translations.h>
+#include <type_id.h>
 #include <algorithm>
 #include <memory>
+#include <optional>
 
-#include "avatar.h"
 #include "ascii_art.h"
+#include "avatar.h"
 #include "cata_imgui.h"
-#include "lua_platform_content.h"
-#include "lua_platform_runtime.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "end_screen.h"
 #include "event.h"
 #include "event_bus.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
 #include "imgui/imgui_stdlib.h"
 #include "input_context.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "npc.h" // for parse_tags()! Why!
 #include "talker.h"
 #include "ui_manager.h"

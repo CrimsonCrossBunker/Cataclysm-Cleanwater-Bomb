@@ -1,9 +1,11 @@
 #include "faction_camp.h" // IWYU pragma: associated
 
+#include <veh_type.h>
 #include <algorithm>
 #include <array>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <map>
@@ -11,7 +13,6 @@
 #include <numeric>
 #include <optional>
 #include <set>
-#include <cstddef>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -101,8 +102,8 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "vehicle.h"

@@ -2,20 +2,22 @@
 
 #include "lua_platform_time.h"
 
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <optional>
+#include <list>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "calendar.h"
+#include "game.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "game.h"
 #include "timed_event.h"
 
 namespace cata::lua_platform

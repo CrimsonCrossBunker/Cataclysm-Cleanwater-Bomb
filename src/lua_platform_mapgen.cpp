@@ -2,19 +2,27 @@
 
 #include "lua_platform_mapgen.h"
 
+#include <coordinates.h>
+extern "C" {
+#include <lua.h>
+}
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <map_scale_constants.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <set>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
 
 #include "calendar.h"
 #include "computer.h"
-#include "field_type.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_group.h"
+#include "lua_platform_overmap.h"
+#include "lua_platform_world.h"
 #include "map.h"
 #include "mapgen.h"
 #include "mapgen_functions.h"
@@ -25,8 +33,6 @@
 #include "point.h"
 #include "trap.h"
 #include "type_id.h"
-#include "lua_platform_overmap.h"
-#include "lua_platform_world.h"
 
 namespace cata::lua_platform
 {

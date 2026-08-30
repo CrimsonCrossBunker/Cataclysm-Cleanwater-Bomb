@@ -1,3 +1,4 @@
+#include <player_activity.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,7 +21,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "color.h"
 #include "contents_change_handler.h"
@@ -46,6 +46,7 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "math_parser_diag_value.h"

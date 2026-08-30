@@ -1,6 +1,11 @@
 // Monster movement code; essentially, the AI
 #include "monster.h" // IWYU pragma: associated
 
+#include <bodypart.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <creature.h>
 #include <algorithm>
 #include <cfloat>
 #include <climits>
@@ -16,7 +21,6 @@
 #include "bionics.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -29,6 +33,7 @@
 #include "gates.h"
 #include "item.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

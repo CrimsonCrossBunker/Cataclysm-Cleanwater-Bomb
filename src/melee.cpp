@@ -4,6 +4,7 @@
 #include <array>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <limits>
@@ -23,8 +24,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -50,6 +49,8 @@
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"

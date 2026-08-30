@@ -1,5 +1,8 @@
 #include "bodygraph.h"
 
+#include <color.h>
+#include <effect.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
@@ -10,7 +13,6 @@
 #include "bodypart.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_content.h"
 #include "character.h"
 #include "character_attire.h"
 #include "creature.h"
@@ -21,6 +23,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "input_context.h"
+#include "lua_platform_content.h"
 #include "memory_fast.h"
 #include "output.h"
 #include "point.h"
@@ -28,8 +31,8 @@
 #include "subbodypart.h"
 #include "translation.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "weather.h"
 

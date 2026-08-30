@@ -2,11 +2,13 @@
 
 #include "lua_platform_world_info.h"
 
+#include <enums.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -18,12 +20,11 @@
 #include "lightmap.h"
 #include "messages.h"
 #include "options.h"
-#include "type_id.h"
-#include "worldfactory.h"
 #include "rng.h"
+#include "type_id.h"
 #include "units.h"
 #include "weather.h"
-#include "widget.h"
+#include "worldfactory.h"
 
 namespace cata::lua_platform
 {

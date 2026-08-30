@@ -2,26 +2,44 @@
 
 #include "lua_platform_creatures.h"
 
+#include <character_attire.h>
+#include <character_id.h>
+#include <enum_traits.h>
+#include <enums.h>
+#include <item_location.h>
+extern "C" {
+#include <lua.h>
+}
+#include <map_scale_constants.h>
+#include <monster_uid.h>
+#include <pimpl.h>
+#include <player_activity.h>
+#include <point.h>
+#include <type_id.h>
+#include <value_ptr.h>
 #include <algorithm>
+#include <array>
+#include <bitset>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
+#include <list>
+#include <map>
+#include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -32,18 +50,19 @@
 #include "faction.h"
 #include "game.h"
 #include "gun_mode.h"
-#include "line.h"
-#include "map.h"
+#include "item.h"
+#include "itype.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "magic.h"
-#include "martialarts.h"
+#include "magic_enchantment.h"
+#include "map.h"
+#include "mongroup.h"
 #include "monster.h"
 #include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
-#include "item.h"
-#include "itype.h"
-#include "magic_enchantment.h"
-#include "mongroup.h"
 #include "overmapbuffer.h"
 #include "profession.h"
 #include "rng.h"

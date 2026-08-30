@@ -2,6 +2,11 @@
 #ifndef CATA_SRC_LUA_PLATFORM_DIALOGUE_H
 #define CATA_SRC_LUA_PLATFORM_DIALOGUE_H
 
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+extern "C" {
+#include <lua.h>
+}
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -12,16 +17,16 @@
 #include <string_view>
 #include <vector>
 
-#include "lua_platform_hooks.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_sol.h"
 #include "dialogue.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_sol.h"
 
 namespace cata::lua_platform::dialogue
 {
 
-struct dialogue_lifetime;
 struct dialogue_context_lifetime;
+struct dialogue_lifetime;
 
 class dialogue_session
 {

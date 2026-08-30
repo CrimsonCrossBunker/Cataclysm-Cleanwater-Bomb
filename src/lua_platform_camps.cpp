@@ -2,16 +2,31 @@
 
 #include "lua_platform_camps.h"
 
+#include <character.h>
+#include <character_id.h>
+extern "C" {
+#include <lua.h>
+}
+#include <map_scale_constants.h>
+#include <mapgendata.h>
+#include <overmap.h>
+#include <pimpl.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 

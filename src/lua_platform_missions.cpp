@@ -2,10 +2,14 @@
 
 #include "lua_platform_missions.h"
 
+#include <coordinates.h>
+extern "C" {
+#include <lua.h>
+}
+#include <point.h>
+#include <translation.h>
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
-#include <limits>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -15,13 +19,13 @@
 
 #include "avatar.h"
 #include "calendar.h"
+#include "character_id.h"
+#include "dialogue_helpers.h"
+#include "enum_conversions.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "character_id.h"
-#include "dialogue_helpers.h"
-#include "enum_conversions.h"
 #include "mission.h"
 #include "type_id.h"
 

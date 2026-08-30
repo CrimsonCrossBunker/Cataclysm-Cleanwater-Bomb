@@ -1,5 +1,12 @@
 #include "veh_type.h"
 
+#include <calendar.h>
+#include <coordinates.h>
+#include <hsv_color.h>
+#include <lightmap.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <translation.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -14,7 +21,6 @@
 #include "ammo.h"
 #include "cata_assert.h"
 #include "catacharset.h"
-#include "lua_platform_content.h"
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
@@ -32,6 +38,7 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "json.h"
+#include "lua_platform_content.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "output.h"

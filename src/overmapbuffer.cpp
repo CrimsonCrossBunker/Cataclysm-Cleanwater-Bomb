@@ -1,5 +1,8 @@
 #include "overmapbuffer.h"
 
+#include <cata_path.h>
+#include <map_scale_constants.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -58,6 +61,8 @@
 #include "translations.h"
 #include "vehicle.h"
 #include "worldfactory.h"
+
+enum class ot_match_type : int;
 
 static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
 static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );

@@ -1,7 +1,9 @@
 #include "ranged.h"
 
+#include <coordinates.h>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -24,7 +26,6 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "color.h"
@@ -54,6 +55,7 @@
 #include "item_tname.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_hooks.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "magic_type.h"

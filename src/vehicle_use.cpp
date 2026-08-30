@@ -1,5 +1,13 @@
 #include "vehicle.h" // IWYU pragma: associated
 
+#include <calendar.h>
+#include <cata_bitset.h>
+#include <coordinates.h>
+#include <effect.h>
+#include <item_location.h>
+#include <point.h>
+#include <talker.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -15,7 +23,6 @@
 #include "activity_handlers.h"
 #include "avatar.h"
 #include "character.h"
-#include "lua_platform_runtime.h"
 #include "clzones.h"
 #include "color.h"
 #include "creature.h"
@@ -37,6 +44,7 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"

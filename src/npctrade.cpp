@@ -1,12 +1,13 @@
 #include "npctrade.h"
 
+#include <coordinates.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
-#include <list>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <ostream>

@@ -1,7 +1,11 @@
 #include "construction_category.h"
 
-#include "lua_platform_content.h"
+#include <translation.h>
+#include <type_id.h>
+
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 
 namespace
 {

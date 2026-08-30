@@ -1,5 +1,10 @@
 #include "main_menu.h"
 
+#include <cuboid_rectangle.h>
+#include <cursesdef.h>
+#include <input_context.h>
+#include <input_enums.h>
+#include <point.h>
 #include <algorithm>
 #include <array>
 #include <chrono>

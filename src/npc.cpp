@@ -1,5 +1,21 @@
 #include "npc.h"
 
+#include <calendar.h>
+#include <color.h>
+#include <compatibility.h>
+#include <coordinates.h>
+#include <inventory.h>
+#include <item_location.h>
+#include <lru_cache.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <mission_companion.h>
+#include <npc_opinion.h>
+#include <pimpl.h>
+#include <point.h>
+#include <translation.h>
+#include <type_id.h>
+
 #define MP_ENABLED
 #include <algorithm>
 #include <atomic>
@@ -22,9 +38,6 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_runtime.h"
-#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -56,6 +69,9 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "map.h"
 #ifdef MP_ENABLED
@@ -98,6 +114,8 @@
 #include "visitable.h"
 #include "vpart_position.h"
 #include "weather.h"
+
+enum class direction : unsigned int;
 
 static const activity_id ACT_TRY_SLEEP( "ACT_TRY_SLEEP" );
 

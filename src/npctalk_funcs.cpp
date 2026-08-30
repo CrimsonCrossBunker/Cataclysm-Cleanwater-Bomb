@@ -1,5 +1,10 @@
 #include "npctalk.h" // IWYU pragma: associated
 
+#include <line.h>
+#include <map_scale_constants.h>
+#include <string_formatter.h>
+#include <tileray.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -9,9 +14,8 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <ostream>
-#include <sstream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -50,7 +54,6 @@
 #include "json.h"
 #include "magic.h"
 #include "map.h"
-#include "mapdata.h"
 #include "martialarts.h"
 #include "math_parser_diag_value.h"
 #include "messages.h"
@@ -70,9 +73,9 @@
 #include "rng.h"
 #include "simple_pathfinding.h"
 #include "skill.h"
+#include "trade_ui.h"
 #include "translation.h"
 #include "translations.h"
-#include "trade_ui.h"
 #include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
@@ -81,8 +84,6 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "viewer.h"
-#include "vpart_position.h"
-#include "vpart_range.h"
 
 static const efftype_id effect_allow_sleep( "allow_sleep" );
 static const efftype_id effect_asked_for_item( "asked_for_item" );

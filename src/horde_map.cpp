@@ -1,5 +1,9 @@
 #include "horde_map.h"
 
+#include <coordinates.h>
+#include <horde_entity.h>
+#include <point.h>
+#include <type_id.h>
 #include <memory>
 #include <optional>
 #include <string>

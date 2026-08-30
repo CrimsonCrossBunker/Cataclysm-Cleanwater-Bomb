@@ -1,13 +1,22 @@
 #include "lua_platform_snapshots.h"
 
+#include <coordinates.h>
+#include <item_uid.h>
+#include <pimpl.h>
+#include <translation.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <list>
+#include <map>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"

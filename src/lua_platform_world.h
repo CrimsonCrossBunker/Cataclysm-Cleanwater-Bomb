@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_LUA_PLATFORM_WORLD_H
 #define CATA_SRC_LUA_PLATFORM_WORLD_H
 
+#include <point.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
