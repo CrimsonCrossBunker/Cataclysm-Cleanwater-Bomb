@@ -1339,11 +1339,10 @@ class Character : public Creature, public visitable
                                      bool damage_armor );
         /** Runs through all bionics and armor on a specific sub-body part without damaging the character. */
         void absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
-                         bool allow_torso_neck_fallback = false, bool damage_armor = true );
+                         bool damage_armor = true );
     protected:
         void absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                            damage_instance &dam, bool allow_torso_neck_fallback = false,
-                            bool damage_armor = true );
+                            damage_instance &dam, bool damage_armor = true );
         float generic_weakpoint_skill( skill_id skill_1, skill_id skill_2,
                                        limb_score_id limb_score_1, limb_score_id limb_score_2 ) const;
     public:

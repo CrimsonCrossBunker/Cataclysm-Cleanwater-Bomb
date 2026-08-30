@@ -153,19 +153,18 @@ const weakpoint *Character::absorb_hit( const weakpoint_attack &attack, const bo
 {
     ( void )attack;
     ( void )wp;
-    absorb_damage( bp, std::nullopt, dam, false, damage_armor );
+    absorb_damage( bp, std::nullopt, dam, damage_armor );
     return nullptr;
 }
 
 void Character::absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
-                            bool allow_torso_neck_fallback, bool damage_armor )
+                            bool damage_armor )
 {
-    absorb_damage( sbp->parent.id(), sbp, dam, allow_torso_neck_fallback, damage_armor );
+    absorb_damage( sbp->parent.id(), sbp, dam, damage_armor );
 }
 
 void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                               damage_instance &dam, bool allow_torso_neck_fallback,
-                               bool damage_armor )
+                               damage_instance &dam, bool damage_armor )
 {
     std::list<item> worn_remains;
     bool armor_destroyed = false;
@@ -219,7 +218,7 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
         adjust_taken_damage_by_enchantments( elem );
 
         worn.absorb_damage( *this, elem, bp, worn_remains, armor_destroyed, sbp,
-                            allow_torso_neck_fallback, damage_armor );
+                            damage_armor );
 
         passive_absorb_hit( bp, elem );
 
