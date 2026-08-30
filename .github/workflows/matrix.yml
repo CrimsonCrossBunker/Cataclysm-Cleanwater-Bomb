@@ -16,6 +16,10 @@ on:
         type: boolean
         default: true
 
+permissions:
+  actions: read
+  contents: read
+
 # We only care about the latest revision of a PR, so cancel all previous instances.
 # Allow running master builds to complete to help with ccache refreshes.
 concurrency:
@@ -111,7 +115,7 @@ jobs:
       actions: read
       contents: read
     secrets:
-      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+      TX_TOKEN: ${{ github.event_name != 'pull_request' && secrets.TX_TOKEN || '' }}
   compile-shaders:
     name: Compile shaders
     needs: [ skip-duplicates-code, skip-duplicates-data ]

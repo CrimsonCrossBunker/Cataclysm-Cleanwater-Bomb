@@ -30,6 +30,16 @@ on:
     - '!tools/format/**'
     - 'utilities/**'
     types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: Run the broad C++ test suite after compiling
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
 
 # We only care about the latest revision of a PR, so cancel previous instances.
 concurrency:
@@ -58,7 +68,7 @@ jobs:
       actions: read
       contents: read
     secrets:
-      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+      TX_TOKEN: ${{ github.event_name != 'pull_request' && secrets.TX_TOKEN || '' }}
 
   build_catatclysm:
     name: Build
@@ -228,7 +238,7 @@ jobs:
           Write-Output "::add-matcher::build-scripts/problem-matchers/debugmsg.json"
 
     - name: Run tests
-      if: ${{ github.ref_name != 'master' }}
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_tests == true }}
       run: |
           .\Cataclysm-test-vcpkg-static-Release-x64.exe --min-duration 20 --rng-seed time --order lex --wait-for-keypress exit
 

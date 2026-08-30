@@ -25,10 +25,11 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const SOURCE_WORKFLOWS = Object.freeze([
-              'General build matrix',
-              'Cataclysm Windows build',
-            ]);
+            const SOURCE_WORKFLOW_PATHS = Object.freeze({
+              'General build matrix': '.github/workflows/matrix.yml',
+              'Cataclysm Windows build': '.github/workflows/msvc-full-features.yml',
+            });
+            const SOURCE_WORKFLOWS = Object.freeze(Object.keys(SOURCE_WORKFLOW_PATHS));
             const GENERAL_WORKFLOW = SOURCE_WORKFLOWS[0];
             const WINDOWS_WORKFLOW = SOURCE_WORKFLOWS[1];
             const BEGIN_MARKER = '<!-- BEGIN ccb-pr-artifacts -->';
@@ -42,12 +43,21 @@ jobs:
             const isSafeInteger = value =>
               Number.isSafeInteger(value) && value > 0;
 
+            const expectedWorkflowPath = workflowName =>
+              typeof workflowName === 'string' &&
+              Object.prototype.hasOwnProperty.call(SOURCE_WORKFLOW_PATHS, workflowName)
+                ? SOURCE_WORKFLOW_PATHS[workflowName]
+                : null;
+
+            const matchesAllowedWorkflow = run =>
+              run && expectedWorkflowPath(run.name) === run.path;
+
             if (workflowRun.event !== 'pull_request') {
               core.info('Ignoring a workflow run that was not triggered by a pull request.');
               return;
             }
-            if (!SOURCE_WORKFLOWS.includes(workflowRun.name)) {
-              core.info('Ignoring an unexpected source workflow.');
+            if (!matchesAllowedWorkflow(workflowRun)) {
+              core.info('Ignoring an unexpected source workflow or workflow path.');
               return;
             }
             if (!/^[0-9a-f]{40}$/i.test(headSha || '')) {
@@ -71,6 +81,9 @@ jobs:
               addCandidateNumber(candidate && candidate.number);
             }
 
+            const workflowHeadRepository =
+              workflowRun.head_repository && workflowRun.head_repository.full_name;
+
             const matchesCurrentPullRequest = pullRequest =>
               pullRequest &&
               pullRequest.state === 'open' &&
@@ -80,6 +93,8 @@ jobs:
               pullRequest.base.repo &&
               pullRequest.base.repo.full_name === currentRepository &&
               pullRequest.head &&
+              pullRequest.head.repo &&
+              pullRequest.head.repo.full_name === workflowHeadRepository &&
               pullRequest.head.sha === headSha;
 
             const fetchMatchingPullRequest = async numbers => {
@@ -130,6 +145,13 @@ jobs:
               return;
             }
 
+            const pullRequestHeadRepository = pullRequest.head.repo.full_name;
+            const hasPullRequestNumber = run =>
+              Array.isArray(run && run.pull_requests) &&
+              run.pull_requests.some(candidate =>
+                candidate && Number(candidate.number) === pullRequestNumber
+              );
+
             const artifactSpecs = Object.freeze([
               {
                 workflow: GENERAL_WORKFLOW,
@@ -171,9 +193,13 @@ jobs:
             for (const workflowName of SOURCE_WORKFLOWS) {
               const candidates = runs.filter(run =>
                 run &&
+                matchesAllowedWorkflow(run) &&
                 run.name === workflowName &&
                 run.event === 'pull_request' &&
-                run.head_sha === headSha
+                run.head_sha === headSha &&
+                hasPullRequestNumber(run) &&
+                run.head_repository &&
+                run.head_repository.full_name === pullRequestHeadRepository
               );
               candidates.sort((left, right) => {
                 const leftTime = Date.parse(left.updated_at || left.created_at || '') || 0;
@@ -222,6 +248,11 @@ jobs:
                 'stale',
               ].includes(run.conclusion);
 
+            const isSuccessfulRun = run =>
+              run &&
+              run.status === 'completed' &&
+              run.conclusion === 'success';
+
             const pendingRow = spec => ({
               ...spec,
               state: 'pending',
@@ -230,6 +261,22 @@ jobs:
 
             const collectRow = async spec => {
               const run = latestRuns.get(spec.workflow);
+              if (!run) {
+                return { ...spec, state: 'not-produced', url: null };
+              }
+              if (isFailedRun(run)) {
+                return { ...spec, state: 'failed', url: runUrl(run) };
+              }
+              if (isPendingRun(run)) {
+                return pendingRow(spec);
+              }
+              if (!isSuccessfulRun(run)) {
+                if (['skipped', 'neutral'].includes(run.conclusion)) {
+                  return { ...spec, state: 'not-produced', url: null };
+                }
+                return pendingRow(spec);
+              }
+
               let artifact = null;
               let artifactLookupFailed = false;
 
@@ -256,9 +303,6 @@ jobs:
               if (download) {
                 return { ...spec, state: 'download', url: download };
               }
-              if (isPendingRun(run)) {
-                return pendingRow(spec);
-              }
               if (artifactLookupFailed) {
                 return {
                   ...spec,
@@ -266,16 +310,7 @@ jobs:
                   url: runUrl(run),
                 };
               }
-              if (isFailedRun(run)) {
-                return { ...spec, state: 'failed', url: runUrl(run) };
-              }
-              if (
-                !run ||
-                ['success', 'skipped', 'neutral'].includes(run.conclusion)
-              ) {
-                return { ...spec, state: 'not-produced', url: null };
-              }
-              return pendingRow(spec);
+              return { ...spec, state: 'not-produced', url: null };
             };
 
             // Re-read immediately before publishing so an obsolete run cannot
