@@ -3,7 +3,6 @@
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <body_part_set.h>
 #include <character_id.h>
 #include <clone_ptr.h>
 #include <common_types.h>
