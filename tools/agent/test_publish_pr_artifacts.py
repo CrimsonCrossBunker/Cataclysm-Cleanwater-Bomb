@@ -18,6 +18,7 @@ TEST_MATRIX_PATH = ROOT / "ai/test-matrix.yml"
 OWNER = "CrimsonCrossBunker"
 REPOSITORY = "Cataclysm-Cleanwater-Bomb"
 CURRENT_REPOSITORY = f"{OWNER}/{REPOSITORY}"
+ACTIONS_RUNS_URL = f"https://github.com/{CURRENT_REPOSITORY}/actions/runs"
 GENERAL_WORKFLOW = "General build matrix"
 GENERAL_WORKFLOW_PATH = ".github/workflows/matrix.yml"
 WINDOWS_WORKFLOW = "Cataclysm Windows build"
@@ -70,7 +71,9 @@ def extract_publisher_script(workflow: str) -> str:
     return f"{script}\n"
 
 
-PUBLISHER_SCRIPT = extract_publisher_script(WORKFLOW_PATH.read_text(encoding="utf-8"))
+PUBLISHER_SCRIPT = extract_publisher_script(
+    WORKFLOW_PATH.read_text(encoding="utf-8")
+)
 
 
 # The production step receives these three objects from actions/github-script.
@@ -123,7 +126,10 @@ NODE_HARNESS = textwrap.dedent(
             return { data: { workflow_runs: scenario.workflow_runs || [] } };
           },
           listWorkflowRunArtifacts: async args => {
-            calls.push({ method: 'actions.listWorkflowRunArtifacts', run_id: args.run_id });
+            calls.push({
+              method: 'actions.listWorkflowRunArtifacts',
+              run_id: args.run_id,
+            });
             if (artifactErrors[String(args.run_id)]) {
               throw new Error(artifactErrors[String(args.run_id)]);
             }
@@ -134,15 +140,24 @@ NODE_HARNESS = textwrap.dedent(
         },
         issues: {
           listComments: async args => {
-            calls.push({ method: 'issues.listComments', issue_number: args.issue_number });
+            calls.push({
+              method: 'issues.listComments',
+              issue_number: args.issue_number,
+            });
             return { data: scenario.comments || [] };
           },
           updateComment: async args => {
-            calls.push({ method: 'issues.updateComment', comment_id: args.comment_id });
+            calls.push({
+              method: 'issues.updateComment',
+              comment_id: args.comment_id,
+            });
             updates.push(args);
           },
           createComment: async args => {
-            calls.push({ method: 'issues.createComment', issue_number: args.issue_number });
+            calls.push({
+              method: 'issues.createComment',
+              issue_number: args.issue_number,
+            });
             creates.push(args);
           },
         },
@@ -172,8 +187,11 @@ NODE_HARNESS = textwrap.dedent(
 
     const result = { calls, updates, creates, failures, infos, debugs };
     try {
-      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-      const execute = new AsyncFunction('github', 'context', 'core', input.script);
+      const AsyncFunction =
+        Object.getPrototypeOf(async function () {}).constructor;
+      const execute = new AsyncFunction(
+        'github', 'context', 'core', input.script
+      );
       await execute(github, context, core);
     } catch (error) {
       result.thrown = String(error && error.stack ? error.stack : error);
@@ -239,7 +257,12 @@ def make_artifact(
     expired: bool = False,
     expires_at: str = FUTURE_EXPIRY,
 ) -> dict[str, Any]:
-    return {"name": name, "id": artifact_id, "expired": expired, "expires_at": expires_at}
+    return {
+        "name": name,
+        "id": artifact_id,
+        "expired": expired,
+        "expires_at": expires_at,
+    }
 
 
 def artifact_names(pr_number: int = 42) -> dict[str, str]:
@@ -269,7 +292,9 @@ def make_scenario(
         "workflow_run": workflow_run,
         "pull_requests": {
             str(number): pull_request
-            for number, pull_request in (pull_requests or {42: make_pull_request()}).items()
+            for number, pull_request in (
+                pull_requests or {42: make_pull_request()}
+            ).items()
         },
         "workflow_runs": workflow_runs or [],
         "associated_pull_requests": associated_pull_requests or [],
@@ -301,7 +326,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         cls.script = PUBLISHER_SCRIPT
         cls.node = shutil.which("node")
         if cls.node is None:
-            raise RuntimeError("Node.js is required for publisher contract tests")
+            raise RuntimeError(
+                "Node.js is required for publisher contract tests"
+            )
 
     def run_publisher(self, scenario: dict[str, Any]) -> dict[str, Any]:
         request = json.dumps(
@@ -320,13 +347,17 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assertEqual(
             completed.returncode,
             0,
-            msg=f"Node harness failed:\n{completed.stderr}\n{completed.stdout}",
+            msg=(
+                f"Node harness failed:\n{completed.stderr}\n"
+                f"{completed.stdout}"
+            ),
         )
         try:
             result = json.loads(completed.stdout)
         except json.JSONDecodeError as error:
             self.fail(
-                f"Node harness did not return JSON: {error}\n{completed.stdout}"
+                "Node harness did not return JSON: "
+                f"{error}\n{completed.stdout}"
             )
         self.assertNotIn("thrown", result, result.get("thrown"))
         return result
@@ -387,15 +418,20 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         )
 
     def test_static_workflow_identity_and_pull_request_guards(self) -> None:
-        self.assertEqual(1, self.workflow.count("- name: Publish fixed artifact links"))
+        self.assertEqual(
+            1,
+            self.workflow.count("- name: Publish fixed artifact links"),
+        )
         self.assertIn("      - General build matrix", self.workflow)
         self.assertIn("      - Cataclysm Windows build", self.workflow)
         self.assertIn("SOURCE_WORKFLOW_PATHS = Object.freeze({", self.script)
         self.assertIn(
-            "'General build matrix': '.github/workflows/matrix.yml'", self.script
+            "'General build matrix': '.github/workflows/matrix.yml'",
+            self.script,
         )
         self.assertIn(
-            "'Cataclysm Windows build': '.github/workflows/msvc-full-features.yml'",
+            "'Cataclysm Windows build': "
+            "'.github/workflows/msvc-full-features.yml'",
             self.script,
         )
         for fragment in (
@@ -446,16 +482,16 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         body = self.body_from_single_write(result)
         expected = {
             "Linux curses": (
-                f"https://github.com/{CURRENT_REPOSITORY}/actions/runs/101/artifacts/1001"
+                f"{ACTIONS_RUNS_URL}/101/artifacts/1001"
             ),
             "macOS tiles": (
-                f"https://github.com/{CURRENT_REPOSITORY}/actions/runs/101/artifacts/1002"
+                f"{ACTIONS_RUNS_URL}/101/artifacts/1002"
             ),
             "Android arm64-v8a": (
-                f"https://github.com/{CURRENT_REPOSITORY}/actions/runs/101/artifacts/1003"
+                f"{ACTIONS_RUNS_URL}/101/artifacts/1003"
             ),
             "Windows tiles x64": (
-                f"https://github.com/{CURRENT_REPOSITORY}/actions/runs/102/artifacts/1004"
+                f"{ACTIONS_RUNS_URL}/102/artifacts/1004"
             ),
         }
         for label, url in expected.items():
@@ -489,7 +525,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assertIn("| Windows tiles x64 | ✅ [download]", body)
         self.assert_artifact_run_ids(result, {202})
 
-    def test_failed_runs_are_failed_and_are_not_looked_up_as_artifacts(self) -> None:
+    def test_failed_runs_are_failed_and_are_not_looked_up_as_artifacts(
+        self,
+    ) -> None:
         general = make_workflow_run(
             run_id=211,
             status="completed",
@@ -513,11 +551,16 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         body = self.body_from_single_write(result)
         run_url = f"https://github.com/{CURRENT_REPOSITORY}/actions/runs/211"
         for label in ("Linux curses", "macOS tiles", "Android arm64-v8a"):
-            self.assertIn(f"| {label} | ❌ [workflow failed]({run_url}) |", body)
+            self.assertIn(
+                f"| {label} | ❌ [workflow failed]({run_url}) |",
+                body,
+            )
         self.assertIn("| Windows tiles x64 | ✅ [download]", body)
         self.assert_artifact_run_ids(result, {212})
 
-    def test_cancelled_runs_are_failed_and_are_not_looked_up_as_artifacts(self) -> None:
+    def test_cancelled_runs_are_failed_and_are_not_looked_up_as_artifacts(
+        self,
+    ) -> None:
         general = make_workflow_run(run_id=221)
         windows = make_workflow_run(
             WINDOWS_WORKFLOW,
@@ -543,7 +586,7 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         body = self.body_from_single_write(result)
         self.assertIn(
             "| Windows tiles x64 | ❌ [workflow failed]("
-            "https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/runs/222) |",
+            f"{ACTIONS_RUNS_URL}/222) |",
             body,
         )
         for artifact_id in (2201, 2202, 2203):
@@ -563,7 +606,7 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
                 general,
                 workflow_runs=[general, windows],
                 artifacts_by_run={
-                    # The macOS candidate is flagged expired; Android is absent.
+                    # macOS is flagged expired; Android is absent.
                     231: [
                         make_artifact(names["linux"], 2301),
                         make_artifact(names["macos"], 2302, expired=True),
@@ -585,7 +628,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             self.assertIn(f"| {label} | ➖ not produced |", body)
         self.assertNotIn("/artifacts/2304", body)
 
-    def test_artifact_metadata_error_reports_run_without_download(self) -> None:
+    def test_artifact_metadata_error_reports_run_without_download(
+        self,
+    ) -> None:
         names = artifact_names()
         general = make_workflow_run(run_id=233)
         windows = make_workflow_run(
@@ -613,7 +658,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assertIn("| Windows tiles x64 | ✅ [download]", body)
         self.assert_artifact_run_ids(result, {233, 234})
 
-    def test_invalid_trigger_workflow_name_path_or_event_is_ignored(self) -> None:
+    def test_invalid_trigger_workflow_name_path_or_event_is_ignored(
+        self,
+    ) -> None:
         for description, changes in (
             ("name", {"name": "Unexpected source workflow"}),
             ("path", {"path": ".github/workflows/other.yml"}),
@@ -635,13 +682,18 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             make_scenario(workflow_run, workflow_runs=[workflow_run])
         )
         self.assertTrue(
-            any("valid commit SHA" in failure for failure in result["failures"]),
+            any(
+                "valid commit SHA" in failure
+                for failure in result["failures"]
+            ),
             result,
         )
         self.assert_no_writes(result)
         self.assertEqual([], result["calls"])
 
-    def test_empty_run_pull_requests_uses_commit_association_fallback(self) -> None:
+    def test_empty_run_pull_requests_uses_commit_association_fallback(
+        self,
+    ) -> None:
         context_run = make_workflow_run(run_id=301, pr_numbers=())
         target_general = make_workflow_run(run_id=301, pr_numbers=(42,))
         target_windows = make_workflow_run(
@@ -655,7 +707,7 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             make_scenario(
                 context_run,
                 pull_requests={
-                    # The association response may contain another, invalid PR first.
+                    # The association response may put an invalid PR first.
                     41: make_pull_request(41, state="closed"),
                     42: make_pull_request(42),
                 },
@@ -675,8 +727,10 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assertEqual(
             1,
             sum(
-                call["method"]
-                == "repos.listPullRequestsAssociatedWithCommit"
+                (
+                    call["method"] ==
+                    "repos.listPullRequestsAssociatedWithCommit"
+                )
                 for call in result["calls"]
             ),
         )
@@ -694,7 +748,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             result["creates"][0]["body"],
         )
 
-    def test_pr_and_run_repository_and_head_guards_reject_wrong_pr(self) -> None:
+    def test_pr_and_run_repository_and_head_guards_reject_wrong_pr(
+        self,
+    ) -> None:
         baseline_run = make_workflow_run(run_id=241)
         baseline_pr = make_pull_request()
         cases: list[tuple[str, dict[str, Any], dict[str, Any]]] = [
@@ -710,22 +766,42 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             ),
             (
                 "wrong base branch",
-                {"base": {"ref": "develop", "repo": {"full_name": CURRENT_REPOSITORY}}},
+                {
+                    "base": {
+                        "ref": "develop",
+                        "repo": {"full_name": CURRENT_REPOSITORY},
+                    }
+                },
                 baseline_run,
             ),
             (
                 "wrong base repository",
-                {"base": {"ref": "master", "repo": {"full_name": "other/repository"}}},
+                {
+                    "base": {
+                        "ref": "master",
+                        "repo": {"full_name": "other/repository"},
+                    }
+                },
                 baseline_run,
             ),
             (
                 "wrong PR head repository",
-                {"head": {"repo": {"full_name": "other/fork"}, "sha": HEAD_SHA}},
+                {
+                    "head": {
+                        "repo": {"full_name": "other/fork"},
+                        "sha": HEAD_SHA,
+                    }
+                },
                 baseline_run,
             ),
             (
                 "wrong PR head SHA",
-                {"head": {"repo": {"full_name": HEAD_REPOSITORY}, "sha": OTHER_SHA}},
+                {
+                    "head": {
+                        "repo": {"full_name": HEAD_REPOSITORY},
+                        "sha": OTHER_SHA,
+                    }
+                },
                 baseline_run,
             ),
             (
@@ -752,9 +828,14 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
                 self.assert_no_writes(result)
                 self.assertEqual([], self.artifact_calls(result))
 
-    def test_wrong_source_run_path_or_repository_cannot_supply_artifacts(self) -> None:
+    def test_wrong_source_run_path_or_repository_cannot_supply_artifacts(
+        self,
+    ) -> None:
         names = artifact_names()
-        general = make_workflow_run(run_id=245, updated_at="2026-08-31T00:00:00Z")
+        general = make_workflow_run(
+            run_id=245,
+            updated_at="2026-08-31T00:00:00Z",
+        )
         wrong_path = make_workflow_run(
             run_id=246,
             path=".github/workflows/other.yml",
@@ -819,7 +900,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         for artifact_id in (2461, 2471, 2491, 2501, 2511):
             self.assertNotIn(f"/artifacts/{artifact_id}", body)
 
-    def test_two_pull_requests_sharing_sha_do_not_cross_publish_artifacts(self) -> None:
+    def test_two_pull_requests_sharing_sha_do_not_cross_publish_artifacts(
+        self,
+    ) -> None:
         names_41 = artifact_names(41)
         names_42 = artifact_names(42)
         context_run = make_workflow_run(run_id=252, pr_numbers=(42,))
@@ -879,7 +962,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
             self.assertNotIn(f"/artifacts/{artifact_id}", body)
         self.assertEqual(42, result["creates"][0]["issue_number"])
 
-    def test_requested_event_publishes_pending_rows_without_artifact_lookup(self) -> None:
+    def test_requested_event_publishes_pending_rows_without_artifact_lookup(
+        self,
+    ) -> None:
         workflow_run = make_workflow_run(
             run_id=261,
             status="requested",
@@ -901,7 +986,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assertEqual(4, body.count("⏳ pending"))
         self.assertIn(f"ccb-pr-artifacts-head: {HEAD_SHA}", body)
 
-    def test_requested_event_is_idempotent_for_existing_head_marker(self) -> None:
+    def test_requested_event_is_idempotent_for_existing_head_marker(
+        self,
+    ) -> None:
         workflow_run = make_workflow_run(
             run_id=262,
             status="requested",
@@ -934,9 +1021,15 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         comments = [
             marker_comment(2701, existing),
             marker_comment(2702, "ordinary bot comment without a marker"),
-            marker_comment(2703, f"{BEGIN_MARKER}\nhuman-owned\n{END_MARKER}", login="maintainer"),
+            marker_comment(
+                2703,
+                f"{BEGIN_MARKER}\nhuman-owned\n{END_MARKER}",
+                login="maintainer",
+            ),
         ]
-        result = self.run_publisher(self.successful_scenario(comments=comments))
+        result = self.run_publisher(
+            self.successful_scenario(comments=comments)
+        )
         self.assertEqual([], result["failures"], result)
         self.assertEqual(
             [2701], [update["comment_id"] for update in result["updates"]]
@@ -945,13 +1038,20 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
 
     def test_duplicate_bot_marker_comments_fail_without_writing(self) -> None:
         body = f"{BEGIN_MARKER}\nold\n{END_MARKER}"
-        workflow_run = make_workflow_run(run_id=281, status="requested", conclusion=None)
+        workflow_run = make_workflow_run(
+            run_id=281,
+            status="requested",
+            conclusion=None,
+        )
         result = self.run_publisher(
             make_scenario(
                 workflow_run,
                 action="requested",
                 workflow_runs=[workflow_run],
-                comments=[marker_comment(2801, body), marker_comment(2802, body)],
+                comments=[
+                    marker_comment(2801, body),
+                    marker_comment(2802, body),
+                ],
             )
         )
         self.assertTrue(
@@ -964,7 +1064,11 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         self.assert_no_writes(result)
 
     def test_repeated_marker_tokens_fail_without_writing(self) -> None:
-        workflow_run = make_workflow_run(run_id=291, status="requested", conclusion=None)
+        workflow_run = make_workflow_run(
+            run_id=291,
+            status="requested",
+            conclusion=None,
+        )
         for description, body in (
             (
                 "repeated begin",
