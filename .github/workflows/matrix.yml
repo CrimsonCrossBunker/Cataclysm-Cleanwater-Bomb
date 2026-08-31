@@ -222,7 +222,10 @@ jobs:
             dont_skip_data_only_changes: 1
             lua_platform: 1
             native: linux64
-            num_build_jobs: 2
+            # This leg does not publish an artifact.  Avoid full -g debug
+            # metadata and a second concurrent TU around the large sol2 TU.
+            full_debug_symbols: 0
+            num_build_jobs: 1
             pch: 1
             title: GCC 14, Ubuntu, Curses, Lua API
             ccache_limit: 6.5G
@@ -265,6 +268,7 @@ jobs:
         SANITIZE: ${{ matrix.sanitize }}
         TEST_STAGE: ${{ matrix.test-stage }}
         TESTS: ${{ matrix.native == 'osx' && '0' || '1' }}
+        FULL_DEBUG_SYMBOLS: ${{ matrix.full_debug_symbols }}
         CXXFLAGS: ${{ matrix.cxxflags }}
         LDFLAGS: ${{ matrix.ldflags }}
         EXTRA_TEST_OPTS: --error-format=github-action

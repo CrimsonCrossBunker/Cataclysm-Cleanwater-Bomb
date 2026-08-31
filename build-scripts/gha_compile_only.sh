@@ -91,7 +91,14 @@ else
     if [ -z "${SDL3+x}" ] && [ "${TILES:-0}" = "1" ]; then
         effective_sdl3=1
     fi
-    make_args=( CCACHE=1 CROSS="$CROSS_COMPILATION" LINTJSON=0 DEBUG_SYMBOLS=1 )
+    make_args=( CCACHE=1 CROSS="$CROSS_COMPILATION" LINTJSON=0 )
+    # Full debug information substantially increases GCC's memory use for the
+    # monolithic Lua Platform translation unit.  Keep it for artifact-
+    # producing jobs, but let selected compile-only matrix legs use Make's
+    # release default (-g1) when they do not publish a debug-symbol artifact.
+    if [ "${FULL_DEBUG_SYMBOLS:-1}" = "1" ]; then
+        make_args+=( DEBUG_SYMBOLS=1 )
+    fi
     if [ -n "${SDL3+x}" ]; then
         make_args+=( SDL3="$SDL3" )
     fi
