@@ -73,7 +73,7 @@ INSTALLER_SPECS = (
     {
         "id": "platform_v1.install_runtime_api",
         "function": "install_runtime_api",
-        "path": "src/lua_platform_runtime.cpp",
+        "path": "src/lua_platform_runtime_services.cpp",
         "signature": (
             "void install_runtime_api( "
             "const std::shared_ptr<runtime> &value,"
@@ -111,6 +111,41 @@ INSTALLER_SPECS = (
             "void content_transaction::install_lua_api( "
             "sol::state &lua, sol::table &ccb,"
         ),
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.items_content_transaction.install_lua_api",
+        "function": "items_content_transaction::install_lua_api",
+        "path": "src/lua_platform_content_items.cpp",
+        "signature": "void items_content_transaction::install_lua_api(",
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.creatures_content_transaction.install_lua_api",
+        "function": "creatures_content_transaction::install_lua_api",
+        "path": "src/lua_platform_content_creatures.cpp",
+        "signature": "void creatures_content_transaction::install_lua_api(",
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.character_content_transaction.install_lua_api",
+        "function": "character_content_transaction::install_lua_api",
+        "path": "src/lua_platform_content_character.cpp",
+        "signature": "void character_content_transaction::install_lua_api(",
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.presentation_content_transaction.install_lua_api",
+        "function": "presentation_content_transaction::install_lua_api",
+        "path": "src/lua_platform_content_presentation.cpp",
+        "signature": "void presentation_content_transaction::install_lua_api(",
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.worldgen_content_transaction.install_lua_api",
+        "function": "worldgen_content_transaction::install_lua_api",
+        "path": "src/lua_platform_content_worldgen.cpp",
+        "signature": "void worldgen_content_transaction::install_lua_api(",
         "namespace": "ccb",
     },
     {
@@ -246,6 +281,31 @@ INSTALLER_EDGE_SPECS = (
         "platform_v1.install_runtime_api",
         "platform_v1.install_runtime_state_task_api",
         "install_runtime_state_task_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.items_content_transaction.install_lua_api",
+        "item_content.install_lua_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.creatures_content_transaction.install_lua_api",
+        "creatures.install_lua_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.character_content_transaction.install_lua_api",
+        "character.install_lua_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.presentation_content_transaction.install_lua_api",
+        "presentation.install_lua_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.worldgen_content_transaction.install_lua_api",
+        "worldgen.install_lua_api(",
     ),
     (
         "platform_v1.content_transaction.install_lua_api",
@@ -1084,6 +1144,14 @@ def add_reviewed_dispositions(
         cpp_type = str(root["cpp_type"])
         if not cpp_type.endswith("_definition_handle"):
             continue
+        registration = root.get("registration")
+        if not isinstance(registration, dict) or not isinstance(
+            registration.get("path"), str
+        ):
+            raise RuntimeError(
+                f"definition handle {root['lua_name']} lacks source evidence"
+            )
+        definition_path = str(registration["path"])
         struct_marker = f"struct {cpp_type}"
         for field, reason_code, reason in (
             (
@@ -1108,7 +1176,7 @@ def add_reviewed_dispositions(
                     "field",
                     "unbound",
                     evidence_for(
-                        platform_runtime, f" {field};", struct_marker
+                        definition_path, f" {field};", struct_marker
                     ),
                     reason_code=reason_code,
                     reason=reason,
