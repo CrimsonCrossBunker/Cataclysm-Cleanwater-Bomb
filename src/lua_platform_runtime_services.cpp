@@ -4,7 +4,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <character_id.h>
-#include <clone_ptr.h>
 #include <common_types.h>
 #include <damage.h>
 #include <enum_bitset.h>
