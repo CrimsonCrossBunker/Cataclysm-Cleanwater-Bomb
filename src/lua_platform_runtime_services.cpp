@@ -7,7 +7,6 @@
 #include <common_types.h>
 #include <enums.h>
 #include <game_constants.h>
-#include <item_pocket.h>
 #include <item_uid.h>
 #include <lua_platform_hooks.h>
 #include <magic.h>
