@@ -75,11 +75,15 @@ entries:
     paths:
       - src/lua_platform_loader.cpp
       - src/lua_platform_runtime.cpp
+      - src/lua_platform_runtime_dialogue.cpp
+      - src/lua_platform_runtime_hooks.cpp
+      - src/lua_platform_runtime_internal.h
+      - src/lua_platform_runtime_lifecycle.cpp
       - src/game_io.cpp
       - src/mod_manager.cpp
       - src/mod_manager_ui.cpp
       - data/mods/Lua_First_Example/
-      - tests/lua_platform_test.cpp
+      - 'tests/lua_platform_test*'
       - tests/mod_manager_test.cpp
     command: make -j2 BUILD_PREFIX=lua-mvp- ODIR=lua-mvp-obj CATA_ENABLE_LUA_PLATFORM=1 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-mvp-cata_test '[playable_mvp]' --rng-seed 20260812
     workdir: .
@@ -87,9 +91,15 @@ entries:
   - id: lua-disabled-build
     paths:
       - src/lua_platform_loader.cpp
+      - src/lua_platform_runtime.cpp
+      - src/lua_platform_runtime_dialogue.cpp
+      - src/lua_platform_runtime_hooks.cpp
+      - src/lua_platform_runtime_internal.h
+      - src/lua_platform_runtime_lifecycle.cpp
       - src/mod_manager.cpp
       - data/mods/Lua_First_Example/
       - tests/mod_manager_test.cpp
+      - 'tests/lua_platform_test*'
     command: make -j2 BUILD_PREFIX=lua-disabled- ODIR=lua-disabled-obj CATA_ENABLE_LUA_PLATFORM=0 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-disabled-cata_test 'lua_first_platform_disabled_build_rejects_runtime_sources' --rng-seed 20260812
     workdir: .
     cost: expensive

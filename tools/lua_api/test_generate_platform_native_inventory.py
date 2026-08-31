@@ -120,6 +120,11 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
     def test_all_runtime_usertype_installers_are_modelled(self) -> None:
         installers, edges, registrations_by_installer = build_installer_model()
         expected_roots = {
+            "platform_v1.install_runtime_callback_api": [],
+            "platform_v1.install_runtime_dialogue_presentation_api": [
+                "PlatformDialogueContext",
+            ],
+            "platform_v1.install_runtime_state_task_api": [],
             "shared.install_camp_api": [
                 "CampExpansionToken",
                 "CampTaskToken",

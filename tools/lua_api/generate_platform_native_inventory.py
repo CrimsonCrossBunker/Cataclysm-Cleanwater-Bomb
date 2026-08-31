@@ -81,6 +81,29 @@ INSTALLER_SPECS = (
         "namespace": "ccb",
     },
     {
+        "id": "platform_v1.install_runtime_callback_api",
+        "function": "install_runtime_callback_api",
+        "path": "src/lua_platform_runtime_hooks.cpp",
+        "signature": "void install_runtime_callback_api(",
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.install_runtime_dialogue_presentation_api",
+        "function": "install_runtime_dialogue_presentation_api",
+        "path": "src/lua_platform_runtime_dialogue.cpp",
+        "signature": (
+            "void detail::install_runtime_dialogue_presentation_api("
+        ),
+        "namespace": "ccb",
+    },
+    {
+        "id": "platform_v1.install_runtime_state_task_api",
+        "function": "install_runtime_state_task_api",
+        "path": "src/lua_platform_runtime_lifecycle.cpp",
+        "signature": "void detail::install_runtime_state_task_api(",
+        "namespace": "ccb",
+    },
+    {
         "id": "platform_v1.content_transaction.install_lua_api",
         "function": "content_transaction::install_lua_api",
         "path": "src/lua_platform_runtime.cpp",
@@ -208,6 +231,21 @@ INSTALLER_EDGE_SPECS = (
         "platform_v1.install_runtime_api",
         "platform_v1.content_transaction.install_lua_api",
         "content.install_lua_api(",
+    ),
+    (
+        "platform_v1.install_runtime_api",
+        "platform_v1.install_runtime_callback_api",
+        "install_runtime_callback_api(",
+    ),
+    (
+        "platform_v1.install_runtime_api",
+        "platform_v1.install_runtime_dialogue_presentation_api",
+        "install_runtime_dialogue_presentation_api(",
+    ),
+    (
+        "platform_v1.install_runtime_api",
+        "platform_v1.install_runtime_state_task_api",
+        "install_runtime_state_task_api(",
     ),
     (
         "platform_v1.content_transaction.install_lua_api",
