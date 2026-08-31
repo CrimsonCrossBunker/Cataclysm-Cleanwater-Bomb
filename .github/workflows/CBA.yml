@@ -1,13 +1,13 @@
 name: Clang Build Analyzer
 
 on:
-  push:
-    branches:
-    - master
   workflow_dispatch:
 
-# Mixing in event_name so that a master push and a workflow dispatch can run at the same time.
-concurrency: clang_build_analyzer-${{ github.event_name }}
+# Build profiling is diagnostic and intentionally opt-in; it should not
+# duplicate every normal master build.
+concurrency:
+  group: clang-build-analyzer
+  cancel-in-progress: true
 
 jobs:
   build:

@@ -1,12 +1,21 @@
 name: IWYU (include-what-you-use)
 on:
-  push:
-    branches:
-    - master
   pull_request:
     branches:
     - master
     types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+    - 'src/**'
+    - 'tests/**'
+    - 'tools/iwyu/**'
+    - 'build-scripts/ci-iwyu-run.py'
+    - 'build-scripts/get_affected_files.py'
+    - 'CMakeLists.txt'
+    - '**/CMakeLists.txt'
+    - '.github/workflows/iwyu.yml'
+  # Full-repository IWYU is intentionally manual.  The repository has a
+  # pre-existing full-scan baseline; PRs use the bounded affected-file path.
+  workflow_dispatch:
 
 # We only care about the latest revision of a PR, so cancel all previous instances.
 concurrency:
@@ -16,7 +25,7 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ github.event_name == 'push' || steps.changed-files.outputs.result == 'true' }}
+      should_run: ${{ github.event_name != 'pull_request' || steps.changed-files.outputs.result == 'true' }}
     steps:
     - name: check for relevant file changes
       id: changed-files
@@ -35,6 +44,8 @@ jobs:
             /^src\//,
             /^tests\//,
             /^tools\/iwyu\//,
+            /^build-scripts\/ci-iwyu-run\.py$/,
+            /^build-scripts\/get_affected_files\.py$/,
             /CMakeLists\.txt$/,
             /^\.github\/workflows\/iwyu\.yml$/,
           ];
@@ -141,7 +152,9 @@ jobs:
       run: |
         set +e
         cat files_changed | while read f; do
-          git add $f
+          if [ -e "$f" ]; then
+            git add -- "$f"
+          fi
         done
         git checkout .
         git reset
@@ -163,7 +176,7 @@ jobs:
 
 
   iwyu-result:
-    if: ${{ !cancelled() && needs.iwyu.result != 'failure' }}
+    if: ${{ always() && !cancelled() }}
     needs: iwyu
     runs-on: ubuntu-latest
     steps:

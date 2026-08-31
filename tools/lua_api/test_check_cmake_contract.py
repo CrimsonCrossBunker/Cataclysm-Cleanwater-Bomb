@@ -7,6 +7,7 @@ try:
         ENGINE_CMAKE_PATH,
         LUA_CMAKE_PATH,
         MAIN_PATH,
+        SOL_CONFIG_PATH,
         validate_cmake_contract,
     )
 except ImportError:
@@ -14,6 +15,7 @@ except ImportError:
         ENGINE_CMAKE_PATH,
         LUA_CMAKE_PATH,
         MAIN_PATH,
+        SOL_CONFIG_PATH,
         validate_cmake_contract,
     )
 
@@ -23,26 +25,45 @@ class CMakeContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.engine_source = ENGINE_CMAKE_PATH.read_text(encoding="utf-8")
         cls.lua_source = LUA_CMAKE_PATH.read_text(encoding="utf-8")
+        cls.sol_config_source = SOL_CONFIG_PATH.read_text(encoding="utf-8")
         cls.main_source = MAIN_PATH.read_text(encoding="utf-8")
 
     def test_checked_in_contract_is_complete(self) -> None:
         self.assertEqual(
             validate_cmake_contract(
-                self.engine_source, self.lua_source, self.main_source
+                self.engine_source,
+                self.lua_source,
+                self.sol_config_source,
+                self.main_source,
             ),
             [],
         )
 
-    def test_c_abi_for_bundled_lua_is_rejected(self) -> None:
+    def test_cpp_abi_for_bundled_lua_is_rejected(self) -> None:
         lua_source = self.lua_source.replace(
-            "PROPERTIES LANGUAGE CXX", "PROPERTIES LANGUAGE C"
+            "PROPERTIES LANGUAGE C", "PROPERTIES LANGUAGE CXX"
         )
         self.assertNotEqual(lua_source, self.lua_source)
         errors = validate_cmake_contract(
-            self.engine_source, lua_source, self.main_source
+            self.engine_source,
+            lua_source,
+            self.sol_config_source,
+            self.main_source,
         )
         self.assertTrue(
-            any("LANGUAGE CXX" in error for error in errors), errors)
+            any("LANGUAGE C" in error for error in errors), errors)
+
+    def test_sol_cpp_lua_abi_is_rejected(self) -> None:
+        sol_config_source = (
+            self.sol_config_source + "\n#define SOL_USE_CXX_LUA 1\n"
+        )
+        errors = validate_cmake_contract(
+            self.engine_source,
+            self.lua_source,
+            sol_config_source,
+            self.main_source,
+        )
+        self.assertTrue(any("Lua C ABI" in error for error in errors), errors)
 
     def test_missing_libsol_propagation_is_rejected(self) -> None:
         engine_source = self.engine_source.replace(
@@ -51,7 +72,10 @@ class CMakeContractTests(unittest.TestCase):
         )
         self.assertNotEqual(engine_source, self.engine_source)
         errors = validate_cmake_contract(
-            engine_source, self.lua_source, self.main_source
+            engine_source,
+            self.lua_source,
+            self.sol_config_source,
+            self.main_source,
         )
         self.assertTrue(
             any("propagate libsol" in error for error in errors), errors)
@@ -71,7 +95,10 @@ class CMakeContractTests(unittest.TestCase):
         )
         self.assertNotEqual(main_source, self.main_source)
         errors = validate_cmake_contract(
-            self.engine_source, self.lua_source, main_source
+            self.engine_source,
+            self.lua_source,
+            self.sol_config_source,
+            main_source,
         )
         self.assertTrue(
             any("skip --check-mods" in error for error in errors), errors)

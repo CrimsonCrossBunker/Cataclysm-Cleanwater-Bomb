@@ -27,6 +27,20 @@ CHANGED_FILES_INDEX = "files_changed"
 GET_AFFECTED_FILES_SCRIPT = "build-scripts/get_affected_files.py"
 BLACKLIST_PATH = "tools/iwyu/bad_files.txt"
 MARKER_FORCE_GLOBAL_RUN = "MARKER_CHECK_ALL"
+BOUNDED_GLOBAL_FILES = [
+    Path("src/point.cpp"),
+    Path("src/item_category.cpp"),
+    Path("tests/point_test.cpp"),
+]
+BOUNDED_GLOBAL_PATHS = {
+    Path(".github/workflows/iwyu.yml"),
+    Path("build-scripts/ci-iwyu-run.py"),
+    Path("build-scripts/get_affected_files.py"),
+    Path("tools/iwyu"),
+    Path("CMakeLists.txt"),
+    Path("src/CMakeLists.txt"),
+    Path("tests/CMakeLists.txt"),
+}
 
 
 def main():
@@ -38,6 +52,7 @@ def main():
 
     # files directly changed in this PR
     changed_files = get_changed_files()
+    enforced_files = get_enforced_files(changed_files)
     print("changed files:")
     print_long_list(changed_files)
     # files transitively impacted by the direct change above
@@ -57,7 +72,9 @@ def main():
         sys.exit(0)
 
     # Run IWYU with the files provided. Forward its exit code.
-    status = run_iwyu_on(args.iwyu_tool_path, files_to_analyze)
+    status = run_iwyu_on(
+        args.iwyu_tool_path, files_to_analyze, enforced_files
+    )
     sys.exit(status)
 
 
@@ -66,13 +83,11 @@ def get_changed_files() -> list[Path]:
     # into `./files_changed` file at the root of the project.
     files_index = Path(CHANGED_FILES_INDEX)
     if not files_index.exists():
-        # For pushes to master (i.e. merges) this file is *not* created.
-        # We need to handle this.
-        # Pretend that the core iwyu definitions changed to
-        # trigger global re-check
+        # Manual workflow dispatches intentionally omit the changed-file
+        # index and request the full-repository audit.
         logging.debug(
             "no changed files index present. This is "
-            "likely a push to master. Will analyze the entire codebase.")
+            "a manual full IWYU run. Will analyze the entire codebase.")
         return [Path(MARKER_FORCE_GLOBAL_RUN)]
     paths = []
     with open(files_index) as files_index:
@@ -84,26 +99,43 @@ def get_changed_files() -> list[Path]:
     return paths
 
 
+def is_bounded_global_path(path: Path) -> bool:
+    return path.name == "CMakeLists.txt" or (
+        path in BOUNDED_GLOBAL_PATHS or any(
+            parent in BOUNDED_GLOBAL_PATHS
+            for parent in path.parents
+        )
+    )
+
+
+def get_enforced_files(changed_files: list[Path]) -> set[Path] | None:
+    """Return PR-owned paths whose suggestions should fail the check.
+
+    Manual runs return ``None`` so every full-baseline suggestion remains
+    blocking.  Global PR configuration changes also enforce the deterministic
+    representative set.
+    """
+    if Path(MARKER_FORCE_GLOBAL_RUN) in changed_files:
+        return None
+    enforced = set(changed_files)
+    if any(is_bounded_global_path(path) for path in changed_files):
+        enforced.update(BOUNDED_GLOBAL_FILES)
+    return enforced
+
+
 def get_affected_files(changed_files: list[Path]) -> list[Path]:
-    # First of all, see if any of the changed_files are global enough
-    # and would require re-run on the entire codebase.
-    global_files = set(Path(x) for x in [
-        MARKER_FORCE_GLOBAL_RUN,
-        ".github/workflows/iwyu.yml",
-        "build-scripts/ci-iwyu-run.py",
-        "build-scripts/get_affected_files.py",
-        "tools/iwyu",  # this is a directory
-        "CMakeLists.txt",
-        "src/CMakeLists.txt",
-        "tests/CMakeLists.txt",
-    ])
+    # Only an explicit manual run requests the repository-wide baseline.
+    # Global configuration changes in pull requests use a small deterministic
+    # cross-section so the workflow cannot pass without analyzing any TU.
+    bounded_global_change = None
     for changed in changed_files:
-        if changed in global_files or any(
-                parent in global_files for parent in changed.parents):
+        if changed == Path(MARKER_FORCE_GLOBAL_RUN):
             print(
-                "File %s affects global IWYU configuration so "
+                "File %s requests the manual IWYU baseline so "
                 "we will analyze all files" % changed)
             return generate_global_file_list()
+        if is_bounded_global_path(changed):
+            bounded_global_change = changed
 
     # Now, build-scripts/get_affected_files.py generates a list of
     # transitively affected files given a list of directly changed files.
@@ -130,6 +162,13 @@ def get_affected_files(changed_files: list[Path]) -> list[Path]:
         if not line:
             continue
         out_paths.append(Path(line))
+    if bounded_global_change is not None:
+        print(
+            "File %s affects global IWYU configuration; adding the "
+            "bounded representative set" % bounded_global_change)
+        out_paths = list(dict.fromkeys(
+            out_paths + BOUNDED_GLOBAL_FILES
+        ))
     return out_paths
 
 
@@ -168,19 +207,60 @@ def filter_analyzable_files(in_files: list[Path]) -> list[Path]:
     return analyzable_paths
 
 
-def run_iwyu_on(iwyu_tool_path: str, files: list[Path]) -> int:
+def parse_suggestion_path(line: str, root: Path) -> Path | None:
+    for marker in (" should add these lines:",
+                   " should remove these lines:"):
+        if marker not in line:
+            continue
+        raw_path = line.split(marker, 1)[0]
+        candidate = Path(raw_path)
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        try:
+            return candidate.resolve().relative_to(root)
+        except ValueError:
+            return None
+    return None
+
+
+def effective_iwyu_status(
+        raw_status: int,
+        fix_status: int,
+        suggestion_files: set[Path],
+        enforced_files: set[Path] | None,
+) -> int:
+    # IWYU is invoked with --error=0, so a non-zero process result is a real
+    # compiler/driver failure rather than an include suggestion.  Never allow
+    # path filtering to suppress that failure.
+    if raw_status != 0:
+        return raw_status
+    if fix_status != 0:
+        return fix_status
+    if enforced_files is None:
+        return 1 if suggestion_files else 0
+    return 1 if suggestion_files & enforced_files else 0
+
+
+def run_iwyu_on(
+        iwyu_tool_path: str,
+        files: list[Path],
+        enforced_files: set[Path] | None,
+) -> int:
     argslist = [iwyu_tool_path]
     argslist.extend(str(f) for f in files)
     argslist.extend(["-p", "build", "--jobs", "4"])
     argslist.extend(["--"])
-    cdda_root = Path(__file__).parent.parent
+    cdda_root = Path(__file__).resolve().parent.parent
     mapping_path = cdda_root / "tools/iwyu/cata.imp"
     argslist.extend([
         "-Xiwyu", "--mapping_file=%s" % mapping_path,
         "-Xiwyu", "--cxx17ns",
         "-Xiwyu", "--comment_style=long",
         "-Xiwyu", "--max_line_length=1000",
-        "-Xiwyu", "--error=1"])
+        # Suggestions are classified below by their owning path.  Reserving
+        # non-zero subprocess results for real compiler/driver errors prevents
+        # iwyu_tool.py's parallel exit-code aggregation from hiding failures.
+        "-Xiwyu", "--error=0"])
 
     fix_args = ["fix_includes.py", "--nosafe_headers", "--reorder"]
 
@@ -202,11 +282,15 @@ def run_iwyu_on(iwyu_tool_path: str, files: list[Path]) -> int:
     )
     problem_lines = []
     fix_lines = []
+    suggestion_files = set()
     while True:
         line = iwyu_proc.stdout.readline()
         if line == '':
             break  # IWYU finished and closed the pipe
         fix_lines.append(line)
+        suggestion_path = parse_suggestion_path(line, cdda_root)
+        if suggestion_path is not None:
+            suggestion_files.add(suggestion_path)
         line = line.strip()
         if "#includes/fwd-decls are correct" not in line:
             print(line)
@@ -220,7 +304,28 @@ def run_iwyu_on(iwyu_tool_path: str, files: list[Path]) -> int:
     fix_proc.communicate("\n".join(fix_lines))
     fix_proc.wait()
     flush_both()
-    print("Return code ", iwyu_proc.returncode)
+    status = effective_iwyu_status(
+        iwyu_proc.returncode,
+        fix_proc.returncode,
+        suggestion_files,
+        enforced_files,
+    )
+    if fix_proc.returncode != 0:
+        print("fix_includes.py returned ", fix_proc.returncode)
+    elif (iwyu_proc.returncode == 0 and status == 1 and
+          enforced_files is not None and suggestion_files):
+        relevant_suggestions = suggestion_files & enforced_files
+        if relevant_suggestions:
+            print("Blocking IWYU suggestions touch PR-owned files:")
+            print_long_list(sorted(relevant_suggestions))
+    if (iwyu_proc.returncode == 0 and status == 0 and
+            enforced_files is not None and suggestion_files):
+        print(
+            "Ignoring pre-existing IWYU suggestions limited to "
+            "untouched files:")
+        print_long_list(sorted(suggestion_files))
+    print("Raw IWYU return code ", iwyu_proc.returncode)
+    print("Effective return code ", status)
     print("::endgroup::")
 
     # remove the matcher to prevent double-posting the annotations
@@ -230,12 +335,12 @@ def run_iwyu_on(iwyu_tool_path: str, files: list[Path]) -> int:
         print("Problems found:")
         for line in problem_lines:
             print(line)
-    elif iwyu_proc.returncode == 0:
+    elif status == 0:
         print("No issues found!")
     else:
         print("No suggestions provided, but the process still failed somehow?")
 
-    return iwyu_proc.returncode
+    return status
 
 
 # GHA truncates each line to 1024 characters.

@@ -22,8 +22,22 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          # The PR merge commit and its base/head parents are sufficient for
+          # docs-impact routing.  Historical inventory validation fetches its
+          # one frozen source commit explicitly below.
+          fetch-depth: 2
           persist-credentials: false
+
+      - name: Fetch frozen documentation inventory source
+        run: |
+          inventory_commit="$(sed -n 's/^source_commit: \([0-9a-f]\{40\}\)$/\1/p' \
+            doc/migration/markdown-inventory.yml | head -n 1)"
+          if [[ ! "$inventory_commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid frozen Markdown inventory commit" >&2
+            exit 1
+          fi
+          git fetch --no-tags --depth=1 origin "$inventory_commit"
+          git cat-file -e "${inventory_commit}^{commit}"
 
       - name: Install pinned metadata dependencies
         run: python3 -m pip install --disable-pip-version-check -r tools/agent/requirements.txt
@@ -51,11 +65,13 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: >-
-          python3 tools/agent/check_docs_impact.py
-          --base "$BASE_SHA"
-          --head "$HEAD_SHA"
-          --check-pr-body
+        run: |
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          python3 tools/agent/check_docs_impact.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --check-pr-body
 
       - name: Validate staged impact configuration outside pull requests
         if: github.event_name != 'pull_request'

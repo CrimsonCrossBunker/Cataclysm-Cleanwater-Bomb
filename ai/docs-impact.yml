@@ -52,18 +52,17 @@ entries:
       - data/lua/reference/ccb_platform_*
       - tools/lua_api/*
     documentation_ids:
-      - architecture.lua-first-platform
-      - architecture.lua-first-roadmap
+      - cpp.lua-bridge
     generated_reference_impact: true
     required_check_ids: [documentation-impact, lua-contract]
     documentation_readiness:
       state: bilingual_draft
       languages: [zh_CN, en]
       repository: CrimsonCrossBunker/CCB-Docs
-      ref: agent/ccb-docs-program-lua-reference
-      commit: 7fc27b606fed83b5dbcef57506b28a84cce046c1
-      source_commit: 3ac0bd7f356b30b880dc655f3006ebf1cbda9cfd
-      activation_gate: Refresh to the merged CCB source commit and promote every mapped page from draft before this enforcement PR merges.
+      ref: codex/pr695-lua-build-contract-docs
+      commit: e64c8fd458f9f9fc140904b9c829f4009e5ce6fb
+      source_commit: b9a8d08beffe5b77aca4d4ff7f80821a7e6bb94c
+      activation_gate: Keep CCB-Docs PR #38 draft until source PR #695 merges; then refresh it to the final source merge commit and promote the mapped page before the documentation PR merges.
     risk_group: lua-api
     risk_level: high
 
@@ -97,8 +96,7 @@ entries:
       - src/game.cpp
       - src/do_turn.cpp
     documentation_ids:
-      - architecture.lua-first-platform
-      - architecture.lua-first-roadmap
+      - cpp.lua-bridge
       - architecture.lua-first-glossary
       - architecture.lua-first-eoc-workflow
     generated_reference_impact: false

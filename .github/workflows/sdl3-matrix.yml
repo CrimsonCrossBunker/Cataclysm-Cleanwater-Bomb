@@ -1,37 +1,16 @@
 name: SDL3 build matrix
 
 on:
-  push:
-    branches:
-    - master
-    paths:
-    - '**'
-    - '!data/**'
-    - '!doc/**'
-    - '!doxygen_doc/**'
-    - '!lang/**'
-    - 'data/shaders/**'
-    - 'tools/build_shaders.py'
-  pull_request:
-    branches:
-    - master
-    types: [opened, reopened, synchronize, ready_for_review]
-    paths:
-    - '**'
-    - '!data/**'
-    - '!doc/**'
-    - '!doxygen_doc/**'
-    - '!lang/**'
-    - 'data/shaders/**'
-    - 'tools/build_shaders.py'
+  workflow_dispatch:
 
 concurrency:
   group: sdl3-matrix-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Desktop SDL3 is temporarily paused. Set the repository variable
-  # CCB_DESKTOP_SDL3_ENABLED=true to restore this workflow without reverting it.
+  # Desktop SDL3 is temporarily paused. To restore automatic runs, re-enable
+  # the push and pull_request triggers in `on` and set the repository variable
+  # CCB_DESKTOP_SDL3_ENABLED=true.
   skip-duplicates-code:
     if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' }}
     continue-on-error: true

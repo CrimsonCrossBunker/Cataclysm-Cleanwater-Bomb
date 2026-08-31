@@ -1,0 +1,428 @@
+name: Publish PR artifacts
+
+on:
+  workflow_run:
+    workflows:
+      - General build matrix
+      - Cataclysm Windows build
+    types: [requested, completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ccb-pr-artifacts-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_repository.id || github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.head_branch || 'detached' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish fixed artifact links
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const SOURCE_WORKFLOW_PATHS = Object.freeze({
+              'General build matrix': '.github/workflows/matrix.yml',
+              'Cataclysm Windows build': '.github/workflows/msvc-full-features.yml',
+            });
+            const SOURCE_WORKFLOWS = Object.freeze(Object.keys(SOURCE_WORKFLOW_PATHS));
+            const GENERAL_WORKFLOW = SOURCE_WORKFLOWS[0];
+            const WINDOWS_WORKFLOW = SOURCE_WORKFLOWS[1];
+            const BEGIN_MARKER = '<!-- BEGIN ccb-pr-artifacts -->';
+            const END_MARKER = '<!-- END ccb-pr-artifacts -->';
+            const { owner, repo } = context.repo;
+            const currentRepository = `${owner}/${repo}`;
+            const workflowRun = context.payload.workflow_run || {};
+            const action = context.payload.action;
+            const headSha = workflowRun.head_sha;
+
+            const isSafeInteger = value =>
+              Number.isSafeInteger(value) && value > 0;
+
+            const expectedWorkflowPath = workflowName =>
+              typeof workflowName === 'string' &&
+              Object.prototype.hasOwnProperty.call(SOURCE_WORKFLOW_PATHS, workflowName)
+                ? SOURCE_WORKFLOW_PATHS[workflowName]
+                : null;
+
+            const matchesAllowedWorkflow = run =>
+              run && expectedWorkflowPath(run.name) === run.path;
+
+            if (workflowRun.event !== 'pull_request') {
+              core.info('Ignoring a workflow run that was not triggered by a pull request.');
+              return;
+            }
+            if (!matchesAllowedWorkflow(workflowRun)) {
+              core.info('Ignoring an unexpected source workflow or workflow path.');
+              return;
+            }
+            if (!/^[0-9a-f]{40}$/i.test(headSha || '')) {
+              core.setFailed('The workflow run did not provide a valid commit SHA.');
+              return;
+            }
+            if (action !== 'requested' && action !== 'completed') {
+              core.info('Ignoring an unsupported workflow-run action.');
+              return;
+            }
+
+            const candidateNumbers = [];
+            const addCandidateNumber = value => {
+              const number = typeof value === 'number' ? value : Number(value);
+              if (isSafeInteger(number) && !candidateNumbers.includes(number)) {
+                candidateNumbers.push(number);
+              }
+            };
+
+            for (const candidate of workflowRun.pull_requests || []) {
+              addCandidateNumber(candidate && candidate.number);
+            }
+
+            const workflowHeadRepository =
+              workflowRun.head_repository && workflowRun.head_repository.full_name;
+
+            const matchesCurrentPullRequest = pullRequest =>
+              pullRequest &&
+              pullRequest.state === 'open' &&
+              pullRequest.draft === false &&
+              pullRequest.base &&
+              pullRequest.base.ref === 'master' &&
+              pullRequest.base.repo &&
+              pullRequest.base.repo.full_name === currentRepository &&
+              pullRequest.head &&
+              pullRequest.head.repo &&
+              pullRequest.head.repo.full_name === workflowHeadRepository &&
+              pullRequest.head.sha === headSha;
+
+            const fetchMatchingPullRequest = async numbers => {
+              for (const number of numbers) {
+                try {
+                  const response = await github.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: number,
+                  });
+                  if (matchesCurrentPullRequest(response.data)) {
+                    return response.data;
+                  }
+                } catch (error) {
+                  core.debug('A candidate pull request could not be read.');
+                }
+              }
+              return null;
+            };
+
+            let pullRequest = await fetchMatchingPullRequest(candidateNumbers);
+            if (!pullRequest) {
+              const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner,
+                repo,
+                commit_sha: headSha,
+                per_page: 100,
+              });
+              const fallbackNumbers = [];
+              for (const candidate of associated.data || []) {
+                const number = candidate && candidate.number;
+                addCandidateNumber(number);
+                if (isSafeInteger(typeof number === 'number' ? number : Number(number))) {
+                  fallbackNumbers.push(typeof number === 'number' ? number : Number(number));
+                }
+              }
+              pullRequest = await fetchMatchingPullRequest(fallbackNumbers);
+            }
+
+            if (!pullRequest) {
+              core.info('No matching open, non-draft master pull request was found.');
+              return;
+            }
+
+            const pullRequestNumber = pullRequest.number;
+            if (!isSafeInteger(pullRequestNumber)) {
+              core.setFailed('The matching pull request number was invalid.');
+              return;
+            }
+
+            const pullRequestHeadRepository = pullRequest.head.repo.full_name;
+            const hasPullRequestNumber = run =>
+              Array.isArray(run && run.pull_requests) &&
+              run.pull_requests.some(candidate =>
+                candidate && Number(candidate.number) === pullRequestNumber
+              );
+
+            const artifactSpecs = Object.freeze([
+              {
+                workflow: GENERAL_WORKFLOW,
+                label: 'Linux curses',
+                name: `ccb-pr-linux-curses-pr-${pullRequestNumber}`,
+              },
+              {
+                workflow: GENERAL_WORKFLOW,
+                label: 'macOS tiles',
+                name: `ccb-pr-macos-tiles-pr-${pullRequestNumber}`,
+              },
+              {
+                workflow: GENERAL_WORKFLOW,
+                label: 'Android arm64-v8a',
+                name: `ccb-pr-android-arm64-v8a-pr-${pullRequestNumber}`,
+              },
+              {
+                workflow: WINDOWS_WORKFLOW,
+                label: 'Windows tiles x64',
+                name: `ccb-pr-windows-tiles-x64-pr-${pullRequestNumber}`,
+              },
+            ]);
+
+            const runsResponse = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: headSha,
+              per_page: 100,
+            });
+            const runs = [...(runsResponse.data.workflow_runs || [])];
+            if (
+              isSafeInteger(workflowRun.id) &&
+              !runs.some(run => run.id === workflowRun.id)
+            ) {
+              runs.push(workflowRun);
+            }
+
+            const latestRuns = new Map();
+            for (const workflowName of SOURCE_WORKFLOWS) {
+              const candidates = runs.filter(run =>
+                run &&
+                matchesAllowedWorkflow(run) &&
+                run.name === workflowName &&
+                run.event === 'pull_request' &&
+                run.head_sha === headSha &&
+                hasPullRequestNumber(run) &&
+                run.head_repository &&
+                run.head_repository.full_name === pullRequestHeadRepository
+              );
+              candidates.sort((left, right) => {
+                const leftTime = Date.parse(left.updated_at || left.created_at || '') || 0;
+                const rightTime = Date.parse(right.updated_at || right.created_at || '') || 0;
+                if (leftTime !== rightTime) {
+                  return rightTime - leftTime;
+                }
+                return (Number(right.id) || 0) - (Number(left.id) || 0);
+              });
+              latestRuns.set(workflowName, candidates[0] || null);
+            }
+
+            const runUrl = run =>
+              run && isSafeInteger(run.id)
+                ? `https://github.com/${owner}/${repo}/actions/runs/${run.id}`
+                : null;
+
+            const artifactUrl = (run, artifact) =>
+              run &&
+              artifact &&
+              isSafeInteger(run.id) &&
+              isSafeInteger(artifact.id)
+                ? `https://github.com/${owner}/${repo}/actions/runs/${run.id}/artifacts/${artifact.id}`
+                : null;
+
+            const isUnexpiredArtifact = artifact => {
+              if (!artifact || artifact.expired !== false) {
+                return false;
+              }
+              const expiresAt = Date.parse(artifact.expires_at || '');
+              return Number.isFinite(expiresAt) && expiresAt > Date.now();
+            };
+
+            const isPendingRun = run =>
+              run &&
+              ['requested', 'queued', 'in_progress', 'waiting', 'pending'].includes(run.status);
+
+            const isFailedRun = run =>
+              run &&
+              [
+                'failure',
+                'cancelled',
+                'timed_out',
+                'action_required',
+                'startup_failure',
+                'stale',
+              ].includes(run.conclusion);
+
+            const isSuccessfulRun = run =>
+              run &&
+              run.status === 'completed' &&
+              run.conclusion === 'success';
+
+            const pendingRow = spec => ({
+              ...spec,
+              state: 'pending',
+              url: null,
+            });
+
+            const collectRow = async spec => {
+              const run = latestRuns.get(spec.workflow);
+              if (!run) {
+                return { ...spec, state: 'not-produced', url: null };
+              }
+              if (isFailedRun(run)) {
+                return { ...spec, state: 'failed', url: runUrl(run) };
+              }
+              if (isPendingRun(run)) {
+                return pendingRow(spec);
+              }
+              if (!isSuccessfulRun(run)) {
+                if (['skipped', 'neutral'].includes(run.conclusion)) {
+                  return { ...spec, state: 'not-produced', url: null };
+                }
+                return pendingRow(spec);
+              }
+
+              let artifact = null;
+              let artifactLookupFailed = false;
+
+              if (run && isSafeInteger(run.id)) {
+                try {
+                  const response = await github.rest.actions.listWorkflowRunArtifacts({
+                    owner,
+                    repo,
+                    run_id: run.id,
+                    per_page: 100,
+                  });
+                  artifact = (response.data.artifacts || []).find(candidate =>
+                    candidate &&
+                    candidate.name === spec.name &&
+                    isUnexpiredArtifact(candidate)
+                  ) || null;
+                } catch (error) {
+                  core.debug('Artifact metadata could not be read for a source run.');
+                  artifactLookupFailed = true;
+                }
+              }
+
+              const download = artifactUrl(run, artifact);
+              if (download) {
+                return { ...spec, state: 'download', url: download };
+              }
+              if (artifactLookupFailed) {
+                return {
+                  ...spec,
+                  state: 'metadata-unavailable',
+                  url: runUrl(run),
+                };
+              }
+              return { ...spec, state: 'not-produced', url: null };
+            };
+
+            // Re-read immediately before publishing so an obsolete run cannot
+            // update the artifact comment after the pull request head changes.
+            const latestPullResponse = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pullRequestNumber,
+            });
+            if (!matchesCurrentPullRequest(latestPullResponse.data)) {
+              core.info('The pull request changed while artifacts were collected.');
+              return;
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number: pullRequestNumber,
+                per_page: 100,
+              }
+            );
+            const artifactComments = comments.filter(comment =>
+              comment &&
+              isSafeInteger(comment.id) &&
+              comment.user &&
+              comment.user.login === 'github-actions[bot]' &&
+              typeof comment.body === 'string' &&
+              comment.body.includes(BEGIN_MARKER)
+            );
+            if (artifactComments.length > 1) {
+              core.setFailed('Multiple workflow-owned PR artifact comments exist.');
+              return;
+            }
+            const artifactComment = artifactComments[0] || null;
+            const currentBody = artifactComment ? artifactComment.body : '';
+            const shortSha = headSha.slice(0, 7);
+            const headMarker = `<!-- ccb-pr-artifacts-head: ${headSha} -->`;
+            const beginCount = currentBody.split(BEGIN_MARKER).length - 1;
+            const endCount = currentBody.split(END_MARKER).length - 1;
+
+            if (
+              artifactComment &&
+              (beginCount !== 1 || endCount !== 1)
+            ) {
+              core.setFailed('The workflow-owned artifact comment has malformed markers.');
+              return;
+            }
+            if (action === 'requested' && currentBody.includes(headMarker)) {
+              core.info('A pending block for this head SHA already exists.');
+              return;
+            }
+
+            const rows = action === 'requested'
+              ? artifactSpecs.map(pendingRow)
+              : await Promise.all(artifactSpecs.map(collectRow));
+
+            const statusText = row => {
+              if (row.state === 'download') {
+                return `✅ [download](${row.url})`;
+              }
+              if (row.state === 'pending') {
+                return '⏳ pending';
+              }
+              if (row.state === 'failed') {
+                return row.url
+                  ? `❌ [workflow failed](${row.url})`
+                  : '❌ workflow failed';
+              }
+              if (row.state === 'metadata-unavailable') {
+                return row.url
+                  ? `⚠️ [metadata unavailable](${row.url})`
+                  : '⚠️ metadata unavailable';
+              }
+              return '➖ not produced';
+            };
+
+            const block = [
+              BEGIN_MARKER,
+              `<!-- ccb-pr-artifacts-head: ${headSha} -->`,
+              '### PR artifacts',
+              '',
+              `Head: \`${shortSha}\``,
+              'Artifacts are retained for 14 days.',
+              'These are untrusted builds produced from PR-controlled code. All artifacts are unsigned; the macOS build is not notarized. Only download or run artifacts from a PR you trust.',
+              '',
+              '| Platform | Status |',
+              '| --- | --- |',
+              ...rows.map(row => `| ${row.label} | ${statusText(row)} |`),
+              END_MARKER,
+            ].join('\n');
+
+            if (block === currentBody) {
+              core.info('The PR artifact comment is already current.');
+              return;
+            }
+
+            if (artifactComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: artifactComment.id,
+                body: block,
+              });
+              core.info('The workflow-owned PR artifact comment was updated.');
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pullRequestNumber,
+                body: block,
+              });
+              core.info('The workflow-owned PR artifact comment was created.');
+            }

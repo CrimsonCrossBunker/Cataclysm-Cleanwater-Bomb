@@ -30,6 +30,16 @@ on:
     - '!tools/format/**'
     - 'utilities/**'
     types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: Run the broad C++ test suite after compiling
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
 
 # We only care about the latest revision of a PR, so cancel previous instances.
 concurrency:
@@ -58,7 +68,7 @@ jobs:
       actions: read
       contents: read
     secrets:
-      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+      TX_TOKEN: ${{ github.event_name != 'pull_request' && secrets.TX_TOKEN || '' }}
 
   build_catatclysm:
     name: Build
@@ -162,6 +172,8 @@ jobs:
         New-Item -ItemType SymbolicLink -Target "$env:TEMP\objwin" objwin
 
     - name: Build
+      env:
+        CDDA_RELEASE_BUILD: 1
       run: |
           msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=false "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features/Cataclysm-vcpkg-static.sln
 
@@ -196,7 +208,7 @@ jobs:
       if: failure()
       run: |
         echo =================================================
-        Get-ChildItem "$env:RUNNER_WORKSPACE/Cataclysm-DDA/msvc-full-features/vcpkg_installed" -Recurse
+        Get-ChildItem "$env:GITHUB_WORKSPACE\msvc-full-features\vcpkg_installed" -Recurse
         echo =================================================
         Get-ChildItem "$env:RUNNER_WORKSPACE/b/vcpkg/buildtrees" |
         Foreach-Object {
@@ -226,7 +238,7 @@ jobs:
           Write-Output "::add-matcher::build-scripts/problem-matchers/debugmsg.json"
 
     - name: Run tests
-      if: ${{ github.ref_name != 'master' }}
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_tests == true }}
       run: |
           .\Cataclysm-test-vcpkg-static-Release-x64.exe --min-duration 20 --rng-seed time --order lex --wait-for-keypress exit
 
@@ -249,3 +261,34 @@ jobs:
       run: |
         echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
       shell: bash
+    - name: package PR Windows tiles x64 artifact
+      id: package-pr-windows-tiles-x64
+      if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && success() }}
+      continue-on-error: true
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      shell: pwsh
+      run: |
+        @"
+        build type: windows-tiles-x64
+        build number: $env:GITHUB_RUN_ID
+        commit sha: $env:GITHUB_SHA
+        commit url: https://github.com/$env:GITHUB_REPOSITORY/commit/$env:GITHUB_SHA
+        "@ | Set-Content -Path VERSION.txt
+        .\build-scripts\windist.ps1
+        $zips = @(Get-ChildItem -File -Filter 'cataclysmdda-0.J.zip')
+        if ($zips.Count -ne 1) {
+            Write-Error "Expected exactly one release zip, found $($zips.Count)"
+            exit 1
+        }
+        Copy-Item -LiteralPath $zips[0].FullName -Destination "ccb-pr-windows-tiles-x64-$env:PR_NUMBER.zip"
+    - name: upload PR Windows tiles x64 artifact
+      id: upload-pr-windows-tiles-x64
+      if: ${{ steps.package-pr-windows-tiles-x64.outcome == 'success' }}
+      continue-on-error: true
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ccb-pr-windows-tiles-x64-pr-${{ github.event.pull_request.number }}
+        path: ccb-pr-windows-tiles-x64-${{ github.event.pull_request.number }}.zip
+        if-no-files-found: error
+        retention-days: 14
