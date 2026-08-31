@@ -1139,7 +1139,7 @@ def add_reviewed_dispositions(
         ),
     )
 
-    platform_runtime = "src/lua_platform_runtime.cpp"
+    platform_runtime_services = "src/lua_platform_runtime_services.cpp"
     for root in roots.values():
         cpp_type = str(root["cpp_type"])
         if not cpp_type.endswith("_definition_handle"):
@@ -1205,7 +1205,7 @@ def add_reviewed_dispositions(
                 "method" if field == "require_active" else "field",
                 "unbound",
                 evidence_for(
-                    platform_runtime,
+                    platform_runtime_services,
                     needle,
                     "struct use_context_data",
                 ),
@@ -1256,7 +1256,7 @@ def add_reviewed_dispositions(
                 cpp_kind,
                 "unbound",
                 evidence_for(
-                    platform_runtime,
+                    platform_runtime_services,
                     needle,
                     "struct use_context_data",
                 ),
