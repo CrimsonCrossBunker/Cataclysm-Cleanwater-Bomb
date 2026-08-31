@@ -12,7 +12,6 @@
 #include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
 #include <point.h>
-#include <list>
 
 namespace cata::lua_platform::detail
 {
