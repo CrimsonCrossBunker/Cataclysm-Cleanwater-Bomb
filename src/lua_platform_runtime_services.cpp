@@ -11,7 +11,6 @@
 #include <lua_platform_hooks.h>
 #include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
-#include <memory_fast.h>
 #include <monster_uid.h>
 #include <npc_opinion.h>
 #include <overmap_ui.h>
