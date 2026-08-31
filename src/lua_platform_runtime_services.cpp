@@ -11,7 +11,6 @@
 #include <lua_platform_hooks.h>
 #include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
-#include <overmap_ui.h>
 #include <pimpl.h>
 #include <pocket_type.h>
 #include <point.h>
