@@ -5,7 +5,6 @@
 
 #include <character_id.h>
 #include <common_types.h>
-#include <damage.h>
 #include <enum_bitset.h>
 #include <enums.h>
 #include <explosion.h>
