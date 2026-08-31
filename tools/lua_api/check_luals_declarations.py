@@ -90,9 +90,15 @@ def check(path: Path) -> dict[str, int]:
             f"{path} omits required Platform classes: {missing}"
         )
 
-    runtime_source = (
-        REPOSITORY_ROOT / "src/lua_platform_runtime.cpp"
-    ).read_text(encoding="utf-8")
+    runtime_source = "\n".join(
+        (REPOSITORY_ROOT / path).read_text(encoding="utf-8")
+        for path in (
+            "src/lua_platform_runtime.cpp",
+            "src/lua_platform_runtime_dialogue.cpp",
+            "src/lua_platform_runtime_hooks.cpp",
+            "src/lua_platform_runtime_lifecycle.cpp",
+        )
+    )
     loader_source = (
         REPOSITORY_ROOT / "src/lua_platform_loader.cpp"
     ).read_text(encoding="utf-8")
