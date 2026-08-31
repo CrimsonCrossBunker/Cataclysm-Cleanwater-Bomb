@@ -7,6 +7,11 @@ entries:
     command: python3 -m unittest discover -s tools/agent -p 'test_*.py'
     workdir: .
     cost: fast
+  - id: publisher-contract
+    paths: [.github/workflows/publish-pr-artifacts.yml, tools/agent/test_publish_pr_artifacts.py]
+    command: python3 -m unittest discover -s tools/agent -p 'test_publish_pr_artifacts.py'
+    workdir: .
+    cost: fast
   - id: governance-audit
     paths:
       - OWNERSHIP.md
