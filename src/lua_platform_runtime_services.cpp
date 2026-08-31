@@ -9,7 +9,6 @@
 #include <game_constants.h>
 #include <item_uid.h>
 #include <lua_platform_hooks.h>
-#include <magic.h>
 #include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
 #include <memory_fast.h>
