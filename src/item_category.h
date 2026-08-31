@@ -19,6 +19,7 @@ class item;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 namespace detail
 {
 struct item_category_snapshot_entry {
@@ -59,6 +60,7 @@ struct zone_priority_data {
 class item_category
 {
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
         friend std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
         cata::lua_platform::detail::item_category_snapshot();
     private:

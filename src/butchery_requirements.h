@@ -19,6 +19,7 @@ enum class creature_size : int;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 /**
@@ -46,6 +47,7 @@ class butchery_requirements
         bool is_valid() const;
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
         // int is speed bonus
         std::map<float, std::map<creature_size, std::map<butcher_type, requirement_id>>> requirements;
 };

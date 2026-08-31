@@ -31,6 +31,7 @@ class effect_type;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 /** Handles the large variety of weed messages. */
@@ -112,6 +113,7 @@ class effect_type
         friend class effect;
         friend struct mod_tracker;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
     public:
         enum class memorial_gender : int {
             male,

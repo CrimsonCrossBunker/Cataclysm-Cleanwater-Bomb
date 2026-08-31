@@ -15,6 +15,7 @@ class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class character_content_transaction;
 }
 
 struct profession_group {
@@ -33,6 +34,7 @@ struct profession_group {
     private:
         friend class generic_factory<profession_group>;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::character_content_transaction;
         std::vector<profession_id> profession_list;
 
 };

@@ -15,6 +15,7 @@ class JsonObject;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 namespace detail
 {
 std::vector<std::pair<ammotype, ammunition_type>> ammunition_type_registry_snapshot();
@@ -25,6 +26,7 @@ class ammunition_type
 {
         friend class DynamicDataLoader;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
         friend std::vector<std::pair<ammotype, ammunition_type>>
                 cata::lua_platform::detail::ammunition_type_registry_snapshot();
         template<typename T> friend class string_id;

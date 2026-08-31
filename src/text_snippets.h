@@ -21,6 +21,7 @@ class cata_path;
 namespace cata::lua_platform
 {
 class content_transaction;
+class presentation_content_transaction;
 }
 
 class snippet_library
@@ -139,6 +140,7 @@ class snippet_library
 
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::presentation_content_transaction;
         std::unordered_map<snippet_id, translation> snippets_by_id;
         // front facing name
         std::unordered_map<snippet_id, translation> name_by_id;

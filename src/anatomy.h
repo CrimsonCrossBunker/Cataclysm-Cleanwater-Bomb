@@ -16,6 +16,7 @@ class JsonObject;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 /**
@@ -25,6 +26,7 @@ class content_transaction;
 class anatomy
 {
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
     private:
         std::vector<bodypart_str_id> unloaded_bps;
         std::vector<bodypart_id> cached_bps;

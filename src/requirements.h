@@ -32,6 +32,7 @@ template <typename E> struct enum_traits;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 enum class available_status : int {
@@ -218,6 +219,7 @@ struct requirement_data {
         // TODO: remove once all parts specify installation requirements directly
         friend class vpart_info;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
         using alter_tool_comp_vector = std::vector<std::vector<tool_comp> >;
         using alter_quali_req_vector = std::vector<std::vector<quality_requirement> >;

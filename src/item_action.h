@@ -20,6 +20,7 @@ using action_map = std::map< item_action_id, item_action >;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 namespace detail
 {
 const item_action *item_action_registry_find( const item_action_id &id );
@@ -40,6 +41,7 @@ class item_action_generator
 {
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
         friend const item_action *cata::lua_platform::detail::item_action_registry_find(
             const item_action_id &id );
         friend std::vector<std::pair<item_action_id, item_action>>

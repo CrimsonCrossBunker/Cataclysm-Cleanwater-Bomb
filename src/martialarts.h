@@ -30,6 +30,7 @@ enum class bp_type;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 const matec_id tec_none( "tec_none" );
@@ -63,6 +64,7 @@ class weapon_category
         friend class generic_factory<weapon_category>;
         friend struct mod_tracker;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
         weapon_category_id id;
         std::vector<std::pair<weapon_category_id, mod_id>> src;

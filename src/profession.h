@@ -26,6 +26,7 @@ class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class character_content_transaction;
 }
 
 class profession
@@ -48,6 +49,7 @@ class profession
         friend class string_id<profession>;
         friend class generic_factory<profession>;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::character_content_transaction;
         friend struct mod_tracker;
 
     private:

@@ -22,6 +22,7 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 enum mf_attitude {
@@ -108,6 +109,7 @@ class monfaction
         friend void monfactions::finalize();
         friend class generic_factory<monfaction>;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
 };
 
 #endif // CATA_SRC_MONFACTION_H

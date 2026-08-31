@@ -37,6 +37,7 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 using bodypart_id = int_id<body_part_type>;
@@ -202,6 +203,7 @@ struct bp_qualities_provided {
 
 struct body_part_type {
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
     public:
         /**
          * the different types of body parts there are.

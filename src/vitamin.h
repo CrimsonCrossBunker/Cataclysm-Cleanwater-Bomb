@@ -21,6 +21,7 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 enum class vitamin_type : int {
@@ -40,6 +41,7 @@ class vitamin
 {
         friend class generic_factory<vitamin>;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
     public:
         vitamin_id id;

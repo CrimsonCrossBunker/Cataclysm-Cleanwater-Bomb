@@ -25,6 +25,7 @@ class recipe;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 struct time_info_t {
@@ -65,6 +66,7 @@ class Skill
 {
         friend class string_id<Skill>;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
         friend std::vector<cata::lua_platform::detail::skill_snapshot_entry>
         cata::lua_platform::detail::skill_registry_snapshot();
         skill_id _ident;

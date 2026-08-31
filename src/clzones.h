@@ -46,6 +46,7 @@ struct construction;
 namespace cata::lua_platform
 {
 class content_transaction;
+class presentation_content_transaction;
 }
 
 inline const faction_id your_fac( "your_followers" );
@@ -57,6 +58,7 @@ class zone_type
 {
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::presentation_content_transaction;
         translation name_;
         translation desc_;
         field_type_str_id field_;
