@@ -441,6 +441,12 @@ jobs:
       shell: bash
       run: |
         set -eo pipefail
+        cat > VERSION.txt <<EOL
+        build type: linux-curses
+        build number: ${GITHUB_RUN_ID}
+        commit sha: ${GITHUB_SHA}
+        commit url: https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}
+        EOL
         make CCACHE=1 CROSS="${CROSS_COMPILATION:-}" LINTJSON=0 DEBUG_SYMBOLS=1 LANGUAGES=all bindist
         cp -- cataclysmdda-0.J.tar.gz "ccb-pr-linux-curses-${PR_NUMBER}.tar.gz"
     - name: upload PR Linux curses artifact
@@ -462,7 +468,7 @@ jobs:
       shell: bash
       run: |
         set -eo pipefail
-        make -j3 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=0 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 FRAMEWORK=1 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
+        make -j1 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=0 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 FRAMEWORK=1 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
         cp -- Cataclysm.dmg "ccb-pr-macos-tiles-${PR_NUMBER}.dmg"
     - name: upload PR macOS tiles artifact
       id: upload-pr-macos-tiles

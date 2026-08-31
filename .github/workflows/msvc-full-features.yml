@@ -269,6 +269,12 @@ jobs:
         PR_NUMBER: ${{ github.event.pull_request.number }}
       shell: pwsh
       run: |
+        @"
+        build type: windows-tiles-x64
+        build number: $env:GITHUB_RUN_ID
+        commit sha: $env:GITHUB_SHA
+        commit url: https://github.com/$env:GITHUB_REPOSITORY/commit/$env:GITHUB_SHA
+        "@ | Set-Content -Path VERSION.txt
         .\build-scripts\windist.ps1
         $zips = @(Get-ChildItem -File -Filter 'cataclysmdda-0.J.zip')
         if ($zips.Count -ne 1) {
