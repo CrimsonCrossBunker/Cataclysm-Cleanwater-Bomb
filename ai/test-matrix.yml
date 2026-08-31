@@ -79,6 +79,17 @@ entries:
       - src/lua_platform_runtime_hooks.cpp
       - src/lua_platform_runtime_internal.h
       - src/lua_platform_runtime_lifecycle.cpp
+      - src/lua_platform_runtime_services.cpp
+      - src/lua_platform_content_presentation.cpp
+      - src/lua_platform_content_presentation.h
+      - src/lua_platform_content_worldgen.cpp
+      - src/lua_platform_content_worldgen.h
+      - src/lua_platform_content_items.cpp
+      - src/lua_platform_content_items.h
+      - src/lua_platform_content_creatures.cpp
+      - src/lua_platform_content_creatures.h
+      - src/lua_platform_content_character.cpp
+      - src/lua_platform_content_character.h
       - src/game_io.cpp
       - src/mod_manager.cpp
       - src/mod_manager_ui.cpp
@@ -96,6 +107,17 @@ entries:
       - src/lua_platform_runtime_hooks.cpp
       - src/lua_platform_runtime_internal.h
       - src/lua_platform_runtime_lifecycle.cpp
+      - src/lua_platform_runtime_services.cpp
+      - src/lua_platform_content_presentation.cpp
+      - src/lua_platform_content_presentation.h
+      - src/lua_platform_content_worldgen.cpp
+      - src/lua_platform_content_worldgen.h
+      - src/lua_platform_content_items.cpp
+      - src/lua_platform_content_items.h
+      - src/lua_platform_content_creatures.cpp
+      - src/lua_platform_content_creatures.h
+      - src/lua_platform_content_character.cpp
+      - src/lua_platform_content_character.h
       - src/mod_manager.cpp
       - data/mods/Lua_First_Example/
       - tests/mod_manager_test.cpp
