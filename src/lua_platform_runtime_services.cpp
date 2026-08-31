@@ -6,7 +6,6 @@
 #include <character_id.h>
 #include <common_types.h>
 #include <enums.h>
-#include <flat_set.h>
 #include <game_constants.h>
 #include <iexamine.h>
 #include <item_pocket.h>
