@@ -45,7 +45,6 @@ extern "C" {
 #include <variant>
 
 #include "achievement.h"
-#include "activity_handlers.h"
 #include "activity_type.h"
 #include "addiction.h"
 #include "ammo.h"
