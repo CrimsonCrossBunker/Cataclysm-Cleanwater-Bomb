@@ -84,9 +84,19 @@ jobs:
             const workflowHeadRepository =
               workflowRun.head_repository && workflowRun.head_repository.full_name;
 
-            const matchesCurrentPullRequest = pullRequest =>
+            const hasPublishablePullRequestState = pullRequest =>
               pullRequest &&
-              pullRequest.state === 'open' &&
+              (
+                pullRequest.state === 'open' ||
+                (
+                  action === 'completed' &&
+                  pullRequest.state === 'closed' &&
+                  pullRequest.merged === true
+                )
+              );
+
+            const matchesCurrentPullRequest = pullRequest =>
+              hasPublishablePullRequestState(pullRequest) &&
               pullRequest.draft === false &&
               pullRequest.base &&
               pullRequest.base.ref === 'master' &&
@@ -135,7 +145,7 @@ jobs:
             }
 
             if (!pullRequest) {
-              core.info('No matching open, non-draft master pull request was found.');
+              core.info('No matching open or merged, non-draft master pull request was found.');
               return;
             }
 

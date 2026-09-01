@@ -209,6 +209,7 @@ def make_pull_request(
     number: int = 42,
     *,
     state: str = "open",
+    merged: bool = False,
     draft: bool = False,
     base_ref: str = "master",
     base_repo: str = CURRENT_REPOSITORY,
@@ -218,6 +219,7 @@ def make_pull_request(
     return {
         "number": number,
         "state": state,
+        "merged": merged,
         "draft": draft,
         "base": {"ref": base_ref, "repo": {"full_name": base_repo}},
         "head": {"repo": {"full_name": head_repo}, "sha": head_sha},
@@ -437,6 +439,9 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         for fragment in (
             "workflowRun.event !== 'pull_request'",
             "pullRequest.state === 'open'",
+            "action === 'completed'",
+            "pullRequest.state === 'closed'",
+            "pullRequest.merged === true",
             "pullRequest.draft === false",
             "pullRequest.base.ref === 'master'",
             "pullRequest.base.repo.full_name === currentRepository",
@@ -497,6 +502,58 @@ class PublishPrArtifactsContractTest(unittest.TestCase):
         for label, url in expected.items():
             self.assertIn(f"| {label} | ✅ [download]({url}) |", body)
         self.assert_artifact_run_ids(result, {101, 102})
+
+    def test_completed_event_updates_artifacts_after_pr_merge(self) -> None:
+        pending = (
+            f"{BEGIN_MARKER}\n"
+            f"<!-- ccb-pr-artifacts-head: {HEAD_SHA} -->\n"
+            "pending\n"
+            f"{END_MARKER}"
+        )
+        result = self.run_publisher(
+            self.successful_scenario(
+                pull_requests={
+                    42: make_pull_request(
+                        state="closed",
+                        merged=True,
+                    )
+                },
+                comments=[marker_comment(4201, pending)],
+            )
+        )
+        self.assertEqual([], result["failures"], result)
+        self.assertEqual(
+            [4201],
+            [item["comment_id"] for item in result["updates"]],
+        )
+        self.assertEqual([], result["creates"], result)
+        body = result["updates"][0]["body"]
+        for artifact_id in (1001, 1002, 1003, 1004):
+            self.assertIn(f"/artifacts/{artifact_id}", body)
+        self.assertNotIn("⏳ pending", body)
+
+    def test_requested_event_does_not_publish_to_merged_pr(self) -> None:
+        workflow_run = make_workflow_run(
+            run_id=103,
+            status="requested",
+            conclusion=None,
+        )
+        result = self.run_publisher(
+            make_scenario(
+                workflow_run,
+                action="requested",
+                pull_requests={
+                    42: make_pull_request(
+                        state="closed",
+                        merged=True,
+                    )
+                },
+                workflow_runs=[workflow_run],
+            )
+        )
+        self.assertEqual([], result["failures"], result)
+        self.assert_no_writes(result)
+        self.assertEqual([], self.artifact_calls(result))
 
     def test_pending_runs_are_pending_without_artifact_lookup(self) -> None:
         general = make_workflow_run(
