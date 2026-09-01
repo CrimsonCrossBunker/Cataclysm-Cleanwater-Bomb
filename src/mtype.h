@@ -44,6 +44,7 @@ class JsonObject;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 // These are triggers which may affect the monster's anger or morale.
@@ -344,6 +345,7 @@ struct mtype {
     private:
         friend class MonsterGenerator;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
 
         enum_bitset<mon_trigger> anger;
         enum_bitset<mon_trigger> fear;

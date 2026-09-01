@@ -15,6 +15,7 @@ struct const_dialogue;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 class emit
@@ -95,6 +96,7 @@ class emit
         std::optional<native_profile> native_profile_;
 
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
 };
 
 #endif // CATA_SRC_EMIT_H

@@ -119,6 +119,40 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
 
     def test_all_runtime_usertype_installers_are_modelled(self) -> None:
         installers, edges, registrations_by_installer = build_installer_model()
+        runtime_installer = next(
+            installer
+            for installer in installers
+            if installer["id"] == "platform_v1.install_runtime_api"
+        )
+        self.assertEqual(
+            runtime_installer["source"]["path"],
+            "src/lua_platform_runtime_services.cpp",
+        )
+        expected_content_installers = {
+            "platform_v1.items_content_transaction.install_lua_api": (
+                "src/lua_platform_content_items.cpp"
+            ),
+            "platform_v1.creatures_content_transaction.install_lua_api": (
+                "src/lua_platform_content_creatures.cpp"
+            ),
+            "platform_v1.character_content_transaction.install_lua_api": (
+                "src/lua_platform_content_character.cpp"
+            ),
+            "platform_v1.presentation_content_transaction.install_lua_api": (
+                "src/lua_platform_content_presentation.cpp"
+            ),
+            "platform_v1.worldgen_content_transaction.install_lua_api": (
+                "src/lua_platform_content_worldgen.cpp"
+            ),
+        }
+        self.assertEqual(
+            {
+                str(installer["id"]): str(installer["source"]["path"])
+                for installer in installers
+                if str(installer["id"]) in expected_content_installers
+            },
+            expected_content_installers,
+        )
         expected_roots = {
             "platform_v1.install_runtime_callback_api": [],
             "platform_v1.install_runtime_dialogue_presentation_api": [
@@ -163,6 +197,16 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
                 ("platform_v1.install_runtime_api", installer_id)
                 in runtime_edges
                 for installer_id in expected_roots
+            )
+        )
+        self.assertTrue(
+            all(
+                (
+                    "platform_v1.content_transaction.install_lua_api",
+                    installer_id,
+                )
+                in runtime_edges
+                for installer_id in expected_content_installers
             )
         )
 

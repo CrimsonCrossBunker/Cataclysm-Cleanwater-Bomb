@@ -219,6 +219,8 @@ class platform_event_dispatch_scope
 };
 
 const std::vector<std::shared_ptr<runtime>> &active_runtime_values();
+extern std::vector<std::shared_ptr<runtime>> active_runtimes;
+extern std::size_t active_world_generation;
 std::shared_ptr<runtime> find_active_runtime( std::string_view id );
 std::size_t &runtime_world_generation_storage();
 int current_platform_event_dispatch_depth() noexcept;

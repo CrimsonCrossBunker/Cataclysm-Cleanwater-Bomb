@@ -97,6 +97,7 @@ def check(path: Path) -> dict[str, int]:
             "src/lua_platform_runtime_dialogue.cpp",
             "src/lua_platform_runtime_hooks.cpp",
             "src/lua_platform_runtime_lifecycle.cpp",
+            "src/lua_platform_runtime_services.cpp",
         )
     )
     loader_source = (

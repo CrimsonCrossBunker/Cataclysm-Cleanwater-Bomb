@@ -53,6 +53,7 @@ template <typename E> struct enum_traits;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 class gun_modifier_data
@@ -1425,6 +1426,7 @@ struct itype {
         friend class Item_factory;
         friend struct mod_tracker;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
         using FlagsSetType = cata::flat_set<flag_id>;
 

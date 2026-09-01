@@ -84,6 +84,17 @@ entries:
       - src/lua_platform_loader.h
       - src/lua_platform_runtime.cpp
       - src/lua_platform_runtime.h
+      - src/lua_platform_runtime_services.cpp
+      - src/lua_platform_content_presentation.cpp
+      - src/lua_platform_content_presentation.h
+      - src/lua_platform_content_worldgen.cpp
+      - src/lua_platform_content_worldgen.h
+      - src/lua_platform_content_items.cpp
+      - src/lua_platform_content_items.h
+      - src/lua_platform_content_creatures.cpp
+      - src/lua_platform_content_creatures.h
+      - src/lua_platform_content_character.cpp
+      - src/lua_platform_content_character.h
       - src/lua_platform_content.h
       - src/lua_platform_world_content.cpp
       - src/lua_platform_world_content.h

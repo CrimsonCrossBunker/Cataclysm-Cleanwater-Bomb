@@ -25,6 +25,7 @@ class Character;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 class recipe_dictionary
@@ -32,6 +33,7 @@ class recipe_dictionary
         friend class Item_factory; // allow removal of blacklisted recipes
         friend recipe_id;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
     public:
         /** Returns all recipes that can be automatically learned */

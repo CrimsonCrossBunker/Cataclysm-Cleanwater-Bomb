@@ -20,6 +20,7 @@ template <typename T> struct enum_traits;
 namespace cata::lua_platform
 {
 class content_transaction;
+class presentation_content_transaction;
 }
 
 /** @relates string_id */
@@ -43,6 +44,7 @@ class activity_type
 {
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::presentation_content_transaction;
         bool was_loaded = false;
 
         activity_id id_;

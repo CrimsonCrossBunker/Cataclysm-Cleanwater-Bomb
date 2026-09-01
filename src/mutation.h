@@ -39,6 +39,7 @@ template <typename E> struct enum_traits;
 namespace cata::lua_platform
 {
 class content_transaction;
+class creatures_content_transaction;
 } // namespace cata::lua_platform
 
 extern std::vector<dream> dreams;
@@ -50,6 +51,7 @@ struct dream {
 
     public:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
         std::vector<std::string> messages() const;
 
         mutation_category_id category; // The category that will trigger the dream
@@ -564,6 +566,7 @@ struct mutation_category_trait {
         static void load( const JsonObject &jsobj );
 
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::creatures_content_transaction;
 };
 
 void load_mutation_type( const JsonObject &jsobj );

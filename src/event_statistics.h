@@ -26,6 +26,7 @@ enum class monotonically : int;
 namespace cata::lua_platform
 {
 class content_transaction;
+class presentation_content_transaction;
 
 namespace detail
 {
@@ -141,6 +142,7 @@ class score
         bool was_loaded = false;
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::presentation_content_transaction;
         translation description_;
         string_id<event_statistic> stat_;
 };

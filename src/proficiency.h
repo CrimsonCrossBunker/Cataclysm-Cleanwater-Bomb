@@ -28,6 +28,7 @@ class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 enum class proficiency_bonus_type : int {
@@ -69,6 +70,7 @@ class proficiency
         friend class generic_factory<proficiency>;
         friend struct mod_tracker;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
         proficiency_id id;
         proficiency_category_id _category;

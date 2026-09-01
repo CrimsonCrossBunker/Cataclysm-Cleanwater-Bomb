@@ -18,6 +18,7 @@ struct input_event;
 namespace cata::lua_platform
 {
 class content_transaction;
+class presentation_content_transaction;
 }
 
 namespace catacurses
@@ -34,6 +35,7 @@ class help
         std::optional<int> platform_topic_order( const std::string &id ) const;
     private:
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::presentation_content_transaction;
         void load_object( const JsonObject &jo, const std::string &src );
         void reset_instance();
         std::map<int, inclusive_rectangle<point>> draw_menu( const catacurses::window &win,

@@ -34,6 +34,7 @@ template <typename T> class value_ptr;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 /**
@@ -102,6 +103,7 @@ class Item_factory
         friend class generic_factory<itype>;
         friend struct itype;
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
     public:
         generic_factory<itype> item_factory = generic_factory<itype>( "ITEM" );
 

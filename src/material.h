@@ -24,6 +24,7 @@ template <typename T> struct enum_traits;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 } // namespace cata::lua_platform
 
 using mat_burn_products = std::vector<std::pair<itype_id, float>>;
@@ -76,6 +77,7 @@ struct fuel_data {
 class material_type
 {
         friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::items_content_transaction;
 
     public:
         material_id id;
