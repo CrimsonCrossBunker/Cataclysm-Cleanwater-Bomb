@@ -9,6 +9,7 @@
 #include "activity_actor_definitions.h"
 #include "avatar_action.h"
 #include "basecamp.h"
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -2303,7 +2304,7 @@ void inventory_selector::add_vehicle_tank_items()
     // within that range.  This naturally includes one-tile vehicles and appliances.
     std::vector<std::pair<vehicle *, int>> nearby_tanks;
     std::unordered_set<vehicle *> vehicles_with_faucet;
-    for( const tripoint_bub_ms &pos : closest_points_first( origin, PICKUP_RANGE ) ) {
+    for( const tripoint_bub_ms &pos : closest_points_first( origin, pickup_range ) ) {
         if( pos != origin &&
             !here.clear_path( origin, pos, rl_dist( origin, pos ), 1, 100 ) ) {
             continue;

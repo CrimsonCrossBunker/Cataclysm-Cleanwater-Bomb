@@ -487,10 +487,10 @@ recipe_availability availability_for(
         value.get_component_filter();
     result.materials =
         value.deduped_requirements().can_make_with_inventory(
-            crafting_inventory, filter, batch );
+            &player, crafting_inventory, filter, batch );
     result.start_materials =
         value.deduped_requirements().can_make_with_inventory(
-            crafting_inventory, filter, batch,
+            &player, crafting_inventory, filter, batch,
             craft_flags::start_only );
     result.craftable =
         result.known && result.required_skills &&
@@ -830,13 +830,14 @@ sol::table requirement_group_page(
 }
 
 sol::table snapshot_requirement(
-    sol::state_view lua, const requirement_data &value,
+    sol::state_view lua, const Character *actor,
+    const requirement_data &value,
     const int batch,
     const read_only_visitable &crafting_inventory,
     const std::function<bool( const item & )> &filter )
 {
     const bool can_make = value.can_make_with_inventory(
-                              crafting_inventory, filter, batch );
+                              actor, crafting_inventory, filter, batch );
     sol::table result = lua.create_table();
     result["id"] = value.id().is_null() ?
                    std::string() : value.id().str();
@@ -871,10 +872,10 @@ sol::table snapshot_requirement(
             entry.requirement;
         item_result["available"] = available;
         return item_result;
-    }, [&crafting_inventory, &filter, batch](
+    }, [actor, &crafting_inventory, &filter, batch](
         const tool_comp & entry ) {
         return entry.has(
-                   crafting_inventory, filter, batch );
+                   actor, crafting_inventory, filter, batch );
     } );
 
     result["qualities"] = requirement_group_page <
@@ -894,9 +895,9 @@ sol::table snapshot_requirement(
             entry.requirement;
         item_result["available"] = available;
         return item_result;
-    }, [&crafting_inventory, &filter](
+    }, [actor, &crafting_inventory, &filter](
         const quality_requirement & entry ) {
-        return entry.has( crafting_inventory, filter );
+        return entry.has( actor, crafting_inventory, filter );
     } );
 
     result["components"] = requirement_group_page <
@@ -920,10 +921,10 @@ sol::table snapshot_requirement(
             entry.requirement;
         item_result["available"] = available;
         return item_result;
-    }, [&crafting_inventory, &filter, batch](
+    }, [actor, &crafting_inventory, &filter, batch](
         const item_comp & entry ) {
         return entry.has(
-                   crafting_inventory, filter, batch );
+                   actor, crafting_inventory, filter, batch );
     } );
     return result;
 }
@@ -956,7 +957,7 @@ sol::object get_requirement(
     return sol::make_object(
                state,
                snapshot_requirement(
-                   state, id.obj(), batch,
+                   state, &player, id.obj(), batch,
                    crafting_inventory, filter ) );
 }
 
@@ -976,7 +977,8 @@ sol::table requirements_for_recipe(
     const inventory &crafting_inventory =
         player.crafting_inventory();
     sol::table result = snapshot_requirement(
-                            state, value.simple_requirements(),
+                            state, &player,
+                            value.simple_requirements(),
                             batch, crafting_inventory,
                             value.get_component_filter() );
     result["recipe"] = id;
@@ -1020,7 +1022,7 @@ sol::table requirement_page(
     for( std::size_t index = 0;
          index < returned; ++index, ++iterator ) {
         items[index + 1] = snapshot_requirement(
-                               state, iterator->second,
+                               state, &player, iterator->second,
                                options.batch,
                                crafting_inventory, filter );
     }

@@ -400,7 +400,7 @@ void iexamine::cvdmachine( Character &you, const tripoint_bub_ms & )
     qty = std::max( 1, qty );
     requirement_data reqs = *requirement_data_cvd_diamond * qty;
 
-    if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
+    if( !reqs.can_make_with_inventory( &you, you.crafting_inventory(), is_crafting_component ) ) {
         popup( "%s", reqs.list_missing() );
         return;
     }
@@ -794,7 +794,7 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
     const int qty = 1;
     requirement_data reqs = *requirement_data_superalloy_forge * qty;
 
-    if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
+    if( !reqs.can_make_with_inventory( &you, you.crafting_inventory(), is_crafting_component ) ) {
         popup( "%s", reqs.list_missing() );
         return;
     }

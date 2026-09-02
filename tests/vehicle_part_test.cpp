@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "cached_options.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "coordinates.h"
@@ -675,7 +676,7 @@ TEST_CASE( "consume_inventory_finds_nearby_vehicle_tanks", "[inventory][vehicle]
     }
 
     SECTION( "nearby appliance with attached faucet is available within pickup range" ) {
-        vehicle *veh = add_test_vehicle( origin + tripoint( PICKUP_RANGE - 1, 0, 0 ), false, true );
+        vehicle *veh = add_test_vehicle( origin + tripoint( pickup_range - 1, 0, 0 ), false, true );
         REQUIRE( veh->is_appliance() );
 
         vehicle_part *tank = nullptr;
@@ -694,7 +695,7 @@ TEST_CASE( "consume_inventory_finds_nearby_vehicle_tanks", "[inventory][vehicle]
     }
 
     SECTION( "nearby tank must itself be within pickup range" ) {
-        add_test_vehicle( origin + tripoint( PICKUP_RANGE + 1, 0, 0 ), true );
+        add_test_vehicle( origin + tripoint( pickup_range + 1, 0, 0 ), true );
 
         inventory_selector selector( character );
         selector.add_vehicle_tank_items();
@@ -702,7 +703,7 @@ TEST_CASE( "consume_inventory_finds_nearby_vehicle_tanks", "[inventory][vehicle]
     }
 
     SECTION( "nearby faucet must itself be within pickup range" ) {
-        vehicle *veh = add_test_vehicle( origin + tripoint( PICKUP_RANGE, 0, 0 ), false );
+        vehicle *veh = add_test_vehicle( origin + tripoint( pickup_range, 0, 0 ), false );
         REQUIRE( veh->install_part( here, point_rel_ms::east, vpart_frame ) >= 0 );
         REQUIRE( veh->install_part( here, point_rel_ms::east, vpart_water_faucet ) >= 0 );
         veh->refresh();

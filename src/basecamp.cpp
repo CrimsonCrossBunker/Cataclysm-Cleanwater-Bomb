@@ -706,7 +706,7 @@ bool consume_detached_requirement_data(
     item_components &consumed, std::string &error )
 {
     const inventory all_items = make_detached_recipe_inventory( values );
-    if( !requirements.can_make_with_inventory( all_items, component_filter, batch ) ) {
+    if( !requirements.can_make_with_inventory( nullptr, all_items, component_filter, batch ) ) {
         error = std::string( label ) + " does not satisfy authoritative requirements";
         return false;
     }
@@ -717,7 +717,7 @@ bool consume_detached_requirement_data(
             if( candidate.requirement ) {
                 continue;
             }
-            if( candidate.has( component_items, component_filter, batch ) ) {
+            if( candidate.has( nullptr, component_items, component_filter, batch ) ) {
                 choice = &candidate;
                 break;
             }
@@ -746,7 +746,7 @@ bool consume_detached_requirement_data(
         const inventory tool_items = make_detached_recipe_inventory( values );
         const tool_comp *choice = nullptr;
         for( const tool_comp &candidate : alternatives ) {
-            if( candidate.has( tool_items, return_true<item>, batch ) ) {
+            if( candidate.has( nullptr, tool_items, return_true<item>, batch ) ) {
                 choice = &candidate;
                 break;
             }
@@ -893,7 +893,7 @@ bool recipe_escrow_matches_work( const basecamp_platform_recipe_work &work,
         escrow_inventory.add_item( std::move( value ), false, false, false );
     }
     if( !making.deduped_requirements().can_make_with_inventory(
-            escrow_inventory, making.get_component_filter(), work.batch ) ) {
+            worker, escrow_inventory, making.get_component_filter(), work.batch ) ) {
         error = "recipe_work escrow does not satisfy authoritative recipe requirements";
         return false;
     }
@@ -977,7 +977,7 @@ bool upgrade_escrow_matches_work( const basecamp_platform_upgrade_work &work,
         escrow_inventory.add_item( std::move( value ), false, false, false );
     }
     if( !requirements->second.consolidated_reqs.can_make_with_inventory(
-            escrow_inventory, upgrade.get_component_filter(), 1 ) ) {
+            worker, escrow_inventory, upgrade.get_component_filter(), 1 ) ) {
         error = "upgrade_work escrow does not satisfy authoritative blueprint requirements";
         return false;
     }
