@@ -32,9 +32,11 @@ static const itype_id itype_rope_30( "rope_30" );
 static const itype_id itype_scalpel( "scalpel" );
 
 static const mtype_id mon_chicken( "mon_chicken" );
+static const mtype_id mon_civilian_panic( "mon_civilian_panic" );
 static const mtype_id mon_deer( "mon_deer" );
 static const mtype_id mon_test_CBM( "mon_test_CBM" );
 static const mtype_id mon_test_bovine( "mon_test_bovine" );
+static const mtype_id mon_zombie( "mon_zombie" );
 
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_survival( "survival" );
@@ -100,6 +102,22 @@ TEST_CASE( "Harvest_drops_from_dissecting_corpse", "[harvest]" )
         CHECK( cbm_count > 0 );
         CHECK( sample_count == 0 );
     }
+}
+
+TEST_CASE( "zombie_corpses_do_not_trigger_butchery_empathy", "[harvest][butchery]" )
+{
+    Character &u = get_player_character();
+    clear_character( u, true );
+
+    REQUIRE( u.empathizes_with_monster( mon_civilian_panic ) );
+    CHECK( character_has_butchery_empathy( u, mon_civilian_panic ) );
+
+    // Keep general species empathy intact; only butchery exempts zombified corpses.
+    REQUIRE( u.empathizes_with_monster( mon_zombie ) );
+    CHECK_FALSE( character_has_butchery_empathy( u, mon_zombie ) );
+
+    // NPC corpses use the null monster id and remain human for butchery purposes.
+    CHECK( character_has_butchery_empathy( u, mtype_id::NULL_ID() ) );
 }
 
 static void do_butchery_timing( int expected_turns, butcher_type butchery_type,
