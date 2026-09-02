@@ -3340,7 +3340,7 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } ) || ( check_engine_state && native_exists( std::string( id ) ) );
         };
-        const auto item_exists = [&index, &staged, check_engine_state]( const std::string & id ) {
+        const auto item_exists = [&index, check_engine_state]( const std::string & id ) {
             return ( index.defines_item && index.defines_item( id ) ) ||
                    ( check_engine_state && itype_id( id ).is_valid() );
         };
