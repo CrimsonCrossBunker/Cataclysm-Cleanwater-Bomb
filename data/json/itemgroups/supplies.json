@@ -215,12 +215,14 @@
     "id": "bleach_jug",
     "type": "item_group",
     "//": "128 oz",
-    "items": [ { "item": "bleach", "charges": 3750 } ]
+    "items": [ { "item": "bleach", "count": -1 } ],
+    "container-item": "jug_plastic"
   },
   {
     "id": "bleach_jug_part",
     "type": "item_group",
-    "items": [ { "item": "bleach", "charges": [ 1, 3750 ] } ]
+    "items": [ { "item": "bleach", "count": [ 125, -1 ] } ],
+    "container-item": "jug_plastic"
   },
   {
     "id": "ammonia_hydroxide_bottle_twoliter",
