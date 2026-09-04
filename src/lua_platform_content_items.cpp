@@ -4299,7 +4299,9 @@ bool items_content_transaction::validate_scaled_requirement_set(
         scaled_requirement_groups scaled_component_groups;
         scaled_requirement_groups scaled_tool_groups;
         std::set<std::string> ids;
-        for( const auto &[id, count] : requirements ) {
+        for( const std::pair<std::string, std::int64_t> &requirement : requirements ) {
+            const std::string &id = requirement.first;
+            const std::int64_t count = requirement.second;
             if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ||
                 count <= 0 || count > std::numeric_limits<int>::max() ||
                 !ids.insert( id ).second ) {
