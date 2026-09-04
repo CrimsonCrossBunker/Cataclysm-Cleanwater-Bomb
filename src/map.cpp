@@ -6503,7 +6503,7 @@ std::unordered_set<item_location> map::all_items( const std::function<bool( cons
             }
         }
     } else if( flags & Access_Map_Around )  {
-        for( const tripoint_bub_ms &pt : points_in_radius( who.pos_bub(), PICKUP_RANGE ) ) {
+        for( const tripoint_bub_ms &pt : points_in_radius( who.pos_bub(), pickup_range ) ) {
             for( item &it : i_at( pt ) ) {
                 // We always want to recurse even if the top-level item doesn't pass our filter - the contained items still might!
                 item_location there( map_cursor( pt ), &it );

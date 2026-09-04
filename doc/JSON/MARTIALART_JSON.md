@@ -205,7 +205,8 @@ All fields, except for the ID, type and name are optional.
       "permanent": false,                // If true the effect won't decay (default: false)
       "duration": 15,                    // Duration of the effect in turns
       "on_damage": true,                 // If true the effect will only be applied if the attack succeeded in doing damage (default: true)
-      "req_flag": "ANY",                 // A single arbitrary character flag (from traits, bionics, effects, or bodyparts) required to apply this effect
+      "condition": "ANY",                // Optional dialogue condition; `u` is the martial artist and `npc` is the target
+      "req_flag": "ANY",                 // Legacy single character flag, retained for external mod compatibility; if both are present, both must pass
       "message": "Example"               // The message to print if you successfully apply the effect, %s can be substituted for the target's name
     }
   ]
@@ -293,4 +294,3 @@ Note: for the (sub)part to apply its unarmed damage it needs unrestricted natura
 ## How to use
 
 MA can be granted to characters in different ways.  They can be `autolearn`ed (as in the MA example), learned from [books](JSON_INFO.md#books) (as `martial_art`), be granted by traits (as `initial_ma_styles`), or dynamically by [eocs](EFFECT_ON_CONDITION.md#u_learn_martial_artnpc_learn_martial_art).
-

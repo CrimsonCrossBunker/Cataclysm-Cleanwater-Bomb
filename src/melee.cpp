@@ -1825,11 +1825,14 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
     move_cost += technique.move_cost_penalty( *this ) * rep;
 
     // Add effects for each repeat of the tech
+    const_dialogue d( get_const_talker_for( *this ), get_const_talker_for( t ) );
     for( int i = 0; i < rep; i++ ) {
         for( const tech_effect_data &eff : technique.tech_effects ) {
             // Add the tech's effects if it rolls the chance and either did damage or ignores it
             if( x_in_y( eff.chance, 100 ) && ( di.total_damage() != 0 || !eff.on_damage ) ) {
-                if( eff.req_flag == json_flag_NULL || has_flag( eff.req_flag ) ) {
+                const bool flag_matches = eff.req_flag == json_flag_NULL || has_flag( eff.req_flag );
+                const bool condition_matches = !eff.has_condition || eff.condition( d );
+                if( flag_matches && condition_matches ) {
                     t.add_effect( eff.id, time_duration::from_turns( eff.duration ), eff.permanent );
                     add_msg_if_player( m_good, _( eff.message ), t.disp_name() );
                 }

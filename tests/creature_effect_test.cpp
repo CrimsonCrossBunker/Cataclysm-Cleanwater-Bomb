@@ -410,10 +410,10 @@ TEST_CASE( "monster_is_immune_effect", "[creature][monster][effect][immune]" )
             CHECK_FALSE( zed.is_immune_effect( effect_bleed ) );
         }
 
-        THEN( "they can be poisoned by stronger poisons" ) {
-            CHECK_FALSE( zed.is_immune_effect( effect_venom_dmg ) );
-            CHECK_FALSE( zed.is_immune_effect( effect_venom_player1 ) );
-            CHECK_FALSE( zed.is_immune_effect( effect_venom_player2 ) );
+        THEN( "their VENOM_IMMUNE flag blocks mutation venom" ) {
+            REQUIRE( zed.has_flag( mon_flag_id( "VENOM_IMMUNE" ) ) );
+            CHECK( zed.is_immune_effect( effect_venom_player1 ) );
+            CHECK( zed.is_immune_effect( effect_venom_player2 ) );
         }
 
         THEN( "they can't be poisoned by weaker poisons" ) {
@@ -551,4 +551,3 @@ TEST_CASE( "creature_effect_reistance", "[creature][effect][resist]" )
     // - has effect from eff.get_resist_effects
     // - has trait from eff.get_resist_traits
 }
-

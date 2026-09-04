@@ -11,8 +11,10 @@
 #include "character_martial_arts.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "damage.h"
 #include "enums.h"
 #include "item.h"
+#include "json_loader.h"
 #include "magic_enchantment.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -52,6 +54,9 @@ static const species_id species_SLIME( "SLIME" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
 
 static const trait_id trait_DEBUG_TAIL( "DEBUG_TAIL" );
+static const trait_id trait_ARM_TENTACLES( "ARM_TENTACLES" );
+
+static const json_character_flag json_flag_PSEUDOPOD_GRASP( "PSEUDOPOD_GRASP" );
 
 static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
 
@@ -65,6 +70,63 @@ TEST_CASE( "martial_arts", "[martial_arts]" )
         GIVEN( "a weapon that fits the martial art weapon category" ) {
             CHECK( test_style_ma1->has_weapon( itype_test_weapon2 ) );
         }
+    }
+}
+
+TEST_CASE( "martial_art_tech_effect_conditions", "[martial_arts][tech_effect]" )
+{
+    standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
+    monster target( mtype_id( "mon_zombie" ) );
+
+    const auto load_effect = []( const std::string & data ) {
+        JsonObject jo = json_loader::from_string( data ).get_object();
+        return load_tech_effect_data( jo );
+    };
+    const auto apply_effect = [&]( tech_effect_data effect ) {
+        ma_technique technique;
+        technique.tech_effects.emplace_back( std::move( effect ) );
+        damage_instance damage;
+        int move_cost = 100;
+        item_location weapon;
+        dude.perform_technique( technique, target, damage, move_cost, weapon );
+    };
+
+    SECTION( "an effect without a condition still applies" ) {
+        tech_effect_data effect = load_effect(
+                                      R"({ "id": "stunned", "duration": 10, "on_damage": false })" );
+        REQUIRE_FALSE( effect.has_condition );
+        apply_effect( std::move( effect ) );
+        CHECK( target.has_effect( effect_stunned ) );
+    }
+
+    SECTION( "a true dialogue condition applies the effect" ) {
+        tech_effect_data effect = load_effect(
+                                      R"({ "id": "stunned", "duration": 10, "on_damage": false, "condition": "u_is_npc" })" );
+        REQUIRE( effect.has_condition );
+        apply_effect( std::move( effect ) );
+        CHECK( target.has_effect( effect_stunned ) );
+    }
+
+    SECTION( "a false dialogue condition blocks the effect" ) {
+        tech_effect_data effect = load_effect(
+                                      R"({ "id": "stunned", "duration": 10, "on_damage": false, "condition": { "not": "u_is_npc" } })" );
+        REQUIRE( effect.has_condition );
+        apply_effect( std::move( effect ) );
+        CHECK_FALSE( target.has_effect( effect_stunned ) );
+    }
+
+    SECTION( "the legacy req_flag field remains supported" ) {
+        tech_effect_data effect = load_effect(
+                                      R"({ "id": "stunned", "duration": 10, "on_damage": false, "req_flag": "PSEUDOPOD_GRASP" })" );
+        REQUIRE( effect.req_flag == json_flag_PSEUDOPOD_GRASP );
+        REQUIRE_FALSE( dude.has_flag( json_flag_PSEUDOPOD_GRASP ) );
+        apply_effect( effect );
+        CHECK_FALSE( target.has_effect( effect_stunned ) );
+
+        dude.set_mutation( trait_ARM_TENTACLES );
+        REQUIRE( dude.has_flag( json_flag_PSEUDOPOD_GRASP ) );
+        apply_effect( std::move( effect ) );
+        CHECK( target.has_effect( effect_stunned ) );
     }
 }
 

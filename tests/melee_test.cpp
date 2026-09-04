@@ -28,6 +28,8 @@
 static const damage_type_id damage_test_fire( "test_fire" );
 
 static const efftype_id effect_sleep( "sleep" );
+static const efftype_id effect_venom_dmg( "venom_dmg" );
+static const efftype_id effect_venom_weaken( "venom_weaken" );
 
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_hoodie( "hoodie" );
@@ -50,6 +52,11 @@ static const mtype_id mon_zombie_hulk( "mon_zombie_hulk" );
 static const mtype_id pseudo_debug_mon( "pseudo_debug_mon" );
 
 static const skill_id skill_melee( "melee" );
+static const skill_id skill_unarmed( "unarmed" );
+
+static const trait_id trait_ARM_TENTACLES( "ARM_TENTACLES" );
+static const trait_id trait_CLAWS_TENTACLE( "CLAWS_TENTACLE" );
+static const trait_id trait_POISONOUS2( "POISONOUS2" );
 
 static float brute_probability( Creature &attacker, Creature &target, const size_t iters )
 {
@@ -109,6 +116,24 @@ static void check_near( float prob, const float expected, const float tolerance 
 static const int num_iters = 10000;
 
 static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+
+TEST_CASE( "strong_mutation_venom_keeps_character_effects", "[melee][mutation][venom]" )
+{
+    standard_npc attacker( "VenomTester", dude_pos, {}, 10, 12, 20, 12, 12 );
+    standard_npc target( "VenomTarget", dude_pos + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    target.set_movement_mode( move_mode_prone );
+    attacker.set_skill_level( skill_unarmed, 10 );
+    attacker.set_mutation( trait_ARM_TENTACLES );
+    attacker.set_mutation( trait_CLAWS_TENTACLE );
+    attacker.set_mutation( trait_POISONOUS2 );
+
+    attacker.melee_attack_abstract( target, true, matec_id( "" ) );
+
+    REQUIRE( target.has_effect( effect_venom_dmg ) );
+    REQUIRE( target.has_effect( effect_venom_weaken ) );
+    CHECK( target.get_effect_dur( effect_venom_dmg ) == 15_minutes );
+    CHECK( target.get_effect_dur( effect_venom_weaken ) == 5_minutes );
+}
 
 TEST_CASE( "Character_attacking_a_zombie", "[.melee]" )
 {

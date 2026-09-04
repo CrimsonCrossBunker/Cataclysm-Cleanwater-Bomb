@@ -2093,6 +2093,14 @@ bool monster::is_elec_immune() const
 
 bool monster::is_immune_effect( const efftype_id &effect ) const
 {
+    // Data-defined immunity must be honored before legacy effect-specific
+    // branches return their material/species result.
+    for( const flag_id &flag : effect->immune_flags ) {
+        if( has_flag( flag ) ) {
+            return true;
+        }
+    }
+
     if( effect == effect_onfire ) {
         return is_immune_damage( damage_heat ) ||
                made_of( phase_id::LIQUID ) ||
@@ -2135,11 +2143,6 @@ bool monster::is_immune_effect( const efftype_id &effect ) const
         } else {
             return type->bodytype == "snake" || type->bodytype == "blob" || type->bodytype == "fish" ||
                    has_flag( mon_flag_FLIES ) || has_flag( mon_flag_IMMOBILE ) || has_flag( json_flag_CANNOT_MOVE );
-        }
-    }
-    for( const flag_id &flag : effect->immune_flags ) {
-        if( has_flag( flag ) ) {
-            return true;
         }
     }
     return false;

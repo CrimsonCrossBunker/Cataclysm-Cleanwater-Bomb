@@ -265,10 +265,15 @@ class ma_weapon_damage_reader : public generic_typed_reader<ma_weapon_damage_rea
 
 tech_effect_data load_tech_effect_data( const JsonObject &e )
 {
-    return tech_effect_data( efftype_id( e.get_string( "id" ) ), e.get_int( "duration", 0 ),
-                             e.get_bool( "permanent", false ), e.get_bool( "on_damage", true ),
-                             e.get_int( "chance", 100 ), e.get_string( "message", "" ),
-                             json_character_flag( e.get_string( "req_flag", "NULL" ) ) );
+    tech_effect_data ret( efftype_id( e.get_string( "id" ) ), e.get_int( "duration", 0 ),
+                          e.get_bool( "permanent", false ), e.get_bool( "on_damage", true ),
+                          e.get_int( "chance", 100 ), e.get_string( "message", "" ),
+                          json_character_flag( e.get_string( "req_flag", "NULL" ) ) );
+    if( e.has_member( "condition" ) ) {
+        read_condition( e, "condition", ret.condition, false );
+        ret.has_condition = true;
+    }
+    return ret;
 }
 
 namespace

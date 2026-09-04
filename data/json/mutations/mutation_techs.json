@@ -26,7 +26,13 @@
         "on_damage": false,
         "message": "You bleed the %s dry!"
       },
-      { "id": "downed", "chance": 50, "duration": 2, "message": "You bonk the %s real good", "req_flag": "DREAMY" }
+      {
+        "id": "downed",
+        "chance": 50,
+        "duration": 2,
+        "message": "You bonk the %s real good",
+        "condition": { "u_has_flag": "DREAMY" }
+      }
     ],
     "attack_vectors": [ "test_test" ]
   },
@@ -37,7 +43,7 @@
     "melee_allowed": true,
     "messages": [ "You bite %s", "<npcname> bites %s" ],
     "unarmed_allowed": true,
-    "weighting": -5,
+    "weighting": 5,
     "reach_ok": false,
     "attack_vectors": [ "vector_bite" ],
     "condition": {
@@ -54,7 +60,7 @@
         "duration": 3000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "flat_bonuses": [
@@ -90,7 +96,7 @@
         "duration": 3000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "flat_bonuses": [
@@ -126,7 +132,7 @@
         "duration": 3000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "flat_bonuses": [
@@ -154,7 +160,7 @@
         "duration": 6000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "flat_bonuses": [
@@ -188,7 +194,7 @@
         "duration": 3000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "flat_bonuses": [
@@ -216,7 +222,7 @@
         "duration": 3000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "condition": {
@@ -247,7 +253,7 @@
         "duration": 6000,
         "on_damage": true,
         "message": "Saliva glistens across %s's wound!",
-        "req_flag": "DRACULIN_VENOM"
+        "condition": { "u_has_flag": "DRACULIN_VENOM" }
       }
     ],
     "attack_vectors": [ "vector_bite" ],
@@ -556,7 +562,7 @@
     "unarmed_allowed": true,
     "messages": [ "You smash %s", "<npcname> smashes %s" ],
     "description": "A basic ursine punch",
-    "condition": { "not": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] } },
+    "condition": { "not": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] } },
     "attack_vectors": [ "vector_broad_paw_punch" ]
   },
   {
@@ -577,7 +583,7 @@
     "unarmed_allowed": true,
     "messages": [ "You claw %s", "<npcname> claws %s" ],
     "description": "A basic ursine punch, with claws",
-    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] },
+    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] },
     "attack_vectors": [ "vector_broad_paw_punch" ]
   },
   {
@@ -590,7 +596,7 @@
     "description": "A vicious clawed attack.",
     "weighting": -2,
     "attack_vectors": [ "vector_broad_paw_punch" ],
-    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] },
+    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] },
     "flat_bonuses": [
       { "stat": "damage", "type": "cut", "scaling-stat": "unarmed", "scale": 0.75 },
       { "stat": "damage", "type": "bash", "scaling-stat": "str", "scale": 0.5625 },
@@ -628,7 +634,7 @@
     "unarmed_allowed": true,
     "messages": [ "You punch %s", "<npcname> punches %s" ],
     "description": "A basic pawed punch",
-    "condition": { "not": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] } },
+    "condition": { "not": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] } },
     "attack_vectors": [ "vector_paw_punch", "vector_paw_rat_punch" ]
   },
   {
@@ -639,7 +645,7 @@
     "unarmed_allowed": true,
     "messages": [ "You claw %s", "<npcname> claw %s" ],
     "description": "A basic clawed and pawed punch",
-    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] },
+    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] },
     "attack_vectors": [ "vector_paw_punch", "vector_paw_rat_punch" ]
   },
   {
@@ -652,7 +658,7 @@
     "description": "A vicious clawed attack.",
     "weighting": -2,
     "attack_vectors": [ "vector_paw_punch", "vector_paw_rat_punch" ],
-    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST" ] },
+    "condition": { "u_has_any_trait": [ "CLAWS", "CLAWS_RAT", "CLAWS_ST", "CLAWS_RETRACT_active" ] },
     "flat_bonuses": [
       { "stat": "damage", "type": "cut", "scaling-stat": "unarmed", "scale": 0.75 },
       { "stat": "damage", "type": "bash", "scaling-stat": "str", "scale": 0.5625 },
