@@ -57,7 +57,7 @@ jobs:
           const hasJson = hasWorkflowChange || files.some(path => path.endsWith('.json'));
           core.setOutput('has_cpp', hasCpp ? 'true' : 'false');
           core.setOutput('has_json', hasJson ? 'true' : 'false');
-          fs.writeFileSync("files_changed", files.join('\n') + '\n');
+          fs.writeFileSync("files_changed", files.map(path => `${path}\0`).join(''));
 
     - name: install astyle
       if: ${{ steps.changed-files.outputs.has_cpp == 'true' }}
@@ -72,23 +72,30 @@ jobs:
       run: make -k style-all-json-parallel
 
     - name: check formatting
-      run: git diff --quiet
+      shell: bash
+      run: |
+        status=0
+        while IFS= read -r -d '' path; do
+          if [[ -e "$path" ]] && ! git diff --quiet -- "$path"; then
+            printf 'Formatting changes required: %q\n' "$path"
+            status=1
+          fi
+        done < files_changed
+        exit "$status"
 
     - name: Create pr comment artifacts
       if: ${{ failure() }}
+      shell: bash
       run: |
-        set +e
-        cat files_changed | while read f; do
-          if [ -e "$f" ]; then
-            git add -- "$f"
+        : > formatter_suggestions.diff
+        while IFS= read -r -d '' path; do
+          if [[ -e "$path" ]]; then
+            git diff -U1 -- "$path" >> formatter_suggestions.diff
           fi
-        done
-        git checkout .
-        git reset
-        git diff --exit-code
-        if [ $? -ne 0 ]; then
+        done < files_changed
+        if [[ -s formatter_suggestions.diff ]]; then
           mkdir -p suggestions
-          git diff -U1 > suggestions/diff.txt
+          mv formatter_suggestions.diff suggestions/diff.txt
           echo ${{ github.event.pull_request.number }} > suggestions/pr_number
           echo ${{ github.event.pull_request.head.sha }} > suggestions/commit_sha
           echo '[JSON & C++ formatters](https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/c++/DEVELOPER_TOOLING.md)' > suggestions/comment.txt
