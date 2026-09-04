@@ -1,5 +1,7 @@
 name: "Experimental Release"
-concurrency: release
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'experimental' }}
+  cancel-in-progress: false
 on:
   push:
     branches:
