@@ -19,6 +19,7 @@
 #if defined(__ANDROID__)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
+    #include "ui_profile.h" // IWYU pragma: keep
 #endif
 
 #include "cata_path.h"
