@@ -1,5 +1,7 @@
 #include "advanced_inv.h"
 
+#include <advanced_inv_pane.h>
+#include <cursesdef.h>
 #include <algorithm>
 #include <climits>
 #include <cstddef>
@@ -36,7 +38,6 @@
 #include "debug.h"
 #include "enums.h"
 #include "game.h"
-#include "game_constants.h"
 #include "imgui/imgui.h"
 #include "input.h"
 #include "input_context.h"
@@ -62,9 +63,9 @@
 #include "string_input_popup.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_iteminfo.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "uistate.h"
 #include "units.h"
 #include "units_utility.h"

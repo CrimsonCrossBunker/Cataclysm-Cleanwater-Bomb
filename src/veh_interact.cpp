@@ -1,5 +1,12 @@
 #include "veh_interact.h"
 
+#include <color.h>
+#include <coordinates.h>
+#include <cursesdef.h>
+#include <input_context.h>
+#include <input_enums.h>
+#include <item_location.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -60,8 +67,8 @@
 #include "tileray.h"
 #include "translation.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"

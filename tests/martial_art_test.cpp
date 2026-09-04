@@ -1,8 +1,10 @@
+#include <item_location.h>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "bodypart.h"
@@ -13,6 +15,8 @@
 #include "creature.h"
 #include "damage.h"
 #include "enums.h"
+// IWYU pragma: no_include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "json_loader.h"
 #include "magic_enchantment.h"
@@ -52,6 +56,8 @@ static const matec_id test_vector_tech_1( "test_vector_tech_1" );
 static const matec_id test_vector_tech_2( "test_vector_tech_2" );
 static const matype_id test_style_ma1( "test_style_ma1" );
 
+static const mtype_id mon_zombie( "mon_zombie" );
+
 static const species_id species_SLIME( "SLIME" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
 
@@ -76,7 +82,7 @@ TEST_CASE( "martial_arts", "[martial_arts]" )
 TEST_CASE( "martial_art_tech_effect_conditions", "[martial_arts][tech_effect]" )
 {
     standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
-    monster target( mtype_id( "mon_zombie" ) );
+    monster target( mon_zombie );
 
     const auto load_effect = []( const std::string & data ) {
         JsonObject jo = json_loader::from_string( data ).get_object();

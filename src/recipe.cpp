@@ -1,5 +1,8 @@
 #include "recipe.h"
 
+#include <build_reqs.h>
+#include <crafting_enums.h>
+#include <translation.h>
 #include <algorithm>
 #include <array>
 #include <cmath>

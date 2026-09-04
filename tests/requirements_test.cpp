@@ -24,16 +24,40 @@ static const butchery_requirements_id butchery_requirements_default( "default" )
 
 static const itype_id itype_ash( "ash" );
 static const itype_id itype_chem_sulphuric_acid( "chem_sulphuric_acid" );
+static const itype_id itype_cooked_cured_meat( "cooked_cured_meat" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_demihuman_cooked( "demihuman_cooked" );
+static const itype_id itype_demihuman_flesh( "demihuman_flesh" );
+static const itype_id itype_demihuman_meat_scrap( "demihuman_meat_scrap" );
 static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_human_cooked( "human_cooked" );
+static const itype_id itype_human_flesh( "human_flesh" );
+static const itype_id itype_human_meat_scrap( "human_meat_scrap" );
 static const itype_id itype_lye( "lye" );
+static const itype_id itype_meat( "meat" );
+static const itype_id itype_meat_cooked( "meat_cooked" );
+static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
+static const itype_id itype_meat_fried( "meat_fried" );
+static const itype_id itype_meat_pickled( "meat_pickled" );
+static const itype_id itype_meat_scrap( "meat_scrap" );
+static const itype_id itype_meat_scrap_cooked( "meat_scrap_cooked" );
+static const itype_id itype_meat_smoked( "meat_smoked" );
 static const itype_id itype_metal_tank_test( "metal_tank_test" );
+static const itype_id itype_mutant_human_cooked( "mutant_human_cooked" );
+static const itype_id itype_mutant_human_flesh( "mutant_human_flesh" );
+static const itype_id itype_mutant_meat( "mutant_meat" );
+static const itype_id itype_mutant_meat_cooked( "mutant_meat_cooked" );
+static const itype_id itype_mutant_meat_scrap( "mutant_meat_scrap" );
+static const itype_id itype_mutant_meat_scrap_cooked( "mutant_meat_scrap_cooked" );
+static const itype_id itype_porkbelly( "porkbelly" );
+static const itype_id itype_rehydrated_meat( "rehydrated_meat" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soap( "soap" );
 static const itype_id itype_test_egg( "test_egg" );
 static const itype_id itype_test_glass_pipe_mostly_glass( "test_glass_pipe_mostly_glass" );
 static const itype_id itype_test_glass_pipe_mostly_steel( "test_glass_pipe_mostly_steel" );
 static const itype_id itype_test_pipe( "test_pipe" );
+static const itype_id itype_washed_cured_meat( "washed_cured_meat" );
 static const itype_id itype_yarn( "yarn" );
 
 static const quality_id qual_BUTCHER( "BUTCHER" );
@@ -228,37 +252,37 @@ TEST_CASE( "requirement_extension", "[requirement]" )
 TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
 {
     const std::map<itype_id, int> expected_curable = {
-        { itype_id( "demihuman_flesh" ), 1 },
-        { itype_id( "demihuman_meat_scrap" ), 10 },
-        { itype_id( "human_flesh" ), 1 },
-        { itype_id( "human_meat_scrap" ), 10 },
-        { itype_id( "meat" ), 1 },
-        { itype_id( "meat_scrap" ), 10 },
-        { itype_id( "mutant_human_flesh" ), 1 },
-        { itype_id( "mutant_meat" ), 1 },
-        { itype_id( "mutant_meat_scrap" ), 10 },
-        { itype_id( "porkbelly" ), 1 }
+        { itype_demihuman_flesh, 1 },
+        { itype_demihuman_meat_scrap, 10 },
+        { itype_human_flesh, 1 },
+        { itype_human_meat_scrap, 10 },
+        { itype_meat, 1 },
+        { itype_meat_scrap, 10 },
+        { itype_mutant_human_flesh, 1 },
+        { itype_mutant_meat, 1 },
+        { itype_mutant_meat_scrap, 10 },
+        { itype_porkbelly, 1 }
     };
     CHECK( component_counts( requirement_data_meat_red_raw_curable.obj() ) == expected_curable );
 
     std::map<itype_id, int> expected_raw = expected_curable;
-    expected_raw.emplace( itype_id( "washed_cured_meat" ), 1 );
+    expected_raw.emplace( itype_washed_cured_meat, 1 );
     CHECK( component_counts( requirement_data_meat_red_raw.obj() ) == expected_raw );
 
     const std::map<itype_id, int> expected_vacuum_packable = {
-        { itype_id( "cooked_cured_meat" ), 1 },
-        { itype_id( "demihuman_cooked" ), 1 },
-        { itype_id( "human_cooked" ), 1 },
-        { itype_id( "meat_cooked" ), 1 },
-        { itype_id( "meat_fatty_cooked" ), 1 },
-        { itype_id( "meat_fried" ), 1 },
-        { itype_id( "meat_pickled" ), 1 },
-        { itype_id( "meat_scrap_cooked" ), 10 },
-        { itype_id( "meat_smoked" ), 1 },
-        { itype_id( "mutant_human_cooked" ), 1 },
-        { itype_id( "mutant_meat_cooked" ), 1 },
-        { itype_id( "mutant_meat_scrap_cooked" ), 10 },
-        { itype_id( "rehydrated_meat" ), 1 }
+        { itype_cooked_cured_meat, 1 },
+        { itype_demihuman_cooked, 1 },
+        { itype_human_cooked, 1 },
+        { itype_meat_cooked, 1 },
+        { itype_meat_fatty_cooked, 1 },
+        { itype_meat_fried, 1 },
+        { itype_meat_pickled, 1 },
+        { itype_meat_scrap_cooked, 10 },
+        { itype_meat_smoked, 1 },
+        { itype_mutant_human_cooked, 1 },
+        { itype_mutant_meat_cooked, 1 },
+        { itype_mutant_meat_scrap_cooked, 10 },
+        { itype_rehydrated_meat, 1 }
     };
     CHECK( component_counts( requirement_data_meat_vacuum_packable.obj() ) ==
            expected_vacuum_packable );

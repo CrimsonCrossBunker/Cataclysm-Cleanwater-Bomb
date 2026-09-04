@@ -1,5 +1,6 @@
 #include "pickup.h"
 
+#include <coordinates.h>
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -34,8 +35,8 @@
 #include "mapdata.h"
 #include "math_parser_diag_value.h"
 #include "messages.h"
-#include "overmapbuffer.h"
 #include "options.h"
+#include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "point.h"

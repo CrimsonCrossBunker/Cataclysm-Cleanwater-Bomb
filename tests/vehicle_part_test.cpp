@@ -10,13 +10,12 @@
 #include <utility>
 #include <vector>
 
-#include "calendar.h"
 #include "cached_options.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "coordinates.h"
 #include "enums.h"
-#include "game_constants.h"
 #include "inventory.h"
 #include "inventory_ui.h"
 #include "item.h"

@@ -1,5 +1,7 @@
 #include "veh_utils.h"
 
+#include <color.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -19,7 +21,6 @@
 #include "debug.h"
 #include "enums.h"
 #include "game.h"
-#include "game_constants.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "inventory.h"

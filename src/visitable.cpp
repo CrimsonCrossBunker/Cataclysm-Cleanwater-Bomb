@@ -1,5 +1,6 @@
 #include "visitable.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cstdint>

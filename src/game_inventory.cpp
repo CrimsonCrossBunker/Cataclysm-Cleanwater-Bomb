@@ -1,5 +1,7 @@
 #include "game_inventory.h"
 
+#include <cata_imgui.h>
+#include <coordinates.h>
 #include <imgui/imgui.h>
 #include <algorithm>
 #include <bitset>
@@ -34,7 +36,6 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"

@@ -9,8 +9,8 @@
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
-#include "cached_options.h"
 #include "bionics.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_utility.h"
@@ -20,7 +20,6 @@
 #include "crafting.h"
 #include "crafting_enums.h"
 #include "flexbuffer_json.h"
-#include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_components.h"

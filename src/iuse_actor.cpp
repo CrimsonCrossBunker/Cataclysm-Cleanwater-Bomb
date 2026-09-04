@@ -1,11 +1,16 @@
 #include "iuse_actor.h"
 
+#include <color.h>
+#include <imgui/imgui.h>
+#include <iuse.h>
+#include <ret_val.h>
+#include <translation.h>
+#include <units.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <imgui/imgui.h>
 #include <iterator>
 #include <limits>
 #include <list>
@@ -50,8 +55,8 @@
 #include "generic_factory.h"
 #include "hsv_color.h"
 #include "iexamine.h"
-#include "inventory.h"
 #include "input_popup.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -75,8 +80,8 @@
 #include "music.h"
 #include "mutation.h"
 #include "npc.h"
-#include "output.h"
 #include "options.h"
+#include "output.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -102,8 +107,8 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "vfx_emit.h"
 #include "vehicle_selector.h"
+#include "vfx_emit.h"
 #include "visitable.h"
 #include "vitamin.h"
 #include "vpart_position.h"

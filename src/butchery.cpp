@@ -1,5 +1,7 @@
 #include "butchery.h"
 
+#include <item_location.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>

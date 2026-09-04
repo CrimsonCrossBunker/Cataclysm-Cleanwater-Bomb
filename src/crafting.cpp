@@ -39,7 +39,6 @@
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
-#include "enum_conversions.h"
 #include "enum_traits.h"
 #include "enums.h"
 #include "faction.h"

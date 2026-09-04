@@ -335,7 +335,7 @@ recipe_options read_recipe_options(
             error += " received unknown option '";
             error += key;
             error += "'";
-            throw std::invalid_argument( std::move( error ) );
+            throw std::invalid_argument( error );
         }
     }
     return result;
@@ -740,7 +740,7 @@ requirement_options read_requirement_options(
             error += " received unknown option '";
             error += key;
             error += "'";
-            throw std::invalid_argument( std::move( error ) );
+            throw std::invalid_argument( error );
         }
     }
     return result;

@@ -1,12 +1,14 @@
 #include "activity_handlers.h" // IWYU pragma: associated
 #include "activity_item_handling.h" // IWYU pragma: associated
 
+#include <line.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
 #include <cmath>
-#include <deque>
 #include <cstdlib>
+#include <deque>
 #include <list>
 #include <memory>
 #include <optional>

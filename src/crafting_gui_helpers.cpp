@@ -1,5 +1,8 @@
 #include "crafting_gui_helpers.h"
 
+#include <color.h>
+#include <proficiency.h>
+#include <translation.h>
 #include <algorithm>
 #include <bitset>
 #include <iterator>
@@ -15,11 +18,12 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "character_id.h"
 #include "character.h"
+#include "character_id.h"
 #include "crafting.h"
 #include "display.h"
 #include "flag.h"
+#include "flat_set.h"
 #include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
@@ -33,7 +37,6 @@
 #include "requirements.h"
 #include "skill.h"
 #include "string_formatter.h"
-#include "flat_set.h"
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"

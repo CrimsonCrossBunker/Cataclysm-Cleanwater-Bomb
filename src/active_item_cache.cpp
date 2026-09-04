@@ -1,5 +1,7 @@
 #include "active_item_cache.h"
 
+#include <coordinates.h>
+#include <point.h>
 #include <algorithm>
 #include <numeric>
 #include <string>

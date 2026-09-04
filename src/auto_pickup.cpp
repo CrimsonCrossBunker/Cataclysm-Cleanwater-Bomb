@@ -1,16 +1,13 @@
 #include "auto_pickup.h"
 
+#include <enums.h>
 #include <algorithm>
-#include <array>
-#include <cmath>
 #include <cstddef>
-#include <deque>
 #include <functional>
 #include <initializer_list>
 #include <iosfwd>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -52,7 +49,6 @@
 #include "string_formatter.h"
 #include "translations.h"
 #include "type_id.h"
-#include "ui_profile.h"
 #include "ui_helpers.h"
 #include "ui_manager.h"
 #include "uilist.h"

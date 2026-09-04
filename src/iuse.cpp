@@ -1,5 +1,6 @@
 #include "iuse.h"
 
+#include <clone_ptr.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -123,8 +124,8 @@
 #include "trap.h"
 #include "try_parse_integer.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"

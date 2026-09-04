@@ -1,5 +1,12 @@
 #include "inventory_ui.h"
 
+#include <color.h>
+#include <coordinates.h>
+#include <cursesdef.h>
+#include <input_context.h>
+#include <item_location.h>
+#include <pimpl.h>
+#include <pocket_type.h>
 #include <chrono>
 #include <optional>
 #include <stdexcept>
@@ -23,10 +30,8 @@
 #include "flag.h"
 #include "flat_set.h"
 #include "flexbuffer_json.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "input.h"
-#include "pickup.h"
 #include "input_enums.h"
 #include "inventory.h"
 #include "item.h"
@@ -46,6 +51,7 @@
 #include "messages.h"
 #include "options.h"
 #include "output.h"
+#include "pickup.h"
 #include "point.h"
 #include "ret_val.h"
 #include "sdltiles.h"
@@ -56,9 +62,9 @@
 #include "translation_cache.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_iteminfo.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "uistate.h"
 #include "units.h"
 #include "units_utility.h"
