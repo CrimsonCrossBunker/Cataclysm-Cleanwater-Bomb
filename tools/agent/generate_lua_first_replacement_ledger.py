@@ -4337,6 +4337,7 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
 EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "goto_location"): "workflows.npc-navigation",
     ("eoc-effects", "morale_chat_activity"): "workflows.socialize",
+    ("eoc-effects", "npc_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "npc_activate"): "services.items-and-characters",
     ("eoc-effects", "npc_deal_damage"): "services.combat",
     ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
@@ -4344,6 +4345,7 @@ EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "u_activate"): "services.items-and-characters",
     ("eoc-effects", "u_deal_damage"): "services.combat",
+    ("eoc-effects", "u_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
     ("eoc-effects", "u_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
