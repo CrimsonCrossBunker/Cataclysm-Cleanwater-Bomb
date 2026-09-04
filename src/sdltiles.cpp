@@ -62,6 +62,7 @@
 #include "game_ui.h"
 #include "hash_utils.h"
 #include "horde_entity.h"
+#include "hover_mouse_input.h"
 #include "input.h"
 #include "input_context.h"
 #include "input_replay.h"
@@ -147,6 +148,9 @@ static bool needupdate = false;
 // Synthetic Android touch clicks carry their own coordinates.  Preserve them
 // instead of replacing them with the (usually stale) hardware mouse position.
 static bool last_input_has_explicit_mouse_pos = false;
+#if defined(__ANDROID__)
+static hover_mouse_input_state android_hover_mouse_input;
+#endif
 static bool need_invalidate_framebuffers = false;
 palette_array windowsPalette;
 
@@ -636,6 +640,9 @@ static Uint32 renderer_watch_window_id = 0;
 //Registers, creates, and shows the Window!!
 static void WinCreate()
 {
+#if defined(__ANDROID__)
+    android_hover_mouse_input.deactivate();
+#endif
     // Common flags used for windowed mode (fullscreen applied after creation)
     Uint32 window_flags = CATA_WINDOW_RESIZABLE | CATA_WINDOW_HIGH_DPI;
     WindowWidth = TERMINAL_WIDTH * fontwidth * scaling_factor;
@@ -876,6 +883,7 @@ static void WinDestroy()
     SDL_DelEventWatch( renderer_event_watch, &renderer_coordinator );
 #endif
 #if defined(__ANDROID__)
+    android_hover_mouse_input.deactivate();
     touch_joystick.reset();
 #endif
     imclient.reset();
@@ -1581,6 +1589,15 @@ void get_display_buffer_dims( int *w, int *h )
     if( h ) {
         *h = buf_h;
     }
+}
+
+bool is_mouse_active_for_edge_scrolling()
+{
+#if defined(__ANDROID__)
+    return android_hover_mouse_input.active();
+#else
+    return true;
+#endif
 }
 
 SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
@@ -6447,6 +6464,43 @@ static void CheckMessages()
     int imgui_buf_h = 0;
     get_display_buffer_dims( &imgui_buf_w, &imgui_buf_h );
     while( SDL_PollEvent( &ev ) ) {
+#if defined(__ANDROID__)
+        // Touchscreens do not provide a persistent hover position.  SDL's
+        // hardware mouse state remains at its default (usually 0, 0) on a
+        // touch-only device, so only real mouse input may enable timeout-based
+        // edge scrolling.  Switching back to touch also retires a stale
+        // external-mouse position until that mouse is used again.
+        if( IsWindowEvent( ev ) &&
+            GetWindowEventID( ev ) == CATA_WINDOWEVENT_FOCUS_LOST ) {
+            android_hover_mouse_input.deactivate();
+        } else if( ev.type == CATA_FINGERMOTION || ev.type == CATA_FINGERDOWN ||
+                   ev.type == CATA_FINGERUP ) {
+            android_hover_mouse_input.deactivate();
+        } else if( ev.type == CATA_MOUSEMOTION ) {
+            if( ev.motion.which == SDL_TOUCH_MOUSEID ) {
+                android_hover_mouse_input.deactivate();
+            } else {
+                android_hover_mouse_input.activate();
+            }
+        } else if( ev.type == CATA_MOUSEBUTTONDOWN || ev.type == CATA_MOUSEBUTTONUP ) {
+            if( ev.button.which == SDL_TOUCH_MOUSEID ) {
+                android_hover_mouse_input.deactivate();
+            } else {
+                android_hover_mouse_input.activate();
+            }
+        } else if( ev.type == CATA_MOUSEWHEEL ) {
+            if( ev.wheel.which == SDL_TOUCH_MOUSEID ) {
+                android_hover_mouse_input.deactivate();
+            } else {
+                android_hover_mouse_input.activate();
+            }
+        }
+#if SDL_MAJOR_VERSION >= 3
+        else if( ev.type == SDL_EVENT_MOUSE_REMOVED ) {
+            android_hover_mouse_input.deactivate();
+        }
+#endif
+#endif
         // Build a display_buffer-coord copy for ImGui and gameplay
         // consumers. The raw `ev` stays in window coordinates so android
         // shortcut and joystick hit-tests see the same domain SDL emitted.
