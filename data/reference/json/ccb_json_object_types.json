@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:9720c146a00f871483a2d30b54f889f6aad413fee667c847db81c7b7403b03af",
+    "source_fingerprint": "sha256:7afc60d5346727dd1e0eedf1667ef458643055f2de5131f32e9af864f76a367b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6767,
-    "top_level_objects": 94710,
+    "tracked_json_files": 6768,
+    "top_level_objects": 94728,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15101,
+        "occurrences": 15113,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -820,7 +820,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3796
+            "line": 3812
           }
         ],
         "confidence": "lexical_only"
@@ -1036,7 +1036,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1875
+            "line": 1891
           }
         ],
         "confidence": "lexical_only"
@@ -1449,7 +1449,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MARTIALART_JSON.md",
-            "line": 276
+            "line": 277
           }
         ],
         "confidence": "lexical_only"
@@ -1803,7 +1803,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1787
+            "line": 1803
           }
         ],
         "confidence": "lexical_only"
@@ -2373,7 +2373,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1874
+            "line": 1890
           }
         ],
         "confidence": "lexical_only"
@@ -2717,7 +2717,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1902
+            "line": 1918
           }
         ],
         "confidence": "lexical_only"
@@ -3299,7 +3299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5810
+            "line": 5826
           }
         ],
         "confidence": "lexical_only"
@@ -3766,7 +3766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5348
+            "line": 5364
           }
         ],
         "confidence": "lexical_only"
@@ -4297,7 +4297,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1892
+            "line": 1908
           }
         ],
         "confidence": "lexical_only"
@@ -4582,7 +4582,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2550
+            "line": 2566
           }
         ],
         "confidence": "lexical_only"
@@ -5054,7 +5054,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1866
+            "line": 1882
           }
         ],
         "confidence": "lexical_only"
@@ -5396,7 +5396,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 133,
+        "occurrences": 134,
         "examples": [
           {
             "path": "data/json/monster_special_attacks/feral_weapon_attacks.json",
@@ -5455,7 +5455,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 163,
+        "occurrences": 164,
         "examples": [
           {
             "path": "data/json/monsters/monster_flags.json",
@@ -5514,7 +5514,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1103,
+        "occurrences": 1104,
         "examples": [
           {
             "path": "data/json/mapgen/animalpound.json",
@@ -5538,7 +5538,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2550
+            "line": 2566
           }
         ],
         "confidence": "lexical_only"
@@ -5656,7 +5656,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4404
+            "line": 4420
           }
         ],
         "confidence": "lexical_only"
@@ -5715,7 +5715,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1783
+            "line": 1799
           }
         ],
         "confidence": "lexical_only"
@@ -7047,7 +7047,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 624
+            "line": 640
           }
         ],
         "confidence": "lexical_only"
@@ -7278,7 +7278,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 885
+            "line": 901
           }
         ],
         "confidence": "lexical_only"
@@ -8566,7 +8566,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2701
+            "line": 2717
           }
         ],
         "confidence": "lexical_only"
@@ -9033,7 +9033,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4346
+            "line": 4362
           }
         ],
         "confidence": "lexical_only"
@@ -9092,7 +9092,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1910
+            "line": 1926
           }
         ],
         "confidence": "lexical_only"
@@ -9200,7 +9200,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3950
+            "line": 3966
           }
         ],
         "confidence": "lexical_only"
@@ -9466,7 +9466,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4652,
+        "occurrences": 4655,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mapgen_eocs/furniture_eocs.json",
@@ -9490,7 +9490,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4297
+            "line": 4313
           }
         ],
         "confidence": "lexical_only"
@@ -9549,7 +9549,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1780
+            "line": 1796
           }
         ],
         "confidence": "lexical_only"
@@ -9726,7 +9726,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5545
+            "line": 5561
           }
         ],
         "confidence": "lexical_only"
@@ -11112,7 +11112,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3239
+            "line": 3255
           }
         ],
         "confidence": "lexical_only"

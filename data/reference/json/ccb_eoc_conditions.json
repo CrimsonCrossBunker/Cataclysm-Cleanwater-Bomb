@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:9720c146a00f871483a2d30b54f889f6aad413fee667c847db81c7b7403b03af",
+    "source_fingerprint": "sha256:7afc60d5346727dd1e0eedf1667ef458643055f2de5131f32e9af864f76a367b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -67,7 +67,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2682,
+            "line": 2696,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -117,7 +117,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5409,
+        "occurrences": 5414,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -163,7 +163,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2610,
+            "line": 2624,
             "symbol": "parsers_simple"
           }
         }
@@ -256,7 +256,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2572,
+            "line": 2586,
             "symbol": "parsers"
           }
         }
@@ -305,7 +305,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3173,
+        "occurrences": 3175,
         "examples": [
           {
             "path": "data/json/effects_on_condition/anomalous_mp3_eocs.json",
@@ -349,7 +349,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2573,
+            "line": 2587,
             "symbol": "parsers"
           }
         }
@@ -442,7 +442,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2512,
+            "line": 2526,
             "symbol": "parsers"
           }
         }
@@ -506,7 +506,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1384
+            "line": 1400
           }
         ],
         "confidence": "lexical_only"
@@ -535,7 +535,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2527,
+            "line": 2541,
             "symbol": "parsers"
           }
         }
@@ -628,7 +628,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2526,
+            "line": 2540,
             "symbol": "parsers"
           }
         }
@@ -716,7 +716,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2574,
+            "line": 2588,
             "symbol": "parsers"
           }
         }
@@ -780,7 +780,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4017
+            "line": 4033
           }
         ],
         "confidence": "lexical_only"
@@ -809,7 +809,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2647,
+            "line": 2661,
             "symbol": "parsers_simple"
           }
         }
@@ -902,7 +902,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2643,
+            "line": 2657,
             "symbol": "parsers_simple"
           }
         }
@@ -966,7 +966,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1737
+            "line": 1753
           }
         ],
         "confidence": "lexical_only"
@@ -995,7 +995,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2589,
+            "line": 2603,
             "symbol": "parsers_simple"
           }
         }
@@ -1090,7 +1090,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2593,
+            "line": 2607,
             "symbol": "parsers_simple"
           }
         }
@@ -1178,7 +1178,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2648,
+            "line": 2662,
             "symbol": "parsers_simple"
           }
         }
@@ -1271,7 +1271,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2590,
+            "line": 2604,
             "symbol": "parsers_simple"
           }
         }
@@ -1366,7 +1366,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2595,
+            "line": 2609,
             "symbol": "parsers_simple"
           }
         }
@@ -1459,7 +1459,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2588,
+            "line": 2602,
             "symbol": "parsers_simple"
           }
         }
@@ -1549,7 +1549,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2591,
+            "line": 2605,
             "symbol": "parsers_simple"
           }
         }
@@ -1644,7 +1644,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2625,
+            "line": 2639,
             "symbol": "parsers_simple"
           }
         }
@@ -1732,7 +1732,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2628,
+            "line": 2642,
             "symbol": "parsers_simple"
           }
         }
@@ -1825,7 +1825,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2627,
+            "line": 2641,
             "symbol": "parsers_simple"
           }
         }
@@ -1918,7 +1918,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2619,
+            "line": 2633,
             "symbol": "parsers_simple"
           }
         }
@@ -1982,7 +1982,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4037
+            "line": 4053
           }
         ],
         "confidence": "lexical_only"
@@ -2011,7 +2011,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2511,
+            "line": 2525,
             "symbol": "parsers"
           }
         }
@@ -2104,7 +2104,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2661,
+            "line": 2675,
             "symbol": "parsers_simple"
           }
         }
@@ -2163,7 +2163,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1741
+            "line": 1757
           }
         ],
         "confidence": "lexical_only"
@@ -2192,7 +2192,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2540,
+            "line": 2554,
             "symbol": "parsers"
           }
         }
@@ -2256,7 +2256,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4037
+            "line": 4053
           }
         ],
         "confidence": "lexical_only"
@@ -2285,7 +2285,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2560,
+            "line": 2574,
             "symbol": "parsers"
           }
         }
@@ -2378,7 +2378,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2547,
+            "line": 2561,
             "symbol": "parsers"
           }
         }
@@ -2442,7 +2442,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1531
+            "line": 1547
           }
         ],
         "confidence": "lexical_only"
@@ -2471,7 +2471,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2565,
+            "line": 2579,
             "symbol": "parsers"
           }
         }
@@ -2535,7 +2535,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1314
+            "line": 1330
           }
         ],
         "confidence": "lexical_only"
@@ -2564,7 +2564,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2564,
+            "line": 2578,
             "symbol": "parsers"
           }
         }
@@ -2628,7 +2628,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1314
+            "line": 1330
           }
         ],
         "confidence": "lexical_only"
@@ -2657,7 +2657,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2562,
+            "line": 2576,
             "symbol": "parsers"
           }
         }
@@ -2750,7 +2750,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2567,
+            "line": 2581,
             "symbol": "parsers"
           }
         }
@@ -2814,7 +2814,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1343
+            "line": 1359
           }
         ],
         "confidence": "lexical_only"
@@ -2843,7 +2843,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2566,
+            "line": 2580,
             "symbol": "parsers"
           }
         }
@@ -2907,7 +2907,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1347
+            "line": 1363
           }
         ],
         "confidence": "lexical_only"
@@ -2936,7 +2936,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2563,
+            "line": 2577,
             "symbol": "parsers"
           }
         }
@@ -3000,7 +3000,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1314
+            "line": 1330
           }
         ],
         "confidence": "lexical_only"
@@ -3029,7 +3029,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2561,
+            "line": 2575,
             "symbol": "parsers"
           }
         }
@@ -3122,7 +3122,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2570,
+            "line": 2584,
             "symbol": "parsers"
           }
         }
@@ -3171,7 +3171,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22114,
+        "occurrences": 22129,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3217,7 +3217,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2597,
+            "line": 2611,
             "symbol": "parsers_simple"
           }
         }
@@ -3312,7 +3312,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2601,
+            "line": 2615,
             "symbol": "parsers_simple"
           }
         }
@@ -3407,7 +3407,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2541,
+            "line": 2555,
             "symbol": "parsers"
           }
         }
@@ -3500,7 +3500,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2629,
+            "line": 2643,
             "symbol": "parsers_simple"
           }
         }
@@ -3595,7 +3595,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2599,
+            "line": 2613,
             "symbol": "parsers_simple"
           }
         }
@@ -3688,7 +3688,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2568,
+            "line": 2582,
             "symbol": "parsers"
           }
         }
@@ -3751,8 +3751,8 @@
         "status": "lexically_mentioned",
         "evidence": [
           {
-            "path": "doc/JSON/NPCs.md",
-            "line": 1174
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 617
           }
         ],
         "confidence": "lexical_only"
@@ -3781,7 +3781,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2698,
+            "line": 2712,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -3831,7 +3831,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6701,
+        "occurrences": 6703,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3877,7 +3877,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2534,
+            "line": 2548,
             "symbol": "parsers"
           }
         }
@@ -3971,7 +3971,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2529,
+            "line": 2543,
             "symbol": "parsers"
           }
         }
@@ -4066,7 +4066,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2530,
+            "line": 2544,
             "symbol": "parsers"
           }
         }
@@ -4162,7 +4162,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2524,
+            "line": 2538,
             "symbol": "parsers"
           }
         }
@@ -4257,7 +4257,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2611,
+            "line": 2625,
             "symbol": "parsers_simple"
           }
         }
@@ -4347,7 +4347,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2603,
+            "line": 2617,
             "symbol": "parsers_simple"
           }
         }
@@ -4442,7 +4442,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2498,
+            "line": 2512,
             "symbol": "parsers"
           }
         }
@@ -4537,7 +4537,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2613,
+            "line": 2627,
             "symbol": "parsers_simple"
           }
         }
@@ -4596,7 +4596,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 920
+            "line": 936
           }
         ],
         "confidence": "lexical_only"
@@ -4627,7 +4627,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2653,
+            "line": 2667,
             "symbol": "parsers_simple"
           }
         }
@@ -4686,7 +4686,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1608
+            "line": 1624
           }
         ],
         "confidence": "lexical_only"
@@ -4717,7 +4717,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2651,
+            "line": 2665,
             "symbol": "parsers_simple"
           }
         }
@@ -4776,7 +4776,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1576
+            "line": 1592
           }
         ],
         "confidence": "lexical_only"
@@ -4807,7 +4807,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2630,
+            "line": 2644,
             "symbol": "parsers_simple"
           }
         }
@@ -4866,7 +4866,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1128
+            "line": 1144
           }
         ],
         "confidence": "lexical_only"
@@ -4897,7 +4897,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2559,
+            "line": 2573,
             "symbol": "parsers"
           }
         }
@@ -4961,7 +4961,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1451
+            "line": 1467
           }
         ],
         "confidence": "lexical_only"
@@ -4992,7 +4992,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2612,
+            "line": 2626,
             "symbol": "parsers_simple"
           }
         }
@@ -5051,7 +5051,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 899
+            "line": 915
           }
         ],
         "confidence": "lexical_only"
@@ -5082,7 +5082,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2537,
+            "line": 2551,
             "symbol": "parsers"
           }
         }
@@ -5172,7 +5172,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2536,
+            "line": 2550,
             "symbol": "parsers"
           }
         }
@@ -5262,7 +5262,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2615,
+            "line": 2629,
             "symbol": "parsers_simple"
           }
         }
@@ -5321,7 +5321,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 968
+            "line": 984
           }
         ],
         "confidence": "lexical_only"
@@ -5352,7 +5352,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2616,
+            "line": 2630,
             "symbol": "parsers_simple"
           }
         }
@@ -5416,7 +5416,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 989
+            "line": 1005
           }
         ],
         "confidence": "lexical_only"
@@ -5447,7 +5447,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2535,
+            "line": 2549,
             "symbol": "parsers"
           }
         }
@@ -5542,7 +5542,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2634,
+            "line": 2648,
             "symbol": "parsers_simple"
           }
         }
@@ -5601,7 +5601,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1207
+            "line": 1223
           }
         ],
         "confidence": "lexical_only"
@@ -5632,7 +5632,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2586,
+            "line": 2600,
             "symbol": "parsers_simple"
           }
         }
@@ -5727,7 +5727,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2604,
+            "line": 2618,
             "symbol": "parsers_simple"
           }
         }
@@ -5822,7 +5822,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2605,
+            "line": 2619,
             "symbol": "parsers_simple"
           }
         }
@@ -5919,7 +5919,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2500,
+            "line": 2514,
             "symbol": "parsers"
           }
         },
@@ -5932,7 +5932,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2617,
+            "line": 2631,
             "symbol": "parsers_simple"
           }
         }
@@ -6028,7 +6028,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2520,
+            "line": 2534,
             "symbol": "parsers"
           }
         }
@@ -6092,7 +6092,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 849
+            "line": 865
           }
         ],
         "confidence": "lexical_only"
@@ -6123,7 +6123,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2488,
+            "line": 2502,
             "symbol": "parsers"
           }
         }
@@ -6216,7 +6216,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2624,
+            "line": 2638,
             "symbol": "parsers_simple"
           }
         }
@@ -6306,7 +6306,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2594,
+            "line": 2608,
             "symbol": "parsers_simple"
           }
         }
@@ -6396,7 +6396,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2519,
+            "line": 2533,
             "symbol": "parsers"
           }
         }
@@ -6460,7 +6460,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 828
+            "line": 844
           }
         ],
         "confidence": "lexical_only"
@@ -6491,7 +6491,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2499,
+            "line": 2513,
             "symbol": "parsers"
           }
         }
@@ -6587,7 +6587,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2506,
+            "line": 2520,
             "symbol": "parsers"
           }
         }
@@ -6647,7 +6647,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -6678,7 +6678,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2521,
+            "line": 2535,
             "symbol": "parsers"
           }
         }
@@ -6773,7 +6773,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2496,
+            "line": 2510,
             "symbol": "parsers"
           }
         }
@@ -6822,7 +6822,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 329,
+        "occurrences": 330,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -6869,7 +6869,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2507,
+            "line": 2521,
             "symbol": "parsers"
           }
         }
@@ -6934,7 +6934,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -6965,7 +6965,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2513,
+            "line": 2527,
             "symbol": "parsers"
           }
         }
@@ -7029,7 +7029,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 683
+            "line": 699
           }
         ],
         "confidence": "lexical_only"
@@ -7060,7 +7060,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2517,
+            "line": 2531,
             "symbol": "parsers"
           }
         }
@@ -7119,7 +7119,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 705
+            "line": 721
           }
         ],
         "confidence": "lexical_only"
@@ -7150,7 +7150,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2514,
+            "line": 2528,
             "symbol": "parsers"
           }
         }
@@ -7209,7 +7209,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1027
+            "line": 1043
           }
         ],
         "confidence": "lexical_only"
@@ -7240,7 +7240,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2515,
+            "line": 2529,
             "symbol": "parsers"
           }
         }
@@ -7299,7 +7299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 683
+            "line": 699
           }
         ],
         "confidence": "lexical_only"
@@ -7330,7 +7330,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2516,
+            "line": 2530,
             "symbol": "parsers"
           }
         }
@@ -7389,7 +7389,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 763
+            "line": 779
           }
         ],
         "confidence": "lexical_only"
@@ -7420,7 +7420,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2596,
+            "line": 2610,
             "symbol": "parsers_simple"
           }
         }
@@ -7505,7 +7505,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2493,
+            "line": 2507,
             "symbol": "parsers"
           }
         }
@@ -7595,7 +7595,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2558,
+            "line": 2572,
             "symbol": "parsers"
           }
         }
@@ -7680,7 +7680,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2592,
+            "line": 2606,
             "symbol": "parsers_simple"
           }
         }
@@ -7770,7 +7770,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2576,
+            "line": 2590,
             "symbol": "parsers"
           }
         }
@@ -7861,7 +7861,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2509,
+            "line": 2523,
             "symbol": "parsers"
           }
         }
@@ -7921,7 +7921,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 682
           }
         ],
         "confidence": "lexical_only"
@@ -7953,7 +7953,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2508,
+            "line": 2522,
             "symbol": "parsers"
           }
         }
@@ -8018,7 +8018,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -8049,7 +8049,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2626,
+            "line": 2640,
             "symbol": "parsers_simple"
           }
         }
@@ -8139,7 +8139,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2492,
+            "line": 2506,
             "symbol": "parsers"
           }
         }
@@ -8198,7 +8198,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 622
+            "line": 638
           }
         ],
         "confidence": "lexical_only"
@@ -8229,7 +8229,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2495,
+            "line": 2509,
             "symbol": "parsers"
           }
         }
@@ -8288,7 +8288,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 883
+            "line": 899
           }
         ],
         "confidence": "lexical_only"
@@ -8319,7 +8319,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2518,
+            "line": 2532,
             "symbol": "parsers"
           }
         }
@@ -8378,7 +8378,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 728
+            "line": 744
           }
         ],
         "confidence": "lexical_only"
@@ -8409,7 +8409,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2497,
+            "line": 2511,
             "symbol": "parsers"
           }
         }
@@ -8504,7 +8504,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2620,
+            "line": 2634,
             "symbol": "parsers_simple"
           }
         }
@@ -8590,7 +8590,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2505,
+            "line": 2519,
             "symbol": "parsers"
           }
         }
@@ -8650,7 +8650,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -8681,7 +8681,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2489,
+            "line": 2503,
             "symbol": "parsers"
           }
         }
@@ -8776,7 +8776,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2491,
+            "line": 2505,
             "symbol": "parsers"
           }
         }
@@ -8871,7 +8871,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2614,
+            "line": 2628,
             "symbol": "parsers_simple"
           }
         }
@@ -8935,7 +8935,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 947
+            "line": 963
           }
         ],
         "confidence": "lexical_only"
@@ -8966,7 +8966,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2552,
+            "line": 2566,
             "symbol": "parsers"
           }
         }
@@ -9025,7 +9025,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1111
+            "line": 1127
           }
         ],
         "confidence": "lexical_only"
@@ -9056,192 +9056,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2549,
-            "symbol": "parsers"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "member"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "legacy_alpha_beta_alias",
-        "talkers": [],
-        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "condition",
-      "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1061
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
-      "key": "npc_has_wielded_with_skill",
-      "syntaxes": [
-        "object_member"
-      ],
-      "accepted_json_shapes": [
-        "member"
-      ],
-      "handlers": [
-        "conditional_fun::f_has_wielded_with_skill"
-      ],
-      "aliases": [
-        "npc_has_wielded_with_skill",
-        "u_has_wielded_with_skill"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 63,
-          "alias_role": "beta",
-          "alias_group": [
-            "u_has_wielded_with_skill",
-            "npc_has_wielded_with_skill"
-          ],
-          "source": {
-            "path": "src/condition.cpp",
-            "line": 2551,
-            "symbol": "parsers"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "member"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "legacy_alpha_beta_alias",
-        "talkers": [],
-        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "condition",
-      "example_evidence": {
-        "status": "lexical_candidate",
-        "occurrences": 2,
-        "examples": [
-          {
-            "path": "data/mods/BombasticPerks/perkdata/boomstick_blast.json",
-            "pointer": "/0/effect/0/if/and/1/npc_has_wielded_with_skill"
-          }
-        ],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1093
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
-      "key": "npc_has_wielded_with_weapon_category",
-      "syntaxes": [
-        "object_member"
-      ],
-      "accepted_json_shapes": [
-        "member"
-      ],
-      "handlers": [
-        "conditional_fun::f_has_wielded_with_weapon_category"
-      ],
-      "aliases": [
-        "npc_has_wielded_with_weapon_category",
-        "u_has_wielded_with_weapon_category"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 62,
-          "alias_role": "beta",
-          "alias_group": [
-            "u_has_wielded_with_weapon_category",
-            "npc_has_wielded_with_weapon_category"
-          ],
-          "source": {
-            "path": "src/condition.cpp",
-            "line": 2550,
+            "line": 2563,
             "symbol": "parsers"
           }
         }
@@ -9307,6 +9122,191 @@
       }
     },
     {
+      "key": "npc_has_wielded_with_skill",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "conditional_fun::f_has_wielded_with_skill"
+      ],
+      "aliases": [
+        "npc_has_wielded_with_skill",
+        "u_has_wielded_with_skill"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 63,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_has_wielded_with_skill",
+            "npc_has_wielded_with_skill"
+          ],
+          "source": {
+            "path": "src/condition.cpp",
+            "line": 2565,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "condition",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 2,
+        "examples": [
+          {
+            "path": "data/mods/BombasticPerks/perkdata/boomstick_blast.json",
+            "pointer": "/0/effect/0/if/and/1/npc_has_wielded_with_skill"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 1109
+          }
+        ],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "npc_has_wielded_with_weapon_category",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "conditional_fun::f_has_wielded_with_weapon_category"
+      ],
+      "aliases": [
+        "npc_has_wielded_with_weapon_category",
+        "u_has_wielded_with_weapon_category"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 62,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_has_wielded_with_weapon_category",
+            "npc_has_wielded_with_weapon_category"
+          ],
+          "source": {
+            "path": "src/condition.cpp",
+            "line": 2564,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "condition",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 1093
+          }
+        ],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_has_worn_with_flag",
       "syntaxes": [
         "object_member"
@@ -9331,7 +9331,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2548,
+            "line": 2562,
             "symbol": "parsers"
           }
         }
@@ -9395,7 +9395,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1045
+            "line": 1061
           }
         ],
         "confidence": "lexical_only"
@@ -9426,7 +9426,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2606,
+            "line": 2620,
             "symbol": "parsers_simple"
           }
         }
@@ -9521,7 +9521,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2632,
+            "line": 2646,
             "symbol": "parsers_simple"
           }
         }
@@ -9585,7 +9585,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1170
+            "line": 1186
           }
         ],
         "confidence": "lexical_only"
@@ -9616,7 +9616,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2635,
+            "line": 2649,
             "symbol": "parsers_simple"
           }
         }
@@ -9711,7 +9711,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2659,
+            "line": 2673,
             "symbol": "parsers_simple"
           }
         }
@@ -9770,7 +9770,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1705
+            "line": 1721
           }
         ],
         "confidence": "lexical_only"
@@ -9801,7 +9801,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2637,
+            "line": 2651,
             "symbol": "parsers_simple"
           }
         }
@@ -9896,7 +9896,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2631,
+            "line": 2645,
             "symbol": "parsers_simple"
           }
         }
@@ -9955,7 +9955,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1149
+            "line": 1165
           }
         ],
         "confidence": "lexical_only"
@@ -9986,7 +9986,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2649,
+            "line": 2663,
             "symbol": "parsers_simple"
           }
         }
@@ -10045,7 +10045,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1489
+            "line": 1505
           }
         ],
         "confidence": "lexical_only"
@@ -10076,7 +10076,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2655,
+            "line": 2669,
             "symbol": "parsers_simple"
           }
         }
@@ -10135,7 +10135,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1641
+            "line": 1657
           }
         ],
         "confidence": "lexical_only"
@@ -10166,7 +10166,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2654,
+            "line": 2668,
             "symbol": "parsers_simple"
           }
         }
@@ -10225,7 +10225,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1624
+            "line": 1640
           }
         ],
         "confidence": "lexical_only"
@@ -10256,7 +10256,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2652,
+            "line": 2666,
             "symbol": "parsers_simple"
           }
         }
@@ -10315,7 +10315,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1592
+            "line": 1608
           }
         ],
         "confidence": "lexical_only"
@@ -10346,7 +10346,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2640,
+            "line": 2654,
             "symbol": "parsers_simple"
           }
         }
@@ -10436,7 +10436,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2557,
+            "line": 2571,
             "symbol": "parsers"
           }
         }
@@ -10495,7 +10495,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1265
           }
         ],
         "confidence": "lexical_only"
@@ -10526,7 +10526,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2660,
+            "line": 2674,
             "symbol": "parsers_simple"
           }
         }
@@ -10585,7 +10585,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1721
+            "line": 1737
           }
         ],
         "confidence": "lexical_only"
@@ -10616,7 +10616,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2639,
+            "line": 2653,
             "symbol": "parsers_simple"
           }
         }
@@ -10706,7 +10706,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2638,
+            "line": 2652,
             "symbol": "parsers_simple"
           }
         }
@@ -10801,7 +10801,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2636,
+            "line": 2650,
             "symbol": "parsers_simple"
           }
         }
@@ -10896,97 +10896,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2555,
-            "symbol": "parsers"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "member"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "legacy_alpha_beta_alias",
-        "talkers": [],
-        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "condition",
-      "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1217
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
-      "key": "npc_is_on_furniture_with_flag",
-      "syntaxes": [
-        "object_member"
-      ],
-      "accepted_json_shapes": [
-        "member"
-      ],
-      "handlers": [
-        "conditional_fun::f_is_on_furniture_with_flag"
-      ],
-      "aliases": [
-        "npc_is_on_furniture_with_flag",
-        "u_is_on_furniture_with_flag"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 68,
-          "alias_role": "beta",
-          "alias_group": [
-            "u_is_on_furniture_with_flag",
-            "npc_is_on_furniture_with_flag"
-          ],
-          "source": {
-            "path": "src/condition.cpp",
-            "line": 2556,
+            "line": 2569,
             "symbol": "parsers"
           }
         }
@@ -11052,6 +10962,96 @@
       }
     },
     {
+      "key": "npc_is_on_furniture_with_flag",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "conditional_fun::f_is_on_furniture_with_flag"
+      ],
+      "aliases": [
+        "npc_is_on_furniture_with_flag",
+        "u_is_on_furniture_with_flag"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 68,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_is_on_furniture_with_flag",
+            "npc_is_on_furniture_with_flag"
+          ],
+          "source": {
+            "path": "src/condition.cpp",
+            "line": 2570,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "condition",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 1249
+          }
+        ],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_is_on_rails",
       "syntaxes": [
         "condition_string"
@@ -11076,7 +11076,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2658,
+            "line": 2672,
             "symbol": "parsers_simple"
           }
         }
@@ -11135,7 +11135,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1689
+            "line": 1705
           }
         ],
         "confidence": "lexical_only"
@@ -11166,7 +11166,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2553,
+            "line": 2567,
             "symbol": "parsers"
           }
         }
@@ -11230,7 +11230,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1217
+            "line": 1233
           }
         ],
         "confidence": "lexical_only"
@@ -11261,7 +11261,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2554,
+            "line": 2568,
             "symbol": "parsers"
           }
         }
@@ -11325,7 +11325,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1249
           }
         ],
         "confidence": "lexical_only"
@@ -11356,7 +11356,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2621,
+            "line": 2635,
             "symbol": "parsers_simple"
           }
         }
@@ -11451,7 +11451,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2650,
+            "line": 2664,
             "symbol": "parsers_simple"
           }
         }
@@ -11510,7 +11510,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1560
+            "line": 1576
           }
         ],
         "confidence": "lexical_only"
@@ -11543,7 +11543,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2501,
+            "line": 2515,
             "symbol": "parsers"
           }
         },
@@ -11556,7 +11556,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2618,
+            "line": 2632,
             "symbol": "parsers_simple"
           }
         }
@@ -11647,7 +11647,97 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2657,
+            "line": 2671,
+            "symbol": "parsers_simple"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "condition_string"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "condition",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 1689
+          }
+        ],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "npc_is_skidding",
+      "syntaxes": [
+        "condition_string"
+      ],
+      "accepted_json_shapes": [
+        "condition_string"
+      ],
+      "handlers": [
+        "conditional_fun::f_is_skidding"
+      ],
+      "aliases": [
+        "npc_is_skidding",
+        "u_is_skidding"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 160,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_is_skidding",
+            "npc_is_skidding"
+          ],
+          "source": {
+            "path": "src/condition.cpp",
+            "line": 2670,
             "symbol": "parsers_simple"
           }
         }
@@ -11713,96 +11803,6 @@
       }
     },
     {
-      "key": "npc_is_skidding",
-      "syntaxes": [
-        "condition_string"
-      ],
-      "accepted_json_shapes": [
-        "condition_string"
-      ],
-      "handlers": [
-        "conditional_fun::f_is_skidding"
-      ],
-      "aliases": [
-        "npc_is_skidding",
-        "u_is_skidding"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 160,
-          "alias_role": "beta",
-          "alias_group": [
-            "u_is_skidding",
-            "npc_is_skidding"
-          ],
-          "source": {
-            "path": "src/condition.cpp",
-            "line": 2656,
-            "symbol": "parsers_simple"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "condition_string"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "legacy_alpha_beta_alias",
-        "talkers": [],
-        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "condition",
-      "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1657
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
       "key": "npc_is_trait_purifiable",
       "syntaxes": [
         "object_member"
@@ -11827,7 +11827,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2490,
+            "line": 2504,
             "symbol": "parsers"
           }
         }
@@ -11917,7 +11917,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2587,
+            "line": 2601,
             "symbol": "parsers_simple"
           }
         }
@@ -12012,7 +12012,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2622,
+            "line": 2636,
             "symbol": "parsers_simple"
           }
         }
@@ -12107,7 +12107,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2641,
+            "line": 2655,
             "symbol": "parsers_simple"
           }
         }
@@ -12197,7 +12197,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2633,
+            "line": 2647,
             "symbol": "parsers_simple"
           }
         }
@@ -12261,7 +12261,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1191
+            "line": 1207
           }
         ],
         "confidence": "lexical_only"
@@ -12292,7 +12292,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2510,
+            "line": 2524,
             "symbol": "parsers"
           }
         }
@@ -12382,7 +12382,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2585,
+            "line": 2599,
             "symbol": "parsers_simple"
           }
         }
@@ -12477,7 +12477,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2598,
+            "line": 2612,
             "symbol": "parsers_simple"
           }
         }
@@ -12567,7 +12567,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2602,
+            "line": 2616,
             "symbol": "parsers_simple"
           }
         }
@@ -12657,7 +12657,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2542,
+            "line": 2556,
             "symbol": "parsers"
           }
         }
@@ -12747,7 +12747,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2600,
+            "line": 2614,
             "symbol": "parsers_simple"
           }
         }
@@ -12837,7 +12837,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2525,
+            "line": 2539,
             "symbol": "parsers"
           }
         }
@@ -12886,7 +12886,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 73,
+        "occurrences": 75,
         "examples": [
           {
             "path": "data/json/effects_on_condition/item_eocs.json",
@@ -12932,7 +12932,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2522,
+            "line": 2536,
             "symbol": "parsers"
           }
         }
@@ -13027,7 +13027,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2539,
+            "line": 2553,
             "symbol": "parsers"
           }
         }
@@ -13117,7 +13117,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2523,
+            "line": 2537,
             "symbol": "parsers"
           }
         }
@@ -13176,7 +13176,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1265
+            "line": 1281
           }
         ],
         "confidence": "lexical_only"
@@ -13205,7 +13205,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2528,
+            "line": 2542,
             "symbol": "parsers"
           }
         }
@@ -13300,7 +13300,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2538,
+            "line": 2552,
             "symbol": "parsers"
           }
         }
@@ -13395,7 +13395,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2645,
+            "line": 2659,
             "symbol": "parsers_simple"
           }
         }
@@ -13480,7 +13480,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2646,
+            "line": 2660,
             "symbol": "parsers_simple"
           }
         }
@@ -13565,7 +13565,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2531,
+            "line": 2545,
             "symbol": "parsers"
           }
         }
@@ -13660,7 +13660,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2607,
+            "line": 2621,
             "symbol": "parsers_simple"
           }
         }
@@ -13755,7 +13755,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2609,
+            "line": 2623,
             "symbol": "parsers_simple"
           }
         }
@@ -13840,7 +13840,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2608,
+            "line": 2622,
             "symbol": "parsers_simple"
           }
         }
@@ -13935,7 +13935,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2494,
+            "line": 2508,
             "symbol": "parsers"
           }
         }
@@ -14025,7 +14025,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2642,
+            "line": 2656,
             "symbol": "parsers_simple"
           }
         }
@@ -14114,7 +14114,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2545,
+            "line": 2559,
             "symbol": "parsers"
           }
         }
@@ -14208,7 +14208,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2690,
+            "line": 2704,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -14302,7 +14302,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2571,
+            "line": 2585,
             "symbol": "parsers"
           }
         }
@@ -14392,7 +14392,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2644,
+            "line": 2658,
             "symbol": "parsers_simple"
           }
         }
@@ -14456,7 +14456,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1435
+            "line": 1451
           }
         ],
         "confidence": "lexical_only"
@@ -14487,7 +14487,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2644,
+            "line": 2658,
             "symbol": "parsers_simple"
           }
         }
@@ -14551,7 +14551,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1435
+            "line": 1451
           }
         ],
         "confidence": "lexical_only"
@@ -14580,7 +14580,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2543,
+            "line": 2557,
             "symbol": "parsers"
           }
         }
@@ -14673,7 +14673,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2575,
+            "line": 2589,
             "symbol": "parsers"
           }
         }
@@ -14737,7 +14737,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1745
+            "line": 1761
           }
         ],
         "confidence": "lexical_only"
@@ -14768,7 +14768,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2534,
+            "line": 2548,
             "symbol": "parsers"
           }
         }
@@ -14857,7 +14857,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2533,
+            "line": 2547,
             "symbol": "parsers"
           }
         }
@@ -14953,7 +14953,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2524,
+            "line": 2538,
             "symbol": "parsers"
           }
         }
@@ -15049,7 +15049,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2610,
+            "line": 2624,
             "symbol": "parsers_simple"
           }
         },
@@ -15062,7 +15062,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2611,
+            "line": 2625,
             "symbol": "parsers_simple"
           }
         }
@@ -15152,7 +15152,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2603,
+            "line": 2617,
             "symbol": "parsers_simple"
           }
         }
@@ -15242,7 +15242,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2498,
+            "line": 2512,
             "symbol": "parsers"
           }
         }
@@ -15332,7 +15332,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2613,
+            "line": 2627,
             "symbol": "parsers_simple"
           }
         }
@@ -15396,7 +15396,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 920
+            "line": 936
           }
         ],
         "confidence": "lexical_only"
@@ -15427,7 +15427,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2653,
+            "line": 2667,
             "symbol": "parsers_simple"
           }
         }
@@ -15486,7 +15486,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1608
+            "line": 1624
           }
         ],
         "confidence": "lexical_only"
@@ -15517,7 +15517,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2651,
+            "line": 2665,
             "symbol": "parsers_simple"
           }
         }
@@ -15576,7 +15576,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1576
+            "line": 1592
           }
         ],
         "confidence": "lexical_only"
@@ -15607,7 +15607,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2630,
+            "line": 2644,
             "symbol": "parsers_simple"
           }
         }
@@ -15671,7 +15671,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1128
+            "line": 1144
           }
         ],
         "confidence": "lexical_only"
@@ -15702,7 +15702,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2559,
+            "line": 2573,
             "symbol": "parsers"
           }
         }
@@ -15766,7 +15766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1451
+            "line": 1467
           }
         ],
         "confidence": "lexical_only"
@@ -15797,7 +15797,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2612,
+            "line": 2626,
             "symbol": "parsers_simple"
           }
         }
@@ -15861,7 +15861,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 899
+            "line": 915
           }
         ],
         "confidence": "lexical_only"
@@ -15892,7 +15892,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2537,
+            "line": 2551,
             "symbol": "parsers"
           }
         }
@@ -15982,7 +15982,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2536,
+            "line": 2550,
             "symbol": "parsers"
           }
         }
@@ -16072,7 +16072,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2615,
+            "line": 2629,
             "symbol": "parsers_simple"
           }
         }
@@ -16136,7 +16136,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 968
+            "line": 984
           }
         ],
         "confidence": "lexical_only"
@@ -16167,7 +16167,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2616,
+            "line": 2630,
             "symbol": "parsers_simple"
           }
         }
@@ -16231,7 +16231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 989
+            "line": 1005
           }
         ],
         "confidence": "lexical_only"
@@ -16262,7 +16262,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2535,
+            "line": 2549,
             "symbol": "parsers"
           }
         }
@@ -16352,7 +16352,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2634,
+            "line": 2648,
             "symbol": "parsers_simple"
           }
         }
@@ -16416,7 +16416,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1207
+            "line": 1223
           }
         ],
         "confidence": "lexical_only"
@@ -16447,7 +16447,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2586,
+            "line": 2600,
             "symbol": "parsers_simple"
           }
         }
@@ -16542,7 +16542,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2604,
+            "line": 2618,
             "symbol": "parsers_simple"
           }
         }
@@ -16637,7 +16637,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2605,
+            "line": 2619,
             "symbol": "parsers_simple"
           }
         }
@@ -16729,7 +16729,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2500,
+            "line": 2514,
             "symbol": "parsers"
           }
         },
@@ -16742,7 +16742,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2617,
+            "line": 2631,
             "symbol": "parsers_simple"
           }
         }
@@ -16833,7 +16833,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2520,
+            "line": 2534,
             "symbol": "parsers"
           }
         }
@@ -16897,7 +16897,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 849
+            "line": 865
           }
         ],
         "confidence": "lexical_only"
@@ -16928,7 +16928,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2488,
+            "line": 2502,
             "symbol": "parsers"
           }
         }
@@ -17024,7 +17024,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2593,
+            "line": 2607,
             "symbol": "parsers_simple"
           }
         },
@@ -17037,7 +17037,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2594,
+            "line": 2608,
             "symbol": "parsers_simple"
           }
         }
@@ -17127,7 +17127,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2519,
+            "line": 2533,
             "symbol": "parsers"
           }
         }
@@ -17191,7 +17191,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 828
+            "line": 844
           }
         ],
         "confidence": "lexical_only"
@@ -17220,7 +17220,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2623,
+            "line": 2637,
             "symbol": "parsers_simple"
           }
         }
@@ -17314,7 +17314,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2532,
+            "line": 2546,
             "symbol": "parsers"
           }
         }
@@ -17410,7 +17410,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2499,
+            "line": 2513,
             "symbol": "parsers"
           }
         }
@@ -17501,7 +17501,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2506,
+            "line": 2520,
             "symbol": "parsers"
           }
         }
@@ -17566,7 +17566,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -17597,7 +17597,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2521,
+            "line": 2535,
             "symbol": "parsers"
           }
         }
@@ -17646,7 +17646,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2270,
+        "occurrences": 2271,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -17691,7 +17691,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2569,
+            "line": 2583,
             "symbol": "parsers"
           }
         }
@@ -17787,7 +17787,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2496,
+            "line": 2510,
             "symbol": "parsers"
           }
         }
@@ -17836,7 +17836,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 823,
+        "occurrences": 832,
         "examples": [
           {
             "path": "data/json/effects_on_condition/misc_effect_on_condition.json",
@@ -17883,7 +17883,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2507,
+            "line": 2521,
             "symbol": "parsers"
           }
         }
@@ -17948,7 +17948,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -17979,7 +17979,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2513,
+            "line": 2527,
             "symbol": "parsers"
           }
         }
@@ -18043,7 +18043,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 683
+            "line": 699
           }
         ],
         "confidence": "lexical_only"
@@ -18074,7 +18074,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2517,
+            "line": 2531,
             "symbol": "parsers"
           }
         }
@@ -18138,7 +18138,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 705
+            "line": 721
           }
         ],
         "confidence": "lexical_only"
@@ -18169,7 +18169,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2514,
+            "line": 2528,
             "symbol": "parsers"
           }
         }
@@ -18233,7 +18233,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1027
+            "line": 1043
           }
         ],
         "confidence": "lexical_only"
@@ -18264,7 +18264,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2515,
+            "line": 2529,
             "symbol": "parsers"
           }
         }
@@ -18313,7 +18313,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 418,
+        "occurrences": 420,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
@@ -18328,7 +18328,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 683
+            "line": 699
           }
         ],
         "confidence": "lexical_only"
@@ -18359,7 +18359,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2516,
+            "line": 2530,
             "symbol": "parsers"
           }
         }
@@ -18423,7 +18423,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 763
+            "line": 779
           }
         ],
         "confidence": "lexical_only"
@@ -18455,7 +18455,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2595,
+            "line": 2609,
             "symbol": "parsers_simple"
           }
         },
@@ -18468,7 +18468,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2596,
+            "line": 2610,
             "symbol": "parsers_simple"
           }
         }
@@ -18553,7 +18553,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2493,
+            "line": 2507,
             "symbol": "parsers"
           }
         }
@@ -18646,7 +18646,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2502,
+            "line": 2516,
             "symbol": "parsers"
           }
         }
@@ -18741,7 +18741,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2558,
+            "line": 2572,
             "symbol": "parsers"
           }
         }
@@ -18832,7 +18832,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2591,
+            "line": 2605,
             "symbol": "parsers_simple"
           }
         },
@@ -18845,7 +18845,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2592,
+            "line": 2606,
             "symbol": "parsers_simple"
           }
         }
@@ -18935,7 +18935,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2576,
+            "line": 2590,
             "symbol": "parsers"
           }
         }
@@ -19026,7 +19026,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2509,
+            "line": 2523,
             "symbol": "parsers"
           }
         }
@@ -19086,7 +19086,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 682
           }
         ],
         "confidence": "lexical_only"
@@ -19118,7 +19118,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2508,
+            "line": 2522,
             "symbol": "parsers"
           }
         }
@@ -19183,7 +19183,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 650
+            "line": 666
           }
         ],
         "confidence": "lexical_only"
@@ -19215,7 +19215,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2625,
+            "line": 2639,
             "symbol": "parsers_simple"
           }
         },
@@ -19228,7 +19228,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2626,
+            "line": 2640,
             "symbol": "parsers_simple"
           }
         }
@@ -19318,7 +19318,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2492,
+            "line": 2506,
             "symbol": "parsers"
           }
         }
@@ -19382,7 +19382,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 622
+            "line": 638
           }
         ],
         "confidence": "lexical_only"
@@ -19413,7 +19413,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2495,
+            "line": 2509,
             "symbol": "parsers"
           }
         }
@@ -19477,7 +19477,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 883
+            "line": 899
           }
         ],
         "confidence": "lexical_only"
@@ -19508,7 +19508,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2518,
+            "line": 2532,
             "symbol": "parsers"
           }
         }
@@ -19572,7 +19572,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 728
+            "line": 744
           }
         ],
         "confidence": "lexical_only"
@@ -19603,7 +19603,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2497,
+            "line": 2511,
             "symbol": "parsers"
           }
         }
@@ -19698,7 +19698,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2620,
+            "line": 2634,
             "symbol": "parsers_simple"
           }
         }
@@ -19789,7 +19789,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2505,
+            "line": 2519,
             "symbol": "parsers"
           }
         }
@@ -19885,7 +19885,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2489,
+            "line": 2503,
             "symbol": "parsers"
           }
         }
@@ -19980,7 +19980,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2491,
+            "line": 2505,
             "symbol": "parsers"
           }
         }
@@ -20070,7 +20070,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2614,
+            "line": 2628,
             "symbol": "parsers_simple"
           }
         }
@@ -20134,7 +20134,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 947
+            "line": 963
           }
         ],
         "confidence": "lexical_only"
@@ -20165,7 +20165,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2552,
+            "line": 2566,
             "symbol": "parsers"
           }
         }
@@ -20229,7 +20229,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1111
+            "line": 1127
           }
         ],
         "confidence": "lexical_only"
@@ -20260,7 +20260,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2549,
+            "line": 2563,
             "symbol": "parsers"
           }
         }
@@ -20324,7 +20324,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 941
+            "line": 957
           }
         ],
         "confidence": "lexical_only"
@@ -20355,7 +20355,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2551,
+            "line": 2565,
             "symbol": "parsers"
           }
         }
@@ -20419,7 +20419,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1093
+            "line": 1109
           }
         ],
         "confidence": "lexical_only"
@@ -20450,7 +20450,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2550,
+            "line": 2564,
             "symbol": "parsers"
           }
         }
@@ -20514,7 +20514,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1077
+            "line": 1093
           }
         ],
         "confidence": "lexical_only"
@@ -20545,7 +20545,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2548,
+            "line": 2562,
             "symbol": "parsers"
           }
         }
@@ -20640,7 +20640,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2606,
+            "line": 2620,
             "symbol": "parsers_simple"
           }
         }
@@ -20730,7 +20730,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2632,
+            "line": 2646,
             "symbol": "parsers_simple"
           }
         }
@@ -20794,7 +20794,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1170
+            "line": 1186
           }
         ],
         "confidence": "lexical_only"
@@ -20825,7 +20825,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2635,
+            "line": 2649,
             "symbol": "parsers_simple"
           }
         }
@@ -20920,7 +20920,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2659,
+            "line": 2673,
             "symbol": "parsers_simple"
           }
         }
@@ -20979,7 +20979,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1705
+            "line": 1721
           }
         ],
         "confidence": "lexical_only"
@@ -21010,7 +21010,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2637,
+            "line": 2651,
             "symbol": "parsers_simple"
           }
         }
@@ -21105,7 +21105,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2631,
+            "line": 2645,
             "symbol": "parsers_simple"
           }
         }
@@ -21200,7 +21200,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2649,
+            "line": 2663,
             "symbol": "parsers_simple"
           }
         }
@@ -21259,7 +21259,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1489
+            "line": 1505
           }
         ],
         "confidence": "lexical_only"
@@ -21290,7 +21290,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2655,
+            "line": 2669,
             "symbol": "parsers_simple"
           }
         }
@@ -21349,7 +21349,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1641
+            "line": 1657
           }
         ],
         "confidence": "lexical_only"
@@ -21380,7 +21380,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2654,
+            "line": 2668,
             "symbol": "parsers_simple"
           }
         }
@@ -21439,7 +21439,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1624
+            "line": 1640
           }
         ],
         "confidence": "lexical_only"
@@ -21470,7 +21470,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2652,
+            "line": 2666,
             "symbol": "parsers_simple"
           }
         }
@@ -21529,7 +21529,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1592
+            "line": 1608
           }
         ],
         "confidence": "lexical_only"
@@ -21560,7 +21560,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2640,
+            "line": 2654,
             "symbol": "parsers_simple"
           }
         }
@@ -21655,7 +21655,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2557,
+            "line": 2571,
             "symbol": "parsers"
           }
         }
@@ -21719,7 +21719,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1265
           }
         ],
         "confidence": "lexical_only"
@@ -21750,7 +21750,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2660,
+            "line": 2674,
             "symbol": "parsers_simple"
           }
         }
@@ -21814,7 +21814,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1721
+            "line": 1737
           }
         ],
         "confidence": "lexical_only"
@@ -21845,7 +21845,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2639,
+            "line": 2653,
             "symbol": "parsers_simple"
           }
         }
@@ -21940,7 +21940,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2638,
+            "line": 2652,
             "symbol": "parsers_simple"
           }
         }
@@ -22035,7 +22035,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2636,
+            "line": 2650,
             "symbol": "parsers_simple"
           }
         }
@@ -22130,7 +22130,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2555,
+            "line": 2569,
             "symbol": "parsers"
           }
         }
@@ -22194,7 +22194,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1217
+            "line": 1233
           }
         ],
         "confidence": "lexical_only"
@@ -22225,7 +22225,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2556,
+            "line": 2570,
             "symbol": "parsers"
           }
         }
@@ -22284,7 +22284,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1249
           }
         ],
         "confidence": "lexical_only"
@@ -22315,7 +22315,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2658,
+            "line": 2672,
             "symbol": "parsers_simple"
           }
         }
@@ -22374,7 +22374,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1689
+            "line": 1705
           }
         ],
         "confidence": "lexical_only"
@@ -22405,7 +22405,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2553,
+            "line": 2567,
             "symbol": "parsers"
           }
         }
@@ -22469,7 +22469,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1217
+            "line": 1233
           }
         ],
         "confidence": "lexical_only"
@@ -22500,7 +22500,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2554,
+            "line": 2568,
             "symbol": "parsers"
           }
         }
@@ -22564,7 +22564,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1249
           }
         ],
         "confidence": "lexical_only"
@@ -22595,7 +22595,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2621,
+            "line": 2635,
             "symbol": "parsers_simple"
           }
         }
@@ -22690,7 +22690,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2650,
+            "line": 2664,
             "symbol": "parsers_simple"
           }
         }
@@ -22749,7 +22749,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1560
+            "line": 1576
           }
         ],
         "confidence": "lexical_only"
@@ -22782,7 +22782,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2501,
+            "line": 2515,
             "symbol": "parsers"
           }
         },
@@ -22795,7 +22795,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2618,
+            "line": 2632,
             "symbol": "parsers_simple"
           }
         }
@@ -22881,7 +22881,97 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2657,
+            "line": 2671,
+            "symbol": "parsers_simple"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "condition_string"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "condition",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
+            "line": 1689
+          }
+        ],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "u_is_skidding",
+      "syntaxes": [
+        "condition_string"
+      ],
+      "accepted_json_shapes": [
+        "condition_string"
+      ],
+      "handlers": [
+        "conditional_fun::f_is_skidding"
+      ],
+      "aliases": [
+        "npc_is_skidding",
+        "u_is_skidding"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 160,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_is_skidding",
+            "npc_is_skidding"
+          ],
+          "source": {
+            "path": "src/condition.cpp",
+            "line": 2670,
             "symbol": "parsers_simple"
           }
         }
@@ -22947,96 +23037,6 @@
       }
     },
     {
-      "key": "u_is_skidding",
-      "syntaxes": [
-        "condition_string"
-      ],
-      "accepted_json_shapes": [
-        "condition_string"
-      ],
-      "handlers": [
-        "conditional_fun::f_is_skidding"
-      ],
-      "aliases": [
-        "npc_is_skidding",
-        "u_is_skidding"
-      ],
-      "parser_registrations": [
-        {
-          "registration_order": 160,
-          "alias_role": "alpha",
-          "alias_group": [
-            "u_is_skidding",
-            "npc_is_skidding"
-          ],
-          "source": {
-            "path": "src/condition.cpp",
-            "line": 2656,
-            "symbol": "parsers_simple"
-          }
-        }
-      ],
-      "parameters": {
-        "status": "unclassified",
-        "items": [],
-        "note": "Handler-specific members require source-backed review."
-      },
-      "value_types": {
-        "status": "partial",
-        "items": [
-          "condition_string"
-        ],
-        "note": "Only parser dispatch shapes are proven here."
-      },
-      "defaults": {
-        "status": "unclassified",
-        "items": []
-      },
-      "nesting": {
-        "status": "unclassified",
-        "allows": []
-      },
-      "talker_semantics": {
-        "status": "legacy_alpha_beta_alias",
-        "talkers": [],
-        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
-      },
-      "variables": {
-        "status": "unclassified",
-        "scopes": [],
-        "known_global_scopes": [
-          "u_val",
-          "npc_val",
-          "global_val",
-          "var_val",
-          "context_val"
-        ]
-      },
-      "context": {
-        "status": "unclassified",
-        "requirements": []
-      },
-      "contract_status": "partial",
-      "contract_kind": "condition",
-      "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
-        "confidence": "lexical_only",
-        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1657
-          }
-        ],
-        "confidence": "lexical_only"
-      }
-    },
-    {
       "key": "u_is_trait_purifiable",
       "syntaxes": [
         "object_member"
@@ -23061,7 +23061,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2490,
+            "line": 2504,
             "symbol": "parsers"
           }
         }
@@ -23151,7 +23151,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2587,
+            "line": 2601,
             "symbol": "parsers_simple"
           }
         }
@@ -23241,7 +23241,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2622,
+            "line": 2636,
             "symbol": "parsers_simple"
           }
         }
@@ -23336,7 +23336,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2641,
+            "line": 2655,
             "symbol": "parsers_simple"
           }
         }
@@ -23426,7 +23426,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2633,
+            "line": 2647,
             "symbol": "parsers_simple"
           }
         }
@@ -23485,7 +23485,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1191
+            "line": 1207
           }
         ],
         "confidence": "lexical_only"
@@ -23516,7 +23516,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2510,
+            "line": 2524,
             "symbol": "parsers"
           }
         }
@@ -23609,7 +23609,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2544,
+            "line": 2558,
             "symbol": "parsers"
           }
         }
@@ -23704,7 +23704,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2585,
+            "line": 2599,
             "symbol": "parsers_simple"
           }
         }
@@ -23800,7 +23800,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2597,
+            "line": 2611,
             "symbol": "parsers_simple"
           }
         },
@@ -23813,7 +23813,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2598,
+            "line": 2612,
             "symbol": "parsers_simple"
           }
         }
@@ -23904,7 +23904,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2601,
+            "line": 2615,
             "symbol": "parsers_simple"
           }
         },
@@ -23917,7 +23917,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2602,
+            "line": 2616,
             "symbol": "parsers_simple"
           }
         }
@@ -24008,7 +24008,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2541,
+            "line": 2555,
             "symbol": "parsers"
           }
         },
@@ -24021,7 +24021,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2542,
+            "line": 2556,
             "symbol": "parsers"
           }
         }
@@ -24112,7 +24112,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2599,
+            "line": 2613,
             "symbol": "parsers_simple"
           }
         },
@@ -24125,7 +24125,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2600,
+            "line": 2614,
             "symbol": "parsers_simple"
           }
         }
@@ -24213,7 +24213,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2503,
+            "line": 2517,
             "symbol": "parsers"
           }
         }
@@ -24303,7 +24303,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2525,
+            "line": 2539,
             "symbol": "parsers"
           }
         }
@@ -24352,7 +24352,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 642,
+        "occurrences": 643,
         "examples": [
           {
             "path": "data/json/effects_on_condition/generalized_eocs.json",
@@ -24398,7 +24398,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2522,
+            "line": 2536,
             "symbol": "parsers"
           }
         }
@@ -24483,7 +24483,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2539,
+            "line": 2553,
             "symbol": "parsers"
           }
         }
@@ -24573,7 +24573,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2523,
+            "line": 2537,
             "symbol": "parsers"
           }
         }
@@ -24637,7 +24637,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1265
+            "line": 1281
           }
         ],
         "confidence": "lexical_only"
@@ -24668,7 +24668,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2538,
+            "line": 2552,
             "symbol": "parsers"
           }
         }
@@ -24756,7 +24756,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2504,
+            "line": 2518,
             "symbol": "parsers"
           }
         }
@@ -24846,7 +24846,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2645,
+            "line": 2659,
             "symbol": "parsers_simple"
           }
         }
@@ -24905,7 +24905,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1478
+            "line": 1494
           }
         ],
         "confidence": "lexical_only"
@@ -24936,7 +24936,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2646,
+            "line": 2660,
             "symbol": "parsers_simple"
           }
         }
@@ -25000,7 +25000,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1509
+            "line": 1525
           }
         ],
         "confidence": "lexical_only"
@@ -25031,7 +25031,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2531,
+            "line": 2545,
             "symbol": "parsers"
           }
         }
@@ -25116,7 +25116,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2607,
+            "line": 2621,
             "symbol": "parsers_simple"
           }
         }
@@ -25206,7 +25206,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2609,
+            "line": 2623,
             "symbol": "parsers_simple"
           }
         }
@@ -25291,7 +25291,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2608,
+            "line": 2622,
             "symbol": "parsers_simple"
           }
         }
@@ -25381,7 +25381,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2494,
+            "line": 2508,
             "symbol": "parsers"
           }
         }
@@ -25476,7 +25476,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2642,
+            "line": 2656,
             "symbol": "parsers_simple"
           }
         }
@@ -25564,7 +25564,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2546,
+            "line": 2560,
             "symbol": "parsers"
           }
         }
