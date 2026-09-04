@@ -542,6 +542,15 @@ Valid arguments:
 "stim_chance_bot"
 "stim_tick"         // Defaults to every tick
 
+"focus_amount"      // Amount of focus it can give/take. Affects the focus stat, which is used in crafting and studying.
+"focus_min"         // Minimal amount of focus, certain effect will give/take
+"focus_max"         // if 0 or missing value will be exactly "focus_min"
+"focus_min_val"     // Defaults to 0, which means uncapped
+"focus_max_val"     // Defaults to 0, which means uncapped
+"focus_chance"      // Chance to change focus
+"focus_chance_bot"
+"focus_tick"        // Defaults to every tick
+
 "health_amount"     // Negatives decrease health and positives increase it. It's semi-hidden stat, which affects healing.
 "health_min"        // Minimal amount of health, certain effect will give/take.
 "health_max"        // if 0 or missing value will be exactly "health_min"
