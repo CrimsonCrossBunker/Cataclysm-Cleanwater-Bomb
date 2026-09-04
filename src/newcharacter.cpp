@@ -4668,8 +4668,8 @@ void character_creator_callback::confirm( uilist *menu )
             const int stat_queried = cc_uistate.stats[selected_stat_index];
             const int maximum = character_creation_stat_max( cc_uistate.pool );
             number_input_popup<int> stat_query( 0, stat_queried,
-                                                string_format( "Set new %s (between %d and %d):",
-                                                        io::enum_to_full_string( selected_stat ),
+                                                string_format( _( "Set new %s (between %d and %d):" ),
+                                                        _( io::enum_to_full_string( selected_stat ) ),
                                                         CHARACTER_STAT_MIN, maximum ) );
             int stat_queried_result = stat_query.query();
             const int stat_result_clamped = std::clamp( stat_queried_result, CHARACTER_STAT_MIN,
