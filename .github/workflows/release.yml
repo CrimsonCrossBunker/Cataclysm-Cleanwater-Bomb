@@ -1,4 +1,4 @@
-name: "Experimental Release"
+name: "CCB Release"
 concurrency: release
 on:
   push:
@@ -20,6 +20,20 @@ on:
       - 'README*'
       - 'src/**'
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        required: true
+        default: experimental
+        type: choice
+        options:
+          - experimental
+          - candidate
+          - stable
+      version:
+        description: Base version for Candidate or Stable, for example 0.Ag
+        required: false
+        type: string
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,15 +51,54 @@ jobs:
     outputs:
       timestamp: ${{ steps.meta.outputs.time }}
       tag_name: ${{ steps.meta.outputs.tag_name }}
+      channel: ${{ steps.meta.outputs.channel }}
     steps:
       - name: Generate release metadata
         id: meta
+        env:
+          REQUESTED_CHANNEL: ${{ inputs.channel }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
+          set -euo pipefail
           time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d-%H%M")
           title_time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d_%H:%M")
+          channel="experimental"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            channel="${REQUESTED_CHANNEL:-experimental}"
+          fi
+
+          case "$channel" in
+            experimental)
+              tag_name="$time"
+              release_name="Experimental $title_time"
+              ;;
+            candidate|stable)
+              if [ -z "${REQUESTED_VERSION:-}" ]; then
+                echo "A base version is required for $channel releases." >&2
+                exit 1
+              fi
+              if [[ ! "$REQUESTED_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+                echo "Invalid release version: $REQUESTED_VERSION" >&2
+                exit 1
+              fi
+              if [ "$channel" = "candidate" ]; then
+                tag_name="${REQUESTED_VERSION}-Candidate-${time}"
+                release_name="${REQUESTED_VERSION} Candidate ${title_time}"
+              else
+                tag_name="$REQUESTED_VERSION"
+                release_name="${REQUESTED_VERSION} Stable"
+              fi
+              ;;
+            *)
+              echo "Unsupported release channel: $channel" >&2
+              exit 1
+              ;;
+          esac
+
           echo "time=$time" >> $GITHUB_OUTPUT
-          echo "tag_name=${time}" >> $GITHUB_OUTPUT
-          echo "release_name=Experimental ${title_time}" >> $GITHUB_OUTPUT
+          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+          echo "release_name=$release_name" >> $GITHUB_OUTPUT
+          echo "channel=$channel" >> $GITHUB_OUTPUT
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -63,8 +116,19 @@ jobs:
           npm install @actions/github@8
           node build-scripts/generate-release-notes.js '${{ secrets.GITHUB_TOKEN }}' '${{ steps.meta.outputs.tag_name }}' "$(git log -1 --format='%H')" '${{ steps.previous.outputs.previous_tag }}' > notes.txt
       - name: Create GitHub Release
+        env:
+          RELEASE_CHANNEL: ${{ steps.meta.outputs.channel }}
+          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
+          RELEASE_TAG: ${{ steps.meta.outputs.tag_name }}
         run: |
-          gh release create '${{ steps.meta.outputs.tag_name }}' --notes-file notes.txt --prerelease --latest --title '${{ steps.meta.outputs.release_name }}' --target "$(git log -1 --format='%H')"
+          set -euo pipefail
+          if [ "$RELEASE_CHANNEL" = "stable" ]; then
+            gh release create "$RELEASE_TAG" --notes-file notes.txt --latest \
+              --title "$RELEASE_NAME" --target "$(git log -1 --format='%H')"
+          else
+            gh release create "$RELEASE_TAG" --notes-file notes.txt --prerelease \
+              --title "$RELEASE_NAME" --target "$(git log -1 --format='%H')"
+          fi
 
   compose-tilesets:
     uses: ./.github/workflows/compose-tilesets.yml
@@ -713,6 +777,9 @@ jobs:
           cat >VERSION.txt <<EOL
           build type: ${{ matrix.artifact }}
           build number: ${NEEDS_RELEASE_OUTPUTS_TIMESTAMP}
+          release channel: ${{ needs.release.outputs.channel }}
+          release tag: ${{ needs.release.outputs.tag_name }}
+          lua api: 1
           commit sha: ${{ github.sha }}
           commit url: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
           EOL
