@@ -4515,7 +4515,7 @@ talk_effect_fun_t::func f_consume_item_sum( const JsonObject &jo, std::string_vi
                 if( it && it->typeId() == item_to_remove ) {
                     const int available = it->count_by_charges() ? it->charges : 1;
                     const int amount_to_remove = std::min( available,
-                                                 static_cast<int>( std::ceil( ( 1.0 - percent ) * amount_desired ) ) );
+                                                           static_cast<int>( std::ceil( ( 1.0 - percent ) * amount_desired ) ) );
                     percent += amount_to_remove / amount_desired;
 
                     if( amount_to_remove >= available ) {
