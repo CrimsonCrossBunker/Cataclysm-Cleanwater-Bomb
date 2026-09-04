@@ -218,5 +218,12 @@
     "name": { "str": "HEW printout CITW-BFγ", "str_pl": "HEW printout CITW-BFγs" },
     "copy-from": "abstract_HEW_printout_data",
     "description": "A short paper report labeled with the mysterious title \"CITW-BF\".  Most of the document is coded in a series of complex equations and data that you cannot understand, but there are several obvious error messages starting with \"VALUE OUTSIDE EXPECTED RANGE\".  The bottom has a bar graph with several bars, the tallest of which is labeled \"γ\".  Beside it is a topographical map you recognize, centered on the lonely cabin in the field."
+  },
+  {
+    "type": "ITEM",
+    "id": "HEW_printout_data_portal_storm_dungeon",
+    "name": { "str": "HEW printout MROTS-S" },
+    "copy-from": "abstract_HEW_printout_data",
+    "description": "A short paper report labeled with the mysterious title \"MROTS-S\".  Most of the document is coded in a series of complex equations and data that you cannot understand, but there are several obvious error messages starting with \"VALUE OUTSIDE EXPECTED RANGE\".  Printed on the bottom of the page is some sort of topological map, which has been overwritten several times in confusing patterns, making it difficult to decipher."
   }
 ]
