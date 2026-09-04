@@ -2590,6 +2590,9 @@ std::pair<tripoint_rel_ms, tripoint_rel_ms> game::mouse_edge_scrolling( input_co
     ( void ) speed;
     ( void ) iso;
 #if !defined(TUI)
+    if( !is_mouse_active_for_edge_scrolling() ) {
+        return std::make_pair( tripoint_rel_ms::zero, tripoint_rel_ms::zero );
+    }
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     if( now < last_mouse_edge_scroll + std::chrono::milliseconds( rate ) ) {
         return ret;

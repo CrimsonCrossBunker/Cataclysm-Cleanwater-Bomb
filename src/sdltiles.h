@@ -80,6 +80,11 @@ SDL_Window *get_sdl_window();
 // or android letterboxing. Zero before the buffer exists.
 void get_display_buffer_dims( int *w, int *h );
 
+// Whether a hover-capable mouse is the active Android pointer source.  Desktop
+// platforms always return true.  Touch input must not make an idle timeout look
+// like a mouse parked at SDL's default (0, 0) position.
+bool is_mouse_active_for_edge_scrolling();
+
 // Map window coordinates to display_buffer (terminal) pixel coordinates.
 // Returns the input unchanged when either dimension source is unavailable.
 SDL_Point window_to_display_buffer_coords( SDL_Point window_pt );
