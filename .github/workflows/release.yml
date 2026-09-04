@@ -1,4 +1,4 @@
-name: "CCB Release"
+name: "Experimental Release"
 concurrency: release
 on:
   push:
