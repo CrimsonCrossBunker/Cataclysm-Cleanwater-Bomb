@@ -7005,6 +7005,16 @@ void Character::process_one_effect( effect &it, bool is_new )
         }
     }
 
+    // Handle focus
+    val = get_effect( "FOCUS", reduced );
+    if( val != 0 ) {
+        mod = 1;
+        if( is_new || it.activated( calendar::turn, "FOCUS", val, reduced, mod ) ) {
+            mod_focus( bound_mod_to_vals( get_focus(), val, it.get_max_val( "FOCUS", reduced ),
+                                          it.get_min_val( "FOCUS", reduced ) ) );
+        }
+    }
+
     // Handle Radiation
     val = get_effect( "RAD", reduced );
     if( val != 0 ) {
