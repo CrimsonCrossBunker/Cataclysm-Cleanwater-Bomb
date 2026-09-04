@@ -976,6 +976,9 @@ std::string effect::disp_desc( bool reduced ) const
     val = get_avg_mod( "SLEEPINESS", reduced );
     values.emplace_back( get_percentage( "SLEEPINESS", val, reduced ), val, _( "sleepiness" ),
                          _( "rest" ) );
+    val = get_avg_mod( "FOCUS", reduced );
+    values.emplace_back( get_percentage( "FOCUS", val, reduced ), val, _( "focus" ),
+                         _( "distraction" ) );
     val = get_avg_mod( "COUGH", reduced );
     values.emplace_back( get_percentage( "COUGH", val, reduced ), val, _( "coughing" ),
                          _( "coughing" ) );
