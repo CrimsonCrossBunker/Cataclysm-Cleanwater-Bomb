@@ -4498,42 +4498,37 @@ talk_effect_fun_t::func f_consume_item_sum( const JsonObject &jo, std::string_vi
 
         itype_id item_to_remove;
         double percent = 0.0f;
-        double ratio = 0.0f;
         double amount_desired = 0.0f;
-        int count_present = 0;
         Character *you = d.actor( is_npc )->get_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
-                                         pickup_range );
-        std::vector<item_comp> items_to_remove_vector;
+        auto legal_to_consume = [&]( const item & it ) {
+            return it.is_owned_by( *you );
+        };
+        std::unordered_set<item_location> all_items = get_map().all_items( legal_to_consume,
+                *you, Access_Inventory | Access_Map_Around | Access_Vehicle );
 
         for( const auto &pair : item_and_amount ) {
-            int amount_to_remove = 0;
             item_to_remove = itype_id( pair.first.evaluate( d ) );
             amount_desired = pair.second.evaluate( d );
-            count_present = inventory_and_around.count_item( item_to_remove );
+            auto iter = all_items.begin();
+            while( iter != all_items.end() && percent < 1.0 ) {
+                item_location it = *iter;
+                if( it && it->typeId() == item_to_remove ) {
+                    const int available = it->count_by_charges() ? it->charges : 1;
+                    const int amount_to_remove = std::min( available,
+                                                 static_cast<int>( std::ceil( ( 1.0 - percent ) * amount_desired ) ) );
+                    percent += amount_to_remove / amount_desired;
 
-            if( count_present == 0 ) {
-                continue;
-            }
-
-            percent += count_present / amount_desired;
-
-            if( percent <= 1.0 ) {
-                // either lack or just right amount of items to consume
-                items_to_remove_vector = { { item_to_remove, static_cast<int>( count_present ) } };
-                you->consume_items( items_to_remove_vector );
-
-            } else {
-                // too much items to consume, consuming only to hit 1.00 percent
-                percent -= count_present / amount_desired;
-                ratio = count_present / amount_desired;
-
-                while( percent < 1.0 ) {
-                    percent += ratio / count_present;
-                    ++amount_to_remove;
+                    if( amount_to_remove >= available ) {
+                        it->spill_contents( it.pos_bub( get_map() ) );
+                        it.remove_item();
+                        iter = all_items.erase( iter );
+                    } else {
+                        it->mod_charges( -amount_to_remove );
+                        ++iter;
+                    }
+                } else {
+                    ++iter;
                 }
-                items_to_remove_vector = { { item_to_remove, amount_to_remove } };
-                you->consume_items( items_to_remove_vector );
             }
         }
     };
