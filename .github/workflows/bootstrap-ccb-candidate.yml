@@ -1,0 +1,24 @@
+name: Bootstrap 0.Ag Candidate
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/bootstrap-ccb-candidate.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch the first 0.Ag Candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release.yml --ref master \
+            -f channel=candidate \
+            -f version=0.Ag
