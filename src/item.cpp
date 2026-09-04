@@ -108,11 +108,11 @@
 namespace
 {
 constexpr std::string_view internal_plutonium_fuel_var = "internal_plutonium_fuel";
-}
+} // namespace
 
 static const ammotype ammo_battery( "battery" );
-static const ammotype ammo_plutonium( "plutonium" );
 static const ammotype ammo_money( "money" );
+static const ammotype ammo_plutonium( "plutonium" );
 
 static const efftype_id effect_cig( "cig" );
 static const efftype_id effect_shakes( "shakes" );
@@ -4303,7 +4303,8 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
     if( std::abs( temperature_difference ) < 0.4 ) {
         return;
     }
-    const float mass = to_gram( weight() ) / ( is_stackable() ? charges : 1 ); // g
+    const float mass = static_cast<float>( to_gram( weight() ) ) /
+                       ( is_stackable() ? charges : 1 ); // g
 
     // If item has negative energy set to environment temperature (it not been processed ever)
     if( units::to_joule_per_gram( specific_energy ) < 0 ) {

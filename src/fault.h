@@ -52,7 +52,7 @@ struct fault_snapshot_entry {
 };
 std::vector<fault_snapshot_entry> fault_registry_snapshot();
 } // namespace detail
-}
+} // namespace cata::lua_platform
 
 namespace faults
 {

@@ -68,8 +68,8 @@ static const harvest_drop_type_id harvest_drop_skin( "skin" );
 
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
 
-static const json_character_flag json_flag_INSTANT_BLEED( "INSTANT_BLEED" );
 static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
+static const json_character_flag json_flag_INSTANT_BLEED( "INSTANT_BLEED" );
 
 static const morale_type morale_butcher( "morale_butcher" );
 

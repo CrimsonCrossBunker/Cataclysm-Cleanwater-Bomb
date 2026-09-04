@@ -76,6 +76,8 @@
 static const std::string comesttype_DRINK( "DRINK" );
 static const std::string comesttype_FOOD( "FOOD" );
 
+static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
+
 static const addiction_id addiction_amphetamine( "amphetamine" );
 static const addiction_id addiction_caffeine( "caffeine" );
 static const addiction_id addiction_cocaine( "cocaine" );
@@ -2021,7 +2023,6 @@ static bool consume_med( item &target, Character &you )
             // 表现为药剂不消耗、可反复使用。施法活动确实已注册时视为"已使用"，
             // 由 consume 流程从实际位置移除物品；施法完成时 item_location 已失效，
             // 不会再重复移除。
-            static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
             if( you.activity.id() != ACT_SPELLCASTING ) {
                 return false;
             }

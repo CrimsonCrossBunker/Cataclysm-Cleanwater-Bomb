@@ -2855,10 +2855,9 @@ std::optional<requirement_id> multi_farm_activity_actor::multi_activity_requirem
 
     if( reason == do_activity_reason::NEEDS_TILLING ) {
         return requirement_data_multi_farm_tilling;
-    } else if( reason == do_activity_reason::NEEDS_WATERING ) {
-        // no requirements, water is consumed directly by the action
-    } else if( reason == do_activity_reason::NEEDS_FERTILIZING ) {
-        // no requirements
+    } else if( reason == do_activity_reason::NEEDS_WATERING ||
+               reason == do_activity_reason::NEEDS_FERTILIZING ) {
+        // no requirements, water is consumed directly by the action or fertilizer is used directly
     } else if( reason == do_activity_reason::NEEDS_PLANTING ) {
         // we can't hardcode individual seed types in JSON, so make a custom requirement
         requirement_data::alter_item_comp_vector requirement_comp_vector = { {

@@ -181,17 +181,6 @@ static const bionic_id bio_ups( "bio_ups" );
 static const bionic_id bio_voice( "bio_voice" );
 static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
 
-static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
-
-static bool fcl_mod_is_active()
-{
-    return world_generator && world_generator->active_world &&
-           std::find( world_generator->active_world->active_mod_order.begin(),
-                      world_generator->active_world->active_mod_order.end(),
-                      MOD_INFORMATION_catalegacy_future ) !=
-           world_generator->active_world->active_mod_order.end();
-}
-
 static const character_modifier_id character_modifier_aim_speed_dex_mod( "aim_speed_dex_mod" );
 static const character_modifier_id character_modifier_aim_speed_mod( "aim_speed_mod" );
 static const character_modifier_id character_modifier_aim_speed_skill_mod( "aim_speed_skill_mod" );
@@ -352,6 +341,8 @@ static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
 
+static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
+
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
 
@@ -428,6 +419,15 @@ static const trait_id trait_SPINES( "SPINES" );
 static const trait_id trait_SUNLIGHT_DEPENDENT( "SUNLIGHT_DEPENDENT" );
 static const trait_id trait_THORNS( "THORNS" );
 static const trait_id trait_VISCOUS( "VISCOUS" );
+
+static bool fcl_mod_is_active()
+{
+    return world_generator && world_generator->active_world &&
+           std::find( world_generator->active_world->active_mod_order.begin(),
+                      world_generator->active_world->active_mod_order.end(),
+                      MOD_INFORMATION_catalegacy_future ) !=
+           world_generator->active_world->active_mod_order.end();
+}
 
 static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_copper_nickel };
 

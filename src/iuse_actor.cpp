@@ -59,6 +59,7 @@
 #include "item_pocket.h"
 #include "item_transformation.h"
 #include "itype.h"
+#include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -658,7 +659,7 @@ std::optional<RGBColor> paint_vehicle_select_color()
     std::vector<std::pair<RGBColor, std::string>> colors( named.begin(), named.end() );
     std::sort( colors.begin(), colors.end(),
     []( const std::pair<RGBColor, std::string> &a, const std::pair<RGBColor, std::string> &b ) {
-        return a.second < b.second;
+        return localized_compare( a.second, b.second );
     } );
 
     uilist menu;

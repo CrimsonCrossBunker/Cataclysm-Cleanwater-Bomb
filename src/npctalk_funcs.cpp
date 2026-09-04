@@ -103,6 +103,8 @@ static const efftype_id effect_sleep( "sleep" );
 static const faction_id faction_no_faction( "no_faction" );
 static const faction_id faction_your_followers( "your_followers" );
 
+static const furn_str_id furn_f_counter( "f_counter" );
+
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
 
@@ -118,8 +120,6 @@ static const mtype_id mon_horse( "mon_horse" );
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_VEHICLE_SERVICE_OUTPUT( "VEHICLE_SERVICE_OUTPUT" );
-
-static const furn_str_id furn_f_counter( "f_counter" );
 
 static const std::string vehicle_part_repair_target = "vehicle_part_repair_target";
 static const std::string vehicle_part_repair_price_multiplier =
@@ -708,6 +708,9 @@ static int vehicle_part_service_labor_cost( const std::map<skill_id, int> &skill
     return ceil_cents_to_dollar( calculated );
 }
 
+namespace
+{
+
 struct vehicle_part_install_candidate {
     item_location location;
     bool supplied_by_mechanic = false;
@@ -715,6 +718,8 @@ struct vehicle_part_install_candidate {
     int labor_cost = 0;
     int total_cost = 0;
 };
+
+} // namespace
 
 static std::optional<std::string> choose_vehicle_part_variant( const vpart_info &part )
 {

@@ -702,7 +702,7 @@ class Character : public Creature, public visitable
         double sensitive_pain_multiplier() const;
 
         /** Modifiers for sensitivity values exclusive to characters */
-        void mod_sensitive( int nsensitive );
+        void mod_sensitive( int mod );
         void mod_sensitive_mod( int nsensitive_mod );
 
         /** Setters for sensitivity values exclusive to characters */

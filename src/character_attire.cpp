@@ -82,8 +82,6 @@ static const material_id material_wool( "wool" );
 
 static const sub_bodypart_str_id sub_body_part_foot_sole_l( "foot_sole_l" );
 static const sub_bodypart_str_id sub_body_part_foot_sole_r( "foot_sole_r" );
-static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
-static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 static const trait_id trait_ANTENNAE( "ANTENNAE" );
 static const trait_id trait_ANTLERS( "ANTLERS" );

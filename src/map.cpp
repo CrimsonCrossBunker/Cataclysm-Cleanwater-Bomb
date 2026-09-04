@@ -215,9 +215,12 @@ static const itype_id itype_mws_weather_data_incomplete( "mws_weather_data_incom
 static const itype_id itype_nail( "nail" );
 static const itype_id itype_pipe( "pipe" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_salt_water( "salt_water" );
 static const itype_id itype_scrap( "scrap" );
 static const itype_id itype_splinter( "splinter" );
 static const itype_id itype_steel_chunk( "steel_chunk" );
+static const itype_id itype_water( "water" );
+static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_wire( "wire" );
 
 
@@ -7074,10 +7077,10 @@ item map::liquid_from( const tripoint_bub_ms &p ) const
     if( managed_source ) {
         const water_source_kind connection = finite_water::check_connection( abs_p, false );
         infinite = ( connection == water_source_kind::fresh_infinite &&
-                     ( source_terrain.liquid_source_item_id == itype_id( "water" ) ||
-                       source_terrain.liquid_source_item_id == itype_id( "water_clean" ) ) ) ||
+                     ( source_terrain.liquid_source_item_id == itype_water ||
+                       source_terrain.liquid_source_item_id == itype_water_clean ) ) ||
                    ( connection == water_source_kind::salt_infinite &&
-                     source_terrain.liquid_source_item_id == itype_id( "salt_water" ) );
+                     source_terrain.liquid_source_item_id == itype_salt_water );
     }
     if( infinite ) {
         item ret( source_terrain.liquid_source_item_id, calendar::turn, item::INFINITE_CHARGES );

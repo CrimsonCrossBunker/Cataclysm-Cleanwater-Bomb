@@ -76,7 +76,6 @@
 #if defined(TILES)
     // Only for the graphical vehicle-layout branch in display_veh(): use_tiles (cached_options),
     // get_option (options), and tilecontext / cata_tiles::draw_vehicle_preview (sdltiles / cata_tiles).
-    #include "cached_options.h"
     #include "cata_tiles.h"
     #include "options.h"
     #include "sdltiles.h"

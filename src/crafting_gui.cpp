@@ -79,8 +79,8 @@ static const skill_id skill_tailor( "tailor" );
 // Batch size limits for the crafting UI.
 // Quick batch mode shows a scrollable list of 1..50 entries.
 // Direct numeric input allows entering a larger amount without expanding the list.
-constexpr int crafting_batch_quick_max = 50;
-constexpr int crafting_batch_input_max = 9999;
+static constexpr int crafting_batch_quick_max = 50;
+static constexpr int crafting_batch_input_max = 9999;
 
 namespace
 {

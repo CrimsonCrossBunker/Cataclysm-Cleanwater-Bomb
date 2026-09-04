@@ -204,10 +204,9 @@ generic_factory<bionic_data> &cata::lua_platform::detail::bionic_registry()
 
 void cata::lua_platform::detail::refresh_bionic_registry_cache()
 {
-    static const json_character_flag faulty( "BIONIC_FAULTY" );
     faulty_bionics.clear();
     for( const bionic_data &value : bionic_factory.get_all() ) {
-        if( value.has_flag( faulty ) ) {
+        if( value.has_flag( json_flag_BIONIC_FAULTY ) ) {
             faulty_bionics.push_back( value.id );
         }
     }

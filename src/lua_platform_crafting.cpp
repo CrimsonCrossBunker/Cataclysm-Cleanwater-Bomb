@@ -276,7 +276,7 @@ script_game_id require_typed_option(
             api_name + " option '" + key +
             "' requires GameId<" + kind + ">" );
     }
-    const script_game_id result = value.as<script_game_id>();
+    const script_game_id &result = value.as<const script_game_id &>();
     require_id( result, kind, api_name + " option '" + key + "'" );
     return result;
 }
@@ -331,8 +331,11 @@ recipe_options read_recipe_options(
             result.flag = require_bounded_string(
                               value, api_name, key );
         } else {
-            throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+            std::string error = api_name;
+            error += " received unknown option '";
+            error += key;
+            error += "'";
+            throw std::invalid_argument( std::move( error ) );
         }
     }
     return result;
@@ -733,9 +736,11 @@ requirement_options read_requirement_options(
                     " option 'batch' must be within 1..1000" );
             }
         } else {
-            throw std::invalid_argument(
-                api_name + " received unknown option '" +
-                key + "'" );
+            std::string error = api_name;
+            error += " received unknown option '";
+            error += key;
+            error += "'";
+            throw std::invalid_argument( std::move( error ) );
         }
     }
     return result;
@@ -1058,10 +1063,10 @@ sol::table requirement_limits( sol::this_state lua )
 
 void install_crafting_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view state( services.lua_state() );
     sol::table recipes = state.create_table();

@@ -42,9 +42,12 @@ static const quality_id qual_HAMMER( "HAMMER" );
 static const requirement_id requirement_data_eggs_bird( "eggs_bird" );
 static const requirement_id
 requirement_data_explosives_casting_standard( "explosives_casting_standard" );
-static const requirement_id requirement_meat_red_raw( "meat_red_raw" );
-static const requirement_id requirement_meat_red_raw_curable( "meat_red_raw_curable" );
-static const requirement_id requirement_meat_vacuum_packable( "meat_vacuum_packable" );
+static const requirement_id requirement_data_meat_red_raw( "meat_red_raw" );
+static const requirement_id requirement_data_meat_red_raw_curable( "meat_red_raw_curable" );
+static const requirement_id requirement_data_meat_vacuum_packable( "meat_vacuum_packable" );
+
+static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
+static const trait_id trait_MANDIBLES( "MANDIBLES" );
 
 static std::map<itype_id, int> component_counts( const requirement_data &requirement )
 {
@@ -56,9 +59,6 @@ static std::map<itype_id, int> component_counts( const requirement_data &require
     }
     return counts;
 }
-
-static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
-static const trait_id trait_MANDIBLES( "MANDIBLES" );
 
 static void test_requirement_deduplication(
     const requirement_data::alter_item_comp_vector &before,
@@ -239,11 +239,11 @@ TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
         { itype_id( "mutant_meat_scrap" ), 10 },
         { itype_id( "porkbelly" ), 1 }
     };
-    CHECK( component_counts( requirement_meat_red_raw_curable.obj() ) == expected_curable );
+    CHECK( component_counts( requirement_data_meat_red_raw_curable.obj() ) == expected_curable );
 
     std::map<itype_id, int> expected_raw = expected_curable;
     expected_raw.emplace( itype_id( "washed_cured_meat" ), 1 );
-    CHECK( component_counts( requirement_meat_red_raw.obj() ) == expected_raw );
+    CHECK( component_counts( requirement_data_meat_red_raw.obj() ) == expected_raw );
 
     const std::map<itype_id, int> expected_vacuum_packable = {
         { itype_id( "cooked_cured_meat" ), 1 },
@@ -260,7 +260,7 @@ TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
         { itype_id( "mutant_meat_scrap_cooked" ), 10 },
         { itype_id( "rehydrated_meat" ), 1 }
     };
-    CHECK( component_counts( requirement_meat_vacuum_packable.obj() ) ==
+    CHECK( component_counts( requirement_data_meat_vacuum_packable.obj() ) ==
            expected_vacuum_packable );
 }
 

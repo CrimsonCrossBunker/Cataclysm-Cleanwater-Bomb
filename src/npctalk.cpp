@@ -2953,12 +2953,12 @@ dialogue::~dialogue() noexcept
     cata::lua_platform::end_dialogue_session( *this );
 }
 
-dialogue::dialogue( dialogue &&d )
+dialogue::dialogue( dialogue &&d ) noexcept
 {
     *this = std::move( d );
 }
 
-dialogue &dialogue::operator=( dialogue &&d )
+dialogue &dialogue::operator=( dialogue &&d ) noexcept
 {
     if( this == &d ) {
         return *this;

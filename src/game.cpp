@@ -7370,9 +7370,11 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
 
     // Magic indices for special butcher options
     const int MAX_ITEM = max_item_in_square;
-    const int MULTISALVAGE = MAX_ITEM + 1, MULTIBUTCHER = MAX_ITEM + 2,
-              MULTIDISASSEMBLE_ONE = MAX_ITEM + 3,
-              MULTIDISASSEMBLE_ALL = MAX_ITEM + 4, NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;
+    const int MULTISALVAGE = MAX_ITEM + 1;
+    const int MULTIBUTCHER = MAX_ITEM + 2;
+    const int MULTIDISASSEMBLE_ONE = MAX_ITEM + 3;
+    const int MULTIDISASSEMBLE_ALL = MAX_ITEM + 4;
+    const int NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;
     // What are we butchering (i.e.. which vector to pick indices from)
     enum {
         BUTCHER_CORPSE,

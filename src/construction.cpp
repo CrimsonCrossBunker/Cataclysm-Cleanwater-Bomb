@@ -1576,12 +1576,11 @@ bool construct::check_channel( const tripoint_bub_ms &p )
     switch( kind ) {
         case water_source_kind::fresh_infinite:
         case water_source_kind::salt_infinite:
-            return true;
         case water_source_kind::fresh_finite:
         case water_source_kind::salt_finite:
             // Digging an open channel does not create or require water.  The
             // connected finite body will redistribute whatever it actually
-            // contains when construction finishes.
+            // contains when construction finishes, and infinite sources are valid too.
             return true;
         case water_source_kind::conflict:
             add_msg( m_warning, _( "Fresh and salt water would mix here, so you can't dig a channel." ) );
