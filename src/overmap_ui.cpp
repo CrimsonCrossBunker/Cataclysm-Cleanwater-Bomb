@@ -23,6 +23,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_imgui.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
@@ -150,6 +151,10 @@ void overmap_sidebar::init()
 
 void overmap_sidebar::draw_controls()
 {
+    if( draw_search_controls ) {
+        draw_search_controls();
+        return;
+    }
     // This info is always shown at the top of the sidebar
     draw_tile_info();
     ImGui::Separator();
@@ -1501,7 +1506,7 @@ static bool toggle_point_of_interest( const tripoint_abs_omt &curs )
 }
 
 // if false, search yielded no results
-static bool search( const ui_adaptor &om_ui, tripoint_abs_omt &curs,
+static bool search( const ui_adaptor &om_ui, overmap_sidebar &sidebar, tripoint_abs_omt &curs,
                     const tripoint_abs_omt &orig )
 {
     input_context ctxt( "STRING_INPUT" );
@@ -1567,17 +1572,6 @@ static bool search( const ui_adaptor &om_ui, tripoint_abs_omt &curs,
     //Navigate through results
     const tripoint_abs_omt prev_curs = curs;
 
-    catacurses::window w_search;
-
-    ui_adaptor ui;
-    int search_width = OVERMAP_LEGEND_WIDTH - 1;
-    ui.on_screen_resize( [&]( ui_adaptor & ui ) {
-        w_search = catacurses::newwin( 13, search_width, point( TERMX - search_width, 3 ) );
-
-        ui.position_from_window( w_search );
-    } );
-    ui.mark_resize();
-
     ctxt.register_action( "NEXT_TAB", to_translation( "Next result" ) );
     ctxt.register_action( "PREV_TAB", to_translation( "Previous result" ) );
     ctxt.register_action( "CONFIRM" );
@@ -1585,48 +1579,31 @@ static bool search( const ui_adaptor &om_ui, tripoint_abs_omt &curs,
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "ANY_INPUT" );
 
-    ui.on_redraw( [&]( const ui_adaptor & ) {
-        //Draw search box
-
-        int a = utf8_width( _( "Search:" ) );
-        int b = utf8_width( _( "Result:" ) );
-        int c = utf8_width( _( "Results:" ) );
-        int d = utf8_width( _( "Direction:" ) );
-        int align_width = 0;
-        std::array<int, 4> align_w_value = { a, b, c, d};
-        for( int n : align_w_value ) {
-            if( n > align_width ) {
-                align_width = n + 2;
+    restore_on_out_of_scope restore_sidebar( sidebar.draw_search_controls );
+    std::string button_action;
+    sidebar.draw_search_controls = [&]() {
+        cataimgui::TextColoredParagraph( c_light_blue, string_format( "%s %s", _( "Search:" ), term ) );
+        cataimgui::TextColoredParagraph( c_light_red, string_format( "%s %d/%d",
+                locations.size() == 1 ? _( "Result:" ) : _( "Results:" ),
+                i + 1, locations.size() ) );
+        const tripoint_abs_omt result( locations[i], orig.z() );
+        cataimgui::TextColoredParagraph( c_white, string_format( "%s %d %s", _( "Direction:" ),
+                static_cast<int>( trig_dist( orig, result ) ),
+                direction_name_short( direction_from( orig, result ) ) ) );
+        ImGui::Separator();
+        const auto action_button = [&]( const std::string & action, const std::string & label ) {
+            const std::string text = string_format( "%s [%s]", label, ctxt.get_desc( action ) );
+            if( ImGui::Button( text.c_str() ) ) {
+                button_action = action;
             }
-        }
-
-        // NOLINTNEXTLINE(cata-use-named-point-constants)
-        mvwprintz( w_search, point( 1, 1 ), c_light_blue, _( "Search:" ) );
-        mvwprintz( w_search, point( align_width, 1 ), c_light_red, "%s", term );
-
-        mvwprintz( w_search, point( 1, 2 ), c_light_blue,
-                   locations.size() == 1 ? _( "Result:" ) : _( "Results:" ) );
-        mvwprintz( w_search, point( align_width, 2 ), c_light_red, "%d/%d     ", i + 1,
-                   locations.size() );
-
-        mvwprintz( w_search, point( 1, 3 ), c_light_blue, _( "Direction:" ) );
-        mvwprintz( w_search, point( align_width, 3 ), c_light_red, "%d %s",
-                   static_cast<int>( trig_dist( orig, tripoint_abs_omt( locations[i], orig.z() ) ) ),
-                   direction_name_short( direction_from( orig, tripoint_abs_omt( locations[i], orig.z() ) ) ) );
-
+        };
         if( locations.size() > 1 ) {
-            fold_and_print( w_search, point( 1, 6 ), search_width, c_white,
-                            _( "Press [<color_yellow>%s</color>] or [<color_yellow>%s</color>] "
-                               "to cycle through search results." ),
-                            ctxt.get_desc( "NEXT_TAB" ), ctxt.get_desc( "PREV_TAB" ) );
+            action_button( "NEXT_TAB", _( "Next result" ) );
+            action_button( "PREV_TAB", _( "Previous result" ) );
         }
-        fold_and_print( w_search, point( 1, 10 ), search_width, c_white,
-                        _( "Press [<color_yellow>%s</color>] to confirm." ), ctxt.get_desc( "CONFIRM" ) );
-        fold_and_print( w_search, point( 1, 11 ), search_width, c_white,
-                        _( "Press [<color_yellow>%s</color>] to quit." ), ctxt.get_desc( "QUIT" ) );
-        draw_border( w_search );
-        wnoutrefresh( w_search );
-    } );
+        action_button( "CONFIRM", _( "Confirm" ) );
+        action_button( "QUIT", _( "Quit" ) );
+    };
 
     std::string action;
     do {
@@ -1635,6 +1612,9 @@ static bool search( const ui_adaptor &om_ui, tripoint_abs_omt &curs,
         om_ui.invalidate_ui();
         ui_manager::redraw();
         action = ctxt.handle_input( get_option<int>( "BLINK_SPEED" ) );
+        if( !button_action.empty() ) {
+            action = std::exchange( button_action, {} );
+        }
         if( uistate.overmap_blinking ) {
             uistate.overmap_show_overlays = !uistate.overmap_show_overlays;
         }
@@ -2384,7 +2364,7 @@ static tripoint_abs_omt display()
         } else if( action == "TOGGLE_FAST_TRAVEL" ) {
             uistate.overmap_fast_travel = !uistate.overmap_fast_travel;
         } else if( action == "SEARCH" ) {
-            if( !search( *ui, curs, orig ) ) {
+            if( !search( *ui, om_sidebar, curs, orig ) ) {
                 continue;
             }
         } else if( action == "PLACE_TERRAIN" || action == "PLACE_SPECIAL" ) {
