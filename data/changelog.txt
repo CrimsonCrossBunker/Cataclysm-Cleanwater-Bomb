@@ -6,6 +6,7 @@
 
 
 ## Features:
+Monsters can block attacks for reduced damage
 Toggle to highlight OMTs revealed by maps
 Adds extreme height chargen traits, adds tools for disabled drivers
 Allows dormant zombie types to be defined easily, with a simple new monster flag.
@@ -239,6 +240,7 @@ Gun and tool mods can retune multimag host consumption, firing modes, and pocket
 
 
 ## Content:
+Add "serum ferals" to serum labs
 Lockets can store photographs
 Add diet soda, because screw your free calories!
 Addition of many new books, from religious texts to magazines, mainly for fluff purposes.
@@ -669,6 +671,7 @@ Display some items by volume, weight or length instead of count
 
 
 ## Mods:
+Faction camp hunting has an extra chance to return nothing based on time since the Cataclysm (and winter)
 [ Sky Island ] Warp Pulse UI
 Paraclesian Map extras
 [MoM] Power learning revamp: Biokinesis
@@ -1306,6 +1309,7 @@ Joint Torsion Ratchet CBM doesn't allow for perpetual motion cyborgs
 Zero cost spells remain zero cost even if encumbered
 
 ## Bugfixes:
+Fix monsters not being slowed by snow
 clarify repeater mod installation and add a vanilla quest for them
 Randomizing character description will produce a matching outfit
 Autodrive over bridges
@@ -2152,6 +2156,7 @@ Abort and quarantine tileset atlas uploads interrupted by a renderer reset
 
 
 ## Build:
+Run tests in CI for multiple sets of mods
 Report game's RNG seed during testing
 Added WebAssembly build via Emscripten
 CMake: Add LLVM build for Windows and other linker fixes

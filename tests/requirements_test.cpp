@@ -1,31 +1,77 @@
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
+#include "butchery.h"
+#include "butchery_requirements.h"
 #include "cata_catch.h"
+#include "cata_utility.h"
+#include "color.h"
+#include "creature.h"
+#include "harvest.h"
+#include "inventory.h"
+#include "item.h"
+#include "npc.h"
+#include "player_helpers.h"
 #include "requirements.h"
 #include "type_id.h"
 
+static const butchery_requirements_id butchery_requirements_default( "default" );
+
 static const itype_id itype_ash( "ash" );
 static const itype_id itype_chem_sulphuric_acid( "chem_sulphuric_acid" );
+static const itype_id itype_cooked_cured_meat( "cooked_cured_meat" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_demihuman_cooked( "demihuman_cooked" );
+static const itype_id itype_demihuman_flesh( "demihuman_flesh" );
+static const itype_id itype_demihuman_meat_scrap( "demihuman_meat_scrap" );
+static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_human_cooked( "human_cooked" );
+static const itype_id itype_human_flesh( "human_flesh" );
+static const itype_id itype_human_meat_scrap( "human_meat_scrap" );
 static const itype_id itype_lye( "lye" );
+static const itype_id itype_meat( "meat" );
+static const itype_id itype_meat_cooked( "meat_cooked" );
+static const itype_id itype_meat_fatty_cooked( "meat_fatty_cooked" );
+static const itype_id itype_meat_fried( "meat_fried" );
+static const itype_id itype_meat_pickled( "meat_pickled" );
+static const itype_id itype_meat_scrap( "meat_scrap" );
+static const itype_id itype_meat_scrap_cooked( "meat_scrap_cooked" );
+static const itype_id itype_meat_smoked( "meat_smoked" );
 static const itype_id itype_metal_tank_test( "metal_tank_test" );
+static const itype_id itype_mutant_human_cooked( "mutant_human_cooked" );
+static const itype_id itype_mutant_human_flesh( "mutant_human_flesh" );
+static const itype_id itype_mutant_meat( "mutant_meat" );
+static const itype_id itype_mutant_meat_cooked( "mutant_meat_cooked" );
+static const itype_id itype_mutant_meat_scrap( "mutant_meat_scrap" );
+static const itype_id itype_mutant_meat_scrap_cooked( "mutant_meat_scrap_cooked" );
+static const itype_id itype_porkbelly( "porkbelly" );
+static const itype_id itype_rehydrated_meat( "rehydrated_meat" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soap( "soap" );
 static const itype_id itype_test_egg( "test_egg" );
 static const itype_id itype_test_glass_pipe_mostly_glass( "test_glass_pipe_mostly_glass" );
 static const itype_id itype_test_glass_pipe_mostly_steel( "test_glass_pipe_mostly_steel" );
 static const itype_id itype_test_pipe( "test_pipe" );
+static const itype_id itype_washed_cured_meat( "washed_cured_meat" );
 static const itype_id itype_yarn( "yarn" );
+
+static const quality_id qual_BUTCHER( "BUTCHER" );
+static const quality_id qual_HAMMER( "HAMMER" );
 
 static const requirement_id requirement_data_eggs_bird( "eggs_bird" );
 static const requirement_id
 requirement_data_explosives_casting_standard( "explosives_casting_standard" );
-static const requirement_id requirement_meat_red_raw( "meat_red_raw" );
-static const requirement_id requirement_meat_red_raw_curable( "meat_red_raw_curable" );
-static const requirement_id requirement_meat_vacuum_packable( "meat_vacuum_packable" );
+static const requirement_id requirement_data_meat_red_raw( "meat_red_raw" );
+static const requirement_id requirement_data_meat_red_raw_curable( "meat_red_raw_curable" );
+static const requirement_id requirement_data_meat_vacuum_packable( "meat_vacuum_packable" );
+
+static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
+static const trait_id trait_MANDIBLES( "MANDIBLES" );
 
 static std::map<itype_id, int> component_counts( const requirement_data &requirement )
 {
@@ -206,38 +252,133 @@ TEST_CASE( "requirement_extension", "[requirement]" )
 TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
 {
     const std::map<itype_id, int> expected_curable = {
-        { itype_id( "demihuman_flesh" ), 1 },
-        { itype_id( "demihuman_meat_scrap" ), 10 },
-        { itype_id( "human_flesh" ), 1 },
-        { itype_id( "human_meat_scrap" ), 10 },
-        { itype_id( "meat" ), 1 },
-        { itype_id( "meat_scrap" ), 10 },
-        { itype_id( "mutant_human_flesh" ), 1 },
-        { itype_id( "mutant_meat" ), 1 },
-        { itype_id( "mutant_meat_scrap" ), 10 },
-        { itype_id( "porkbelly" ), 1 }
+        { itype_demihuman_flesh, 1 },
+        { itype_demihuman_meat_scrap, 10 },
+        { itype_human_flesh, 1 },
+        { itype_human_meat_scrap, 10 },
+        { itype_meat, 1 },
+        { itype_meat_scrap, 10 },
+        { itype_mutant_human_flesh, 1 },
+        { itype_mutant_meat, 1 },
+        { itype_mutant_meat_scrap, 10 },
+        { itype_porkbelly, 1 }
     };
-    CHECK( component_counts( requirement_meat_red_raw_curable.obj() ) == expected_curable );
+    CHECK( component_counts( requirement_data_meat_red_raw_curable.obj() ) == expected_curable );
 
     std::map<itype_id, int> expected_raw = expected_curable;
-    expected_raw.emplace( itype_id( "washed_cured_meat" ), 1 );
-    CHECK( component_counts( requirement_meat_red_raw.obj() ) == expected_raw );
+    expected_raw.emplace( itype_washed_cured_meat, 1 );
+    CHECK( component_counts( requirement_data_meat_red_raw.obj() ) == expected_raw );
 
     const std::map<itype_id, int> expected_vacuum_packable = {
-        { itype_id( "cooked_cured_meat" ), 1 },
-        { itype_id( "demihuman_cooked" ), 1 },
-        { itype_id( "human_cooked" ), 1 },
-        { itype_id( "meat_cooked" ), 1 },
-        { itype_id( "meat_fatty_cooked" ), 1 },
-        { itype_id( "meat_fried" ), 1 },
-        { itype_id( "meat_pickled" ), 1 },
-        { itype_id( "meat_scrap_cooked" ), 10 },
-        { itype_id( "meat_smoked" ), 1 },
-        { itype_id( "mutant_human_cooked" ), 1 },
-        { itype_id( "mutant_meat_cooked" ), 1 },
-        { itype_id( "mutant_meat_scrap_cooked" ), 10 },
-        { itype_id( "rehydrated_meat" ), 1 }
+        { itype_cooked_cured_meat, 1 },
+        { itype_demihuman_cooked, 1 },
+        { itype_human_cooked, 1 },
+        { itype_meat_cooked, 1 },
+        { itype_meat_fatty_cooked, 1 },
+        { itype_meat_fried, 1 },
+        { itype_meat_pickled, 1 },
+        { itype_meat_scrap_cooked, 10 },
+        { itype_meat_smoked, 1 },
+        { itype_mutant_human_cooked, 1 },
+        { itype_mutant_meat_cooked, 1 },
+        { itype_mutant_meat_scrap_cooked, 10 },
+        { itype_rehydrated_meat, 1 }
     };
-    CHECK( component_counts( requirement_meat_vacuum_packable.obj() ) ==
+    CHECK( component_counts( requirement_data_meat_vacuum_packable.obj() ) ==
            expected_vacuum_packable );
+}
+
+TEST_CASE( "requirement_checks_follow_their_actor_mode", "[requirement]" )
+{
+    clear_avatar();
+    avatar &u = get_avatar();
+    const inventory empty_inv;
+
+    GIVEN( "a requirement demanding a quality, a tool and a component" ) {
+        const requirement_data req( { { tool_comp( itype_hammer, -1 ) } },
+        { { quality_requirement( qual_HAMMER, 1, 1 ) } },
+        { { item_comp( itype_rock, 1 ) } } );
+        const quality_requirement qual_req( qual_HAMMER, 1, 1 );
+        const tool_comp tool_req( itype_hammer, -1 );
+        const item_comp comp_req( itype_rock, 1 );
+
+        WHEN( "the avatar carries a qualifying tool and the component" ) {
+            u.wear_item( item( itype_debug_backpack ) );
+            u.i_add( item( itype_hammer ) );
+            u.i_add( item( itype_rock ) );
+
+            THEN( "an inventory-only check is decided on the passed inventory alone" ) {
+                CHECK_FALSE( req.can_make_with_inventory( nullptr, empty_inv,
+                             return_true<item> ) );
+                CHECK_FALSE( qual_req.has( nullptr, empty_inv, return_true<item> ) );
+            }
+        }
+
+        WHEN( "the avatar has debug hammerspace" ) {
+            u.set_mutation( trait_DEBUG_HS );
+
+            THEN( "an inventory-only check grants none of it, at any level" ) {
+                CHECK_FALSE( req.can_make_with_inventory( nullptr, empty_inv,
+                             return_true<item> ) );
+                CHECK_FALSE( qual_req.has( nullptr, empty_inv, return_true<item> ) );
+                CHECK_FALSE( tool_req.has( nullptr, empty_inv, return_true<item> ) );
+                CHECK_FALSE( comp_req.has( nullptr, empty_inv, return_true<item> ) );
+            }
+
+            THEN( "the display path agrees with the refusal" ) {
+                CHECK( qual_req.get_color( nullptr, false, empty_inv,
+                                           return_true<item> ) != c_green );
+            }
+
+            THEN( "the same check for the avatar as actor is granted" ) {
+                CHECK( req.can_make_with_inventory( &u, empty_inv, return_true<item> ) );
+            }
+        }
+
+        WHEN( "an NPC without the trait stands beside a hammerspace avatar" ) {
+            u.set_mutation( trait_DEBUG_HS );
+            standard_npc guy( "ModeTester" );
+
+            THEN( "the NPC is not granted the avatar's hammerspace" ) {
+                CHECK_FALSE( req.can_make_with_inventory( &guy, empty_inv,
+                             return_true<item> ) );
+            }
+
+            THEN( "the NPC's own trait is what grants it" ) {
+                guy.set_mutation( trait_DEBUG_HS );
+                CHECK( req.can_make_with_inventory( &guy, empty_inv, return_true<item> ) );
+            }
+        }
+    }
+
+    GIVEN( "a crafter whose only butchering quality is a mutation grant" ) {
+        u.set_mutation( trait_MANDIBLES );
+        const quality_requirement butcher_req( qual_BUTCHER, 1, 1 );
+
+        THEN( "the actor-aware check reaches the intrinsic grant" ) {
+            CHECK( butcher_req.has( &u, empty_inv, return_true<item> ) );
+        }
+
+        THEN( "the inventory-only check has no actor to reach it through" ) {
+            CHECK_FALSE( butcher_req.has( nullptr, empty_inv, return_true<item> ) );
+        }
+    }
+
+    GIVEN( "the default butchery ladder, whose tiers differ in speed" ) {
+        u.set_mutation( trait_DEBUG_HS );
+        standard_npc guy( "ModeTester" );
+
+        THEN( "the actor decides which tier is reachable" ) {
+            // The hammerspace avatar satisfies the first tier; the bare NPC falls
+            // through to the fastest-tier fallback, so the pairs differ.  Depends on
+            // the "default" ladder carrying more than one speed tier.
+            const std::pair<float, requirement_id> for_avatar =
+                butchery_requirements_default.obj().get_fastest_requirements(
+                    &u, empty_inv, creature_size::medium, butcher_type::FULL );
+            const std::pair<float, requirement_id> for_npc =
+                butchery_requirements_default.obj().get_fastest_requirements(
+                    &guy, empty_inv, creature_size::medium, butcher_type::FULL );
+            CHECK( for_avatar != for_npc );
+        }
+    }
 }

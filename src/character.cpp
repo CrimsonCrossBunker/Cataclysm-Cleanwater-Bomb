@@ -41,6 +41,7 @@
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "addiction.h"
+#include "bonuses.h"
 #include "anatomy.h"
 #include "avatar.h"
 #include "avatar_action.h"
@@ -180,17 +181,6 @@ static const bionic_id bio_ups( "bio_ups" );
 static const bionic_id bio_voice( "bio_voice" );
 static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
 
-static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
-
-static bool fcl_mod_is_active()
-{
-    return world_generator && world_generator->active_world &&
-           std::find( world_generator->active_world->active_mod_order.begin(),
-                      world_generator->active_world->active_mod_order.end(),
-                      MOD_INFORMATION_catalegacy_future ) !=
-           world_generator->active_world->active_mod_order.end();
-}
-
 static const character_modifier_id character_modifier_aim_speed_dex_mod( "aim_speed_dex_mod" );
 static const character_modifier_id character_modifier_aim_speed_mod( "aim_speed_mod" );
 static const character_modifier_id character_modifier_aim_speed_skill_mod( "aim_speed_skill_mod" );
@@ -247,7 +237,6 @@ static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_masked_scent( "masked_scent" );
 static const efftype_id effect_mech_recon_vision( "mech_recon_vision" );
 static const efftype_id effect_melatonin( "melatonin" );
-static const efftype_id effect_meth( "meth" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_no_sight( "no_sight" );
@@ -282,6 +271,7 @@ static const json_character_flag json_flag_BIONIC_TOGGLED( "BIONIC_TOGGLED" );
 static const json_character_flag json_flag_CANNIBAL( "CANNIBAL" );
 static const json_character_flag json_flag_CANNOT_CHANGE_TEMPERATURE( "CANNOT_CHANGE_TEMPERATURE" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const json_character_flag json_flag_CANNOT_SLEEP( "CANNOT_SLEEP" );
 static const json_character_flag json_flag_CLAIRVOYANCE( "CLAIRVOYANCE" );
 static const json_character_flag json_flag_CLAIRVOYANCE_PLUS( "CLAIRVOYANCE_PLUS" );
 static const json_character_flag json_flag_DEAF( "DEAF" );
@@ -350,6 +340,8 @@ static const material_id material_mc_steel_chain( "mc_steel_chain" );
 static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
+
+static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
 
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
@@ -427,6 +419,15 @@ static const trait_id trait_SPINES( "SPINES" );
 static const trait_id trait_SUNLIGHT_DEPENDENT( "SUNLIGHT_DEPENDENT" );
 static const trait_id trait_THORNS( "THORNS" );
 static const trait_id trait_VISCOUS( "VISCOUS" );
+
+static bool fcl_mod_is_active()
+{
+    return world_generator && world_generator->active_world &&
+           std::find( world_generator->active_world->active_mod_order.begin(),
+                      world_generator->active_world->active_mod_order.end(),
+                      MOD_INFORMATION_catalegacy_future ) !=
+           world_generator->active_world->active_mod_order.end();
+}
 
 static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_copper_nickel };
 
@@ -1169,7 +1170,9 @@ double Character::aim_per_move( const item &gun, double recoil,
     aim_speed = std::max( aim_speed, MIN_RECOIL_IMPROVEMENT );
 
     // Never improve by more than the currently used sights permit.
-    return std::min( aim_speed, recoil - limit );
+    aim_speed = std::min( aim_speed, recoil - limit );
+
+    return calculate_by_enchantment( aim_speed, enchant_vals::mod::AIMING_SPEED );
 }
 
 void Character::mod_free_dodges( int added )
@@ -2617,6 +2620,8 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
     // but perception also plays a role, representing both memory/attentiveness and catching on to how
     // the two apply to each other.
     float catchup_modifier = 1.0f + ( 2.0f * get_int() + get_per() ) / 24.0f; // 2 for an average person
+    catchup_modifier = calculate_by_enchantment( catchup_modifier,
+                       enchant_vals::mod::THEORETICAL_SKILL_CATCHUP_BONUS );
     float knowledge_modifier = 1.0f + get_int() /
                                40.0f; // 1.2 for an average person, always a bit higher than base amount
 
@@ -3387,6 +3392,22 @@ int Character::get_per_bonus() const
 int Character::get_int_bonus() const
 {
     return int_bonus;
+}
+
+int Character::get_primary_stat_value( const scaling_stat stat ) const
+{
+    switch( stat ) {
+        case STAT_STR:
+            return get_str();
+        case STAT_DEX:
+            return get_dex();
+        case STAT_INT:
+            return get_int();
+        case STAT_PER:
+            return get_per();
+        default:
+            cata_fatal( "Invalid primary character stat" );
+    }
 }
 
 int Character::get_enchantment_speed_bonus() const
@@ -4440,7 +4461,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
                     break;
                 }
             }
-            opt.doable &= fix.get_requirements().can_make_with_inventory( inv, is_crafting_component );
+            opt.doable &= fix.get_requirements().can_make_with_inventory( this, inv, is_crafting_component );
             mending_options.emplace_back( opt );
         }
     }
@@ -4480,8 +4501,9 @@ void Character::mend_item( item_location &&obj, bool interactive )
             const nc_color col = opt.doable ? c_white : c_light_gray;
 
             const requirement_data &reqs = fix.get_requirements();
-            auto tools = reqs.get_folded_tools_list( fold_width, col, inv );
-            auto comps = reqs.get_folded_components_list( fold_width, col, inv, is_crafting_component );
+            auto tools = reqs.get_folded_tools_list( this, fold_width, col, inv );
+            auto comps = reqs.get_folded_components_list( this, fold_width, col, inv,
+                         is_crafting_component );
 
             std::string descr = word_rewrap( obj.get_item()->get_fault_description( opt.fault ), 80 ) + "\n\n";
             for( const fault_id &fid : fix.faults_removed ) {
@@ -5710,8 +5732,13 @@ void Character::fall_asleep( const time_duration &duration )
             cancel_activity();
         }
     }
-    add_effect( effect_sleep, duration );
-    get_event_bus().send<event_type::character_falls_asleep>( getID(), to_seconds<int>( duration ) );
+    if( has_flag( json_flag_CANNOT_SLEEP ) ) {
+        add_msg_if_player( m_info, _( "You cannot sleep!" ) );
+        cancel_activity();
+    } else {
+        add_effect( effect_sleep, duration );
+        get_event_bus().send<event_type::character_falls_asleep>( getID(), to_seconds<int>( duration ) );
+    }
 }
 
 std::map<bodypart_id, int> Character::bonus_item_warmth() const
@@ -7419,8 +7446,9 @@ void Character::stagger()
 
 bool Character::can_sleep()
 {
-    if( has_effect( effect_meth ) ) {
-        // Sleep ain't happening until that meth wears off completely.
+
+    if( has_flag( json_flag_CANNOT_SLEEP ) ) {
+        // Sleep ain't happening
         return false;
     }
 

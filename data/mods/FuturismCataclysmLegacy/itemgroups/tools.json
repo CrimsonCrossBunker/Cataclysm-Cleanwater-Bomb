@@ -2,8 +2,9 @@
   {
     "type": "item_group",
     "id": "tools_robotics",
+    "subtype": "collection",
     "//": "tools and equipment you might find on robotics laboratories.",
     "copy-from": "tools_robotics",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ] ] }
+    "extend": { "entries": [ { "item": "fcl_atomic_lamp", "prob": 1 } ] }
   }
 ]

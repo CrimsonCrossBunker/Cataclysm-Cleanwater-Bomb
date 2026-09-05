@@ -1,11 +1,16 @@
 #include "iuse_actor.h"
 
+#include <color.h>
+#include <imgui/imgui.h>
+#include <iuse.h>
+#include <ret_val.h>
+#include <translation.h>
+#include <units.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <imgui/imgui.h>
 #include <iterator>
 #include <limits>
 #include <list>
@@ -50,8 +55,8 @@
 #include "generic_factory.h"
 #include "hsv_color.h"
 #include "iexamine.h"
-#include "inventory.h"
 #include "input_popup.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -59,6 +64,7 @@
 #include "item_pocket.h"
 #include "item_transformation.h"
 #include "itype.h"
+#include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -74,8 +80,8 @@
 #include "music.h"
 #include "mutation.h"
 #include "npc.h"
-#include "output.h"
 #include "options.h"
+#include "output.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -101,8 +107,8 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "vfx_emit.h"
 #include "vehicle_selector.h"
+#include "vfx_emit.h"
 #include "visitable.h"
 #include "vitamin.h"
 #include "vpart_position.h"
@@ -201,6 +207,17 @@ item_location form_loc_recursive( T &loc, item &it )
 //explict template instantiation
 template item_location form_loc_recursive<Character>( Character &loc, item &it );
 template item_location form_loc_recursive<npc>( npc &loc, item &it );
+
+template<>
+item_location form_loc_recursive( item_location &loc, item &it )
+{
+    item *parent = loc->find_parent( it );
+    if( parent != nullptr ) {
+        return item_location( form_loc_recursive( loc, *parent ), &it );
+    }
+
+    return item_location( loc, &it );
+}
 
 static std::optional<item_location> try_form_loc( Character &you, map *here,
         const tripoint_bub_ms &p, item &it )
@@ -647,7 +664,7 @@ std::optional<RGBColor> paint_vehicle_select_color()
     std::vector<std::pair<RGBColor, std::string>> colors( named.begin(), named.end() );
     std::sort( colors.begin(), colors.end(),
     []( const std::pair<RGBColor, std::string> &a, const std::pair<RGBColor, std::string> &b ) {
-        return a.second < b.second;
+        return localized_compare( a.second, b.second );
     } );
 
     uilist menu;

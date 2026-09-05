@@ -1624,6 +1624,17 @@ SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
         static_cast<int>( static_cast<int64_t>( window_pt.x - dstrect.x ) * buf_w / dstrect.w ),
         static_cast<int>( static_cast<int64_t>( window_pt.y - dstrect.y ) * buf_h / dstrect.h )
     };
+#elif SDL_MAJOR_VERSION >= 3
+    // Use SDL's renderer transformation for SDL3 window coordinates.
+    if( renderer ) {
+        float rx = 0.0f;
+        float ry = 0.0f;
+        if( SDL_RenderCoordinatesFromWindow( renderer.get(), static_cast<float>( window_pt.x ),
+                                             static_cast<float>( window_pt.y ), &rx, &ry ) ) {
+            return SDL_Point{ static_cast<int>( rx ), static_cast<int>( ry ) };
+        }
+    }
+    return window_pt;
 #else
     int win_w = 0;
     int win_h = 0;
@@ -6506,7 +6517,7 @@ static void CheckMessages()
         // shortcut and joystick hit-tests see the same domain SDL emitted.
         SDL_Event ev_display = ev;
         convert_event_to_display_buffer_coords( &ev_display );
-        imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h );
+        imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h, scaling_factor );
 
         bool imgui_owns_text_event = cataimgui::client::want_text_input() &&
                                      ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ||

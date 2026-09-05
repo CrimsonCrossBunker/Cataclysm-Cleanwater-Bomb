@@ -1,5 +1,12 @@
 #include "veh_interact.h"
 
+#include <color.h>
+#include <coordinates.h>
+#include <cursesdef.h>
+#include <input_context.h>
+#include <input_enums.h>
+#include <item_location.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -60,8 +67,8 @@
 #include "tileray.h"
 #include "translation.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"
@@ -76,7 +83,6 @@
 #if defined(TILES)
     // Only for the graphical vehicle-layout branch in display_veh(): use_tiles (cached_options),
     // get_option (options), and tilecontext / cata_tiles::draw_vehicle_preview (sdltiles / cata_tiles).
-    #include "cached_options.h"
     #include "cata_tiles.h"
     #include "options.h"
     #include "sdltiles.h"
@@ -523,7 +529,8 @@ bool veh_interact::format_reqs( std::string &msg, const requirement_data &reqs,
 {
     Character &player_character = get_player_character();
     const inventory &inv = player_character.crafting_inventory();
-    bool ok = reqs.can_make_with_inventory( inv, is_crafting_component, 1, craft_flags::none, false );
+    bool ok = reqs.can_make_with_inventory( &player_character, inv, is_crafting_component, 1,
+                                            craft_flags::none, false );
 
     msg += _( "<color_white>Time required:</color>\n" );
     msg += "> " + to_string_approx( time ) + "\n";
@@ -543,12 +550,12 @@ bool veh_interact::format_reqs( std::string &msg, const requirement_data &reqs,
         msg += string_format( "> %1$s%2$s</color>", status_color( true ), _( "NONE" ) ) + "\n";
     }
 
-    auto comps = reqs.get_folded_components_list( getmaxx( w_msg ) - 2, c_white, inv,
+    auto comps = reqs.get_folded_components_list( &player_character, getmaxx( w_msg ) - 2, c_white, inv,
                  is_crafting_component );
     for( const std::string &line : comps ) {
         msg += line + "\n";
     }
-    auto tools = reqs.get_folded_tools_list( getmaxx( w_msg ) - 2, c_white, inv );
+    auto tools = reqs.get_folded_tools_list( &player_character, getmaxx( w_msg ) - 2, c_white, inv );
     for( const std::string &line : tools ) {
         msg += line + "\n";
     }
@@ -2483,7 +2490,8 @@ bool veh_interact::can_potentially_install( const vpart_info &vpart )
                !vpart.has_flag( VPFLAG_APPLIANCE );
     }
     bool engine_reqs_met = true;
-    bool can_make = vpart.install_requirements().can_make_with_inventory( *crafting_inv,
+    bool can_make = vpart.install_requirements().can_make_with_inventory( &get_player_character(),
+                    *crafting_inv,
                     is_crafting_component, 1, craft_flags::none, false );
     bool hammerspace = get_player_character().has_trait( trait_DEBUG_HS );
 

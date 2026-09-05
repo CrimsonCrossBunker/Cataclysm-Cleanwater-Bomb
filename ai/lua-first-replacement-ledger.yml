@@ -31,26 +31,26 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:462f7c9380cbffcb50edae3e9b8d428705dce494fe16a39c177a286e8d52cabf
+  source_fingerprint: sha256:7a312ca0a6a04c9f73736e9f792bf33e05eefadac952bde972142d94cdcb5222
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:462f7c9380cbffcb50edae3e9b8d428705dce494fe16a39c177a286e8d52cabf
+  source_fingerprint: sha256:7a312ca0a6a04c9f73736e9f792bf33e05eefadac952bde972142d94cdcb5222
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:462f7c9380cbffcb50edae3e9b8d428705dce494fe16a39c177a286e8d52cabf
-  entry_count: 309
+  source_fingerprint: sha256:7a312ca0a6a04c9f73736e9f792bf33e05eefadac952bde972142d94cdcb5222
+  entry_count: 311
 summary:
-  total: 774
+  total: 776
   implemented_verified: 0
   implemented_unverified: 89
   bounded_implemented_verified: 0
   bounded_implemented_unverified: 668
   primitive_available_unverified: 0
-  planned: 0
+  planned: 2
   private_adapter: 0
   reviewed_not_applicable: 17
 entries:
@@ -5721,6 +5721,15 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
+  selector: npc_lose_mutation_type
+  target_kind: shared_service
+  target: services.mutations
+  status: planned
+  legacy_dependency: public_legacy
+  evidence:
+  - data/reference/json/ccb_eoc_effects.json
+  verification: not_run
+- inventory: eoc-effects
   selector: npc_lose_trait
   target_kind: shared_service
   target: services.mutations
@@ -7636,6 +7645,15 @@ entries:
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
   verification: source_only
+- inventory: eoc-effects
+  selector: u_lose_mutation_type
+  target_kind: shared_service
+  target: services.mutations
+  status: planned
+  legacy_dependency: public_legacy
+  evidence:
+  - data/reference/json/ccb_eoc_effects.json
+  verification: not_run
 - inventory: eoc-effects
   selector: u_lose_trait
   target_kind: shared_service

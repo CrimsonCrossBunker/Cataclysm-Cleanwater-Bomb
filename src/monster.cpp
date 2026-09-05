@@ -2093,6 +2093,14 @@ bool monster::is_elec_immune() const
 
 bool monster::is_immune_effect( const efftype_id &effect ) const
 {
+    // Data-defined immunity must be honored before legacy effect-specific
+    // branches return their material/species result.
+    for( const flag_id &flag : effect->immune_flags ) {
+        if( has_flag( flag ) ) {
+            return true;
+        }
+    }
+
     if( effect == effect_onfire ) {
         return is_immune_damage( damage_heat ) ||
                made_of( phase_id::LIQUID ) ||
@@ -2135,11 +2143,6 @@ bool monster::is_immune_effect( const efftype_id &effect ) const
         } else {
             return type->bodytype == "snake" || type->bodytype == "blob" || type->bodytype == "fish" ||
                    has_flag( mon_flag_FLIES ) || has_flag( mon_flag_IMMOBILE ) || has_flag( json_flag_CANNOT_MOVE );
-        }
-    }
-    for( const flag_id &flag : effect->immune_flags ) {
-        if( has_flag( flag ) ) {
-            return true;
         }
     }
     return false;
@@ -2196,9 +2199,43 @@ bool monster::is_dead_state() const
     return hp <= 0;
 }
 
-bool monster::block_hit( Creature *, bodypart_id &, damage_instance & )
+bool monster::block_hit( Creature *, bodypart_id &, damage_instance &dam )
 {
-    return false;
+    if( blocks_left <= 0 ) {
+        return false;
+    }
+
+    --blocks_left;
+
+    if( !x_in_y( type->block.chance, 100 ) ) {
+        return false;
+    }
+
+    bool blocked = false;
+    float remaining_block = type->block.effectiveness;
+
+    for( damage_unit &elem : dam.damage_units ) {
+        if( remaining_block <= 0.0f ) {
+            break;
+        }
+
+        if( type->block.ranged || ( elem.type->physical && elem.type->melee_only ) ) {
+            const float block_amount = std::min( remaining_block, elem.amount );
+
+            elem.amount -= block_amount;
+            remaining_block -= block_amount;
+
+            if( block_amount > 0.0f ) {
+                blocked = true;
+            }
+        }
+    }
+
+    if( blocked ) {
+        add_msg( m_info, _( "%s blocks the attack!" ), disp_name() );
+    }
+
+    return blocked;
 }
 
 const weakpoint *monster::absorb_hit( const weakpoint_attack &attack, const bodypart_id &,
@@ -3001,6 +3038,8 @@ void monster::explode()
 
 void monster::process_turn()
 {
+    blocks_left = type->block.count;
+
     map &here = get_map();
     if( !is_hallucination() ) {
         for( const std::pair<const emit_id, time_duration> &e : type->emit_fields ) {

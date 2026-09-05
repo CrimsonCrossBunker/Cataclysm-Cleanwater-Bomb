@@ -1,5 +1,7 @@
 #include "veh_utils.h"
 
+#include <color.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -19,7 +21,6 @@
 #include "debug.h"
 #include "enums.h"
 #include "game.h"
-#include "game_constants.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "inventory.h"
@@ -79,7 +80,7 @@ vehicle_part *most_repairable_part( vehicle &veh, Character &who )
 
         if( vp.is_broken() ) {
             if( who.meets_skill_requirements( info.install_skills ) &&
-                info.install_requirements().can_make_with_inventory( inv, is_crafting_component ) ) {
+                info.install_requirements().can_make_with_inventory( &who, inv, is_crafting_component ) ) {
                 vp_broken = &vp;
             }
             continue;
@@ -87,7 +88,7 @@ vehicle_part *most_repairable_part( vehicle &veh, Character &who )
 
         if( who.meets_skill_requirements( info.repair_skills ) ) {
             const requirement_data reqs = info.repair_requirements() * vp.get_base().repairable_levels();
-            if( reqs.can_make_with_inventory( inv, is_crafting_component ) ) {
+            if( reqs.can_make_with_inventory( &who, inv, is_crafting_component ) ) {
                 const int repairable_damage = vp.get_base().damage();
                 if( repairable_damage > most_damage ) {
                     most_damage = repairable_damage;
@@ -115,7 +116,7 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
     // or able to drag a welding cart etc.
     map_inv.form_from_map( who.pos_bub(), pickup_range, &who, false,
                            !who.is_npc() );
-    if( !reqs.can_make_with_inventory( inv, is_crafting_component ) ) {
+    if( !reqs.can_make_with_inventory( &who, inv, is_crafting_component ) ) {
         who.add_msg_if_player( m_info, _( "You don't meet the requirements to repair the %s." ),
                                pt.name() );
         return false;

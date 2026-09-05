@@ -336,6 +336,7 @@
     "desc": [ { "str": "Don't worry, you shouldn't get this.", "//~": "NO_I18N" } ],
     "max_duration": 120,
     "base_mods": { "hurt_amount": [ 10 ], "hurt_min": [ 1 ], "hurt_chance": [ 2 ] },
+    "immune_flags": [ "VENOM_IMMUNE" ],
     "//": "10+0,5/s dmg, from max duration avg 70 (range 10-130)"
   },
   {
@@ -345,6 +346,7 @@
     "desc": [ { "str": "Don't worry, you really shouldn't get this.", "//~": "NO_I18N" } ],
     "max_duration": 120,
     "base_mods": { "hurt_amount": [ 20 ], "hurt_min": [ 4 ], "hurt_chance": [ 2 ], "speed_mod": [ -50 ] },
+    "immune_flags": [ "VENOM_IMMUNE" ],
     "//": "20+2/s dmg, from max duration avg 260 (range 20-480)"
   },
   {
@@ -3787,7 +3789,8 @@
       "sleepiness_tick": [ 9 ],
       "stamina_min": [ 8 ]
     },
-    "blood_analysis_description": "Methamphetamines"
+    "blood_analysis_description": "Methamphetamines",
+    "flags": [ "CANNOT_SLEEP" ]
   },
   {
     "type": "effect_type",
@@ -5937,5 +5940,31 @@
     "int_dur_factor": "5 m",
     "scaling_mods": { "per_mod": [ 1 ] },
     "show_in_info": true
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_zero_manip",
+    "//": "Hidden effect, sets manip to 0 so you drop what you're holding",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "limb_score_mods": [ { "limb_score": "manip", "modifier": 0 } ],
+    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_mon_feral_serum_user_armus",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "rating": "mixed",
+    "enchantments": [
+      {
+        "incoming_damage_mod": [
+          { "type": "bash", "multiply": -0.75 },
+          { "type": "cut", "multiply": -0.666 },
+          { "type": "stab", "multiply": -0.5 },
+          { "type": "bullet", "multiply": -0.2 }
+        ]
+      }
+    ]
   }
 ]

@@ -163,7 +163,11 @@ struct tech_effect_data {
     bool on_damage;
     int chance;
     std::string message;
+    // Legacy single-flag requirement retained for external mod compatibility.
     json_character_flag req_flag;
+    // Dialogue condition; `u` is the martial artist and `npc` is the target.
+    std::function<bool( const_dialogue const & )> condition;
+    bool has_condition = false;
 
     tech_effect_data( const efftype_id &nid, int dur, bool perm, bool ondmg,
                       int nchance, std::string message, json_character_flag req_flag ) :

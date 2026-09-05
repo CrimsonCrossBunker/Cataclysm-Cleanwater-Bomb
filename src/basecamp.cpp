@@ -170,7 +170,7 @@ constexpr int maximum_platform_recipe_batch = 1000;
 constexpr std::int64_t maximum_platform_recipe_duration = 1000000;
 constexpr std::int64_t maximum_platform_upgrade_duration = 1000000;
 
-bool platform_expansion_name_is_valid( const std::string &name )
+bool platform_expansion_name_is_valid( const std::string_view name )
 {
     if( name.empty() || name.size() > 64 ) {
         return false;
@@ -183,10 +183,9 @@ bool platform_expansion_name_is_valid( const std::string &name )
 bool platform_expansion_position_is_in_domain( const tripoint_abs_omt &camp,
         const tripoint_abs_omt &position )
 {
-    const int dx = position.x() - camp.x();
-    const int dy = position.y() - camp.y();
-    return position.z() == camp.z() && ( dx != 0 || dy != 0 ) &&
-           dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
+    const point d( position.x() - camp.x(), position.y() - camp.y() );
+    return position.z() == camp.z() && ( d.x != 0 || d.y != 0 ) &&
+           d.x >= -1 && d.x <= 1 && d.y >= -1 && d.y <= 1;
 }
 constexpr std::size_t maximum_platform_recipe_holders = 16;
 constexpr std::size_t maximum_platform_recipe_escrow_items = 256;
@@ -706,7 +705,7 @@ bool consume_detached_requirement_data(
     item_components &consumed, std::string &error )
 {
     const inventory all_items = make_detached_recipe_inventory( values );
-    if( !requirements.can_make_with_inventory( all_items, component_filter, batch ) ) {
+    if( !requirements.can_make_with_inventory( nullptr, all_items, component_filter, batch ) ) {
         error = std::string( label ) + " does not satisfy authoritative requirements";
         return false;
     }
@@ -717,7 +716,7 @@ bool consume_detached_requirement_data(
             if( candidate.requirement ) {
                 continue;
             }
-            if( candidate.has( component_items, component_filter, batch ) ) {
+            if( candidate.has( nullptr, component_items, component_filter, batch ) ) {
                 choice = &candidate;
                 break;
             }
@@ -746,7 +745,7 @@ bool consume_detached_requirement_data(
         const inventory tool_items = make_detached_recipe_inventory( values );
         const tool_comp *choice = nullptr;
         for( const tool_comp &candidate : alternatives ) {
-            if( candidate.has( tool_items, return_true<item>, batch ) ) {
+            if( candidate.has( nullptr, tool_items, return_true<item>, batch ) ) {
                 choice = &candidate;
                 break;
             }
@@ -893,7 +892,7 @@ bool recipe_escrow_matches_work( const basecamp_platform_recipe_work &work,
         escrow_inventory.add_item( std::move( value ), false, false, false );
     }
     if( !making.deduped_requirements().can_make_with_inventory(
-            escrow_inventory, making.get_component_filter(), work.batch ) ) {
+            worker, escrow_inventory, making.get_component_filter(), work.batch ) ) {
         error = "recipe_work escrow does not satisfy authoritative recipe requirements";
         return false;
     }
@@ -977,7 +976,7 @@ bool upgrade_escrow_matches_work( const basecamp_platform_upgrade_work &work,
         escrow_inventory.add_item( std::move( value ), false, false, false );
     }
     if( !requirements->second.consolidated_reqs.can_make_with_inventory(
-            escrow_inventory, upgrade.get_component_filter(), 1 ) ) {
+            worker, escrow_inventory, upgrade.get_component_filter(), 1 ) ) {
         error = "upgrade_work escrow does not satisfy authoritative blueprint requirements";
         return false;
     }
@@ -2571,9 +2570,9 @@ safe_reference<basecamp> basecamp::get_safe_reference()
 void basecamp::platform_register_expansion_identity(
     const point_rel_omt &direction, const expansion_data &expansion, std::string expansion_name )
 {
-    for( auto it = platform_expansions_.begin(); it != platform_expansions_.end(); ++it ) {
-        if( it->second.direction == direction ) {
-            platform_retire_expansion_identity( it->first );
+    for( const auto &platform_entry : platform_expansions_ ) {
+        if( platform_entry.second.direction == direction ) {
+            platform_retire_expansion_identity( platform_entry.first );
             break;
         }
     }
@@ -2731,8 +2730,8 @@ std::string basecamp::om_upgrade_description( const std::string &bldg, const map
 
     std::vector<std::string> component_print_buffer;
     const int pane = FULL_SCREEN_WIDTH;
-    const auto tools = reqs->get_folded_tools_list( pane, c_white, _inv, 1 );
-    const auto comps = reqs->get_folded_components_list( pane, c_white, _inv,
+    const auto tools = reqs->get_folded_tools_list( nullptr, pane, c_white, _inv, 1 );
+    const auto comps = reqs->get_folded_components_list( nullptr, pane, c_white, _inv,
                        making.get_component_filter(), 1 );
     component_print_buffer.insert( component_print_buffer.end(), tools.begin(), tools.end() );
     component_print_buffer.insert( component_print_buffer.end(), comps.begin(), comps.end() );
@@ -2885,7 +2884,8 @@ std::vector<basecamp_upgrade> basecamp::available_upgrades( const point_rel_omt 
                 const mapgen_arguments &args = args_and_reqs.first;
                 const requirement_data &reqs = args_and_reqs.second.consolidated_reqs;
                 bool can_make =
-                    reqs.can_make_with_inventory( _inv, recp.get_component_filter(), 1, craft_flags::none, false );
+                    reqs.can_make_with_inventory( nullptr, _inv, recp.get_component_filter(), 1, craft_flags::none,
+                                                  false );
                 ret_data.push_back( { bldg, args, recp.blueprint_name(), can_make, in_progress } );
             }
         }
@@ -3426,11 +3426,11 @@ bool basecamp::platform_adjust_resources(
 }
 
 bool basecamp::platform_reservation_liability(
-    std::vector<basecamp_platform_resource_change> &result,
+    std::vector<basecamp_platform_resource_change> &resources,
     std::int64_t &food_kcal, std::string &error,
     const std::uint64_t excluded_task_id ) const
 {
-    result.clear();
+    resources.clear();
     food_kcal = 0;
     std::vector<basecamp_resource> normalized;
     if( !platform_resource_snapshot( normalized, error ) ) {
@@ -3482,16 +3482,16 @@ bool basecamp::platform_reservation_liability(
                 error = "resource_work reservation refers to an unknown camp resource";
                 return false;
             }
-            const auto existing = std::find_if( result.begin(), result.end(),
+            const auto existing = std::find_if( resources.begin(), resources.end(),
             [&change]( const basecamp_platform_resource_change & candidate ) {
                 return candidate.resource_id == change.resource_id;
             } );
-            if( existing == result.end() ) {
-                result.push_back( change );
+            if( existing == resources.end() ) {
+                resources.push_back( change );
             } else if( existing->delta > std::numeric_limits<std::int64_t>::max() -
                        change.delta ) {
                 error = "resource_work reservation liability overflows";
-                result.clear();
+                resources.clear();
                 return false;
             } else {
                 existing->delta += change.delta;
@@ -3500,16 +3500,16 @@ bool basecamp::platform_reservation_liability(
         if( task.reserved_food_kcal >
             maximum_platform_resource_work_amount - food_kcal ) {
             error = "resource_work food reservation liability exceeds capacity";
-            result.clear();
+            resources.clear();
             return false;
         }
         food_kcal += task.reserved_food_kcal;
     }
 
-    for( const basecamp_platform_resource_change &change : result ) {
+    for( const basecamp_platform_resource_change &change : resources ) {
         if( change.delta > std::numeric_limits<int>::max() ) {
             error = "resource_work reservation liability exceeds resource capacity";
-            result.clear();
+            resources.clear();
             return false;
         }
     }
@@ -3675,7 +3675,7 @@ bool basecamp::platform_validate_upgrade_target(
     static_cast<void>( mirror_horizontal );
     static_cast<void>( mirror_vertical );
     static_cast<void>( rotation );
-    const auto required = upgrade.blueprint_requires();
+    const auto &required = upgrade.blueprint_requires();
     for( const auto &parent : required ) {
         const auto provided = target.provides.find( parent.first );
         if( provided == target.provides.end() || provided->second < parent.second ) {
@@ -4967,7 +4967,7 @@ bool basecamp::platform_complete_upgrade_task(
         staged_expansion_it->second.work_in_progress = false;
     }
 
-    auto staged_task_context = basecamp_platform_task_execution_context{};
+    basecamp_platform_task_execution_context staged_task_context{};
     staged_task_context.camp = this;
     staged_task_context.task = &*staged_task_it;
     staged_task_context.worker = worker;

@@ -288,9 +288,9 @@ struct dialogue: public const_dialogue {
         dialogue() = default;
         ~dialogue() noexcept;
         dialogue( const dialogue &d );
-        dialogue( dialogue &&d );
+        dialogue( dialogue &&d ) noexcept;
         dialogue &operator=( const dialogue & );
-        dialogue &operator=( dialogue &&d );
+        dialogue &operator=( dialogue &&d ) noexcept;
         dialogue( std::unique_ptr<talker> alpha_in, std::unique_ptr<talker> beta_in,
                   const std::unordered_map<std::string, std::function<bool( const_dialogue const & )>> &cond = {},
                   global_variables::impl_t const &ctx = {} );

@@ -25,6 +25,7 @@ int pixel_minimap_r;
 int pixel_minimap_g;
 int pixel_minimap_b;
 int pixel_minimap_a;
+float combat_speed_modifier;
 
 int max_item_in_square;
 units::volume default_tile_volume;

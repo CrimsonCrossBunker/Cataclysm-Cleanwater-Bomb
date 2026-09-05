@@ -108,11 +108,11 @@
 namespace
 {
 constexpr std::string_view internal_plutonium_fuel_var = "internal_plutonium_fuel";
-}
+} // namespace
 
 static const ammotype ammo_battery( "battery" );
-static const ammotype ammo_plutonium( "plutonium" );
 static const ammotype ammo_money( "money" );
+static const ammotype ammo_plutonium( "plutonium" );
 
 static const efftype_id effect_cig( "cig" );
 static const efftype_id effect_shakes( "shakes" );
@@ -1239,6 +1239,30 @@ const std::string &item::symbol() const
     return type->sym;
 }
 
+nc_color item::get_fault_color( const nc_color base_color ) const
+{
+    fault_severity severity = fault_severity::none;
+    for( const fault_id &fault : faults ) {
+        severity = std::max( severity, fault->severity() );
+        if( severity == fault_severity::critical ) {
+            break;
+        }
+    }
+
+    switch( severity ) {
+        case fault_severity::none:
+            return base_color;
+        case fault_severity::minor:
+            return c_light_red;
+        case fault_severity::major:
+            return red_background( c_black );
+        case fault_severity::critical:
+            return yellow_background( c_yellow );
+        default:
+            return base_color;
+    }
+}
+
 nc_color item::color_in_inventory( const Character *const ch ) const
 {
     const Character &player_character = ch ? *ch : get_player_character();
@@ -1572,20 +1596,35 @@ void item::update_prefix_suffix_flags( const flag_id &f )
     }
 }
 
-std::string item::tname( unsigned int quantity, bool with_prefix ) const
+std::string item::tname( unsigned int quantity, bool with_prefix, bool color_faults ) const
 {
-    return tname( quantity, with_prefix ? tname::default_tname : tname::unprefixed_tname );
+    return tname( quantity, with_prefix ? tname::default_tname : tname::unprefixed_tname,
+                  color_faults );
 }
 
-std::string item::tname( unsigned int quantity, tname::segment_bitset const &segments ) const
+std::string item::tname( unsigned int quantity, const tname::segment_bitset &segments,
+                         bool color_faults ) const
 {
     std::string ret;
+    size_t fault_color_start = 0;
 
     for( tname::segments idx : tname::get_tname_set() ) {
         if( !segments[idx] ) {
             continue;
         }
         ret += tname::print_segment( idx, *this, quantity, segments );
+
+        if( idx == tname::segments::DURABILITY ) {
+            fault_color_start = ret.size();
+        }
+    }
+
+    if( color_faults ) {
+        const nc_color fault_color = get_fault_color( c_white );
+        if( fault_color != c_white ) {
+            ret = ret.substr( 0, fault_color_start ) +
+                  colorize( ret.substr( fault_color_start ), fault_color );
+        }
     }
 
     if( item_vars.find( "item_note" ) != item_vars.end() ) {
@@ -1617,9 +1656,9 @@ std::string item::display_money( unsigned int quantity, unsigned int total,
     }
 }
 
-std::string item::display_name( unsigned int quantity ) const
+std::string item::display_name( unsigned int quantity, bool color_faults ) const
 {
-    std::string name = tname( quantity );
+    std::string name = tname( quantity, tname::default_tname, color_faults );
     std::string sidetxt;
     std::string amt;
     std::string cable;
@@ -4264,7 +4303,8 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
     if( std::abs( temperature_difference ) < 0.4 ) {
         return;
     }
-    const float mass = to_gram( weight() ) / ( is_stackable() ? charges : 1 ); // g
+    const float mass = static_cast<float>( to_gram( weight() ) ) /
+                       ( is_stackable() ? charges : 1 ); // g
 
     // If item has negative energy set to environment temperature (it not been processed ever)
     if( units::to_joule_per_gram( specific_energy ) < 0 ) {

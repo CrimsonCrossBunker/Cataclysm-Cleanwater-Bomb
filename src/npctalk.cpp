@@ -76,7 +76,6 @@
 #include "input_context.h"
 #include "input_enums.h"
 #include "input_popup.h"
-#include "inventory.h"
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_category.h"
@@ -129,7 +128,6 @@
 #include "ranged.h"
 #include "recipe.h"
 #include "recipe_groups.h"
-#include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "simple_pathfinding.h"
@@ -2953,12 +2951,12 @@ dialogue::~dialogue() noexcept
     cata::lua_platform::end_dialogue_session( *this );
 }
 
-dialogue::dialogue( dialogue &&d )
+dialogue::dialogue( dialogue &&d ) noexcept
 {
     *this = std::move( d );
 }
 
-dialogue &dialogue::operator=( dialogue &&d )
+dialogue &dialogue::operator=( dialogue &&d ) noexcept
 {
     if( this == &d ) {
         return *this;
@@ -3807,6 +3805,34 @@ talk_effect_fun_t::func f_remove_category( const JsonObject &jo,
     };
 }
 
+talk_effect_fun_t::func f_remove_mutation_type( const JsonObject &jo,
+        std::string_view member,
+        std::string_view,
+        bool is_npc )
+{
+    str_or_var type = get_str_or_var( jo.get_member( member ), member, true );
+
+    return [is_npc, type]( dialogue const & d ) {
+        Character *ch = d.actor( is_npc )->get_character();
+
+        const std::string type_id = type.evaluate( d );
+
+        std::vector<trait_id> to_remove;
+
+        for( const trait_id &mut : ch->get_mutations() ) {
+            const mutation_branch &branch = mut.obj();
+
+            if( branch.types.count( type_id ) > 0 ) {
+                to_remove.push_back( mut );
+            }
+        }
+
+        for( const trait_id &mut : to_remove ) {
+            ch->unset_mutation( mut );
+        }
+    };
+}
+
 talk_effect_fun_t::func f_learn_martial_art( const JsonObject &jo, std::string_view member,
         std::string_view, bool is_npc )
 {
@@ -4470,42 +4496,37 @@ talk_effect_fun_t::func f_consume_item_sum( const JsonObject &jo, std::string_vi
 
         itype_id item_to_remove;
         double percent = 0.0f;
-        double ratio = 0.0f;
         double amount_desired = 0.0f;
-        int count_present = 0;
         Character *you = d.actor( is_npc )->get_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
-                                         pickup_range );
-        std::vector<item_comp> items_to_remove_vector;
+        auto legal_to_consume = [&]( const item & it ) {
+            return it.is_owned_by( *you );
+        };
+        std::unordered_set<item_location> all_items = get_map().all_items( legal_to_consume,
+                *you, Access_Inventory | Access_Map_Around | Access_Vehicle );
 
         for( const auto &pair : item_and_amount ) {
-            int amount_to_remove = 0;
             item_to_remove = itype_id( pair.first.evaluate( d ) );
             amount_desired = pair.second.evaluate( d );
-            count_present = inventory_and_around.count_item( item_to_remove );
+            auto iter = all_items.begin();
+            while( iter != all_items.end() && percent < 1.0 ) {
+                item_location it = *iter;
+                if( it && it->typeId() == item_to_remove ) {
+                    const int available = it->count_by_charges() ? it->charges : 1;
+                    const int amount_to_remove = std::min( available,
+                                                           static_cast<int>( std::ceil( ( 1.0 - percent ) * amount_desired ) ) );
+                    percent += amount_to_remove / amount_desired;
 
-            if( count_present == 0 ) {
-                continue;
-            }
-
-            percent += count_present / amount_desired;
-
-            if( percent <= 1.0 ) {
-                // either lack or just right amount of items to consume
-                items_to_remove_vector = { { item_to_remove, static_cast<int>( count_present ) } };
-                you->consume_items( items_to_remove_vector );
-
-            } else {
-                // too much items to consume, consuming only to hit 1.00 percent
-                percent -= count_present / amount_desired;
-                ratio = count_present / amount_desired;
-
-                while( percent < 1.0 ) {
-                    percent += ratio / count_present;
-                    ++amount_to_remove;
+                    if( amount_to_remove >= available ) {
+                        it->spill_contents( it.pos_bub( get_map() ) );
+                        it.remove_item();
+                        iter = all_items.erase( iter );
+                    } else {
+                        it->mod_charges( -amount_to_remove );
+                        ++iter;
+                    }
+                } else {
+                    ++iter;
                 }
-                items_to_remove_vector = { { item_to_remove, amount_to_remove } };
-                you->consume_items( items_to_remove_vector );
             }
         }
     };
@@ -7041,6 +7062,25 @@ talk_effect_fun_t::func f_run_eoc_selector( const JsonObject &jo, std::string_vi
     translation title = to_translation( "Select an option." );
     jo.read( "title", title );
 
+    // Selector dialog can't be initialized in tests, so either cancel or activate first eoc
+    if( test_mode ) {
+        return [eocs, context, allow_cancel]( dialogue & d ) {
+            if( allow_cancel ) {
+                return;
+            }
+
+            dialogue newDialog( d );
+            if( !context.empty() ) {
+                for( const auto &val : context[0] ) {
+                    newDialog.set_value( val.first, val.second.evaluate( d ) );
+                }
+            }
+            const effect_on_condition_id first_eoc =
+                eocs[0].var ? effect_on_condition_id( eocs[0].var->evaluate( d ) ) : eocs[0].id;
+            first_eoc->activate( newDialog );
+        };
+    }
+
     return [eocs, context, title, eoc_names, eoc_keys, eoc_descriptions,
           hide_failing, allow_cancel, hilight_disabled]( dialogue & d ) {
         uilist eoc_list;
@@ -8800,6 +8840,7 @@ parsers = {
     { "u_add_trait", "npc_add_trait", jarg::member, &talk_effect_fun::f_add_trait },
     { "u_lose_trait", "npc_lose_trait", jarg::member, &talk_effect_fun::f_remove_trait },
     { "u_lose_category", "npc_lose_category", jarg::member, &talk_effect_fun::f_remove_category },
+    { "u_lose_mutation_type", "npc_lose_mutation_type", jarg::member, &talk_effect_fun::f_remove_mutation_type },
     { "u_deactivate_trait", "npc_deactivate_trait", jarg::member, &talk_effect_fun::f_deactivate_trait },
     { "u_activate_trait", "npc_activate_trait", jarg::member, &talk_effect_fun::f_activate_trait },
     { "u_mutate", "npc_mutate", jarg::member | jarg::array, &talk_effect_fun::f_mutate },

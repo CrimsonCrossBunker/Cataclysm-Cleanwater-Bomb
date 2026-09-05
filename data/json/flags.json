@@ -380,6 +380,11 @@
     "info": "You don't know how hungry you are when you are effected by this."
   },
   {
+    "id": "CANNOT_CONSUME_DRUGS",
+    "type": "json_flag",
+    "info": "You cannot use any item with the consume_drug use_action when you have this flag."
+  },
+  {
     "id": "ELECTRIC_IMMUNE",
     "type": "json_flag",
     "info": "This gear <good>completely protects</good> you from <info>electric discharges</info>."
@@ -2578,6 +2583,11 @@
     "id": "SUNBURN_SUPERNATURAL_REDUCTION",
     "type": "json_flag",
     "info": "You burn in the sunlight like a vampire, but not quite as badly."
+  },
+  {
+    "id": "DISTRIBUTED_DAMAGE",
+    "type": "json_flag",
+    "info": "Damage you take is split evenly between your limbs"
   },
   {
     "id": "SHREDDED",

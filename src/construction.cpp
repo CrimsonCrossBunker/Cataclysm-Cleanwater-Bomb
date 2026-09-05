@@ -651,8 +651,8 @@ construction_id construction_menu( const bool blueprint )
                     }
                 }
                 // Update the cached availability of components and tools in the requirement object
-                current_con->requirements->can_make_with_inventory( total_inv, is_crafting_component, 1,
-                        craft_flags::none, false );
+                current_con->requirements->can_make_with_inventory( &get_player_character(), total_inv,
+                        is_crafting_component, 1, craft_flags::none, false );
 
                 std::vector<std::string> current_buffer;
 
@@ -775,11 +775,11 @@ construction_id construction_menu( const bool blueprint )
                 // get time needed
                 add_folded( current_con->get_folded_time_string( available_window_width ) );
 
-                add_folded( current_con->requirements->get_folded_tools_list( available_window_width, color_stage,
-                            total_inv ) );
+                add_folded( current_con->requirements->get_folded_tools_list( &player_character,
+                            available_window_width, color_stage, total_inv ) );
 
-                add_folded( current_con->requirements->get_folded_components_list( available_window_width,
-                            color_stage, total_inv, is_crafting_component ) );
+                add_folded( current_con->requirements->get_folded_components_list( &player_character,
+                            available_window_width, color_stage, total_inv, is_crafting_component ) );
 
                 construct_buffers.push_back( current_buffer );
             }
@@ -1206,8 +1206,8 @@ bool player_can_build( Character &you, const read_only_visitable &inv, const con
     }
 
     // check for construction spot can be skipped by using can_construct_skip
-    return con.requirements->can_make_with_inventory( inv, is_crafting_component, 1, craft_flags::none,
-            false ) &&
+    return con.requirements->can_make_with_inventory( &you, inv, is_crafting_component, 1,
+            craft_flags::none, false ) &&
            ( can_construct_skip || can_construct( con ) );
 }
 
@@ -1576,12 +1576,11 @@ bool construct::check_channel( const tripoint_bub_ms &p )
     switch( kind ) {
         case water_source_kind::fresh_infinite:
         case water_source_kind::salt_infinite:
-            return true;
         case water_source_kind::fresh_finite:
         case water_source_kind::salt_finite:
             // Digging an open channel does not create or require water.  The
             // connected finite body will redistribute whatever it actually
-            // contains when construction finishes.
+            // contains when construction finishes, and infinite sources are valid too.
             return true;
         case water_source_kind::conflict:
             add_msg( m_warning, _( "Fresh and salt water would mix here, so you can't dig a channel." ) );

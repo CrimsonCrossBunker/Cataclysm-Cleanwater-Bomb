@@ -33,6 +33,7 @@ extern int pixel_minimap_a;
 extern int max_item_in_square;
 extern units::volume default_tile_volume;
 extern int pickup_range;
+extern float combat_speed_modifier;
 
 namespace cata::options
 {

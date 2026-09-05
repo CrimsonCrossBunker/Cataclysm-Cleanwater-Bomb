@@ -1195,7 +1195,7 @@ bool spell::check_if_component_in_hand( Character &guy ) const
     const requirement_data &spell_components = type->spell_components.obj();
 
     if( guy.has_weapon() ) {
-        if( spell_components.can_make_with_inventory( *guy.get_wielded_item(), return_true<item> ) ) {
+        if( spell_components.can_make_with_inventory( &guy, *guy.get_wielded_item(), return_true<item> ) ) {
             return true;
         }
     }
@@ -1274,7 +1274,7 @@ bool spell::has_required_components( const Character &guy ) const
 {
     return !has_components() ||
            type->spell_components->can_make_with_inventory(
-               guy.crafting_inventory( guy.pos_bub(), 0, false ), return_true<item> );
+               &guy, guy.crafting_inventory( guy.pos_bub(), 0, false ), return_true<item> );
 }
 
 std::string spell::name() const
@@ -3267,14 +3267,14 @@ void spellcasting_callback::display_spell_info( size_t index )
         ImGui::NewLine();
         if( !sp.components().get_components().empty() ) {
             for( const std::string &line : sp.components().get_folded_components_list(
-                     0, c_light_gray, pc.crafting_inventory( pc.pos_bub(), 0, false ), return_true<item> ) ) {
+                     &pc, 0, c_light_gray, pc.crafting_inventory( pc.pos_bub(), 0, false ), return_true<item> ) ) {
                 cataimgui::TextColoredParagraph( c_white, line );
                 ImGui::NewLine();
             }
         }
         if( !( sp.components().get_tools().empty() && sp.components().get_qualities().empty() ) ) {
             for( const std::string &line : sp.components().get_folded_tools_list(
-                     0, c_light_gray, pc.crafting_inventory( pc.pos_bub(), 0, false ) ) ) {
+                     &pc, 0, c_light_gray, pc.crafting_inventory( pc.pos_bub(), 0, false ) ) ) {
                 cataimgui::TextColoredParagraph( c_white, line );
                 ImGui::NewLine();
             }

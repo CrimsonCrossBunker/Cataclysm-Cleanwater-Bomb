@@ -1,5 +1,12 @@
 #include "inventory_ui.h"
 
+#include <color.h>
+#include <coordinates.h>
+#include <cursesdef.h>
+#include <input_context.h>
+#include <item_location.h>
+#include <pimpl.h>
+#include <pocket_type.h>
 #include <chrono>
 #include <optional>
 #include <stdexcept>
@@ -9,6 +16,7 @@
 #include "activity_actor_definitions.h"
 #include "avatar_action.h"
 #include "basecamp.h"
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -24,7 +32,6 @@
 #include "flexbuffer_json.h"
 #include "game_inventory.h"
 #include "input.h"
-#include "pickup.h"
 #include "input_enums.h"
 #include "inventory.h"
 #include "item.h"
@@ -44,6 +51,7 @@
 #include "messages.h"
 #include "options.h"
 #include "output.h"
+#include "pickup.h"
 #include "point.h"
 #include "ret_val.h"
 #include "sdltiles.h"
@@ -54,9 +62,9 @@
 #include "translation_cache.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_iteminfo.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "uistate.h"
 #include "units.h"
 #include "units_utility.h"
@@ -119,7 +127,7 @@ item_name_t &get_cached_name( item const *it )
     if( iter == item_name_cache.end() ) {
         return item_name_cache
                .emplace( it, item_name_t{ remove_color_tags( it->tname( 1, tname::tname_sort_key ) ),
-                                          remove_color_tags( it->tname( 1, true ) ),
+                                          remove_color_tags( it->tname( 1, tname::unprefixed_tname, true ) ),
                                           it->aggregated_contents().count } )
                .first->second;
     }
@@ -801,10 +809,10 @@ std::string inventory_selector_preset::get_caption( const inventory_entry &entry
     } else if( entry.is_collation_header() && entry.any_item()->count_by_charges() ) {
         item temp( *entry.any_item() );
         temp.charges = entry.get_total_charges();
-        disp_name = temp.display_name();
+        disp_name = temp.display_name( 1, true );
         count = 1;
     } else {
-        disp_name = entry.any_item()->display_name( count );
+        disp_name = entry.any_item()->display_name( count, true );
     }
 
     return ( count > 1 ) ? string_format( "%s %s",
@@ -2259,40 +2267,76 @@ void inventory_selector::add_vehicle_items( const tripoint_bub_ms &target, bool 
     }, add_efiles );
 }
 
-void inventory_selector::add_vehicle_tank_items( const tripoint_bub_ms &target )
+void inventory_selector::add_vehicle_tank_items()
 {
     map &here = get_map();
+    const tripoint_bub_ms origin = u.pos_bub();
+    const optional_vpart_position current_vp = here.veh_at( origin );
+    vehicle *const current_vehicle = current_vp ? &current_vp->vehicle() : nullptr;
 
-    // Check for a vehicle at the player's tile
-    const optional_vpart_position ovp = here.veh_at( target );
-    if( !ovp ) {
-        return;
-    }
+    const auto add_tank = [this]( vehicle & veh, int part_index ) {
+        item_location base_loc = veh.part_base( part_index );
+        add_entry( map_column, std::vector<item_location>( 1, item_location( base_loc,
+                   &base_loc->only_item() ) ) );
+    };
 
-    // Check for hose or faucet to determine if we can access the tank
-    const bool has_hose = u.crafting_inventory().has_quality( qual_HOSE );
-    bool has_faucet = false;
-    if( !has_hose ) {
-        for( const tripoint_bub_ms &pos : closest_points_first( target, 1 ) ) {
-            if( here.veh_at( pos ).part_with_tool( here, itype_water_faucet ) ) {
-                has_faucet = true;
-                break;
+    // Preserve the existing behavior for the vehicle the character is standing on: a hose or a
+    // nearby faucet grants access to every liquid tank on that vehicle.  Keep the faucet tied to
+    // the same vehicle so a faucet on an adjacent vehicle cannot expose these tanks.
+    if( current_vehicle ) {
+        const bool has_hose = u.crafting_inventory().has_quality( qual_HOSE );
+        bool has_faucet = false;
+        if( !has_hose ) {
+            for( const tripoint_bub_ms &pos : closest_points_first( origin, 1 ) ) {
+                const optional_vpart_position vp = here.veh_at( pos );
+                if( vp && &vp->vehicle() == current_vehicle &&
+                    vp.part_with_tool( here, itype_water_faucet ) ) {
+                    has_faucet = true;
+                    break;
+                }
+            }
+        }
+        if( has_hose || has_faucet ) {
+            for( const vpart_reference &vpr : current_vehicle->get_all_parts() ) {
+                if( vpr.part().contains_liquid() ) {
+                    add_tank( *current_vehicle, vpr.part_index() );
+                }
             }
         }
     }
-    if( !has_hose && !has_faucet ) {
-        return;
-    }
 
-    // Get all tank liquids on the vehicle
-    vehicle &veh = ovp->vehicle();
-    for( const vpart_reference &vpr : veh.get_all_parts() ) {
-        if( !vpr.part().contains_liquid() ) {
+    // For other nearby vehicles, only expose tanks whose tile is reachable and within the normal
+    // pickup range, and only if a water faucet belonging to the same vehicle is also reachable
+    // within that range.  This naturally includes one-tile vehicles and appliances.
+    std::vector<std::pair<vehicle *, int>> nearby_tanks;
+    std::unordered_set<vehicle *> vehicles_with_faucet;
+    for( const tripoint_bub_ms &pos : closest_points_first( origin, pickup_range ) ) {
+        if( pos != origin &&
+            !here.clear_path( origin, pos, rl_dist( origin, pos ), 1, 100 ) ) {
             continue;
         }
-        item_location base_loc = veh.part_base( vpr.part_index() );
-        add_entry( map_column, std::vector<item_location>( 1, item_location( base_loc,
-                   &base_loc->only_item() ) ) );
+
+        const optional_vpart_position vp = here.veh_at( pos );
+        if( !vp || &vp->vehicle() == current_vehicle ) {
+            continue;
+        }
+
+        vehicle &veh = vp->vehicle();
+        if( vp.part_with_tool( here, itype_water_faucet ) ) {
+            vehicles_with_faucet.insert( &veh );
+        }
+
+        for( const int part_index : veh.parts_at_relative( vp->mount_pos(), false ) ) {
+            if( veh.part( part_index ).contains_liquid() ) {
+                nearby_tanks.emplace_back( &veh, part_index );
+            }
+        }
+    }
+
+    for( const auto &[veh, part_index] : nearby_tanks ) {
+        if( vehicles_with_faucet.count( veh ) != 0 ) {
+            add_tank( *veh, part_index );
+        }
     }
 }
 
@@ -4402,7 +4446,8 @@ void inventory_selector::action_examine( const item_location &sitem )
     vThisItem.insert( vThisItem.begin(),
     { {}, string_format( _( "Location: %s" ), sitem.describe( &u ) ) } );
 
-    item_info_data data( sitem->tname(), sitem->type_name(), vThisItem, vDummy );
+    item_info_data data( sitem->tname( 1, tname::unprefixed_tname, true ), sitem->type_name(),
+                         vThisItem, vDummy );
     data.handle_scrolling = true;
     data.arrow_scrolling = true;
     int maxwidth = std::max( FULL_SCREEN_WIDTH, TERMX );
@@ -5285,7 +5330,9 @@ void inventory_examiner::draw_item_details( const item_location &sitem )
 
     sitem->info( true, vThisItem );
 
-    item_info_data data( sitem->tname(), sitem->type_name(), vThisItem, vDummy, examine_window_scroll );
+    item_info_data data( sitem->tname( 1, tname::unprefixed_tname, true ), sitem->type_name(),
+                         vThisItem, vDummy,
+                         examine_window_scroll );
     data.without_getch = true;
 
     draw_item_info( w_examine, data );

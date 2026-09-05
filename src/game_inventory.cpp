@@ -1,5 +1,7 @@
 #include "game_inventory.h"
 
+#include <cata_imgui.h>
+#include <coordinates.h>
 #include <imgui/imgui.h>
 #include <algorithm>
 #include <bitset>
@@ -34,7 +36,6 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"
@@ -172,7 +173,7 @@ static item_location inv_internal( Character &u, const inventory_selector_preset
         inv_s.add_character_items( u, add_ebooks );
         inv_s.add_nearby_items( radius, add_ebooks );
         if( using_consume_menu ) {
-            inv_s.add_vehicle_tank_items( u.pos_bub() );
+            inv_s.add_vehicle_tank_items();
         }
     }
 

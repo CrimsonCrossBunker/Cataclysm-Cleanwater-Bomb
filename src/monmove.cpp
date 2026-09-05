@@ -62,6 +62,7 @@
 #include "vehicle.h"
 #include "viewer.h"
 #include "vpart_position.h"
+#include "weather.h"
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
@@ -92,12 +93,15 @@ static const field_type_str_id field_fd_last_known( "fd_last_known" );
 static const flag_id json_flag_AQUATIC( "AQUATIC" );
 static const flag_id json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const flag_id json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const flag_id json_flag_FLIES( "FLIES" );
 static const flag_id json_flag_GRAB( "GRAB" );
 static const flag_id json_flag_GRAB_FILTER( "GRAB_FILTER" );
 
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_napalm( "napalm" );
 static const itype_id itype_pressurized_tank( "pressurized_tank" );
+
+static const json_character_flag json_flag_SNOWWALKING( "SNOWWALKING" );
 
 static const material_id material_iflesh( "iflesh" );
 
@@ -1820,6 +1824,19 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
             return 0;
         }
         cost += fieldcost;
+
+        // snow
+        int snowcost = 0;
+        if( where == to && here.is_outside( pos_bub() ) && !here.is_roofed( pos_bub() ) &&
+            !terrain.has_flag( ter_furn_flag::TFLAG_SWIMMABLE ) &&
+            !terrain.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER ) ) {
+            const double snow_mm = get_weather().get_snow_depth_mm( pos_abs_omt() );
+            if( snow_mm >= 100 && !has_flag( json_flag_FLIES ) && !has_flag( json_flag_SNOWWALKING ) ) {
+                snowcost = snow_mm >= 500 ? 4 : ( snow_mm >= 250 ? 2 : 1 );
+            }
+        }
+
+        cost += snowcost;
     }
 
     int movecost = std::max( tilecosts[from] + tilecosts[to], 1 ) * 25;

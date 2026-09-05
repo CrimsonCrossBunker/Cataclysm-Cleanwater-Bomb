@@ -1,5 +1,6 @@
 #include "iuse.h"
 
+#include <clone_ptr.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -123,8 +124,8 @@
 #include "trap.h"
 #include "try_parse_integer.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"
@@ -212,7 +213,6 @@ static const efftype_id effect_music( "music" );
 static const efftype_id effect_nausea( "nausea" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_paincysts( "paincysts" );
-static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
@@ -3770,9 +3770,9 @@ void iuse::make_music( Character *p, const tripoint_bub_ms &source, int volume, 
     }
     p->add_effect( effect_music, 1_turns );
     if( max_morale > 0 ) {
-        p->add_morale( morale_music, 1, max_morale, 2_hours, 30_minutes );
+        p->add_morale( morale_music, 1, max_morale, 2_hours, 30_minutes, true );
     } else if( max_morale < 0 ) {
-        p->add_morale( morale_music, -1, max_morale, 2_hours, 30_minutes );
+        p->add_morale( morale_music, -1, max_morale, 2_hours, 30_minutes, true );
     }
 }
 
@@ -7748,7 +7748,7 @@ std::optional<int> iuse::multicooker( Character *p, item *it, const tripoint_bub
                 for( const recipe * const &rec : recipes_to_add ) {
                     dishes.push_back( rec );
                     const bool can_make = rec->deduped_requirements().can_make_with_inventory(
-                                              crafting_inv, rec->get_component_filter() );
+                                              p, crafting_inv, rec->get_component_filter() );
                     dmenu.addentry( counter++, can_make, -1, rec->result_name( /*decorated=*/true ) );
                 }
             }

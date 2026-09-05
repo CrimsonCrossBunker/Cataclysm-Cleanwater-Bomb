@@ -66,6 +66,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
           git cat-file -e "${BASE_SHA}^{commit}"
           git cat-file -e "${HEAD_SHA}^{commit}"
           python3 tools/agent/check_docs_impact.py \

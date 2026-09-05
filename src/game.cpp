@@ -7373,9 +7373,11 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
 
     // Magic indices for special butcher options
     const int MAX_ITEM = max_item_in_square;
-    const int MULTISALVAGE = MAX_ITEM + 1, MULTIBUTCHER = MAX_ITEM + 2,
-              MULTIDISASSEMBLE_ONE = MAX_ITEM + 3,
-              MULTIDISASSEMBLE_ALL = MAX_ITEM + 4, NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;
+    const int MULTISALVAGE = MAX_ITEM + 1;
+    const int MULTIBUTCHER = MAX_ITEM + 2;
+    const int MULTIDISASSEMBLE_ONE = MAX_ITEM + 3;
+    const int MULTIDISASSEMBLE_ALL = MAX_ITEM + 4;
+    const int NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;
     // What are we butchering (i.e.. which vector to pick indices from)
     enum {
         BUTCHER_CORPSE,
@@ -8844,7 +8846,12 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
     if( u.is_hauling() && ( !here.can_put_items( dest_loc ) ||
                             here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, dest_loc ) ||
                             vp1 ) ) {
-        u.stop_hauling();
+        // returns false if not automoving in the first place
+        if( cancel_auto_move( *u.as_character(), _( "You're about to stop hauling!" ) ) ) {
+            return point_rel_sm::zero;
+        } else {
+            u.stop_hauling();
+        }
     }
     u.setpos( here, dest_loc );
     if( u.is_mounted() ) {
