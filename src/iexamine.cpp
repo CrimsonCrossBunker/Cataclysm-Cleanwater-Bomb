@@ -7809,9 +7809,37 @@ void iexamine::quern_examine( Character &you, const tripoint_bub_ms &examp )
     }
 }
 
+void iexamine::smoker_reconcile( map &here, const tripoint_bub_ms &examp )
+{
+    const furn_id rack = here.furn( examp );
+    if( rack != furn_f_smoking_rack_active && rack != furn_f_metal_smoking_rack_active ) {
+        return;
+    }
+    map_stack items = here.i_at( examp );
+    if( std::any_of( items.begin(), items.end(), []( const item & it ) {
+    return it.typeId() == itype_fake_smoke_plume && it.active;
+    } ) ) {
+        return;
+    }
+    // No live embers means there is no timer capable of completing this batch.
+    // Preserve the food, but let the player relight the rack. Never invent a
+    // completion time for a save that has lost its timer.
+    for( auto it = items.begin(); it != items.end(); ) {
+        if( it->typeId() == itype_fake_smoke_plume ) {
+            it = items.erase( it );
+        } else {
+            it->unset_flag( flag_PROCESSING );
+            ++it;
+        }
+    }
+    here.furn_set( examp, rack == furn_f_metal_smoking_rack_active ?
+                   furn_f_metal_smoking_rack : furn_f_smoking_rack );
+}
+
 void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
+    smoker_reconcile( here, examp );
     const furn_id &f = here.furn( examp );
     const bool active = f == furn_f_smoking_rack_active ||
                         f == furn_f_metal_smoking_rack_active;

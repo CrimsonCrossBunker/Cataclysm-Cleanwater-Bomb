@@ -10934,6 +10934,7 @@ void map::actualize( const tripoint_rel_sm &grid )
         for( int y = 0; y < SEEY; y++ ) {
             const tripoint_bub_ms pnt =  rebase_bub( coords::project_to<coords::ms>( grid ) + point( x, y ) );
             const point_sm_ms p( x, y );
+            iexamine::smoker_reconcile( *this, pnt );
             const furn_t &furn = *this->furn( pnt );
             const ter_t &terr = *this->ter( pnt );
             if( !furn.emissions.empty() ) {
