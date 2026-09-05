@@ -4532,7 +4532,13 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     // This temporarily rescales the shared tile context. cata_tiles::draw() does not reset
     // the scale every frame, so we must restore it before returning or the map would stay
     // at the preview scale.
+    restore_on_out_of_scope restore_origin( o );
+    restore_on_out_of_scope restore_pixel_origin( op );
+    restore_on_out_of_scope restore_entity_offset( m_entity_draw_offset );
     const int saved_zoom = g->get_zoom();
+    on_out_of_scope restore_scale( [this, saved_zoom]() {
+        set_draw_scale( saved_zoom );
+    } );
     // Fixed preview scale (16 == native tile size). Lower it to fit more of large vehicles.
     constexpr int preview_scale = 16;
     set_draw_scale( preview_scale );
@@ -4540,8 +4546,10 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     // Target window rectangle, in screen pixels.
     const window_dimensions dim = get_window_dimensions( w_disp );
     const point win_px_beg = dim.window_pos_pixel;
-    const point win_px_size = dim.window_size_pixel;
-    const point center_px = win_px_beg + win_px_size / 2;
+    // This panel is drawn into the logical display buffer. Generic window
+    // dimensions include UI scaling in their size, but not their position.
+    const point win_px_size = dim.window_size_pixel / get_scaling_factor();
+    const point center_px = win_px_beg + ( win_px_size - point( tile_width, tile_height ) ) / 2;
 
     // Repurpose the draw origin so a synthetic tile coordinate maps straight to a screen
     // pixel: player_to_screen( pos ) == op + ( pos - o ) * { tile_width, tile_height } in the
@@ -4549,8 +4557,15 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     // lands at the centre, where the cursor part is drawn.
     o = point::zero;
     op = center_px;
+    m_entity_draw_offset = point::zero;
 
     // Clip to the panel so an oversized vehicle does not bleed into neighbouring windows.
+    const bool had_clip = RenderIsClipEnabled( renderer );
+    SDL_Rect saved_clip;
+    RenderGetClipRect( renderer, &saved_clip );
+    on_out_of_scope restore_clip( [this, had_clip, saved_clip]() {
+        RenderSetClipRect( renderer, had_clip ? &saved_clip : nullptr );
+    } );
     const SDL_Rect clip{ win_px_beg.x, win_px_beg.y, win_px_size.x, win_px_size.y };
     RenderSetClipRect( renderer, &clip );
 
@@ -4595,9 +4610,6 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     draw_from_id_string( "cursor", tripoint_bub_ms( tripoint::zero ), 0, 0, lit_level::LIT,
                          false );
 
-    // Restore the clip rectangle and the map draw scale.
-    RenderSetClipRect( renderer, nullptr );
-    set_draw_scale( saved_zoom );
     return true;
 }
 
