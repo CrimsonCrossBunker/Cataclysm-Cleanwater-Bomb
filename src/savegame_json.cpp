@@ -1,4 +1,4 @@
-// Associated headers here are the ones for which their only non-inline
+﻿// Associated headers here are the ones for which their only non-inline
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
@@ -1423,6 +1423,10 @@ void Character::load( const JsonObject &data )
         queued_effect_on_conditions.push( temp );
     }
     data.read( "inactive_eocs", inactive_effect_on_condition_vector );
+
+    // Merge stackable items that older saves stored as separate entries, so a
+    // stackable field change takes effect after loading the character.
+    inv->restack( *this );
 }
 
 /**
@@ -6865,6 +6869,23 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                     const int stored = legacy_charges > 0 ? legacy_charges :
                                        terrain.liquid_source_count.second;
                     set_finite_liquid( p, std::min( stored, terrain.liquid_source_count.second ) );
+                }
+            }
+            // Merge stackable items that older saves stored as separate
+            // entries, so a stackable field change is reflected after load.
+            auto &items_here = m->itm[p.x()][p.y()];
+            for( auto outer = items_here.begin(); outer != items_here.end(); ++outer ) {
+                if( !outer->is_stackable() ) {
+                    continue;
+                }
+                auto inner = outer;
+                ++inner;
+                while( inner != items_here.end() ) {
+                    if( outer->merge_charges( *inner ) ) {
+                        inner = items_here.erase( inner );
+                    } else {
+                        ++inner;
+                    }
                 }
             }
             // some portion could've been read even if error occurred

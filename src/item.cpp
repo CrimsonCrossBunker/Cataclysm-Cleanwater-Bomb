@@ -1,4 +1,4 @@
-#include "item.h"
+﻿#include "item.h"
 
 #include <cata_lazy.h>
 #include <crafting_enums.h>
@@ -3447,6 +3447,11 @@ bool item::is_same_relic( item const &rhs ) const
 
 bool item::is_same_temperature( item const &rhs ) const
 {
+    // Stackable items are treated as the same temperature regardless of
+    // individual temperature flags, so they can stack and merge together.
+    if( is_stackable() && rhs.is_stackable() ) {
+        return true;
+    }
     return ( !has_temperature() && !rhs.has_temperature() ) ||
            ( has_temperature() && rhs.has_temperature() &&
              has_flag( flag_HOT ) == rhs.has_flag( flag_HOT ) &&
