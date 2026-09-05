@@ -107,9 +107,6 @@ static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_tapeworm( "tapeworm" );
 static const efftype_id effect_visuals( "visuals" );
 
-static const flag_id json_flag_ALCOHOL( "ALCOHOL" );
-static const flag_id json_flag_ALCOHOL_STRONG( "ALCOHOL_STRONG" );
-static const flag_id json_flag_ALCOHOL_WEAK( "ALCOHOL_WEAK" );
 static const flag_id json_flag_ALLERGEN_CHEESE( "ALLERGEN_CHEESE" );
 static const flag_id json_flag_ALLERGEN_EGG( "ALLERGEN_EGG" );
 static const flag_id json_flag_ALLERGEN_MEAT( "ALLERGEN_MEAT" );
@@ -170,7 +167,6 @@ static const skill_id skill_survival( "survival" );
 static const species_id species_HUMAN( "HUMAN" );
 
 static const trait_id trait_ACIDBLOOD( "ACIDBLOOD" );
-static const trait_id trait_ALCMET( "ALCMET" );
 static const trait_id trait_AMORPHOUS( "AMORPHOUS" );
 static const trait_id trait_ANTIFRUIT( "ANTIFRUIT" );
 static const trait_id trait_ANTIJUNK( "ANTIJUNK" );
@@ -1127,35 +1123,6 @@ ret_val<edible_rating> Character::will_eat( const item &food, bool interactive )
     return ret_val<edible_rating>::make_success();
 }
 
-static constexpr time_duration alc_strength( const int strength, const time_duration &weak,
-        const time_duration &medium, const time_duration &strong )
-{
-    return strength == 0 ? weak : strength == 1 ? medium : strong;
-}
-
-static int apply_alcohol_effects( Character &p, const item &it, const int strength )
-{
-    // Weaker characters are cheap drunks
-    /** @EFFECT_STR_MAX reduces drunkenness duration */
-    time_duration duration = alc_strength( strength, 22_minutes, 34_minutes,
-                                           45_minutes ) - ( alc_strength( strength, 36_seconds, 1_minutes, 72_seconds ) * p.get_str_base() );
-    if( p.has_trait( trait_ALCMET ) ) {
-        duration = alc_strength( strength, 6_minutes, 14_minutes, 18_minutes ) - ( alc_strength( strength,
-                   36_seconds, 1_minutes, 1_minutes ) * p.get_str_base() );
-        // Metabolizing the booze improves the nutritional value;
-        // might not be healthy, and still causes Thirst problems, though
-        p.stomach.mod_nutr( -std::abs( it.get_comestible() ? it.type->comestible->stim : 0 ) );
-        // Metabolizing it cancels out the depressant
-        p.mod_stim( std::abs( it.get_comestible() ? it.get_comestible()->stim : 0 ) );
-    } else if( p.has_trait( trait_TOLERANCE ) ) {
-        duration -= alc_strength( strength, 9_minutes, 16_minutes, 24_minutes );
-    } else if( p.has_trait( trait_LIGHTWEIGHT ) ) {
-        duration += alc_strength( strength, 9_minutes, 16_minutes, 24_minutes );
-    }
-    p.add_effect( effect_drunk, duration );
-    return 1;
-}
-
 /** Eat a comestible.
 *   @return true if item consumed.
 */
@@ -1172,14 +1139,6 @@ static bool eat( item &food, Character &you, bool force )
 
     // Note: the block below assumes we decided to eat it
     // No coming back from here
-
-    if( food.has_flag( json_flag_ALCOHOL_WEAK ) ) {
-        apply_alcohol_effects( you, food, 0 );
-    } else if( food.has_flag( json_flag_ALCOHOL ) ) {
-        apply_alcohol_effects( you, food, 1 );
-    } else if( food.has_flag( json_flag_ALCOHOL_STRONG ) ) {
-        apply_alcohol_effects( you, food, 2 );
-    }
 
     if( food.is_container() ) {
         food.spill_contents( you );

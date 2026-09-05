@@ -1852,7 +1852,7 @@
     "price_postapoc": "2 USD 50 cent",
     "material": [ "alcohol" ],
     "volume": "250 ml",
-    "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME", "ALCOHOL" ],
+    "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
     "freezing_point": -30,
     "phase": "liquid",
     "charges": 7,
@@ -2963,7 +2963,7 @@
     "volume": "250 ml",
     "phase": "liquid",
     "charges": 7,
-    "flags": [ "EATEN_COLD", "ALCOHOL_WEAK" ],
+    "flags": [ "EATEN_COLD" ],
     "fun": -5,
     "freezing_point": -7
   },

@@ -109,7 +109,8 @@
     "price_postapoc": "10 cent",
     "charges": 1,
     "phase": "liquid",
-    "flags": [ "NUTRIENT_OVERRIDE", "ALCOHOL_WEAK", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 3 ] ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "comestible_type": "DRINK",
     "freezing_point": -15
   },
@@ -163,7 +164,8 @@
     "price_postapoc": "10 cent",
     "charges": 1,
     "phase": "liquid",
-    "flags": [ "NUTRIENT_OVERRIDE", "ALCOHOL_WEAK", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 3 ] ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "comestible_type": "DRINK",
     "freezing_point": -15
   },
@@ -306,7 +308,8 @@
     "price_postapoc": "10 cent",
     "charges": 1,
     "phase": "liquid",
-    "flags": [ "NUTRIENT_OVERRIDE", "ALCOHOL_WEAK", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 3 ] ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "comestible_type": "DRINK",
     "freezing_point": -15
   },
@@ -360,7 +363,8 @@
     "price_postapoc": "10 cent",
     "charges": 1,
     "phase": "liquid",
-    "flags": [ "NUTRIENT_OVERRIDE", "ALCOHOL_WEAK", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 3 ] ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "comestible_type": "DRINK",
     "freezing_point": -15
   },
@@ -652,7 +656,8 @@
     "price_postapoc": "10 cent",
     "charges": 1,
     "phase": "liquid",
-    "flags": [ "NUTRIENT_OVERRIDE", "ALCOHOL_WEAK", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 3 ] ],
+    "flags": [ "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "comestible_type": "DRINK",
     "freezing_point": -15
   },

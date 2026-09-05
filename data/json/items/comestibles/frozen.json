@@ -263,8 +263,8 @@
     "price_postapoc": "1 USD",
     "material": [ "water", "alcohol" ],
     "phase": "liquid",
-    "flags": [ "MELTS", "NO_AUTO_CONSUME", "ALCOHOL_WEAK" ],
-    "vitamins": [  ]
+    "flags": [ "MELTS", "NO_AUTO_CONSUME" ],
+    "vitamins": [ [ "ethanol", 5 ] ]
   },
   {
     "type": "ITEM",

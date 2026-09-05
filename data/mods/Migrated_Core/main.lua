@@ -262,33 +262,6 @@ content.replace(definition)
 end
 do
 local definition = content.JsonFlag {
-    id = "ALCOHOL",
-    inherit = true,
-    craft_inherit = false,
-    taste_modifier = 0,
-}
-content.replace(definition)
-end
-do
-local definition = content.JsonFlag {
-    id = "ALCOHOL_STRONG",
-    inherit = true,
-    craft_inherit = false,
-    taste_modifier = 0,
-}
-content.replace(definition)
-end
-do
-local definition = content.JsonFlag {
-    id = "ALCOHOL_WEAK",
-    inherit = true,
-    craft_inherit = false,
-    taste_modifier = 0,
-}
-content.replace(definition)
-end
-do
-local definition = content.JsonFlag {
     id = "ALLOWS_TAIL",
     inherit = true,
     craft_inherit = false,
