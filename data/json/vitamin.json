@@ -102,11 +102,13 @@
     "type": "vitamin",
     "vit_type": "drug",
     "name": { "str": "Caffeine" },
+    "//": "1 unit is 1 mg of caffeine.  Dose tiers follow FDA (https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much) and FSANZ P1056 (https://www.foodstandards.gov.au/sites/default/files/2025-03/P1056%20SD1%202nd%20CFS%20Safety%20Assessment.pdf): single doses up to ~210 mg (3 mg/kg) generally cause no adverse effects; 400 mg/day is the FDA adult daily line; rapid intake of ~1,200 mg or more can cause seizures and arrhythmia.",
+    "weight_per_unit": "1 mg",
     "excess": "caffeine_eff",
     "min": 0,
-    "max": 1000,
+    "max": 1600,
     "rate": "25 s",
-    "disease_excess": [ [ 25, 200 ], [ 201, 500 ], [ 501, 1000 ] ]
+    "disease_excess": [ [ 25, 200 ], [ 201, 400 ], [ 401, 1000 ], [ 1001, 1600 ] ]
   },
   {
     "id": "nicotine_slow",

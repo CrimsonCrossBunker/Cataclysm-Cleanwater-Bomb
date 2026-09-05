@@ -3792,13 +3792,15 @@
   {
     "type": "effect_type",
     "id": "caffeine_eff",
-    "name": [ "Caffeinated", "Overcaffeinated", "Caffeine Overdose" ],
+    "//": "DEX/INT/PER/SPEED scaling of -0.7 is deliberate: stat mods truncate toward zero, giving 0 at intensity 2 (the <=400 mg/day band stays penalty-free), -1 at intensity 3 and -2 at intensity 4.",
+    "name": [ "Caffeinated", "Energized", "Caffeine Overdose", "Caffeine Toxicity" ],
     "desc": [
       "Just a little pick-me-up.",
-      "Caffeine is giving you a little too much energy, leaving you jittery and uncomfortable.",
-      "You've had far too much caffeine.  You feel shaky and irritable."
+      "A strong wave of alertness; the buzz is starting to lose its edge.",
+      "You've had far too much caffeine.  You feel shaky and irritable.",
+      "Your heart pounds and skips, your hands tremble, and you feel horribly sick.  This is caffeine poisoning."
     ],
-    "max_intensity": 3,
+    "max_intensity": 4,
     "base_mods": {
       "vomit_chance": [ -20 ],
       "vomit_chance_bot": [ 1000 ],
@@ -3821,9 +3823,10 @@
       "focus_max_val": [ -3 ],
       "focus_min": [ -1 ],
       "vomit_chance": [ 15 ],
-      "dex_mod": [ -1 ],
-      "int_mod": [ -0.5 ],
-      "per_mod": [ -0.5 ]
+      "dex_mod": [ -0.7 ],
+      "int_mod": [ -0.7 ],
+      "per_mod": [ -0.7 ],
+      "speed_mod": [ -0.7 ]
     },
     "blood_analysis_description": "Caffeine"
   },
