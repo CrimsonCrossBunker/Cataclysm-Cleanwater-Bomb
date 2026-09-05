@@ -528,9 +528,7 @@ dependencies {
     // reference implementation lets model tests exercise real HUD
     // import/export round trips without adding anything to the APK.
     testImplementation 'org.json:json:20240303'
-    implementation files(
-        'libs/SDL3-3.4.10.aar',
-        'libs/SDL3_image-3.4.4.aar',
-        'libs/SDL3_ttf-3.2.2.aar',
-        'libs/SDL3_mixer-3.2.4.aar')
+    sdl3Aars.each { entry ->
+        implementation files("libs/${entry.name}-${entry.version}.aar")
+    }
 }
