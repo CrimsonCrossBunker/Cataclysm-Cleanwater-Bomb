@@ -1,4 +1,5 @@
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
@@ -8,6 +9,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "monster.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
@@ -15,6 +17,50 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+
+TEST_CASE( "airborne_vehicle_carries_tied_animal", "[vehicle][regression][airship_rider]" )
+{
+    clear_map( -2, 2 );
+    clear_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms seat( 60, 60, 1 );
+    here.vertical_shift( seat.z() );
+    on_out_of_scope restore_level( [&]() {
+        here.vertical_shift( 0 );
+        clear_map( -2, 2 );
+    } );
+    for( int z = 1; z <= 2; ++z ) {
+        for( int x = 58; x <= 65; ++x ) {
+            for( int y = 58; y <= 62; ++y ) {
+                here.ter_set( tripoint_bub_ms( x, y, z ), ter_id( "t_open_air" ) );
+            }
+        }
+    }
+    vehicle *veh = here.add_vehicle( vproto_id( "bicycle" ), seat, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    monster &cow = spawn_test_monster( "mon_cow", seat );
+    cow.add_effect( efftype_id( "tied" ), 1_turns, true );
+    REQUIRE( veh->get_riders().size() == 1 );
+    const int seat_part = veh->get_riders().front().prt;
+    tripoint_rel_ms movement = tripoint_rel_ms::above;
+    SECTION( "takeoff" ) {}
+    SECTION( "horizontal_flight" ) {
+        movement = tripoint_rel_ms::east;
+    }
+    SECTION( "descent" ) {
+        movement = tripoint_rel_ms::below;
+    }
+    REQUIRE( here.displace_vehicle( *veh, movement ) );
+    CHECK( cow.pos_bub( here ) == veh->bub_part_pos( here, seat_part ) );
+    CHECK( cow.pos_bub( here ).z() == seat.z() + movement.z() );
+    CHECK( cow.has_effect( efftype_id( "tied" ) ) );
+    // Normal gravity checks after the displacement must see the moved deck.
+    cow.gravity_check( &here );
+    CHECK( cow.pos_bub( here ) == veh->bub_part_pos( here, seat_part ) );
+    REQUIRE( here.displace_vehicle( *veh, tripoint_rel_ms::east ) );
+    CHECK( cow.pos_bub( here ) == veh->bub_part_pos( here, seat_part ) );
+}
 
 TEST_CASE( "airborne_vehicle_supports_unboarded_character_above_monster", "[vehicle][regression]" )
 {

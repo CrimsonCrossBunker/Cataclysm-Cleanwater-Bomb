@@ -2186,7 +2186,10 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
                 z_change = psgp.z() - part_pos.z();
             }
 
-            psg->setpos( *this, psgp );
+            // Riders and their supporting vehicle move together.  The vehicle
+            // cache still describes the old position here, so checking gravity
+            // now would drop monsters through the not-yet-moved deck.
+            psg->setpos( *this, psgp, false );
             r.moved = true;
         }
     }
