@@ -873,6 +873,8 @@ void npc::generate_personality_traits()
                 ( required->min_collector <= ur.collector && ur.collector <= required->max_collector ) &&
                 ( required->min_altruism <= ur.altruism && ur.altruism <= required->max_altruism ) ) {
                 set_mutation( mdata.id );
+            } else if( has_trait( mdata.id ) ) {
+                unset_mutation( mdata.id );
             }
         }
     }
@@ -3593,6 +3595,10 @@ void npc::npc_update_body()
 
 void npc::on_load( map *here )
 {
+    // Reconcile only changed traits; an unchanged personality must not
+    // repeatedly activate passive enchantments when re-entering the bubble.
+    generate_personality_traits();
+
     const auto advance_effects = [&]( const time_duration & elapsed_dur ) {
         for( auto &elem : *effects ) {
             for( auto &_effect_it : elem.second ) {
