@@ -541,10 +541,9 @@ These branches are the valid `dreams` from [dreams.json](/data/json/dreams.json)
 
 ## Comestibles
 
+Drunkenness, caffeine and nicotine are no longer flag-driven: items deliver the `ethanol`, `caffeine` and `nicotine` vitamins, and their excess levels trigger the `drunk`, `caffeine_eff` and `cig` effects.  See VITAMIN.md.
+
 - ```ACID``` When consumed using the `BLECH` function, penalties are reduced if character has `ACIDPROOF` or `ACIDBLOOD` traits.
-- ```ALCOHOL``` Increases drunkenness.  Adds effect `drunk`.
-- ```ALCOHOL_STRONG``` Greatly increases drunkenness.  Adds effect `drunk`.
-- ```ALCOHOL_WEAK``` Slightly increases drunkenness.  Adds effect `drunk`.
 - ```CARNIVORE_OK``` Can be eaten by characters with the Carnivore mutation at 50% kcal reduction.
 - ```CANT_HEAL_EVERYONE``` This med can't be used by everyone, it requires a special mutation.  See `can_heal_with` in mutation.
 - ```CORROSIVE``` when consumed using the `BLECH` function, causes the same penalties as `ACID` but is not affected by `ACIDPROOF` or `ACIDBLOOD` traits.
@@ -606,7 +605,6 @@ These flags apply to the `use_action` field, instead of the `flags` field.
 - ```BLECH``` Causes vomiting, adds disease `poison`, adds pain and hurts torso.
 - ```BLECH_BECAUSE_UNCLEAN``` Causes warning.
 - ```CHEW``` Displays message "You chew your %s.", but otherwise does nothing.
-- ```CIG``` Alleviates nicotine cravings.  Adds disease `cig`.
 - ```COKE``` Decreases hunger.  Adds disease `high`.
 - ```CRACK``` Decreases hunger.  Adds disease `high`.
 - ```DISINFECTANT``` Prevents infections.
