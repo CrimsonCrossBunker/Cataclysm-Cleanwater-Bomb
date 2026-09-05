@@ -164,7 +164,7 @@
     "price": "3 USD",
     "price_postapoc": "1 USD",
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 180 ] ],
+    "vitamins": [ [ "caffeine", 200 ] ],
     "fun": 10
   },
   {

@@ -114,7 +114,7 @@
     "weight": "250 g",
     "color": "brown",
     "addiction_type": "caffeine",
-    "vitamins": [ [ "caffeine", 180 ] ],
+    "vitamins": [ [ "caffeine", 255 ] ],
     "sleepiness_mod": 300,
     "stim": 80,
     "container": "bottle_plastic",
