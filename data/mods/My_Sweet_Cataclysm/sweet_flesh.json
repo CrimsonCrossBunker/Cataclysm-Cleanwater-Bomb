@@ -147,12 +147,11 @@
     "price_postapoc": "1 USD",
     "symbol": "*",
     "color": "white",
-    "stim": 10,
     "fun": 1,
     "material": [ "junk" ],
     "flags": [ "NO_INGEST" ],
     "use_action": [ "CHEW" ],
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ], [ "caffeine", 60 ] ]
   },
   {
     "type": "ITEM",
