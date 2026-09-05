@@ -764,7 +764,13 @@ static void move_item( Character &you, item &it, const int quantity, const tripo
         if( activity_to_restore == ACT_FETCH_REQUIRED ) {
             it.set_var( "activity_var", you.name );
         }
-        put_into_vehicle_or_drop( you, item_drop_reason::deliberate, { it }, &here, dest );
+        const std::vector<item_location> moved = put_into_vehicle_or_drop_ret_locs(
+                you, item_drop_reason::deliberate, { it }, &here, dest );
+        if( activity_to_restore == ACT_FETCH_REQUIRED ) {
+            for( const item_location &loc : moved ) {
+                activity_handlers::reserve_activity_item( you, loc );
+            }
+        }
         // Remove from map or vehicle.
         if( vpr_src ) {
             vpr_src->vehicle().remove_item( vpr_src->part(), &it );
@@ -2349,7 +2355,7 @@ activity_reason_info multi_study_activity_actor::multi_activity_can_do( Characte
 
     item_location book = find_study_book( abspos, you );
     if( book ) {
-        book->set_var( "activity_var", you.name );
+        activity_handlers::reserve_activity_item( you, book );
         return activity_reason_info::ok( do_activity_reason::NEEDS_BOOK_TO_LEARN );
     }
 
@@ -2598,7 +2604,7 @@ activity_reason_info multi_disassemble_activity_actor::multi_activity_can_do( Ch
                 continue;
             }
             // check passed, mark the item
-            i.set_var( "activity_var", you.name );
+            activity_handlers::reserve_activity_item( you, item_location( map_cursor( src_loc ), &i ) );
             return activity_reason_info::ok( do_activity_reason::NEEDS_DISASSEMBLE );
         }
     }
@@ -3364,7 +3370,7 @@ bool fetch_required_activity_actor::fetch_activity(
                         leftovers.charges = 0;
                     }
                     it.set_var( "activity_var", you.name );
-                    you.i_add( it );
+                    activity_handlers::reserve_activity_item( you, you.i_add( it ) );
                     if( you.is_npc() ) {
                         if( pickup_count == 1 ) {
                             const std::string item_name = it.tname();
@@ -3405,8 +3411,8 @@ static bool butcher_corpse_activity( Character &you, const tripoint_bub_ms &src_
             if( corpse.size > creature_size::medium && reason != do_activity_reason::NEEDS_BIG_BUTCHERING ) {
                 continue;
             }
-            elem.set_var( "activity_var", you.name );
             item_location corpse_loc = item_location( map_cursor( src_loc ), &elem );
+            activity_handlers::reserve_activity_item( you, corpse_loc );
             bd.emplace_back( corpse_loc, butcher_type::FULL );
         }
     }
@@ -3915,8 +3921,7 @@ bool multi_study_activity_actor::multi_activity_do( Character &you,
     if( reason == do_activity_reason::NEEDS_BOOK_TO_LEARN ) {
         item_location book_loc = find_study_book( src, you );
         if( book_loc ) {
-            book_loc->set_var( "activity_var", you.name );
-            you.may_activity_occupancy_after_end_items_loc.push_back( book_loc );
+            activity_handlers::reserve_activity_item( you, book_loc );
             const time_duration time_taken = you.time_to_read( *book_loc, you );
             item_location ereader;
             you.assign_activity( read_activity_actor( time_taken, book_loc, ereader, true ) );
@@ -4599,6 +4604,18 @@ bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
         }
     }
     return true;
+}
+
+void activity_handlers::reserve_activity_item( Character &you, item_location loc )
+{
+    if( !loc ) {
+        return;
+    }
+    loc.get_item()->set_var( "activity_var", you.name );
+    auto &reserved = you.may_activity_occupancy_after_end_items_loc;
+    if( std::find( reserved.begin(), reserved.end(), loc ) == reserved.end() ) {
+        reserved.push_back( loc );
+    }
 }
 
 void activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now(
