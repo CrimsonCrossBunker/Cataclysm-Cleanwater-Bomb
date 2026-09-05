@@ -151,7 +151,7 @@
     "material": [ "junk" ],
     "flags": [ "NO_INGEST" ],
     "use_action": [ "CHEW" ],
-    "vitamins": [ [ "junk_allergen", 1 ], [ "caffeine", 60 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ], [ "caffeine", 90 ] ]
   },
   {
     "type": "ITEM",

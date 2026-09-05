@@ -57,7 +57,7 @@
     "addiction_potential": 5,
     "addiction_type": "caffeine",
     "sleepiness_mod": 25,
-    "stim": 10,
+    "vitamins": [ [ "caffeine", 75 ] ],
     "variants": [
       {
         "id": "snicker",
@@ -105,7 +105,7 @@
     "name": { "str_sp": "Sugar Chomps cereal" },
     "description": "Foodplace brand \"Sugar Chomps\" cereal.  \"Chocolate Frosted Crunchy Sugar Chomps: 8 essential vitamins packed into that rich, fudgy taste!\"",
     "addiction_potential": 10,
-    "stim": 20,
+    "vitamins": [ [ "caffeine", 150 ] ],
     "spoils_in": "540 days",
     "variants": [  ]
   }

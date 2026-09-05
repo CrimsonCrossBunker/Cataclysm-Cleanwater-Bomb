@@ -292,7 +292,7 @@
     "symbol": "*",
     "color": "white",
     "fun": 1,
-    "vitamins": [ [ "caffeine", 60 ] ],
+    "vitamins": [ [ "caffeine", 90 ] ],
     "flags": [ "NO_INGEST" ],
     "use_action": [ "CHEW" ],
     "stackable": true
