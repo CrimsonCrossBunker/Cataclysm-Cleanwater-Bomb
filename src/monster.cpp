@@ -363,6 +363,13 @@ monster::~monster() = default;
 monster &monster::operator=( const monster & ) = default;
 monster &monster::operator=( monster && ) noexcept( string_is_noexcept ) = default;
 
+monster monster::copy_for_persistence() const
+{
+    monster result( *this );
+    result.uid_.deserialize( uid_.get_value() );
+    return result;
+}
+
 void monster::ensure_uid()
 {
     if( !uid_.is_valid() ) {
