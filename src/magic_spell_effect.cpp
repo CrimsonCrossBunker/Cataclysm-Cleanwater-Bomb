@@ -1937,8 +1937,13 @@ void spell_effect::bash( const spell &sp, Creature &caster, const tripoint_bub_m
 void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_ms &target )
 {
     const tripoint_bub_ms source = caster.pos_bub();
+    if( source == target ) {
+        return;
+    }
     const std::vector<tripoint_bub_ms> trajectory_local = line_to( source, target );
     ::map &here = get_map();
+    const tripoint_abs_ms source_abs = caster.pos_abs();
+    const units::angle direction = coord_to_angle( source, target );
     // uses abs() coordinates
     std::vector<tripoint_abs_ms> trajectory;
     trajectory.reserve( trajectory_local.size() );
@@ -1946,43 +1951,43 @@ void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_m
         trajectory.push_back( here.get_abs( local_point ) );
     }
     avatar *caster_you = caster.as_avatar();
-    auto walk_point = trajectory.begin();
-    if( here.get_bub( *walk_point ) == source ) {
-        ++walk_point;
-    }
+    tripoint_abs_ms last_reached = source_abs;
     // save the amount of moves the caster has so we can restore them after the dash
     const int cur_moves = caster.get_moves();
     creature_tracker &creatures = get_creature_tracker();
-    while( walk_point != trajectory.end() ) {
+    for( const tripoint_abs_ms &step : trajectory ) {
         if( caster_you != nullptr ) {
-            if( creatures.creature_at( here.get_bub( *walk_point ) ) ||
-                !g->walk_move( here.get_bub( *walk_point ), false ) ) {
-                if( walk_point != trajectory.begin() ) {
-                    --walk_point;
-                }
+            const tripoint_bub_ms next = here.get_bub( step );
+            if( !here.inbounds( next ) ||
+                !here.valid_move( here.get_bub( last_reached ), next, false, true ) ||
+                creatures.creature_at( next ) ) {
                 break;
-            } else if( walk_point != trajectory.begin() ) {
-                sp.create_field( here.get_bub( *( walk_point - 1 ) ), caster );
-                g->draw_ter();
+            } else if( last_reached != source_abs ) {
+                sp.create_field( here.get_bub( last_reached ), caster );
             }
         }
-        ++walk_point;
+        last_reached = step;
     }
-    if( walk_point == trajectory.end() ) {
-        // we want the last tripoint in the actually reached trajectory
-        --walk_point;
+    if( caster_you != nullptr && last_reached != source_abs ) {
+        // A leap crosses unsupported tiles in flight. Walking each tile opens
+        // the ledge menu, whose climb action can move the caster off the path
+        // before the remaining steps run. Apply gravity and landing effects
+        // only at the reachable endpoint, using the normal placement routine.
+        g->place_player( here.get_bub( last_reached ), true );
+        g->draw_ter();
     }
     caster.set_moves( cur_moves );
 
     tripoint_bub_ms far_target;
-    calc_ray_end( coord_to_angle( source, target ), sp.aoe( caster ),
-                  here.get_bub( *walk_point ),
+    calc_ray_end( direction, sp.aoe( caster ),
+                  caster_you != nullptr ? caster.pos_bub() : here.get_bub( last_reached ),
                   far_target );
 
     spell_effect::override_parameters params( sp, caster );
     params.range = sp.aoe( caster );
-    const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params, source,
-            far_target );
+    const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params,
+        here.get_bub( source_abs ),
+        far_target );
     damage_targets( sp, caster, hit_area );
 }
 
