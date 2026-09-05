@@ -2,6 +2,7 @@ package org.libsdl.app;
 
 import android.content.Context;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
@@ -18,6 +19,19 @@ import android.view.inputmethod.InputConnection;
 public final class CleanwaterDummyEdit extends SDLDummyEdit {
     public CleanwaterDummyEdit(Context context) {
         super(context);
+    }
+
+    @Override
+    public boolean onKeyPreIme(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && getVisibility() == View.VISIBLE) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                SDLActivity.onNativeKeyboardFocusLost();
+            }
+            // Hide the IME without forwarding Back to the game's editor.
+            // Its text and cursor must remain available when the IME reopens.
+            return true;
+        }
+        return super.onKeyPreIme(keyCode, event);
     }
 
     @Override
