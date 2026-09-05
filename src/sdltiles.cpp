@@ -73,6 +73,7 @@
 #include "map_extras.h"
 #include "mapbuffer.h"
 #include "mission.h"
+#include "mouse_button_capture.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -6142,6 +6143,7 @@ static bool pop_extra_button_input( input_event &event )
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
 {
+    static mouse_button_capture imgui_mouse_buttons;
     SDL_Event ev;
     bool quit = false;
     bool text_refresh = false;
@@ -6561,6 +6563,14 @@ static void CheckMessages()
         convert_event_to_display_buffer_coords( &ev_display );
         imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h, scaling_factor );
 
+        if( IsWindowEvent( ev ) && GetWindowEventID( ev ) == CATA_WINDOWEVENT_FOCUS_LOST ) {
+            imgui_mouse_buttons.clear();
+        }
+        const bool imgui_owns_mouse_button =
+            ( ev.type == CATA_MOUSEBUTTONDOWN || ev.type == CATA_MOUSEBUTTONUP ) &&
+            imgui_mouse_buttons.process( ev.button.button, ev.type == CATA_MOUSEBUTTONDOWN,
+                                         cataimgui::client::want_capture_mouse() );
+
         bool imgui_owns_text_event = cataimgui::client::want_text_input() &&
                                      ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ||
                                        ev.type == CATA_TEXTINPUT || ev.type == CATA_TEXTEDITING );
@@ -6886,7 +6896,7 @@ static void CheckMessages()
                     if( ! mouse.enabled ) {
                         break;
                     }
-                    if( cataimgui::client::want_capture_mouse() ) {
+                    if( imgui_owns_mouse_button ) {
                         break;
                     }
                     switch( ev.button.button ) {
@@ -6909,7 +6919,7 @@ static void CheckMessages()
                     if( ! mouse.enabled ) {
                         break;
                     }
-                    if( cataimgui::client::want_capture_mouse() ) {
+                    if( imgui_owns_mouse_button ) {
                         break;
                     }
                     switch( ev.button.button ) {
