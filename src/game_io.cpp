@@ -811,8 +811,17 @@ bool game::save_external_options_record()
     return saved_externals;
 }
 
+// Saving can pump UI events. These guards cover nested callbacks even if a
+// callback tries to enter through a different save entry point.
+static bool save_in_progress = false;
+
 bool game::save()
 {
+    if( save_in_progress ) {
+        return false;
+    }
+    restore_on_out_of_scope restore_saving( save_in_progress );
+    save_in_progress = true;
     // total_time_played accumulates real wall-clock seconds, which is inherently
     // non-deterministic. Under input replay we freeze the delta at 0 so the
     // persisted playtime (written to both .pt and the character .sav) is
@@ -997,6 +1006,16 @@ void game::init_autosave()
 
 void game::quicksave()
 {
+    static bool quicksave_in_progress = false;
+    // Android can pump focus events from loading screens and save popups.
+    // Only save a running session, never a half-loaded avatar/map or a save
+    // already in progress. Check this here so every quicksave caller is safe.
+    if( !world_generator || !world_generator->active_world || new_game ||
+        !should_draw || uquit != QUIT_NO || save_in_progress || quicksave_in_progress ) {
+        return;
+    }
+    restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
+    quicksave_in_progress = true;
     //Don't autosave if the player hasn't done anything since the last autosave/quicksave,
     if( !moves_since_last_save && !world_generator->active_world->world_saves.empty() ) {
         return;
@@ -1012,7 +1031,9 @@ void game::quicksave()
     time_t now = std::time( nullptr ); //timestamp for start of saving procedure
 
     //perform save
-    save();
+    if( !save() ) {
+        return;
+    }
     //Now reset counters for autosaving, so we don't immediately autosave after a quicksave or autosave.
     moves_since_last_save = 0;
     last_save_timestamp = now;
