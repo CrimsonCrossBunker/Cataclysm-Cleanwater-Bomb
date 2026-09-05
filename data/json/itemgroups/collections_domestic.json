@@ -999,6 +999,7 @@
       { "group": "chewing_gum_used", "prob": 30 },
       { "group": "chewing_gum_used_caff", "prob": 4 },
       { "group": "chewing_gum_used_nic", "prob": 2 },
+      { "group": "box_small_nicotine_patch_1_10", "prob": 1 },
       { "item": "clown_suit", "prob": 1 },
       { "item": "clownshoes", "prob": 1 },
       { "item": "bondage_suit", "prob": 5 },
