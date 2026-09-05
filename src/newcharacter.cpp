@@ -2303,14 +2303,15 @@ void draw_time_cataclysm_start()
 {
     draw_action_button( _( "Start of cataclysm:" ), "CHANGE_START_OF_CATACLYSM" );
     ImGui::SameLine();
-    cataimgui::draw_colored_text( to_string( get_scenario()->start_of_cataclysm() ), c_light_gray );
+    cataimgui::draw_colored_text( to_string( get_scenario()->start_of_cataclysm(), true ),
+                                  c_light_gray );
 }
 
 void draw_time_game_start()
 {
     draw_action_button( _( "Start of game:" ), "CHANGE_START_OF_GAME" );
     ImGui::SameLine();
-    cataimgui::draw_colored_text( to_string( get_scenario()->start_of_game() ), c_light_gray );
+    cataimgui::draw_colored_text( to_string( get_scenario()->start_of_game(), true ), c_light_gray );
 }
 
 void draw_location( const avatar &you )
@@ -4348,11 +4349,11 @@ bool character_creator_ui::handle_action( const std::string &action )
     } else if( action == "CHANGE_START_OF_CATACLYSM" ) {
         const scenario *scen = get_scenario();
         scen->change_start_of_cataclysm( calendar_ui::select_time_point( scen->start_of_cataclysm(),
-                                         _( "Select cataclysm start date" ), calendar_ui::granularity::hour ) );
+                                         _( "Select cataclysm start date" ), calendar_ui::granularity::hour, true ) );
     } else if( action == "CHANGE_START_OF_GAME" ) {
         const scenario *scen = get_scenario();
         scen->change_start_of_game( calendar_ui::select_time_point( scen->start_of_game(),
-                                    _( "Select game start date" ), calendar_ui::granularity::hour ) );
+                                    _( "Select game start date" ), calendar_ui::granularity::hour, true ) );
     } else if( action == "RESET_CALENDAR" ) {
         get_scenario()->reset_calendar();
     } else if( action == "CHOOSE_CITY" ) {

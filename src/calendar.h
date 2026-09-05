@@ -605,9 +605,11 @@ inline T day_of_season( const time_point &p )
 
 /// @returns The season of the of the given time point. Returns the same season for
 /// any input if the calendar::eternal_season yields true.
-season_type season_of_year( const time_point &p );
+/// With ignore_eternal_season, use the date itself (e.g. when choosing an opening date).
+season_type season_of_year( const time_point &p, bool ignore_eternal_season = false );
 /// @returns The time point formatted to be shown to the player. Contains year, season, day and time of day.
-std::string to_string( const time_point &p );
+/// With ignore_eternal_season, show the date's season even before the game starts.
+std::string to_string( const time_point &p, bool ignore_eternal_season = false );
 /// @returns The time point formatted to be shown to the player. Contains only the time of day, not the year, day or season.
 std::string to_string_time_of_day( const time_point &p );
 /** Time approximation based on the player's timekeeping capability, formatted for diary pages **/

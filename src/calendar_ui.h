@@ -21,10 +21,12 @@ enum class granularity : int {
 
 /**
  * Displays ui element that allows to select and return time point.
+ * ignore_eternal_season edits absolute dates before the opening season is established.
  */
 time_point select_time_point( time_point initial_value,
                               std::string_view title,
-                              calendar_ui::granularity granularity_level = calendar_ui::granularity::turn );
+                              calendar_ui::granularity granularity_level = calendar_ui::granularity::turn,
+                              bool ignore_eternal_season = false );
 } // namespace calendar_ui
 
 #endif // CATA_SRC_CALENDAR_UI_H
