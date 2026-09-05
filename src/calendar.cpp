@@ -811,27 +811,17 @@ constexpr const std::array<std::pair<std::string_view, time_duration>, 15> time_
     }
 };
 
-season_type season_of_year( const time_point &p )
+season_type season_of_year( const time_point &p, bool ignore_eternal_season )
 {
-    static time_point prev_turn = calendar::before_time_starts;
-    static season_type prev_season = calendar::initial_season;
-
-    if( p != prev_turn ) {
-        prev_turn = p;
-        if( calendar::eternal_season() ) {
-            // If we use calendar::start to determine the initial season, and the user shortens the season length
-            // mid-game, the result could be the wrong season!
-            return prev_season = calendar::initial_season;
-        }
-        return prev_season = static_cast<season_type>(
-                                 to_turn<int>( p ) / to_turns<int>( calendar::season_length() ) % 4
-                             );
+    if( calendar::eternal_season() && !ignore_eternal_season ) {
+        // Keep the opening season even if the season length changes during play.
+        return calendar::initial_season;
     }
-
-    return prev_season;
+    return static_cast<season_type>(
+               to_turn<int>( p ) / to_turns<int>( calendar::season_length() ) % 4 );
 }
 
-std::string to_string( const time_point &p )
+std::string to_string( const time_point &p, bool ignore_eternal_season )
 {
     const int year = calendar::years_since_cataclysm( p ) + 1;
     const std::string time = to_string_time_of_day( p );
@@ -841,7 +831,7 @@ std::string to_string( const time_point &p )
         //~ 1 is the year, 2 is the month, 3 is the day, 4 is the time of the day in its usual format
         return string_format( _( "Year %1$d, %2$s %3$d %4$s" ), year, to_string( month_day.first ),
                               month_day.second, time );
-    } else if( calendar::eternal_season() ) {
+    } else if( calendar::eternal_season() && !ignore_eternal_season ) {
         const int day = to_days<int>( time_past_new_year( p ) );
         //~ 1 is the year, 2 is the day (of the *year*), 3 is the time of the day in its usual format
         return string_format( _( "Year %1$d, day %2$d %3$s" ), year, day, time );
@@ -849,7 +839,7 @@ std::string to_string( const time_point &p )
     const int day = day_of_season<int>( p ) + 1;
     //~ 1 is the year, 2 is the season name, 3 is the day (of the season), 4 is the time of the day in its usual format
     return string_format( _( "Year %1$d, %2$s, day %3$d %4$s" ), year,
-                          calendar::name_season( season_of_year( p ) ), day, time );
+                          calendar::name_season( season_of_year( p, ignore_eternal_season ) ), day, time );
 
 }
 
