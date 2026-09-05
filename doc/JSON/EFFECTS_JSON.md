@@ -736,7 +736,7 @@ as if it were equal to 1 (i.e. trigger every time)
         "thirst_tick": [ 1000 ],
         "sensitive_amount": [ -1 ],
         "sensitive_chance": [ 300 ],
-        "sensitive_min_val": [ 50 ],
+        "sensitive_min_val": [ 70 ],
         "str_mod": [ 0.5 ]
     },
     "scaling_mods": {
@@ -808,8 +808,9 @@ Intensity 5
 ```
 On top of the stat changes, "limb_score_mods" degrade manipulation, balance, reaction, vision,
 footing and so on as the intensity rises; the "EFFECT_LIMB_SCORE_MOD" flag switches that block
-on.  "sensitive_amount" lowers nerve sensitivity by 1 per intensity (clamped at a minimum of
-50), and "pkill" drips painkiller up to a value of 1 + 4 * 5 = 21 at intensity 5.  Thirst also
+on.  "sensitive_amount" lowers nerve sensitivity by 1 per intensity, with the clamp floor
+sliding down 5 per intensity (70 at intensity 1, 50 at intensity 5), and "pkill" drips
+painkiller up to a value of 1 + 4 * 5 = 21 at intensity 5.  Thirst also
 climbs faster as the intensity rises ("thirst_tick" 1000 down to 600).
 
 ### Blood analysis description
