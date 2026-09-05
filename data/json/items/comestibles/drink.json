@@ -23,7 +23,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 167 ], [ "calcium", 1 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ],
     "fun": 2
-
   },
   {
     "type": "ITEM",
@@ -49,7 +48,6 @@
     "vitamins": [ [ "calcium", 8 ], [ "nut_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -75,7 +73,6 @@
     "vitamins": [ [ "iron", 1 ], [ "calcium", 6 ], [ "nut_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -101,7 +98,6 @@
     "vitamins": [ [ "calcium", 5 ], [ "nut_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -127,7 +123,6 @@
     "vitamins": [ [ "iron", 1 ], [ "calcium", 8 ], [ "veggy_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -153,7 +148,6 @@
     "vitamins": [ [ "iron", 2 ], [ "calcium", 6 ], [ "wheat_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -172,7 +166,6 @@
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
     "vitamins": [ [ "caffeine", 225 ] ],
     "fun": 10
-
   },
   {
     "type": "ITEM",
@@ -190,7 +183,6 @@
     "fun": 1,
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME", "NUTRIENT_OVERRIDE" ],
     "vitamins": [ [ "caffeine", 60 ] ]
-
   },
   {
     "type": "ITEM",
@@ -210,7 +202,6 @@
     "fun": 1,
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
     "vitamins": [ [ "caffeine", 15 ] ]
-
   },
   {
     "id": "can_coconut",
@@ -235,7 +226,6 @@
     "quench": 5,
     "calories": 78,
     "vitamins": [ [ "iron", 4 ], [ "calcium", 36 ], [ "fruit_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -283,7 +273,6 @@
     "price_postapoc": "25 cent",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -308,7 +297,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 8 ], [ "calcium", 18 ], [ "iron", 4 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "fun": 7
-
   },
   {
     "type": "ITEM",
@@ -335,7 +323,6 @@
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
     "vitamins": [ [ "caffeine", 90 ] ],
     "fun": 6
-
   },
   {
     "type": "ITEM",
@@ -360,7 +347,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE", "NO_AUTO_CONSUME" ],
     "fun": -5
-
   },
   {
     "type": "ITEM",
@@ -376,7 +362,6 @@
     "display_type": "BY_VOLUME",
     "fun": 1,
     "vitamins": [ [ "milk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -389,7 +374,6 @@
     "description": "The morning ritual of the post-apocalyptic world.  Brewed from the Kentucky coffeetree, this drink has no actual caffeine, but serves as a replacement for those who dearly miss the aroma of real coffee.  Can also be served cold.",
     "display_type": "BY_VOLUME",
     "fun": 4
-
   },
   {
     "type": "ITEM",
@@ -401,7 +385,6 @@
     "description": "Some milk with sugar added.  Tastes slightly better.",
     "display_type": "BY_VOLUME",
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -413,7 +396,6 @@
     "description": "Milk enriched with protein powder, it's extra healthy and doesn't taste too bad.  It has sugar added, for those who like it sweeter.",
     "display_type": "BY_VOLUME",
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -437,7 +419,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 2
-
   },
   {
     "type": "ITEM",
@@ -547,7 +528,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 131 ], [ "calcium", 3 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ],
     "fun": -1
-
   },
   {
     "type": "ITEM",
@@ -572,7 +552,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 60 ], [ "fruit_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 6
-
   },
   {
     "type": "ITEM",
@@ -596,7 +575,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 2
-
   },
   {
     "type": "ITEM",
@@ -620,7 +598,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT" ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -647,7 +624,6 @@
     "flags": [ "EATEN_COLD", "EATEN_HOT", "FREEZERBURN" ],
     "vitamins": [ [ "vitC", 3 ], [ "calcium", 13 ], [ "iron", 2 ], [ "egg_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "fun": 15
-
   },
   {
     "type": "ITEM",
@@ -694,7 +670,6 @@
     "//": "Check whether Rivtech-Expensive applies to their energy drinks",
     "vitamins": [ [ "caffeine", 255 ] ],
     "fun": -1
-
   },
   {
     "type": "ITEM",
@@ -719,7 +694,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 4
-
   },
   {
     "id": "hot_chocolate",
@@ -747,7 +721,6 @@
     "spoils_in": "1 day",
     "vitamins": [ [ "calcium", 4 ], [ "iron", 2 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "flags": [ "EATEN_HOT" ]
-
   },
   {
     "type": "ITEM",
@@ -776,7 +749,6 @@
     "spoils_in": "1 day",
     "vitamins": [ [ "calcium", 4 ], [ "iron", 2 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "flags": [ "EATEN_COLD" ]
-
   },
   {
     "type": "ITEM",
@@ -792,7 +764,6 @@
     "price_postapoc": "1 USD 50 cent",
     "flags": [ "EATEN_COLD", "IRREPLACEABLE_CONSUMABLE" ],
     "fun": 1
-
   },
   {
     "id": "juice",
@@ -850,7 +821,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 106 ], [ "iron", 4 ], [ "fruit_allergen", 1 ] ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -864,7 +834,6 @@
     "description": "Freshly-squeezed from real pineapples!  Tasty and nutritious.",
     "display_type": "BY_VOLUME",
     "vitamins": [ [ "vitC", 14 ], [ "calcium", 1 ], [ "iron", 2 ] ]
-
   },
   {
     "type": "ITEM",
@@ -891,7 +860,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 16 ], [ "calcium", 2 ], [ "iron", 3 ], [ "fruit_allergen", 1 ] ],
     "fun": 12
-
   },
   {
     "type": "ITEM",
@@ -918,7 +886,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 12,
     "vitamins": [ [ "vitC", 23 ], [ "calcium", 1 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -945,7 +912,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 12,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1043,7 +1009,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 25 ], [ "fruit_allergen", 1 ] ],
     "fun": 8
-
   },
   {
     "type": "ITEM",
@@ -1069,7 +1034,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", 16 ], [ "iron", 2 ], [ "fruit_allergen", 1 ] ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -1079,7 +1043,6 @@
     "name": { "str_sp": "orangeade" },
     "description": "Cheap orange flavored beverage with limited vitamins.",
     "display_type": "BY_VOLUME"
-
   },
   {
     "type": "ITEM",
@@ -1089,7 +1052,6 @@
     "name": { "str_sp": "grapeade" },
     "description": "Cheap grape flavored beverage with limited vitamins.",
     "display_type": "BY_VOLUME"
-
   },
   {
     "type": "ITEM",
@@ -1115,7 +1077,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 5,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1131,7 +1092,6 @@
     "price_postapoc": "25 cent",
     "fun": 1,
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ]
-
   },
   {
     "id": "mex_chocolate",
@@ -1160,7 +1120,6 @@
     "spoils_in": "1 day",
     "vitamins": [ [ "calcium", 7 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "flags": [ "EATEN_HOT" ]
-
   },
   {
     "type": "ITEM",
@@ -1245,7 +1204,6 @@
     "//": "most store-bought oj is fortified with calcium.",
     "vitamins": [ [ "vitC", "83700 μg" ], [ "iron", "320 μg" ], [ "calcium", "348600 μg" ], [ "fruit_allergen", 1 ] ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -1260,7 +1218,6 @@
     "description": "Freshly-squeezed from real oranges!  Tasty and nutritious.",
     "display_type": "BY_VOLUME",
     "vitamins": [ [ "vitC", "124 mg" ], [ "iron", "500 μg" ], [ "calcium", "27300 μg" ], [ "fruit_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1286,7 +1243,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 5,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1311,7 +1267,6 @@
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 1,
     "vitamins": [ [ "vitC", 10 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1365,7 +1320,6 @@
     "flags": [ "EATEN_COLD", "MYCUS_OK", "NUTRIENT_OVERRIDE" ],
     "vitamins": [ [ "vitC", 20 ], [ "calcium", 20 ], [ "iron", 16 ], [ "veggy_allergen", 1 ] ],
     "fun": 30
-
   },
   {
     "type": "ITEM",
@@ -1391,7 +1345,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 3,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1418,7 +1371,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -1444,7 +1396,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 2,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1499,7 +1450,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 1,
     "vitamins": [ [ "vitC", 1 ], [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1546,7 +1496,6 @@
     "looks_like": "sports_drink",
     "phase": "liquid",
     "fun": -1
-
   },
   {
     "type": "ITEM",
@@ -1572,7 +1521,6 @@
     "fun": 2,
     "freezing_point": -5,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1600,7 +1548,6 @@
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "caffeine", 60 ] ],
     "fun": 6
-
   },
   {
     "type": "ITEM",
@@ -1647,7 +1594,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_HOT", "NO_AUTO_CONSUME" ],
     "fun": -5
-
   },
   {
     "type": "ITEM",
@@ -1674,7 +1620,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 1,
     "vitamins": [ [ "vitC", "71 mg" ], [ "iron", "700 μg" ], [ "calcium", "19200 μg" ], [ "veggy_allergen", 1 ] ]
-
   },
   {
     "id": "water",
@@ -1689,7 +1634,6 @@
     "sealed": false,
     "delete": { "flags": [ "DECAYS_IN_AIR" ] },
     "contamination": [ { "disease": "highly_contaminated_food", "probability": 0.1 }, { "disease": "bad_food", "probability": 1 } ]
-
   },
   {
     "id": "water_murky",
@@ -1702,7 +1646,6 @@
     "quench": 30,
     "parasites": 5,
     "contamination": [ { "disease": "highly_contaminated_food", "probability": 100 } ]
-
   },
   {
     "id": "water_clean",
@@ -1730,7 +1673,6 @@
     "properties": { "max_air_exposure_hours": "720" },
     "revert_to": "water",
     "ammo_type": "water"
-
   },
   {
     "id": "water_clean_scarlet",
@@ -1759,7 +1701,6 @@
     "properties": { "max_air_exposure_hours": "144" },
     "revert_to": "water_clean",
     "fun": -3
-
   },
   {
     "id": "water_spring",
@@ -1770,7 +1711,6 @@
     "description": "Natural alpine spring water, bottled at the source.",
     "display_type": "BY_VOLUME",
     "relative": { "fun": 1 }
-
   },
   {
     "id": "water_mineral",
@@ -1782,7 +1722,6 @@
     "display_type": "BY_VOLUME",
     "proportional": { "quench": 1.2 },
     "relative": { "fun": 1 }
-
   },
   {
     "type": "ITEM",
@@ -1795,7 +1734,6 @@
     "description": "Made from applying hot water to leaves of the tea plant \"Camellia sinensis\".  Green tea has a lighter, fresher taste than black and is traditionally preferred in Asian cultures.",
     "display_type": "BY_VOLUME",
     "vitamins": [ [ "caffeine", 40 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1810,7 +1748,6 @@
     "description": "A tasty beverage made with herbs and dried fruit from plants other than the tea plant.  While colloquially called 'tea', technically it's an infusion.",
     "display_type": "BY_VOLUME",
     "fun": 8
-
   },
   {
     "type": "ITEM",
@@ -1825,7 +1762,6 @@
     "price_postapoc": "60 cent",
     "material": [ "water" ],
     "fun": 10
-
   },
   {
     "type": "ITEM",
@@ -1841,7 +1777,6 @@
     "price": "1 USD",
     "price_postapoc": "35 cent",
     "fun": 10
-
   },
   {
     "type": "ITEM",
@@ -1856,7 +1791,6 @@
     "price_postapoc": "60 cent",
     "vitamins": [ [ "vitC", 2 ], [ "calcium", 12 ] ],
     "fun": 14
-
   },
   {
     "type": "ITEM",
@@ -1871,7 +1805,6 @@
     "price_postapoc": "35 cent",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 1
-
   },
   {
     "type": "ITEM",
@@ -1886,7 +1819,6 @@
     "price": "4 USD 90 cent",
     "price_postapoc": "60 cent",
     "fun": 14
-
   },
   {
     "type": "ITEM",
@@ -1912,7 +1844,6 @@
     "flags": [ "EATEN_COLD" ],
     "vitamins": [ [ "vitC", "170300 μg" ], [ "iron", "900 μg" ], [ "calcium", "24300 μg" ], [ "veggy_allergen", 1 ] ],
     "fun": 2
-
   },
   {
     "type": "ITEM",
@@ -1936,7 +1867,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
     "fun": 6
-
   },
   {
     "type": "ITEM",
@@ -1961,7 +1891,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1986,7 +1915,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -2011,7 +1939,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -2064,7 +1991,6 @@
     "flags": [ "EATEN_COLD" ],
     "fun": 2,
     "vitamins": [ [ "junk_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -2088,7 +2014,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
     "fun": 2
-
   },
   {
     "type": "ITEM",
@@ -2112,7 +2037,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
     "fun": 3
-
   },
   {
     "type": "ITEM",
@@ -2136,7 +2060,6 @@
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
     "fun": 3
-
   },
   {
     "id": "brew_kvass",
@@ -2163,7 +2086,6 @@
     "spoils_in": "7 days",
     "brew_time": "3 days",
     "brew_results": [ "kvass" ]
-
   },
   {
     "id": "kvass",

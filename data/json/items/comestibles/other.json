@@ -12,7 +12,6 @@
     "volume": "1250 ml",
     "container": "bag_plastic",
     "flags": [ "INEDIBLE" ]
-
   },
   {
     "id": "gum",
@@ -162,7 +161,6 @@
     "volume": "250 ml",
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -183,7 +181,6 @@
     "volume": "250 ml",
     "fun": 9,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -200,7 +197,6 @@
     "volume": "250 ml",
     "flags": [ "UNRECOVERABLE" ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -220,7 +216,6 @@
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" ],
     "fun": -5,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -241,7 +236,6 @@
     "//": "It takes about 30 portions of honeydew to feed an adult (~2000 kkal). 2000 kkal is about 10 raw chunks of mutant meat, which is 250% toxins. Honeydew probably isn't as toxic as meat, so 30 portions of it would give you 180% of toxins.",
     "volume": "16 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -267,7 +261,6 @@
     "fun": 30,
     "vitamins": [ [ "fruit_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -293,7 +286,6 @@
     "fun": 30,
     "vitamins": [ [ "fruit_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -316,7 +308,6 @@
     "vitamins": [ [ "vitC", 25 ], [ "calcium", 25 ], [ "iron", 25 ], [ "fruit_allergen", 1 ] ],
     "fun": 30,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -339,7 +330,6 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -362,7 +352,6 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -386,7 +375,6 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -410,7 +398,6 @@
     "fun": -10,
     "vitamins": [ [ "iron", "100 μg" ], [ "calcium", "6 mg" ], [ "meat_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -437,7 +424,6 @@
     "vitamins": [ [ "vitC", 15 ], [ "calcium", 2 ], [ "iron", 8 ], [ "meat_allergen", 1 ] ],
     "flags": [ "EATEN_COLD", "FREEZERBURN" ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -459,7 +445,6 @@
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -478,7 +463,6 @@
     "flags": [ "TINDER" ],
     "//2": "Based on https://www.sizes.com/home/napkins.htm",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -495,7 +479,6 @@
     "material": [ "cardboard" ],
     "volume": "25 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -519,7 +502,6 @@
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "calcium", 9 ], [ "iron", 24 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -555,7 +537,6 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -579,7 +560,6 @@
     "fun": 1,
     "vitamins": [ [ "calcium", 8 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -603,7 +583,6 @@
     "smoking_result": "dry_tofu",
     "vitamins": [ [ "calcium", 20 ], [ "iron", 4 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -626,7 +605,6 @@
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "vitamins": [ [ "calcium", 16 ], [ "iron", 4 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -647,7 +625,6 @@
     "volume": "85 ml",
     "vitamins": [ [ "calcium", 16 ], [ "iron", 4 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -686,7 +663,6 @@
     "into": "paste_nut",
     "recipe": "paste_nut_mill_5_1",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -724,7 +700,6 @@
     "into": "flour_wheat_free",
     "recipe": "flour_wheat_free_mill_1_1",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -749,7 +724,6 @@
     "flags": [ "NUTRIENT_OVERRIDE", "RAW", "INEDIBLE", "CATTLE" ],
     "smoking_result": "edamame_roasted",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -771,7 +745,6 @@
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -793,7 +766,6 @@
     "addiction_potential": 1,
     "fun": 2,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -815,7 +787,6 @@
     "addiction_potential": 1,
     "fun": 1,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -834,7 +805,6 @@
     "volume": "125 ml",
     "flags": [ "EATEN_HOT", "FREEZERBURN" ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -859,7 +829,6 @@
     "fun": -5,
     "freezing_point": -274,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -870,7 +839,6 @@
     "description": "Coffee grounds created through washing, cleaning, and roasting the pods from a Kentucky coffeetree.  They can be used to create coffee.",
     "display_type": "BY_WEIGHT",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" ]
-
   },
   {
     "id": "honey_glassed",
@@ -892,7 +860,6 @@
     "calories": 201,
     "fun": 2,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -916,7 +883,6 @@
     "vitamins": [ [ "vitC", "11 mg" ], [ "iron", "1600 μg" ], [ "calcium", "40800 μg" ], [ "veggy_allergen", 1 ] ],
     "flags": [ "RAW" ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -940,7 +906,6 @@
     "volume": "250 ml",
     "fun": -30,
     "stackable": true
-
   },
   {
     "id": "cattlefodder",
@@ -965,7 +930,6 @@
     "flags": [ "INEDIBLE", "CATTLE" ],
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATTLEFOOD" ]
-
   },
   {
     "id": "cattlefodder_medium",
@@ -989,7 +953,6 @@
     "flags": [ "INEDIBLE", "CATTLE" ],
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATTLEFOOD" ]
-
   },
   {
     "id": "cattlefodder_large",
@@ -1013,7 +976,6 @@
     "flags": [ "INEDIBLE", "CATTLE" ],
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATTLEFOOD" ]
-
   },
   {
     "id": "birdfood",
@@ -1038,7 +1000,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "BIRDFOOD" ],
     "stackable": true
-
   },
   {
     "id": "dogfood_raw",
@@ -1064,7 +1025,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "DOGFOOD" ],
     "stackable": true
-
   },
   {
     "id": "dogfood",
@@ -1090,7 +1050,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "DOGFOOD" ],
     "stackable": true
-
   },
   {
     "id": "dogfood_dry",
@@ -1117,7 +1076,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "DOGFOOD" ],
     "stackable": true
-
   },
   {
     "id": "catfood_raw",
@@ -1143,7 +1101,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATFOOD" ],
     "stackable": true
-
   },
   {
     "id": "catfood",
@@ -1169,7 +1126,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATFOOD" ],
     "stackable": true
-
   },
   {
     "id": "catfood_dry",
@@ -1197,7 +1153,6 @@
     "use_action": [ "PETFOOD" ],
     "petfood": [ "CATFOOD" ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1217,7 +1172,6 @@
     "flags": [ "TRADER_AVOID" ],
     "volume": "250 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1240,7 +1194,6 @@
     "flags": [ "TRADER_AVOID" ],
     "volume": "250 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1260,7 +1213,6 @@
     "flags": [ "TRADER_AVOID" ],
     "volume": "250 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1279,7 +1231,6 @@
     "flags": [ "TRADER_AVOID" ],
     "volume": "250 ml",
     "stackable": true
-
   },
   {
     "id": "tea_bag",
@@ -1300,7 +1251,6 @@
     "freezing_point": -274,
     "description": "A paper sachet with tea leaves inside.  Put it into boiling water to make a cup of black tea.",
     "stackable": true
-
   },
   {
     "id": "tea_green_bag",
@@ -1309,7 +1259,6 @@
     "name": { "str": "green tea bag" },
     "copy-from": "tea_bag",
     "description": "A paper sachet with tea leaves inside.  Put it into boiling water to make a cup of green tea."
-
   },
   {
     "id": "tea_fruit_bag",
@@ -1318,7 +1267,6 @@
     "name": { "str": "fruit tea bag" },
     "copy-from": "tea_bag",
     "description": "A paper sachet with leaves and fruit parts inside.  Put it into boiling water to make a cup of fruit tea."
-
   },
   {
     "id": "herbal_tea_bag",
@@ -1327,7 +1275,6 @@
     "name": { "str": "herbal tea bag" },
     "copy-from": "tea_bag",
     "description": "A paper sachet with dried wild herbs inside.  Put it into boiling water to make a cup of herbal tea."
-
   },
   {
     "id": "tea_bag_dandelion",
@@ -1336,7 +1283,6 @@
     "name": { "str": "dandelion tea bag" },
     "copy-from": "tea_bag",
     "description": "A paper sachet with dried dandelion roots inside.  Put it into boiling water to make a cup of dandelion tea."
-
   },
   {
     "id": "tea_bag_chamomile",
@@ -1345,7 +1291,6 @@
     "name": { "str": "chamomile tea bag" },
     "copy-from": "tea_bag",
     "description": "A paper sachet with dried chamomile inside.  Put it into boiling water to make a cup of chamomile tea."
-
   },
   {
     "id": "instant_coffee",
@@ -1366,7 +1311,6 @@
     "description": "A small packet of commercial instant coffee powder.  No creamer or sweetener added.",
     "display_type": "BY_WEIGHT",
     "stackable": true
-
   },
   {
     "id": "cocoa_powder",
@@ -1390,7 +1334,6 @@
     "description": "A cocoa powder.  No milk or sweetener added.  Bitter, used on baking.",
     "display_type": "BY_WEIGHT",
     "stackable": true
-
   },
   {
     "id": "cocoa_powder_milk",
@@ -1414,7 +1357,6 @@
     "description": "A cocoa powder, with some milk powder and sugar added.  Sweet with a bitter aftertaste, water or milk will made it very tasty.",
     "display_type": "BY_WEIGHT",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1439,7 +1381,6 @@
     "flags": [ "NUTRIENT_OVERRIDE" ],
     "brew_time": "24 hours",
     "brew_results": [ "gelatin_extracted" ]
-
   },
   {
     "type": "ITEM",
@@ -1461,7 +1402,6 @@
     "phase": "liquid",
     "comestible_type": "DRINK",
     "flags": [ "NUTRIENT_OVERRIDE" ]
-
   },
   {
     "type": "ITEM",
@@ -1480,7 +1420,6 @@
     "spoils_in": "300 days",
     "calories": 0,
     "flags": [ "DEBUG_ONLY" ]
-
   },
   {
     "type": "ITEM",
@@ -1522,7 +1461,6 @@
     "fun": -15,
     "freezing_point": -274,
     "vitamins": [ [ "veggy_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1548,7 +1486,6 @@
     "//1": "1 earthworm has such a small amount of vitamins, i'm not sure it's possible to model them.",
     "vitamins": [ [ "calcium", 1 ], [ "iron", 1 ], [ "meat_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1565,7 +1502,6 @@
     "parasites": 10,
     "vitamins": [ [ "calcium", 3 ], [ "iron", 8 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1583,7 +1519,6 @@
     "weight": "3 g",
     "volume": "3 ml",
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1594,7 +1529,6 @@
     "description": "A handful of fried earthworms, cooked in salt.",
     "flags": [ "NUTRIENT_OVERRIDE" ],
     "fun": 0
-
   },
   {
     "type": "ITEM",
@@ -1609,7 +1543,6 @@
     "parasites": 0,
     "flags": [ "FREEZERBURN", "NUTRIENT_OVERRIDE" ],
     "smoking_result": "earthworm_dried"
-
   },
   {
     "type": "ITEM",
@@ -1633,7 +1566,6 @@
     "fun": -20,
     "vitamins": [ [ "meat_allergen", 1 ] ],
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1656,7 +1588,6 @@
     "fun": -15,
     "freezing_point": -274,
     "vitamins": [ [ "veggy_allergen", 1 ] ]
-
   },
   {
     "type": "ITEM",
@@ -1679,7 +1610,6 @@
     "fun": -15,
     "freezing_point": -274,
     "flags": [ "NUTRIENT_OVERRIDE" ]
-
   },
   {
     "id": "swarm_bees",
@@ -1696,7 +1626,6 @@
     "volume": "500 ml",
     "symbol": "B",
     "color": "yellow"
-
   },
   {
     "type": "ITEM",
@@ -1720,7 +1649,6 @@
     "vitamins": [ [ "meat_allergen", 1 ] ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
@@ -1744,7 +1672,6 @@
     "vitamins": [ [ "veggy_allergen", 1 ] ],
     "fun": -10,
     "stackable": true
-
   },
   {
     "type": "ITEM",
