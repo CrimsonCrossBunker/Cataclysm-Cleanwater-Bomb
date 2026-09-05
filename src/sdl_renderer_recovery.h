@@ -396,6 +396,7 @@ class atlas_upload_scope
 // coordinator, tileset cache, and tileset so a Catch2 suite can stand up a
 // headless renderer and synthetic bundle without those members going public.
 struct renderer_recovery_test_support {
+    static point character_preview_size( const Character &ch, int scale );
     // Stand up a hidden-window software renderer, display_buffer, variant_pass,
     // and geometry on the file-static globals, then seed and bootstrap the
     // coordinator. False (globals clean) if the dummy backend fails or a window is up.
