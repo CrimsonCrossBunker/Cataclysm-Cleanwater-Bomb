@@ -11825,10 +11825,14 @@ void unload_loot_activity_actor::stage_do( player_activity &, Character &you )
 
         const std::unordered_set<tripoint_abs_ms> dest_set;
 
-        zone_sorting::unload_item( you, src,
-                                   zone_unload_options,
-                                   it->second ? zone_sorting::cargo_part_from_index( src_bub, *it->second ) : std::nullopt,
-                                   it->first, dest_set, num_processed );
+        if( !zone_sorting::unload_item( you, src,
+                                        zone_unload_options,
+                                        it->second ? zone_sorting::cargo_part_from_index( src_bub, *it->second ) : std::nullopt,
+                                        it->first, dest_set, num_processed ) ) {
+            // Starting gunmod removal replaces this actor.  Resume from the
+            // saved zone activity instead of continuing through destroyed state.
+            return;
+        }
 
         if( you.get_moves() <= 0 ) {
             return;

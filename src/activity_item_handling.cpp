@@ -1414,9 +1414,17 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                     if( mod->is_irremovable() ) {
                         continue;
                     }
-                    you.gunmod_remove( *it, *mod );
-                    // need to return so the remove gunmod activity starts
-                    return std::nullopt;
+                    const item_location gun_loc = vpr_src ?
+                                                  item_location( vehicle_cursor( vpr_src->vehicle(), vpr_src->part_index() ), it ) :
+                                                  item_location( map_cursor( src_bub ), it );
+                    // Keep the zone activity in the backlog while the removable
+                    // mod is processed, including its viewport and tile progress.
+                    const bool was_auto_resume = you.activity.auto_resume;
+                    you.activity.auto_resume = true;
+                    if( you.gunmod_remove( gun_loc, *mod ) ) {
+                        return std::nullopt;
+                    }
+                    you.activity.auto_resume = was_auto_resume;
                 }
             }
 

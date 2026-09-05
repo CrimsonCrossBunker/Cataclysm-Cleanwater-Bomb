@@ -295,6 +295,15 @@ void Character::gunmod_add( item &gun, item &mod )
 
 bool Character::gunmod_remove( item &gun, item &mod )
 {
+    return gunmod_remove( item_location( *this, &gun ), mod );
+}
+
+bool Character::gunmod_remove( item_location gun_loc, item &mod )
+{
+    if( !gun_loc ) {
+        return false;
+    }
+    item &gun = *gun_loc.get_item();
     std::vector<item *> mods = gun.gunmods();
     size_t gunmod_idx = mods.size();
     for( size_t i = 0; i < mods.size(); i++ ) {
@@ -315,7 +324,6 @@ bool Character::gunmod_remove( item &gun, item &mod )
     // Removing gunmod takes only half as much time as installing it
     const int moves = has_trait( trait_DEBUG_HS ) ? 0 : to_moves<int>
                       ( mod.type->gunmod->install_time ) / 2;
-    item_location gun_loc = item_location( *this, &gun );
     assign_activity( gunmod_remove_activity_actor( moves, gun_loc, static_cast<int>( gunmod_idx ) ) );
     return true;
 }
