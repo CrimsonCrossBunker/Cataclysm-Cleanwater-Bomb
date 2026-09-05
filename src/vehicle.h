@@ -548,7 +548,7 @@ struct vehicle_part {
         bool removed = false; // NOLINT(cata-serialize)
         bool enabled = true;
         // set by power_parts() on deficit, cleared by grid resolution on recovery
-        bool power_disabled = false; // NOLINT(cata-serialize)
+        bool power_disabled = false;
 
         /** ID of player passenger */
         character_id passenger_id;
