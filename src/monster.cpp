@@ -2243,7 +2243,9 @@ bool monster::melee_attack( Creature &target, float accuracy )
         return false;
     }
     if( !sees( here, target ) && !target.is_hallucination() ) {
-        debugmsg( "Z-Level view violation: %s tried to attack %s.", disp_name(), target.disp_name() );
+        // Adjacency does not guarantee visibility: stairs can connect tiles
+        // without line of sight, and a target can be invisible. A rejected
+        // attack is an ordinary AI outcome, with its move cost paid above.
         return false;
     }
     // Prevent monsters from attacking THROUGH terrain if they are submerged under it & target isn't.
