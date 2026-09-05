@@ -3584,7 +3584,7 @@ bool character_creator_ui::display( pool_type &pool )
                 }
             }
             const std::string input_action = current_tab_input.handle_input( 33 );
-            if( !input_action.empty() ) {
+            if( !input_action.empty() && input_action != "TIMEOUT" && input_action != "MOUSE_MOVE" ) {
                 adaptive_ccui->show_loading();
                 handle_action( input_action );
             }

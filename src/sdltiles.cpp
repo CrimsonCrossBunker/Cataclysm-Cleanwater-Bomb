@@ -2840,6 +2840,24 @@ std::shared_ptr<const tileset> renderer_recovery_test_support::install_synthetic
     return ts;
 }
 
+point renderer_recovery_test_support::character_preview_size( const Character &ch, int scale )
+{
+    auto ts = std::const_pointer_cast<tileset>( install_synthetic_bundle(
+                  "character_preview_test", "color_pixel_sepia_light",
+                  renderer_coordinator.instance_generation(), renderer_coordinator.textures_generation() ) );
+    ts->tile_width = 1;
+    ts->tile_height = 1;
+    tile_type player_tile;
+    player_tile.fg.add( std::vector<int> { 0 }, 1 );
+    ts->create_tile_type( "player_male", tile_type( player_tile ) );
+    ts->create_tile_type( "player_female", tile_type( player_tile ) );
+    cata_tiles preview( renderer, geometry, ts_cache );
+    preview.tileset_ptr = ts;
+    point size;
+    preview.render_character_preview( ch, scale, size.x, size.y );
+    return size;
+}
+
 atlas_replay_quarantine::gate renderer_recovery_test_support::populate_mode2_quarantine(
     atlas_replay_quarantine &quarantine )
 {
