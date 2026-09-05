@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <climits>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -190,6 +191,9 @@ class overmap_sidebar : public cataimgui::window
         void draw_layer_info();
         void draw_debug();
     public:
+        // A modal search shares the sidebar's ImGui surface so it remains
+        // visible above the map on both desktop and Android.
+        std::function<void()> draw_search_controls;
         int width = 0;
         int x_pos = 0;
         overmap_sidebar( overmap_ui::overmap_draw_data_t &data, const input_context &ictxt );
