@@ -6523,7 +6523,7 @@ static void CheckMessages()
                                      ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ||
                                        ev.type == CATA_TEXTINPUT || ev.type == CATA_TEXTEDITING );
 #if defined(__ANDROID__)
-        // Android's system Back key dismisses the focused text widget below;
+        // Android's system Back key toggles the soft keyboard below;
         // it is not text editing input and must keep following that path.
         if( imgui_owns_text_event &&
             ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ) &&
@@ -6715,12 +6715,7 @@ static void CheckMessages()
                         if( ( !android_ui_mode::is_new_ui_build() || ac_back_down_time > 0 ) &&
                             ticks - ac_back_down_time <= static_cast<uint32_t>
                             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                            if( cataimgui::client::want_text_input() ) {
-                                // ImGui owns the keyboard while a text widget is
-                                // focused. Defocus it so ImGui releases text input
-                                // and the keyboard dismisses.
-                                cataimgui::client::clear_text_focus();
-                            } else if( IsTextInputActive( ::window.get() ) ) {
+                            if( IsTextInputActive( ::window.get() ) ) {
                                 focus_aware_stop_text_input();
                             } else {
                                 focus_aware_start_text_input();

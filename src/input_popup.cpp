@@ -14,6 +14,11 @@
 #include "ui_manager.h"
 #include "uistate.h"
 
+#if defined(__ANDROID__)
+    #include "sdl_wrappers.h"
+    #include "sdltiles.h"
+#endif
+
 input_popup::input_popup( int width, const std::string &title, const point &pos,
                           ImGuiWindowFlags flags ) :
     cataimgui::window( title, ImGuiWindowFlags_NoNavInputs | flags | ( title.empty() ?
@@ -221,6 +226,15 @@ void string_input_popup_imgui::draw_input_control()
 
     std::string input_label = "##string_input_" + label;
     ImGui::InputText( input_label.c_str(), &text, flags, input_callback, this );
+#if defined(__ANDROID__)
+    // An IME may have been dismissed, or its first show request may have
+    // failed. Clicking an already-active widget does not make ImGui request
+    // text input again, so explicitly retry on an input-field tap.
+    if( ImGui::IsItemClicked() && !SDL_ScreenKeyboardShown( get_sdl_window() ) ) {
+        StopTextInput( get_sdl_window() );
+        StartTextInput( get_sdl_window() );
+    }
+#endif
 }
 
 void string_input_popup_imgui::set_identifier( const std::string &ident )
