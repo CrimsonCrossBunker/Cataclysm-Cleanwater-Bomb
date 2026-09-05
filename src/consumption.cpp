@@ -167,6 +167,7 @@ static const skill_id skill_survival( "survival" );
 static const species_id species_HUMAN( "HUMAN" );
 
 static const trait_id trait_ACIDBLOOD( "ACIDBLOOD" );
+static const trait_id trait_ALCMET( "ALCMET" );
 static const trait_id trait_AMORPHOUS( "AMORPHOUS" );
 static const trait_id trait_ANTIFRUIT( "ANTIFRUIT" );
 static const trait_id trait_ANTIJUNK( "ANTIJUNK" );
@@ -217,6 +218,7 @@ static const vitamin_id vitamin_milk_allergen( "milk_allergen" );
 static const vitamin_id vitamin_nut_allergen( "nut_allergen" );
 static const vitamin_id vitamin_veggy_allergen( "veggy_allergen" );
 static const vitamin_id vitamin_wheat_allergen( "wheat_allergen" );
+static const vitamin_id vitamin_ethanol( "ethanol" );
 static const vitamin_id vitamin_bac( "BAC" );
 
 // note: cannot use constants from flag.h (e.g. flag_ALLERGEN_VEGGY) here, as they
@@ -1795,6 +1797,17 @@ bool Character::consume_effects( item &food )
     }
     // to do: reduce nutrition by a factor of the amount of muscle to be rebuilt?
     activate_consume_eocs( *this, food );
+
+    if( has_trait( trait_ALCMET ) ) {
+        // Metabolizing the booze improves the nutritional value; might not be
+        // healthy, and still causes thirst problems, though.  Legacy path used
+        // the drink's depressant strength; ~8.7 kcal per ml of ethanol matches
+        // the old gain for a typical drink.
+        const int ethanol_units = food_nutrients.get_vitamin( vitamin_ethanol );
+        if( ethanol_units > 0 ) {
+            stomach.mod_nutr( -ethanol_units );
+        }
+    }
 
     // GET IN MAH BELLY!
     stomach.ingest( ingested );
