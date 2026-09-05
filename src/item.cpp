@@ -114,10 +114,10 @@ static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_plutonium( "plutonium" );
 static const ammotype ammo_money( "money" );
 
-static const efftype_id effect_cig( "cig" );
 static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_weed_high( "weed_high" );
+static const vitamin_id vitamin_nicotine( "nicotine" );
 
 static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
@@ -4648,10 +4648,22 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
         } else if( carrier->has_trait( trait_LIGHTWEIGHT ) ) {
             duration = 30_seconds;
         }
-        carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
+        int puff_chance = 24;
         if( has_flag( flag_TOBACCO ) ) {
-            carrier->add_effect( effect_cig, duration );
+            // Try not to go over 5mg nicotine if we started at 0.
+            if( typeId() == itype_cigar_lit ) {
+                puff_chance = 36;
+            }
+            // Smokers reflexively puff more often if they need more nicotine.
+            if( carrier->vitamin_get( vitamin_nicotine ) < 5 ) {
+                puff_chance /= 6;
+            }
+            if( one_in( puff_chance ) ) {
+                carrier->vitamin_mod( vitamin_nicotine, 1 );
+                carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
+            }
         } else {
+            carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
             carrier->add_effect( effect_weed_high, duration / 2 );
         }
         carrier->mod_moves( -to_moves<int>( 1_seconds ) * 0.15 );
