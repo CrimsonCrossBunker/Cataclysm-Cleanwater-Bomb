@@ -3953,7 +3953,7 @@
       "thirst_tick": [ 1000 ],
       "sensitive_amount": [ -1 ],
       "sensitive_chance": [ 300 ],
-      "sensitive_min_val": [ 50 ],
+      "sensitive_min_val": [ 70 ],
       "str_mod": [ 0.5 ]
     },
     "scaling_mods": {
@@ -3966,6 +3966,7 @@
       "vomit_tick": [ -30 ],
       "sleep_chance": [ 501 ],
       "sensitive_amount": [ -1 ],
+      "sensitive_min_val": [ -5 ],
       "pkill_max_val": [ 5 ],
       "pkill_tick": [ -5 ],
       "thirst_tick": [ -100 ]
