@@ -781,6 +781,9 @@ bool cataimgui::client::auto_size_frame_active()
 
 bool cataimgui::client::any_window_shown()
 {
+    if( !ui_adaptor::has_imgui() ) {
+        return false;
+    }
     bool any_window_shown = false;
     for( const ImGuiWindow *window : GImGui->Windows ) {
         if( window->Active && !window->Hidden ) {
@@ -794,7 +797,7 @@ bool cataimgui::client::any_window_shown()
 bool cataimgui::client::want_capture_mouse()
 {
     ImGuiContext *ctx = ImGui::GetCurrentContext();
-    if( !ctx ) {
+    if( !ctx || !ui_adaptor::has_imgui() ) {
         return false;
     }
 
@@ -1194,7 +1197,12 @@ cataimgui::window::~window()
     if( GImGui ) {
         ImGui::ClearWindowSettings( id.c_str() );
         if( !ui_adaptor::has_imgui() ) {
+            // ClearInputKeys deliberately excludes mouse state.  A queued
+            // release can be discarded with the window, leaving ImGui holding
+            // a button and capturing subsequent map clicks indefinitely.
+            ImGui::ClearActiveID();
             ImGui::GetIO().ClearInputKeys();
+            ImGui::GetIO().ClearInputMouse();
             GImGui->InputEventsQueue.resize( 0 );
 #ifdef TILES
             // Removes leftover ImGui artifacts
