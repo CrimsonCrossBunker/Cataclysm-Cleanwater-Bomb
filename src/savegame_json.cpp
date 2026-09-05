@@ -2403,8 +2403,9 @@ void npc::load( const JsonObject &data )
         platform_identity_generation_ = loaded_platform_identity_generation;
         reserve_platform_npc_identity_generation( platform_identity_generation_ );
     }
-    clear_personality_traits();
-    generate_personality_traits();
+    // Personality reconciliation uses live mutation changes, which can emit
+    // fields or cast passive spells. Defer it to on_load(), after placement
+    // in the fully loaded reality bubble; overmap deserialization is too early.
     data.read( "may_activity_occupancy_after_end_items_loc",
                may_activity_occupancy_after_end_items_loc );
 }
