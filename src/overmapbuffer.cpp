@@ -25,6 +25,7 @@
 #include "city.h"
 #include "color.h"
 #include "coordinates.h"
+#include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "filesystem.h"
@@ -2403,9 +2404,16 @@ void overmapbuffer::spawn_monster( const tripoint_abs_sm &p, bool spawn_nonlocal
         }
         monster *placed = nullptr;
         if( entry.node.mapped().monster_data ) {
-            placed = g->place_critter_around( make_shared_fast<monster>(
-                                                  *entry.node.mapped().monster_data ),
-                                              local, 1, true );
+            const monster &stored = *entry.node.mapped().monster_data;
+            // A dimension departure saves these monsters to the overmap even
+            // when the player later reloads an older character save. If that
+            // save already restored this entity, consume the stale map copy.
+            if( get_creature_tracker().find_by_uid( stored.uid().get_value() ) ) {
+                continue;
+            }
+            const shared_ptr_fast<monster> restored(
+                std::make_unique<monster>( stored.copy_for_persistence() ) );
+            placed = g->place_critter_around( restored, local, 1, true );
             // TODO: make sure entity data such as destination is synched
         } else {
             placed = g->place_critter_around( entry.node.mapped().type_id->id, local, 1 );
