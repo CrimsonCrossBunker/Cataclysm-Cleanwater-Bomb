@@ -368,8 +368,7 @@
     "phase": "liquid",
     "charges": 3,
     "flags": [ "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 50 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 50 ], [ "junk_allergen", 1 ] ],
     "fun": 6
   },
   {

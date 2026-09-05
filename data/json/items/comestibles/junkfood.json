@@ -728,8 +728,7 @@
     "volume": "8 ml",
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 80 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 80 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
   },
   {

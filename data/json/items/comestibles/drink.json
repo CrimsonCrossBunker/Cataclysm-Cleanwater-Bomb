@@ -251,8 +251,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "caffeine", 50 ], [ "milk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 50 ], [ "milk_allergen", 1 ] ],
     "fun": 14
   },
   {
@@ -444,8 +443,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 34 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 34 ], [ "junk_allergen", 1 ] ],
     "fun": 5
   },
   {
@@ -472,8 +470,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 54 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 54 ], [ "junk_allergen", 1 ] ],
     "fun": 5
   },
   {
@@ -500,8 +497,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 30 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 30 ], [ "junk_allergen", 1 ] ],
     "fun": 5
   },
   {
@@ -650,8 +646,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 80 ], [ "vitC", 105 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 80 ], [ "vitC", 105 ], [ "junk_allergen", 1 ] ],
     "fun": 5
   },
   {
@@ -938,8 +933,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
-    "vitamins": [ [ "caffeine", 45 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 45 ], [ "junk_allergen", 1 ] ],
     "fun": 12
   },
   {
@@ -1147,8 +1141,7 @@
     "phase": "liquid",
     "charges": 2,
     "flags": [ "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 60 ], [ "vitC", 2 ], [ "calcium", 12 ], [ "milk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 60 ], [ "vitC", 2 ], [ "calcium", 12 ], [ "milk_allergen", 1 ] ],
     "fun": 10
   },
   {
@@ -1173,8 +1166,7 @@
     "volume": "500 ml",
     "phase": "liquid",
     "charges": 2,
-    "vitamins": [ [ "vitC", 2 ], [ "calcium", 12 ], [ "milk_allergen", 1 ], [ "caffeine", 50 ] ]
-,
+    "vitamins": [ [ "vitC", 2 ], [ "calcium", 12 ], [ "milk_allergen", 1 ], [ "caffeine", 50 ] ],
     "fun": 10,
     "flags": [ "EATEN_HOT" ]
   },
@@ -1290,8 +1282,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD" ],
-    "vitamins": [ [ "caffeine", 15 ], [ "vitC", 50 ], [ "calcium", 3 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 15 ], [ "vitC", 50 ], [ "calcium", 3 ], [ "junk_allergen", 1 ] ],
     "fun": 3
   },
   {
@@ -1422,8 +1413,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 30 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 30 ], [ "junk_allergen", 1 ] ],
     "fun": 6
   },
   {
@@ -1964,8 +1954,7 @@
     "charges": 1,
     "phase": "liquid",
     "flags": [ "EATEN_COLD", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "caffeine", 54 ], [ "junk_allergen", 1 ] ]
-,
+    "vitamins": [ [ "caffeine", 54 ], [ "junk_allergen", 1 ] ],
     "fun": 4
   },
   {
