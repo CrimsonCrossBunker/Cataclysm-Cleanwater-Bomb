@@ -3793,7 +3793,7 @@
     "type": "effect_type",
     "id": "caffeine_eff",
     "//": "DEX/INT/PER/SPEED scaling of -0.7 is deliberate: stat mods truncate toward zero, giving 0 at intensity 2 (the <=400 mg/day band stays penalty-free), -1 at intensity 3 and -2 at intensity 4.",
-    "name": [ "Caffeinated", "Energized", "Caffeine Overdose", "Caffeine Toxicity" ],
+    "name": [ "Caffeinated", "Caffeine Energized", "Caffeine Overdose", "Caffeine Toxicity" ],
     "desc": [
       "Just a little pick-me-up.",
       "A strong wave of alertness; the buzz is starting to lose its edge.",
