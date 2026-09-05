@@ -117,6 +117,7 @@
     "vitamins": [ [ "iron", 10 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 15,
     "stackable": true
+
   },
   {
     "id": "toasterpastryfrozen",
@@ -132,6 +133,7 @@
     "price_postapoc": "62 cent",
     "fun": 5,
     "stackable": true
+
   },
   {
     "id": "toasterpastry",
@@ -141,6 +143,7 @@
     "name": { "str": "toasted pastry", "str_pl": "toasted pastries" },
     "description": "A toaster pastry that has been toasted, delicious!",
     "fun": 20
+
   },
   {
     "type": "ITEM",
@@ -162,6 +165,7 @@
     "fun": 6,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -185,6 +189,7 @@
     "vitamins": [ [ "iron", 16 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 4,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -208,6 +213,7 @@
     "fun": 6,
     "vitamins": [ [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -230,6 +236,7 @@
     "vitamins": [ [ "calcium", 8 ], [ "iron", 8 ], [ "junk_allergen", 1 ] ],
     "fun": 10,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -252,6 +259,7 @@
     "fun": 10,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -274,6 +282,7 @@
     "vitamins": [ [ "calcium", 4 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 20,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -298,6 +307,7 @@
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -321,6 +331,7 @@
     "vitamins": [ [ "iron", 9 ], [ "junk_allergen", 1 ] ],
     "fun": 3,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -344,6 +355,7 @@
     "fun": 3,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -367,6 +379,7 @@
     "fun": 5,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -390,6 +403,7 @@
     "fun": 4,
     "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -398,6 +412,7 @@
     "name": { "str_sp": "chewy reptilian candy" },
     "copy-from": "candy3",
     "description": "A handful of colorful fruit-flavored chewy candies shaped in a reptilian fashion.  Made by SugarRush."
+
   },
   {
     "type": "ITEM",
@@ -408,6 +423,7 @@
     "symbol": "*",
     "copy-from": "candy2",
     "color": "brown"
+
   },
   {
     "type": "ITEM",
@@ -431,6 +447,7 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -454,6 +471,7 @@
     "fun": 6,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -468,6 +486,7 @@
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "sided": true,
     "armor": [ { "coverage": 50, "covers": [ "hand_l", "hand_r" ], "specifically_covers": [ "hand_wrist_l", "hand_wrist_r" ] } ]
+
   },
   {
     "type": "ITEM",
@@ -492,6 +511,7 @@
     "fun": 10,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -515,6 +535,7 @@
     "vitamins": [ [ "calcium", 4 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -523,6 +544,7 @@
     "name": { "str_sp": "graham cracker chunks" },
     "copy-from": "grahmcrackers",
     "description": "These dry, sugary cracker pellets will leave you thirsty, and they're not the right size to make s'mores with.  Made by SugarRush!"
+
   },
   {
     "type": "ITEM",
@@ -547,6 +569,7 @@
     "vitamins": [ [ "calcium", 2 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 7,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -555,6 +578,7 @@
     "name": { "str": "cookie egg" },
     "copy-from": "cookies",
     "description": "A sweet, delicious cookie, shaped like an egg.  Made by SugarRush!"
+
   },
   {
     "type": "ITEM",
@@ -579,6 +603,7 @@
     "fun": 5,
     "vitamins": [ [ "calcium", 2 ], [ "junk_allergen", 1 ] ],
     "freezing_point": -57
+
   },
   {
     "type": "ITEM",
@@ -601,6 +626,7 @@
     "phase": "liquid",
     "vitamins": [ [ "iron", 34 ], [ "junk_allergen", 1 ] ],
     "charges": 16
+
   },
   {
     "type": "ITEM",
@@ -626,6 +652,7 @@
     "fun": -1,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "freezing_point": -57
+
   },
   {
     "type": "ITEM",
@@ -649,6 +676,7 @@
     "charges": 16,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "freezing_point": -57
+
   },
   {
     "type": "ITEM",
@@ -669,6 +697,7 @@
     "vitamins": [ [ "calcium", 3 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 15,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -679,6 +708,7 @@
     "copy-from": "jihelucake",
     "calories": 280,
     "description": "Delicious chocolate cake.  It has all the icing.  All of it."
+
   },
   {
     "type": "ITEM",
@@ -691,6 +721,7 @@
     "quench": -5,
     "description": "A slice of cake coated in the thickest icing you've ever seen.  Someone has written \"guff\" on every slice.",
     "fun": 20
+
   },
   {
     "type": "ITEM",
@@ -705,6 +736,7 @@
       "//~": "NO_I18N"
     },
     "fun": 20
+
   },
   {
     "type": "ITEM",
@@ -715,8 +747,6 @@
     "color": "brown",
     "spoils_in": "360 days",
     "addiction_type": "caffeine",
-    "sleepiness_mod": 30,
-    "stim": 10,
     "container": "bag_plastic_small",
     "comestible_type": "FOOD",
     "symbol": "%",
@@ -730,7 +760,8 @@
     "volume": "8 ml",
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "vitamins": [ [ "caffeine", 80 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+,
     "stackable": true
   },
   {
@@ -761,6 +792,7 @@
     "vitamins": [ [ "vitC", 4 ], [ "calcium", 1 ], [ "iron", 3 ], [ "junk_allergen", 1 ] ],
     "flags": [ "EATEN_HOT" ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -783,6 +815,7 @@
     "vitamins": [ [ "vitC", 4 ], [ "calcium", 17 ], [ "iron", 4 ], [ "milk_allergen", 1 ] ],
     "flags": [ "EATEN_HOT" ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -806,6 +839,7 @@
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -830,6 +864,7 @@
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -854,6 +889,7 @@
     "fun": 4,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -876,6 +912,7 @@
     "vitamins": [ [ "calcium", 9 ], [ "junk_allergen", 1 ] ],
     "fun": 2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -897,6 +934,7 @@
     "vitamins": [ [ "calcium", 9 ], [ "vitC", 14 ], [ "iron", 1 ], [ "fruit_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 5,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -977,6 +1015,7 @@
       }
     ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1000,6 +1039,7 @@
     "vitamins": [ [ "calcium", 5 ], [ "iron", 3 ], [ "junk_allergen", 1 ] ],
     "fun": 8,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1023,6 +1063,7 @@
     "fun": 16,
     "vitamins": [ [ "calcium", 12 ], [ "iron", 6 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1051,6 +1092,7 @@
     "fun": 16,
     "vitamins": [ [ "vitC", 5 ], [ "calcium", 2 ], [ "iron", 24 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1088,6 +1130,7 @@
     "fun": 20,
     "vitamins": [ [ "calcium", 10 ], [ "iron", 12 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1110,6 +1153,7 @@
     "fun": 16,
     "vitamins": [ [ "calcium", 8 ], [ "iron", 17 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1136,6 +1180,7 @@
     "flags": [ "EATEN_HOT" ],
     "fun": 20,
     "vitamins": [ [ "calcium", 13 ], [ "iron", 17 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+
   },
   {
     "type": "ITEM",
@@ -1159,6 +1204,7 @@
     "vitamins": [ [ "calcium", 8 ], [ "iron", 4 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 4,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1188,6 +1234,7 @@
     "fun": 5,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1211,6 +1258,7 @@
     "fun": -3,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1234,6 +1282,7 @@
     "fun": 2,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1256,6 +1305,7 @@
     "fun": 12,
     "vitamins": [ [ "iron", 4 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1286,6 +1336,7 @@
       [ "junk_allergen", 1 ]
     ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1308,6 +1359,7 @@
     "fun": -18,
     "vitamins": [ [ "calcium", 6 ], [ "iron", 8 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1320,6 +1372,7 @@
     "healthy": -1,
     "description": "A heavily processed sausage, dipped in batter and deep-fried.  Now that it's been cooked, this corn dog tastes much better, but will spoil faster.",
     "fun": 18
+
   },
   {
     "type": "ITEM",
@@ -1332,6 +1385,7 @@
     "fun": 18,
     "calories": 250,
     "volume": "250 ml"
+
   },
   {
     "type": "ITEM",
@@ -1353,6 +1407,7 @@
     ],
     "fun": 6,
     "vitamins": [ [ "calcium", 5 ], [ "iron", 17 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+
   },
   {
     "type": "ITEM",
@@ -1379,6 +1434,7 @@
     "fun": 12,
     "vitamins": [ [ "calcium", 25 ], [ "iron", 25 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1401,6 +1457,7 @@
     "fun": 6,
     "vitamins": [ [ "calcium", 15 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1424,6 +1481,7 @@
     "fun": 6,
     "vitamins": [ [ "vitC", 4 ], [ "calcium", 17 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1447,6 +1505,7 @@
     "fun": 6,
     "vitamins": [ [ "calcium", 4 ], [ "iron", 7 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1470,6 +1529,7 @@
     "fun": -6,
     "vitamins": [ [ "iron", 3 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "id": "hotdogs_campfire",
@@ -1480,6 +1540,7 @@
     "description": "A simple hot dog, cooked over an open fire.  Would be better on a bun, but it's quite an improvement over eating it uncooked.",
     "fun": 5,
     "volume": "187 ml"
+
   },
   {
     "type": "ITEM",
@@ -1510,6 +1571,7 @@
       [ "junk_allergen", 1 ]
     ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1556,6 +1618,7 @@
     "vitamins": [ [ "calcium", 4 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "fun": 6,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1581,6 +1644,7 @@
     "fun": 6,
     "vitamins": [ [ "calcium", 1 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "nut_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1604,6 +1668,7 @@
     "vitamins": [ [ "iron", 10 ], [ "meat_allergen", 1 ], [ "egg_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": -2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1634,6 +1699,7 @@
     ],
     "fun": -2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1657,6 +1723,7 @@
     "vitamins": [ [ "calcium", 30 ], [ "iron", 15 ], [ "milk_allergen", 1 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": -2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1680,6 +1747,7 @@
     "vitamins": [ [ "iron", 10 ], [ "meat_allergen", 1 ], [ "egg_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 4,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1710,6 +1778,7 @@
     ],
     "fun": 4,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1733,6 +1802,7 @@
     "vitamins": [ [ "calcium", 30 ], [ "iron", 15 ], [ "milk_allergen", 1 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "fun": 2,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1753,6 +1823,7 @@
     "fun": -3,
     "vitamins": [ [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1777,6 +1848,7 @@
     "fun": -2,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1799,6 +1871,7 @@
     "fun": 5,
     "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1840,6 +1913,7 @@
     "material": [ "veggy", "junk" ],
     "copy-from": "gelatin_dessert_base",
     "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+
   },
   {
     "type": "ITEM",
@@ -1852,6 +1926,7 @@
     "material": [ "veggy", "junk" ],
     "copy-from": "gelatin_dessert_base",
     "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+
   },
   {
     "type": "ITEM",
@@ -1876,6 +1951,7 @@
     "vitamins": [ [ "calcium", 10 ], [ "iron", 5 ], [ "wheat_allergen", 1 ], [ "egg_allergen", 1 ] ],
     "fun": 8,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1900,6 +1976,7 @@
     "vitamins": [ [ "calcium", 10 ], [ "iron", 6 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ],
     "fun": 8,
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1922,6 +1999,7 @@
     "fun": 3,
     "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
@@ -1944,6 +2022,7 @@
     "fun": 3,
     "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "stackable": true
+
   },
   {
     "type": "ITEM",
