@@ -106,6 +106,8 @@ class monster : public Creature
             return uid_;
         }
         void ensure_uid();
+        // Transfer between active and overmap storage without creating a new entity.
+        monster copy_for_persistence() const;
 
         mfaction_id get_monster_faction() const override {
             return faction.id();

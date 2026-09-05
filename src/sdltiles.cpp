@@ -1991,6 +1991,7 @@ static void reset_context_minimaps()
 {
     for_each_unique_tile_context( []( cata_tiles & c ) {
         c.reset_minimap();
+        c.reset_character_preview();
     } );
 }
 
@@ -2783,6 +2784,29 @@ bool renderer_recovery_test_support::setup_software_renderer()
     return true;
 }
 
+bool renderer_recovery_test_support::install_character_preview_targets()
+{
+    if( tilecontext ) {
+        return false;
+    }
+    tilecontext = std::make_unique<cata_tiles>( renderer, geometry, ts_cache );
+    tilecontext->char_preview_work_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                         SDL_TEXTUREACCESS_TARGET, 8, 8 );
+    tilecontext->char_preview_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                    SDL_TEXTUREACCESS_TARGET, 4, 4 );
+    return tilecontext->char_preview_work_tex && tilecontext->char_preview_tex;
+}
+
+bool renderer_recovery_test_support::has_character_preview_targets()
+{
+    return tilecontext && ( tilecontext->char_preview_work_tex || tilecontext->char_preview_tex );
+}
+
+void renderer_recovery_test_support::remove_character_preview_context()
+{
+    tilecontext.reset();
+}
+
 void renderer_recovery_test_support::teardown_software_renderer()
 {
     ts_cache.release_live_atlases();
@@ -2849,6 +2873,24 @@ std::shared_ptr<const tileset> renderer_recovery_test_support::install_synthetic
     };
     ts_cache.tilesets_.insert_or_assign( key, ts );
     return ts;
+}
+
+point renderer_recovery_test_support::character_preview_size( const Character &ch, int scale )
+{
+    auto ts = std::const_pointer_cast<tileset>( install_synthetic_bundle(
+                  "character_preview_test", "color_pixel_sepia_light",
+                  renderer_coordinator.instance_generation(), renderer_coordinator.textures_generation() ) );
+    ts->tile_width = 1;
+    ts->tile_height = 1;
+    tile_type player_tile;
+    player_tile.fg.add( std::vector<int> { 0 }, 1 );
+    ts->create_tile_type( "player_male", tile_type( player_tile ) );
+    ts->create_tile_type( "player_female", tile_type( player_tile ) );
+    cata_tiles preview( renderer, geometry, ts_cache );
+    preview.tileset_ptr = ts;
+    point size;
+    preview.render_character_preview( ch, scale, size.x, size.y );
+    return size;
 }
 
 atlas_replay_quarantine::gate renderer_recovery_test_support::populate_mode2_quarantine(

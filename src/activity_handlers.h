@@ -206,6 +206,8 @@ int move_cost_cart( const item &it, const tripoint_bub_ms &src, const tripoint_b
                     const units::volume &capacity );
 int move_cost_inv( const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest );
 
+// Reserve the final location so cancellation can release ground, cargo and inventory items.
+void reserve_activity_item( Character &you, item_location loc );
 void clean_may_activity_occupancy_items_var( Character &you );
 void clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( Character &you );
 // defined in activity_handlers.cpp

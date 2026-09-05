@@ -9,6 +9,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "options.h"
+#include "options_helpers.h"
 #include "string_formatter.h"
 
 TEST_CASE( "time_duration_to_string", "[calendar][nogame]" )
@@ -49,6 +50,48 @@ TEST_CASE( "time_duration_to_string_eternal_season", "[calendar][nogame]" )
     CHECK( to_string( 3650_days ) == "521 weeks and 3 days" );
     calendar::set_eternal_season( false );
     REQUIRE( calendar::season_from_default_ratio() == Approx( 1.0f ) );
+}
+
+TEST_CASE( "opening_dates_ignore_eternal_season", "[calendar][nogame]" )
+{
+    const bool was_eternal = calendar::eternal_season();
+    const int old_length = to_days<int>( calendar::season_length() );
+    on_out_of_scope restore_calendar( [was_eternal, old_length]() {
+        calendar::set_eternal_season( was_eternal );
+        calendar::set_season_length( old_length );
+    } );
+    restore_on_out_of_scope restore_initial_season( calendar::initial_season );
+    const int length = GENERATE( 91, 73 );
+    const season_type initial = GENERATE( SPRING, SUMMER, AUTUMN, WINTER );
+    const bool show_months = GENERATE( false, true );
+    override_option months( "SHOW_MONTHS", show_months ? "true" : "false" );
+    calendar::set_season_length( length );
+    calendar::initial_season = initial;
+
+    const std::array<season_type, 4> seasons = {{ SPRING, SUMMER, AUTUMN, WINTER }};
+    for( const season_type selected : seasons ) {
+        CAPTURE( length, initial, show_months, selected );
+        const time_point date = calendar::turn_zero + calendar::season_length() * selected +
+                                10_days + 8_hours;
+        calendar::set_eternal_season( false );
+        const std::string expected_preview = to_string( date );
+        calendar::set_eternal_season( true );
+
+        CHECK( season_of_year( date ) == initial );
+        CHECK( season_of_year( date, true ) == selected );
+        CHECK( to_string( date, true ) == expected_preview );
+        // A date preview must not change the world's lock or its opening season.
+        CHECK( calendar::eternal_season() );
+        CHECK( calendar::initial_season == initial );
+        CHECK( season_of_year( date ) == initial );
+
+        // At game start the chosen date establishes the lock, even if the UI
+        // has just queried this exact timestamp with the previous initial season.
+        calendar::initial_season = selected;
+        CHECK( season_of_year( date ) == selected );
+        CHECK( season_of_year( date + calendar::season_length() ) == selected );
+        calendar::initial_season = initial;
+    }
 }
 
 TEST_CASE( "months_and_days_over_time", "[calendar]" )

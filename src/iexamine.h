@@ -161,6 +161,7 @@ void quern_examine( Character &you, const tripoint_bub_ms &examp );
 void smoker_options( Character &you, const tripoint_bub_ms &examp );
 bool smoker_prep( Character &you, const tripoint_bub_ms &examp );
 bool smoker_fire( Character &you, const tripoint_bub_ms &examp );
+void smoker_reconcile( map &here, const tripoint_bub_ms &examp );
 void open_safe( Character &you, const tripoint_bub_ms &examp );
 void workbench( Character &you, const tripoint_bub_ms &examp );
 void workbench_internal( Character &you, const tripoint_bub_ms &examp,

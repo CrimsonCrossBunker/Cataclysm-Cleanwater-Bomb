@@ -2027,6 +2027,16 @@ void cata_tiles::reset_minimap()
     minimap->reset();
 }
 
+void cata_tiles::reset_character_preview()
+{
+    char_preview_work_tex.reset();
+    char_preview_tex.reset();
+    char_preview_work_w = 0;
+    char_preview_work_h = 0;
+    char_preview_w = 0;
+    char_preview_h = 0;
+}
+
 void cata_tiles::reset_tint_mask()
 {
     tint_mask_tex.reset();
@@ -4632,11 +4642,8 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
     const int saved_zoom = g->get_zoom();
     set_draw_scale( scale );
 
-    // Character sprites are not tile-sized: they carry per-sprite offsets and overlays (hair,
-    // hats, mutations) that extend above and around the base tile by an amount that varies per
-    // tileset. Rather than guess a headroom that fits every case, draw into a generous work
-    // canvas, then read the rendered pixels back to find the tight non-transparent bounding box
-    // and crop to exactly that. This removes the dead space above the sprite for any tileset.
+    // Use the opaque sprite bounds cached when the tileset was loaded. Reading
+    // pixels back from the GPU here stalls every appearance change on mobile.
     const int work_w = tile_width * 3;
     const int work_h = tile_height * 3;
     if( work_w <= 0 || work_h <= 0 ) {
@@ -4662,8 +4669,12 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
     o = point::zero;
     m_entity_draw_offset = point::zero;
 
-    // Pixel buffer for readback: ARGB8888, 4 bytes per pixel.
-    std::vector<uint32_t> pixels( static_cast<size_t>( work_w ) * work_h, 0 );
+    sprite_screen_bounds bounds;
+    sprite_screen_bounds *const previous_bounds = m_cur_bounds;
+    m_cur_bounds = &bounds;
+    on_out_of_scope restore_bounds( [&]() {
+        m_cur_bounds = previous_bounds;
+    } );
     bool drawn = false;
     {
         scoped_render_target preview_scope( renderer, char_preview_work_tex.get()
@@ -4682,9 +4693,7 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
             draw_entity_with_overlays( ch, tripoint_bub_ms( tripoint::zero ), lit_level::BRIGHT,
                                        height_3d, FacingDirection::RIGHT );
 
-            const SDL_Rect full{ 0, 0, work_w, work_h };
-            drawn = RenderReadPixels( renderer, &full, SDL_PIXELFORMAT_ARGB8888, pixels.data(),
-                                      work_w * 4 );
+            drawn = bounds.valid;
             RenderSetClipRect( renderer, nullptr );
         }
     }
@@ -4694,22 +4703,9 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
         return nullptr;
     }
 
-    // Scan for the bounding box of any non-zero (non-transparent) pixel. The canvas was cleared
-    // to all-zero bytes, so a pixel is "drawn" iff it is non-zero -- no need to assume which byte
-    // is alpha, sidestepping format/endianness concerns.
-    point min( work_w, work_h );
-    point max = point::north_west;
-    for( int y = 0; y < work_h; y++ ) {
-        const uint32_t *row = pixels.data() + static_cast<size_t>( y ) * work_w;
-        for( int x = 0; x < work_w; x++ ) {
-            if( row[x] != 0 ) {
-                min.x = std::min( min.x, x );
-                max.x = std::max( max.x, x );
-                min.y = std::min( min.y, y );
-                max.y = std::max( max.y, y );
-            }
-        }
-    }
+    const point min( std::max( 0, bounds.x ), std::max( 0, bounds.y ) );
+    const point max( std::min( work_w, bounds.x + bounds.w ) - 1,
+                     std::min( work_h, bounds.y + bounds.h ) - 1 );
 
     if( max.x < min.x || max.y < min.y ) {
         // Nothing was drawn (e.g. a tileset with no player sprite); show nothing.

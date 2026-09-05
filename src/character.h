@@ -1981,6 +1981,7 @@ class Character : public Creature, public visitable
          * Returns true on success (activity has been started)
          */
         bool gunmod_remove( item &gun, item &mod );
+        bool gunmod_remove( item_location gun_loc, item &mod );
 
         /** Starts activity to install gunmod having warned user about any risk of failure or irremovable mods s*/
         void gunmod_add( item &gun, item &mod );

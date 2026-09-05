@@ -17,6 +17,7 @@
 
 #include "cata_path.h"
 #include "cata_utility.h"
+#include "coordinates.h"
 #include "debug.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
@@ -38,6 +39,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
+#include "vehicle.h"
 #include "worldfactory.h"
 #include "zzip.h"
 
@@ -92,6 +94,12 @@ bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &s
         return false;
     }
 
+    // Vehicles store their mount origin within the submap, not its absolute
+    // coordinates. Cable lookup can load this submap without map::loadn(), so
+    // establish the absolute origin here before any off-bubble processing.
+    for( const std::unique_ptr<vehicle> &veh : sm->vehicles ) {
+        veh->sm_pos = p;
+    }
     submaps[p] = std::move( sm );
 
     return true;

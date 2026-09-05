@@ -219,11 +219,10 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
     //new item (copy)
     item newit = it;
 
-    // Clear activity_var if it differs from the picker's name
-    if( it.has_var( "activity_var" ) && it.get_var( "activity_var", "" ) != player_character.name ) {
-        it.erase_var( "activity_var" );
-        newit.erase_var( "activity_var" );
-    }
+    // The picked-up copy no longer belongs to the reservation at this location.
+    // Also release orphaned marks from older activities, including our own.
+    // Leave the source unchanged if pickup is cancelled or only takes a portion.
+    newit.erase_var( "activity_var" );
     if( !newit.is_owned_by( player_character, true ) ) {
         const std::string thief_mode = player_character.get_value( "THIEF_MODE" ).str();
         if( thief_mode == "THIEF_HONEST" ) {

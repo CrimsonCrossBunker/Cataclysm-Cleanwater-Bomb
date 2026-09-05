@@ -15,7 +15,7 @@
 #include "uilist.h"
 
 time_point calendar_ui::select_time_point( time_point initial_value, std::string_view title,
-        calendar_ui::granularity granularity_level )
+        calendar_ui::granularity granularity_level, bool ignore_eternal_season )
 {
     time_point return_value = initial_value;
     auto set_turn = [&]( const int initial, const time_duration & factor, const char *const msg,
@@ -45,8 +45,8 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
         smenu.reset();
         smenu.title = title;
         smenu.text += string_format( _( "Old date: %1$s\nNew date: %2$s" ),
-                                     colorize( to_string( initial_value ), c_light_red ),
-                                     colorize( to_string( return_value ), c_light_cyan ) );
+                                     colorize( to_string( initial_value, ignore_eternal_season ), c_light_red ),
+                                     colorize( to_string( return_value, ignore_eternal_season ), c_light_cyan ) );
         smenu.desc_enabled = true;
         smenu.allow_additional = true;
         smenu.input_category = "CALENDAR_UI";
@@ -68,7 +68,8 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
         smenu.addentry( static_cast<int>( calendar_ui::granularity::year ), true,
                         'y', "%s: %d", _( "year" ), years( return_value ) + 1 );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::season ), true,
-                        's', "%s: %s", _( "season" ), calendar::name_season( season_of_year( return_value ) ) );
+                        's', "%s: %s", _( "season" ), calendar::name_season( season_of_year( return_value,
+                                ignore_eternal_season ) ) );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::day ), true,
                         'd', "%s: %d", _( "day" ), day_of_season<int>( return_value ) + 1 );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::hour ), true,
@@ -92,7 +93,8 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
                 set_turn( years( return_value ) + 1, calendar::year_length(), _( "Set year to?" ) );
                 break;
             case static_cast<int>( calendar_ui::granularity::season ):
-                set_turn( static_cast<int>( season_of_year( return_value ) ), calendar::season_length(),
+                set_turn( static_cast<int>( season_of_year( return_value, ignore_eternal_season ) ),
+                          calendar::season_length(),
                           _( "Set season to?  (0 = spring)" ) );
                 break;
             case static_cast<int>( calendar_ui::granularity::day ):
@@ -123,7 +125,8 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
                             set_turn( years( return_value ) + 1, calendar::year_length(), "", auto_value );
                             break;
                         case static_cast<int>( calendar_ui::granularity::season ):
-                            set_turn( static_cast<int>( season_of_year( return_value ) ), calendar::season_length(), "",
+                            set_turn( static_cast<int>( season_of_year( return_value, ignore_eternal_season ) ),
+                                      calendar::season_length(), "",
                                       auto_value );
                             break;
                         case static_cast<int>( calendar_ui::granularity::day ):
