@@ -249,7 +249,6 @@
     "volume": "250 ml",
     "color": "cyan",
     "addiction_type": "alcohol",
-    "stim": -4,
     "spoils_in": "1 days",
     "container": "cup_plastic",
     "comestible_type": "FOOD",
