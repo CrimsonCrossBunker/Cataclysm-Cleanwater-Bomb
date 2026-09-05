@@ -714,66 +714,104 @@ as if it were equal to 1 (i.e. trigger every time)
 ```jsonc
     "type": "effect_type",
     "id": "drunk",
-    "name": [
-        "Tipsy",
-        "Drunk",
-        "Trashed",
-        "Wasted"
-    ],
-    "max_intensity": 4,
+    "name": [ "Buzzed", "Tipsy", "Drunk", "Wasted", "Dead Drunk" ],
+    "max_intensity": 5,
     "apply_message": "You feel lightheaded.",
-    "int_dur_factor": 1000,
-    "miss_messages": [["You feel woozy.", 1]],
+    "miss_messages": [ [ "You feel woozy.", 1 ] ],
+    "chance_kill": [ [ -1, 1 ], [ -1, 1 ], [ -1, 1 ], [ -1, 1 ], [ 1, 25000 ] ],
+    "death_msg": "Your breathing grows weaker and weaker, and then you are gone.",
     "base_mods": {
-        "str_mod": [1],
-        "vomit_chance": [-43],
-        "sleep_chance": [-1003],
-        "sleep_min": [2500],
-        "sleep_max": [3500]
+        "vomit_chance": [ -20 ],
+        "vomit_chance_bot": [ 1000 ],
+        "vomit_tick": [ 180 ],
+        "sleep_tick": [ 45 ],
+        "sleep_chance": [ -1003 ],
+        "sleep_min": [ 15000 ],
+        "sleep_max": [ 21000 ],
+        "pkill_amount": [ 1 ],
+        "pkill_max_val": [ 1 ],
+        "pkill_tick": [ 45 ],
+        "thirst_min": [ 1 ],
+        "thirst_max": [ 2 ],
+        "thirst_tick": [ 1000 ],
+        "sensitive_amount": [ -1 ],
+        "sensitive_chance": [ 300 ],
+        "sensitive_min_val": [ 70 ],
+        "str_mod": [ 0.5 ]
     },
     "scaling_mods": {
-        "str_mod": [-0.67],
-        "per_mod": [-1],
-        "dex_mod": [-1],
-        "int_mod": [-1.42],
-        "vomit_chance": [21],
-        "sleep_chance": [501]
-    }
+        "speed_mod": [ -2 ],
+        "str_mod": [ 0.5 ],
+        "per_mod": [ -0.5 ],
+        "dex_mod": [ -0.5 ],
+        "int_mod": [ -0.75 ],
+        "vomit_chance": [ 17 ],
+        "vomit_tick": [ -30 ],
+        "sleep_chance": [ 501 ],
+        "sensitive_amount": [ -1 ],
+        "pkill_max_val": [ 5 ],
+        "pkill_tick": [ -5 ],
+        "thirst_tick": [ -100 ]
+    },
+    "limb_score_mods": [
+        { "limb_score": "manip", "modifier": 0.9, "scaling": -0.1 },
+        { "limb_score": "block", "modifier": 1.0, "scaling": -0.05 },
+        { "limb_score": "vision", "modifier": 1.0, "scaling": -0.05 },
+        { "limb_score": "reaction", "modifier": 0.9, "scaling": -0.2 },
+        { "limb_score": "move_speed", "modifier": 1.0, "scaling": -0.02 },
+        { "limb_score": "balance", "modifier": 0.9, "scaling": -0.2 },
+        { "limb_score": "footing", "modifier": 1.0, "scaling": -0.15 },
+        { "limb_score": "swim", "modifier": 1.0, "scaling": -0.2 }
+    ],
+    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
+    // (the five per-tier desc strings are omitted here)
 ```
 First when "drunk" is applied to the player if they aren't already drunk it prints the message,
 "You feel lightheaded". It also adds the "You feel woozy" miss message for as long as it is applied.
-It has "int_dur_factor": 1000, meaning that its intensity will always be equal to its duration / 1000 rounded up, and
-it has "max_intensity": 4 meaning the highest its intensity will go is 4 at a duration of 3000 or higher.
-As it moves up through the different intensities, its name will change. Its description will simply display the stat
-changes, with no additional description added.
+
+Its intensity is not duration-driven.  The `ethanol` vitamin that drinks deliver gets metabolized
+into the `BAC` vitamin, and the excess tiers of `BAC` map straight onto the drunk intensity:
+`BAC` 1 to 1000 is intensity 1, 1001 to 2000 is intensity 2, and so on up to intensity 5 at 4001
+or higher.  At intensity 5 each effect tick rolls a 1 in 25000 "chance_kill"; on a hit the
+character dies with the "death_msg" line.
+
+As it moves up through the different intensities, its name will change. Its description will
+display the stat changes plus a per-tier description line.
 
 As it moves up through the intensity levels its effects will be:
 ```
 Intensity 1
-    +1 STR
-    No other effects (since both "X_chance"s are negative)
+    0.5 =                    0 STR (rounds towards zero)
+    No penalties, no vomiting (negative "vomit_chance"), no passing out
 Intensity 2
-    1 - .67 = .33 =         0 STR (Round towards zero)
-    0 - 1 =                 -1 PER
-    0 - 1 =                 -1 DEX
-    0 -1.42 =               -1 INT
-    -43 + 21 =              still negative, so no vomiting
-    -1003 + 501 =           still negative, so no passing out
+    0.5 + 1 * 0.5 = 1.0 =    +1 STR
+    0 - 1 * 0.5 = -0.5 =     0 PER (rounds towards zero)
+    0 - 1 * 0.5 = -0.5 =     0 DEX (rounds towards zero)
+    0 - 1 * 0.75 = -0.75 =   0 INT (rounds towards zero)
+    -2 * 1 =                 -2 speed
+    -20 + 17 = -3            still negative, so no vomiting
+    -1003 + 501 = -502       still negative, so no passing out
 Intensity 3
-    1 - 2 * .67 = -.34 =    0 STR (round towards zero)
-    0 - 2 * 1 =             -2 PER
-    0 - 2 * 1 =             -2 DEX
-    0 - 2 * 1.43 =          -2 INT
-    -43 + 2 * 21 = -1       still negative, no vomiting
-    -1003 + 2 * 501 = -1    still negative, no passing out
-Intensity 4
-    1 - 3 * .67 = - 1.01 =  -1 STR
-    0 - 3 * 1 =             -3 PER
-    0 - 3 * 1 =             -3 DEX
-    0 - 3 * 1.43 =          -4 INT
-    -43 + 3 * 21 = 20       "vomit_chance_bot" doesn't exist, so a 1 in 20 chance of vomiting. "vomit_tick" doesn't exist, so it rolls every turn.
-    -1003 + 3 * 501 = 500   "sleep_chance_bot" doesn't exist, so a 1 in 500 chance of passing out for rng(2500, 3500) turns. "sleep_tick" doesn't exist, so it rolls every turn.
+    0.5 + 2 * 0.5 = 1.5 =    +1 STR
+    -1 PER, -1 DEX
+    0 - 2 * 0.75 = -1.5 =    -1 INT
+    -4 speed
+    -20 + 2 * 17 = 14        a 14 in 1000 chance of vomiting, rolled every 180 - 2 * 30 = 120 turns
+    -1003 + 2 * 501 = -1     still negative, so no passing out
+Intensity 5
+    0.5 + 4 * 0.5 = 2.5 =    +2 STR
+    -2 PER, -2 DEX
+    0 - 4 * 0.75 = -3 =      -3 INT
+    -8 speed
+    -20 + 4 * 17 = 48        a 48 in 1000 chance of vomiting, rolled every 60 turns
+    -1003 + 4 * 501 = 1001   passes out for rng(15000, 21000) turns, rolled every 45 turns
 ```
+On top of the stat changes, "limb_score_mods" degrade manipulation, balance, reaction, vision,
+footing and so on as the intensity rises; the "EFFECT_LIMB_SCORE_MOD" flag switches that block
+on.  "sensitive_amount" lowers nerve sensitivity by 1 per intensity, with the clamp floor
+sliding down 5 per intensity (70 at intensity 1, 50 at intensity 5), and "pkill" drips
+painkiller up to a value of 1 + 4 * 5 = 21 at intensity 5.  Thirst also
+climbs faster as the intensity rises ("thirst_tick" 1000 down to 600).
 
 ### Blood analysis description
 ```jsonc

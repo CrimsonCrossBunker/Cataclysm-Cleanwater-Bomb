@@ -55,7 +55,6 @@
     "comestible_type": "DRINK",
     "symbol": "~",
     "calories": 163,
-    "stim": 6,
     "quench": 26,
     "healthy": -2,
     "addiction_potential": 6,

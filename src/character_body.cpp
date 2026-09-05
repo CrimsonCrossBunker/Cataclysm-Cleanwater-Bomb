@@ -64,6 +64,7 @@ static const efftype_id effect_betablock( "betablock" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_blisters( "blisters" );
+static const efftype_id effect_caffeine_eff( "caffeine_eff" );
 static const efftype_id effect_cig( "cig" );
 static const efftype_id effect_cold( "cold" );
 static const efftype_id effect_common_cold( "common_cold" );
@@ -1475,6 +1476,17 @@ void Character::update_heartrate_index()
             hr_nicotine_mod = 0.1f;
         }
     }
+    float hr_caffeine_mod = 0.0f;
+    if( has_effect( effect_caffeine_eff ) ) {
+        //Caffeine overdose causes palpitations; severe caffeine toxicity causes tachycardia and arrhythmia.
+        const int caff_int = get_effect( effect_caffeine_eff ).get_intensity();
+        if( caff_int >= 3 ) {
+            hr_caffeine_mod = 0.1f;
+        }
+        if( caff_int >= 4 ) {
+            hr_caffeine_mod = 0.3f;
+        }
+    }
     // ********************
     // diff ratio goes from 3.0 to 1.0. This should correspond to a natural decrease of around 20% bpm at max fitness.
     // however this ratio should also increase cardiac output, as the heart is more efficient. So lower bpm, same CO.
@@ -1551,7 +1563,7 @@ void Character::update_heartrate_index()
     const float hr_effect_mod = effect_mod * HR_EFFECT_INT_TO_FLOAT_MULT;
 
     heart_rate_index = 1.0f + hr_temp_mod + hr_activity_mods + hr_stim_mod + hr_nicotine_mod
-                       + hr_bp_loss_mod + hr_effect_mod;
+                       + hr_caffeine_mod + hr_bp_loss_mod + hr_effect_mod;
 }
 
 float Character::get_bloodvol_index() const

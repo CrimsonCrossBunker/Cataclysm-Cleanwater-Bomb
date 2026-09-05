@@ -351,8 +351,6 @@
     "weight": "110 g",
     "color": "brown",
     "addiction_type": "caffeine",
-    "sleepiness_mod": 24,
-    "stim": 8,
     "container": "bottle_plastic",
     "sealed": false,
     "comestible_type": "DRINK",
@@ -370,8 +368,8 @@
     "phase": "liquid",
     "charges": 3,
     "flags": [ "NO_AUTO_CONSUME" ],
-    "fun": 6,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "caffeine", 50 ], [ "junk_allergen", 1 ] ],
+    "fun": 6
   },
   {
     "id": "coconut_water",

@@ -98,6 +98,40 @@
     "disease_excess": [ [ 500, 1500 ], [ 1501, 5000 ], [ 5001, 18000 ], [ 18001, 30000 ], [ 30001, 39998 ], [ 39999, 40000 ] ]
   },
   {
+    "id": "caffeine",
+    "type": "vitamin",
+    "vit_type": "drug",
+    "name": { "str": "Caffeine" },
+    "//": "1 unit is 1 mg of caffeine.  Dose tiers follow FDA (https://www.fda.gov/consumers/consumer-updates/spilling-beans-how-much-caffeine-too-much) and FSANZ P1056 (https://www.foodstandards.gov.au/sites/default/files/2025-03/P1056%20SD1%202nd%20CFS%20Safety%20Assessment.pdf): single doses up to ~210 mg (3 mg/kg) generally cause no adverse effects; 400 mg/day is the FDA adult daily line; rapid intake of ~1,200 mg or more can cause seizures and arrhythmia.",
+    "weight_per_unit": "1 mg",
+    "excess": "caffeine_eff",
+    "min": 0,
+    "max": 1600,
+    "rate": "25 s",
+    "disease_excess": [ [ 25, 200 ], [ 201, 400 ], [ 401, 1000 ], [ 1001, 1600 ] ]
+  },
+  {
+    "id": "nicotine_slow",
+    "type": "vitamin",
+    "vit_type": "drug",
+    "name": { "str": "Slow-release Nicotine" },
+    "min": 0,
+    "max": 48,
+    "rate": "40 m",
+    "decays_into": [ [ "nicotine", 1 ] ]
+  },
+  {
+    "id": "nicotine",
+    "type": "vitamin",
+    "vit_type": "drug",
+    "name": { "str": "Nicotine" },
+    "excess": "cig",
+    "min": 0,
+    "max": 10,
+    "rate": "5 m",
+    "disease_excess": [ [ 1, 6 ], [ 7, 10 ] ]
+  },
+  {
     "id": "mutant_toxin",
     "type": "vitamin",
     "vit_type": "toxin",

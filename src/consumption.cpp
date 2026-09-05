@@ -109,9 +109,6 @@ static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_tapeworm( "tapeworm" );
 static const efftype_id effect_visuals( "visuals" );
 
-static const flag_id json_flag_ALCOHOL( "ALCOHOL" );
-static const flag_id json_flag_ALCOHOL_STRONG( "ALCOHOL_STRONG" );
-static const flag_id json_flag_ALCOHOL_WEAK( "ALCOHOL_WEAK" );
 static const flag_id json_flag_ALLERGEN_CHEESE( "ALLERGEN_CHEESE" );
 static const flag_id json_flag_ALLERGEN_EGG( "ALLERGEN_EGG" );
 static const flag_id json_flag_ALLERGEN_MEAT( "ALLERGEN_MEAT" );
@@ -226,6 +223,8 @@ static const vitamin_id vitamin_milk_allergen( "milk_allergen" );
 static const vitamin_id vitamin_nut_allergen( "nut_allergen" );
 static const vitamin_id vitamin_veggy_allergen( "veggy_allergen" );
 static const vitamin_id vitamin_wheat_allergen( "wheat_allergen" );
+static const vitamin_id vitamin_ethanol( "ethanol" );
+static const vitamin_id vitamin_bac( "BAC" );
 
 // note: cannot use constants from flag.h (e.g. flag_ALLERGEN_VEGGY) here, as they
 // might be uninitialized at the time these const arrays are created
@@ -656,6 +655,15 @@ time_duration Character::vitamin_rate( const vitamin_id &vit ) const
             } else {
                 res = iter->second;
             }
+        }
+    }
+
+    // Stronger characters metabolize blood alcohol faster, mirroring the
+    // strength-based shortening of the legacy drunk duration.
+    if( vit == vitamin_bac ) {
+        const float strength_factor = 1.0f + ( get_str_base() - 8 ) * 0.07f;
+        if( strength_factor > 0.0f && res > 0_turns ) {
+            res = time_duration::from_turns( to_turns<int>( res ) / strength_factor );
         }
     }
 
@@ -1128,35 +1136,6 @@ ret_val<edible_rating> Character::will_eat( const item &food, bool interactive )
     return ret_val<edible_rating>::make_success();
 }
 
-static constexpr time_duration alc_strength( const int strength, const time_duration &weak,
-        const time_duration &medium, const time_duration &strong )
-{
-    return strength == 0 ? weak : strength == 1 ? medium : strong;
-}
-
-static int apply_alcohol_effects( Character &p, const item &it, const int strength )
-{
-    // Weaker characters are cheap drunks
-    /** @EFFECT_STR_MAX reduces drunkenness duration */
-    time_duration duration = alc_strength( strength, 22_minutes, 34_minutes,
-                                           45_minutes ) - ( alc_strength( strength, 36_seconds, 1_minutes, 72_seconds ) * p.get_str_base() );
-    if( p.has_trait( trait_ALCMET ) ) {
-        duration = alc_strength( strength, 6_minutes, 14_minutes, 18_minutes ) - ( alc_strength( strength,
-                   36_seconds, 1_minutes, 1_minutes ) * p.get_str_base() );
-        // Metabolizing the booze improves the nutritional value;
-        // might not be healthy, and still causes Thirst problems, though
-        p.stomach.mod_nutr( -std::abs( it.get_comestible() ? it.type->comestible->stim : 0 ) );
-        // Metabolizing it cancels out the depressant
-        p.mod_stim( std::abs( it.get_comestible() ? it.get_comestible()->stim : 0 ) );
-    } else if( p.has_trait( trait_TOLERANCE ) ) {
-        duration -= alc_strength( strength, 9_minutes, 16_minutes, 24_minutes );
-    } else if( p.has_trait( trait_LIGHTWEIGHT ) ) {
-        duration += alc_strength( strength, 9_minutes, 16_minutes, 24_minutes );
-    }
-    p.add_effect( effect_drunk, duration );
-    return 1;
-}
-
 /** Eat a comestible.
 *   @return true if item consumed.
 */
@@ -1173,14 +1152,6 @@ static bool eat( item &food, Character &you, bool force )
 
     // Note: the block below assumes we decided to eat it
     // No coming back from here
-
-    if( food.has_flag( json_flag_ALCOHOL_WEAK ) ) {
-        apply_alcohol_effects( you, food, 0 );
-    } else if( food.has_flag( json_flag_ALCOHOL ) ) {
-        apply_alcohol_effects( you, food, 1 );
-    } else if( food.has_flag( json_flag_ALCOHOL_STRONG ) ) {
-        apply_alcohol_effects( you, food, 2 );
-    }
 
     if( food.is_container() ) {
         food.spill_contents( you );
@@ -1837,6 +1808,17 @@ bool Character::consume_effects( item &food )
     }
     // to do: reduce nutrition by a factor of the amount of muscle to be rebuilt?
     activate_consume_eocs( *this, food );
+
+    if( has_trait( trait_ALCMET ) ) {
+        // Metabolizing the booze improves the nutritional value; might not be
+        // healthy, and still causes thirst problems, though.  Legacy path used
+        // the drink's depressant strength; ~8.7 kcal per ml of ethanol matches
+        // the old gain for a typical drink.
+        const int ethanol_units = food_nutrients.get_vitamin( vitamin_ethanol );
+        if( ethanol_units > 0 ) {
+            stomach.mod_nutr( -ethanol_units );
+        }
+    }
 
     // GET IN MAH BELLY!
     stomach.ingest( ingested );

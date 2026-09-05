@@ -1616,7 +1616,8 @@
     "cancels": [ "LIGHTWEIGHT" ],
     "points": 1,
     "starting_trait": true,
-    "vitamin_cost": 60
+    "vitamin_cost": 60,
+    "vitamin_rates": [ [ "BAC", 30 ] ]
   },
   {
     "type": "mutation",
@@ -1627,7 +1628,8 @@
     "cancels": [ "TOLERANCE" ],
     "points": -1,
     "starting_trait": true,
-    "vitamin_cost": 60
+    "vitamin_cost": 60,
+    "vitamin_rates": [ [ "BAC", -40 ] ]
   },
   {
     "type": "mutation",
@@ -6749,7 +6751,8 @@
     "prereqs": [ "TOLERANCE" ],
     "prereqs2": [ "SAPROVORE" ],
     "points": 2,
-    "vitamin_cost": 160
+    "vitamin_cost": 160,
+    "vitamin_rates": [ [ "BAC", 20 ] ]
   },
   {
     "type": "mutation",

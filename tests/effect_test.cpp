@@ -125,17 +125,10 @@ TEST_CASE( "effect_duration", "[effect][duration]" )
         CHECK( eff_debugged.get_duration() == 1_hours );
     }
 
-    // Example Effect (from EFFECTS_JSON.md):
-    //
-    // "id": "drunk",
-    // "name": [ "Tipsy", "Drunk", "Trashed", "Wasted" ],
-    // "max_intensity": 3,
-    // "apply_message": "You feel lightheaded.",
-    // "int_dur_factor": 1000,
-    //
-    // It has "int_dur_factor": 1000, meaning that its intensity will always be equal to its duration /
-    // 1000 rounded up, and it has "max_intensity": 3 meaning the highest its intensity will go is 3 at
-    // a duration of 3000 or higher.
+    // Effects with "int_dur_factor" derive their intensity from duration (see
+    // EFFECTS_JSON.md).  "effect_intensified" here is such an effect, with one
+    // intensity step per minute.  The drunk effect itself is now BAC-vitamin
+    // driven and no longer uses "int_dur_factor".
     SECTION( "set_duration modifies intensity if effect is duration-based" ) {
         effect eff_intense( effect_source::empty(), &effect_intensified.obj(), 1_turns,
                             bodypart_str_id::NULL_ID(),
