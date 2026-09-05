@@ -1196,20 +1196,16 @@ bool RenderReadPixels( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect,
         return false;
     }
 #if SDL_MAJOR_VERSION >= 3
-    ( void )format;
     SDL_Surface *surf = SDL_RenderReadPixels( renderer.get(), rect );
     if( !surf ) {
         return false;
     }
-    const int copy_h = surf->h;
-    const int copy_pitch = std::min( pitch, surf->pitch );
-    for( int row = 0; row < copy_h; row++ ) {
-        std::memcpy( static_cast<Uint8 *>( pixels ) + row * pitch,
-                     static_cast<const Uint8 *>( surf->pixels ) + row * surf->pitch,
-                     copy_pitch );
-    }
+    // SDL3 chooses the surface format. Honor the caller's requested format
+    // and pitch instead of copying bytes from a potentially different layout.
+    const bool converted = SDL_ConvertPixels( surf->w, surf->h, surf->format,
+                           surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
     SDL_DestroySurface( surf );
-    return true;
+    return converted;
 #else
     return SDL_RenderReadPixels( renderer.get(), rect, format, pixels, pitch ) == 0;
 #endif

@@ -600,6 +600,7 @@ using color_block_overlay_container = std::pair<SDL_BlendMode, std::multimap<poi
 class cata_tiles
 {
         friend class cata_tiles_test_helper;
+        friend struct renderer_recovery_test_support;
 
     public:
         cata_tiles( const SDL_Renderer_Ptr &render, const GeometryRenderer_Ptr &geometry,
@@ -1487,6 +1488,7 @@ class cata_tiles
         // Drop the pixel minimap's renderer-owned resources and cache so
         // they rebuild against the live renderer on the next draw.
         void reset_minimap();
+        void reset_character_preview();
 
         // Drop the scratch silhouette mask target so the next tinted ortho
         // draw reallocates it against the live renderer.
