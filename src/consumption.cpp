@@ -221,6 +221,7 @@ static const vitamin_id vitamin_milk_allergen( "milk_allergen" );
 static const vitamin_id vitamin_nut_allergen( "nut_allergen" );
 static const vitamin_id vitamin_veggy_allergen( "veggy_allergen" );
 static const vitamin_id vitamin_wheat_allergen( "wheat_allergen" );
+static const vitamin_id vitamin_bac( "BAC" );
 
 // note: cannot use constants from flag.h (e.g. flag_ALLERGEN_VEGGY) here, as they
 // might be uninitialized at the time these const arrays are created
@@ -651,6 +652,15 @@ time_duration Character::vitamin_rate( const vitamin_id &vit ) const
             } else {
                 res = iter->second;
             }
+        }
+    }
+
+    // Stronger characters metabolize blood alcohol faster, mirroring the
+    // strength-based shortening of the legacy drunk duration.
+    if( vit == vitamin_bac ) {
+        const float strength_factor = 1.0f + ( get_str_base() - 8 ) * 0.07f;
+        if( strength_factor > 0.0f && res > 0_turns ) {
+            res = time_duration::from_turns( to_turns<int>( res ) / strength_factor );
         }
     }
 
