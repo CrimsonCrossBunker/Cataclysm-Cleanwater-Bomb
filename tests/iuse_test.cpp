@@ -70,6 +70,8 @@ static const itype_id itype_towel( "towel" );
 static const itype_id itype_towel_wet( "towel_wet" );
 static const itype_id itype_xanax( "xanax" );
 
+static const vitamin_id vitamin_caffeine( "caffeine" );
+
 static const morale_type morale_wet( "morale_wet" );
 
 TEST_CASE( "eyedrops", "[iuse][eyedrops]" )
@@ -404,7 +406,7 @@ TEST_CASE( "oxygen_tank", "[iuse][oxygen_bottle]" )
     }
 }
 
-// test the `iuse::caff` and `iuse::atomic_caff` functions
+// test caffeine delivery through the caffeine vitamin
 TEST_CASE( "caffeine_and_atomic_caffeine", "[iuse][caff][atomic_caff]" )
 {
     avatar dummy;
@@ -420,19 +422,22 @@ TEST_CASE( "caffeine_and_atomic_caffeine", "[iuse][caff][atomic_caff]" )
     REQUIRE( dummy.get_stim() == 0 );
     REQUIRE( dummy.get_rad() == 0 );
 
-    SECTION( "coffee reduces sleepiness, but does not give stimulant effect" ) {
+    SECTION( "coffee delivers caffeine to the stomach without an instant effect" ) {
         item coffee( itype_coffee, calendar::turn_zero, item::default_charges_tag{} );
         dummy.consume( coffee );
-        CHECK( dummy.get_sleepiness() == sleepiness_before - coffee.get_comestible()->sleepiness_mod );
-        CHECK( dummy.get_stim() == coffee.get_comestible()->stim );
+        CHECK( dummy.stomach.get_vitamin( vitamin_caffeine ) == 90 );
+        CHECK( dummy.get_stim() == 0 );
+        // Drug vitamins absorb on the first stomach step, so any sleepiness
+        // relief comes later through the caffeine_eff effect, not right away.
+        CHECK( dummy.get_sleepiness() == sleepiness_before );
     }
 
-    SECTION( "atomic caffeine greatly reduces sleepiness, and increases stimulant effect" ) {
+    SECTION( "atomic coffee delivers a larger dose" ) {
         item atomic_coffee( itype_atomic_coffee, calendar::turn_zero, item::default_charges_tag{} );
         dummy.consume( atomic_coffee );
-        CHECK( dummy.get_sleepiness() == sleepiness_before -
-               atomic_coffee.get_comestible()->sleepiness_mod );
-        CHECK( dummy.get_stim() == atomic_coffee.get_comestible()->stim );
+        CHECK( dummy.stomach.get_vitamin( vitamin_caffeine ) == 200 );
+        CHECK( dummy.get_stim() == 0 );
+        CHECK( dummy.get_sleepiness() == sleepiness_before );
     }
 }
 
