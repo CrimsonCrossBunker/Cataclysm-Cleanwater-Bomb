@@ -15,7 +15,7 @@
 There are a large number of files in `json/items/comestibles`, and this guide will help you decide where to put your new comestible!
 
 ## List of special comestibles:
-`med.json` -- comestible that has an addiction effect besides alcohol and caffeine, plus bandages and antiseptic type items.
+`med.json` -- comestibles with an addiction effect, such as drugstore medicines, tobacco products and caffeine items, plus bandages and antiseptic type items.
 
 `mre.json` -- items and comestibles related to MREs
 
