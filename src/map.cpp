@@ -1954,6 +1954,10 @@ void map::board_vehicle( const tripoint_bub_ms &pos, Character *p )
     }
     if( vp->part().has_flag( vp_flag::passenger_flag ) ) {
         Character *psg = vp->vehicle().get_passenger( vp->part_index() );
+        if( psg == p && p->pos_abs() == get_abs( pos ) ) {
+            p->in_vehicle = true;
+            return;
+        }
         debugmsg( "map::board_vehicle: %s failed to board passenger (%s) is already there",
                   p ? p->get_name() : "<null_boarder>",
                   psg ? psg->get_name() : "<null_passenger>" );
@@ -1963,8 +1967,8 @@ void map::board_vehicle( const tripoint_bub_ms &pos, Character *p )
     vp->part().passenger_id = p->getID();
     vp->vehicle().invalidate_mass();
 
-    p->setpos( *this, pos );
     p->in_vehicle = true;
+    p->setpos( *this, pos );
     if( p->is_avatar() ) {
         g->update_map( *p->as_avatar() );
     }
@@ -7452,10 +7456,19 @@ void map::process_items_in_submap( submap &current_submap, const tripoint_rel_sm
 std::vector<item_reference> map::item_network_connections( vehicle *power_grid )
 {
     std::vector<item_reference> result;
+    update_submaps_with_active_items();
     for( const auto &iter : submaps_with_active_items ) {
         tripoint_abs_sm const abs_pos = iter;
+        // Shifting the bubble leaves old entries until process_items prunes
+        // them. Appliance merging can run before that next processing pass.
+        if( !inbounds( project_to<coords::ms>( abs_pos ) ) ) {
+            continue;
+        }
         const tripoint_rel_sm local_pos = abs_pos - abs_sub.xy();
         submap *const current_submap = get_submap_at_grid( local_pos );
+        if( current_submap == nullptr ) {
+            continue;
+        }
         std::vector<item_reference> active_items = current_submap->active_items.get_for_processing();
         for( item_reference &active_item_ref : active_items ) {
             if( !active_item_ref.item_ref ) {
@@ -12339,6 +12352,12 @@ void map::maybe_trigger_prox_trap( const tripoint_bub_ms &pos, Creature &c,
 bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
 {
     if( c == nullptr ) {
+        return false;
+    }
+    // A character moving between seats is temporarily unboarded. Vehicle
+    // support still prevents falling, including the zero-height case which
+    // would otherwise push a monster below aside and drop through the deck.
+    if( has_vehicle_floor( p ) ) {
         return false;
     }
 
