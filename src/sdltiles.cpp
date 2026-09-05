@@ -1991,6 +1991,7 @@ static void reset_context_minimaps()
 {
     for_each_unique_tile_context( []( cata_tiles & c ) {
         c.reset_minimap();
+        c.reset_character_preview();
     } );
 }
 
@@ -2781,6 +2782,29 @@ bool renderer_recovery_test_support::setup_software_renderer()
     renderer_coordinator.seed_renderer_policy( {} );
     renderer_coordinator.finish_bootstrap();
     return true;
+}
+
+bool renderer_recovery_test_support::install_character_preview_targets()
+{
+    if( tilecontext ) {
+        return false;
+    }
+    tilecontext = std::make_unique<cata_tiles>( renderer, geometry, ts_cache );
+    tilecontext->char_preview_work_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                         SDL_TEXTUREACCESS_TARGET, 8, 8 );
+    tilecontext->char_preview_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                    SDL_TEXTUREACCESS_TARGET, 4, 4 );
+    return tilecontext->char_preview_work_tex && tilecontext->char_preview_tex;
+}
+
+bool renderer_recovery_test_support::has_character_preview_targets()
+{
+    return tilecontext && ( tilecontext->char_preview_work_tex || tilecontext->char_preview_tex );
+}
+
+void renderer_recovery_test_support::remove_character_preview_context()
+{
+    tilecontext.reset();
 }
 
 void renderer_recovery_test_support::teardown_software_renderer()

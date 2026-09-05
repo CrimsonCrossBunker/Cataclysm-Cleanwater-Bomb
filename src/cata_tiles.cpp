@@ -2027,6 +2027,16 @@ void cata_tiles::reset_minimap()
     minimap->reset();
 }
 
+void cata_tiles::reset_character_preview()
+{
+    char_preview_work_tex.reset();
+    char_preview_tex.reset();
+    char_preview_work_w = 0;
+    char_preview_work_h = 0;
+    char_preview_w = 0;
+    char_preview_h = 0;
+}
+
 void cata_tiles::reset_tint_mask()
 {
     tint_mask_tex.reset();

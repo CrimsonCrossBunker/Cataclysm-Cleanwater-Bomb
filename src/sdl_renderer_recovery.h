@@ -400,6 +400,9 @@ struct renderer_recovery_test_support {
     // and geometry on the file-static globals, then seed and bootstrap the
     // coordinator. False (globals clean) if the dummy backend fails or a window is up.
     static bool setup_software_renderer();
+    static bool install_character_preview_targets();
+    static bool has_character_preview_targets();
+    static void remove_character_preview_context();
     // Reverse setup: drain the quarantine and release atlases on the live
     // renderer, destroy variant_pass before the renderer, reset globals and the
     // coordinator, and quit video only if this fixture acquired it.
