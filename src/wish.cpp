@@ -1456,7 +1456,6 @@ void debug_menu::wishproficiency( Character *you )
 
     uilist prmenu;
     prmenu.text = _( "Select proficiency to toggle" );
-    prmenu.allow_anykey = true;
     prmenu.addentry( 0, true, '1', _( "Toggle all proficiencies" ) );
 
     const std::vector<proficiency_id> &known_profs = you->known_proficiencies();
@@ -1496,6 +1495,8 @@ void debug_menu::wishproficiency( Character *you )
         }
     }
 
+    // Keep the same ImGui window (and its scroll position) across toggles.
+    shared_ptr_fast<uilist_impl> prmenu_ui = prmenu.create_or_get_ui();
     do {
         prmenu.query();
         const int prsel = prmenu.ret;
