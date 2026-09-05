@@ -7340,6 +7340,11 @@ static void CheckMessages()
         // report_unvisited() -> DebugLog() after the debug subsystem is gone,
         // crashing. Disable the report globally before exiting.
         Json::globally_report_unvisited_members( false );
+        input_replay::finish();
+        // Match normal exit: destroy the game while its Lua session registries
+        // and renderer dependencies are still alive. Leaving g to static
+        // destruction makes game::~game() revisit already-destroyed registries.
+        g.reset();
         catacurses::endwin();
         exit( 0 );
     }
