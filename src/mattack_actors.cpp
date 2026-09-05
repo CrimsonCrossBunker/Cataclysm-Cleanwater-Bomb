@@ -673,32 +673,19 @@ int melee_actor::do_grab( monster &z, Creature *target, bodypart_id bp_id ) cons
         while( pull_range > 0 ) {
             // Recalculate the ray each step
             // We can't depend on either the target position being constant (obviously),
-            // but neither on z pos staying constant, because we may want to shift the map mid-pull
+            // nor on the attacker's position staying constant.
             const units::angle dir = coord_to_angle( target_pos, monster_pos );
             tileray tdir( dir );
             tdir.advance();
             pt.x() = target_pos.x() + tdir.dx();
             pt.y() = target_pos.y() + tdir.dy();
             //Cancel the grab if the space is occupied by something
-            if( !g->is_empty( pt ) ) {
+            if( !here.inbounds( pt ) || !g->is_empty( pt ) ) {
                 break;
             }
 
-            if( foe != nullptr ) {
-                if( foe->in_vehicle ) {
-                    here.unboard_vehicle( target_pos );
-                }
-
-                if( foe->is_avatar() && ( pt.x() < HALF_MAPSIZE_X || pt.y() < HALF_MAPSIZE_Y ||
-                                          pt.x() >= HALF_MAPSIZE_X + SEEX || pt.y() >= HALF_MAPSIZE_Y + SEEY ) ) {
-                    const tripoint_abs_ms pt_abs = here.get_abs(
-                                                       pt ); // Could have used the result from update_map to shift the value instead.
-                    g->update_map( pt.x(), pt.y() );
-                    // update_map invalidates bubble positions on a shift. Refetch invalidated positions.
-                    pt = here.get_bub( pt_abs );
-                    monster_pos = z.pos_bub( here );
-                    target_pos = target->pos_bub( here );
-                }
+            if( foe != nullptr && foe->in_vehicle ) {
+                here.unboard_vehicle( target_pos );
             }
 
             // Don't try to fall mid pull
@@ -721,6 +708,13 @@ int melee_actor::do_grab( monster &z, Creature *target, bodypart_id bp_id ) cons
         // The monster might drag a target that's not on it's z level
         // So if they leave them on open air, make them fall
         target->gravity_check();
+        // update_map sets the avatar's position and checks gravity. Doing that
+        // mid-pull can cause a fall, then restore the old height while the map
+        // remains on the landing level. Finish the pull and fall first.
+        if( target->is_avatar() ) {
+            g->update_map( *foe );
+        }
+        monster_pos = z.pos_bub( here );
         target_pos = target->pos_bub( here );
         here.creature_on_trap( *target );
 
