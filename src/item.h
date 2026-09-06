@@ -1232,6 +1232,9 @@ class item : public visitable
         /** Get @ref rot value relative to shelf life (or 0 if item does not spoil) */
         double get_relative_rot() const;
 
+        /** Highest relative rot among spoiling comestible components (0 if there is none) */
+        double max_components_relative_rot() const;
+
         /** Set current item @ref rot relative to shelf life (no-op if item does not spoil) */
         void set_relative_rot( double val );
 
