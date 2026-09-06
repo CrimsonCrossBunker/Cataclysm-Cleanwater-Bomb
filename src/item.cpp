@@ -342,7 +342,8 @@ item::item( const recipe *rec, int qty, item_components items, std::vector<item_
     components = std::move( items );
     craft_data_->comps_used = std::move( selections );
 
-    if( has_temperature() ) {
+    const bool fresh_rot = rec && rec->get_rot_inherit() == rot_inherit_mode::FRESH;
+    if( has_temperature() && !fresh_rot ) {
         active = true;
         last_temp_check = bday;
         if( goes_bad() ) {
