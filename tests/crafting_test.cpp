@@ -3056,6 +3056,46 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
             CHECK( craft.get_relative_rot() == Approx( 1.0 - 1.2_hours / 6_hours ) );
         }
     }
+
+    GIVEN( "preserve blend mode with a near fully rotten component among barely bad ones" ) {
+        item_components comps;
+        for( int i = 0; i < 20; ++i ) {
+            item comp( itype_test_rot_b, calendar::turn, 1 );
+            comp.set_relative_rot( 0.91 );
+            comps.add( comp );
+        }
+        item comp_rotten( itype_test_rot_a, calendar::turn, 1 );
+        comp_rotten.set_relative_rot( 2.0 );
+        comps.add( comp_rotten );
+        item craft( &*recipe_test_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
+
+        THEN( "the bad-mass-fraction floor overtakes the weighted blend" ) {
+            // 20 x 500 g at 0.91 plus 250 g at 2.0: the weighted blend is 0.9366,
+            // the floor is 5 x 2.0 x ( 10250 g / 102500 g ) = 1.0.
+            CHECK( craft.get_relative_rot() == approx_rot( 1.0 ) );
+        }
+    }
+
+    GIVEN( "preserve blend mode with going-bad components half near fully rotten" ) {
+        item_components comps;
+        for( int i = 0; i < 10; ++i ) {
+            item comp( itype_test_rot_b, calendar::turn, 1 );
+            comp.set_relative_rot( 0.91 );
+            comps.add( comp );
+        }
+        for( int i = 0; i < 10; ++i ) {
+            item comp( itype_test_rot_a, calendar::turn, 1 );
+            comp.set_relative_rot( 2.0 );
+            comps.add( comp );
+        }
+        item craft( &*recipe_test_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
+
+        THEN( "the floor stays below the weighted blend once the batch is mostly rotten" ) {
+            const double expected = ( 10 * 0.91 * mg_per_b + 10 * 2.0 * mg_per_a ) /
+                                    ( seed_mult * ( 10 * mg_per_b + 10 * mg_per_a ) );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+        }
+    }
 }
 
 // Cooking rescues marginally old components: heated results get a rot reduction while
