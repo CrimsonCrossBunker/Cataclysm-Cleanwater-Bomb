@@ -16,7 +16,13 @@
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 
-    <style name="AlertDialogTheme" parent="@android:style/Theme.Material.Dialog.Alert" >
-        <item name="android:colorAccent">#F2F2F2</item>
+    <style name="AlertDialogTheme" parent="@android:style/Theme.Material.Light.Dialog.Alert" >
+        <item name="android:colorBackground">#F2F2F2</item>
+        <item name="android:colorBackgroundFloating">#F2F2F2</item>
+        <item name="android:textColorPrimary">#202020</item>
+        <item name="android:textColorSecondary">#505050</item>
+        <item name="android:textColorHint">#606060</item>
+        <item name="android:colorAccent">#1565C0</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
