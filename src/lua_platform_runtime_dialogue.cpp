@@ -3,7 +3,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -14,18 +17,32 @@
 #include <utility>
 #include <vector>
 
+#include "cata_scope_helpers.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "item_category.h"
 #include "itype.h"
+#include "lua_platform_canvas.h"
 #include "lua_platform_dialogue.h"
+#include "music.h"
 #include "npc_opinion.h"
 #include "output.h"
+#include "sdlsound.h"
+#include "sounds.h"
 #include "string_input_popup.h"
 #include "talker.h"
 #include "type_id.h"
 #include "uilist.h"
+
+#if defined(TILES)
+#include "cata_imgui.h"
+#include "cata_tiles.h"
+#include "imgui/imgui.h"
+#include "input_context.h"
+#include "sdltiles.h"
+#include "ui_manager.h"
+#endif
 
 namespace cata::lua_platform
 {
@@ -34,6 +51,188 @@ talk_topic invoke_platform_dialogue_response_callback(
     std::weak_ptr<runtime> weak_owner, std::string topic_id,
     sol::protected_function callback, ::dialogue &d, const talk_topic &fallback,
     bool trial_success );
+
+platform_canvas_context::platform_canvas_context( const int width, const int height,
+        const std::int64_t elapsed_ms, const std::int64_t delta_ms,
+        const float origin_x, const float origin_y, const float scale ) :
+    width_( width ), height_( height ), elapsed_ms_( elapsed_ms ), delta_ms_( delta_ms ),
+    origin_x_( origin_x ), origin_y_( origin_y ), scale_( scale )
+{
+    if( width < 1 || width > 2048 || height < 1 || height > 2048 ||
+        elapsed_ms < 0 || delta_ms < 0 || delta_ms > 250 ||
+        !std::isfinite( origin_x ) || !std::isfinite( origin_y ) ||
+        !std::isfinite( scale ) || scale <= 0 || scale > 1 ) {
+        throw std::invalid_argument( "invalid Platform canvas frame" );
+    }
+}
+
+void platform_canvas_context::require_active() const
+{
+    if( !active_ ) {
+        throw std::runtime_error( "stale Platform canvas frame" );
+    }
+}
+
+void platform_canvas_context::invalidate()
+{
+    active_ = false;
+}
+
+int platform_canvas_context::width() const
+{
+    require_active();
+    return width_;
+}
+
+int platform_canvas_context::height() const
+{
+    require_active();
+    return height_;
+}
+
+std::int64_t platform_canvas_context::elapsed_ms() const
+{
+    require_active();
+    return elapsed_ms_;
+}
+
+std::int64_t platform_canvas_context::delta_ms() const
+{
+    require_active();
+    return delta_ms_;
+}
+
+bool platform_canvas_context::is_open() const
+{
+    require_active();
+    return open_;
+}
+
+void platform_canvas_context::close()
+{
+    require_active();
+    open_ = false;
+}
+
+void platform_canvas_context::operation( const float x, const float y,
+                                       const float w, const float h )
+{
+    require_active();
+    if( !std::isfinite( x ) || !std::isfinite( y ) || !std::isfinite( w ) ||
+        !std::isfinite( h ) || std::abs( x ) > 8192 || std::abs( y ) > 8192 ||
+        w < 0 || h < 0 || w > 8192 || h > 8192 ) {
+        throw std::invalid_argument( "canvas coordinates exceed native limits" );
+    }
+    if( ++operations_ > 4096 ) {
+        throw std::runtime_error( "canvas frame operation limit exceeded" );
+    }
+}
+
+namespace
+{
+void require_canvas_color( const float r, const float g, const float b, const float a )
+{
+    for( const float value : { r, g, b, a } ) {
+        if( !std::isfinite( value ) || value < 0 || value > 1 ) {
+            throw std::invalid_argument( "canvas color components must be within 0..1" );
+        }
+    }
+}
+
+void require_canvas_string( const std::string &value, const std::size_t maximum )
+{
+    if( value.size() > maximum || value.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( "canvas string exceeds native limits" );
+    }
+}
+} // namespace
+
+void platform_canvas_context::rect( const float x, const float y, const float w,
+                                   const float h, const float r, const float g, const float b, const float a )
+{
+    operation( x, y, w, h );
+    require_canvas_color( r, g, b, a );
+#if defined(TILES)
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ),
+        ImVec2( origin_x_ + ( x + w ) * scale_, origin_y_ + ( y + h ) * scale_ ),
+        ImGui::ColorConvertFloat4ToU32( ImVec4( r, g, b, a ) ) );
+#endif
+}
+
+void platform_canvas_context::text( const float x, const float y, const std::string &value,
+                                   const float r, const float g, const float b, const float a )
+{
+    operation( x, y, 0, 0 );
+    require_canvas_string( value, 4096 );
+    require_canvas_color( r, g, b, a );
+#if defined(TILES)
+    ImGui::GetWindowDrawList()->AddText(
+        ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ),
+        ImGui::ColorConvertFloat4ToU32( ImVec4( r, g, b, a ) ), value.c_str() );
+#endif
+}
+
+bool platform_canvas_context::sprite( const std::string &id, const float x, const float y,
+                                     const float w, const float h )
+{
+    operation( x, y, w, h );
+    require_canvas_string( id, 256 );
+#if defined(TILES)
+    const texture *sprite = tilecontext ? tilecontext->ui_sprite( id ) : nullptr;
+    if( !sprite || !sprite->get_texture_ptr() ) {
+        return false;
+    }
+    SDL_Texture *tex = sprite->get_texture_ptr().get();
+#if SDL_MAJOR_VERSION >= 3
+    float atlas_width = 0;
+    float atlas_height = 0;
+    SDL_GetTextureSize( tex, &atlas_width, &atlas_height );
+#else
+    int atlas_width = 0;
+    int atlas_height = 0;
+    SDL_QueryTexture( tex, nullptr, nullptr, &atlas_width, &atlas_height );
+#endif
+    if( atlas_width <= 0 || atlas_height <= 0 ) {
+        return false;
+    }
+    const SDL_Rect &source = sprite->get_source_rect();
+    ImGui::GetWindowDrawList()->AddImage( reinterpret_cast<ImTextureID>( tex ),
+                                        ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ),
+                                        ImVec2( origin_x_ + ( x + w ) * scale_, origin_y_ + ( y + h ) * scale_ ),
+                                        ImVec2( static_cast<float>( source.x ) / atlas_width,
+                                                static_cast<float>( source.y ) / atlas_height ),
+                                        ImVec2( static_cast<float>( source.x + source.w ) / atlas_width,
+                                                static_cast<float>( source.y + source.h ) / atlas_height ) );
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool platform_canvas_context::button( const std::string &id, const std::string &label,
+                                     const float x, const float y, const float w, const float h,
+                                     const bool request_focus )
+{
+    operation( x, y, w, h );
+    require_canvas_string( id, 96 );
+    require_canvas_string( label, 512 );
+    if( id.empty() || w <= 0 || h <= 0 ) {
+        throw std::invalid_argument( "canvas buttons require an id and positive size" );
+    }
+#if defined(TILES)
+    ImGui::SetCursorScreenPos( ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ) );
+    if( request_focus ) {
+        ImGui::SetKeyboardFocusHere();
+    }
+    const bool clicked = ImGui::Button( ( label + "###" + id ).c_str(),
+                                       ImVec2( w * scale_, h * scale_ ) );
+    return clicked && !cataimgui::interaction_suppressed();
+#else
+    ( void )request_focus;
+    return false;
+#endif
+}
 
 namespace
 {
@@ -52,6 +251,181 @@ void require_presentation_text( const std::string &value,
                                      " is empty or exceeds its native limit" );
     }
 }
+
+int canvas_dimension( const sol::table &options, const char *key, const int fallback )
+{
+    const sol::object raw = options.raw_get<sol::object>( key );
+    if( raw == sol::lua_nil ) {
+        return fallback;
+    }
+    if( raw.get_type() != sol::type::number ) {
+        throw std::invalid_argument( "canvas dimensions must be integers within 1..2048" );
+    }
+    const double value = raw.as<double>();
+    if( !std::isfinite( value ) || std::floor( value ) != value || value < 1 || value > 2048 ) {
+        throw std::invalid_argument( "canvas dimensions must be integers within 1..2048" );
+    }
+    return static_cast<int>( value );
+}
+
+std::string presentation_asset_path( const runtime &owner, const std::string &file )
+{
+    require_presentation_text( file, "asset path", 1024 );
+    const std::filesystem::path relative = std::filesystem::u8path( file );
+    if( relative.is_absolute() || relative.has_root_name() || relative.has_root_directory() ) {
+        throw std::invalid_argument( "presentation assets must be relative to the owning Mod" );
+    }
+    const std::filesystem::path root = std::filesystem::canonical( owner.mod_root );
+    const std::filesystem::path asset = std::filesystem::canonical( root / relative );
+    const std::filesystem::path within = asset.lexically_relative( root );
+    if( within.empty() || within.is_absolute() ||
+        std::find( within.begin(), within.end(), ".." ) != within.end() ||
+        !std::filesystem::is_regular_file( asset ) ) {
+        throw std::invalid_argument( "presentation asset is outside the owning Mod or not a file" );
+    }
+    return asset.u8string();
+}
+
+#if defined(TILES)
+class canvas_music_scope
+{
+    public:
+        explicit canvas_music_scope( const std::string &file ) {
+            if( file.empty() ) {
+                return;
+            }
+            static std::uint64_t sequence = 0;
+            id_ = "ccb_platform_canvas_music_" + std::to_string( ++sequence );
+            previous_ = sfx::playlist_registry_get( id_ );
+            resume_ = music::get_music_id_string();
+            sfx::playlist_definition playlist;
+            playlist.id = id_;
+            playlist.entries.push_back( { file, 100, true } );
+            sfx::playlist_registry_set( playlist );
+            ::set_temporary_music( id_ );
+        }
+        ~canvas_music_scope() {
+            if( id_.empty() ) {
+                return;
+            }
+            ::clear_temporary_music();
+            if( previous_ ) {
+                sfx::playlist_registry_set( *previous_ );
+            } else {
+                sfx::playlist_registry_erase( id_ );
+            }
+            ::play_music( resume_ );
+        }
+        canvas_music_scope( const canvas_music_scope & ) = delete;
+        canvas_music_scope &operator=( const canvas_music_scope & ) = delete;
+    private:
+        std::string id_;
+        std::string resume_;
+        std::optional<sfx::playlist_definition> previous_;
+};
+
+class platform_canvas_window : public cataimgui::window
+{
+    public:
+        platform_canvas_window( std::shared_ptr<runtime> owner, const std::string &title,
+                                const int width, const int height, const bool allow_quit,
+                                sol::protected_function callback ) :
+            cataimgui::window( title + "###ccb_platform_canvas",
+                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                               ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse |
+                               ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+                               ( allow_quit ? 0 : ImGuiWindowFlags_NoTitleBar ) ),
+            owner_( std::move( owner ) ), callback_( std::move( callback ) ),
+            width_( width ), height_( height ), allow_quit_( allow_quit ),
+            generation_( detail::active_world_generation ) {
+            set_redraw_underlay( false );
+        }
+
+        void run() {
+            input_context input( "CCB_PLATFORM_CANVAS" );
+            input.register_action( "ANY_INPUT" );
+            input.register_action( "QUIT" );
+            started_ = previous_ = std::chrono::steady_clock::now();
+            while( get_is_open() ) {
+                ui_manager::redraw();
+                if( !get_is_open() ) {
+                    break;
+                }
+                const std::string action = input.handle_input( 33 );
+                if( allow_quit_ && action == "QUIT" ) {
+                    is_open = false;
+                }
+            }
+            if( !error_.empty() ) {
+                throw std::runtime_error( "Platform canvas callback failed: " + error_ );
+            }
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            const ImVec2 screen = ImGui::GetIO().DisplaySize;
+            const float scale = std::min( { 1.0F,
+                                           std::max( 1.0F, screen.x - 48 ) / width_,
+                                           std::max( 1.0F, screen.y - 72 ) / height_ } );
+            return { -1.0F, -1.0F, width_ * scale + 32, height_ * scale + 56 };
+        }
+
+        void draw_controls() override {
+            if( !is_open ) {
+                return;
+            }
+            if( !owner_->world_is_ready || generation_ != detail::active_world_generation ) {
+                error_ = "stale Platform canvas world";
+                is_open = false;
+                return;
+            }
+            const ImVec2 origin = ImGui::GetCursorScreenPos();
+            const ImVec2 available = ImGui::GetContentRegionAvail();
+            const float scale = std::min( { 1.0F, std::max( 1.0F, available.x ) / width_,
+                                           std::max( 1.0F, available.y ) / height_ } );
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     now - started_ ).count();
+            const auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   now - previous_ ).count();
+            previous_ = now;
+            const auto frame = std::make_shared<platform_canvas_context>(
+                                   width_, height_, elapsed, std::min<std::int64_t>( delta, 250 ),
+                                   origin.x, origin.y, scale );
+            cataimgui::PushGuiFontScaled( scale );
+            ImGui::PushClipRect( origin, ImVec2( origin.x + width_ * scale,
+                                               origin.y + height_ * scale ), true );
+            const on_out_of_scope cleanup( [&]() {
+                frame->invalidate();
+                ImGui::PopClipRect();
+                cataimgui::PopGuiFontScaled();
+            } );
+            detail::callback_scope callback_scope( *owner_ );
+            const sol::protected_function_result result = callback_( frame );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                error_ = error.what();
+                is_open = false;
+            } else if( !frame->is_open() ) {
+                is_open = false;
+            }
+            // Establish a real layout item after absolute-positioned controls.
+            ImGui::SetCursorScreenPos( origin );
+            ImGui::Dummy( ImVec2( width_ * scale, height_ * scale ) );
+        }
+
+    private:
+        std::shared_ptr<runtime> owner_;
+        sol::protected_function callback_;
+        int width_;
+        int height_;
+        bool allow_quit_;
+        std::size_t generation_;
+        std::chrono::steady_clock::time_point started_;
+        std::chrono::steady_clock::time_point previous_;
+        std::string error_;
+};
+#endif
 
 struct presentation_choice {
     std::string id;
@@ -338,6 +712,23 @@ void detail::install_runtime_dialogue_presentation_api(
     const std::shared_ptr<runtime> &value, sol::state &lua, sol::table &ccb )
 {
     const std::weak_ptr<runtime> weak = value;
+    ccb.new_usertype<platform_canvas_context>(
+        "PlatformCanvasContext", sol::no_constructor,
+        "width", sol::property( &platform_canvas_context::width ),
+        "height", sol::property( &platform_canvas_context::height ),
+        "elapsed_ms", sol::property( &platform_canvas_context::elapsed_ms ),
+        "delta_ms", sol::property( &platform_canvas_context::delta_ms ),
+        "is_open", &platform_canvas_context::is_open,
+        "close", &platform_canvas_context::close,
+        "rect", &platform_canvas_context::rect,
+        "text", &platform_canvas_context::text,
+        "sprite", &platform_canvas_context::sprite,
+        "button", []( platform_canvas_context & context, const std::string & id,
+                      const std::string & label, const float x, const float y,
+    const float w, const float h, const sol::optional<bool> &focus ) {
+        return context.button( id, label, x, y, w, h, focus.value_or( false ) );
+    } );
+    ccb["PlatformCanvasContext"] = sol::lua_nil;
     ccb.new_usertype<platform_dialogue_context>(
         "PlatformDialogueContext", sol::no_constructor,
         "valid", &platform_dialogue_context::valid,
@@ -416,6 +807,53 @@ void detail::install_runtime_dialogue_presentation_api(
         }
     };
     sol::table presentation = lua.create_table();
+    presentation.set_function( "canvas", [weak, require_presentation](
+    const sol::table & options, sol::protected_function draw ) {
+        require_presentation();
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready ) {
+            throw std::runtime_error( "Platform canvas requires a ready world" );
+        }
+        const std::string title = options.get_or( "title", std::string( "Canvas" ) );
+        require_presentation_text( title, "canvas title", 256 );
+        const int width = canvas_dimension( options, "width", 960 );
+        const int height = canvas_dimension( options, "height", 720 );
+        if( width < 1 || width > 2048 || height < 1 || height > 2048 || !draw.valid() ) {
+            throw std::invalid_argument( "canvas requires a callback and dimensions within 1..2048" );
+        }
+        const bool allow_quit = options.get_or( "allow_quit", true );
+        const std::string music = options.get_or( "music", std::string() );
+        const std::string asset = music.empty() ? std::string() :
+                                  presentation_asset_path( *owner, music );
+#if defined(TILES)
+        if( !tilecontext || !ImGui::GetCurrentContext() ) {
+            return false;
+        }
+        static bool canvas_open = false;
+        if( canvas_open ) {
+            throw std::runtime_error( "Platform canvases cannot be nested" );
+        }
+        const restore_on_out_of_scope<bool> restore_open( canvas_open );
+        canvas_open = true;
+        const canvas_music_scope music_scope( asset );
+        platform_canvas_window window( owner, title, width, height, allow_quit, std::move( draw ) );
+        window.run();
+        return true;
+#else
+        ( void )allow_quit;
+        ( void )asset;
+        return false;
+#endif
+    } );
+    presentation.set_function( "play_sound", [weak, require_presentation](
+    const std::string & file, const sol::optional<int> &volume ) {
+        require_presentation();
+        const int loudness = volume.value_or( 100 );
+        if( loudness < 0 || loudness > 128 ) {
+            throw std::invalid_argument( "presentation sound volume must be within 0..128" );
+        }
+        sfx::play_sound_file( presentation_asset_path( *weak.lock(), file ), loudness, true );
+    } );
     presentation.set_function( "notice", [require_presentation]( const std::string & message ) {
         require_presentation();
         require_presentation_text( message, "notice" );

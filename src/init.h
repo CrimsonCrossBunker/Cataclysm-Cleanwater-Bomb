@@ -181,7 +181,8 @@ class DynamicDataLoader
         /**
          * Loads and then removes entries from @param data
          */
-        void load_deferred( deferred_json &data );
+        // With final_pass=false, retain unresolved entries for later dependencies.
+        void load_deferred( deferred_json &data, bool final_pass = true );
 
         /**
          * Returns whether the data is finalized and ready to be utilized.

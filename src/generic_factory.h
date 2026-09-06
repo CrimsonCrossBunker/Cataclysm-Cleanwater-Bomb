@@ -474,6 +474,11 @@ class generic_factory
             return true;
         }
 
+        /** Resolve available JSON parents without finalizing or discarding missing dependencies. */
+        void resolve_deferred() {
+            DynamicDataLoader::get_instance().load_deferred( deferred, false );
+        }
+
         /** Finalize all entries (derived classes should chain to this method) */
         virtual void finalize() {
             DynamicDataLoader::get_instance().load_deferred( deferred );

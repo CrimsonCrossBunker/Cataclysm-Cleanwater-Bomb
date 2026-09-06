@@ -16,6 +16,7 @@
 #include "type_id.h"
 
 class mapgendata;
+struct platform_mapgen_transaction_report;
 
 namespace cata::lua_platform
 {
@@ -79,6 +80,8 @@ class script_mapgen_context
 
         bool valid() const noexcept;
         void invalidate() noexcept;
+        // Native-only publication after the map transaction commits. Never exposed to Lua.
+        bool publish_deferred( const platform_mapgen_transaction_report &report );
         std::size_t operations_used() const;
         std::size_t operations_remaining() const;
 
@@ -118,6 +121,8 @@ class script_mapgen_context
         bool set_furniture_id( int x, int y, const std::string &id );
         bool set_trap_id( int x, int y, const std::string &id );
         void reset( const std::string &terrain_id );
+        void set_item_faction( int x1, int y1, int x2, int y2,
+                               const std::string &faction );
         void place_item( int x, int y, const std::string &item_id,
                          int quantity, int charges,
                          const std::string &faction_id );
@@ -200,6 +205,11 @@ class script_mapgen_context
                                               const std::string &unique_id );
         [[noreturn]] void remove_all( int x1, int y1, int x2, int y2 );
         void queue_point( const std::string &name, int x, int y );
+        void queue_npc( int x, int y, const std::string &template_id,
+                        const std::string &unique_id );
+        void queue_zone( int x1, int y1, int x2, int y2,
+                         const std::string &zone_type, const std::string &faction,
+                         const std::string &name, const std::string &filter );
 
         void fill_groundcover();
         [[noreturn]] void nest( const std::string &id, int x, int y );

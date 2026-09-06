@@ -2958,6 +2958,7 @@ struct shopkeeper_blacklist_definition_data {
     std::string id;
     std::vector<shopkeeper_entry_definition_data> entries;
     std::string message;
+    std::string predicate;
     std::int64_t default_rate = 0;
     bool registered = false;
 };
@@ -4565,6 +4566,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->kind = kind;
         definition->id = options.get_or( "id", std::string() );
         definition->message = options.get_or( "message", std::string() );
+        definition->predicate = options.get_or( "predicate", std::string() );
         definition->default_rate = options.get_or<std::int64_t>( "default_rate", 0 );
         return shopkeeper_definition_handle{
             std::move( definition ), transaction->token
@@ -6471,7 +6473,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.name.empty() || definition.color.empty() ||
                 definition.symbol.empty() ||
                 !furniture_ids.insert( definition.id ).second ||
-                definition.movecost < 0 ||
+                // Native furniture uses negative movement cost for impassable tiles.
+                definition.movecost < std::numeric_limits<int>::min() ||
+                definition.movecost > std::numeric_limits<int>::max() ||
                 definition.light_emitted < 0 ||
                 definition.max_volume_ml < 0 ||
                 definition.mass_grams < 0 ||
@@ -6511,6 +6515,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> terrain_ids;
+        const auto terrain_is_staged = [this]( const std::string &id ) {
+            return std::any_of( pimpl_->terrain.begin(), pimpl_->terrain.end(),
+            [&id]( const terrain_registration &candidate ) {
+                return candidate.definition->id == id;
+            } );
+        };
         for( const terrain_registration &entry : pimpl_->terrain ) {
             const terrain_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "terrain" );
@@ -6528,7 +6538,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                          definition.open, definition.close, definition.transforms_into,
                          definition.roof, definition.lockpick_result
                      } ) {
-                    if( !target.empty() && !ter_str_id( target ).is_valid() ) {
+                    if( !target.empty() && !terrain_is_staged( target ) &&
+                        !ter_str_id( target ).is_valid() ) {
                         throw std::runtime_error( "terrain '" + definition.id +
                                                   "' references an invalid terrain id '" +
                                                   target + "'" );
@@ -6747,6 +6758,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
         for( const shopkeeper_registration &entry : pimpl_->shopkeeper_rules ) {
             const shopkeeper_blacklist_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "shopkeeper rule" );
+            if( !definition.predicate.empty() &&
+                ( definition.kind != "whitelist" ||
+                  owner_runtime.handlers.count( definition.predicate ) == 0 ) ) {
+                throw std::runtime_error( "shopkeeper whitelist '" + definition.id +
+                                          "' requires a registered predicate handler" );
+            }
             if( !shopkeeper_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "shopkeeper rule '" + definition.id +
                                           "' has a duplicate registration" );
@@ -8470,7 +8487,10 @@ bool content_transaction::apply( std::string &error )
             if( !source.lockpick_result.empty() ) {
                 native.lockpick_result = ter_str_id( source.lockpick_result );
             }
-            native.trap = trap_str_id( source.trap );
+            native.trap_id_str = source.trap;
+            if( !source.trap.empty() ) {
+                native.trap = trap_str_id( source.trap );
+            }
             if( !source.examine_handler.empty() ) {
                 native.examine_actor.emplace_back(
                     std::make_unique<lua_platform_examine_actor>(
@@ -8771,6 +8791,8 @@ bool content_transaction::apply( std::string &error )
                 if( !source.message.empty() ) {
                     native.message = no_translation( source.message );
                 }
+                native.lua_mod_id = pimpl_->owner;
+                native.lua_predicate = source.predicate;
                 for( const shopkeeper_entry_definition_data &entry_data :
                      source.entries ) {
                     icg_entry native_entry;
@@ -8863,6 +8885,8 @@ bool content_transaction::apply( std::string &error )
                 std::nullopt );
             const scenario_definition_data &source = *entry.definition;
             scenario native;
+            // Use the same option-dependent calendar defaults as a fresh JSON scenario.
+            native.initialize_default_calendar();
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
@@ -11213,6 +11237,22 @@ std::string content_transaction::fingerprint() const
             hash_part( state, charge.recharge_type );
         }
     }
+    for( const shopkeeper_registration &entry : pimpl_->shopkeeper_rules ) {
+        hash_part( state, "shopkeeper_rule" );
+        hash_part( state, operation_name( entry.operation ) );
+        const shopkeeper_blacklist_definition_data &value = *entry.definition;
+        hash_part( state, value.kind );
+        hash_part( state, value.id );
+        hash_part( state, value.message );
+        hash_part( state, value.predicate );
+        hash_part( state, std::to_string( value.default_rate ) );
+        for( const shopkeeper_entry_definition_data &rule : value.entries ) {
+            hash_part( state, rule.item );
+            hash_part( state, rule.category );
+            hash_part( state, rule.item_group );
+            hash_part( state, rule.message );
+        }
+    }
     pimpl_->presentation.append_fingerprint( state );
     for( const attack_vector_registration &entry : pimpl_->attack_vectors ) {
         hash_part( state, "attack_vector" );
@@ -12006,6 +12046,12 @@ void invoke_weakpoint_effect_handler(
 std::optional<bool> invoke_behavior_condition_handler(
     std::string_view, std::string_view, std::string_view,
     const Creature *, std::string_view )
+{
+    return std::nullopt;
+}
+
+std::optional<bool> invoke_shopkeeper_whitelist_handler(
+    std::string_view, std::string_view, const item &, const npc & )
 {
     return std::nullopt;
 }

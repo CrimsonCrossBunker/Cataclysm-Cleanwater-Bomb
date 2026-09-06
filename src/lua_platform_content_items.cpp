@@ -282,7 +282,7 @@ namespace cata::lua_platform
 namespace
 {
 
-enum class definition_operation : int { add, replace, edit };
+enum class definition_operation : int { add, replace, edit, extend };
 enum class handle_lifecycle : int { building, committed, discarded };
 
 std::size_t require_dense_array( const sol::table &values,
@@ -333,6 +333,25 @@ struct quality_level {
 };
 
 struct item_definition_data {
+    struct comestible_data {
+        std::string type;
+        std::int64_t calories = 0;
+        std::int64_t fun = 0;
+        std::int64_t healthy = 0;
+        std::int64_t quench = 0;
+        std::int64_t spoils_in_turns = 0;
+        std::int64_t charges = 1;
+        std::int64_t stack_size = 1;
+        std::map<std::string, std::int64_t> vitamins;
+    };
+    struct book_data {
+        std::string skill;
+        std::int64_t required_level = 0;
+        std::int64_t maximum_level = 0;
+        std::int64_t intelligence = 0;
+        std::int64_t read_time_turns = 0;
+        std::int64_t fun = 0;
+    };
     std::string id;
     std::string copy_from;
     std::string name;
@@ -365,6 +384,8 @@ struct item_definition_data {
     std::string use_handler;
     std::string use_label;
     std::string consume_handler;
+    std::optional<comestible_data> comestible;
+    std::optional<book_data> book;
     bool registered = false;
 };
 
@@ -391,6 +412,7 @@ struct recipe_definition_data {
     std::int64_t time_moves = 100;
     bool autolearn = true;
     bool reversible = false;
+    std::optional<std::int64_t> result_charges;
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::map<std::string, std::int64_t> required_skills;
@@ -896,6 +918,53 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &comestible( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        if( definition->book ) {
+            throw std::runtime_error( "an item cannot be both comestible and a book" );
+        }
+        item_definition_data::comestible_data value;
+        value.type = options.get_or( "type", std::string() );
+        value.calories = options.get_or<std::int64_t>( "calories", -1 );
+        value.fun = options.get_or<std::int64_t>( "fun", 0 );
+        value.healthy = options.get_or<std::int64_t>( "healthy", 0 );
+        value.quench = options.get_or<std::int64_t>( "quench", 0 );
+        value.spoils_in_turns = options.get_or<std::int64_t>( "spoils_in_turns", 0 );
+        value.charges = options.get_or<std::int64_t>( "charges", 1 );
+        value.stack_size = options.get_or<std::int64_t>( "stack_size", value.charges );
+        definition->comestible = std::move( value );
+        return *this;
+    }
+
+    item_definition_handle &vitamin( const std::string &id, std::int64_t amount ) {
+        require_building_handle( token, *definition, "item" );
+        if( !definition->comestible ) {
+            throw std::runtime_error( "item vitamins require a comestible definition" );
+        }
+        if( id.empty() || amount < std::numeric_limits<int>::min() ||
+            amount > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "item vitamin requires a valid id and native amount" );
+        }
+        definition->comestible->vitamins[id] = amount;
+        return *this;
+    }
+
+    item_definition_handle &book( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        if( definition->comestible ) {
+            throw std::runtime_error( "an item cannot be both a book and comestible" );
+        }
+        item_definition_data::book_data value;
+        value.skill = options.get_or( "skill", std::string() );
+        value.required_level = options.get_or<std::int64_t>( "required_level", 0 );
+        value.maximum_level = options.get_or<std::int64_t>( "maximum_level", 0 );
+        value.intelligence = options.get_or<std::int64_t>( "intelligence", 0 );
+        value.read_time_turns = options.get_or<std::int64_t>( "read_time_turns", 0 );
+        value.fun = options.get_or<std::int64_t>( "fun", 0 );
+        definition->book = std::move( value );
+        return *this;
+    }
+
     item_definition_handle &on_use( const std::string &handler,
                                     const sol::optional<std::string> &label ) {
         require_building_handle( token, *definition, "item" );
@@ -932,6 +1001,15 @@ struct recipe_definition_handle {
             throw std::runtime_error( "recipe duration must be positive" );
         }
         definition->time_moves = moves;
+        return *this;
+    }
+
+    recipe_definition_handle &result_charges( std::int64_t charges ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( charges <= 0 || charges > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe result charges are outside the native range" );
+        }
+        definition->result_charges = charges;
         return *this;
     }
 
@@ -2145,7 +2223,8 @@ using ammo_effect_registration = catalog_registration<ammo_effect_definition_dat
 std::string operation_name( const definition_operation operation )
 {
     return operation == definition_operation::add ? "add" :
-           operation == definition_operation::replace ? "replace" : "edit";
+           operation == definition_operation::replace ? "replace" :
+           operation == definition_operation::extend ? "extend" : "edit";
 }
 
 std::optional<creature_size> platform_creature_size( std::string value )
@@ -2319,6 +2398,7 @@ struct items_content_transaction::impl {
         std::optional<butchery_requirements>>> butchery_requirements_undo;
     std::vector<std::pair<std::string, std::optional<item_action>>> item_action_undo;
     std::vector<std::pair<item_group_id, std::unique_ptr<Item_spawn_data>>> item_group_undo;
+    std::vector<std::pair<item_group_id, std::size_t>> item_group_extension_undo;
     std::vector<std::pair<ammo_effect_str_id, std::optional<ammo_effect>>> ammo_effect_undo;
     std::vector<std::pair<itype_id, std::optional<itype>>> item_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> recipe_undo;
@@ -2433,12 +2513,16 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "material", &item_definition_handle::material,
         "quality", &item_definition_handle::quality,
         "flag", &item_definition_handle::flag,
+        "comestible", &item_definition_handle::comestible,
+        "vitamin", &item_definition_handle::vitamin,
+        "book", &item_definition_handle::book,
         "on_use", &item_definition_handle::on_use,
         "on_consume", &item_definition_handle::on_consume );
     ccb.new_usertype<recipe_definition_handle>(
         "RecipeDefinition", sol::no_constructor,
         "id", sol::property( &recipe_definition_handle::id ),
         "duration_moves", &recipe_definition_handle::duration,
+        "result_charges", &recipe_definition_handle::result_charges,
         "component", &recipe_definition_handle::component,
         "component_any", &recipe_definition_handle::component_any,
         "tool", &recipe_definition_handle::tool,
@@ -2882,6 +2966,14 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             std::move( definition ), transaction->token
         };
     } );
+    content.set_function( "extend_item_group", [transaction]( item_group_definition_handle handle ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot register an item group definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "item group" );
+        handle.definition->registered = true;
+        transaction->item_groups.push_back( { definition_operation::extend, handle.definition } );
+    } );
     content.set_function( "AmmoEffect", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -3259,6 +3351,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             if( operation == definition_operation::replace && !exists ) {
                 throw std::runtime_error( std::string( "replace requires existing " ) +
+                                          kind + " '" + id + "'" );
+            }
+            if( operation == definition_operation::extend && !exists ) {
+                throw std::runtime_error( std::string( "extend requires existing " ) +
                                           kind + " '" + id + "'" );
             }
         };
@@ -3862,6 +3958,24 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             validate_operation( entry.operation,
                                 item_group::group_is_defined( item_group_id( definition.id ) ),
                                 definition.id, "item group" );
+            if( entry.operation == definition_operation::extend ) {
+                if( definition.with_ammo != 0 || definition.with_magazine != 0 ) {
+                    throw std::runtime_error( "item group extension '" + definition.id +
+                                              "' may only append entries" );
+                }
+                if( check_engine_state ) {
+                    const auto existing = item_controller->m_template_groups.find(
+                                              item_group_id( definition.id ) );
+                    const Item_group *const native = existing == item_controller->m_template_groups.end() ?
+                                                     nullptr : dynamic_cast<const Item_group *>( existing->second.get() );
+                    const Item_group::Type expected = definition.kind == "collection" ?
+                                                      Item_group::G_COLLECTION : Item_group::G_DISTRIBUTION;
+                    if( native == nullptr || native->type != expected ) {
+                        throw std::runtime_error( "item group extension '" + definition.id +
+                                                  "' must match the existing group kind" );
+                    }
+                }
+            }
         }
         for( const item_group_registration &entry : pimpl_->item_groups ) {
             const item_group_definition_data &definition = *entry.definition;
@@ -4096,6 +4210,52 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id +
                                           "' references unknown looks_like item '" + definition.looks_like + "'" );
             }
+            if( definition.comestible ) {
+                const item_definition_data::comestible_data &food = *definition.comestible;
+                if( ( food.type != "FOOD" && food.type != "DRINK" ) ||
+                    food.calories < 0 || food.calories > std::numeric_limits<int>::max() ||
+                    food.fun < std::numeric_limits<int>::min() ||
+                    food.fun > std::numeric_limits<int>::max() ||
+                    food.healthy < std::numeric_limits<int>::min() ||
+                    food.healthy > std::numeric_limits<int>::max() ||
+                    food.quench < std::numeric_limits<int>::min() ||
+                    food.quench > std::numeric_limits<int>::max() ||
+                    food.spoils_in_turns < 0 ||
+                    food.spoils_in_turns > std::numeric_limits<int>::max() ||
+                    food.charges <= 0 || food.charges > std::numeric_limits<int>::max() ||
+                    food.stack_size <= 0 ||
+                    food.stack_size > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "item '" + definition.id +
+                                              "' has invalid comestible values" );
+                }
+                for( const auto &[vitamin_key, amount] : food.vitamins ) {
+                    if( ( vitamin_ids.count( vitamin_key ) == 0 &&
+                          !vitamin_id( vitamin_key ).is_valid() ) ||
+                        amount < std::numeric_limits<int>::min() ||
+                        amount > std::numeric_limits<int>::max() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' references an invalid vitamin '" +
+                                                  vitamin_key + "'" );
+                    }
+                }
+            }
+            if( definition.book ) {
+                const item_definition_data::book_data &book = *definition.book;
+                if( book.skill.empty() ||
+                    ( skill_ids.count( book.skill ) == 0 &&
+                      !skill_id( book.skill ).is_valid() ) ||
+                    book.required_level < 0 || book.required_level > MAX_SKILL ||
+                    book.maximum_level < book.required_level ||
+                    book.maximum_level > MAX_SKILL || book.intelligence < 0 ||
+                    book.intelligence > std::numeric_limits<int>::max() ||
+                    book.read_time_turns <= 0 ||
+                    book.read_time_turns > std::numeric_limits<int>::max() ||
+                    book.fun < std::numeric_limits<int>::min() ||
+                    book.fun > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "item '" + definition.id +
+                                              "' has invalid book values" );
+                }
+            }
             validate_operation( entry.operation,
                                 item_controller->has_template( itype_id( definition.id ) ),
                                 definition.id, "item" );
@@ -4116,7 +4276,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 } else if( item::type_is_defined( itype_id( definition.id ) ) ) {
                     base = item::find_type( itype_id( definition.id ) );
                 }
-                if( check_engine_state && base != nullptr && !base->comestible ) {
+                if( check_engine_state && !definition.comestible && base != nullptr &&
+                    !base->comestible ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' attaches on_consume to a non-comestible item" );
                 }
@@ -4218,6 +4379,12 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
             };
+            if( definition.result_charges &&
+                ( *definition.result_charges <= 0 ||
+                  *definition.result_charges > std::numeric_limits<int>::max() ) ) {
+                throw std::runtime_error( "recipe '" + definition.id +
+                                          "' has invalid result charges" );
+            }
             validate_recipe_groups( definition.components, "component", false );
             validate_recipe_groups( definition.tools, "tool", true );
             for( const recipe_definition_data::proficiency_data &proficiency : definition.proficiencies ) {
@@ -5025,18 +5192,31 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 for( const item_group_registration &entry : pimpl_->item_groups ) {
                     const item_group_id id( entry.definition->id );
                     auto previous = item_controller->m_template_groups.find( id );
-                    std::unique_ptr<Item_spawn_data> snapshot;
-                    if( previous != item_controller->m_template_groups.end() ) {
-                        snapshot = std::move( previous->second );
-                    }
-                    pimpl_->item_group_undo.emplace_back( id, std::move( snapshot ) );
                     const item_group_definition_data &source = *entry.definition;
                     const Item_group::Type kind = source.kind == "collection" ?
                                                   Item_group::G_COLLECTION : Item_group::G_DISTRIBUTION;
-                    auto native = std::make_unique<Item_group>(
-                                      kind, 100, static_cast<int>( source.with_ammo ),
-                                      static_cast<int>( source.with_magazine ),
-                                      "Lua-first item group " + source.id );
+                    std::unique_ptr<Item_group> replacement;
+                    Item_group *native = nullptr;
+                    if( entry.operation == definition_operation::extend ) {
+                        native = previous == item_controller->m_template_groups.end() ?
+                                 nullptr : dynamic_cast<Item_group *>( previous->second.get() );
+                        if( native == nullptr || native->type != kind ) {
+                            throw std::runtime_error( "cannot extend missing or mismatched item group '" +
+                                                      source.id + "'" );
+                        }
+                        pimpl_->item_group_extension_undo.emplace_back( id, native->entry_count() );
+                    } else {
+                        std::unique_ptr<Item_spawn_data> snapshot;
+                        if( previous != item_controller->m_template_groups.end() ) {
+                            snapshot = std::move( previous->second );
+                        }
+                        pimpl_->item_group_undo.emplace_back( id, std::move( snapshot ) );
+                        replacement = std::make_unique<Item_group>(
+                                          kind, 100, static_cast<int>( source.with_ammo ),
+                                          static_cast<int>( source.with_magazine ),
+                                          "Lua-first item group " + source.id );
+                        native = replacement.get();
+                    }
                     for( const item_group_entry_definition_data &source_entry : source.entries ) {
                         const Single_item_creator::Type entry_type = source_entry.group ?
                                 Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
@@ -5078,7 +5258,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native->add_entry( std::move( native_entry ) );
                     }
-                    item_controller->m_template_groups[id] = std::move( native );
+                    if( replacement ) {
+                        item_controller->m_template_groups[id] = std::move( replacement );
+                    }
                 }
                 break;
             }
@@ -5263,6 +5445,41 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const std::string &flag : definition.flags ) {
                         native->item_tags.insert( flag_id( flag ) );
                     }
+                    if( entry.definition->comestible ) {
+                        const item_definition_data::comestible_data &source =
+                            *entry.definition->comestible;
+                        native->book.reset();
+                        native->comestible = cata::make_value<islot_comestible>();
+                        native->comestible->was_loaded = true;
+                        native->comestible->comesttype = source.type;
+                        native->comestible->def_charges = static_cast<int>( source.charges );
+                        native->comestible->stack_size = static_cast<int>( source.stack_size );
+                        native->comestible->quench = static_cast<int>( source.quench );
+                        native->comestible->healthy = static_cast<int>( source.healthy );
+                        native->comestible->spoils = time_duration::from_turns(
+                                                        static_cast<int>( source.spoils_in_turns ) );
+                        native->comestible->set_fun( static_cast<int>( source.fun ) );
+                        nutrients nutrition;
+                        nutrition.calories = source.calories * 1000;
+                        for( const auto &[vitamin_key, amount] : source.vitamins ) {
+                            nutrition.set_vitamin( vitamin_id( vitamin_key ),
+                                                   static_cast<int>( amount ) );
+                        }
+                        native->comestible->set_default_nutrition( std::move( nutrition ) );
+                    }
+                    if( entry.definition->book ) {
+                        const item_definition_data::book_data &source = *entry.definition->book;
+                        native->comestible.reset();
+                        native->book = cata::make_value<islot_book>();
+                        native->book->was_loaded = true;
+                        native->book->skill = skill_id( source.skill );
+                        native->book->req = static_cast<int>( source.required_level );
+                        native->book->level = static_cast<int>( source.maximum_level );
+                        native->book->intel = static_cast<int>( source.intelligence );
+                        native->book->time = time_duration::from_turns(
+                                                 static_cast<int>( source.read_time_turns ) );
+                        native->book->fun = static_cast<int>( source.fun );
+                    }
                     for( const auto &[damage, amount] : definition.melee_damage ) {
                         native->melee.damage_map[damage_type_id( damage )] = static_cast<float>( amount );
                     }
@@ -5344,6 +5561,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         continue;
                     }
                     native.result_ = itype_id( entry.definition->result );
+                    if( entry.definition->result_charges ) {
+                        native.charges = static_cast<int>( *entry.definition->result_charges );
+                    }
                     native.time = entry.definition->time_moves;
                     native.category = crafting_category_id( entry.definition->category );
                     native.subcategory = entry.definition->subcategory;
@@ -5693,6 +5913,17 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
             pimpl_->recipe_group_undo.clear();
             break;
         case items_content_rollback_phase::item_groups:
+            for( auto it = pimpl_->item_group_extension_undo.rbegin();
+                 it != pimpl_->item_group_extension_undo.rend(); ++it ) {
+                const auto existing = item_controller->m_template_groups.find( it->first );
+                if( existing != item_controller->m_template_groups.end() ) {
+                    Item_group *const native = dynamic_cast<Item_group *>( existing->second.get() );
+                    if( native != nullptr ) {
+                        native->truncate_entries( it->second );
+                    }
+                }
+            }
+            pimpl_->item_group_extension_undo.clear();
             for( auto it = pimpl_->item_group_undo.rbegin(); it != pimpl_->item_group_undo.rend(); ++it ) {
                 item_controller->m_template_groups.erase( it->first );
                 if( it->second ) {
@@ -5788,6 +6019,7 @@ void items_content_transaction::commit()
     pimpl_->butchery_requirements_undo.clear();
     pimpl_->item_action_undo.clear();
     pimpl_->item_group_undo.clear();
+    pimpl_->item_group_extension_undo.clear();
     pimpl_->ammo_effect_undo.clear();
     pimpl_->item_undo.clear();
     pimpl_->recipe_undo.clear();
@@ -6437,6 +6669,32 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label );
                 hash_part( state, v.consume_handler );
+                if( v.comestible ) {
+                    const item_definition_data::comestible_data &food = *v.comestible;
+                    hash_part( state, "comestible" );
+                    hash_part( state, food.type );
+                    hash_part( state, std::to_string( food.calories ) );
+                    hash_part( state, std::to_string( food.fun ) );
+                    hash_part( state, std::to_string( food.healthy ) );
+                    hash_part( state, std::to_string( food.quench ) );
+                    hash_part( state, std::to_string( food.spoils_in_turns ) );
+                    hash_part( state, std::to_string( food.charges ) );
+                    hash_part( state, std::to_string( food.stack_size ) );
+                    for( const auto &[vitamin_key, amount] : food.vitamins ) {
+                        hash_part( state, vitamin_key );
+                        hash_part( state, std::to_string( amount ) );
+                    }
+                }
+                if( v.book ) {
+                    const item_definition_data::book_data &book = *v.book;
+                    hash_part( state, "book" );
+                    hash_part( state, book.skill );
+                    hash_part( state, std::to_string( book.required_level ) );
+                    hash_part( state, std::to_string( book.maximum_level ) );
+                    hash_part( state, std::to_string( book.intelligence ) );
+                    hash_part( state, std::to_string( book.read_time_turns ) );
+                    hash_part( state, std::to_string( book.fun ) );
+                }
                 for( const auto &m : v.materials ) {
                     hash_part( state, m.id );
                     hash_part( state, std::to_string( m.portions ) );
@@ -6466,6 +6724,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.id );
                 hash_part( state, v.nested_category ? "nested_category" : "craft_recipe" );
                 hash_part( state, v.result );
+                hash_part( state, v.result_charges ?
+                           std::to_string( *v.result_charges ) : "default_charges" );
                 hash_part( state, v.name );
                 hash_part( state, v.description );
                 hash_part( state, v.category );

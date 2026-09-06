@@ -22,11 +22,13 @@ extern "C" {
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "character.h"
 #include "faction.h"
 #include "item.h"
 #include "item_location.h"
+#include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
 #include "npc.h"
@@ -1705,6 +1707,75 @@ sol::table get_trade_quote(
                state, sol::make_object( state, trade_quote_snapshot( state, token ) ) );
 }
 
+// Native interactive trade is deliberately distinct from the exact-Item
+// quote/commit API: this opens the existing barter UI or pays for a service.
+// Both parties are explicit; the UI itself only supports the active avatar.
+sol::table interactive_trade( sol::this_state lua, const game_handle &seller_handle,
+                             const game_handle &buyer_handle, const int cost, const std::string &title,
+                             const bool payment, const game_handle_runtime &runtime,
+                             const std::size_t world_generation )
+{
+    if( cost < 0 || title.size() > 4096 || title.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( "interactive trade requires a nonnegative cost and bounded title" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *seller = resolve_exact_npc( seller_handle, runtime, world_generation, error );
+    if( seller == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *buyer = resolve_exact_avatar( buyer_handle, runtime, world_generation, error );
+    if( buyer == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( buyer != &get_avatar() ) {
+        return make_game_error_result( state, {
+            "unsupported_participants", "The native trade UI requires the active avatar as buyer"
+        } );
+    }
+    const bool accepted = payment ? npc_trading::pay_npc( *seller, cost ) :
+                          npc_trading::trade( *seller, cost, title );
+    return make_game_value_result( state, sol::make_object( state, accepted ) );
+}
+
+sol::table order_price( sol::this_state lua, const game_handle &seller_handle,
+                       const game_handle &buyer_handle, const script_game_id &id, const int count,
+                       const game_handle_runtime &runtime, const std::size_t world_generation )
+{
+    if( id.kind() != "item" || !id.is_valid() || count < 1 || count > 1000000 ) {
+        throw std::invalid_argument( "order_price requires a valid item ID and count within 1..1000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *seller = resolve_exact_npc( seller_handle, runtime, world_generation, error );
+    if( seller == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    Character *buyer = resolve_exact_character( buyer_handle, runtime, world_generation, error );
+    if( buyer == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( buyer == seller ) {
+        return make_game_error_result( state, {
+            "same_participant", "Order buyer and seller must be different Characters"
+        } );
+    }
+    const item prototype( itype_id( id.value() ), calendar::turn );
+    const int price = npc_trading::trading_price_for_order( *buyer, *seller, prototype, count );
+    if( price <= 0 || price == std::numeric_limits<int>::max() ) {
+        return make_game_error_result( state, {
+            "invalid_price", "The requested order has no bounded positive native trading price"
+        } );
+    }
+    sol::table value = state.create_table();
+    value["item"] = id;
+    value["item_name"] = prototype.tname();
+    value["count"] = count;
+    value["cost_cents"] = price;
+    value["count_by_charges"] = prototype.count_by_charges();
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 trade_quote_token::trade_quote_token( std::shared_ptr<state> value ) :
@@ -1870,6 +1941,27 @@ void install_trade_api(
         return lhs == rhs;
     } );
     sol::table trade = lua.create_table();
+    trade.set_function( "open", [current_runtime_generation, current_world_generation,
+                                require_write]( sol::this_state state, const game_handle & seller,
+    const game_handle & buyer, const int cost, const std::string & title ) {
+        require_write();
+        return interactive_trade( state, seller, buyer, cost, title, false,
+                                  current_runtime_generation(), current_world_generation() );
+    } );
+    trade.set_function( "pay", [current_runtime_generation, current_world_generation,
+                               require_write]( sol::this_state state, const game_handle & seller,
+    const game_handle & buyer, const int cost ) {
+        require_write();
+        return interactive_trade( state, seller, buyer, cost, std::string(), true,
+                                  current_runtime_generation(), current_world_generation() );
+    } );
+    trade.set_function( "order_price", [current_runtime_generation, current_world_generation,
+                                       require_read]( sol::this_state state, const game_handle & seller,
+    const game_handle & buyer, const script_game_id & id, const int count ) {
+        require_read();
+        return order_price( state, seller, buyer, id, count,
+                            current_runtime_generation(), current_world_generation() );
+    } );
     trade.set_function(
         "quote",
         [current_runtime_generation,

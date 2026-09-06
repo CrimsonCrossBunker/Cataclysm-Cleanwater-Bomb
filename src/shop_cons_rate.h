@@ -109,6 +109,9 @@ struct shopkeeper_whitelist {
 
     std::vector<icg_entry> entries;
     translation message;
+    icg_entry lua_match;
+    std::string lua_mod_id;
+    std::string lua_predicate;
 
     static void reset();
     static const std::vector<shopkeeper_whitelist> &get_all();

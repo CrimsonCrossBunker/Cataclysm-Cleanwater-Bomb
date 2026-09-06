@@ -1,4 +1,6 @@
 #include "lua_platform_runtime_internal.h"
+#include "item_category.h"
+#include "itype.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
@@ -2402,6 +2404,58 @@ std::optional<bool> invoke_behavior_condition_handler(
     }
     if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first behavior condition '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return std::nullopt;
+    }
+    return result.get<bool>();
+}
+
+std::optional<bool> invoke_shopkeeper_whitelist_handler(
+    const std::string_view mod_id, const std::string_view handler_id,
+    const item &candidate, const npc &shopkeeper )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first shopkeeper whitelist unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+
+    sol::table payload = owner->lua->create_table();
+    sol::table item_value = owner->lua->create_table();
+    item_value["id"] = cata::lua_platform::script_game_id(
+                           "item", candidate.typeId().str() );
+    item_value["category_id"] = candidate.get_category_shallow().get_id().str();
+    item_value["comestible"] = candidate.is_comestible();
+    item_value["food"] = candidate.is_food();
+    item_value["medication"] = candidate.is_medication();
+    item_value["base_enjoyment"] = candidate.is_comestible() ?
+                                     candidate.get_comestible()->get_fun() : 0;
+    item_value["fresh"] = candidate.is_fresh();
+    item_value["going_bad"] = candidate.is_going_bad();
+    item_value["rotten"] = candidate.rotten();
+    payload["item"] = std::move( item_value );
+
+    sol::table shopkeeper_value = owner->lua->create_table();
+    shopkeeper_value["name"] = shopkeeper.get_name();
+    shopkeeper_value["class_id"] = shopkeeper.myclass.str();
+    shopkeeper_value["faction_id"] = shopkeeper.get_fac_id().str();
+    payload["shopkeeper"] = std::move( shopkeeper_value );
+
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first shopkeeper whitelist '"
                                     << mod_id << ':' << handler_id
                                     << "' must return exactly one boolean";
         return std::nullopt;

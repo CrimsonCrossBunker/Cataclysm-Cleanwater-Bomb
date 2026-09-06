@@ -325,6 +325,13 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
         std::function<bool( const item & )> empty_filter = [&filter]( const item & it ) {
             return it.empty_container() && filter( it );
         };
+        std::function<bool( const item & )> map_filter = [this, &filter]( const item & candidate ) {
+            return candidate.is_owned_by( *crafter, true ) && filter( candidate );
+        };
+        std::function<bool( const item & )> map_empty_filter =
+        [this, &empty_filter]( const item & candidate ) {
+            return candidate.is_owned_by( *crafter, true ) && empty_filter( candidate );
+        };
 
         const char *liq_cont_msg = _( "%1$s is not empty.  Continue anyway?" );
         std::vector<std::pair<const tripoint_bub_ms, item>> map_items;
@@ -353,7 +360,7 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
                             // "Simulate" consuming items and put them back
                             // not very efficient but should be rare enough not to matter
                             std::list<item> tmp = m.use_amount_square( p, it.comp.type, real_count,
-                                                  i == 0 ? empty_filter : filter );
+                                                  i == 0 ? map_empty_filter : map_filter );
                             bool cont_not_empty = false;
                             std::string iname;
                             for( item &tmp_i : tmp ) {
@@ -418,6 +425,13 @@ static std::list<item> sane_consume_items( const comp_selection<item_comp> &it, 
     std::function<bool( const item & )> empty_filter = [&filter]( const item & it ) {
         return it.empty_container() && filter( it );
     };
+    std::function<bool( const item & )> map_filter = [crafter, &filter]( const item & candidate ) {
+        return candidate.is_owned_by( *crafter, true ) && filter( candidate );
+    };
+    std::function<bool( const item & )> map_empty_filter =
+    [crafter, &empty_filter]( const item & candidate ) {
+        return candidate.is_owned_by( *crafter, true ) && empty_filter( candidate );
+    };
 
     int real_count = ( it.comp.count > 0 ) ? it.comp.count * batch : std::abs( it.comp.count );
     std::list<item> ret;
@@ -428,7 +442,7 @@ static std::list<item> sane_consume_items( const comp_selection<item_comp> &it, 
                 for( const tripoint_bub_ms &p : m.points_in_radius( loc, radius ) ) {
                     if( rl_dist( loc, p ) >= radius ) {
                         std::list<item> tmp = m.use_amount_square( p, it.comp.type, real_count,
-                                              i == 0 ? empty_filter : filter );
+                                              i == 0 ? map_empty_filter : map_filter );
                         ret.insert( ret.end(), tmp.begin(), tmp.end() );
                     }
                 }

@@ -312,6 +312,11 @@ struct islot_comestible {
             return fun;
         }
 
+        /** Set the fixed base enjoyment used by typed runtime content builders. */
+        void set_fun( const int value ) {
+            fun = value;
+        }
+
         /** The monster that is drawn from when the item rots away */
         rot_spawn_data rot_spawn;
 

@@ -47,6 +47,9 @@ extern "C" {
 
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "generic_factory.h"
+#include "item_factory.h"
+#include "itype.h"
 
 namespace cata::lua_platform
 {
@@ -558,6 +561,10 @@ bool apply_prepared_content( std::string &error )
         error.clear();
         return true;
     }
+    // JSON items may still be waiting for parents declared later in the files.
+    // Resolve native inheritance before any Lua transaction takes its snapshots;
+    // leave abstract parents and unresolved dependencies for finalization.
+    item_controller->get_generic_factory().resolve_deferred();
     std::vector<std::shared_ptr<runtime>> applied;
     for( runtime_state &state : prepared_states ) {
         if( !validate_runtime( state.platform, true, error ) ) {

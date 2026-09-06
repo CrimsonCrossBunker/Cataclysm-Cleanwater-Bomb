@@ -4395,6 +4395,7 @@ void apply_platform_declarative_mapgen(
         }
         transaction.commit();
         set_queued_points();
+        context->publish_deferred( report );
         context->invalidate();
     } catch( const std::exception &exception ) {
         const std::string message = exception.what();
@@ -4513,6 +4514,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
                 }
                 transaction.commit();
                 set_queued_points();
+                context->publish_deferred( report );
                 context->invalidate();
                 matched = true;
             } catch( const std::exception &exception ) {

@@ -627,6 +627,12 @@
       "synchronized": true
     },
     {
+      "declared_class": "PlatformCanvasContext",
+      "in_public_contract": true,
+      "native_name": "PlatformCanvasContext",
+      "synchronized": true
+    },
+    {
       "declared_class": "PlatformDialogueContext",
       "in_public_contract": true,
       "native_name": "PlatformDialogueContext",
@@ -1067,13 +1073,13 @@
   ],
   "platform_sync": {
     "contract_export_roots_missing_from_inventory": [],
-    "luals_class_count": 664,
-    "luals_function_count": 1217,
-    "native_export_root_count": 177,
-    "native_export_roots_declared": 177,
-    "native_export_roots_in_public_contract": 177,
-    "native_registration_file_count": 119,
-    "public_contract_export_root_count": 177,
+    "luals_class_count": 669,
+    "luals_function_count": 1237,
+    "native_export_root_count": 178,
+    "native_export_roots_declared": 178,
+    "native_export_roots_in_public_contract": 178,
+    "native_registration_file_count": 120,
+    "public_contract_export_root_count": 178,
     "synchronized": true,
     "unmatched_native_export_roots": []
   },
