@@ -124,11 +124,14 @@ static constexpr double ROT_SEED_MASS_MULT = 10.0;
 // going-bad average, i.e. when it is near fully rotten (relative rot above 1.8).
 static constexpr double PRESERVE_FLOOR_COEFF = 5.0;
 
+namespace
+{
 struct component_rot_blend {
     double weighted_rot = 0.0;
     // Mass fraction of going-bad components among all spoiling components.
     double bad_mass_fraction = 0.0;
 };
+} // namespace
 
 // Mass-weighted average relative rot of spoiling comestible components.  Components
 // at or past the going-bad threshold contribute extra weight: microbes from a bad
