@@ -202,7 +202,9 @@ static bool nicotine_effect( Character &u, addiction &add )
         if( one_in( 800 - 50 * in ) ) {
             u.mod_sleepiness( 1 );
         }
-        if( current_stim > -5 * in && one_in( 400 - 20 * in ) ) {
+        //Withdrawal only erodes a mild, non-overdose stimulant effect: it must
+        //never fabricate depressant symptoms or ease an ongoing overdose.
+        if( current_stim > 0 && current_stim <= 30 && one_in( 400 - 20 * in ) ) {
             u.mod_stim( -1 );
         }
         return true;
