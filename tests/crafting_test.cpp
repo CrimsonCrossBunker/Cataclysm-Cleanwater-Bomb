@@ -133,6 +133,9 @@ static const itype_id itype_soldering_iron( "soldering_iron" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const itype_id itype_test_cracklins( "test_cracklins" );
 static const itype_id itype_test_gum( "test_gum" );
+static const itype_id itype_test_rot_a( "test_rot_a" );
+static const itype_id itype_test_rot_b( "test_rot_b" );
+static const itype_id itype_test_rot_result( "test_rot_result" );
 static const itype_id itype_test_storage_battery( "test_storage_battery" );
 static const itype_id itype_test_ups( "test_ups" );
 static const itype_id itype_thread( "thread" );
@@ -188,6 +191,15 @@ static const recipe_id recipe_macaroni_cooked( "macaroni_cooked" );
 static const recipe_id recipe_magazine_battery_light_mod( "magazine_battery_light_mod" );
 static const recipe_id recipe_makeshift_funnel( "makeshift_funnel" );
 static const recipe_id recipe_sushi_rice( "sushi_rice" );
+static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
+static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
+static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
+static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
+static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
+static const recipe_id
+recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
+static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
+static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
 static const recipe_id recipe_test_tallow( "test_tallow" );
 static const recipe_id recipe_test_tallow2( "test_tallow2" );
 static const recipe_id recipe_test_waist_apron_long( "test_waist_apron_long" );
@@ -197,18 +209,6 @@ static const recipe_id
 recipe_test_xl_waist_apron_long_pink_apron_cotton( "test_xl_waist_apron_long_pink_apron_cotton" );
 static const recipe_id recipe_vambrace_larmor( "vambrace_larmor" );
 static const recipe_id recipe_water_clean( "water_clean" );
-static const itype_id itype_test_rot_a( "test_rot_a" );
-static const itype_id itype_test_rot_b( "test_rot_b" );
-static const itype_id itype_test_rot_result( "test_rot_result" );
-static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
-static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
-static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
-static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
-static const recipe_id
-recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
-static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
-static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
-static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
 
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_survival( "survival" );
