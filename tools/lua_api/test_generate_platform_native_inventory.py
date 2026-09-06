@@ -156,6 +156,7 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
         expected_roots = {
             "platform_v1.install_runtime_callback_api": [],
             "platform_v1.install_runtime_dialogue_presentation_api": [
+                "PlatformCanvasContext",
                 "PlatformDialogueContext",
             ],
             "platform_v1.install_runtime_state_task_api": [],

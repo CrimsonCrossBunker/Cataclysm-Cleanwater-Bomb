@@ -2,6 +2,7 @@
 #include <string_id.h>
 #include <translation.h>
 #include <units.h>
+#include "lua_platform_runtime.h"
 #include <algorithm>
 
 #include "avatar.h"
@@ -289,15 +290,7 @@ icg_entry const *shopkeeper_blacklist::matches(
 
 icg_entry const *shopkeeper_whitelist::matches( item const &it, npc const &beta ) const
 {
-    auto const el = std::find_if( entries.begin(), entries.end(),
-    [&it, &beta]( icg_entry const & rit ) {
-        return rit.matches( it, beta );
-    } );
-    if( el != entries.end() ) {
-        return &*el;
-    }
-
-    return nullptr;
+    return matches( it, beta, get_avatar() );
 }
 
 icg_entry const *shopkeeper_whitelist::matches(
@@ -309,6 +302,12 @@ icg_entry const *shopkeeper_whitelist::matches(
     } );
     if( el != entries.end() ) {
         return &*el;
+    }
+
+    if( !lua_predicate.empty() &&
+        cata::lua_platform::invoke_shopkeeper_whitelist_handler(
+            lua_mod_id, lua_predicate, it, beta ).value_or( false ) ) {
+        return &lua_match;
     }
 
     return nullptr;

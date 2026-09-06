@@ -48,6 +48,7 @@ extern "C" {
 #include "enum_conversions.h"
 #include "faction.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "lua_platform_content.h"
 #include "lua_platform_runtime.h"
 #include "memory_fast.h"
@@ -3142,7 +3143,6 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
         vehicle_part_order, inheritance_error, "vehicle part" ) ) {
             throw std::runtime_error( inheritance_error );
         }
-        std::set<std::string> staged_vehicle_parts;
         for( const std::size_t index : vehicle_part_order ) {
             const registration<vehicle_part_data> &entry = pimpl_->vehicle_parts[index];
             const vehicle_part_data &part = *entry.definition;
@@ -3248,7 +3248,6 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                                           "' references missing handler '" +
                                           part.activation_handler + "'" );
             }
-            staged_vehicle_parts.insert( part.id );
         }
         std::vector<std::size_t> vehicle_order;
         if( !detail::resolve_platform_inheritance_order(
@@ -3290,15 +3289,18 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
             }
+            // Native turret parts and deferred JSON parts do not exist until global
+            // finalization.  Validate placement values now, and resolved part ids in
+            // validate_finalized(), after the native part registry is complete.
             for( const vehicle_part_placement_data &part : vehicle.parts ) {
                 if( part.part.empty() ||
-                    ( !vpart_id( part.part ).is_valid() &&
-                      staged_vehicle_parts.count( part.part ) == 0 ) ||
                     part.with_ammo < 0 || part.with_ammo > 100 ||
                     ( part.ammo_quantity.first >= 0 &&
                       part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                     throw std::runtime_error( "vehicle '" + vehicle.id +
-                                              "' has an invalid part placement" );
+                                              "' has an invalid part placement '" + part.part +
+                                              "' at (" + std::to_string( part.x ) + ", " +
+                                              std::to_string( part.y ) + ")" );
                 }
             }
             for( const std::optional<std::vector<vehicle_part_placement_data>> *patch : {
@@ -3307,13 +3309,13 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                 if( *patch ) {
                     for( const vehicle_part_placement_data &part : **patch ) {
                         if( part.part.empty() ||
-                            ( !vpart_id( part.part ).is_valid() &&
-                              staged_vehicle_parts.count( part.part ) == 0 ) ||
                             part.with_ammo < 0 || part.with_ammo > 100 ||
                             ( part.ammo_quantity.first >= 0 &&
                               part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                             throw std::runtime_error( "vehicle '" + vehicle.id +
-                                                      "' has an invalid collection patch" );
+                                                      "' has an invalid collection patch for part '" + part.part +
+                                                      "' at (" + std::to_string( part.x ) + ", " +
+                                                      std::to_string( part.y ) + ")" );
                         }
                     }
                 }
@@ -4479,6 +4481,21 @@ bool world_content_transaction::validate_finalized( std::string &error ) const
     }, "vehicle" ) ) {
         return false;
     }
+    for( const registration<vehicle_data> &entry : pimpl_->vehicles ) {
+        const vehicle_prototype &prototype = vproto_id( entry.definition->id ).obj();
+        // Check the resolved prototype, including inherited and extended placements.
+        // Unknown native parts are skipped by blueprint construction, so the vehicle
+        // id surviving finalization alone does not prove that its parts are valid.
+        for( const vehicle_prototype::part_def &part : prototype.parts ) {
+            if( !part.part.is_valid() ) {
+                error = "Lua-first Mod '" + pimpl_->owner + "': vehicle '" +
+                        entry.definition->id + "' references unknown part '" + part.part.str() +
+                        "' at (" + std::to_string( part.pos.x() ) + ", " +
+                        std::to_string( part.pos.y() ) + ") after global finalization";
+                return false;
+            }
+        }
+    }
     pimpl_->finalization_validated = true;
     error.clear();
     return true;
@@ -4514,7 +4531,11 @@ void world_content_transaction::rollback()
         }
     }
     pimpl_->vehicle_part_undo.clear();
-    if( rebuild_vehicles ) {
+    // Before the global data pass, item templates are deliberately not frozen yet.
+    // Vehicle prototype finalization constructs part items and therefore cannot run
+    // safely while rolling back an earlier Lua-first transaction during loading.
+    // The normal global finalization pass will rebuild the restored prototypes.
+    if( rebuild_vehicles && DynamicDataLoader::get_instance().is_data_finalized() ) {
         vehicles::finalize_prototypes();
     }
     for( auto it = pimpl_->overmap_special_undo.rbegin();

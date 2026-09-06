@@ -189,7 +189,7 @@ shared_ptr_fast<std::istream> DynamicDataLoader::get_cached_stream( const std::s
     return cached;
 }
 
-void DynamicDataLoader::load_deferred( deferred_json &data )
+void DynamicDataLoader::load_deferred( deferred_json &data, bool final_pass )
 {
     while( !data.empty() ) {
         const size_t n = data.size();
@@ -207,6 +207,9 @@ void DynamicDataLoader::load_deferred( deferred_json &data )
         }
         data.erase( data.begin(), it );
         if( data.size() == n ) {
+            if( !final_pass ) {
+                return;
+            }
             for( const auto &elem : data ) {
                 scoped_debug_error_source error_source( get_mod_error_source( elem.second ) );
                 try {

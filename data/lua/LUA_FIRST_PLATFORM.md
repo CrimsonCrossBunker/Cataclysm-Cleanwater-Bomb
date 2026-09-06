@@ -160,6 +160,19 @@ domain requires them:
 - finalize caches and derived relationships once;
 - undo every mutation in reverse order on candidate failure.
 
+`ccb.content.extend_item_group(definition)` accepts a newly built `ItemGroup`
+as an entry-only patch to an existing group of the same collection/distribution
+kind. It preserves native entries and contributions from earlier Mods, keeps
+the target's ammo/magazine defaults unchanged, and fingerprints the extension.
+Candidate rollback restores the previous entry boundary. `edit_item_group`
+instead clones a definition staged earlier by the same Mod; it is not a way
+to extend a native group or another Mod's group.
+
+`ccb.content.extend_item_group(definition)` 将新建的 `ItemGroup` 作为纯条目补丁，
+追加到同类的既有物品组中，保留原生内容和更早 Mod 的条目，不改变弹药/弹匣默认概率。
+追加内容参与指纹计算，候选事务回滚时恢复原有条目边界。`edit_item_group` 只克隆本 Mod
+此前暂存的定义，不能代替这种跨 Mod 或原生物品组的扩展。
+
 Complex registrar work is still an implementation milestone. Until a domain's
 source, declaration, migration shape, test source, and documentation are
 closed, its ledger disposition remains unverified or bounded. Unsupported
@@ -196,6 +209,41 @@ Each service documents read/write phase, bounds, return envelope, lifetime
 guards, and failure behavior. Read operations require a readable active
 Platform context. Mutations require the correct transaction or runtime phase.
 Callbacks receive typed payloads and handles, not arbitrary engine objects.
+
+Mapgen callbacks may stage bounded static NPC and global zone requests with
+`ScriptMapgenContext:queue_npc` and `queue_zone` (128 of each per callback).
+They validate IDs and current-OMT coordinates without spawning external objects.
+Failed callbacks discard the requests. After the map transaction commits, native
+publication installs zones first, then NPCs with native unique-ID deduplication.
+Publication is a post-commit phase, not part of submap rollback; native publication
+errors are logged and do not turn a committed primary map into a fallback map.
+Immediate `place_npc`, `place_zone`, vehicle and other external mutations remain
+unavailable inside the callback. Ordinary runtime service writes remain blocked.
+`ScriptMapgenContext:set_item_faction` is a map-only ownership operation: it
+updates ground stacks and their contents inside the current OMT and participates
+in submap rollback. It does not assign vehicle or vehicle-cargo ownership.
+
+`ccb.presentation.canvas` runs a bounded frame callback in the native ImGui
+window system, using registered tileset sprites rather than a second UI runtime.
+It requires a ready world and an active runtime callback; no renderer means
+`false` without invoking Lua drawing or charging for an interaction. Logical
+canvas dimensions are 1..2048 pixels, scaled together to fit the display. Each
+frame permits 4096 primitives and its context is invalidated on return, including
+errors. Canvases cannot nest. They use real time without advancing game turns.
+`allow_quit=false` requires the Mod to provide its own close control. Callback
+failures close the window and propagate to the caller. Optional canvas music and
+`ccb.presentation.play_sound` reuse native audio with canonical asset paths
+confined to the owning Mod; temporary music is restored when the canvas exits.
+
+Native barter UI and service payments are available through
+`ccb.services.trade.open(npc, buyer, cost, title)` and `pay(npc, buyer, cost)`.
+They require explicit live parties and reject any buyer other than the active
+avatar; no removed dialogue-context purchase helpers or implicit avatar aliases
+are restored. `order_price(npc, buyer, item_id, count)` is a read-only quote for
+made-to-order goods using `npc_trading::trading_price_for_order`. Lua must
+revalidate the price before payment and explicitly handle inventory delivery.
+This is not a reservation of existing Items; existing-stock transfers continue
+to use the exact-Item `quote/get/commit` API.
 
 领域服务按原生职责组织，而不是按旧 selector 命名，覆盖身份与 snapshot、角色/生物/NPC/
 物品/载具/任务/区域、背包与 crafting、地图与天气、时间与派系、对话、活动、hook、持久

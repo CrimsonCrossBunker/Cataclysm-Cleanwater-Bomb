@@ -3290,6 +3290,10 @@ std::vector<item_location> preview_source_locations( Character &crafter,
         return candidate.typeId() == type && filter( candidate ) &&
                ( !preferred || is_preferred_component( candidate ) );
     };
+    const std::function<bool( const item & )> map_source_filter =
+    [&crafter, &source_filter]( const item & candidate ) {
+        return candidate.is_owned_by( crafter, true ) && source_filter( candidate );
+    };
     std::vector<item_location> locations;
     map &here = get_map();
     if( selection.use_from & usage_from::map ) {
@@ -3303,7 +3307,7 @@ std::vector<item_location> preview_source_locations( Character &crafter,
                 return true;
             } );
             for( item_location &location : at_point ) {
-                append_preview_source_locations( location, source_filter, locations );
+                append_preview_source_locations( location, map_source_filter, locations );
             }
         }
     }
@@ -3497,6 +3501,14 @@ std::list<item> Character::consume_items( map &m, const comp_selection<item_comp
     };
     std::function<bool( const item & )> preferred_filter = disable_preference ? filter :
             active_preferred_filter;
+    const std::function<bool( const item & )> map_filter =
+    [this, &filter]( const item & candidate ) {
+        return candidate.is_owned_by( *this, true ) && filter( candidate );
+    };
+    const std::function<bool( const item & )> map_preferred_filter =
+    [this, &preferred_filter]( const item & candidate ) {
+        return candidate.is_owned_by( *this, true ) && preferred_filter( candidate );
+    };
 
     std::list<item> ret;
 
@@ -3515,11 +3527,11 @@ std::list<item> Character::consume_items( map &m, const comp_selection<item_comp
     if( is.use_from & usage_from::map ) {
         if( by_charges ) {
             std::list<item> tmp = m.use_charges( reachable_pts, selected_comp.type, real_count,
-                                                 preferred_filter );
+                                                 map_preferred_filter );
             ret.splice( ret.end(), tmp );
         } else {
-            std::list<item> tmp = m.use_amount( reachable_pts, selected_comp.type, real_count, preferred_filter,
-                                                select_ind );
+            std::list<item> tmp = m.use_amount( reachable_pts, selected_comp.type, real_count,
+                                                map_preferred_filter, select_ind );
             remove_ammo( tmp, *this );
             ret.splice( ret.end(), tmp );
         }
@@ -3543,10 +3555,11 @@ std::list<item> Character::consume_items( map &m, const comp_selection<item_comp
     if( real_count > 0 ) {
         if( is.use_from & usage_from::map ) {
             if( by_charges ) {
-                std::list<item> tmp = m.use_charges( reachable_pts, selected_comp.type, real_count, filter );
+                std::list<item> tmp = m.use_charges( reachable_pts, selected_comp.type, real_count,
+                                                     map_filter );
                 ret.splice( ret.end(), tmp );
             } else {
-                std::list<item> tmp = m.use_amount( reachable_pts, selected_comp.type, real_count, filter,
+                std::list<item> tmp = m.use_amount( reachable_pts, selected_comp.type, real_count, map_filter,
                                                     select_ind );
                 remove_ammo( tmp, *this );
                 ret.splice( ret.end(), tmp );

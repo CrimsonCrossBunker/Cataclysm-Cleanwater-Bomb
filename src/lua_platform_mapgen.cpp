@@ -18,7 +18,11 @@ extern "C" {
 #include <utility>
 
 #include "calendar.h"
+#include "clzones.h"
 #include "computer.h"
+#include "debug.h"
+#include "faction.h"
+#include "game.h"
 #include "item.h"
 #include "item_group.h"
 #include "lua_platform_overmap.h"
@@ -29,6 +33,7 @@ extern "C" {
 #include "mapgendata.h"
 #include "mission.h"
 #include "mongroup.h"
+#include "npc.h"
 #include "omdata.h"
 #include "point.h"
 #include "trap.h"
@@ -519,11 +524,28 @@ script_game_id overmap_terrain_id( const oter_id &id )
 } // namespace
 
 struct script_mapgen_context::context_state {
+    struct deferred_npc {
+        tripoint_bub_ms position;
+        npc_template_id type;
+        std::string unique_id;
+    };
+    struct deferred_zone {
+        tripoint_abs_ms start;
+        tripoint_abs_ms end;
+        zone_type_id type;
+        faction_id faction;
+        std::string name;
+        shared_ptr_fast<zone_options> options;
+    };
     mapgendata *data = nullptr;
     bool allow_write = false;
     std::string platform_mod_id;
     std::uint64_t random_state = 0;
     std::size_t operations = 0;
+    std::vector<deferred_npc> npcs;
+    std::vector<deferred_zone> zones;
+    bool published = false;
+    bool publication_succeeded = true;
 };
 
 script_mapgen_context::script_mapgen_context(
@@ -545,8 +567,67 @@ bool script_mapgen_context::valid() const noexcept
 void script_mapgen_context::invalidate() noexcept
 {
     if( state_ != nullptr ) {
+        state_->npcs.clear();
+        state_->zones.clear();
         state_->data = nullptr;
     }
+}
+
+bool script_mapgen_context::publish_deferred(
+    const platform_mapgen_transaction_report &report )
+{
+    context_state &state = require_state();
+    if( report.state != platform_mapgen_transaction_state::committed ) {
+        throw std::runtime_error( "Lua mapgen deferred placement requires a committed map" );
+    }
+    if( state.published ) {
+        return state.publication_succeeded;
+    }
+    state.published = true;
+    state.allow_write = false;
+    // Zones must exist before native NPC loading/restocking can inspect the shop.
+    // These are post-commit native spawns, not mutations inside the Lua transaction.
+    const auto failure = [&state]( const char *kind, const std::string &id ) {
+        state.publication_succeeded = false;
+        DebugLog( D_ERROR, D_MAP_GEN ) << "Lua-first Mod '" << state.platform_mod_id
+                                     << "' post-commit " << kind << " placement failed: " << id;
+    };
+    for( const context_state::deferred_zone &zone : state.zones ) {
+        try {
+            if( zone_manager::get_manager().add( zone.name, zone.type, zone.faction,
+                                                false, true, zone.start, zone.end, zone.options,
+                                                true, &state.data->m, false ) == nullptr ) {
+                failure( "zone", zone.type.str() );
+            }
+        } catch( ... ) {
+            failure( "zone", zone.type.str() );
+        }
+    }
+    for( const context_state::deferred_npc &request : state.npcs ) {
+        try {
+            if( !request.unique_id.empty() && g->unique_npc_exists( request.unique_id ) ) {
+                continue;
+            }
+            const character_id id = state.data->m.place_npc( request.position.xy(), request.type );
+            npc *const placed = g->find_npc( id );
+            if( placed == nullptr ) {
+                failure( "NPC", request.type.str() );
+                continue;
+            }
+            if( !request.unique_id.empty() ) {
+                placed->set_unique_id( request.unique_id );
+            }
+            // Match native mapgen NPC placement, including reality-bubble activation.
+            if( reality_bubble().inbounds( state.data->m.get_abs( request.position ) ) ) {
+                state.data->m.queue_main_cleanup();
+            }
+        } catch( ... ) {
+            failure( "NPC", request.type.str() );
+        }
+    }
+    state.zones.clear();
+    state.npcs.clear();
+    return state.publication_succeeded;
 }
 
 script_mapgen_context::context_state &script_mapgen_context::require_state() const
@@ -966,6 +1047,34 @@ void script_mapgen_context::reset( const std::string &terrain_id )
             state.data->m.trap_set( position, tr_null );
             state.data->m.furn_set( position, furn_str_id::NULL_ID().id() );
             state.data->m.ter_set( position, target.id() );
+        }
+    }
+}
+
+void script_mapgen_context::set_item_faction(
+    const int x1, const int y1, const int x2, const int y2, const std::string &faction )
+{
+    context_state &state = require_write_state();
+    require_rectangle( x1, y1, x2, y2, "Lua mapgen set_item_faction" );
+    require_mapgen_id( faction, "Lua mapgen set_item_faction" );
+    const faction_id owner( faction );
+    if( !owner.is_valid() ) {
+        throw std::invalid_argument( "Lua mapgen set_item_faction requires an existing faction" );
+    }
+    // Reserve the whole operation before changing ownership. Only ground stacks are
+    // touched: unlike map::apply_faction_ownership, this cannot mutate vehicles.
+    std::size_t cost = 0;
+    for( int y = y1; y <= y2; ++y ) {
+        for( int x = x1; x <= x2; ++x ) {
+            cost += 1 + state.data->m.i_at( bounded_position( state, x, y ) ).size();
+        }
+    }
+    consume( cost );
+    for( int y = y1; y <= y2; ++y ) {
+        for( int x = x1; x <= x2; ++x ) {
+            for( item &entry : state.data->m.i_at( bounded_position( state, x, y ) ) ) {
+                entry.set_owner( owner );
+            }
         }
     }
 }
@@ -1515,6 +1624,52 @@ void script_mapgen_context::queue_point(
     queue_mapgen_point( name, state.data->m.get_abs( position ) );
 }
 
+void script_mapgen_context::queue_npc(
+    const int x, const int y, const std::string &template_id, const std::string &unique_id )
+{
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    require_mapgen_id( template_id, "Lua mapgen queue_npc" );
+    if( !unique_id.empty() ) {
+        require_mapgen_id( unique_id, "Lua mapgen queue_npc unique_id" );
+    }
+    const npc_template_id type( template_id );
+    if( !type.is_valid() || state.npcs.size() >= 128 ) {
+        throw std::invalid_argument( "Lua mapgen queue_npc requires a known template and at most 128 NPCs" );
+    }
+    consume( 1 );
+    state.npcs.push_back( { position, type, unique_id } );
+}
+
+void script_mapgen_context::queue_zone(
+    const int x1, const int y1, const int x2, const int y2,
+    const std::string &zone_type, const std::string &faction,
+    const std::string &name, const std::string &filter )
+{
+    context_state &state = require_write_state();
+    require_rectangle( x1, y1, x2, y2, "Lua mapgen queue_zone" );
+    const tripoint_bub_ms start = bounded_position( state, x1, y1 );
+    const tripoint_bub_ms end = bounded_position( state, x2, y2 );
+    const zone_type_id type( zone_type );
+    const faction_id owner( faction );
+    if( !type.is_valid() || !owner.is_valid() || state.zones.size() >= 128 ||
+        name.size() > 4096 || name.find( '\0' ) != std::string::npos ||
+        filter.size() > 4096 || filter.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( "Lua mapgen queue_zone has invalid type, faction, text or count" );
+    }
+    auto options = zone_options::create( type );
+    if( !filter.empty() ) {
+        auto *const loot = dynamic_cast<loot_options *>( options.get() );
+        if( loot == nullptr ) {
+            throw std::invalid_argument( "Lua mapgen queue_zone filter requires a custom loot zone" );
+        }
+        loot->set_mark( filter );
+    }
+    consume( 1 );
+    state.zones.push_back( { state.data->m.get_abs( start ), state.data->m.get_abs( end ),
+                            type, owner, name, std::move( options ) } );
+}
+
 void script_mapgen_context::fill_groundcover()
 {
     context_state &state = require_write_state();
@@ -1571,6 +1726,7 @@ void install_script_mapgen_context_api( sol::state &lua )
         "set_furniture_id", &script_mapgen_context::set_furniture_id,
         "set_trap_id", &script_mapgen_context::set_trap_id,
         "reset", &script_mapgen_context::reset,
+        "set_item_faction", &script_mapgen_context::set_item_faction,
         "place_item", &script_mapgen_context::place_item,
         "place_item_group", &script_mapgen_context::place_item_group,
         "place_liquid", &script_mapgen_context::place_liquid,
@@ -1595,6 +1751,8 @@ void install_script_mapgen_context_api( sol::state &lua )
         "place_sign", &script_mapgen_context::place_sign,
         "set_graffiti", &script_mapgen_context::set_graffiti,
         "queue_point", &script_mapgen_context::queue_point,
+        "queue_npc", &script_mapgen_context::queue_npc,
+        "queue_zone", &script_mapgen_context::queue_zone,
         "fill_groundcover", &script_mapgen_context::fill_groundcover );
 }
 

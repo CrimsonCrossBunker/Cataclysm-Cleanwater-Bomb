@@ -370,6 +370,11 @@ std::optional<bool> invoke_behavior_condition_handler(
     std::string_view handler_id, const Creature *subject,
     std::string_view argument );
 
+/** Evaluate a Lua-authored shopkeeper whitelist against one detached item snapshot. */
+std::optional<bool> invoke_shopkeeper_whitelist_handler(
+    std::string_view mod_id, std::string_view handler_id,
+    const item &candidate, const npc &shopkeeper );
+
 /** Evaluate a Lua-authored behavior utility score for one native AI subject. */
 std::optional<double> invoke_behavior_score_handler(
     std::string_view mod_id, std::string_view behavior_id,

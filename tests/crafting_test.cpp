@@ -24,6 +24,7 @@
 #include "craft_command.h"
 #include "crafting.h"
 #include "enums.h"
+#include "faction.h"
 #include "game.h"
 #include "game_constants.h"
 #include "game_inventory.h"
@@ -72,6 +73,8 @@ static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
 static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_USE_UPS( "USE_UPS" );
+
+static const faction_id faction_free_merchants( "free_merchants" );
 
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 static const furn_str_id furn_f_solar_cooker( "f_solar_cooker" );
@@ -1644,6 +1647,40 @@ TEST_CASE( "broken_component", "[crafting][component]" )
             }
         }
     }
+}
+
+TEST_CASE( "crafting_does_not_consume_map_components_owned_by_another_faction",
+           "[crafting][component][ownership]" )
+{
+    clear_avatar();
+    clear_map();
+
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms player_pos( 60, 60, 0 );
+    const tripoint_bub_ms available_pos = player_pos + tripoint_rel_ms::east;
+    player.setpos( here, player_pos );
+
+    g->faction_manager_ptr->create_if_needed();
+    REQUIRE( g->faction_manager_ptr->get( faction_free_merchants, false ) != nullptr );
+
+    item owned_component( itype_2x4, calendar::turn );
+    owned_component.set_owner( faction_free_merchants );
+    here.add_item_or_charges( player_pos, owned_component );
+    here.add_item_or_charges( available_pos, item( itype_2x4, calendar::turn ) );
+
+    comp_selection<item_comp> selection;
+    selection.use_from = usage_from::map;
+    selection.comp = item_comp( itype_2x4, 1 );
+    const std::list<item> consumed = player.consume_items(
+                                         selection, 1, return_true<item> );
+
+    REQUIRE( consumed.size() == 1 );
+    CHECK( consumed.front().get_owner().is_null() );
+    const map_stack owned_stack = here.i_at( player_pos );
+    REQUIRE( owned_stack.size() == 1 );
+    CHECK( owned_stack.begin()->get_owner() == faction_free_merchants );
+    CHECK( here.i_at( available_pos ).empty() );
 }
 
 // Resume the first in progress craft found in the player's inventory

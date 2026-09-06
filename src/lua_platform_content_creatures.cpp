@@ -32,6 +32,7 @@ extern "C" {
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "magic_enchantment.h"
 #include "color.h"
 #include "damage.h"
 #include "dialogue.h"
@@ -252,6 +253,7 @@ struct effect_type_definition_data {
     std::set<std::string> resist_effects;
     std::set<std::string> removes_effects;
     std::set<std::string> blocks_effects;
+    std::set<std::string> enchantments;
     bool registered = false;
 };
 
@@ -1054,6 +1056,10 @@ struct effect_type_definition_handle {
 
         effect_type_definition_handle &blocks_effect( const std::string &id ) {
             return insert_id( definition->blocks_effects, id, "blocked effect" );
+        }
+
+        effect_type_definition_handle &enchantment( const std::string &id ) {
+            return insert_id( definition->enchantments, id, "enchantment" );
         }
 
         std::string id() const {
@@ -2457,7 +2463,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "resist_trait", &effect_type_definition_handle::resist_trait,
         "resist_effect", &effect_type_definition_handle::resist_effect,
         "removes_effect", &effect_type_definition_handle::removes_effect,
-        "blocks_effect", &effect_type_definition_handle::blocks_effect );
+        "blocks_effect", &effect_type_definition_handle::blocks_effect,
+        "enchantment", &effect_type_definition_handle::enchantment );
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
         "id", sol::property( &monster_attack_definition_handle::id ),
@@ -3336,33 +3343,47 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
 
         const auto staged = [check_engine_state]( const auto & entries,
         const std::string_view id, const auto & native_exists ) {
+            // Bootstrap validates structure without consulting engine registries.
+            // Resolve native and dependency-Mod references during apply validation.
+            if( id.empty() ) {
+                return false;
+            }
+            if( !check_engine_state ) {
+                return true;
+            }
             return std::any_of( entries.begin(), entries.end(), [id]( const auto & entry ) {
                 return entry.definition->id == id;
-            } ) || ( check_engine_state && native_exists( std::string( id ) ) );
+            } ) || native_exists( std::string( id ) );
         };
         const auto item_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_item && index.defines_item( id ) ) ||
-                   ( check_engine_state && itype_id( id ).is_valid() );
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_item && index.defines_item( id ) ) ||
+                                   itype_id( id ).is_valid() );
         };
         const auto material_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_material && index.defines_material( id ) ) ||
-                   !check_engine_state || material_id( id ).is_valid();
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_material && index.defines_material( id ) ) ||
+                                   material_id( id ).is_valid() );
         };
         const auto damage_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_damage_type && index.defines_damage_type( id ) ) ||
-                   ( check_engine_state && damage_type_id( id ).is_valid() );
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_damage_type && index.defines_damage_type( id ) ) ||
+                                   damage_type_id( id ).is_valid() );
         };
         const auto skill_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_skill && index.defines_skill( id ) ) ||
-                   ( check_engine_state && skill_id( id ).is_valid() );
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_skill && index.defines_skill( id ) ) ||
+                                   skill_id( id ).is_valid() );
         };
         const auto proficiency_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_proficiency && index.defines_proficiency( id ) ) ||
-                   ( check_engine_state && proficiency_id( id ).is_valid() );
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_proficiency && index.defines_proficiency( id ) ) ||
+                                   proficiency_id( id ).is_valid() );
         };
         const auto vitamin_exists = [&index, check_engine_state]( const std::string & id ) {
-            return ( index.defines_vitamin && index.defines_vitamin( id ) ) ||
-                   ( check_engine_state && vitamin_id( id ).is_valid() );
+            return !id.empty() && ( !check_engine_state ||
+                                   ( index.defines_vitamin && index.defines_vitamin( id ) ) ||
+                                   vitamin_id( id ).is_valid() );
         };
         const auto behavior_exists = [&]( const std::string & id ) {
             return staged( pimpl_->behaviors, id, native_behavior );
@@ -3698,8 +3719,19 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &[id, value] : definition.melee_damage ) {
-                if( !damage_exists( id ) || value.amount < 0.0 || value.armor_penetration < 0.0 ) {
-                    throw std::runtime_error( "monster '" + definition.id + "' has invalid melee damage" );
+                if( !damage_exists( id ) ) {
+                    throw std::runtime_error( "monster '" + definition.id +
+                                              "' references unknown melee damage type '" + id + "'" );
+                }
+                if( value.amount < 0.0 || value.armor_penetration < 0.0 ) {
+                    throw std::runtime_error( "monster '" + definition.id +
+                                              "' has invalid melee damage for type '" + id + "'" );
+                }
+            }
+            for( const auto &[id, amount] : definition.armor ) {
+                if( !damage_exists( id ) || !std::isfinite( amount ) || amount < 0.0 ) {
+                    throw std::runtime_error( "monster '" + definition.id +
+                                              "' has invalid armor for damage type '" + id + "'" );
                 }
             }
             for( const auto &attack : definition.attacks ) {
@@ -4159,6 +4191,9 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 }
                 for( const std::string &id : source.blocks_effects ) {
                     native.blocks_effects.emplace_back( id );
+                }
+                for( const std::string &id : source.enchantments ) {
+                    native.enchantments.emplace_back( id );
                 }
                 detail::effect_type_registry_set( native );
             }
@@ -5248,6 +5283,11 @@ bool creatures_content_transaction::validate_finalized( std::string &error ) con
                             "effect type", entry.definition->id ) ) {
             return false;
         }
+        for( const std::string &id : entry.definition->enchantments ) {
+            if( !require_valid( enchantment_id( id ).is_valid(), "effect enchantment", id ) ) {
+                return false;
+            }
+        }
     }
     for( const auto &entry : pimpl_->monster_attacks ) {
         if( !require_valid( detail::monster_attack_registry_find( entry.definition->id ) != nullptr,
@@ -5796,6 +5836,7 @@ void creatures_content_transaction::append_fingerprint(
             hash_ids( "resist_effect", value.resist_effects );
             hash_ids( "removes_effect", value.removes_effects );
             hash_ids( "blocks_effect", value.blocks_effects );
+            hash_ids( "enchantment", value.enchantments );
         }
     } else if( phase == creatures_content_fingerprint_phase::sub_body_part ) {
         for( const auto &entry : pimpl_->sub_body_parts ) {

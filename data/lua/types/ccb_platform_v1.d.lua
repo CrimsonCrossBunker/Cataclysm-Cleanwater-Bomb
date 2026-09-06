@@ -419,6 +419,37 @@ function ItemDefinition:quality(id, level) end
 ---@return ItemDefinition self
 function ItemDefinition:flag(id) end
 
+---@class ComestibleDefinitionOptions
+---@field type "FOOD"|"DRINK"
+---@field calories integer Fixed kilocalories per serving.
+---@field fun integer Base enjoyment.
+---@field healthy? integer Health modifier; defaults to zero.
+---@field quench? integer Thirst modifier; defaults to zero.
+---@field spoils_in_turns? integer Non-negative shelf life; zero never spoils.
+---@field charges? integer Positive default serving count; defaults to one.
+---@field stack_size? integer Positive servings represented by the volume; defaults to charges.
+
+---@param options ComestibleDefinitionOptions
+---@return ItemDefinition self
+function ItemDefinition:comestible(options) end
+
+---@param vitamin_id string Existing or same-transaction vitamin id.
+---@param amount integer Vitamin units per serving.
+---@return ItemDefinition self
+function ItemDefinition:vitamin(vitamin_id, amount) end
+
+---@class BookDefinitionOptions
+---@field skill string Existing or same-transaction skill id.
+---@field required_level integer Minimum skill needed to understand the book.
+---@field maximum_level integer Maximum skill level trained by the book.
+---@field intelligence integer Minimum intelligence needed to read it.
+---@field read_time_turns integer Positive time per chapter.
+---@field fun integer Reading enjoyment.
+
+---@param options BookDefinitionOptions
+---@return ItemDefinition self
+function ItemDefinition:book(options) end
+
 ---@param handler_id string
 ---@param label? string
 ---@return ItemDefinition self
@@ -457,6 +488,10 @@ local RecipeDefinition = {}
 ---@param moves integer
 ---@return RecipeDefinition self
 function RecipeDefinition:duration_moves(moves) end
+
+---@param charges integer Positive number of result charges/servings.
+---@return RecipeDefinition self
+function RecipeDefinition:result_charges(charges) end
 
 ---@param id string
 ---@param count integer
@@ -648,6 +683,8 @@ function ButcheryRequirementDefinition:requirement(speed, size, butcher, require
 local ItemActionDefinition = {}
 
 ---@class ScenarioDefinitionOptions
+---Calendar defaults match native JSON scenarios without explicit dates, using SEASON_LENGTH.
+---Game start is at 08:00; the cataclysm begins five calendar days earlier at 00:00.
 ---@field id string Stable scenario id.
 ---@field name string Scenario display name.
 ---@field description string Scenario description.
@@ -927,6 +964,10 @@ function EffectTypeDefinition:removes_effect(id) end
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:blocks_effect(id) end
+
+---@param id string Existing or same-transaction Enchantment id.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:enchantment(id) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
@@ -2508,7 +2549,7 @@ function ConstructionDefinition:post_flag(flag_id) end
 ---@field description? string Furniture description.
 ---@field color string Native color name.
 ---@field symbol string Single map symbol character.
----@field move_cost_mod? integer Non-negative move cost modifier.
+---@field move_cost_mod? integer Native signed-int move cost modifier; negative values make the furniture impassable.
 ---@field required_str? integer Non-negative strength required to move through.
 ---@field light_emitted? integer Non-negative light emitted.
 ---@field comfort? integer Non-negative sleeping comfort.
@@ -2774,6 +2815,11 @@ function TraitGroupDefinition:group(group_id, weight) end
 ---@field id string Stable shopkeeper rule id.
 ---@field message? string Override message shown when entries match.
 ---@field default_rate? integer Default consumption rate.
+---@field predicate? string Named boolean handler for a dynamic whitelist; receives a detached ShopkeeperWhitelistPayload.
+
+---@class ShopkeeperWhitelistPayload
+---@field item table Detached item fields: id, category_id, comestible, food, medication, base_enjoyment, fresh, going_bad, and rotten.
+---@field shopkeeper table Detached NPC fields: name, class_id, and faction_id.
 
 ---@class ShopkeeperDefinition
 ---@field id string
@@ -4499,7 +4545,7 @@ local VehiclePartDefinition = {}
 ---@class VehiclePartPlacementOptions
 ---@field x integer Mount x coordinate.
 ---@field y integer Mount y coordinate.
----@field part string Existing or same-transaction vehicle-part id.
+---@field part string Vehicle-part id resolved after global finalization, including native auto-generated turrets.
 ---@field variant? string Vehicle-part variant id.
 ---@field with_ammo? integer Ammo fill percentage.
 ---@field ammo_types? string[] Allowed ammo item ids.
@@ -5515,6 +5561,8 @@ function CcbPlatformContent.add(definition) end
 function CcbPlatformContent.replace(definition) end
 ---@param definition PlatformContentDefinition Clone of a definition staged earlier by this Mod.
 function CcbPlatformContent.edit(definition) end
+---@param definition ItemGroupDefinition Entry-only patch for an existing group of the same kind; preserves prior entries and rolls back transactionally.
+function CcbPlatformContent.extend_item_group(definition) end
 
 ---@param id string Item id staged earlier by this Mod in the current candidate.
 ---@return ItemDefinition
@@ -6254,8 +6302,77 @@ function CcbPlatformTasks.cancel(task_id) end
 ---@field max_length? integer Maximum Unicode characters, from one through 32768.
 ---@field only_digits? boolean Reject non-digit input.
 
+---@class PlatformCanvasOptions
+---@field title? string Nonempty title, at most 256 bytes.
+---@field width? integer Logical pixel width, 1..2048; default 960.
+---@field height? integer Logical pixel height, 1..2048; default 720.
+---@field allow_quit? boolean Allow the native close control and QUIT action; default true. Otherwise the callback must provide a close button.
+---@field music? string Existing audio file relative to the owning Mod. Canonical paths must remain inside that Mod; temporary music is restored on exit.
+
+---@class PlatformCanvasContext
+---@field width integer Logical pixel width (not the scaled window width); read-only.
+---@field height integer Logical pixel height; read-only.
+---@field elapsed_ms integer Monotonic real milliseconds since opening; read-only.
+---@field delta_ms integer Real milliseconds since the previous frame, capped at 250; read-only.
+local PlatformCanvasContext = {}
+
+---Every method and property rejects use after its frame callback returns.
+---@return boolean open
+function PlatformCanvasContext:is_open() end
+
+function PlatformCanvasContext:close() end
+
+---Primitives share a 4096-operation limit per frame and are clipped to the canvas. Coordinates are finite, within +/-8192; sizes within 0..8192. Colors use finite 0..1 RGBA.
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param r number
+---@param g number
+---@param b number
+---@param a number
+function PlatformCanvasContext:rect(x, y, width, height, r, g, b, a) end
+
+---@param x number
+---@param y number
+---@param value string Text up to 4096 bytes; no NUL.
+---@param r number
+---@param g number
+---@param b number
+---@param a number
+function PlatformCanvasContext:text(x, y, value, r, g, b, a) end
+
+---@param id string Registered tileset tile id, at most 256 bytes.
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@return boolean drawn False when the tile or texture is unavailable.
+function PlatformCanvasContext:sprite(id, x, y, width, height) end
+
+---@param id string Stable nonempty button id up to 96 bytes; unique within the frame.
+---@param label string Label up to 512 bytes.
+---@param x number
+---@param y number
+---@param width number Positive width.
+---@param height number Positive height.
+---@param request_focus? boolean Request keyboard focus; default false.
+---@return boolean clicked
+function PlatformCanvasContext:button(id, label, x, y, width, height, request_focus) end
+
 ---@class CcbPlatformPresentation
 local CcbPlatformPresentation = {}
+
+---Runtime callbacks in a ready world only. Uses native ImGui/tileset rendering, fits logical pixels to the display, and does not advance game turns. Nested canvases are rejected. Callback errors close the window, invalidate the frame and propagate; music is restored on every exit.
+---@param options PlatformCanvasOptions
+---@param draw fun(context: PlatformCanvasContext) Frame-local drawing and interaction callback; do not retain the context.
+---@return boolean available False without a graphical renderer; the callback is never invoked in that case.
+function CcbPlatformPresentation.canvas(options, draw) end
+
+---Play an existing Mod-relative audio asset from a runtime callback. Canonical paths must stay inside the owning Mod. No-op without sound support.
+---@param file string Relative audio path, at most 1024 bytes.
+---@param volume? integer Native volume 0..128, default 100.
+function CcbPlatformPresentation.play_sound(file, volume) end
 
 ---@param message string
 function CcbPlatformPresentation.notice(message) end
@@ -6448,6 +6565,17 @@ function ScriptMapgenContext:set_trap_id(x, y, id) end
 ---@param terrain_id string
 function ScriptMapgenContext:reset(terrain_id) end
 
+---Assign ownership to ground items and their contents within the current OMT.
+---Does not change vehicles, vehicle cargo, NPCs, furniture or terrain.
+---Uses the submap transaction, so callback failure restores prior ownership.
+---Consumes one operation per tile and per top-level item, reserved before any change.
+---@param x1 integer Local start x, 0..23.
+---@param y1 integer Local start y, 0..23.
+---@param x2 integer Local end x, x1..23.
+---@param y2 integer Local end y, y1..23.
+---@param faction string Existing non-empty faction ID.
+function ScriptMapgenContext:set_item_faction(x1, y1, x2, y2, faction) end
+
 ---@param x integer
 ---@param y integer
 ---@param item_id string
@@ -6609,6 +6737,29 @@ function ScriptMapgenContext:set_graffiti(x, y, text) end
 ---@param x integer
 ---@param y integer
 function ScriptMapgenContext:queue_point(name, x, y) end
+
+---Stage a native static NPC; published only after this map callback commits.
+---At most 128 NPC requests per context. Existing unique IDs are skipped at publication.
+---Callback failure discards all requests; this method does not return a live NPC handle.
+---Native publication errors are logged without rolling back the already committed map.
+---@param x integer Local x, 0..23.
+---@param y integer Local y, 0..23.
+---@param template_id string Existing NPC template ID.
+---@param unique_id string Empty, or a unique ID of at most 256 non-NUL bytes.
+function ScriptMapgenContext:queue_npc(x, y, template_id, unique_id) end
+
+---Stage a global zone; published before queued NPCs, only after the map callback commits.
+---At most 128 zone requests per context; no vehicle binding or personal zones.
+---Native publication errors are logged without rolling back the already committed map.
+---@param x1 integer Local start x, 0..23.
+---@param y1 integer Local start y, 0..23.
+---@param x2 integer Local end x, x1..23.
+---@param y2 integer Local end y, y1..23.
+---@param zone_type string Existing zone type ID.
+---@param faction string Existing faction ID.
+---@param name string At most 4096 non-NUL bytes.
+---@param filter string Empty, or at most 4096 non-NUL bytes for a custom loot zone.
+function ScriptMapgenContext:queue_zone(x1, y1, x2, y2, zone_type, faction, name, filter) end
 
 function ScriptMapgenContext:fill_groundcover() end
 
@@ -9481,6 +9632,29 @@ function CcbNpcsApi.ai_rules(handle) end
 
 ---@class CcbTradeApi
 local CcbTradeApi = {}
+
+---Open the native barter window. Both handles are explicit; only the active avatar is supported as buyer. Runtime write phase only. Does not replace exact-Item quote/commit.
+---@param seller GameHandle Exact NPC handle.
+---@param buyer GameHandle Exact active avatar handle.
+---@param cost integer Nonnegative service cost added to the barter balance.
+---@param title string Deal title, at most 4096 bytes and no NUL.
+---@return CcbResult result `value` is true when accepted, false when cancelled.
+function CcbTradeApi.open(seller, buyer, cost, title) end
+
+---Pay the NPC using their existing credit ledger or the native barter window. No implicit buyer. Runtime write phase only.
+---@param seller GameHandle Exact NPC handle.
+---@param buyer GameHandle Exact active avatar handle.
+---@param cost integer Nonnegative service cost in cents.
+---@return CcbResult result `value` is true when paid, false when cancelled.
+function CcbTradeApi.pay(seller, buyer, cost) end
+
+---Read-only native price for a made-to-order item prototype, not an inventory reservation. Includes the native NPC pricing rules. Call again immediately before payment; delivery remains explicit Lua inventory logic.
+---@param seller GameHandle Exact NPC handle.
+---@param buyer GameHandle Exact different Character handle.
+---@param item_type GameId Valid GameId<item>.
+---@param count integer Quantity, 1..1000000 (charges for charge-counted items).
+---@return CcbResult result `value` is { item: GameId, item_name: string, count: integer, cost_cents: integer, count_by_charges: boolean }. Invalid/nonpositive/overflow prices fail closed.
+function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 
 ---@param seller GameHandle Exact seller Character/NPC handle; never inferred from avatar/current trader.
 ---@param buyer GameHandle Exact buyer Character/NPC handle; never inferred from avatar/current trader.

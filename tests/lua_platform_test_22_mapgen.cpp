@@ -94,10 +94,194 @@ TEST_CASE( "lua_platform_mapgen_context_exposes_only_safe_mutations",
     CHECK( mapgen_context["queue_point"].valid() );
     CHECK( context["set_terrain"].valid() );
     CHECK( context["queue_point"].valid() );
+    CHECK( context["queue_npc"].valid() );
+    CHECK( context["queue_zone"].valid() );
+    CHECK( context["set_item_faction"].valid() );
+    CHECK_FALSE( context["publish_deferred"].valid() );
+    const sol::protected_function_result staged = fixture.lua.safe_script( R"lua(
+        context:queue_npc(1, 1, "test_talker", "platform_queued_not_published")
+        context:queue_zone(2, 2, 3, 3, "LOOT_FOOD", "your_followers", "test", "")
+    )lua", sol::script_pass_on_error );
+    REQUIRE( staged.valid() );
+    CHECK( fixture.context.operations_used() == 2 );
 
     CHECK_THROWS_WITH(
         fixture.context.place_vehicle( 0, 0, "", 0, -1, -1, "" ),
         Catch::Matchers::Contains( "external mutation is unsupported" ) );
+}
+
+TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit",
+           "[lua][platform][mapgen][transaction]" )
+{
+    platform_mapgen_callback_transaction_test_fixture fixture;
+    zone_manager &zones = zone_manager::get_manager();
+    const zone_manager zones_before = zones;
+    const std::string unique_id = "platform_deferred_mapgen_test_npc";
+    REQUIRE_FALSE( g->unique_npc_exists( unique_id ) );
+    on_out_of_scope cleanup( [&]() {
+        zones = zones_before;
+        if( g->unique_npc_exists( unique_id ) ) {
+            const shared_ptr_fast<npc> placed = overmap_buffer.find_npc_by_unique_id( unique_id );
+            if( placed ) {
+                if( placed->get_faction() ) {
+                    placed->get_faction()->remove_member( placed->getID() );
+                }
+                overmap_buffer.remove_npc( placed->getID() );
+            }
+            g->unique_npc_despawn( unique_id );
+        }
+    } );
+    REQUIRE( npc_template_id( "test_talker" ).is_valid() );
+    REQUIRE( faction_id( "your_followers" ).is_valid() );
+    const auto zone_count = [&]() {
+        return zones.get_zones( faction_id( "your_followers" ) ).size();
+    };
+    const std::size_t count_before = zone_count();
+    platform_mapgen_transaction_report report;
+    platform_mapgen_callback_transaction transaction( fixture.data, &report );
+    REQUIRE( transaction.ready() );
+    fixture.context.queue_zone( 2, 3, 4, 5, "LOOT_UNSORTED", "your_followers",
+                                "deferred stock", "" );
+    fixture.context.queue_zone( 6, 7, 6, 7, "LOOT_FOOD", "your_followers",
+                                "deferred food", "" );
+    fixture.context.queue_zone( 8, 9, 9, 10, "ZONE_START_POINT", "your_followers",
+                                "deferred start", "" );
+    fixture.context.queue_npc( 11, 12, "test_talker", unique_id );
+    fixture.context.queue_npc( 13, 12, "test_talker", unique_id );
+    CHECK( zone_count() == count_before );
+    CHECK_FALSE( g->unique_npc_exists( unique_id ) );
+    CHECK_THROWS( fixture.context.publish_deferred( report ) );
+
+    SECTION( "aborted callback never publishes NPCs or zones" )
+    {
+        CHECK( transaction.rollback( "callback_failed", "injected failure" ) );
+        CHECK_THROWS( fixture.context.publish_deferred( report ) );
+        fixture.context.invalidate();
+        CHECK( zone_count() == count_before );
+        CHECK_FALSE( g->unique_npc_exists( unique_id ) );
+        CHECK_THROWS( fixture.context.queue_npc( 1, 1, "test_talker", unique_id ) );
+    }
+    SECTION( "commit publishes exact positions and honors NPC uniqueness" )
+    {
+        transaction.commit();
+        REQUIRE( fixture.context.publish_deferred( report ) );
+        CHECK( zone_count() == count_before + 3 );
+        REQUIRE( g->unique_npc_exists( unique_id ) );
+        const shared_ptr_fast<npc> placed = overmap_buffer.find_npc_by_unique_id( unique_id );
+        REQUIRE( placed );
+        CHECK( placed->pos_abs() == fixture.native_map().get_abs( tripoint_bub_ms( 11, 12, 0 ) ) );
+        for( const auto &entry : std::vector<std::pair<zone_type_id, tripoint_bub_ms>>{
+                 { zone_type_id( "LOOT_UNSORTED" ), tripoint_bub_ms( 2, 3, 0 ) },
+                 { zone_type_id( "LOOT_FOOD" ), tripoint_bub_ms( 6, 7, 0 ) },
+                 { zone_type_id( "ZONE_START_POINT" ), tripoint_bub_ms( 8, 9, 0 ) }
+             } ) {
+            const zone_data *zone = zones.get_zone_at( fixture.native_map().get_abs( entry.second ),
+                                    entry.first, faction_id( "your_followers" ) );
+            REQUIRE( zone != nullptr );
+            CHECK_FALSE( zone->get_is_vehicle() );
+            CHECK( zone->get_start_point() == fixture.native_map().get_abs( entry.second ) );
+        }
+        CHECK( fixture.context.publish_deferred( report ) );
+        CHECK( zone_count() == count_before + 3 );
+        CHECK_THROWS( fixture.context.queue_zone( 0, 0, 0, 0, "LOOT_FOOD",
+                      "your_followers", "too late", "" ) );
+    }
+}
+
+TEST_CASE( "lua_platform_mapgen_deferred_placement_validates_before_publication",
+           "[lua][platform][mapgen][contract]" )
+{
+    platform_mapgen_callback_transaction_test_fixture fixture;
+    CHECK_THROWS( fixture.context.queue_npc( 24, 0, "test_talker", "" ) );
+    CHECK_THROWS( fixture.context.queue_npc( 0, 0, "missing_mapgen_npc", "" ) );
+    CHECK_THROWS( fixture.context.queue_npc( 0, 0, "test_talker", std::string( 257, 'x' ) ) );
+    CHECK_THROWS( fixture.context.queue_zone( 0, 0, 24, 1, "LOOT_FOOD",
+                  "your_followers", "", "" ) );
+    CHECK_THROWS( fixture.context.queue_zone( 0, 0, 0, 0, "missing_mapgen_zone",
+                  "your_followers", "", "" ) );
+    CHECK_THROWS( fixture.context.queue_zone( 0, 0, 0, 0, "LOOT_FOOD",
+                  "missing_mapgen_faction", "", "" ) );
+    CHECK_THROWS( fixture.context.queue_zone( 0, 0, 0, 0, "LOOT_FOOD",
+                  "your_followers", "", "unsupported filter" ) );
+    CHECK( fixture.context.operations_used() == 0 );
+    for( int i = 0; i < 128; ++i ) {
+        fixture.context.queue_npc( 0, 0, "test_talker", "" );
+        fixture.context.queue_zone( 0, 0, 0, 0, "LOOT_FOOD", "your_followers", "", "" );
+    }
+    CHECK_THROWS( fixture.context.queue_npc( 0, 0, "test_talker", "" ) );
+    CHECK_THROWS( fixture.context.queue_zone( 0, 0, 0, 0, "LOOT_FOOD",
+                  "your_followers", "", "" ) );
+    fixture.context.invalidate();
+}
+
+TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transactional",
+           "[lua][platform][mapgen][transaction][ownership]" )
+{
+    platform_mapgen_callback_transaction_test_fixture fixture;
+    map &here = fixture.native_map();
+    const faction_id owner( "your_followers" );
+    const faction_id previous_owner( "tacoma_commune" );
+    REQUIRE( owner.is_valid() );
+    REQUIRE( previous_owner.is_valid() );
+    const tripoint_bub_ms inside( 1, 1, 0 );
+    const tripoint_bub_ms outside( 3, 3, 0 );
+    item bottle( itype_id( "bottle_plastic" ), calendar::turn );
+    REQUIRE( bottle.put_in( item( itype_id( "water" ), calendar::turn, 1 ),
+                           pocket_type::CONTAINER ).success() );
+    bottle.set_owner( previous_owner );
+    here.add_item_or_charges( inside, bottle );
+    here.add_item_or_charges( outside, bottle );
+    fixture.context.place_toilet( 2, 2, 10 );
+
+    const auto check_stack_owner = [&]( const tripoint_bub_ms & position,
+    const faction_id & expected ) {
+        REQUIRE_FALSE( here.i_at( position ).empty() );
+        for( const item &entry : here.i_at( position ) ) {
+            CHECK( entry.get_owner() == expected );
+            for( const item *contents : entry.all_items_top() ) {
+                CHECK( contents->get_owner() == expected );
+            }
+        }
+    };
+    platform_mapgen_transaction_report report;
+    platform_mapgen_callback_transaction transaction( fixture.data, &report );
+    REQUIRE( transaction.ready() );
+    CHECK_THROWS( fixture.context.set_item_faction( 0, 0, 24, 23, owner.str() ) );
+    CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "missing_mapgen_faction" ) );
+    CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "" ) );
+    check_stack_owner( inside, previous_owner );
+    SECTION( "an exhausted budget leaves ownership unchanged" )
+    {
+        while( fixture.context.operations_remaining() > 0 ) {
+            fixture.context.random_int( 0, 0 );
+        }
+        CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() ) );
+        check_stack_owner( inside, previous_owner );
+        check_stack_owner( outside, previous_owner );
+        return;
+    }
+    fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() );
+    check_stack_owner( inside, owner );
+    check_stack_owner( tripoint_bub_ms( 2, 2, 0 ), owner );
+    check_stack_owner( outside, previous_owner );
+
+    SECTION( "failure restores ground and contained item ownership" )
+    {
+        REQUIRE( transaction.rollback( "callback_failed", "injected failure" ) );
+        check_stack_owner( inside, previous_owner );
+        check_stack_owner( outside, previous_owner );
+        for( const item &water : here.i_at( tripoint_bub_ms( 2, 2, 0 ) ) ) {
+            CHECK( water.get_owner().is_null() );
+        }
+    }
+    SECTION( "commit preserves ownership" )
+    {
+        transaction.commit();
+        check_stack_owner( inside, owner );
+        check_stack_owner( outside, previous_owner );
+    }
+    fixture.context.invalidate();
+    CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() ) );
 }
 
 TEST_CASE( "lua_platform_mapgen_service_uses_typed_update_and_target_tokens",

@@ -1,6 +1,64 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 
+TEST_CASE( "lua_platform_native_order_price_uses_explicit_parties_and_native_pricing",
+           "[lua][platform][trade][order]" )
+{
+    platform_trade_quote_fixture fixture( 240, 501, 220001, 220002 );
+    REQUIRE( fixture.ready() );
+    sol::protected_function price = fixture.services["trade"]["order_price"];
+    const cata::lua_platform::script_game_id ammo( "item", "9mm" );
+    const int original_charges = fixture.live_item->charges;
+    const int original_debt = fixture.buyer->op_of_u.owed;
+    // This fixture names the avatar 'seller' and the NPC 'buyer'; reverse them
+    // for a made-to-order NPC sale without introducing an implicit avatar.
+    const sol::protected_function_result result = price(
+                fixture.buyer_handle, fixture.seller_handle, ammo, 500 );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"];
+    const item prototype( itype_id( "9mm" ), calendar::turn );
+    CHECK( value["cost_cents"].get<int>() == npc_trading::trading_price_for_order(
+               fixture.seller, *fixture.buyer, prototype, 500 ) );
+    CHECK( value["count"].get<int>() == 500 );
+    CHECK( value["count_by_charges"].get<bool>() );
+    CHECK( fixture.live_item->charges == original_charges );
+    CHECK( fixture.buyer->op_of_u.owed == original_debt );
+    CHECK_FALSE( price( fixture.buyer_handle, fixture.seller_handle, ammo, 0 ).valid() );
+    CHECK_FALSE( price( fixture.buyer_handle, fixture.seller_handle, ammo, 1000001 ).valid() );
+    const sol::protected_function_result same = price(
+                fixture.buyer_handle, fixture.buyer_handle, ammo, 1 );
+    REQUIRE( same.valid() );
+    CHECK_FALSE( same.get<sol::table>()["ok"].get<bool>() );
+}
+
+TEST_CASE( "lua_platform_native_trade_does_not_substitute_the_active_avatar",
+           "[lua][platform][trade][order]" )
+{
+    platform_trade_quote_fixture fixture( 241, 502, 220011, 220012 );
+    REQUIRE( fixture.ready() );
+    sol::protected_function pay = fixture.services["trade"]["pay"];
+    sol::protected_function open = fixture.services["trade"]["open"];
+    fixture.buyer->op_of_u.owed = 1000;
+    const sol::protected_function_result result = pay(
+                fixture.buyer_handle, fixture.seller_handle, 100 );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE_FALSE( envelope["ok"].get<bool>() );
+    CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() ==
+           "unsupported_participants" );
+    CHECK( fixture.buyer->op_of_u.owed == 1000 );
+    CHECK_FALSE( pay( fixture.buyer_handle, fixture.seller_handle, -1 ).valid() );
+    CHECK_FALSE( open( fixture.buyer_handle, fixture.seller_handle, 0,
+                       std::string( 4097, 'x' ) ).valid() );
+    // No test opens an interactive window; the identity check rejects first.
+    const sol::protected_function_result rejected = open(
+                fixture.buyer_handle, fixture.seller_handle, 0, "Test trade" );
+    REQUIRE( rejected.valid() );
+    CHECK_FALSE( rejected.get<sol::table>()["ok"].get<bool>() );
+}
+
 TEST_CASE( "lua_platform_trade_quote_requires_exact_participants_and_holders",
            "[lua][platform][trade][quote]" )
 {
