@@ -119,6 +119,10 @@ static const item *get_most_rotten_component( const item &craft )
 }
 
 static constexpr double ROT_SEED_MASS_MULT = 10.0;
+// Against the seed multiplier above, the bad-mass-fraction floor only overtakes the
+// weighted blend once the most rotten component is several times worse than the
+// going-bad average, i.e. when it is near fully rotten (relative rot above 1.8).
+static constexpr double PRESERVE_FLOOR_COEFF = 5.0;
 
 struct component_rot_blend {
     double weighted_rot = 0.0;
@@ -221,9 +225,12 @@ static bool shelf_life_less_than_each_component( const item &craft )
 // 2) Relative rot of the most rotten component, used otherwise: heavily rotten
 //    components can never be turned into fresh long-shelf-life products.
 // Cooked results (heated result or non-raw result) blend component rot by mass
-// instead, floored at the most rotten component's rot scaled by the bad mass
-// fraction: a small batch with a bad piece stays nearly as bad as that piece,
-// while large batches dilute it.
+// instead, floored at PRESERVE_FLOOR_COEFF times the most rotten component's rot
+// scaled by the bad mass fraction: a small batch with a bad piece stays nearly as
+// bad as that piece, while large batches dilute it.  The floor only overtakes the
+// weighted blend for near fully rotten components, i.e. once the most rotten
+// component exceeds the seed multiplier / floor coefficient times the going-bad
+// average.
 // An explicit "rot_inherit" recipe setting overrides the automatic choice;
 // "fresh" skips inheritance entirely so the in-progress craft does not rot.
 void item::inherit_rot_from_components( item &it )
@@ -275,7 +282,8 @@ void item::inherit_rot_from_components( item &it )
             if( blend ) {
                 const double blended = mode == rot_inherit_mode::PRESERVE_BLEND ?
                                        std::max( blend->weighted_rot,
-                                                 max_rot * blend->bad_mass_fraction ) :
+                                                 PRESERVE_FLOOR_COEFF * max_rot *
+                                                 blend->bad_mass_fraction ) :
                                        blend->weighted_rot;
                 it.set_relative_rot( blended );
             } else if( most_rotten ) {
