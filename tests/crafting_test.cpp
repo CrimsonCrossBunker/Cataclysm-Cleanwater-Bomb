@@ -2913,7 +2913,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "weighted mode with a going-bad and a fresh component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
@@ -2935,7 +2935,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
             comps.add( comp );
         }
         item comp_bad( itype_test_rot_a, calendar::turn, 1 );
-        comp_bad.set_rot( comp_bad.get_shelf_life() - 1.2_hours );
+        comp_bad.set_rot( comp_bad.get_shelf_life() - 72_minutes );
         comps.add( comp_bad );
         item craft( &*recipe_test_rot_weighted, 1, comps, std::vector<item_comp> {}, false );
 
@@ -2950,7 +2950,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "preserve blend mode with a going-bad and a stale component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.4 );
         item_components comps;
         comps.add( comp_a );
@@ -2967,7 +2967,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "max mode with a going-bad and a stale component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.5 );
         item_components comps;
         comps.add( comp_a );
@@ -2982,7 +2982,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "shortest mode with a going-bad and a stale component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.5 );
         item_components comps;
         comps.add( comp_a );
@@ -2990,14 +2990,14 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item craft( &*recipe_test_rot_shortest, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the shortest remaining lifespan is inherited" ) {
-            CHECK( craft.get_relative_rot() == Approx( 1.0 - 1.2_hours / 30_days ) );
+            CHECK( craft.get_relative_rot() == Approx( 1.0 - 72_minutes / 30_days ) );
         }
     }
 
     GIVEN( "fresh mode with a rotten component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
@@ -3011,7 +3011,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "automatic mode with a raw result" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.5 );
         item_components comps;
         comps.add( comp_a );
@@ -3026,7 +3026,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "automatic mode with a non-raw result" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.4 );
         item_components comps;
         comps.add( comp_a );
@@ -3043,7 +3043,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
     GIVEN( "automatic mode with a short shelf life result and a nearly rotten component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         comp_b.set_relative_rot( 0.2 );
         item_components comps;
         comps.add( comp_a );
@@ -3053,7 +3053,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         THEN( "the shortest remaining lifespan is inherited" ) {
             // The component holds exactly 1.2 hours of remaining shelf life, the
             // result shelf life is 6 hours.
-            CHECK( craft.get_relative_rot() == Approx( 1.0 - 1.2_hours / 6_hours ) );
+            CHECK( craft.get_relative_rot() == Approx( 1.0 - 72_minutes / 6_hours ) );
         }
     }
 
@@ -3166,7 +3166,7 @@ TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
     GIVEN( "a weighted mode recipe with a going-bad component" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_rot( comp_a.get_shelf_life() - 1.2_hours );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
         tools.insert( tools.end(), 1, comp_a );
         tools.insert( tools.end(), 1, comp_b );
 
