@@ -104,7 +104,7 @@ static const item *get_most_rotten_component( const item &craft )
 {
     const item *most_rotten = nullptr;
     for( const item_components::type_vector_pair &tvp : craft.components ) {
-        if( !tvp.second.front().goes_bad() ) {
+        if( !tvp.second.front().goes_bad() || !tvp.second.front().is_comestible() ) {
             // they're all the same type, so this should be the same for all
             continue;
         }
@@ -122,7 +122,7 @@ static time_duration get_shortest_lifespan_from_components( const item &craft )
     const item *shortest_lifespan_component = nullptr;
     time_duration shortest_lifespan = 0_turns;
     for( const item_components::type_vector_pair &tvp : craft.components ) {
-        if( !tvp.second.front().goes_bad() ) {
+        if( !tvp.second.front().goes_bad() || !tvp.second.front().is_comestible() ) {
             // they're all the same type, so this should be the same for all
             continue;
         }
