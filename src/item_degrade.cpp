@@ -242,16 +242,21 @@ void item::inherit_rot_from_components( item &it )
         return;
     }
 
-    if( mode == rot_inherit_mode::DEFAULT || mode == rot_inherit_mode::SHORTEST ) {
-        if( shelf_life_less_than_each_component( it ) ) {
-            const time_duration shortest_lifespan = get_shortest_lifespan_from_components( it );
-            if( shortest_lifespan > 0_turns &&
-                ( mode == rot_inherit_mode::SHORTEST || shortest_lifespan < it.get_shelf_life() ) ) {
-                it.set_rot( std::max( 0_turns, it.get_shelf_life() - shortest_lifespan ) );
-                return;
-            }
-            // Fallthrough: shortest_lifespan <= 0_turns (all components are rotten)
+    if( mode == rot_inherit_mode::SHORTEST ) {
+        const time_duration shortest_lifespan = get_shortest_lifespan_from_components( it );
+        if( shortest_lifespan > 0_turns ) {
+            it.set_rot( std::max( 0_turns, it.get_shelf_life() - shortest_lifespan ) );
+            return;
         }
+        // Fallthrough: all components are rotten
+    } else if( mode == rot_inherit_mode::DEFAULT &&
+               shelf_life_less_than_each_component( it ) ) {
+        const time_duration shortest_lifespan = get_shortest_lifespan_from_components( it );
+        if( shortest_lifespan > 0_turns && shortest_lifespan < it.get_shelf_life() ) {
+            it.set_rot( it.get_shelf_life() - shortest_lifespan );
+            return;
+        }
+        // Fallthrough: shortest_lifespan <= 0_turns (all components are rotten)
     }
 
     const item *most_rotten = get_most_rotten_component( it );
