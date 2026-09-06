@@ -9,12 +9,10 @@ target: Lua is the sole executable authoring language for CCB core content and M
 current_phase: core_platform_complete
 
 verification_policy:
-  implementation_loop: source_and_test_writes_only
-  acceptance_gate: one_final_gate_after_all_source_batches
+  implementation_loop: domain_batch_with_focused_checks
+  acceptance_gate: scoped_gate_after_each_domain_batch
   forbidden_before_gate:
     - cxx_build
-    - catch2
-    - python_suite
     - contract_generation
     - ledger_refresh
     - full_corpus_audit
@@ -645,12 +643,15 @@ capabilities:
     next_actions: []
   - id: platform-hardening
     phase: hardening
-    status: in_progress
-    target_surface: "High-priority follow-on runtime hardening. Existing standard-library whitelist changes are useful incremental hardening; per-state memory budgets, callback instruction budgets or equivalent interruptible boundaries, process isolation, and any wider limits remain separately planned and are not core Platform closure conditions."
+    status: planned
+    target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Current loader whitelist and package restrictions do not yet implement this policy."
     legacy_dependency: none
     evidence: [src/lua_platform_runtime.cpp, src/lua_platform_loader.cpp, tests/lua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
     verification: not_run
-    next_actions: [Track the existing whitelist changes as incremental hardening without claiming the broader batch is complete; design and verify resource, callback, and isolation limits in an independent follow-on gate; do not add this capability as a platform-capability-closure or final-acceptance dependency.]
+    next_actions:
+      - Replace library/package restrictions while preserving the reserved ccb entrypoint and local module resolution; verify full standard libraries and ordinary external/native loading on supported platforms.
+      - Document executable metadata discovery and provide execution-risk notice before downloaded Mod code first runs; do not claim existing catalog or launcher integration supplies this notice.
+      - Validate handle safety, reload and error cleanup; add profiling or optional diagnostic limits only when useful. Supersede sandbox/process-isolation and mandatory-budget plans rather than introducing another runtime or permission manifest.
   - id: shared-ccb-std
     phase: standard-library
     status: planned
@@ -669,9 +670,11 @@ capabilities:
     next_actions: [Design and implement internationalization in an independent follow-on batch with its own extraction, declaration, example, test, and acceptance evidence; do not make it a platform-capability-closure or final-acceptance dependency.]
   - id: author-experience
     phase: tooling
-    status: planned
+    status: in_progress
     target_surface: "Recommended future cookbook/console/author-experience work: actionable diagnostics, editor declarations, scaffolding, runnable examples, cookbook guidance, console support, and migration reports that make typed Lua workflows discoverable and debuggable."
     legacy_dependency: none
-    evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua, data/lua/LUA_FIRST_EOC_WORKFLOW.md]
+    evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, tools/lua_api/mod_sdk.py, tools/lua_api/test_mod_sdk.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua, data/lua/LUA_FIRST_EOC_WORKFLOW.md]
     verification: not_run
-    next_actions: [Plan cookbook, console, diagnostics, editor, scaffolding, examples, and migration-report improvements as an independent follow-on batch; evaluate author workflows rather than selector or TODO counts; do not make this capability a platform-capability-closure or final-acceptance dependency.]
+    next_actions:
+      - The initial declaration-snapshot, scaffold/editor and static-diagnostic slice passed local tool tests and the real LuaLS gate; it does not implement an in-game debugger, state/task inspector or native compatibility negotiation.
+      - Continue runtime debugging, cookbook and author-workflow improvements as independent batches with their own evidence; do not make the whole author-experience capability a core Platform closure dependency.

@@ -8,22 +8,34 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     from .check_platform_native_inventory import check
     from .generate_platform_native_inventory import (
         DEFAULT_OUTPUT,
-        build_native_inventory,
     )
 except ImportError:
     from check_platform_native_inventory import check
     from generate_platform_native_inventory import (
         DEFAULT_OUTPUT,
-        build_native_inventory,
     )
 
 
 class PlatformNativeInventoryCheckTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.inventory = json.loads(DEFAULT_OUTPUT.read_text(encoding="utf-8"))
+
+    def check_fixture(self, path: Path) -> dict[str, int]:
+        # Negative cases exercise validation against a fixed source snapshot.
+        # The repository test below keeps the real source scan end to end.
+        with patch(
+            f"{check.__module__}.build_native_inventory",
+            return_value=self.inventory,
+        ):
+            return check(path)
+
     def test_checked_in_inventory_matches_sources(self) -> None:
         summary = check(DEFAULT_OUTPUT)
         for key in (
@@ -47,7 +59,7 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
         return path
 
     def test_missing_platform_shared_root_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         graph = stale["export_installation_graph"]
         graph["edges"] = [
             edge
@@ -64,10 +76,10 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"platform_v1 installation root parity.*GameHandle",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_root_without_member_disposition_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         root = next(
             entry
             for entry in stale["export_roots"]
@@ -79,10 +91,10 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"GameHandle lacks member disposition structure",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_member_without_disposition_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         root = next(
             entry
             for entry in stale["export_roots"]
@@ -99,10 +111,10 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"GameHandle.status lacks a valid disposition",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_unbound_member_without_reason_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         root = next(
             entry
             for entry in stale["export_roots"]
@@ -119,10 +131,10 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"UnitValue.native.canonical_wide unbound.*reason",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_registered_root_missing_from_inventory_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         stale["export_roots"] = [
             entry
             for entry in stale["export_roots"]
@@ -133,10 +145,10 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"registered export roots missing from inventory.*GameHandle",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_adapted_member_without_lua_access_is_rejected(self) -> None:
-        stale = copy.deepcopy(build_native_inventory())
+        stale = copy.deepcopy(self.inventory)
         root = next(
             entry
             for entry in stale["export_roots"]
@@ -153,21 +165,21 @@ class PlatformNativeInventoryCheckTest(unittest.TestCase):
                 RuntimeError,
                 r"PointCoord.native.line_to adapted.*Lua access",
             ):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_source_drift_is_rejected(self) -> None:
-        stale = build_native_inventory()
+        stale = copy.deepcopy(self.inventory)
         stale["id_kinds"] = stale["id_kinds"][:-1]
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(RuntimeError, "stale"):
-                check(self.write_inventory(directory, stale))
+                self.check_fixture(self.write_inventory(directory, stale))
 
     def test_non_object_inventory_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "inventory.json"
             path.write_text("[]\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "JSON object"):
-                check(path)
+                self.check_fixture(path)
 
 
 if __name__ == "__main__":

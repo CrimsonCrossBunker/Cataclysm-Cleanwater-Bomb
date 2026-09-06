@@ -1,4 +1,6 @@
 local ccb = require("ccb")
+assert(ccb.platform_version == 1,
+    "This Mod requires CCB Lua Platform v1; got " .. tostring(ccb.platform_version))
 local behaviour = require("runtime.behaviour")
 local token_content = require("content.token")
 

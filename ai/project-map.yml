@@ -18,10 +18,10 @@ entries:
     boundaries:
       - Preserve stable IDs or provide explicit migration data.
   - id: lua-api
-    paths: [data/lua/types/ccb_platform_v1.d.lua, 'data/lua/reference/ccb_platform_*', tools/lua_api/, src/main.cpp, src/game_io.cpp, src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h']
+    paths: [data/lua/types/ccb_platform_v1.d.lua, 'data/lua/reference/ccb_platform_*', tools/lua_api/, tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/, src/main.cpp, src/game_io.cpp, src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h']
     purpose: Lua-first Platform v1 declarations, native inventory, public contract, synchronization coverage, and contract checks.
     instructions: data/lua/AGENTS.md
-    validation_ids: [lua-contract]
+    validation_ids: [lua-contract, lua-authoring]
     boundaries:
       - Platform v1 declarations, registrations, generated inventory, and contract checks are authoritative.
       - This is a contract-validation route within the sole Platform runtime, not a second Lua system.

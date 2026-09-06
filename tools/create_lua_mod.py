@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create an author-owned, zero-JSON Lua-first Platform Mod."""
+"""Create a manifest-free Lua-first Mod with optional editor metadata."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ import argparse
 import shutil
 import tempfile
 from pathlib import Path
+
+from lua_api.mod_sdk import DEFAULT_DECLARATIONS, write_editor_files
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +57,10 @@ def _install_staged_directory(staging: Path, target: Path) -> None:
     staging.replace(target)
 
 
-def create_mod(target: Path, template: str) -> None:
+def create_mod(
+    target: Path, template: str, *, editor: bool = True,
+    declarations: Path = DEFAULT_DECLARATIONS,
+) -> None:
     source = TEMPLATE_ROOT / template
     if not source.is_dir():
         raise ValueError(f"unknown Lua-first template: {template}")
@@ -87,6 +92,8 @@ def create_mod(target: Path, template: str) -> None:
                 render_template_file(entry, destination, mod_id)
             else:
                 raise ValueError(f"unsupported template entry: {entry}")
+        if editor:
+            write_editor_files(staging, declarations)
         removed_empty_target = False
         if target.exists() or target.is_symlink():
             if target.is_symlink() or not had_empty_target:
@@ -131,9 +138,18 @@ def main() -> int:
     parser.add_argument(
         "--template", choices=("minimal", "complete"), default="minimal"
     )
+    parser.add_argument(
+        "--no-editor", action="store_true",
+        help="create runtime files only, without the optional LuaLS SDK",
+    )
+    parser.add_argument(
+        "--declarations", type=Path, default=DEFAULT_DECLARATIONS,
+        help="LuaLS declaration file from the target CCB checkout or release",
+    )
     args = parser.parse_args()
     try:
-        create_mod(args.target, args.template)
+        create_mod(args.target, args.template, editor=not args.no_editor,
+                   declarations=args.declarations)
     except (FileExistsError, OSError, ValueError) as error:
         parser.error(str(error))
     return 0

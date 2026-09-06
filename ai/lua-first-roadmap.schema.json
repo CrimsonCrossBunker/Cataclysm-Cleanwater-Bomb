@@ -42,8 +42,8 @@
         "complete_means"
       ],
       "properties": {
-        "implementation_loop": { "enum": ["source_and_test_writes_only"] },
-        "acceptance_gate": { "enum": ["one_final_gate_after_all_source_batches"] },
+        "implementation_loop": { "enum": ["domain_batch_with_focused_checks"] },
+        "acceptance_gate": { "enum": ["scoped_gate_after_each_domain_batch"] },
         "forbidden_before_gate": {
           "type": "array",
           "items": {
