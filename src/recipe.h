@@ -61,7 +61,8 @@ enum class rot_inherit_mode : int {
     WEIGHTED = 2,
     /** Inherit the shortest remaining lifespan among components. */
     SHORTEST = 3,
-    /** Mass-weighted average with a floor at a fraction of the highest relative rot. */
+    /** Mass-weighted average floored at the highest relative rot scaled by the
+     * going-bad components' mass fraction. */
     PRESERVE_BLEND = 4,
     /** The in-progress craft does not rot and the result stays fresh. */
     FRESH = 5,
