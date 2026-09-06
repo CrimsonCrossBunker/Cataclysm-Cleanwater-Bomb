@@ -2478,11 +2478,19 @@ void item::inherit_flags( const item_components &parents, const recipe &making )
     }
 }
 
-static void set_temp_rot( item &newit, const double relative_rot, const bool should_heat )
+static constexpr double COOK_SALVAGE_THRESHOLD = 0.5;
+static constexpr double COOK_ROT_MITIGATION = 0.85;
+
+static void set_temp_rot( item &newit, const double relative_rot, const bool should_heat,
+                          const double rot_mitigation )
 {
     if( newit.has_temperature() ) {
         if( newit.goes_bad() ) {
-            newit.set_relative_rot( relative_rot );
+            if( rot_mitigation < 1.0 && !newit.has_flag( flag_PROCESSING_RESULT ) ) {
+                newit.set_relative_rot( relative_rot * rot_mitigation );
+            } else {
+                newit.set_relative_rot( relative_rot );
+            }
         }
         if( should_heat ) {
             newit.heat_up();
@@ -2500,16 +2508,16 @@ static void set_temp_rot( item &newit, const double relative_rot, const bool sho
 
 static void spawn_items( Character &guy, std::vector<item> &results,
                          const std::optional<tripoint_bub_ms> &loc, const double relative_rot, const bool should_heat,
-                         bool allow_wield = false )
+                         const double rot_mitigation, bool allow_wield = false )
 {
     auto prepare = [&]( item & it ) {
         // todo: set this up recursively, who knows what kinda crafts will need it
         if( !it.empty() ) {
             for( item *new_content : it.all_items_top() ) {
-                set_temp_rot( *new_content, relative_rot, should_heat );
+                set_temp_rot( *new_content, relative_rot, should_heat, rot_mitigation );
             }
         }
-        set_temp_rot( it, relative_rot, should_heat );
+        set_temp_rot( it, relative_rot, should_heat, rot_mitigation );
         it.set_owner( guy.get_faction()->id );
     };
 
@@ -2589,6 +2597,12 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
     item_components &used = craft.components;
     const double relative_rot = craft.get_relative_rot();
     const bool should_heat = making.hot_result();
+    // Cooking makes marginally old components safer, but a component at or past
+    // the salvage threshold is not recoverable (heat-stable toxins).
+    double rot_mitigation = 1.0;
+    if( should_heat && craft.max_components_relative_rot() < COOK_SALVAGE_THRESHOLD ) {
+        rot_mitigation = COOK_ROT_MITIGATION;
+    }
     const bool add_faults_to_results = craft.has_flag( flag_FAULT_ON_COMPLETION );
     std::vector<item> newits;
 
@@ -2630,7 +2644,7 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
         }
         // only wield crafted items if there's only one
         bool allow_wield = newits.size() == 1;
-        spawn_items( *this, newits, loc, relative_rot, should_heat, allow_wield );
+        spawn_items( *this, newits, loc, relative_rot, should_heat, rot_mitigation, allow_wield );
     }
 
     // messages, learning of recipe
@@ -2677,7 +2691,7 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
 
     if( making.has_byproducts() ) {
         std::vector<item> bps = making.create_byproducts( batch_size );
-        spawn_items( *this, bps, loc, relative_rot, should_heat );
+        spawn_items( *this, bps, loc, relative_rot, should_heat, rot_mitigation );
     }
 
     recoil = MAX_RECOIL;
