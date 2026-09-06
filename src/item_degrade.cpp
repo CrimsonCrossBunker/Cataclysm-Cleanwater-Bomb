@@ -118,17 +118,23 @@ static const item *get_most_rotten_component( const item &craft )
     return most_rotten;
 }
 
-static constexpr double PRESERVE_FLOOR_FRACTION = 0.3;
 static constexpr double ROT_SEED_MASS_MULT = 10.0;
+
+struct component_rot_blend {
+    double weighted_rot = 0.0;
+    // Mass fraction of going-bad components among all spoiling components.
+    double bad_mass_fraction = 0.0;
+};
 
 // Mass-weighted average relative rot of spoiling comestible components.  Components
 // at or past the going-bad threshold contribute extra weight: microbes from a bad
 // piece seed the whole batch, so dilution helps at large scale but a small batch
 // with a bad piece stays nearly as bad as that piece.
-static std::optional<double> get_mass_weighted_rot( const item &craft )
+static std::optional<component_rot_blend> get_mass_weighted_rot( const item &craft )
 {
-    double weighted_rot = 0.0;
+    component_rot_blend blend;
     double total_weight = 0.0;
+    double bad_weight = 0.0;
     for( const item_components::type_vector_pair &tvp : craft.components ) {
         if( !tvp.second.front().goes_bad() || !tvp.second.front().is_comestible() ) {
             // they're all the same type, so this should be the same for all
@@ -139,15 +145,21 @@ static std::optional<double> get_mass_weighted_rot( const item &craft )
             if( weight <= 0.0 ) {
                 continue;
             }
-            const double seed_mult = it.is_going_bad() ? ROT_SEED_MASS_MULT : 1.0;
-            weighted_rot += it.get_relative_rot() * weight * seed_mult;
+            const bool going_bad = it.is_going_bad();
+            const double seed_mult = going_bad ? ROT_SEED_MASS_MULT : 1.0;
+            blend.weighted_rot += it.get_relative_rot() * weight * seed_mult;
             total_weight += weight * seed_mult;
+            if( going_bad ) {
+                bad_weight += weight;
+            }
         }
     }
     if( total_weight <= 0.0 ) {
         return std::nullopt;
     }
-    return weighted_rot / total_weight;
+    blend.weighted_rot /= total_weight;
+    blend.bad_mass_fraction = bad_weight / total_weight;
+    return blend;
 }
 
 double item::max_components_relative_rot() const
@@ -209,8 +221,9 @@ static bool shelf_life_less_than_each_component( const item &craft )
 // 2) Relative rot of the most rotten component, used otherwise: heavily rotten
 //    components can never be turned into fresh long-shelf-life products.
 // Cooked results (heated result or non-raw result) blend component rot by mass
-// instead, floored at a fraction of the most rotten component: a small batch with
-// a bad piece stays nearly as bad as that piece, while large batches dilute it.
+// instead, floored at the most rotten component's rot scaled by the bad mass
+// fraction: a small batch with a bad piece stays nearly as bad as that piece,
+// while large batches dilute it.
 // An explicit "rot_inherit" recipe setting overrides the automatic choice;
 // "fresh" skips inheritance entirely so the in-progress craft does not rot.
 void item::inherit_rot_from_components( item &it )
@@ -253,11 +266,12 @@ void item::inherit_rot_from_components( item &it )
             break;
         case rot_inherit_mode::WEIGHTED:
         case rot_inherit_mode::PRESERVE_BLEND: {
-            const std::optional<double> weighted = get_mass_weighted_rot( it );
-            if( weighted ) {
+            const std::optional<component_rot_blend> blend = get_mass_weighted_rot( it );
+            if( blend ) {
                 const double blended = mode == rot_inherit_mode::PRESERVE_BLEND ?
-                                       std::max( *weighted, PRESERVE_FLOOR_FRACTION * max_rot ) :
-                                       *weighted;
+                                       std::max( blend->weighted_rot,
+                                                 max_rot * blend->bad_mass_fraction ) :
+                                       blend->weighted_rot;
                 it.set_relative_rot( blended );
             } else if( most_rotten ) {
                 it.set_relative_rot( max_rot );
