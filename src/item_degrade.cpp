@@ -49,6 +49,7 @@
 #include "messages.h"
 #include "mtype.h"
 #include "options.h"
+#include "recipe.h"
 #include "rng.h"
 #include "string_formatter.h"
 #include "translations.h"
@@ -117,6 +118,38 @@ static const item *get_most_rotten_component( const item &craft )
     return most_rotten;
 }
 
+static constexpr double PRESERVE_FLOOR_FRACTION = 0.3;
+static constexpr double ROT_SEED_MASS_MULT = 10.0;
+
+// Mass-weighted average relative rot of spoiling comestible components.  Components
+// at or past the going-bad threshold contribute extra weight: microbes from a bad
+// piece seed the whole batch, so dilution helps at large scale but a small batch
+// with a bad piece stays nearly as bad as that piece.
+static std::optional<double> get_mass_weighted_rot( const item &craft )
+{
+    double weighted_rot = 0.0;
+    double total_weight = 0.0;
+    for( const item_components::type_vector_pair &tvp : craft.components ) {
+        if( !tvp.second.front().goes_bad() || !tvp.second.front().is_comestible() ) {
+            // they're all the same type, so this should be the same for all
+            continue;
+        }
+        for( const item &it : tvp.second ) {
+            const double weight = units::to_milligram<int64_t>( it.weight() );
+            if( weight <= 0.0 ) {
+                continue;
+            }
+            const double seed_mult = it.is_going_bad() ? ROT_SEED_MASS_MULT : 1.0;
+            weighted_rot += it.get_relative_rot() * weight * seed_mult;
+            total_weight += weight * seed_mult;
+        }
+    }
+    if( total_weight <= 0.0 ) {
+        return std::nullopt;
+    }
+    return weighted_rot / total_weight;
+}
+
 double item::max_components_relative_rot() const
 {
     double max_rot = 0.0;
@@ -169,31 +202,70 @@ static bool shelf_life_less_than_each_component( const item &craft )
     return true;
 }
 
-// There are two ways rot is inherited:
-// 1) Inherit the remaining lifespan of the component with the lowest remaining lifespan
-// 2) Inherit the relative rot of the component with the highest relative rot
-//
-// Method 1 is used when the result of the recipe has a lower maximum shelf life than all of
-// its component's maximum shelf lives. Relative rot is not good to inherit in this case because
-// it can make an extremely short resultant remaining lifespan on the product.
-//
-// Method 2 is used when any component has a longer maximum shelf life than the result does.
-// Inheriting the lowest remaining lifespan can not be used in this case because it would break
-// food preservation recipes.
+// Rot inheritance modes:
+// 1) Shortest remaining lifespan of the components, used when the result has a lower
+//    maximum shelf life than all of its components: a short-lived mix goes bad with
+//    its worst part.
+// 2) Relative rot of the most rotten component, used otherwise: heavily rotten
+//    components can never be turned into fresh long-shelf-life products.
+// Cooked results (heated result or non-raw result) blend component rot by mass
+// instead, floored at a fraction of the most rotten component: a small batch with
+// a bad piece stays nearly as bad as that piece, while large batches dilute it.
+// An explicit "rot_inherit" recipe setting overrides the automatic choice;
+// "fresh" skips inheritance entirely so the in-progress craft does not rot.
 void item::inherit_rot_from_components( item &it )
 {
-    if( shelf_life_less_than_each_component( it ) ) {
-        const time_duration shortest_lifespan = get_shortest_lifespan_from_components( it );
-        if( shortest_lifespan > 0_turns && shortest_lifespan < it.get_shelf_life() ) {
-            it.set_rot( it.get_shelf_life() - shortest_lifespan );
-            return;
+    rot_inherit_mode mode = rot_inherit_mode::MAX;
+    if( it.is_craft() && it.craft_data_ && it.craft_data_->making ) {
+        mode = it.craft_data_->making->get_rot_inherit();
+        if( mode == rot_inherit_mode::DEFAULT && !it.craft_data_->disassembly ) {
+            const recipe &making = *it.craft_data_->making;
+            if( making.hot_result() || making.removes_raw() ) {
+                mode = rot_inherit_mode::PRESERVE_BLEND;
+            }
         }
-        // Fallthrough: shortest_lifespan <= 0_turns (all components are rotten)
+    }
+    if( mode == rot_inherit_mode::FRESH ) {
+        return;
+    }
+
+    if( mode == rot_inherit_mode::DEFAULT || mode == rot_inherit_mode::SHORTEST ) {
+        if( shelf_life_less_than_each_component( it ) ) {
+            const time_duration shortest_lifespan = get_shortest_lifespan_from_components( it );
+            if( shortest_lifespan > 0_turns &&
+                ( mode == rot_inherit_mode::SHORTEST || shortest_lifespan < it.get_shelf_life() ) ) {
+                it.set_rot( std::max( 0_turns, it.get_shelf_life() - shortest_lifespan ) );
+                return;
+            }
+            // Fallthrough: shortest_lifespan <= 0_turns (all components are rotten)
+        }
     }
 
     const item *most_rotten = get_most_rotten_component( it );
-    if( most_rotten ) {
-        it.set_relative_rot( most_rotten->get_relative_rot() );
+    const double max_rot = most_rotten ? most_rotten->get_relative_rot() : 0.0;
+    switch( mode ) {
+        case rot_inherit_mode::SHORTEST:
+        case rot_inherit_mode::MAX:
+        default:
+            if( most_rotten ) {
+                it.set_relative_rot( max_rot );
+            }
+            break;
+        case rot_inherit_mode::WEIGHTED:
+        case rot_inherit_mode::PRESERVE_BLEND: {
+            const std::optional<double> weighted = get_mass_weighted_rot( it );
+            if( weighted ) {
+                const double blended = mode == rot_inherit_mode::PRESERVE_BLEND ?
+                                       std::max( *weighted, PRESERVE_FLOOR_FRACTION * max_rot ) :
+                                       *weighted;
+                it.set_relative_rot( blended );
+            } else if( most_rotten ) {
+                it.set_relative_rot( max_rot );
+            }
+            break;
+        }
+        case rot_inherit_mode::FRESH:
+            break;
     }
 }
 
