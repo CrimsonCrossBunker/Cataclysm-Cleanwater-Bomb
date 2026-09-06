@@ -117,7 +117,6 @@ static const ammotype ammo_plutonium( "plutonium" );
 static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_weed_high( "weed_high" );
-static const vitamin_id vitamin_nicotine( "nicotine" );
 
 static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
@@ -160,6 +159,7 @@ static const trait_id trait_JITTERY( "JITTERY" );
 static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
+static const vitamin_id vitamin_nicotine( "nicotine" );
 
 // vitamin flags
 static const std::string flag_NO_SELL( "NO_SELL" );
