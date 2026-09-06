@@ -117,6 +117,21 @@ static const item *get_most_rotten_component( const item &craft )
     return most_rotten;
 }
 
+double item::max_components_relative_rot() const
+{
+    double max_rot = 0.0;
+    for( const item_components::type_vector_pair &tvp : components ) {
+        if( !tvp.second.front().goes_bad() || !tvp.second.front().is_comestible() ) {
+            // they're all the same type, so this should be the same for all
+            continue;
+        }
+        for( const item &it : tvp.second ) {
+            max_rot = std::max( max_rot, it.get_relative_rot() );
+        }
+    }
+    return max_rot;
+}
+
 static time_duration get_shortest_lifespan_from_components( const item &craft )
 {
     const item *shortest_lifespan_component = nullptr;
