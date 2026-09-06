@@ -200,14 +200,14 @@ static const recipe_id recipe_water_clean( "water_clean" );
 static const itype_id itype_test_rot_a( "test_rot_a" );
 static const itype_id itype_test_rot_b( "test_rot_b" );
 static const itype_id itype_test_rot_result( "test_rot_result" );
-static const recipe_id recipe_test_rot_auto_blend( "test_rot_result_rot_auto_blend" );
-static const recipe_id recipe_test_rot_auto_raw( "test_rot_result_rot_auto_raw" );
-static const recipe_id recipe_test_rot_auto_gate( "test_rot_result_rot_auto_gate" );
-static const recipe_id recipe_test_rot_weighted( "test_rot_result_rot_weighted" );
-static const recipe_id recipe_test_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
-static const recipe_id recipe_test_rot_max( "test_rot_result_rot_max" );
-static const recipe_id recipe_test_rot_shortest( "test_rot_result_rot_shortest" );
-static const recipe_id recipe_test_rot_fresh( "test_rot_result_rot_fresh" );
+static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
+static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
+static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
+static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
+static const recipe_id recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
+static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
+static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
+static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
 
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_survival( "survival" );
@@ -2917,7 +2917,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_weighted, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_weighted, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the bad piece dominates the small batch" ) {
             const double expected = 0.95 * seed_mult * mg_per_a /
@@ -2937,7 +2937,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item comp_bad( itype_test_rot_a, calendar::turn, 1 );
         comp_bad.set_rot( comp_bad.get_shelf_life() - 72_minutes );
         comps.add( comp_bad );
-        item craft( &*recipe_test_rot_weighted, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_weighted, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the large batch dilutes the bad piece" ) {
             const double expected = ( 99 * 0.05 * mg_per_a + 0.95 * seed_mult * mg_per_a ) /
@@ -2955,7 +2955,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the weighted blend with the bad-mass-fraction floor is inherited" ) {
             const double expected = ( 0.95 * seed_mult * mg_per_a + 0.4 * mg_per_b ) /
@@ -2972,7 +2972,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_max, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_max, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the most rotten component wins regardless of mass" ) {
             CHECK( craft.get_relative_rot() == approx_rot( 0.95 ) );
@@ -2987,7 +2987,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_shortest, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_shortest, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the shortest remaining lifespan is inherited" ) {
             CHECK( craft.get_relative_rot() == Approx( 1.0 - 72_minutes / 30_days ) );
@@ -3001,7 +3001,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_fresh, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_fresh, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the craft stays fresh" ) {
             CHECK( craft.get_rot() == 0_turns );
@@ -3016,7 +3016,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_auto_raw, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_auto_raw, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the most rotten component wins without dilution" ) {
             CHECK( craft.get_relative_rot() == approx_rot( 0.95 ) );
@@ -3031,7 +3031,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_auto_blend, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_auto_blend, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the weighted blend with the bad-mass-fraction floor is inherited" ) {
             const double expected = ( 0.95 * seed_mult * mg_per_a + 0.4 * mg_per_b ) /
@@ -3048,7 +3048,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_auto_gate, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_auto_gate, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the shortest remaining lifespan is inherited" ) {
             // The component holds exactly 1.2 hours of remaining shelf life, the
@@ -3067,7 +3067,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item comp_rotten( itype_test_rot_a, calendar::turn, 1 );
         comp_rotten.set_relative_rot( 2.0 );
         comps.add( comp_rotten );
-        item craft( &*recipe_test_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the bad-mass-fraction floor overtakes the weighted blend" ) {
             // 20 x 500 g at 0.91 plus 250 g at 2.0: the weighted blend is 0.9366,
@@ -3088,7 +3088,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
             comp.set_relative_rot( 2.0 );
             comps.add( comp );
         }
-        item craft( &*recipe_test_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps, std::vector<item_comp> {}, false );
 
         THEN( "the floor stays below the weighted blend once the batch is mostly rotten" ) {
             const double expected = ( 10 * 0.91 * mg_per_b + 10 * 2.0 * mg_per_a ) /
@@ -3171,8 +3171,8 @@ TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
         tools.insert( tools.end(), 1, comp_b );
 
         WHEN( "crafting the test recipe" ) {
-            prep_craft( recipe_test_rot_weighted, tools, true );
-            actually_test_craft( recipe_test_rot_weighted, INT_MAX, 10 );
+            prep_craft( recipe_test_rot_result_rot_weighted, tools, true );
+            actually_test_craft( recipe_test_rot_result_rot_weighted, INT_MAX, 10 );
 
             THEN( "the result carries the weighted rot" ) {
                 item_location result = player_character.get_wielded_item();
@@ -3194,8 +3194,8 @@ TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
         tools.insert( tools.end(), 1, comp_b );
 
         WHEN( "crafting the test recipe" ) {
-            prep_craft( recipe_test_rot_fresh, tools, true );
-            actually_test_craft( recipe_test_rot_fresh, INT_MAX, 10 );
+            prep_craft( recipe_test_rot_result_rot_fresh, tools, true );
+            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10 );
 
             THEN( "the result stays fresh" ) {
                 item_location result = player_character.get_wielded_item();
