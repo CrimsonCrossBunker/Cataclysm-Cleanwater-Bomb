@@ -812,7 +812,8 @@ void crafting_ui_impl::draw_category_tabs()
             bool should_select = force_select_tab &&
                                  ( tab.cur_index() == static_cast<int>( i ) );
             if( cataimgui::BeginTabItem( label.c_str(), should_select ) ) {
-                if( tab.cur_index() != static_cast<int>( i ) ) {
+                if( crafting_tab_selection_changed( tab.cur_index(), static_cast<int>( i ),
+                                                    force_select_tab ) ) {
                     pending_tab_index = static_cast<int>( i );
                 }
                 ImGui::EndTabItem();
@@ -853,7 +854,8 @@ void crafting_ui_impl::draw_subcategory_tabs()
             bool should_select = force_select_subtab &&
                                  ( subtab.cur_index() == static_cast<int>( i ) );
             if( cataimgui::BeginTabItem( label.c_str(), should_select ) ) {
-                if( subtab.cur_index() != static_cast<int>( i ) ) {
+                if( crafting_tab_selection_changed( subtab.cur_index(), static_cast<int>( i ),
+                                                    force_select_subtab ) ) {
                     pending_subtab_index = static_cast<int>( i );
                 }
                 ImGui::EndTabItem();
