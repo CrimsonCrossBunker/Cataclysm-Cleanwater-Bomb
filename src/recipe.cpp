@@ -372,6 +372,25 @@ void recipe::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "difficulty", difficulty, numeric_bound_reader<int> {0, MAX_SKILL} );
     optional( jo, was_loaded, "flags", flags );
 
+    if( jo.has_string( "rot_inherit" ) ) {
+        const std::string mode = jo.get_string( "rot_inherit" );
+        if( mode == "default" ) {
+            rot_inherit_ = rot_inherit_mode::DEFAULT;
+        } else if( mode == "max" ) {
+            rot_inherit_ = rot_inherit_mode::MAX;
+        } else if( mode == "weighted" ) {
+            rot_inherit_ = rot_inherit_mode::WEIGHTED;
+        } else if( mode == "shortest" ) {
+            rot_inherit_ = rot_inherit_mode::SHORTEST;
+        } else if( mode == "preserve_blend" ) {
+            rot_inherit_ = rot_inherit_mode::PRESERVE_BLEND;
+        } else if( mode == "fresh" ) {
+            rot_inherit_ = rot_inherit_mode::FRESH;
+        } else {
+            jo.throw_error_at( "rot_inherit", "invalid rot_inherit mode" );
+        }
+    }
+
     optional( jo, was_loaded, "character_resources", character_resources );
 
     // automatically set contained if we specify as container
@@ -2133,6 +2152,11 @@ bool recipe::removes_raw() const
 {
     item result( result_ );
     return result.is_comestible() && !result.has_flag( flag_RAW );
+}
+
+rot_inherit_mode recipe::get_rot_inherit() const
+{
+    return rot_inherit_;
 }
 
 bool recipe::hot_result() const
