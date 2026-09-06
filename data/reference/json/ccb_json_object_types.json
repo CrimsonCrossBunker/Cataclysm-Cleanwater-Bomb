@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:7a312ca0a6a04c9f73736e9f792bf33e05eefadac952bde972142d94cdcb5222",
+    "source_fingerprint": "sha256:0e28bff9b70ded8d69250da89baf121992dd37ec181fd59c69c8bd1d63aa927b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6768,
-    "top_level_objects": 94728,
+    "tracked_json_files": 6769,
+    "top_level_objects": 94745,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15113,
+        "occurrences": 15119,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2432,7 +2432,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_FLAGS.md",
-            "line": 685
+            "line": 683
           }
         ],
         "confidence": "lexical_only"
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1675,
+        "occurrences": 1676,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7763,
+        "occurrences": 7765,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 920,
+        "occurrences": 917,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -6000,7 +6000,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md",
-            "line": 351
+            "line": 352
           }
         ],
         "confidence": "lexical_only"
@@ -7431,7 +7431,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8195,
+        "occurrences": 8203,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -10744,7 +10744,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 128,
+        "occurrences": 131,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.I/migration_mutation.json",
