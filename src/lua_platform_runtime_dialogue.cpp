@@ -60,8 +60,8 @@ platform_canvas_context::platform_canvas_context( const int width, const int hei
 {
     if( width < 1 || width > 2048 || height < 1 || height > 2048 ||
         elapsed_ms < 0 || delta_ms < 0 || delta_ms > 250 ||
-        !std::isfinite( origin_x ) || !std::isfinite( origin_y ) ||
-        !std::isfinite( scale ) || scale <= 0 || scale > 1 ) {
+        !std::isfinite( origin_x_ ) || !std::isfinite( origin_y_ ) ||
+        !std::isfinite( scale_ ) || scale_ <= 0 || scale_ > 1 ) {
         throw std::invalid_argument( "invalid Platform canvas frame" );
     }
 }
