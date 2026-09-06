@@ -51,6 +51,23 @@ enum class recipe_time_flag : int {
     ignore_proficiencies = 1,
 };
 
+/** How the rot of crafting components carries over to the result. */
+enum class rot_inherit_mode : int {
+    /** Automatic: gate first, then domain-based (weighted blend when cooked, max otherwise). */
+    DEFAULT = 0,
+    /** Inherit the highest relative rot among components. */
+    MAX = 1,
+    /** Inherit the mass-weighted average relative rot, with extra mass for going-bad components. */
+    WEIGHTED = 2,
+    /** Inherit the shortest remaining lifespan among components. */
+    SHORTEST = 3,
+    /** Mass-weighted average floored at the highest relative rot scaled by the
+     * going-bad components' mass fraction. */
+    PRESERVE_BLEND = 4,
+    /** The in-progress craft does not rot and the result stays fresh. */
+    FRESH = 5,
+};
+
 template<>
 struct enum_traits<recipe_time_flag> {
     static constexpr bool is_flag_enum = true;
@@ -468,6 +485,9 @@ class recipe
 
         bool removes_raw() const;
 
+        /** How component rot carries over to the result (see @ref rot_inherit_mode). */
+        rot_inherit_mode get_rot_inherit() const;
+
         // Return the amount the recipe will produce (be it charges, or whole items).
         int makes_amount() const;
 
@@ -533,6 +553,9 @@ class recipe
 
         /** Legacy definitions for byproducts **/
         std::map<itype_id, int> byproducts;
+
+        /** Component rot inheritance mode, see @ref rot_inherit_mode. */
+        rot_inherit_mode rot_inherit_ = rot_inherit_mode::DEFAULT;
 
         /** Item group representing byproducts **/
         std::optional<item_group_id> byproduct_group;

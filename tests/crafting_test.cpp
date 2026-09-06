@@ -136,6 +136,9 @@ static const itype_id itype_soldering_iron( "soldering_iron" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const itype_id itype_test_cracklins( "test_cracklins" );
 static const itype_id itype_test_gum( "test_gum" );
+static const itype_id itype_test_rot_a( "test_rot_a" );
+static const itype_id itype_test_rot_b( "test_rot_b" );
+static const itype_id itype_test_rot_result( "test_rot_result" );
 static const itype_id itype_test_storage_battery( "test_storage_battery" );
 static const itype_id itype_test_ups( "test_ups" );
 static const itype_id itype_thread( "thread" );
@@ -191,6 +194,15 @@ static const recipe_id recipe_macaroni_cooked( "macaroni_cooked" );
 static const recipe_id recipe_magazine_battery_light_mod( "magazine_battery_light_mod" );
 static const recipe_id recipe_makeshift_funnel( "makeshift_funnel" );
 static const recipe_id recipe_sushi_rice( "sushi_rice" );
+static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
+static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
+static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
+static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
+static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
+static const recipe_id
+recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
+static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
+static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
 static const recipe_id recipe_test_tallow( "test_tallow" );
 static const recipe_id recipe_test_tallow2( "test_tallow2" );
 static const recipe_id recipe_test_waist_apron_long( "test_waist_apron_long" );
@@ -2914,6 +2926,330 @@ TEST_CASE( "recipes_inherit_rot_of_components_properly", "[crafting][rot]" )
                 REQUIRE( dehydrated_meat->type->get_id() == recipe_dry_meat->result() );
 
                 CHECK( dehydrated_meat->get_relative_rot() == 0.01 );
+            }
+        }
+    }
+}
+
+// Unit-level checks of component rot inheritance math.  Constructing an in-progress
+// craft runs inherit_rot_from_components directly, so no crafting setup is needed.
+// TEST_DATA weights are fixed: test_rot_a 250 g, test_rot_b 500 g, test_rot_result
+// 30 days, test_rot_result_short 6 hours.  The seed multiplier must match
+// ROT_SEED_MASS_MULT in item_degrade.cpp.  set_relative_rot truncates its result
+// to whole turns, so components are given exact rot via set_rot instead and the
+// craft side checks use a tolerance that covers the same truncation.
+TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
+{
+    static constexpr double mg_per_a = 250000;
+    static constexpr double mg_per_b = 500000;
+    static constexpr double seed_mult = 10.0;
+    // Largest truncation error of set_relative_rot on the 30 day result shelf life.
+    const auto approx_rot = []( double v ) {
+        return Approx( v ).epsilon( 1e-5 );
+    };
+
+    GIVEN( "weighted mode with a going-bad and a fresh component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_weighted, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the bad piece dominates the small batch" ) {
+            const double expected = 0.95 * seed_mult * mg_per_a /
+                                    ( seed_mult * mg_per_a + mg_per_b );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+            CHECK( craft.get_relative_rot() > 0.5 );
+        }
+    }
+
+    GIVEN( "weighted mode with one going-bad piece among many fresh ones" ) {
+        item_components comps;
+        for( int i = 0; i < 99; ++i ) {
+            item comp( itype_test_rot_a, calendar::turn, 1 );
+            comp.set_relative_rot( 0.05 );
+            comps.add( comp );
+        }
+        item comp_bad( itype_test_rot_a, calendar::turn, 1 );
+        comp_bad.set_rot( comp_bad.get_shelf_life() - 72_minutes );
+        comps.add( comp_bad );
+        item craft( &*recipe_test_rot_result_rot_weighted, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the large batch dilutes the bad piece" ) {
+            const double expected = ( 99 * 0.05 * mg_per_a + 0.95 * seed_mult * mg_per_a ) /
+                                    ( ( 99 + seed_mult ) * mg_per_a );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+            CHECK( craft.get_relative_rot() < 0.2 );
+        }
+    }
+
+    GIVEN( "preserve blend mode with a going-bad and a stale component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.4 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the weighted blend with the bad-mass-fraction floor is inherited" ) {
+            const double expected = ( 0.95 * seed_mult * mg_per_a + 0.4 * mg_per_b ) /
+                                    ( seed_mult * mg_per_a + mg_per_b );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+        }
+    }
+
+    GIVEN( "max mode with a going-bad and a stale component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.5 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_max, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the most rotten component wins regardless of mass" ) {
+            CHECK( craft.get_relative_rot() == approx_rot( 0.95 ) );
+        }
+    }
+
+    GIVEN( "shortest mode with a going-bad and a stale component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.5 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_shortest, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the shortest remaining lifespan is inherited" ) {
+            CHECK( craft.get_relative_rot() == Approx( 1.0 - 72_minutes / 30_days ) );
+        }
+    }
+
+    GIVEN( "fresh mode with a rotten component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_fresh, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the craft stays fresh" ) {
+            CHECK( craft.get_rot() == 0_turns );
+        }
+    }
+
+    GIVEN( "automatic mode with a raw result" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.5 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_auto_raw, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the most rotten component wins without dilution" ) {
+            CHECK( craft.get_relative_rot() == approx_rot( 0.95 ) );
+        }
+    }
+
+    GIVEN( "automatic mode with a non-raw result" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.4 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_auto_blend, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the weighted blend with the bad-mass-fraction floor is inherited" ) {
+            const double expected = ( 0.95 * seed_mult * mg_per_a + 0.4 * mg_per_b ) /
+                                    ( seed_mult * mg_per_a + mg_per_b );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+        }
+    }
+
+    GIVEN( "automatic mode with a short shelf life result and a nearly rotten component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        comp_b.set_relative_rot( 0.2 );
+        item_components comps;
+        comps.add( comp_a );
+        comps.add( comp_b );
+        item craft( &*recipe_test_rot_result_rot_auto_gate, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the shortest remaining lifespan is inherited" ) {
+            // The component holds exactly 1.2 hours of remaining shelf life, the
+            // result shelf life is 6 hours.
+            CHECK( craft.get_relative_rot() == Approx( 1.0 - 72_minutes / 6_hours ) );
+        }
+    }
+
+    GIVEN( "preserve blend mode with a near fully rotten component among barely bad ones" ) {
+        item_components comps;
+        for( int i = 0; i < 20; ++i ) {
+            item comp( itype_test_rot_b, calendar::turn, 1 );
+            comp.set_relative_rot( 0.91 );
+            comps.add( comp );
+        }
+        item comp_rotten( itype_test_rot_a, calendar::turn, 1 );
+        comp_rotten.set_relative_rot( 2.0 );
+        comps.add( comp_rotten );
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the bad-mass-fraction floor overtakes the weighted blend" ) {
+            // 20 x 500 g at 0.91 plus 250 g at 2.0: the weighted blend is 0.9366,
+            // the floor is 5 x 2.0 x ( 10250 g / 102500 g ) = 1.0.
+            CHECK( craft.get_relative_rot() == approx_rot( 1.0 ) );
+        }
+    }
+
+    GIVEN( "preserve blend mode with going-bad components half near fully rotten" ) {
+        item_components comps;
+        for( int i = 0; i < 10; ++i ) {
+            item comp( itype_test_rot_b, calendar::turn, 1 );
+            comp.set_relative_rot( 0.91 );
+            comps.add( comp );
+        }
+        for( int i = 0; i < 10; ++i ) {
+            item comp( itype_test_rot_a, calendar::turn, 1 );
+            comp.set_relative_rot( 2.0 );
+            comps.add( comp );
+        }
+        item craft( &*recipe_test_rot_result_rot_preserve_blend, 1, comps,
+                    std::vector<item_comp> {}, false );
+
+        THEN( "the floor stays below the weighted blend once the batch is mostly rotten" ) {
+            const double expected = ( 10 * 0.91 * mg_per_b + 10 * 2.0 * mg_per_a ) /
+                                    ( seed_mult * ( 10 * mg_per_b + 10 * mg_per_a ) );
+            CHECK( craft.get_relative_rot() == approx_rot( expected ) );
+        }
+    }
+}
+
+// Cooking rescues marginally old components: heated results get a rot reduction while
+// every component stays below the salvage threshold, and none once any component
+// reaches it.
+TEST_CASE( "cooking_mitigates_salvageable_component_rot", "[crafting][rot]" )
+{
+    Character &player_character = get_player_character();
+    std::vector<item> tools;
+    tools.insert( tools.end(), 10, tool_with_ammo( itype_popcan_stove, 500 ) );
+    tools.emplace_back( itype_pot_canning );
+    tools.emplace_back( itype_knife_huge );
+
+    GIVEN( "macaroni and cheese below the salvage threshold" ) {
+        item macaroni( itype_macaroni_raw, calendar::turn, 1 );
+        item cheese( itype_cheese, calendar::turn, 1 );
+        macaroni.set_relative_rot( 0.2 );
+        cheese.set_relative_rot( 0.2 );
+        tools.insert( tools.end(), 1, macaroni );
+        tools.insert( tools.end(), 1, cheese );
+        item &bottle = tools.emplace_back( itype_bottle_plastic );
+        bottle.get_contents().insert_item( item( itype_water_clean, calendar::turn, 1 ),
+                                           pocket_type::CONTAINER );
+
+        WHEN( "crafting the mac and cheese" ) {
+            prep_craft( recipe_macaroni_cooked, tools, true );
+            actually_test_craft( recipe_macaroni_cooked, INT_MAX, 10 );
+
+            THEN( "the inherited rot is reduced" ) {
+                item_location mac_and_cheese = player_character.get_wielded_item();
+                REQUIRE( mac_and_cheese->type->get_id() == recipe_macaroni_cooked->result() );
+                CHECK( mac_and_cheese->get_relative_rot() == Approx( 0.2 * 0.85 ) );
+            }
+        }
+    }
+
+    GIVEN( "components at the salvage threshold" ) {
+        item macaroni( itype_macaroni_raw, calendar::turn, 1 );
+        item cheese( itype_cheese, calendar::turn, 1 );
+        macaroni.set_relative_rot( 0.5 );
+        cheese.set_relative_rot( 0.5 );
+        tools.insert( tools.end(), 1, macaroni );
+        tools.insert( tools.end(), 1, cheese );
+        item &bottle = tools.emplace_back( itype_bottle_plastic );
+        bottle.get_contents().insert_item( item( itype_water_clean, calendar::turn, 1 ),
+                                           pocket_type::CONTAINER );
+
+        WHEN( "crafting the mac and cheese" ) {
+            prep_craft( recipe_macaroni_cooked, tools, true );
+            actually_test_craft( recipe_macaroni_cooked, INT_MAX, 10 );
+
+            THEN( "the inherited rot is not reduced" ) {
+                item_location mac_and_cheese = player_character.get_wielded_item();
+                REQUIRE( mac_and_cheese->type->get_id() == recipe_macaroni_cooked->result() );
+                CHECK( mac_and_cheese->get_relative_rot() == Approx( 0.5 ) );
+            }
+        }
+    }
+}
+
+// Full crafting flow checks for the new inheritance modes.
+TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
+{
+    Character &player_character = get_player_character();
+    std::vector<item> tools;
+    tools.emplace_back( itype_knife_huge );
+
+    GIVEN( "a weighted mode recipe with a going-bad component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_rot( comp_a.get_shelf_life() - 72_minutes );
+        tools.insert( tools.end(), 1, comp_a );
+        tools.insert( tools.end(), 1, comp_b );
+
+        WHEN( "crafting the test recipe" ) {
+            prep_craft( recipe_test_rot_result_rot_weighted, tools, true );
+            actually_test_craft( recipe_test_rot_result_rot_weighted, INT_MAX, 10 );
+
+            THEN( "the result carries the weighted rot" ) {
+                item_location result = player_character.get_wielded_item();
+                REQUIRE( result->type->get_id() == itype_test_rot_result );
+                constexpr double mg_per_a = 250000;
+                constexpr double mg_per_b = 500000;
+                constexpr double seed_mult = 10.0;
+                CHECK( result->get_relative_rot() == Approx( 0.95 * seed_mult * mg_per_a /
+                        ( seed_mult * mg_per_a + mg_per_b ) ).epsilon( 1e-5 ) );
+            }
+        }
+    }
+
+    GIVEN( "a fresh mode recipe with a rotten component" ) {
+        item comp_a( itype_test_rot_a, calendar::turn, 1 );
+        item comp_b( itype_test_rot_b, calendar::turn, 1 );
+        comp_a.set_relative_rot( 1.5 );
+        tools.insert( tools.end(), 1, comp_a );
+        tools.insert( tools.end(), 1, comp_b );
+
+        WHEN( "crafting the test recipe" ) {
+            prep_craft( recipe_test_rot_result_rot_fresh, tools, true );
+            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10 );
+
+            THEN( "the result stays fresh" ) {
+                item_location result = player_character.get_wielded_item();
+                REQUIRE( result->type->get_id() == itype_test_rot_result );
+                CHECK( result->get_rot() == 0_turns );
             }
         }
     }

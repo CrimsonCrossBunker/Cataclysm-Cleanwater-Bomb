@@ -315,11 +315,7 @@
     "flags": [ "WATER_DISSOLVE", "NO_TEMP" ],
     "addiction_potential": 3,
     "addiction_type": "caffeine",
-    "use_action": {
-      "type": "consume_drug",
-      "activation_message": "You take a %s.",
-      "vitamins": [ [ "caffeine", 100 ] ]
-    },
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "caffeine", 100 ] ] },
     "stackable": true
   },
   {
@@ -2492,11 +2488,7 @@
     "addiction_type": "nicotine",
     "addiction_potential": 75,
     "flags": [ "NO_INGEST", "NO_TEMP" ],
-    "use_action": {
-      "type": "consume_drug",
-      "activation_message": "You apply a nicotine patch.",
-      "vitamins": [ [ "nicotine_slow", 24 ] ]
-    },
+    "use_action": { "type": "consume_drug", "activation_message": "You apply a nicotine patch.", "vitamins": [ [ "nicotine_slow", 24 ] ] },
     "stackable": true
   },
   {

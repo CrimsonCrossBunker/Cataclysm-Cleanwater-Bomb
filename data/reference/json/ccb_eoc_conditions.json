@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:7a312ca0a6a04c9f73736e9f792bf33e05eefadac952bde972142d94cdcb5222",
+    "source_fingerprint": "sha256:0e28bff9b70ded8d69250da89baf121992dd37ec181fd59c69c8bd1d63aa927b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -21708,7 +21708,7 @@
         "examples": [
           {
             "path": "data/json/effects.json",
-            "pointer": "/410/enchantments/0/condition/u_is_in_field"
+            "pointer": "/411/enchantments/0/condition/u_is_in_field"
           }
         ],
         "confidence": "lexical_only",

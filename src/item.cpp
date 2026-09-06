@@ -117,7 +117,6 @@ static const ammotype ammo_plutonium( "plutonium" );
 static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_weed_high( "weed_high" );
-static const vitamin_id vitamin_nicotine( "nicotine" );
 
 static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
@@ -160,6 +159,7 @@ static const trait_id trait_JITTERY( "JITTERY" );
 static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
+static const vitamin_id vitamin_nicotine( "nicotine" );
 
 // vitamin flags
 static const std::string flag_NO_SELL( "NO_SELL" );
@@ -342,7 +342,8 @@ item::item( const recipe *rec, int qty, item_components items, std::vector<item_
     components = std::move( items );
     craft_data_->comps_used = std::move( selections );
 
-    if( has_temperature() ) {
+    const bool fresh_rot = rec && rec->get_rot_inherit() == rot_inherit_mode::FRESH;
+    if( has_temperature() && !fresh_rot ) {
         active = true;
         last_temp_check = bday;
         if( goes_bad() ) {
