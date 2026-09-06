@@ -661,7 +661,8 @@ item craft_command::create_in_progress_craft()
     const double predicted_rot = preview.get_relative_rot_after(
                                      get_weather().get_temperature( crafter->pos_bub() ), 1.0f,
                                      expected_duration );
-    if( preview.goes_bad() && crafter->is_avatar() ) {
+    if( preview.goes_bad() && crafter->is_avatar() &&
+        rec->get_rot_inherit() != rot_inherit_mode::FRESH ) {
         const time_duration predicted_remaining = preview.get_shelf_life() -
                 preview.get_shelf_life() * predicted_rot;
         if( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) {
