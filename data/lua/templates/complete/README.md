@@ -39,3 +39,13 @@ For existing JSON/EOC content, start with
 `python3 tools/migrate_lua_first.py INPUT --output TARGET`.  Its output is a
 reviewable skeleton: every unsupported semantic field remains an explicit
 TODO in `MIGRATION_REPORT.md`, never a hidden legacy runner.
+
+
+The scaffolder normally also creates optional `.luarc.json` and `.ccb-sdk/`
+editor files. Open this directory in a LuaLS-enabled editor for completion and
+parameter diagnostics. The SDK is a frozen declaration snapshot, not runtime
+code; `require("ccb")` is supplied by the game. `--no-editor` creates only the
+runtime template. Keep the SDK matched to the game you target and review API
+changes explicitly; copying an SDK does not upgrade the game or prove save
+compatibility. See the source repository's `tools/lua_api/README.md` for the
+`mod_sdk.py check` and `compare` commands.

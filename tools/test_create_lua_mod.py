@@ -1,4 +1,5 @@
 import tempfile
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -20,7 +21,7 @@ class CreateLuaModTest(unittest.TestCase):
     def test_complete_template_is_zero_json_and_has_vertical_slice(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "complete"
-            create_mod(target, "complete")
+            create_mod(target, "complete", editor=False)
             files = [path for path in target.rglob("*") if path.is_file()]
             self.assertTrue((target / "runtime" / "behaviour.lua").is_file())
             self.assertTrue((target / "content" / "token.lua").is_file())
@@ -49,6 +50,28 @@ class CreateLuaModTest(unittest.TestCase):
             self.assertEqual(
                 sentinel.read_text(encoding="utf-8"), "author owned\n"
             )
+
+    def test_default_editor_library_is_portable_and_not_runtime_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "editor_mod"
+            create_mod(target, "minimal")
+            settings = json.loads((target / ".luarc.json").read_text())
+            self.assertEqual(settings["runtime.version"], "Lua 5.4")
+            self.assertEqual(settings["workspace.library"], [".ccb-sdk"])
+            self.assertEqual(
+                (target / ".ccb-sdk/ccb.lua").read_bytes(),
+                create_lua_mod.DEFAULT_DECLARATIONS.read_bytes(),
+            )
+            self.assertNotIn(".ccb-sdk", (target / "main.lua").read_text())
+
+    def test_missing_sdk_input_preserves_empty_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "editor_mod"
+            target.mkdir()
+            with self.assertRaises(FileNotFoundError):
+                create_mod(target, "minimal", declarations=target / "missing")
+            self.assertEqual(list(target.iterdir()), [])
+            self.assertEqual(list(target.parent.iterdir()), [target])
 
     def test_file_target_is_never_replaced(self):
         with tempfile.TemporaryDirectory() as directory:

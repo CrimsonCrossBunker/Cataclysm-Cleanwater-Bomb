@@ -33,6 +33,10 @@ except ImportError:
 
 
 class PlatformCoverageCheckTest(unittest.TestCase):
+    def test_checked_in_coverage_is_current_and_synchronized(self) -> None:
+        summary = check()
+        self.assertGreater(summary["native_roots"], 0)
+
     def test_matching_synchronization_is_accepted(self) -> None:
         contract = build_contract(
             declarations=parse_luals_declarations(DECLARATIONS),

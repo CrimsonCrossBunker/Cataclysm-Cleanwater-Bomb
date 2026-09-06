@@ -17,6 +17,8 @@ on:
       - 'src/lua_platform*.h'
       - 'src/event.h'
       - 'tools/lua_api/**'
+      - 'tools/create_lua_mod.py'
+      - 'tools/test_create_lua_mod.py'
   push:
     branches: [ master ]
     paths:
@@ -34,6 +36,8 @@ on:
       - 'src/lua_platform*.h'
       - 'src/event.h'
       - 'tools/lua_api/**'
+      - 'tools/create_lua_mod.py'
+      - 'tools/test_create_lua_mod.py'
   workflow_dispatch:
 
 permissions:
@@ -56,15 +60,22 @@ jobs:
 
       - name: Install pinned validation dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends lua5.4
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
       - name: Validate Lua-first Platform declarations and contracts
+        # Includes live repository checks for all five contracts and negative cases.
         run: |
-          python3 tools/lua_api/check_luals_declarations.py
-          python3 tools/lua_api/check_platform_native_inventory.py
-          python3 tools/lua_api/check_platform_contract.py
-          python3 tools/lua_api/check_platform_coverage.py
-          python3 tools/lua_api/check_cmake_contract.py
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+
+      - name: Validate Mod scaffolds and editor diagnostics
+        env:
+          CCB_LUALS: ${{ runner.temp }}/ccb-luals/bin/lua-language-server
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            https://github.com/LuaLS/lua-language-server/releases/download/3.19.1/lua-language-server-3.19.1-linux-x64.tar.gz \
+            -o "${RUNNER_TEMP}/ccb-luals.tar.gz"
+          echo "e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8  ${RUNNER_TEMP}/ccb-luals.tar.gz" | sha256sum --check
+          mkdir -p "${RUNNER_TEMP}/ccb-luals"
+          tar -xzf "${RUNNER_TEMP}/ccb-luals.tar.gz" -C "${RUNNER_TEMP}/ccb-luals"
+          python3 tools/test_create_lua_mod.py
+          python3 -m unittest discover -s tools/lua_api -p 'test_mod_sdk.py' -k LuaLanguageServerIntegrationTest

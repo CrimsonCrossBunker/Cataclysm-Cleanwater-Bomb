@@ -211,8 +211,14 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
             )
         )
 
+
+class RepositoryNativeInventoryGeneratorTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.inventory = build_native_inventory()
+
     def test_repository_inventory_has_expected_native_baselines(self) -> None:
-        inventory = build_native_inventory()
+        inventory = self.inventory
         self.assertEqual(inventory["schema_version"], 2)
         self.assertEqual(len(inventory["id_kinds"]), 132)
         self.assertEqual(len(inventory["json_types"]), 190)
@@ -237,7 +243,7 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
         )
 
     def test_repository_inventory_records_alias_and_dispositions(self) -> None:
-        inventory = build_native_inventory()
+        inventory = self.inventory
         roots = {
             entry["lua_name"]: entry
             for entry in inventory["export_roots"]
@@ -337,12 +343,12 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
             )
 
     def test_repository_inventory_uses_generator_format(self) -> None:
-        serialized = serialize_native_inventory(build_native_inventory())
+        serialized = serialize_native_inventory(self.inventory)
         self.assertEqual(
             serialized,
             DEFAULT_OUTPUT.read_text(encoding="utf-8"),
         )
-        self.assertEqual(json.loads(serialized), build_native_inventory())
+        self.assertEqual(json.loads(serialized), self.inventory)
 
 
 if __name__ == "__main__":

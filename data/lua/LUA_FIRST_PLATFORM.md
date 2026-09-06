@@ -24,8 +24,8 @@ Platform Lua 是 CCB 核心内容和 Mod 的原生创作模型。作者使用普
 For author-facing content, Lua is the only executable content language. All
 new behaviour, policies, conditions, effects, and workflows enter through the
 Platform contract; EOC is not a second behaviour system. One isolated Lua
-state per Mod is an ownership and failure boundary, not a second runtime or a
-second public API.
+state per Mod separates ownership and ordinary Lua globals; it is not process
+isolation, crash containment, a second runtime, or a second public API.
 
 Static JSON may remain when it is passive, schema-validatable data. Such JSON
 and Lua builders enter the same typed C++ content model; the distinction is
@@ -38,8 +38,8 @@ proves that EOC references have reached zero; retaining the parser for passive
 or engine-owned JSON is not a failure of the Lua-first direction.
 
 面向作者的内容只有 Lua 一种可执行语言。新的行为、策略、条件、效果和 workflow 都必须
-进入 Platform 契约；EOC 不是第二套行为系统。每个 Mod 一个隔离 Lua state 只是 owner 和
-故障边界，不是第二个 runtime 或第二套公开 API。
+进入 Platform 契约；EOC 不是第二套行为系统。每个 Mod 一个独立 Lua state 用于区分 owner 和普通全局变量，
+不代表进程隔离或崩溃隔离，也不是第二个 runtime 或第二套公开 API。
 
 只要 JSON 是静态、被动且可由 Schema 校验，就可以长期保留。这样的 JSON 与 Lua builder
 进入同一个类型化 C++ 内容模型；边界在于内容是否携带可执行行为，而不在于文件扩展名。
@@ -57,14 +57,18 @@ local ccb = require("ccb")
 ```
 
 The loader installs that table in `package.loaded["ccb"]` and provides a
-root-local module resolver. It does not create a global `game` table, a second
+Mod-local module resolver. Under the accepted trusted-code policy, ordinary
+Lua/package and native module loading also remain available; these are module
+mechanisms, not alternative game-authoring APIs. It does not create a global
+`game` table, a second
 authoring entry, or a compatibility namespace. The Platform may own one Lua
 state per loaded Mod for isolation; those states are all instances of this
 same Platform runtime and share no alternate public contract.
 
 Platform v1 是唯一受支持的 Lua 运行时、加载器、状态模型和作者契约。Mod 通过
 `require("ccb")` 获得包内 `ccb` 表。加载器只注册 `package.loaded["ccb"]` 并提供根目录内
-模块解析，不创建全局 `game` 表、第二个作者入口或兼容命名空间。为隔离 Mod，Platform
+模块解析；按已采纳的可信代码契约，也允许普通 Lua/package 与原生模块加载。这些是模块
+加载机制，不是另一套游戏创作 API。不创建全局 `game` 表、第二个作者入口或兼容命名空间。为隔离 Mod，Platform
 可以为每个已加载 Mod 持有一个 Lua state；这些 state 都属于同一个 Platform 运行时，
 不存在另一套公开契约。
 
@@ -75,6 +79,7 @@ stable groups:
 - `ccb.content` — transactional native definitions and content builders;
 - `ccb.runtime` — named handlers, lifecycle hooks, synchronous callbacks, and
   persistent task policies;
+- `ccb.dialogue` — typed dialogue topics, responses, and extensions;
 - `ccb.services` — generation-checked world, character, item, creature, NPC,
   vehicle, map, weather, mission, faction, time, and presentation services;
 - `ccb.state`, `ccb.tasks`, and `ccb.presentation` — bounded persistent and
@@ -82,7 +87,7 @@ stable groups:
 
 公开 LuaLS 声明是 `data/lua/types/ccb_platform_v1.d.lua`。公共根表稳定地分为
 `ccb.content`（事务化原生定义）、`ccb.runtime`（命名 handler、生命周期 hook、同步回调和
-持久任务）、`ccb.services`（代际安全的世界、角色、物品、地图、天气、任务等领域服务），
+持久任务）、`ccb.dialogue`（类型化对话与扩展）、`ccb.services`（代际安全的世界、角色、物品、地图、天气、任务等领域服务），
 以及 `ccb.state`、`ccb.tasks`、`ccb.presentation` 等运行时支持。
 
 ## Mod discovery / Mod 发现
@@ -106,10 +111,58 @@ JSON/EOC author files.
 `content/`、`runtime/`、`lib/`、`tests/` 只是作者的组织选择，模板可以推荐但加载器不
 强制。Platform Mod 不需要 `lua/`、`manifest.json`、`modinfo.json` 或 JSON/EOC 作者文件。
 
-The local `require` helper resolves only safe module names inside the Mod root
-(`?.lua` and `?/init.lua`). It rejects traversal and path escape. This is a
-module boundary, not a sandbox promise: bundled Platform Lua is trusted code
-and its native operations remain bounded by C++ validation.
+## Trust, libraries, and resource policy / 信任、库与资源契约
+
+Accepted on 2026-09-06: Platform Mods are trusted executable code chosen by the
+player, regardless of author or source. CCB does not promise to protect the
+player's system from them. This is one Platform contract, not separate
+restricted and unrestricted runtime tiers.
+
+- Expose the complete bundled Lua standard library, including `io`, `os`,
+  `debug`, and ordinary `load`, `loadfile`, `dofile`, and `package` facilities.
+  Preserve `require("ccb")` as the stable game API and prefer local modules
+  without making the Mod root a security boundary for other loading paths.
+- Permit external Lua modules and native dynamic libraries where the host
+  platform supports them. Native extensions are executable code with the game
+  process's privileges; authors own OS, architecture, Lua ABI, and dependency
+  compatibility. This does not create a stable ABI for internal C++ objects.
+- Keep per-Mod Lua states for namespacing and ownership. A state is not a
+  thread, a process sandbox, or protection against a native crash.
+- Do not impose mandatory global Lua instruction or memory budgets by default.
+  Profiling, diagnostics and explicitly enabled developer limits may assist
+  debugging. Bounded queries, persistent data formats, valid parameters and
+  handle/lifecycle checks in supported `ccb` services remain API correctness
+  requirements, not a security boundary against trusted code.
+- Present a clear execution-risk notice before first executing downloaded Mod
+  code, including executable `mod.lua` metadata discovery. Selection to trust
+  code is not a per-API permission dialog, and catalog inclusion is not a
+  security guarantee. Record this as an integration requirement, not a claim
+  that a launcher or game notice already exists.
+- Report ordinary Lua errors with context and perform supported cleanup, but
+  do not promise safe interruption of arbitrary loops/native calls, crash
+  containment, or rollback of external filesystem/process side effects.
+
+2026-09-06 已采纳：所有来源的 Mod 均按玩家选择运行的可信代码处理；CCB 不承诺保护玩家系统，
+不划分两套受限/无限制运行时。开放完整 Lua 标准库、文件/系统/调试能力、外部 Lua 模块和
+平台支持的原生动态库；`require("ccb")` 仍是稳定游戏接口，本地模块优先不是安全边界。
+原生扩展作者负责系统、架构、Lua ABI 与依赖适配，引擎内部 C++ ABI 不因此成为稳定公开契约。
+每 Mod 独立 state 只用于命名与 owner 隔离，不能隔离崩溃。默认不设全局执行指令或内存配额；
+可提供自愿启用的诊断限制。`ccb` 的分页、有界数据格式、参数、句柄和生命周期校验继续保留。
+首次执行下载的 Mod 代码前应明确告知风险，包含会执行代码的 `mod.lua` 发现阶段，不对每次
+API 调用弹权限窗口。此告知是待落实的集成要求，不代表现有启动器已实现。普通 Lua 错误应可
+定位与清理，但不承诺无限循环/原生调用可安全中断，也不承诺崩溃隔离或外部副作用回滚。
+
+Implementation checkpoint (2026-09-06): `initialize_state` still uses a
+standard-library whitelist, removes `io`/`os`/`debug` and native package loaders,
+and restricts module resolution to the Mod root. Full-library and external/native
+loading support is **accepted, pending implementation and runtime acceptance**.
+The roadmap's `platform-hardening` entry now tracks this trust-policy transition
+and reliability/diagnostics work; old sandbox and mandatory-budget plans are
+superseded. This documentation update changes no running permissions.
+
+实现断点：当前加载器仍使用白名单并移除系统库与原生加载入口，因此完整标准库与外部/原生模块
+加载是**已采纳、待实现和运行验证**。roadmap 的 `platform-hardening` 改为跟踪此策略切换及
+可靠性/诊断；旧沙盒和默认强制配额计划作废。本次文档修改不改变运行中的权限。
 
 ## Loading and lifecycle / 加载与生命周期
 
@@ -250,6 +303,27 @@ to use the exact-Item `quote/get/commit` API.
 任务和 presentation。每个服务都应说明读写阶段、边界、返回 envelope、生命周期保护和
 失败行为；回调接收类型化 payload 与句柄，不接收任意引擎对象。
 
+## Persistence, tasks, and failure semantics / 持久化、任务与失败语义
+
+- Persist explicit serializable state and stable entity identities, not live
+  handles, functions, C++ pointers, or arbitrary Lua globals. Exact scopes,
+  accepted value types and payload bounds are defined in LuaLS and native code.
+- Persistent tasks refer to named handlers and versioned payloads. On reload,
+  resolve identities into fresh handles; unavailable entities, missing handlers
+  and payload migrations follow the documented retry/failure policy.
+- Native service results, optional values, errors, snapshots and cursors follow
+  each declared signature. A detached snapshot is not a writable engine object;
+  tokens/cursors can expire and must not be reused after their stated lifetime.
+- Content registration rollback is not a universal gameplay transaction.
+  Multi-step world operations are atomic only where the API explicitly promises
+  it. Files, processes and native extension side effects remain author-owned.
+
+持久化只保存明确可序列化的数据与稳定身份，不保存活句柄、函数、指针或任意全局变量；作用域、
+类型与边界以 LuaLS/源码为准。持久任务绑定命名 handler 与版本化 payload，重载后重新解析
+句柄，缺失实体/handler 与 payload 迁移遵循各自失败或重试约定。结果、快照和游标按具体签名
+使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
+只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
@@ -325,97 +399,23 @@ The source of current Platform references is deliberately small:
 - `tools/migrate_lua_first.py` and `tests/lua_platform_test.cpp` — migration
   and semantic evidence sources.
 
-The generated Platform references, ledger, documentation registry, and
-migration reports are outputs. They are not hand-edited evidence and are
-refreshed together at the final acceptance gate.
+Generated references, ledger, documentation registry, and migration reports are
+outputs, never hand-edited evidence. Refresh them only when their declared
+inputs change. Validation cadence, current priorities, and completion reporting
+are defined once in [the EOC capability workflow](LUA_FIRST_EOC_WORKFLOW.md).
 
-当前 Platform 参考资料只来自 LuaLS 声明、`lua_platform_*` 原生注册、Platform schema、
-Platform 工具、迁移器和测试源码。Platform reference、账本、文档 registry 与迁移报告都
-是生成输出，不手工编辑，统一留到最终门禁刷新。
+Platform reference、账本、文档 registry 与迁移报告是生成输出，禁止手改；只在声明的输入
+变化时刷新。当前优先级、验证流程与完成度口径统一见 [EOC 能力流程](LUA_FIRST_EOC_WORKFLOW.md)。
 
-Cached gate results may be reused while the inputs relevant to that gate remain
-unchanged. Once a change touches a relevant input, the final gate must be run
-again; this documentation batch claims no current gate result.
+PR 664's foundation scope and later capabilities retain their evidence in
+`ai/lua-first-roadmap.yml`. They are not recurring prerequisites for every
+change. Optional standard helpers, internationalization and author tools remain
+separate needs. Proposed `ccb.std` helper names are not frozen public contracts;
+any future implementation uses the sole `require("ccb")` entrypoint.
 
-相关输入未变化时可以复用缓存的门禁结果；一旦修改触及相关输入，就必须重新回到最终门禁。
-本次文档批次不声称任何当前门禁结果。
-
-## Development sprint and acceptance / 开发冲刺与验收
-
-Before all core source batches required by PR 664 are closed, the implementation
-loop permits focused read-only search, narrow source reads, test-source edits,
-and compact checkpoints. It does not run a C++ build, Catch2, Python suite,
-checker, generator, full contract refresh, ledger refresh, or full JSON/EOC
-audit.
-
-The final gate runs once, in dependency order: generate the Platform native
-inventory, public contract, and synchronization coverage; run applicable
-Platform checkers and tool tests; perform one low-memory build; run one broad
-Platform Catch2 process; classify the real JSON/EOC inventories once; then
-inspect the final diff. This gate accepts the core Platform infrastructure and
-generic capability scope named by the roadmap. It does not require migrating
-all core JSON/EOC content, deleting passive JSON, reducing TODOs to zero, or
-closing any independent follow-on capability batch. A failure receives one
-focused diagnostic and returns to the same gate after repair.
-
-在 PR 664 所需的核心源码批次闭合前，只允许精确搜索、小窗口读取、测试源码修改和
-checkpoint；不运行编译、Catch2、Python 套件、checker、generator、完整契约刷新、账本刷新或
-全量 JSON/EOC 审计。最终门禁只运行一次，按生成 reference、运行 Platform 检查和工具测试、
-一次低内存构建、一次 broad Platform Catch2、一次真实语料分类、最终 diff 的顺序执行。
-该门禁只验收 roadmap 指定的核心 Platform 基础设施和通用能力，不要求迁移全部本体 JSON/EOC、
-删除静态 JSON、把 TODO 降到零或闭合任何独立的后续能力批次。失败只做一次聚焦诊断，修复后
-回到同一总门禁。
-
-## PR 664 boundary / PR 664 边界
-
-The reasonable endpoint for PR 664 is the core Platform foundation and generic
-capability closure: one Platform v1 runtime and `ccb` contract, a typed content
-model and registrars, lifecycle and handle/identity safety, reusable generic
-domain services, and an honest migration boundary. Passive schema-validatable
-JSON may remain in the shared typed C++ model, and the EOC runner remains a
-private legacy path until an exact audit proves that its references are zero.
-Core and bundled content migration remains a later consumer of the Platform.
-Runtime hardening, optional standard helpers, author-facing internationalization,
-and cookbook/console/author-experience work are high-priority follow-on batches;
-none is a prerequisite for closing or merging PR 664.
-
-PR 664 的合理终点是核心 Platform 基础设施和通用能力闭合：唯一 Platform v1 runtime 与
-`ccb` 契约、类型化内容模型和 registrar、生命周期与句柄/身份安全、可复用的通用领域服务，
-以及诚实的迁移边界。静态且可由 Schema 校验的 JSON 可以保留在共享的类型化 C++ 模型中；
-EOC runner 作为私有旧路径保留，直到精确审计证明 EOC 引用归零。核心与捆绑内容迁移是
-Platform 的后续消费者。runtime hardening、可选标准库 helper、面向作者的国际化以及
-cookbook/console/作者体验是高优先级后续批次，都不是 PR 664 闭合或合并的前置条件。
-
-## Follow-on capability batches / 后续能力批次
-
-The roadmap keeps the following high-priority work independently trackable
-rather than treating it as a frozen Platform v1 contract: the current
-standard-library whitelist slice as incremental hardening, broader runtime
-hardening, shared standard helpers, author-facing internationalization, and
-cookbook/console/author experience. The whitelist changes are useful in this
-PR, but they do not claim that memory budgets, callback instruction limits,
-process isolation, or the wider hardening batch is complete; the broader items
-remain planned or recommended follow-ons.
-
-The names `ccb.std.collections`, `ccb.std.ui`, `ccb.std.inspect`, and
-`ccb.std.text` are recommended candidates for a future shared-helper design
-only. No `ccb.std` namespace, sub-namespace, or helper name is a frozen public
-contract; any such design gets its own declarations, tests, documentation, and
-acceptance record. The follow-on batches continue to use the sole
-`require("ccb")` entrypoint and typed model if implemented, but none is a
-dependency of `platform-capability-closure` or `final-acceptance-gate`.
-
-roadmap 会把以下高优先级工作独立跟踪，而不是把它们冻结为 Platform v1 契约：当前标准库
-白名单切片作为增量 hardening、更广泛的 runtime hardening、共享标准库 helper、面向作者的
-国际化，以及 cookbook/console/作者体验。白名单修改对本 PR 有价值，但不能据此声称内存预算、
-callback 指令限制、进程隔离或更广泛的 hardening 批次已经完成；其余项目仍是 planned 或
-recommended 后续批次。
-
-`ccb.std.collections`、`ccb.std.ui`、`ccb.std.inspect`、`ccb.std.text` 只是未来共享 helper
-设计的推荐候选；没有任何 `ccb.std` 命名空间、子命名空间或 helper 名称是冻结的公开契约。
-后续如实现，应各自补充声明、测试、文档和验收记录。后续批次如实现，继续使用唯一
-`require("ccb")` 入口和类型化模型，但都不是 `platform-capability-closure` 或
-`final-acceptance-gate` 的依赖。
+PR 664 的基础设施范围和后续能力证据保留在 roadmap，不作为每轮修改的重复前置条件。
+可选标准 helper、国际化与作者工具按需求独立推进；候选 `ccb.std` 名称不是冻结公开契约，
+未来实现仍使用唯一 `require("ccb")` 入口。
 
 ## Templates, examples, and maintenance / 模板、样例与维护
 

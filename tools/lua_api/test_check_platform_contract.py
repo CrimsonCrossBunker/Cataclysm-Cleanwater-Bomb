@@ -33,6 +33,10 @@ except ImportError:
 
 
 class PlatformContractCheckTest(unittest.TestCase):
+    def test_checked_in_contract_matches_sources(self) -> None:
+        summary = check()
+        self.assertGreater(summary["export_roots"], 0)
+
     def test_matching_contract_is_accepted(self) -> None:
         contract = build_contract(
             declarations=parse_luals_declarations(DECLARATIONS),
