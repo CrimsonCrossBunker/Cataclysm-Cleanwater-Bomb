@@ -15,6 +15,13 @@ class inventory;
 class recipe;
 class recipe_subset;
 
+// ImGui still exposes the previous tab during the frame that queues SetSelected.
+// Do not interpret that stale visible tab as a mouse selection.
+inline bool crafting_tab_selection_changed( int selected, int visible, bool synchronizing )
+{
+    return !synchronizing && selected != visible;
+}
+
 /**
  * Open crafting menu where user selects who will craft what (the crafter & the recipe).
  *
