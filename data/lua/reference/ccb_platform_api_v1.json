@@ -29216,7 +29216,6 @@
       "src/lua_platform_bionics.h",
       "src/lua_platform_camps.cpp",
       "src/lua_platform_camps.h",
-      "src/lua_platform_canvas.h",
       "src/lua_platform_content.h",
       "src/lua_platform_content_character.cpp",
       "src/lua_platform_content_character.h",
