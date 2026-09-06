@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.view.WindowManager;
+import android.view.ContextThemeWrapper;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -162,7 +163,9 @@ public class NativeUI {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    final EditText input = new EditText(activity);
+                    final Context dialogContext = new ContextThemeWrapper(
+                            activity, R.style.AlertDialogTheme);
+                    final EditText input = new EditText(dialogContext);
                     input.setSingleLine(true);
                     input.setInputType(InputType.TYPE_CLASS_TEXT
                         | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
@@ -175,7 +178,7 @@ public class NativeUI {
 
                     int padding = Math.round(20f
                         * activity.getResources().getDisplayMetrics().density);
-                    LinearLayout container = new LinearLayout(activity);
+                    LinearLayout container = new LinearLayout(dialogContext);
                     container.setPadding(padding, 0, padding, 0);
                     container.addView(input, new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
