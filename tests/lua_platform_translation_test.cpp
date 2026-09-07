@@ -46,6 +46,13 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         assert(not pcall(ccb.services.translate_plural, one, "a\0b", 2))
         assert(not pcall(ccb.services.translate_plural, one, many, 2, "a\0b"))
     )" );
+    lua["native_count_accepts_2_to_32"] = sizeof( std::size_t ) > 4;
+    run( R"(
+        local success = pcall(ccb.services.translate_plural,
+            "ccb translation regression singular 1901", "ccb translation regression plural 1901",
+            4294967296)
+        assert(success == native_count_accepts_2_to_32)
+    )" );
     cata::lua_platform::clear_active_runtimes();
     run( R"(
         assert(not pcall(ccb.services.translate, "after world unload"))

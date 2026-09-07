@@ -1731,13 +1731,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         if( context ) {
             require_translation_text( *context );
         }
-        if( count < 0 || static_cast<std::uint64_t>( count ) >
-            std::numeric_limits<std::size_t>::max() ) {
+        const std::size_t native_count = static_cast<std::size_t>( count );
+        if( count < 0 || static_cast<std::uint64_t>( native_count ) !=
+            static_cast<std::uint64_t>( count ) ) {
             throw std::runtime_error( "translation count is outside the native nonnegative range" );
         }
 #if defined(LOCALIZE)
         TranslationManager &manager = TranslationManager::GetInstance();
-        const std::size_t native_count = static_cast<std::size_t>( count );
         return context ? manager.TranslatePluralWithContext( context->c_str(), singular.c_str(),
                plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
                        plural.c_str(), native_count );
