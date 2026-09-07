@@ -125,6 +125,7 @@ static const trait_id trait_SLIMY( "SLIMY" );
 static const trait_id trait_URSINE_FUR( "URSINE_FUR" );
 
 static const vitamin_id vitamin_blood( "blood" );
+static const vitamin_id vitamin_nicotine( "nicotine" );
 
 void Character::update_body_wetness( const w_point &weather )
 {
@@ -1467,10 +1468,11 @@ void Character::update_heartrate_index()
         hr_stim_mod = 2 - 2 / ( 1 + 0.001 * stim_level * stim_level );
     }
     float hr_nicotine_mod = 0.0f;
-    if( get_effect_dur( effect_cig ) > 0_turns ) {
-        //Nicotine-induced tachycardia
-        if( get_effect_dur( effect_cig ) >
-            10_minutes * ( addiction_level( addiction_nicotine ) + 1 ) ) {
+    if( has_effect( effect_cig ) ) {
+        //Nicotine-induced tachycardia.  The excess effect is permanent, so compare
+        //nicotine load to tolerance: 1 unit decays per vitamin rate, 10 min = 2 units.
+        if( vitamin_get( vitamin_nicotine ) >
+            2 * ( addiction_level( addiction_nicotine ) + 1 ) ) {
             hr_nicotine_mod = 0.2f;
         } else {
             hr_nicotine_mod = 0.1f;
