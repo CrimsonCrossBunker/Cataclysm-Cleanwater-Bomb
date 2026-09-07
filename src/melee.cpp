@@ -1413,20 +1413,22 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
     }
 
     // FIXME: Hardcoded damage type effects (stab)
-    if( dt == damage_stab ) {
-        // 66%, 76%, 86%, 96%, 106%, 116%, 122%, 128%, 134%, 140%
-        /** @EFFECT_STABBING increases stabbing damage multiplier */
-        if( skill <= 5 ) {
-            dmg_mul = 0.66 + 0.1 * skill;
+    if( !dt->skill.is_null() ) {
+        if( dt == damage_stab ) {
+            // 66%, 76%, 86%, 96%, 106%, 116%, 122%, 128%, 134%, 140%
+            /** @EFFECT_STABBING increases stabbing damage multiplier */
+            if( skill <= 5 ) {
+                dmg_mul = 0.66 + 0.1 * skill;
+            } else {
+                dmg_mul = 0.86 + 0.06 * skill;
+            }
         } else {
-            dmg_mul = 0.86 + 0.06 * skill;
-        }
-    } else {
-        // 80%, 88%, 96%, 104%, 112%, 116%, 120%, 124%, 128%, 132%
-        if( skill < 5 ) {
-            dmg_mul *= 0.8 + 0.08 * skill;
-        } else {
-            dmg_mul *= 0.96 + 0.04 * skill;
+            // 80%, 88%, 96%, 104%, 112%, 116%, 120%, 124%, 128%, 132%
+            if( skill < 5 ) {
+                dmg_mul *= 0.8 + 0.08 * skill;
+            } else {
+                dmg_mul *= 0.96 + 0.04 * skill;
+            }
         }
     }
 
