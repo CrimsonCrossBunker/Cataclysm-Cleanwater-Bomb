@@ -217,8 +217,10 @@ saved input. Console changes are immediate and are not rolled back on error.
 The explicit call enters the selected owner's callback scope; normal world-ready,
 handle-generation and domain checks still apply to services.
 Return display shows at most 16 values and 1024 source bytes per string, escaping
-control bytes and replacing invalid UTF-8; other objects appear as type labels
-without invoking `__tostring`. These are display limits, not script quotas.
+control bytes and replacing invalid UTF-8. Returned tables show up to 20 raw
+fields in unspecified order; nested tables and other objects appear as type
+labels. No `__pairs` or `__tostring` runs. Return a nested field explicitly to
+inspect it. These are display limits, not script quotas.
 Recursive execution in the same state and execution during a script reload are
 rejected. This console source and its regression source remain uncompiled and
 have not received interactive acceptance.
@@ -228,7 +230,9 @@ have not received interactive acceptance.
 不创建第二套运行时，也不自动执行保存的输入。修改立即生效，后续报错不会回滚。
 手动调用进入所选 owner 的回调上下文，服务继续检查 world-ready、句柄代次和领域规则。
 最多展示 16 个返回值，每个字符串最多读取 1024 字节，转义控制字节、替换无效 UTF-8；
-其他对象只展示类型，不调用 `__tostring`。这只是显示限制，不是脚本配额。
+返回表最多展示 20 个原始字段，顺序不作保证；嵌套表和其他对象仅显示类型，
+不调用 `__pairs` 或 `__tostring`。要进一步查看，显式返回嵌套字段即可。
+这只是显示限制，不是脚本配额。
 同一状态递归执行以及重载过程中的执行会被拒绝。源码和回归测试源码尚未编译或交互验收。
 
 ## Native content model / 原生内容模型

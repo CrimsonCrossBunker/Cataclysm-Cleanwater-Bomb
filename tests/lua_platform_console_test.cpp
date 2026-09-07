@@ -55,7 +55,7 @@ return ccb.services.characters.recalculate_enchantments(ccb.services.handles.ava
 return 9223372036854775807, true, nil, "a\0b", "中文",
     setmetatable({}, { __tostring = function() error("must not stringify") end })
 )lua", output, error ) );
-    CHECK( output == "9223372036854775807\ntrue\nnil\n\"a\\x00b\"\n\"中文\"\n<table>" );
+    CHECK( output == "9223372036854775807\ntrue\nnil\n\"a\\x00b\"\n\"中文\"\n{}" );
     REQUIRE( platform::execute_console( "console-first", "", output, error ) );
     CHECK( output == "Completed (no return values)" );
 }
@@ -84,6 +84,23 @@ TEST_CASE( "lua_platform_console_bounds_display_and_rejects_recursive_execution"
     REQUIRE( platform::execute_console( "console-bounds",
                                         "return 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17", output, error ) );
     CHECK( output.find( "\n16\n[remaining return values omitted]" ) != std::string::npos );
+    REQUIRE( platform::execute_console( "console-bounds", R"lua(
+local t = { [1] = "one", name = "snapshot" }
+t.self = t
+return setmetatable(t, {
+    __pairs = function() error("must not call __pairs") end,
+    __tostring = function() error("must not call __tostring") end
+})
+)lua", output, error ) );
+    CHECK( output.find( "[1] = \"one\"" ) != std::string::npos );
+    CHECK( output.find( "[\"name\"] = \"snapshot\"" ) != std::string::npos );
+    CHECK( output.find( "[\"self\"] = <table>" ) != std::string::npos );
+    REQUIRE( platform::execute_console( "console-bounds", R"lua(
+local t = {}
+for i = 1, 21 do t[i] = i end
+return t
+)lua", output, error ) );
+    CHECK( output.find( "[remaining fields omitted]" ) != std::string::npos );
 
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
                 "console-bounds" );

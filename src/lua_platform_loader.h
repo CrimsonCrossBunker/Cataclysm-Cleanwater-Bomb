@@ -100,7 +100,8 @@ bool reload_active_mods( std::string &error );
 /**
  * Run an explicitly submitted console chunk in an existing Mod state. This is
  * not a sandbox or a transaction: changes survive a later script error.
- * Output describes up to 16 return values without invoking their metamethods.
+ * Output describes up to 16 return values, expanding at most 20 raw fields of
+ * each returned table without traversing nested tables or invoking metamethods.
  */
 bool execute_console( const std::string &mod_id, const std::string &source,
                       std::string &output, std::string &error );

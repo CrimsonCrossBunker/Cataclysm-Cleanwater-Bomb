@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -793,6 +794,57 @@ std::string console_string( const char *text, const std::size_t size )
     }
     return result;
 }
+
+std::string console_value( lua_State *lua, const int index, const bool expand_table )
+{
+    const int type = lua_type( lua, index );
+    if( type == LUA_TSTRING ) {
+        std::size_t size = 0;
+        const char *text = lua_tolstring( lua, index, &size );
+        return console_string( text, size );
+    }
+    if( type == LUA_TNUMBER ) {
+        // Do not convert a live lua_next numeric key into a string on the stack.
+        if( lua_isinteger( lua, index ) ) {
+            return std::to_string( lua_tointeger( lua, index ) );
+        }
+        std::ostringstream number;
+        number << std::setprecision( std::numeric_limits<lua_Number>::max_digits10 ) <<
+               lua_tonumber( lua, index );
+        return number.str();
+    }
+    if( type == LUA_TBOOLEAN ) {
+        return lua_toboolean( lua, index ) ? "true" : "false";
+    }
+    if( type == LUA_TNIL ) {
+        return "nil";
+    }
+    if( type == LUA_TTABLE && expand_table ) {
+        if( !lua_checkstack( lua, 2 ) ) {
+            return "<table: insufficient stack space>";
+        }
+        const int top = lua_gettop( lua );
+        const on_out_of_scope restore_stack( [lua, top]() {
+            lua_settop( lua, top );
+        } );
+        const int table = lua_absindex( lua, index );
+        int count = 0;
+        std::string result = "{";
+        lua_pushnil( lua );
+        while( lua_next( lua, table ) != 0 ) {
+            if( count == 20 ) {
+                result += "\n  [remaining fields omitted]";
+                break;
+            }
+            result += "\n  [" + console_value( lua, -2, false ) + "] = " +
+                      console_value( lua, -1, false );
+            ++count;
+            lua_pop( lua, 1 );
+        }
+        return result + ( count == 0 ? "}" : "\n}" );
+    }
+    return std::string( "<" ) + lua_typename( lua, type ) + ">";
+}
 } // namespace
 
 bool execute_console( const std::string &mod_id, const std::string &source,
@@ -835,20 +887,7 @@ bool execute_console( const std::string &mod_id, const std::string &source,
             if( i != 0 ) {
                 output += '\n';
             }
-            const int type = lua_type( lua, index );
-            if( type == LUA_TSTRING ) {
-                std::size_t size = 0;
-                const char *text = lua_tolstring( lua, index, &size );
-                output += console_string( text, size );
-            } else if( type == LUA_TNUMBER ) {
-                output += lua_tolstring( lua, index, nullptr );
-            } else if( type == LUA_TBOOLEAN ) {
-                output += lua_toboolean( lua, index ) ? "true" : "false";
-            } else if( type == LUA_TNIL ) {
-                output += "nil";
-            } else {
-                output += std::string( "<" ) + lua_typename( lua, type ) + ">";
-            }
+            output += console_value( lua, index, true );
         }
         if( result.return_count() == 0 ) {
             output = "Completed (no return values)";
