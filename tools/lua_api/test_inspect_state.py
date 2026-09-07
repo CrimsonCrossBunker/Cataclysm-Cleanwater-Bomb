@@ -67,6 +67,19 @@ class StateInspectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "absent"):
             inspect_state.summarize(snapshot, mod="missing")
 
+    def test_mod_list_is_bounded_with_total_and_filtered_counts(self):
+        snapshot = saved_state()
+        snapshot["mods"]["another"] = {"values": {}, "tasks": []}
+        report = inspect_state.summarize(snapshot, limit=1)
+        self.assertEqual(report["mod_count"], 2)
+        self.assertEqual(report["matched_mod_count"], 2)
+        self.assertEqual(len(report["mods"]), 1)
+        self.assertEqual(report["mods"][0]["mod"], "another")
+        report = inspect_state.summarize(snapshot, mod="tonic", limit=1)
+        self.assertEqual(report["mod_count"], 2)
+        self.assertEqual(report["matched_mod_count"], 1)
+        self.assertEqual(report["mods"][0]["mod"], "tonic")
+
     def test_invalid_task_identity_and_owner_are_reported(self):
         for field, value in (("id", True), ("id", 0),
                              ("owner_mod_id", "another-mod"),

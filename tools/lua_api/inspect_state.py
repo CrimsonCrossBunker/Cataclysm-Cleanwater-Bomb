@@ -134,7 +134,8 @@ def summarize(document: object, mod: str | None = None,
             "state": values[:limit], "task_count": len(task_rows),
             "tasks": sorted(task_rows, key=lambda row: row["id"])[:limit],
         })
-    return {"version": 1, "scope": scope, "mods": rows,
+    return {"version": 1, "scope": scope, "mod_count": len(mods),
+            "matched_mod_count": len(rows), "mods": rows[:limit],
             "note": "Saved snapshot only; handler availability, participant "
                     "liveness and runtime execution are not verified."}
 
