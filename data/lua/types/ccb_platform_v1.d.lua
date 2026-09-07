@@ -9795,6 +9795,55 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
 ---@field force? boolean Bypass native immunity checks; defaults to false.
 
+---@class CcbMoraleAddOptions
+---@field duration? TimeDuration Nonnegative; defaults to one hour.
+---@field decay_start? TimeDuration Nonnegative; defaults to thirty minutes.
+---@field capped? boolean Defaults to false; uses native stacking rules.
+
+---@class CcbMoraleApi
+local CcbMoraleApi = {}
+
+---Add morale to the explicit Character, preserving native caps, stacking and decay.
+---@param character GameHandle
+---@param morale GameId GameId<morale>.
+---@param bonus integer Native signed 32-bit amount.
+---@param max_bonus integer Native signed 32-bit cap.
+---@param options? CcbMoraleAddOptions
+---@return CcbResult result `value` contains before, after and changed.
+function CcbMoraleApi.add(character, morale, bonus, max_bonus, options) end
+
+---Remove one morale type. Repeated removal has no further effect.
+---@param character GameHandle
+---@param morale GameId GameId<morale>.
+---@return CcbResult result `value` contains before, after and changed.
+function CcbMoraleApi.remove(character, morale) end
+
+---@class CcbBionicsApi
+local CcbBionicsApi = {}
+
+---Inspect native installed count, stored power, maximum power and capacity independently.
+---@param character GameHandle Exact avatar or NPC handle.
+---@return CcbResult result `value` contains installed_count, power, maximum_power and has_capacity.
+function CcbBionicsApi.summary(character) end
+
+---Query one concrete bionic type; ANY is not a bionic GameId.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` is boolean.
+function CcbBionicsApi.has(character, bionic) end
+
+---Grant directly through native Character rules, including storage capacity and duplicates.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` contains changed, uid and count.
+function CcbBionicsApi.grant(character, bionic) end
+
+---Remove the first matching native instance; absent types are harmless.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` contains changed and count.
+function CcbBionicsApi.remove_type(character, bionic) end
+
 ---@class CcbEffectsApi
 local CcbEffectsApi = {}
 

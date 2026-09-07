@@ -18940,13 +18940,13 @@ def render_static_character_morale(
         return None
     bonus = effect.get("bonus")
     max_bonus = effect.get("max_bonus")
-    bonus_choices: list[int] | None = None
-    if isinstance(bonus, list) and 0 < len(bonus) <= 32 and all(
+    bonus_range: list[int] | None = None
+    if isinstance(bonus, list) and len(bonus) == 2 and all(
         isinstance(value, int) and not isinstance(value, bool) and
-        NATIVE_INT_MIN <= value <= NATIVE_INT_MAX for value in bonus
+        -1000000000 <= value <= 1000000000 for value in bonus
     ):
-        bonus_choices = bonus
-        bonus = bonus_choices[0]
+        bonus_range = sorted(bonus)
+        bonus = bonus_range[0]
     if (
         not isinstance(bonus, int) or isinstance(bonus, bool) or
         not NATIVE_INT_MIN <= bonus <= NATIVE_INT_MAX or
@@ -18969,18 +18969,16 @@ def render_static_character_morale(
     if capped:
         options.append("capped = true")
     result: list[str] = []
-    if bonus_choices is not None:
+    if bonus_range is not None:
         result.append(
-            "    local morale_bonus = { " +
-            ", ".join(str(value) for value in bonus_choices) +
-            " }[services.random.int(1, " + str(len(bonus_choices)) + ")]"
+            f"    local morale_bonus = services.random.int({bonus_range[0]}, {bonus_range[1]})"
         )
     result.extend([
         "    services.morale.add(",
         f"        {target_expression},",
         "        services.types.id(\"morale\", "
         f"{lua_quote(effect[key])}),",
-        f"        {'morale_bonus' if bonus_choices is not None else bonus}, {max_bonus}",
+        f"        {'morale_bonus' if bonus_range is not None else bonus}, {max_bonus}",
     ])
     if options:
         result[-1] += ", { " + ", ".join(options) + " })"
@@ -19025,18 +19023,16 @@ def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
-    if target_expression is None or key not in effect:
+    if target_expression is None or key not in effect or "duration" not in effect:
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
     effect_id = _dynamic_id_expression(effect[key], "effect", target_expression)
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    if raw_duration == 0 or parse_turns(raw_duration) == 0:
-        raw_duration = "1 turn"
     duration = _duration_expression(
         "1 turn" if permanent else raw_duration,
-        minimum=1, actor_expression=target_expression,
+        minimum=0, actor_expression=target_expression,
     )
     if effect_id is None or duration is None:
         return None
@@ -19048,8 +19044,7 @@ def render_dynamic_character_effect(
         isinstance(raw_intensity, (int, float)) and
         not isinstance(raw_intensity, bool) and
         (not math.isfinite(float(raw_intensity)) or
-         int(raw_intensity) != raw_intensity or
-         not 0 <= int(raw_intensity) <= NATIVE_MAX_EFFECT_INTENSITY)
+         not -NATIVE_MAX_EFFECT_INTENSITY <= int(raw_intensity) <= NATIVE_MAX_EFFECT_INTENSITY)
     ):
         return None
     target_part = effect.get("target_part")
@@ -19063,8 +19058,8 @@ def render_dynamic_character_effect(
         options.append("permanent = true")
     if intensity != "0":
         options.append(
-            "intensity = math.max(0, math.min(" +
-            f"{NATIVE_MAX_EFFECT_INTENSITY}, math.floor(({intensity}) + 0.5)))"
+            "intensity = (function(value) return value < 0 and math.ceil(value) "
+            f"or math.floor(value) end)({intensity})"
         )
     force = effect.get("force", False)
     if not isinstance(force, bool):
@@ -25442,6 +25437,19 @@ def render_dynamic_character_condition(
         proven, actor = actor_specs[scope]
         if not proven:
             return None
+        if service == "bionics.has":
+            if condition[key] == "ANY":
+                return f"character_has_any_bionic_or_capacity({actor})"
+            if not isinstance(condition[key], str):
+                raw_id = render_eoc_string_expression(condition[key], actor)
+                if raw_id is None:
+                    return None
+                return (
+                    '(function(id) if id == "ANY" then return '
+                    f'character_has_any_bionic_or_capacity({actor}) end return '
+                    f'service_value(services.bionics.has({actor}, '
+                    'services.types.id("bionic", id))) end)(' + raw_id + ')'
+                )
         identifier = _dynamic_id_expression(condition[key], kind, actor)
         if identifier is None:
             return None

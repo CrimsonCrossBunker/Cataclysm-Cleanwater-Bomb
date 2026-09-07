@@ -15,6 +15,157 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_shipped_nightmare_reversed_morale_range_keeps_native_bounds(self) -> None:
+        entries = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/effects_on_condition/dream_eocs.json"])
+        nightmare = next(entry for entry in entries if entry.value.get("id") == "EOC_GIVE_NIGHTMARES")
+        effect = next(effect for effect in nightmare.value["effect"] if "u_add_morale" in effect)
+        self.assertEqual(effect["bonus"], [-15, -30])
+        lines = migrate_lua_first.render_static_character_morale(effect, "u_add_morale", "actor")
+        self.assertIsNotNone(lines)
+        script = """
+local actor = {}
+local called = false
+local services = {
+ types = { id = function(kind, id) return id end },
+ random = { int = function(lo, hi) assert(lo == -30 and hi == -15); return -22 end },
+ morale = { add = function(target, id, bonus, maximum)
+   assert(target == actor and id == 'morale_nightmare' and bonus == -22 and maximum == -30)
+   called = true
+ end }
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_dynamic_effect_zero_and_signed_intensity_match_native_arguments(self) -> None:
+        for prefix in ("u_", "npc_"):
+            lines = migrate_lua_first.render_dynamic_character_effect(
+                {prefix + "add_effect": {"context_val": "effect"}, "duration": 0,
+                 "intensity": {"context_val": "intensity"}}, prefix + "add_effect", "actor")
+            self.assertIsNotNone(lines)
+            script = """
+local actor = {}
+local context = { data = { effect = "bleed", intensity = -1.8 } }
+local received
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ types = { id = function(kind, id) return id end },
+ time = { duration = function(value, unit) assert(value == 0); return value end },
+ effects = { add = function(target, id, duration, options)
+   assert(target == actor and id == 'bleed' and duration == 0)
+   received = options.intensity
+   return { ok = true }
+ end }
+}
+local function apply()
+BODY
+end
+apply(); assert(received == -1)
+context.data.intensity = 1.8
+apply(); assert(received == 1)
+""".replace("BODY", "\n".join(lines))
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_morale_range_generates_executable_interior_integer_choice(self) -> None:
+        for prefix in ("u_", "npc_"):
+            lines = migrate_lua_first.render_static_character_morale(
+                {prefix + "add_morale": "morale_feeling_good", "bonus": [1, 4], "max_bonus": 10},
+                prefix + "add_morale", "actor")
+            self.assertIsNotNone(lines)
+            script = """
+local actor = {}
+local called = false
+local services = {
+ types = { id = function(kind, id) return id end },
+ random = { int = function(lo, hi) assert(lo == 1 and hi == 4); return 2 end },
+ morale = { add = function(target, id, bonus, maximum)
+   assert(target == actor and bonus == 2 and maximum == 10)
+   called = true
+ end }
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_shipped_bionic_conditions_and_collar_effects_use_domain_services(self) -> None:
+        doctor = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/npcs/tacoma_ranch/NPC_ranch_doctor.json"])
+        topic = next(entry for entry in doctor if entry.value.get("id") == "TALK_RANCH_DOCTOR_BIONICS")
+        for response in topic.value["responses"][:2]:
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                response["condition"], avatar_actor_proven=True)
+            self.assertIsNotNone(expression)
+            self.assertIn("character_has_any_bionic_or_capacity(actor)", expression)
+            self.assertNotIn('id("bionic", "ANY")', expression)
+        sources = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/effects_on_condition/scenario_specific_eocs.json"])
+        checked = set()
+        for entry in sources:
+            effects = entry.value.get("effect", [])
+            if not isinstance(effects, list):
+                continue
+            for effect in effects:
+                if not isinstance(effect, dict):
+                    continue
+                for key, identifier, service in (
+                    ("u_lose_bionic", "bio_nl_collar", "remove_type"),
+                    ("u_add_bionic", "bio_nl_collar_deactivated", "grant"),
+                ):
+                    if effect.get(key) != identifier:
+                        continue
+                    with self.subTest(source=entry.location, key=key):
+                        lines = migrate_lua_first.render_static_false_effect(effect, True, False, {})
+                        self.assertIsNotNone(lines)
+                        self.assertIn("services.bionics." + service, "\n".join(lines))
+                        self.assertIn(identifier, "\n".join(lines))
+                        checked.add(key)
+        self.assertEqual(checked, {"u_add_bionic", "u_lose_bionic"})
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_any_generated_query_includes_capacity_and_exact_actor(self) -> None:
+        for value in ("ANY", {"context_val": "bionic"}):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_bionics": value}, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = """
+local actor = { capacity = true }
+local partner = { capacity = false }
+local context = { data = { bionic = "ANY" } }
+local services = {
+ types = { id = function(kind, id) assert(id ~= 'ANY'); return id end },
+ bionics = { has = function(target, id)
+   assert(target == partner and id == 'bio_batteries')
+   return { value = true }
+ end }
+}
+local function service_value(result) return result.value end
+local function character_has_any_bionic_or_capacity(target)
+ assert(target == partner)
+ return target.capacity
+end
+local function predicate() return EXPRESSION end
+assert(predicate() == false)
+partner.capacity = true
+assert(predicate() == true)
+""".replace("EXPRESSION", expression)
+            if not isinstance(value, str):
+                script += '\ncontext.data.bionic = "bio_batteries"; assert(predicate() == true)'
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_zero_duration_effect_migration_preserves_native_duration(self) -> None:
         for prefix in ("u_", "npc_"):
             for duration in (0, "0 turns"):
@@ -1579,7 +1730,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 1)
-            self.assertNotIn("services.bionics.summary", main)
+            self.assertIn("services.bionics.summary", main)
+            self.assertIn('if id == "ANY" then return', main)
             self.assertIn("services.bionics.has", main)
             self.assertIn("services.recipes.knows", main)
             self.assertEqual(
