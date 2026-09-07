@@ -481,8 +481,11 @@ void Character::roll_all_damage( bool crit, damage_instance &di, bool average,
     if( target != nullptr ) {
         crit_mod = target->get_crit_factor( bp );
     }
+    const float target_cut_armor = target ?
+                                   target->get_armor_type( damage_cut, bp ) : 0.0f;
     for( const damage_type &dt : damage_type::get_all() ) {
-        roll_damage( dt.id, crit, di, average, weap, attack_vector, contact, crit_mod );
+        roll_damage( dt.id, crit, di, average, weap, attack_vector, contact, crit_mod,
+                     target_cut_armor );
     }
 }
 
@@ -1345,7 +1348,8 @@ float Character::bonus_damage( bool random ) const
 
 static void roll_melee_damage_internal( const Character &u, const damage_type_id &dt, bool crit,
                                         damage_instance &di, bool average, const item &weap,
-                                        const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact, float crit_mod )
+                                        const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact, float crit_mod,
+                                        float target_cut_armor )
 {
     float dmg = u.mabuff_damage_bonus( dt ) + weap.damage_melee( dt );
     float dmg_mul = 1.0f;
@@ -1397,6 +1401,17 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
         return; // No negative damage!
     }
 
+    // Cut criticals against poorly-armored targets gain a stat-scaled bonus zone:
+    // triggers when raw damage reaches 250% of the target's cut armor (0 armor always
+    // qualifies); ramp is logistic from sum 16 to sum 56, capped at +50%.
+    if( crit && dt == damage_cut && dmg >= 2.5f * target_cut_armor &&
+        u.get_str() > 8 && u.get_dex() > 8 ) {
+        const int str_val = std::min( u.get_str(), 40 );
+        const int dex_val = std::min( u.get_dex(), 40 );
+        const float zone = 0.5f * ( 1.0f - logarithmic_range( 16, 56, str_val + dex_val ) );
+        dmg *= 1.0f + zone;
+    }
+
     // FIXME: Hardcoded damage type effects (stab)
     if( dt == damage_stab ) {
         // 66%, 76%, 86%, 96%, 106%, 116%, 122%, 128%, 134%, 140%
@@ -1434,11 +1449,12 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
 
 void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instance &di, bool average,
                              const item &weap, const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact,
-                             float crit_mod ) const
+                             float crit_mod, float target_cut_armor ) const
 {
     // For handling typical melee damage types (bash, cut, stab)
     if( dt->melee_only ) {
-        roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod );
+        roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod,
+                                    target_cut_armor );
         return;
     }
 

@@ -1270,7 +1270,7 @@ class Character : public Creature, public visitable
                               const Creature *target, const bodypart_id &bp ) const;
         void roll_damage( const damage_type_id &dt, bool crit, damage_instance &di, bool average,
                           const item &weap, const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact,
-                          float crit_mod ) const;
+                          float crit_mod, float target_cut_armor ) const;
 
         /** Returns true if the player should be dead */
         bool is_dead_state() const override;
