@@ -3341,11 +3341,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 ".needs.thirst > 0", main
             )
             self.assertIn(
-                "services.mutations.definition(", main
+                "service_value(services.mutations.is_purifiable(actor, ", main
             )
-            self.assertIn(
-                ".availability.purifiable", main
-            )
+            self.assertNotIn(".availability.purifiable", main)
             self.assertIn(
                 "services.gameplay.environment.safe_mode_dangerous(", main
             )

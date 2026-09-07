@@ -897,6 +897,45 @@ sol::table remove_category(
                    state, std::move( value ) ) );
 }
 
+sol::table remove_type(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &type,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( type.empty() || type.size() > 256 || type.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.mutations.remove_type requires a nonempty, NUL-free type of at most 256 bytes" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Snapshot before removal: unset_mutation changes the Character's mutation
+    // collection.  Match the native type-removal effect, without purifier downgrades.
+    std::vector<trait_id> to_remove;
+    for( const trait_id &id : character->get_mutations() ) {
+        if( id.obj().types.count( type ) > 0 ) {
+            to_remove.push_back( id );
+        }
+    }
+    sol::table removed = state.create_table(
+                             static_cast<int>( to_remove.size() ), 0 );
+    for( std::size_t index = 0; index < to_remove.size(); ++index ) {
+        removed[index + 1] = script_game_id( "mutation", to_remove[index].str() );
+        character->unset_mutation( to_remove[index] );
+    }
+    sol::table value = state.create_table();
+    value["type"] = type;
+    value["removed"] = std::move( removed );
+    value["removed_count"] = to_remove.size();
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -1431,6 +1470,17 @@ void install_mutation_api(
         require_write();
         return remove_category(
                    lua_state, handle, category,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "remove_type",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & type ) {
+        require_write();
+        return remove_type(
+                   lua_state, handle, type,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

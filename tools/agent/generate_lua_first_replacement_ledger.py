@@ -2906,6 +2906,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_knockback"): "services.characters",
     ("eoc-effects", "npc_level_spell_class"): "services.characters",
     ("eoc-effects", "npc_lose_category"): "services.mutations",
+    ("eoc-effects", "npc_lose_mutation_type"): "services.mutations.remove_type",
     ("eoc-effects", "npc_lose_effect"): "services.effects",
     ("eoc-effects", "npc_make_radio_representative"): "services.npcs",
     ("eoc-effects", "npc_make_sound"): "services.sound",
@@ -2950,6 +2951,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_knockback"): "services.characters",
     ("eoc-effects", "u_level_spell_class"): "services.characters",
     ("eoc-effects", "u_lose_category"): "services.mutations",
+    ("eoc-effects", "u_lose_mutation_type"): "services.mutations.remove_type",
     ("eoc-effects", "u_make_radio_representative"): "services.characters",
     ("eoc-effects", "u_make_sound"): "services.sound",
     ("eoc-effects", "u_mutate"): "services.characters",
@@ -3011,6 +3013,14 @@ RETIRED_BOUNDED_IMPLEMENTED_EOC = {
 }
 
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "u_lose_mutation_type"): [
+        "src/npctalk.cpp", "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+    ],
+    ("eoc-effects", "npc_lose_mutation_type"): [
+        "src/npctalk.cpp", "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+    ],
     ("eoc-effects", "location_variable_adjust"): [
         "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
@@ -4337,7 +4347,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
 EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "goto_location"): "workflows.npc-navigation",
     ("eoc-effects", "morale_chat_activity"): "workflows.socialize",
-    ("eoc-effects", "npc_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "npc_activate"): "services.items-and-characters",
     ("eoc-effects", "npc_deal_damage"): "services.combat",
     ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
@@ -4345,7 +4354,6 @@ EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "u_activate"): "services.items-and-characters",
     ("eoc-effects", "u_deal_damage"): "services.combat",
-    ("eoc-effects", "u_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
     ("eoc-effects", "u_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",

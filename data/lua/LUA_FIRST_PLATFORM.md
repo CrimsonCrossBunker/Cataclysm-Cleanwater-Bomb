@@ -263,6 +263,28 @@ guards, and failure behavior. Read operations require a readable active
 Platform context. Mutations require the correct transaction or runtime phase.
 Callbacks receive typed payloads and handles, not arbitrary engine objects.
 
+`services.mutations.remove_type(character, type)` removes every mutation whose
+native `types` contains the requested string, using `unset_mutation` semantics
+(no purifier downgrade or prerequisite restoration). The explicit Character
+handle may target an avatar or NPC; runtime write and handle lifetime guards
+apply. The type must be nonempty, NUL-free and at most 256 bytes. An unknown type
+is a successful no-op. The result contains `type`, a detached `removed` array of
+`GameId<mutation>`, and `removed_count`; array ordering is unspecified.
+Migration lowers literal `u_lose_mutation_type` / `npc_lose_mutation_type` only
+when the corresponding actor is proven. Dynamic legacy variables, additional
+options and ambiguous actors remain explicit manual-rewrite TODOs; ordinary
+Lua can compute the string before calling this service.
+
+Purifiability conditions query `services.mutations.is_purifiable(character, id)`
+and unwrap its result envelope. Reading the static definition would ignore
+Character-specific intrinsic overrides. This migration covers literal ids and
+proven actors; unsupported shapes remain TODOs. These bounded implementations
+are not claims of full EOC semantic acceptance.
+
+`remove_type` 按突变的 `types` 成员批量移除，不按突变类别筛选，也不会恢复前置突变。
+可净化条件必须读取指定角色的动态状态，不能以定义的静态标记代替。
+当前只自动转换目标明确的受支持参数；其余输入保留明确 TODO，不计为全面语义验收通过。
+
 Mapgen callbacks may stage bounded static NPC and global zone requests with
 `ScriptMapgenContext:queue_npc` and `queue_zone` (128 of each per callback).
 They validate IDs and current-OMT coordinates without spawning external objects.

@@ -27034,20 +27034,19 @@ def render_eoc_condition_expression(
             return (
                 "true" if condition[bodytype_key] == "human" else "false"
             )
-    for purifiable_key, actor_proven in (
-        ("u_is_trait_purifiable", avatar_actor_proven),
-        ("npc_is_trait_purifiable", npc_actor_proven),
+    for purifiable_key, target in (
+        ("u_is_trait_purifiable", "actor" if avatar_actor_proven else None),
+        ("npc_is_trait_purifiable", npc_query_actor),
     ):
         if (
-            actor_proven and
+            target is not None and
             set(condition) == {purifiable_key} and
-            safe_platform_id(condition.get(purifiable_key))
+            bounded_platform_id(condition.get(purifiable_key))
         ):
             return (
-                "services.mutations.definition("
+                f"service_value(services.mutations.is_purifiable({target}, "
                 "services.types.id(\"mutation\", "
-                f"{lua_quote(condition[purifiable_key])}))"
-                ".availability.purifiable"
+                f"{lua_quote(condition[purifiable_key])})))"
             )
     for part_flag_key, actor_proven in (
         ("u_has_part_flag", avatar_actor_proven),
@@ -29042,6 +29041,38 @@ def render_eoc(
                             f"        services.types.id(\"body_part\", {lua_quote(target_part)}))",
                         ])
                 converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                ("u_lose_mutation_type" in effect or "npc_lose_mutation_type" in effect)
+            ):
+                key = (
+                    "u_lose_mutation_type" if "u_lose_mutation_type" in effect
+                    else "npc_lose_mutation_type"
+                )
+                target = _eoc_actor_expression(
+                    key, avatar_actor_proven,
+                    npc_event_character_actor_proven,
+                )
+                if (
+                    target is not None and set(effect) == {key} and
+                    bounded_utf8_string(effect[key], PLATFORM_ID_MAX_BYTES)
+                ):
+                    lines.append(
+                        "    services.mutations.remove_type("
+                        f"{target}, {lua_quote(effect[key])})"
+                    )
+                    converted_effect = True
+                else:
+                    reason = (
+                        "mutation-type removal requires a proven Character actor "
+                        "and one literal type of 1..256 bytes without NUL"
+                    )
+                    lines.append(f"    -- TODO: {reason}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index}: {reason}"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_lose_category" in effect or "npc_lose_category" in effect)

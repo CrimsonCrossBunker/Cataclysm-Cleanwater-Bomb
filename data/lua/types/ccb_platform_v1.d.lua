@@ -9784,6 +9784,30 @@ function CcbPlatformWoundsApi.add(character, body_part, wound) end
 ---@return CcbResult result `value` has detached native-order before/after arrays; absent instances produce `changed = false`.
 function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
+---@class CcbMutationTypeRemoval
+---@field type string Requested mutation type (a mutation's `types` membership, not its category).
+---@field removed GameId[] Detached GameId<mutation> array; ordering is unspecified.
+---@field removed_count integer Number of removed mutations; zero when nothing matches.
+
+---@class CcbMutationsApi
+local CcbMutationsApi = {}
+
+---Read the explicit Character's current purifiability, including intrinsic overrides.
+---This is not the static mutation definition's purifiable flag.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean; stale handles return an error envelope.
+function CcbMutationsApi.is_purifiable(character, mutation) end
+
+---Remove all mutations of a type from the explicit avatar or NPC; runtime-callback write only.
+---Uses native unset semantics, without purifier downgrades or restoring prerequisites.
+---Unknown types succeed with an empty result. Invalid types raise invalid_argument;
+---expired, wrong-kind or stale handles return the normal GameHandle error envelope.
+---@param character GameHandle Exact Character handle.
+---@param mutation_type string Nonempty, NUL-free mutation type, at most 256 bytes.
+---@return CcbResult result `value` is CcbMutationTypeRemoval.
+function CcbMutationsApi.remove_type(character, mutation_type) end
+
 ---@class CcbPlatformBionicsApi: CcbBionicsApi
 local CcbPlatformBionicsApi = {}
 

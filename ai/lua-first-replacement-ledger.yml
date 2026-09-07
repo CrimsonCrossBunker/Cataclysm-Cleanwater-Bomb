@@ -48,9 +48,9 @@ summary:
   implemented_verified: 0
   implemented_unverified: 89
   bounded_implemented_verified: 0
-  bounded_implemented_unverified: 668
+  bounded_implemented_unverified: 670
   primitive_available_unverified: 0
-  planned: 2
+  planned: 0
   private_adapter: 0
   reviewed_not_applicable: 17
 entries:
@@ -5723,12 +5723,19 @@ entries:
 - inventory: eoc-effects
   selector: npc_lose_mutation_type
   target_kind: shared_service
-  target: services.mutations
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.mutations.remove_type
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  verification: not_run
+  - src/lua_platform_mutations.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_trait
   target_kind: shared_service
@@ -7648,12 +7655,19 @@ entries:
 - inventory: eoc-effects
   selector: u_lose_mutation_type
   target_kind: shared_service
-  target: services.mutations
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.mutations.remove_type
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  verification: not_run
+  - src/lua_platform_mutations.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-effects
   selector: u_lose_trait
   target_kind: shared_service
