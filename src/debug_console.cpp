@@ -3549,7 +3549,7 @@ void tab_lua_view::draw_body( debug_console &host )
         ImGui::TextUnformatted( "No Lua Mods are loaded in this world." );
         return;
     }
-    if( std::find( mods.begin(), mods.end(), selected_mod ) == mods.end() ) {
+    if( selected_mod.empty() ) {
         selected_mod = mods.front();
     }
     if( ImGui::BeginCombo( "Mod", selected_mod.c_str() ) ) {
@@ -3564,9 +3564,15 @@ void tab_lua_view::draw_body( debug_console &host )
                        "rolled back on error. Use return to display values; return a nested "
                        "field explicitly to inspect it." );
     ImGui::InputTextMultiline( "##lua_source", &source, ImVec2( -1.0f, 180.0f ) );
+    const bool selected_loaded = std::find( mods.begin(), mods.end(), selected_mod ) != mods.end();
+    if( !selected_loaded ) {
+        ImGui::TextUnformatted( "The selected Mod is no longer loaded. Choose another Mod explicitly." );
+    }
+    ImGui::BeginDisabled( !selected_loaded );
     if( ImGui::Button( "Run Lua" ) ) {
         host.request_lua( selected_mod, source );
     }
+    ImGui::EndDisabled();
     if( !result.empty() ) {
         ImGui::Separator();
         ImGui::TextWrapped( "%s", result.c_str() );
