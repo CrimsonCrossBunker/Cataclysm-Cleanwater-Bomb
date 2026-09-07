@@ -116,3 +116,30 @@ python3 tools/test_create_lua_mod.py
 The editor gate checks both real templates and deliberately invalid author code
 for unknown APIs, missing arguments and wrong argument types. It is a static
 acceptance gate and does not trigger a C++ build or a full content audit.
+
+## Inspect saved state without starting the game
+
+```sh
+python3 tools/lua_api/inspect_state.py /path/world/lua_platform_world.json
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --mod MyMod
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --values --limit 50
+```
+
+The inspector reads one explicit Platform v1 save file and emits JSON containing
+saved Mod owners, state key/type summaries, task IDs, handler names, due turns,
+recurrence intervals and saved participant/actor records. Values are included
+only with `--values`. Each displayed list defaults to 20 entries; total counts
+remain visible, and `--limit` accepts 1–200. It never executes Mod metadata or Lua,
+loads native libraries, resolves participants against a world, or rewrites the
+save. The world and character files are separate scopes; inspect both when a Mod
+uses both.
+
+An absent/uninstalled Mod can still have a retained saved record. Finding a
+record does not establish that its handler currently exists, its participants
+are live, or its task will run. This is a saved-snapshot diagnostic, not a runtime
+debugger or a replacement for the engine's save loader. Basic malformed input,
+duplicate IDs/members and unsupported versions produce an error and exit code 2;
+successful inspection returns 0. A report is not full save compatibility proof.
+
+Implementation and regression source are currently awaiting the deferred
+acceptance gate; no native game build is needed to exercise this tool later.
