@@ -398,9 +398,13 @@ void weakpoint_attack::compute_wp_skill()
     } else if( chr_att != nullptr ) {
         switch( type ) {
             case attack_type::MELEE_BASH:
-            case attack_type::MELEE_CUT:
             case attack_type::MELEE_STAB:
                 attacker_skill = chr_att->melee_weakpoint_skill( *weapon );
+                break;
+            case attack_type::MELEE_CUT:
+                // Skill with cutting weapons improves the chance to hit weak points.
+                attacker_skill = chr_att->melee_weakpoint_skill( *weapon ) +
+                                 0.1f * chr_att->get_skill_level( damage_cut->skill );
                 break;
             case attack_type::PROJECTILE:
                 attacker_skill = is_thrown
