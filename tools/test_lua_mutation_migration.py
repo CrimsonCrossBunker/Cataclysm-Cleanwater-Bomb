@@ -36,8 +36,8 @@ class MutationMigrationTest(unittest.TestCase):
                     ),
                     (
                         {
-                            prefix + "has_any_trait": ["QUICK"] * 64
-                            + [{"context_val": "trait"}]
+                            prefix + "has_any_trait": ["QUICK"] * 64 +
+                            [{"context_val": "trait"}]
                         },
                         "true",
                         target,
@@ -99,15 +99,12 @@ services.variables.resolve = function(data, owner, scope, key)
 end
 """
                 raw = next(iter(condition.values()))
-                script += (
-                    "local match_quick = "
-                    + (
-                        "false"
-                        if isinstance(raw, list) and len(raw) > 64
-                        else "true"
-                    )
-                    + "\n"
+                match_quick = (
+                    "false"
+                    if isinstance(raw, list) and len(raw) > 64
+                    else "true"
                 )
+                script += f"local match_quick = {match_quick}\n"
                 if target is not None:
                     script += f"""
 services.mutations.has = function(owner, id)
@@ -135,7 +132,8 @@ end
         cases = [
             ("data/json/npcs/holdouts/Mr_Lapin.json", "u_has_any_trait"),
             (
-                "data/json/npcs/refugee_center/surface_visitors/NPC_arsonist.json",
+                "data/json/npcs/refugee_center/surface_visitors/"
+                "NPC_arsonist.json",
                 "npc_has_visible_trait",
             ),
             (
