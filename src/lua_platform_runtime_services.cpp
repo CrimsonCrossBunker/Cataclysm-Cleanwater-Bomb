@@ -4833,8 +4833,6 @@ void hot_swap_active_runtimes(
         owner->character_state = std::move( old.character_state );
         owner->world_state = std::move( old.world_state );
         owner->tasks = std::move( old.tasks );
-        owner->reported_task_migration_failures =
-            std::move( old.reported_task_migration_failures );
         owner->next_task_id = old.next_task_id;
         owner->random_engine = std::move( old.random_engine );
         owner->world_is_ready = previously_ready.count( owner->mod_id ) != 0;

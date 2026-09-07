@@ -188,7 +188,6 @@ class runtime : public std::enable_shared_from_this<runtime>
         script_persistent_state character_state;
         script_persistent_state world_state;
         std::vector<persistent_task> tasks;
-        std::set<std::uint64_t> reported_task_migration_failures;
         std::uint64_t next_task_id = 1;
         bool task_migration_active = false;
         std::mt19937_64 random_engine;

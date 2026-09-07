@@ -165,8 +165,9 @@ Lua metadata (stderr for headless hosts); its startup UI ordering still requires
 interactive acceptance. Direct loader embedders must provide their own notice.
 
 实现断点（2026-09-08）：加载器源码已开放 bundled 标准库，保留普通 package 查找器与原生
-加载入口，并优先查找 Mod 本地模块；`require("ccb")` 仍固定返回所属 state 的 Platform
-根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
+加载入口，并优先查找 Mod 本地模块。原生库搜索路径增加 Mod 根目录的 `?.so`（Windows
+为 `?.dll`），同时保留原有路径；根目录含 `;` 或 `?` 时可使用明确的 `package.loadlib`
+路径，避免 cpath 语法歧义。`require("ccb")` 仍固定返回所属 state 的 Platform 根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
 构建与 ABI。Mod 管理器已在元数据发现前加入每会话风险告知（无界面宿主输出到 stderr），
 启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。不得将源码完成描述为已发布或已通过验收。
 

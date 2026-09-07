@@ -1291,7 +1291,6 @@ void detail::install_runtime_state_task_api(
         [task_id]( const persistent_task & task ) {
             return task.id == task_id;
         } ), owner->tasks.end() );
-        owner->reported_task_migration_failures.erase( task_id );
         return owner->tasks.size() != old_size;
     } );
     tasks.set_function( "get", [weak, task_snapshot](
@@ -1646,7 +1645,6 @@ void runtime_process_tasks()
                 continue;
             }
             if( handler->second.payload_version == task.payload_version ) {
-                owner->reported_task_migration_failures.erase( task.id );
                 continue;
             }
             std::string migration_error;
@@ -1656,8 +1654,6 @@ void runtime_process_tasks()
                                               << owner->mod_id << ':' << task.handler_id
                                               << "': " << migration_error;
                 retired_task_ids.insert( task.id );
-            } else {
-                owner->reported_task_migration_failures.erase( task.id );
             }
         }
         if( !retired_task_ids.empty() ) {
@@ -1666,9 +1662,6 @@ void runtime_process_tasks()
             [&retired_task_ids]( const persistent_task & task ) {
                 return retired_task_ids.count( task.id ) != 0;
             } ), owner->tasks.end() );
-            for( const std::uint64_t task_id : retired_task_ids ) {
-                owner->reported_task_migration_failures.erase( task_id );
-            }
         }
         std::vector<persistent_task> due;
         owner->tasks.erase( std::remove_if( owner->tasks.begin(), owner->tasks.end(),
@@ -1682,7 +1675,6 @@ void runtime_process_tasks()
             return false;
         } ), owner->tasks.end() );
         for( const persistent_task &task : due ) {
-            owner->reported_task_migration_failures.erase( task.id );
         }
         std::sort( due.begin(), due.end(), []( const persistent_task & lhs,
         const persistent_task & rhs ) {
