@@ -19,6 +19,9 @@ on:
       - 'tools/lua_api/**'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
+      - 'tools/migrate_lua_first.py'
+      - 'tools/test_migrate_lua_first.py'
+      - 'tools/test_lua_mutation_migration.py'
   push:
     branches: [ master ]
     paths:
@@ -38,6 +41,9 @@ on:
       - 'tools/lua_api/**'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
+      - 'tools/migrate_lua_first.py'
+      - 'tools/test_migrate_lua_first.py'
+      - 'tools/test_lua_mutation_migration.py'
   workflow_dispatch:
 
 permissions:
@@ -66,6 +72,14 @@ jobs:
         # Includes live repository checks for all five contracts and negative cases.
         run: |
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+
+      - name: Validate Lua-first migration semantics
+        run: |
+          if ! command -v lua >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y lua5.4
+          fi
+          python3 tools/test_migrate_lua_first.py
 
       - name: Validate Mod scaffolds and editor diagnostics
         env:

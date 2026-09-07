@@ -90,3 +90,15 @@ data/mods/Lua_First_Example/
 - **Character & World State**: Durable storage via `ccb.state.character.get/set` and `ccb.state.world.get/set`, automatically saved into player/world sidecars.
 - **Delayed & Periodic Tasks**: Scheduled via `ccb.tasks.after(turns, handler_id, payload, version, owner)`. Survives save/reload cycles.
 - **Synchronous Hooks**: Subscribed via `ccb.runtime.hook(hook_name, handler_id)` for combat, crafting, and creature events.
+
+### Nano-tonic gameplay loop / 药剂玩法闭环
+
+Activate `lua_first_nano_tonic` while carrying a `lua_first_cleanwater_cell`.
+One cell is consumed; a visible recovery effect starts three stamina pulses
+(+100 each, ten seconds apart). The injector has a sixty-second cooldown.
+The native effect event schedules the first pulse. Character state and tasks
+persist across saving and loading; loading does not schedule a second chain.
+The implementation is in `runtime/nano_tonic.lua`.
+
+携带净化电池后使用药剂装置：消耗一枚电池，每十秒恢复 100 耐力，共三次，
+冷却六十秒。原生效果事件启动首个任务，后续任务与冷却随角色保存。

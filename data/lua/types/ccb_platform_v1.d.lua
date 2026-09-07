@@ -9802,6 +9802,185 @@ function CcbPlatformWoundsApi.add(character, body_part, wound) end
 ---@return CcbResult result `value` has detached native-order before/after arrays; absent instances produce `changed = false`.
 function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
+---@class CcbMutationTypeRemoval
+---@field type string Requested mutation type (a mutation's `types` membership, not its category).
+---@field removed GameId[] Detached GameId<mutation> array; ordering is unspecified.
+---@field removed_count integer Number of removed mutations; zero when nothing matches.
+
+---@class CcbEffectAddOptions
+---@field body_part? GameId A body part present on the target Creature.
+---@field permanent? boolean Defaults to false.
+---@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
+---@field force? boolean Bypass native immunity checks; defaults to false.
+
+---@class CcbMoraleAddOptions
+---@field duration? TimeDuration Nonnegative; defaults to one hour.
+---@field decay_start? TimeDuration Nonnegative; defaults to thirty minutes.
+---@field capped? boolean Defaults to false; uses native stacking rules.
+
+---@class CcbOfferedSkills
+---@field items GameId[] Detached skill ids, at most 256 entries.
+---@field total integer Number of teachable skills before truncation.
+---@field returned integer Number of returned ids.
+---@field truncated boolean Whether additional ids were omitted.
+
+---@class CcbSkillsApi
+local CcbSkillsApi = {}
+
+---Skills the teacher can teach this student, using the student's knowledge level.
+---@param teacher GameHandle Character handle.
+---@param student GameHandle Character handle; never inferred from the avatar.
+---@return CcbResult result `value` is CcbOfferedSkills; stale handles return an error.
+function CcbSkillsApi.offered(teacher, student) end
+
+---@class CcbMoraleApi
+local CcbMoraleApi = {}
+
+---Add morale to the explicit Character, preserving native caps, stacking and decay.
+---@param character GameHandle
+---@param morale GameId GameId<morale>.
+---@param bonus integer Native signed 32-bit amount.
+---@param max_bonus integer Native signed 32-bit cap.
+---@param options? CcbMoraleAddOptions
+---@return CcbResult result `value` contains before, after and changed.
+function CcbMoraleApi.add(character, morale, bonus, max_bonus, options) end
+
+---Remove one morale type. Repeated removal has no further effect.
+---@param character GameHandle
+---@param morale GameId GameId<morale>.
+---@return CcbResult result `value` contains before, after and changed.
+function CcbMoraleApi.remove(character, morale) end
+
+---@class CcbBionicsApi
+local CcbBionicsApi = {}
+
+---Inspect native installed count, stored power, maximum power and capacity independently.
+---@param character GameHandle Exact avatar or NPC handle.
+---@return CcbResult result `value` contains installed_count, power, maximum_power and has_capacity.
+function CcbBionicsApi.summary(character) end
+
+---Query one concrete bionic type; ANY is not a bionic GameId.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` is boolean.
+function CcbBionicsApi.has(character, bionic) end
+
+---Grant directly through native Character rules, including storage capacity and duplicates.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` contains changed, uid and count.
+function CcbBionicsApi.grant(character, bionic) end
+
+---Remove the first matching native instance; absent types are harmless.
+---@param character GameHandle
+---@param bionic GameId GameId<bionic>.
+---@return CcbResult result `value` contains changed and count.
+function CcbBionicsApi.remove_type(character, bionic) end
+
+---@class CcbEffectsApi
+local CcbEffectsApi = {}
+
+---Apply an effect through native Creature rules. Zero duration is preserved;
+---it still applies immediately and expires when native effect processing runs.
+---@param character GameHandle
+---@param effect GameId
+---@param duration TimeDuration Between zero turns and 365 days.
+---@param options? CcbEffectAddOptions
+---@return CcbResult
+function CcbEffectsApi.add(character, effect, duration, options) end
+
+---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
+---@param character GameHandle
+---@param effect GameId
+---@param body_part? GameId Omit for native unqualified lookup.
+---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
+---@return CcbResult result `value` is boolean.
+function CcbEffectsApi.has(character, effect, body_part, intensity) end
+
+---Remove an effect, optionally restricted to one body part; repeat removal is harmless.
+---@param character GameHandle
+---@param effect GameId
+---@param body_part? GameId Omit to remove all instances of this effect.
+---@return CcbResult result `value` is whether any instance was removed.
+function CcbEffectsApi.remove(character, effect, body_part) end
+
+---@class CcbMutationsApi
+local CcbMutationsApi = {}
+
+---Read whether the explicit Character has a mutation; compose multiple queries with Lua `or`.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.has(character, mutation) end
+
+---Check a mutation's visibility to the explicit observer, including the native visibility threshold.
+---@param observed GameHandle Character whose mutation is inspected.
+---@param observer GameHandle Character performing the observation.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.is_visible_to(observed, observer, mutation) end
+
+---Read the explicit Character's current purifiability, including intrinsic overrides.
+---This is not the static mutation definition's purifiable flag.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean; stale handles return an error envelope.
+function CcbMutationsApi.is_purifiable(character, mutation) end
+
+---Set a present mutation's intrinsic purifiability override; runtime-callback write only.
+---Absent mutations are unchanged. The definition's own non-purifiable flag still applies.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@param purifiable boolean
+---@return CcbResult result `value` contains present, before, after and changed booleans.
+function CcbMutationsApi.set_purifiable(character, mutation, purifiable) end
+
+---Grant a new permanent mutation without clearing other mutations sharing its types.
+---An existing mutation returns already_present; success emits gains_mutation.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param variant? string Optional known variant id.
+---@return CcbResult result `value` is a detached mutation state snapshot.
+function CcbMutationsApi.grant(character, mutation, variant) end
+
+---Remove a permanent mutation and synchronize base-trait bookkeeping and native events.
+---An absent permanent mutation returns not_permanent. This is not legacy unset_mutation semantics.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` contains the removed snapshot and remaining present flag.
+function CcbMutationsApi.remove(character, mutation) end
+
+---Request an activatable permanent mutation's state, skipping an already-satisfied state.
+---Not-permanent or non-activatable mutations return errors; accepted indicates the resulting state.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param active boolean
+---@return CcbResult result `value` contains before, after, requested, accepted and present.
+function CcbMutationsApi.set_active(character, mutation, active) end
+
+---Remove all mutations of a category using native unset semantics, without purifier downgrades.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param category GameId Valid GameId<mutation_category>.
+---@return CcbResult result `value` contains category, removed GameId<mutation>[] and removed_count.
+function CcbMutationsApi.remove_category(character, category) end
+
+---Invoke native category mutation selection for the explicit Character.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param category? GameId GameId<mutation_category>; nil selects any category.
+---@param use_vitamins? boolean Defaults to true.
+---@param true_random? boolean Defaults to false.
+---@return CcbResult result `value` contains changed, before_count and after_count.
+function CcbMutationsApi.mutate_category(character, category, use_vitamins, true_random) end
+
+---Remove all mutations of a type from the explicit avatar or NPC; runtime-callback write only.
+---Uses native unset semantics, without purifier downgrades or restoring prerequisites.
+---Unknown types succeed with an empty result. Invalid types raise invalid_argument;
+---expired, wrong-kind or stale handles return the normal GameHandle error envelope.
+---@param character GameHandle Exact Character handle.
+---@param mutation_type string Nonempty, NUL-free mutation type, at most 256 bytes.
+---@return CcbResult result `value` is CcbMutationTypeRemoval.
+function CcbMutationsApi.remove_type(character, mutation_type) end
+
 ---@class CcbPlatformBionicsApi: CcbBionicsApi
 local CcbPlatformBionicsApi = {}
 

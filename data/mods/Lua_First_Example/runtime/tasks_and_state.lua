@@ -63,12 +63,6 @@ function tasks.dynamic_mist_profile(payload)
     }
 end
 
-function tasks.tonic_tick(task)
-    local ticks = ccb.state.character.get("lua_first_tonic_ticks", 0) + 1
-    ccb.state.character.set("lua_first_tonic_ticks", ticks)
-    ccb.services.message("The nano-tonic circulates through your bloodstream (pulse " .. ticks .. ").")
-end
-
 function tasks.run_diagnostics()
     local log = {}
     table.insert(log, "=== Lua Platform v1 Self-Diagnostics ===")

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +15,331 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_skill_teaching_requires_two_proven_participants(self) -> None:
+        for selector, expected in (
+            ("u_train_skills", "services.skills.offered(actor, partner)"),
+            ("npc_train_skills", "services.skills.offered(partner, actor)"),
+        ):
+            with self.subTest(selector=selector):
+                for proof in ({}, {"avatar_actor_proven": True}, {"npc_actor_proven": True},
+                              {"npc_actor_expression": "partner"}):
+                    self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(selector, **proof))
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    selector, avatar_actor_proven=True, npc_actor_expression="partner")
+                self.assertIn(expected, expression)
+                self.assertTrue(expression.endswith(".total > 0"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_visible_traits_require_and_use_both_proven_participants(self) -> None:
+        for selector, observed, observer in (
+            ("u_has_visible_trait", "actor", "partner"),
+            ("npc_has_visible_trait", "partner", "actor"),
+        ):
+            condition = {selector: "FELINE_EARS"}
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_actor_proven=True))
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                condition, avatar_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = f"""
+local actor, partner = {{}}, {{}}
+local answer = false
+local services = {{types={{id=function(kind,id) return id end}}, mutations={{}}}}
+local function service_value(r) assert(r.ok); return r.value end
+services.mutations.is_visible_to = function(subject, viewer, id)
+ assert(subject == {observed} and viewer == {observer} and id == 'FELINE_EARS')
+ return {{ok=true,value=answer}}
+end
+assert(not ({expression}))
+answer = true
+assert({expression})
+"""
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_knowledge_predicates_execute_for_both_participants(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for key, kind, identifier in (
+                ("has_proficiency", "proficiency", "prof_carving"),
+                ("has_wielded_with_skill", "skill", "cutting"),
+                ("has_wielded_with_weapon_category", "weapon_category", "LONG_SWORDS"),
+            ):
+                with self.subTest(selector=prefix + key):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + key: identifier}, avatar_actor_proven=True,
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    script = """
+local actor, partner = {}, {}
+local answer = false
+local function service_value(result) assert(result.ok); return result.value end
+local services = {types={id=function(kind,id) return {kind=kind,id=id} end},
+ proficiencies={}, inventory={}}
+"""
+                    script += f"""
+local function query(character, id)
+ assert(character == {target} and id.kind == '{kind}' and id.id == '{identifier}')
+ return {{ok=true,value={"{known=answer}" if kind == "proficiency" else "answer"}}}
+end
+services.proficiencies.get = query
+services.inventory.wielded_matches = query
+assert(not ({expression}))
+answer = true
+assert({expression})
+"""
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_skill_teaching_executes_with_exact_teacher_and_student(self) -> None:
+        source = REPOSITORY_ROOT / "data/json/npcs/godco/members/NPC_Corrie_Kaja_Dosia.json"
+        entries = migrate_lua_first.load_objects([source])
+        self.assertTrue(any("npc_train_skills" in json.dumps(entry.value) for entry in entries))
+        expressions = [migrate_lua_first.render_eoc_condition_expression(
+            selector, avatar_actor_proven=True, npc_actor_expression="partner")
+            for selector in ("u_train_skills", "npc_train_skills")]
+        script = """
+local actor, partner = {}, {}
+local expected_teacher, expected_student, total
+local services = { skills = { offered = function(teacher, student)
+ assert(teacher == expected_teacher and student == expected_student)
+ return {ok=true, value={total=total}}
+end } }
+local function service_value(result) assert(result.ok); return result.value end
+"""
+        for expression, teacher, student in zip(expressions, ("actor", "partner"), ("partner", "actor")):
+            script += f"expected_teacher, expected_student = {teacher}, {student}\n"
+            script += f"total = 0; assert(not ({expression}))\n"
+            script += f"total = 2; assert({expression})\n"
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_shipped_nightmare_reversed_morale_range_keeps_native_bounds(self) -> None:
+        entries = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/effects_on_condition/dream_eocs.json"])
+        nightmare = next(entry for entry in entries if entry.value.get("id") == "EOC_GIVE_NIGHTMARES")
+        effect = next(effect for effect in nightmare.value["effect"] if "u_add_morale" in effect)
+        self.assertEqual(effect["bonus"], [-15, -30])
+        lines = migrate_lua_first.render_static_character_morale(effect, "u_add_morale", "actor")
+        self.assertIsNotNone(lines)
+        script = """
+local actor = {}
+local called = false
+local services = {
+ types = { id = function(kind, id) return id end },
+ random = { int = function(lo, hi) assert(lo == -30 and hi == -15); return -22 end },
+ morale = { add = function(target, id, bonus, maximum)
+   assert(target == actor and id == 'morale_nightmare' and bonus == -22 and maximum == -30)
+   called = true
+ end }
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_dynamic_effect_zero_and_signed_intensity_match_native_arguments(self) -> None:
+        for prefix in ("u_", "npc_"):
+            lines = migrate_lua_first.render_dynamic_character_effect(
+                {prefix + "add_effect": {"context_val": "effect"}, "duration": 0,
+                 "intensity": {"context_val": "intensity"}}, prefix + "add_effect", "actor")
+            self.assertIsNotNone(lines)
+            script = """
+local actor = {}
+local context = { data = { effect = "bleed", intensity = -1.8 } }
+local received
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ types = { id = function(kind, id) return id end },
+ time = { duration = function(value, unit) assert(value == 0); return value end },
+ effects = { add = function(target, id, duration, options)
+   assert(target == actor and id == 'bleed' and duration == 0)
+   received = options.intensity
+   return { ok = true }
+ end }
+}
+local function apply()
+BODY
+end
+apply(); assert(received == -1)
+context.data.intensity = 1.8
+apply(); assert(received == 1)
+""".replace("BODY", "\n".join(lines))
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_morale_range_generates_executable_interior_integer_choice(self) -> None:
+        for prefix in ("u_", "npc_"):
+            lines = migrate_lua_first.render_static_character_morale(
+                {prefix + "add_morale": "morale_feeling_good", "bonus": [1, 4], "max_bonus": 10},
+                prefix + "add_morale", "actor")
+            self.assertIsNotNone(lines)
+            script = """
+local actor = {}
+local called = false
+local services = {
+ types = { id = function(kind, id) return id end },
+ random = { int = function(lo, hi) assert(lo == 1 and hi == 4); return 2 end },
+ morale = { add = function(target, id, bonus, maximum)
+   assert(target == actor and bonus == 2 and maximum == 10)
+   called = true
+ end }
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_shipped_bionic_conditions_and_collar_effects_use_domain_services(self) -> None:
+        doctor = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/npcs/tacoma_ranch/NPC_ranch_doctor.json"])
+        topic = next(entry for entry in doctor if entry.value.get("id") == "TALK_RANCH_DOCTOR_BIONICS")
+        for response in topic.value["responses"][:2]:
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                response["condition"], avatar_actor_proven=True)
+            self.assertIsNotNone(expression)
+            self.assertIn("character_has_any_bionic_or_capacity(actor)", expression)
+            self.assertNotIn('id("bionic", "ANY")', expression)
+        sources = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/effects_on_condition/scenario_specific_eocs.json"])
+        checked = set()
+        for entry in sources:
+            effects = entry.value.get("effect", [])
+            if not isinstance(effects, list):
+                continue
+            for effect in effects:
+                if not isinstance(effect, dict):
+                    continue
+                for key, identifier, service in (
+                    ("u_lose_bionic", "bio_nl_collar", "remove_type"),
+                    ("u_add_bionic", "bio_nl_collar_deactivated", "grant"),
+                ):
+                    if effect.get(key) != identifier:
+                        continue
+                    with self.subTest(source=entry.location, key=key):
+                        lines = migrate_lua_first.render_static_false_effect(effect, True, False, {})
+                        self.assertIsNotNone(lines)
+                        self.assertIn("services.bionics." + service, "\n".join(lines))
+                        self.assertIn(identifier, "\n".join(lines))
+                        checked.add(key)
+        self.assertEqual(checked, {"u_add_bionic", "u_lose_bionic"})
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_any_generated_query_includes_capacity_and_exact_actor(self) -> None:
+        for value in ("ANY", {"context_val": "bionic"}):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_bionics": value}, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = """
+local actor = { capacity = true }
+local partner = { capacity = false }
+local context = { data = { bionic = "ANY" } }
+local services = {
+ types = { id = function(kind, id) assert(id ~= 'ANY'); return id end },
+ bionics = { has = function(target, id)
+   assert(target == partner and id == 'bio_batteries')
+   return { value = true }
+ end }
+}
+local function service_value(result) return result.value end
+local function character_has_any_bionic_or_capacity(target)
+ assert(target == partner)
+ return target.capacity
+end
+local function predicate() return EXPRESSION end
+assert(predicate() == false)
+partner.capacity = true
+assert(predicate() == true)
+""".replace("EXPRESSION", expression)
+            if not isinstance(value, str):
+                script += '\ncontext.data.bionic = "bio_batteries"; assert(predicate() == true)'
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_zero_duration_effect_migration_preserves_native_duration(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for duration in (0, "0 turns"):
+                with self.subTest(prefix=prefix, duration=duration):
+                    lines = migrate_lua_first.render_static_character_effect(
+                        {prefix + "add_effect": "bleed", "duration": duration},
+                        prefix + "add_effect", "actor")
+                    self.assertIsNotNone(lines)
+                    self.assertIn('services.time.duration(0, "turn")', "\n".join(lines))
+
+    def test_shipped_reverberation_zero_duration_effects_preserve_zero(self) -> None:
+        source = REPOSITORY_ROOT / "data/json/effects_on_condition/nether_eocs/reverberations.json"
+        checked = []
+        for entry in migrate_lua_first.load_objects([source]):
+            for effect in entry.value.get("effect", []):
+                if not isinstance(effect, dict) or effect.get("u_add_effect") != "blind":
+                    continue
+                self.assertEqual(effect.get("duration"), 0)
+                with self.subTest(source=entry.location, eoc=entry.value.get("id")):
+                    lines = migrate_lua_first.render_static_character_effect(
+                        effect, "u_add_effect", "actor")
+                    self.assertIsNotNone(lines)
+                    self.assertIn('services.time.duration(0, "turn")', "\n".join(lines))
+                    checked.append(entry.value["id"])
+        self.assertEqual(len(checked), 4)
+        self.assertEqual(len(set(checked)), 4)
+
+    def test_any_effect_query_preserves_explicit_npc_target(self) -> None:
+        for bodypart in (None, "arm_l"):
+            condition = {"npc_has_any_effect": ["poison", "bleed"]}
+            if bodypart is not None:
+                condition["bodypart"] = bodypart
+            with self.subTest(bodypart=bodypart):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition, npc_actor_expression="partner")
+                self.assertIsNotNone(expression)
+                self.assertEqual(expression.count("services.effects.has(partner,"), 2)
+                self.assertNotIn("services.effects.has(actor,", expression)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_any_effect_generated_lua_queries_live_npc(self) -> None:
+        # This executes generated Lua against a service double, not the engine.
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_any_effect": ["poison", "bleed"], "bodypart": "arm_l"},
+            npc_actor_expression="partner")
+        self.assertIsNotNone(expression)
+        script = """
+local actor = { poison = true, bleed = true }
+local partner = { poison = false, bleed = false }
+local calls = 0
+local services = {
+  types = { id = function(kind, id) return id end },
+  effects = { has = function(character, id, part)
+    assert(character == partner and part == 'arm_l')
+    calls = calls + 1
+    if character.stale then error('stale_world') end
+    return { ok = true, value = character[id] }
+  end },
+}
+local function service_value(result) assert(result.ok); return result.value end
+local function predicate() return EXPRESSION end
+assert(predicate() == false and calls == 2)
+partner.bleed = true
+assert(predicate() == true and calls == 4)
+partner.poison = true
+assert(predicate() == true and calls == 5)
+partner.stale = true
+local ok, message = pcall(predicate)
+assert(not ok and string.find(message, 'stale_world', 1, true))
+""".replace("EXPRESSION", expression)
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_migration_todos_are_structured_and_categories_are_strict(self) -> None:
         result = migrate_lua_first.MigrationResult()
         categories = (
@@ -1503,7 +1830,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 1)
-            self.assertNotIn("services.bionics.summary", main)
+            self.assertIn("services.bionics.summary", main)
+            self.assertIn('if id == "ANY" then return', main)
             self.assertIn("services.bionics.has", main)
             self.assertIn("services.recipes.knows", main)
             self.assertEqual(
@@ -2441,8 +2769,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 8)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 6)
             self.assertIn(
                 'services.types.id("effect", "downed")',
                 main,
@@ -2455,18 +2783,18 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 'services.time.duration(1, "turn"), { permanent = true })',
                 main,
             )
-            self.assertIn(
+            self.assertNotIn(
                 'services.mutations.grant(\n        actor,\n'
                 '        services.types.id("mutation", "TOUGH"))',
                 main,
             )
-            self.assertIn(
+            self.assertNotIn(
                 'services.mutations.grant(\n        actor,\n'
                 '        services.types.id("mutation", "SKIN_DARK"),\n'
                 '        "black")',
                 main,
             )
-            self.assertIn(
+            self.assertNotIn(
                 'services.mutations.remove(\n        actor,\n'
                 '        services.types.id("mutation", "TOUGH"))',
                 main,
@@ -2477,16 +2805,20 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 report,
             )
             self.assertIn(
-                'services.effects.adjust_intensity(\n'
+                'services.effects.add(\n'
                 '        actor,\n'
                 '        services.types.id("effect", "bleed"),\n'
-                '        -1, services.types.id("body_part", "arm_l"))',
+                '        services.time.duration(0, "turn"), { '
+                'body_part = services.types.id("body_part", "arm_l"), intensity = -1 })',
                 main,
             )
             self.assertNotIn(
                 "EOC bad_intensity effect #0 needs domain-service conversion",
                 report,
             )
+            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 5)
+            self.assertIn("choose mutation conflict replacement and event policy", report)
+            self.assertIn("choose mutation removal and event policy", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_bounded_mutation_effects_for_avatar_and_npc(self) -> None:
@@ -3341,11 +3673,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 ".needs.thirst > 0", main
             )
             self.assertIn(
-                "services.mutations.definition(", main
+                "service_value(services.mutations.is_purifiable(actor, ", main
             )
-            self.assertIn(
-                ".availability.purifiable", main
-            )
+            self.assertNotIn(".availability.purifiable", main)
             self.assertIn(
                 "services.gameplay.environment.safe_mode_dangerous(", main
             )
@@ -3625,8 +3955,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 10)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 5)
+            self.assertEqual(len(result.partial), 7)
             self.assertIn(
                 'services.variables.remove(actor, "quest_var")', main
             )
@@ -3636,7 +3966,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn(
                 'services.message("hello")', main
             )
-            self.assertIn(
+            self.assertNotIn(
                 "services.mutations.set_active(", main
             )
             self.assertIn(
@@ -3655,6 +3985,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 "EOC dynamic_trait_effect effect #0 needs domain-service conversion",
                 report,
             )
+            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 5)
+            self.assertIn("choose mutation activation semantics", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_literal_u_has_profession_with_proven_avatar(self) -> None:
@@ -8137,10 +8469,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
-            self.assertNotIn("needs review", report)
+            self.assertIn("condition TODO", report)
 
     def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8183,8 +8515,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
             self.assertIn('services.npcs.set_attitude(actor, "lead")', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
@@ -8214,7 +8546,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 'services.time.duration(10800, "turn"))',
                 main,
             )
-            self.assertNotIn("needs review", report)
+            self.assertIn("condition TODO", report)
 
     def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -12174,11 +12506,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn("services.characters.can_see_location(", main)
-            self.assertIn("services.mutations.is_visible_to(", main)
+            self.assertNotIn("services.mutations.is_visible_to(", main)
 
     def test_npc_population_and_overmap_proximity_conditions_use_typed_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -17937,16 +18269,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.todos)
+            self.assertTrue(all(todo.category == "semantic_choice" for todo in result.todos))
             self.assertIn(
                 'services.messages.add("A translated message", "good")',
                 main,
             )
             self.assertIn("services.recipes.forget", main)
             self.assertIn('context.data["effect_to_remove"]', main)
-            self.assertIn('services.variables.get_global("trait_to_gain")', main)
+            self.assertNotIn('services.variables.get_global("trait_to_gain")', main)
             self.assertIn("intensity = 50000", main)
             self.assertIn("moves = -math.max", main)
             self.assertIn("math.floor((6)", main)
@@ -18610,6 +18943,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 {"u_spawn_item": "rock", "force_equip": True}, True
             )
         )
+
+
+def load_tests(loader, tests, pattern):
+    # Keep domain regressions on the same migration gate without growing this file.
+    from test_lua_mutation_migration import MutationMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(MutationMigrationTest))
+    return tests
 
 
 if __name__ == "__main__":

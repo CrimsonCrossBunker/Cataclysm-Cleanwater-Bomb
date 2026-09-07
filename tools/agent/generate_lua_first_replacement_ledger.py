@@ -2655,10 +2655,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_cancel_activity"): "services.activities",
     ("eoc-effects", "u_add_effect"): "services.effects",
     ("eoc-effects", "npc_add_effect"): "services.effects",
-    ("eoc-effects", "u_add_trait"): "services.mutations",
-    ("eoc-effects", "npc_add_trait"): "services.mutations",
-    ("eoc-effects", "u_lose_trait"): "services.mutations",
-    ("eoc-effects", "npc_lose_trait"): "services.mutations",
     ("eoc-effects", "u_add_wet"): "services.wetness",
     ("eoc-effects", "u_forget_martial_art"): "services.martial_arts",
     ("eoc-effects", "npc_forget_martial_art"): "services.martial_arts",
@@ -2679,10 +2675,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_lose_var"): "services.variables",
     ("eoc-effects", "u_message"): "services.message",
     ("eoc-effects", "npc_message"): "services.message",
-    ("eoc-effects", "u_activate_trait"): "services.mutations",
-    ("eoc-effects", "u_deactivate_trait"): "services.mutations",
-    ("eoc-effects", "npc_activate_trait"): "services.mutations",
-    ("eoc-effects", "npc_deactivate_trait"): "services.mutations",
     ("eoc-effects", "sound_effect"): "services.sound",
     ("eoc-effects", "u_wants_to_talk"): "services.characters",
     ("eoc-effects", "npc_wants_to_talk"): "services.npcs",
@@ -2906,6 +2898,8 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_knockback"): "services.characters",
     ("eoc-effects", "npc_level_spell_class"): "services.characters",
     ("eoc-effects", "npc_lose_category"): "services.mutations",
+    ("eoc-effects", "npc_lose_mutation_type"):
+        "services.mutations.remove_type",
     ("eoc-effects", "npc_lose_effect"): "services.effects",
     ("eoc-effects", "npc_make_radio_representative"): "services.npcs",
     ("eoc-effects", "npc_make_sound"): "services.sound",
@@ -2950,6 +2944,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_knockback"): "services.characters",
     ("eoc-effects", "u_level_spell_class"): "services.characters",
     ("eoc-effects", "u_lose_category"): "services.mutations",
+    ("eoc-effects", "u_lose_mutation_type"): "services.mutations.remove_type",
     ("eoc-effects", "u_make_radio_representative"): "services.characters",
     ("eoc-effects", "u_make_sound"): "services.sound",
     ("eoc-effects", "u_mutate"): "services.characters",
@@ -3011,6 +3006,14 @@ RETIRED_BOUNDED_IMPLEMENTED_EOC = {
 }
 
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "u_lose_mutation_type"): [
+        "src/npctalk.cpp", "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+    ],
+    ("eoc-effects", "npc_lose_mutation_type"): [
+        "src/npctalk.cpp", "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+    ],
     ("eoc-effects", "location_variable_adjust"): [
         "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
@@ -4096,6 +4099,14 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
 }
 
 EXPLICIT_PRIMITIVE_EOC = {
+    ("eoc-effects", "u_add_trait"): "services.mutations",
+    ("eoc-effects", "u_lose_trait"): "services.mutations",
+    ("eoc-effects", "u_activate_trait"): "services.mutations",
+    ("eoc-effects", "u_deactivate_trait"): "services.mutations",
+    ("eoc-effects", "npc_add_trait"): "services.mutations",
+    ("eoc-effects", "npc_lose_trait"): "services.mutations",
+    ("eoc-effects", "npc_activate_trait"): "services.mutations",
+    ("eoc-effects", "npc_deactivate_trait"): "services.mutations",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -4123,6 +4134,54 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "u_add_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_lose_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_activate_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_deactivate_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_add_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_lose_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_activate_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_deactivate_trait"): [
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
     ("eoc-effects", "add_debt"): [
         "src/npctalk.cpp",
         "src/talker_npc.cpp",
@@ -4337,7 +4396,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
 EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "goto_location"): "workflows.npc-navigation",
     ("eoc-effects", "morale_chat_activity"): "workflows.socialize",
-    ("eoc-effects", "npc_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "npc_activate"): "services.items-and-characters",
     ("eoc-effects", "npc_deal_damage"): "services.combat",
     ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
@@ -4345,7 +4403,6 @@ EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "u_activate"): "services.items-and-characters",
     ("eoc-effects", "u_deal_damage"): "services.combat",
-    ("eoc-effects", "u_lose_mutation_type"): "services.mutations",
     ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
     ("eoc-effects", "u_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
