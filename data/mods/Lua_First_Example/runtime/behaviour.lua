@@ -49,14 +49,6 @@ function behaviour.use_omnitool(context)
     return 0
 end
 
-function behaviour.use_nano_tonic(context)
-    local ticks = ccb.state.character.get("lua_first_tonic_ticks", 0) + 1
-    ccb.state.character.set("lua_first_tonic_ticks", ticks)
-    context:message("You inject the purifying nano-tonic. Cellular renewal underway.")
-    ccb.tasks.after(3, "lua_first_task_tonic_tick", {}, 1, "character")
-    return 0
-end
-
 -- Exported task and policy callbacks
 behaviour.monster_attack_pulse = tasks_mod.monster_attack_pulse
 behaviour.ai_should_patrol = tasks_mod.ai_should_patrol
@@ -68,7 +60,6 @@ behaviour.magic_cast_exp = tasks_mod.magic_cast_exp
 behaviour.magic_fail_chance = tasks_mod.magic_fail_chance
 behaviour.magic_on_failure = tasks_mod.magic_on_failure
 behaviour.dynamic_mist_profile = tasks_mod.dynamic_mist_profile
-behaviour.task_tonic_tick = tasks_mod.tonic_tick
 
 -- Exported hook callbacks
 behaviour.on_craft_result = combat_mod.on_craft_result

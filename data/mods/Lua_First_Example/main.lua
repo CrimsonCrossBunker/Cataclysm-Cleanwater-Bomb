@@ -9,6 +9,7 @@ local content_magic = require("content.magic_and_spells")
 local content_env = require("content.environment_and_emissions")
 
 local behaviour = require("runtime.behaviour")
+local tonic = require("runtime.nano_tonic")
 
 -- Register runtime handlers
 ccb.runtime.handler("use_cleanwater_charm", behaviour.use_charm, 1)
@@ -17,8 +18,8 @@ ccb.runtime.handler("lua_first_example_reminder", behaviour.remind, 1)
 
 ccb.runtime.handler("lua_first_open_dev_codex", behaviour.use_codex, 1)
 ccb.runtime.handler("lua_first_use_omnitool", behaviour.use_omnitool, 1)
-ccb.runtime.handler("lua_first_use_nano_tonic", behaviour.use_nano_tonic, 1)
-ccb.runtime.handler("lua_first_task_tonic_tick", behaviour.task_tonic_tick, 1)
+ccb.runtime.handler("lua_first_use_nano_tonic", tonic.use, 1)
+ccb.runtime.handler("lua_first_task_tonic_tick", tonic.tick, 1)
 
 ccb.runtime.handler("lua_first_monster_attack_pulse", behaviour.monster_attack_pulse, 1)
 ccb.runtime.handler("lua_first_ai_should_patrol", behaviour.ai_should_patrol, 1)
@@ -35,6 +36,9 @@ ccb.runtime.handler("lua_first_dynamic_mist_profile", behaviour.dynamic_mist_pro
 
 ccb.runtime.handler("lua_first_hook_craft_result", behaviour.on_craft_result, 1)
 ccb.runtime.handler("lua_first_hook_melee_attack", behaviour.on_melee_attacked, 1)
+
+ccb.runtime.handler("lua_first_tonic_gained_effect", tonic.gained_effect, 1)
+ccb.runtime.on("game:character_gains_effect", "lua_first_tonic_gained_effect")
 
 -- Register lifecycle events and native hooks
 ccb.runtime.on("world_ready", "lua_first_example_ready")

@@ -32,10 +32,17 @@ function content.register(ccb)
     omnitool:on_use("lua_first_use_omnitool", "Toggle power modes")
     ccb.content.add(omnitool)
 
+    ccb.content.add(ccb.content.EffectType {
+        id = "lua_first_nano_recovery",
+        name = "Nano-tonic recovery",
+        description = "Three scheduled nano-tonic pulses restore your stamina.",
+        maximum_intensity = 1,
+    })
+
     local tonic = ccb.content.Item {
         id = "lua_first_nano_tonic",
         name = "purifying nano-tonic",
-        description = "A medical stimulant vial synthesized via Lua chemistry recipes. Grants sustained cellular regeneration and scheduled state tracking.",
+        description = "A reusable nano-tonic injector. Consumes one purification capacitor cell to restore stamina in three pulses over thirty seconds, with a sixty-second cooldown.",
         symbol = "!",
     }
     tonic:mass_grams(60)

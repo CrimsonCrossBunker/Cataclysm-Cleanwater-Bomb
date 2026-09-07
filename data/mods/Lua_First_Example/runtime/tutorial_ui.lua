@@ -140,7 +140,7 @@ function ui.open_codex_menu(context)
             while true do
                 local sb_choice = ccb.presentation.choose("=== 开发者沙盒调试箱 ===", {
                     { id = "task_demo", label = "⏳ 调度 5 回合延迟任务", description = "使用 ccb.tasks.after 设置一个世界级提醒任务" },
-                    { id = "tonic_demo", label = "💊 激活纳米再生注射剂效果", description = "测试角色状态计数与任务循环" },
+                    { id = "tonic_demo", label = "💊 药剂玩法说明", description = "查看电池消耗、耐力脉冲与冷却规则" },
                     { id = "inc_state", label = "📈 手动递增角色持久化计数器", description = "增加 ccb.state.character['dev_sandbox_counter']" },
                     { id = "back", label = "⬅️ 返回主目录", description = "返回开发手册主菜单" },
                 })
@@ -152,10 +152,7 @@ function ui.open_codex_menu(context)
                     }, 1, "world")
                     ccb.presentation.notice("已调度 5 回合延迟任务！请在游戏中等待 5 回合查看效果。")
                 elseif sb_choice == "tonic_demo" then
-                    local ticks = ccb.state.character.get("lua_first_tonic_ticks", 0) + 1
-                    ccb.state.character.set("lua_first_tonic_ticks", ticks)
-                    ccb.tasks.after(2, "lua_first_task_tonic_tick", {}, 1, "character")
-                    ccb.presentation.notice("已激活纳米再生循环，已记录当前脉冲次数: " .. ticks)
+                    ccb.presentation.notice("携带净化电池并使用药剂装置：每十秒恢复 100 耐力，共三次，冷却六十秒。保存重载后继续剩余脉冲。")
                 elseif sb_choice == "inc_state" then
                     local cur = ccb.state.character.get("dev_sandbox_counter", 0) + 1
                     ccb.state.character.set("dev_sandbox_counter", cur)
