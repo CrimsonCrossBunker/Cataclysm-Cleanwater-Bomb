@@ -29,6 +29,8 @@ extern "C" {
 #include "type_id.h"
 #include "units.h"
 
+static const mutation_category_id mutation_category_ANY( "ANY" );
+
 namespace cata::lua_platform
 {
 
@@ -64,14 +66,14 @@ mutation_category_id resolve_mutation_category(
     // category.  Lua represents that sentinel as nil (and accepts the
     // explicit string ID only for migration ergonomics).
     if( !requested || requested->is_null() ) {
-        return mutation_category_id( "ANY" );
+        return mutation_category_ANY;
     }
     if( requested->kind() != "mutation_category" ) {
         throw std::invalid_argument(
             api_name + " requires GameId<mutation_category> or nil" );
     }
     if( requested->value() == "ANY" ) {
-        return mutation_category_id( "ANY" );
+        return mutation_category_ANY;
     }
     if( !requested->is_valid() ) {
         throw std::invalid_argument(

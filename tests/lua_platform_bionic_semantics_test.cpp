@@ -1,10 +1,18 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "avatar.h"
+#include "bionics.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
+#include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
@@ -17,14 +25,11 @@
 #include "npc.h"
 #include "type_id.h"
 #include "units.h"
-#include <functional>
-#include <initializer_list>
-#include <memory>
-#include <string>
-#include <vector>
-#include "lua_platform_test_support.h"
-#include "condition.h"
-#include "bionics.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
            "[lua][platform][bionics][semantic]" )

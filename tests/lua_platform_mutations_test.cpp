@@ -1,17 +1,13 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include "dialogue_helpers.h"
-#include "flexbuffer_json.h"
-#include "lua_platform_sol.h"
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <memory>
-#include <vector>
-
-#include <cstddef>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
@@ -19,14 +15,16 @@
 #include "character_id.h"
 #include "condition.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
+#include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_mutations.h"
+#include "lua_platform_sol.h"
 #include "npc.h"
 #include "options_helpers.h"
 #include "rng.h"
-#include "talker.h"
 #include "type_id.h"
 
 static const trait_id trait_FELINE_EARS( "FELINE_EARS" );
