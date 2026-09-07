@@ -706,6 +706,10 @@ struct damage_type_definition_data {
     std::string on_damage_handler;
     double derived_factor = 0.0;
     double bash_conversion_factor = 0.1;
+    double melee_crit_dmg_mult = 0.0;
+    double melee_crit_dmg_mult_per_skill = 0.0;
+    double melee_crit_armor_mult = 1.0;
+    double melee_crit_armor_penetration = 0.0;
     std::set<std::string> character_immune_flags;
     std::set<std::string> monster_immune_flags;
     bool melee_only = false;
@@ -2683,6 +2687,12 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->material_required = options.get_or( "material_required", false );
         definition->bash_conversion_factor = options.get_or(
                 "bash_conversion_factor", definition->physical ? 0.5 : 0.1 );
+        definition->melee_crit_dmg_mult = options.get_or( "melee_crit_dmg_mult", 0.0 );
+        definition->melee_crit_dmg_mult_per_skill = options.get_or(
+                "melee_crit_dmg_mult_per_skill", 0.0 );
+        definition->melee_crit_armor_mult = options.get_or( "melee_crit_armor_mult", 1.0 );
+        definition->melee_crit_armor_penetration = options.get_or(
+                "melee_crit_armor_penetration", 0.0 );
         return damage_type_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Material", [transaction]( const sol::table & options ) {
@@ -4823,6 +4833,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.skill = source.skill.empty() ? skill_id::NULL_ID() : skill_id( source.skill );
                     native.magic_color = color_from_string( source.magic_color );
                     native.bash_conversion_factor = source.bash_conversion_factor;
+                    native.melee_crit_dmg_mult = source.melee_crit_dmg_mult;
+                    native.melee_crit_dmg_mult_per_skill = source.melee_crit_dmg_mult_per_skill;
+                    native.melee_crit_armor_mult = source.melee_crit_armor_mult;
+                    native.melee_crit_armor_penetration = source.melee_crit_armor_penetration;
                     native.melee_only = source.melee_only;
                     native.physical = source.physical;
                     native.mon_difficulty = source.monster_difficulty;
@@ -6337,6 +6351,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.on_damage_handler );
                 hash_part( state, std::to_string( v.derived_factor ) );
                 hash_part( state, std::to_string( v.bash_conversion_factor ) );
+                hash_part( state, std::to_string( v.melee_crit_dmg_mult ) );
+                hash_part( state, std::to_string( v.melee_crit_dmg_mult_per_skill ) );
+                hash_part( state, std::to_string( v.melee_crit_armor_mult ) );
+                hash_part( state, std::to_string( v.melee_crit_armor_penetration ) );
                 hash_part( state, v.melee_only ? "melee" : "ranged" );
                 hash_part( state, v.physical ? "physical" : "nonphysical" );
                 hash_part( state, v.monster_difficulty ? "monster_difficulty" : "ordinary" );
