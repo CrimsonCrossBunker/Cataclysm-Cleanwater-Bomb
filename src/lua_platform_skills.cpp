@@ -563,6 +563,38 @@ void install_skill_api(
     sol::state_view lua( services.lua_state() );
     sol::table skills = lua.create_table();
     skills.set_function(
+        "offered",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & teacher_handle,
+    const game_handle & student_handle ) {
+        require_read();
+        const game_handle_runtime runtime = current_runtime_generation();
+        const std::size_t world = current_world_generation();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *teacher = resolve_exact_character( teacher_handle, runtime, world, error );
+        if( teacher == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        Character *student = resolve_exact_character( student_handle, runtime, world, error );
+        if( student == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const std::vector<skill_id> offered = teacher->skills_offered_to( student );
+        const std::size_t returned = std::min( offered.size(),
+                                               static_cast<std::size_t>( maximum_state_limit ) );
+        sol::table items = state.create_table();
+        for( std::size_t index = 0; index < returned; ++index ) {
+            items[index + 1] = script_game_id( "skill", offered[index].str() );
+        }
+        sol::table value = state.create_table();
+        value["items"] = std::move( items );
+        value["total"] = offered.size();
+        value["returned"] = returned;
+        value["truncated"] = returned < offered.size();
+        return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+    } );
+    skills.set_function(
         "definitions",
         [require_read]( sol::this_state lua_state,
     const sol::optional<sol::table> &options ) {

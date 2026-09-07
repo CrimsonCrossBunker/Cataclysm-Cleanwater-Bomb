@@ -25645,6 +25645,14 @@ def render_eoc_condition_expression(
     npc_query_actor = npc_actor_expression or (
         "actor" if npc_actor_proven else None
     )
+    if condition in ("u_train_skills", "npc_train_skills"):
+        if not avatar_actor_proven or npc_actor_expression is None:
+            return None
+        teacher, student = (
+            ("actor", npc_actor_expression) if condition == "u_train_skills"
+            else (npc_actor_expression, "actor")
+        )
+        return f"service_value(services.skills.offered({teacher}, {student})).total > 0"
     if creature_actor_proven:
         if isinstance(condition, str):
             if condition == "player_see_u":
@@ -26005,11 +26013,11 @@ def render_eoc_condition_expression(
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
         if avatar_actor_proven and condition in (
             "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
-            "u_train_skills", "u_train_spells", "u_train_styles",
+            "u_train_spells", "u_train_styles",
         ):
             return "false"
         if npc_actor_proven and condition in (
-            "npc_train_skills", "npc_train_spells", "npc_train_styles",
+            "npc_train_spells", "npc_train_styles",
             "npc_has_stolen_item", "npc_can_stow_weapon",
         ):
             return "false"
@@ -26450,7 +26458,7 @@ def render_eoc_condition_expression(
         if actor_proven and set(condition) == {item_key} and bounded_platform_id(condition.get(item_key)):
             return (
                 "service_value(services.inventory.wielded_matches(actor, "
-                f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])}))"
+                f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])})))"
             )
 
     for key, function_name, minimum in (

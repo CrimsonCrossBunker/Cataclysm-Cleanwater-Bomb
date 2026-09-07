@@ -15,6 +15,78 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_skill_teaching_requires_two_proven_participants(self) -> None:
+        for selector, expected in (
+            ("u_train_skills", "services.skills.offered(actor, partner)"),
+            ("npc_train_skills", "services.skills.offered(partner, actor)"),
+        ):
+            with self.subTest(selector=selector):
+                for proof in ({}, {"avatar_actor_proven": True}, {"npc_actor_proven": True},
+                              {"npc_actor_expression": "partner"}):
+                    self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(selector, **proof))
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    selector, avatar_actor_proven=True, npc_actor_expression="partner")
+                self.assertIn(expected, expression)
+                self.assertTrue(expression.endswith(".total > 0"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_knowledge_predicates_execute_for_both_participants(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for key, kind, identifier in (
+                ("has_proficiency", "proficiency", "prof_carving"),
+                ("has_wielded_with_skill", "skill", "cutting"),
+                ("has_wielded_with_weapon_category", "weapon_category", "LONG_SWORDS"),
+            ):
+                with self.subTest(selector=prefix + key):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + key: identifier}, avatar_actor_proven=True,
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    script = """
+local actor, partner = {}, {}
+local answer = false
+local function service_value(result) assert(result.ok); return result.value end
+local services = {types={id=function(kind,id) return {kind=kind,id=id} end},
+ proficiencies={}, inventory={}}
+"""
+                    script += f"""
+local function query(character, id)
+ assert(character == {target} and id.kind == '{kind}' and id.id == '{identifier}')
+ return {{ok=true,value={"{known=answer}" if kind == "proficiency" else "answer"}}}
+end
+services.proficiencies.get = query
+services.inventory.wielded_matches = query
+assert(not ({expression}))
+answer = true
+assert({expression})
+"""
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_skill_teaching_executes_with_exact_teacher_and_student(self) -> None:
+        source = REPOSITORY_ROOT / "data/json/npcs/godco/members/NPC_Corrie_Kaja_Dosia.json"
+        entries = migrate_lua_first.load_objects([source])
+        self.assertTrue(any("npc_train_skills" in json.dumps(entry.value) for entry in entries))
+        expressions = [migrate_lua_first.render_eoc_condition_expression(
+            selector, avatar_actor_proven=True, npc_actor_expression="partner")
+            for selector in ("u_train_skills", "npc_train_skills")]
+        script = """
+local actor, partner = {}, {}
+local expected_teacher, expected_student, total
+local services = { skills = { offered = function(teacher, student)
+ assert(teacher == expected_teacher and student == expected_student)
+ return {ok=true, value={total=total}}
+end } }
+local function service_value(result) assert(result.ok); return result.value end
+"""
+        for expression, teacher, student in zip(expressions, ("actor", "partner"), ("partner", "actor")):
+            script += f"expected_teacher, expected_student = {teacher}, {student}\n"
+            script += f"total = 0; assert(not ({expression}))\n"
+            script += f"total = 2; assert({expression})\n"
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_shipped_nightmare_reversed_morale_range_keeps_native_bounds(self) -> None:
         entries = migrate_lua_first.load_objects([
@@ -8369,10 +8441,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
-            self.assertNotIn("needs review", report)
+            self.assertIn("condition TODO", report)
 
     def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8415,8 +8487,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
             self.assertIn('services.npcs.set_attitude(actor, "lead")', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
@@ -8446,7 +8518,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 'services.time.duration(10800, "turn"))',
                 main,
             )
-            self.assertNotIn("needs review", report)
+            self.assertIn("condition TODO", report)
 
     def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

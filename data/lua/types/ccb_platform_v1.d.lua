@@ -9800,6 +9800,21 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@field decay_start? TimeDuration Nonnegative; defaults to thirty minutes.
 ---@field capped? boolean Defaults to false; uses native stacking rules.
 
+---@class CcbOfferedSkills
+---@field items GameId[] Detached skill ids, at most 256 entries.
+---@field total integer Number of teachable skills before truncation.
+---@field returned integer Number of returned ids.
+---@field truncated boolean Whether additional ids were omitted.
+
+---@class CcbSkillsApi
+local CcbSkillsApi = {}
+
+---Skills the teacher can teach this student, using the student's knowledge level.
+---@param teacher GameHandle Character handle.
+---@param student GameHandle Character handle; never inferred from the avatar.
+---@return CcbResult result `value` is CcbOfferedSkills; stale handles return an error.
+function CcbSkillsApi.offered(teacher, student) end
+
 ---@class CcbMoraleApi
 local CcbMoraleApi = {}
 
