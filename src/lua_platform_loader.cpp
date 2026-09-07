@@ -715,6 +715,12 @@ bool reload_active_mods( std::string &error )
     std::vector<mod_source> sources;
     sources.reserve( active_states.size() );
     for( const runtime_state &state : active_states ) {
+        lua_Debug frame;
+        if( lua_getstack( state.lua->lua_state(), 0, &frame ) != 0 ) {
+            error = "Lua code is still executing for Mod '" + state.id +
+                    "'; retry script reload after it returns";
+            return false;
+        }
         active_fingerprint << state.id.size() << ':' << state.id << ':'
                            << runtime_fingerprint( state.platform ) << ';';
         sources.push_back( { state.id, state.root, state.entry } );

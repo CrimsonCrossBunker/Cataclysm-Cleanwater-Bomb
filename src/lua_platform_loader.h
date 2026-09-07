@@ -91,7 +91,8 @@ std::string prepared_content_fingerprint();
 /**
  * Re-execute active entries and swap runtime registrations only when their
  * static content fingerprint is unchanged.  A changed fingerprint returns
- * false with `requires_full_data_reload` in @p error.
+ * false with `requires_full_data_reload` in @p error. Reentrant calls while
+ * an active Mod is executing Lua are rejected before touching its state.
  */
 bool reload_active_mods( std::string &error );
 

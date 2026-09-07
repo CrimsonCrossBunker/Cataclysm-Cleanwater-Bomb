@@ -196,6 +196,19 @@ replacement preserves only the state explicitly defined by Platform lifecycle
 and persistence rules; external filesystem or process side effects are trusted
 code responsibilities and are not silently rolled back.
 
+A draft author-tool entry under **Debug menu → Game → Reload Lua Mod scripts**
+also appears in the searchable debug action list. It calls the existing runtime
+swap operation for active Mods, preserves its static-content gate, and displays
+loader failures. Reload is rejected while an active Mod still has an executing
+Lua call stack. A successful swap does not imply callbacks succeeded; inspect
+the message log. This UI integration has not been compiled or interactively
+accepted. Restart the game when static definitions change.
+
+调试菜单的“游戏 → 重新加载 Lua Mod 脚本”草稿入口调用已有脚本替换后端，也可通过调试
+动作搜索找到。活动 Mod 仍在执行 Lua 或静态定义发生变化时会拒绝替换并显示原因；
+成功替换注册表不代表回调无错误，
+应查看消息日志。修改静态定义后重启游戏；菜单集成尚未编译或完成交互验收。
+
 ## Native content model / 原生内容模型
 
 `ccb.content` is a pure-Lua native typed builder and registrar surface, not a
