@@ -2976,7 +2976,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "extend_item_group", [transaction]( const item_group_definition_handle &handle ) {
+    content.set_function( "extend_item_group", [transaction]( const item_group_definition_handle &
+    handle ) {
         if( handle.token != transaction->token ) {
             throw std::runtime_error( "cannot register an item group definition owned by another Mod" );
         }
