@@ -1,4 +1,27 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#include "avatar.h"
+#include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "character.h"
+#include "character_id.h"
+#include "debug.h"
+#include "dialogue.h"
+#include "dialogue_helpers.h"
+#include "flexbuffer_json.h"
+#include "json_loader.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_sol.h"
+#include "npc.h"
+#include "type_id.h"
+#include "units.h"
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <vector>
 #include "lua_platform_test_support.h"
 #include "condition.h"
 #include "bionics.h"
@@ -41,12 +64,12 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
     cata::lua_platform::set_active_runtimes( { runtime } );
     bool completed = false;
     lua.set_function( "accept", [&]( const sol::table & ) {
-        const auto handle = cata::lua_platform::game_handle::from_creature(
-                                new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
-                                              0, 0, 0, {}
-                                            },
-                                cata::lua_platform::detail::runtime_handle_identity( runtime ),
-                                cata::lua_platform::runtime_world_generation() );
+        const cata::lua_platform::game_handle handle = cata::lua_platform::game_handle::from_creature(
+                new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
+                              0, 0, 0, {}
+                            },
+                cata::lua_platform::detail::runtime_handle_identity( runtime ),
+                cata::lua_platform::runtime_world_generation() );
         sol::table services = ccb["services"];
         const auto query = [&]() {
             sol::protected_function summary = services["bionics"]["summary"];
@@ -55,8 +78,8 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );
             sol::table value = result["value"];
-            const conditional_t any( json_loader::from_string( "{\"" + prefix +
-                    "has_bionics\":\"ANY\"}" ).get_object() );
+            const conditional_t any( json_loader::from_string( R"({")" + prefix +
+                    R"(has_bionics":"ANY"})" ).get_object() );
             CHECK( any( old_dialogue ) == ( value["installed_count"].get<int>() > 0 ||
                                             value["has_capacity"].get<bool>() ) );
             sol::protected_function has = services["bionics"]["has"];
@@ -64,8 +87,8 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             REQUIRE( call.valid() );
             result = call;
             REQUIRE( result["ok"].get<bool>() );
-            const conditional_t specific( json_loader::from_string( "{\"" + prefix +
-                    "has_bionics\":\"" + id + "\"}" ).get_object() );
+            const conditional_t specific( json_loader::from_string( R"({")" + prefix +
+                    R"(has_bionics":")" + id + R"("})" ).get_object() );
             CHECK( specific( old_dialogue ) == result["value"].get<bool>() );
         };
         query();
@@ -78,8 +101,8 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
                  "add_bionic", "add_bionic", "lose_bionic", "lose_bionic"
              } ) {
             talk_effect_t effect;
-            effect.parse_sub_effect( json_loader::from_string( "{\"" + prefix + operation +
-                    "\":\"" + id + "\"}" ).get_object(), "bionic_semantics" );
+            effect.parse_sub_effect( json_loader::from_string( std::string( R"({")" ).append( prefix ).append(
+                        operation ).append( R"(":")" ).append( id ).append( R"("})" ) ).get_object(), "bionic_semantics" );
             const bool duplicate = operation == "add_bionic" &&
                                    old_target.has_bionic( bionic_id( id ) ) &&
                                    !bionic_id( id )->dupes_allowed;

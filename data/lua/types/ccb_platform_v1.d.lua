@@ -4113,6 +4113,10 @@ function JsonFlagDefinition:conflicts_with(flag_id) end
 ---@field skill? string Associated Skill id.
 ---@field magic_color? string Native color name.
 ---@field bash_conversion_factor? number Non-negative conversion factor.
+---@field melee_crit_dmg_mult? number Base critical damage multiplier.
+---@field melee_crit_dmg_mult_per_skill? number Critical damage multiplier gained per skill level; requires a valid skill.
+---@field melee_crit_armor_mult? number Armor multiplier applied on critical hits at full crit_mod; 1.0 disables it.
+---@field melee_crit_armor_penetration? number Extra armor penetration applied on critical hits.
 ---@field melee_only? boolean
 ---@field physical? boolean
 ---@field monster_difficulty? boolean

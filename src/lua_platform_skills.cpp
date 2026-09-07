@@ -128,7 +128,10 @@ std::vector<const Skill *> matching_definitions(
     std::sort(
         result.begin(), result.end(),
     []( const Skill * lhs, const Skill * rhs ) {
-        return lhs->ident().str() < rhs->ident().str();
+        // Stable API identifiers must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
+        return lhs->ident().str() <
+               rhs->ident().str();
     } );
     return result;
 }
@@ -255,7 +258,10 @@ std::vector<const Skill *> character_skill_definitions(
     std::sort(
         result.begin(), result.end(),
     []( const Skill * lhs, const Skill * rhs ) {
-        return lhs->ident().str() < rhs->ident().str();
+        // Stable API identifiers must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
+        return lhs->ident().str() <
+               rhs->ident().str();
     } );
     return result;
 }
@@ -555,10 +561,10 @@ sol::table practice_state(
 
 void install_skill_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table skills = lua.create_table();

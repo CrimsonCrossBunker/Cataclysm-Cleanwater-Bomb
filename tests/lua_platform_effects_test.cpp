@@ -1,5 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "dialogue_helpers.h"
+#include "flexbuffer_json.h"
+#include "lua_platform_sol.h"
+#include <functional>
+#include <initializer_list>
+#include <vector>
+
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -20,6 +27,8 @@
 #include "npc.h"
 #include "talker.h"
 #include "type_id.h"
+
+static const efftype_id efftype_bleed( "bleed" );
 
 namespace
 {
@@ -115,23 +124,24 @@ TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
     const std::string prefix = npc_target ? "npc_" : "u_";
     Character &target = fixture.target( npc_target );
     // The other actor has both effects so checking the wrong actor is observable.
-    fixture.target( !npc_target ).add_effect( efftype_id( "bleed" ), 10_turns,
-            bodypart_id( "arm_l" ), false, 2, true );
+    fixture.target( !npc_target ).add_effect( efftype_bleed, 10_turns,
+            body_part_arm_l.id(), false, 2, true );
     for( const bool present : {
              false, true
          } ) {
         if( present ) {
-            target.add_effect( efftype_id( "bleed" ), 10_turns,
-                               bodypart_id( "arm_l" ), false, 1, true );
+            target.add_effect( efftype_bleed, 10_turns,
+                               body_part_arm_l.id(), false, 1, true );
         }
-        const std::string qualifiers = ", \"bodypart\": \"" + part +
-                                       "\", \"intensity\": " + std::to_string( intensity ) + "}";
+        const std::string qualifiers = R"(, "bodypart": ")" + part +
+                                       R"(", "intensity": )" + std::to_string( intensity ) + "}";
         const bool native = fixture.query( npc_target, "bleed", part, intensity );
         CHECK( native == fixture.legacy_condition(
-                   "{\"" + prefix + "has_effect\": \"bleed\"" + qualifiers ) );
+                   std::string( R"({")" ).append( prefix ).append( R"(has_effect": "bleed")" ).append(
+                       qualifiers ) ) );
         CHECK( ( native || fixture.query( npc_target, "poison", part, intensity ) ) ==
-               fixture.legacy_condition( "{\"" + prefix +
-                                         "has_any_effect\": [\"bleed\", \"poison\"]" + qualifiers ) );
+               fixture.legacy_condition( std::string( R"({")" ).append( prefix ).append(
+                                             R"(has_any_effect": ["bleed", "poison"])" ).append( qualifiers ) ) );
         CHECK( native == ( present && part == "arm_l" && intensity <= 1 ) );
     }
 }
@@ -145,7 +155,7 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
     const bool permanent = GENERATE( false, true );
     const int intensity = GENERATE( -1, 0, 1 );
     const std::string prefix = npc_target ? "npc_" : "u_";
-    const efftype_id bleeding( "bleed" );
+    const efftype_id &bleeding = efftype_bleed;
     const bodypart_id left( "arm_l" );
     const bodypart_id right( "arm_r" );
     for( effect_fixture *fixture : {
@@ -160,10 +170,10 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
     options["force"] = true;
     options["permanent"] = permanent;
     for( int repeat = 0; repeat < 2; ++repeat ) {
-        legacy.legacy_effect( "{\"" + prefix + "add_effect\": \"bleed\", "
-                              "\"duration\": " + ( permanent ? std::string( "\"PERMANENT\"" ) : "10" ) +
-                              ", \"target_part\": \"arm_l\", \"intensity\": " + std::to_string( intensity ) +
-                              ", \"force\": true}" );
+        legacy.legacy_effect( R"({")" + prefix + R"(add_effect": "bleed", )"
+                              R"("duration": )" + ( permanent ? std::string( R"("PERMANENT")" ) : "10" ) +
+                              R"(, "target_part": "arm_l", "intensity": )" + std::to_string( intensity ) +
+                              R"(, "force": true})" );
         sol::protected_function add = modern.services["effects"]["add"];
         sol::protected_function_result call = add( modern.handle( npc_target ),
             cata::lua_platform::script_game_id( "effect", "bleed" ),
@@ -181,8 +191,8 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
         CHECK( before.is_permanent() == after.is_permanent() );
     }
     for( int repeat = 0; repeat < 2; ++repeat ) {
-        legacy.legacy_effect( "{\"" + prefix +
-                              "lose_effect\": \"bleed\", \"target_part\": \"arm_l\"}" );
+        legacy.legacy_effect( R"({")" + prefix +
+                              R"(lose_effect": "bleed", "target_part": "arm_l"})" );
         sol::protected_function remove = modern.services["effects"]["remove"];
         sol::protected_function_result call = remove( modern.handle( npc_target ),
             cata::lua_platform::script_game_id( "effect", "bleed" ),
@@ -207,8 +217,8 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     effect_fixture modern( 3500 );
     const bool npc_target = GENERATE( false, true );
     const std::string prefix = npc_target ? "npc_" : "u_";
-    legacy.legacy_effect( "{\"" + prefix + "add_effect\": \"bleed\", "
-                          "\"duration\": 0, \"target_part\": \"arm_l\", \"intensity\": 1}" );
+    legacy.legacy_effect( R"({")" + prefix + R"(add_effect": "bleed", )"
+                          R"("duration": 0, "target_part": "arm_l", "intensity": 1})" );
     sol::table options = modern.lua.create_table();
     options["body_part"] = cata::lua_platform::script_game_id( "body_part", "arm_l" );
     options["intensity"] = 1;
@@ -220,9 +230,9 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
     const effect &before = legacy.target( npc_target ).get_effect(
-                               efftype_id( "bleed" ), bodypart_id( "arm_l" ) );
+                               efftype_bleed, body_part_arm_l.id() );
     const effect &after = modern.target( npc_target ).get_effect(
-                              efftype_id( "bleed" ), bodypart_id( "arm_l" ) );
+                              efftype_bleed, body_part_arm_l.id() );
     REQUIRE_FALSE( before.is_null() );
     REQUIRE_FALSE( after.is_null() );
     CHECK( before.get_duration() == 0_turns );
@@ -236,7 +246,7 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
     effect_fixture modern( 3700 );
     const bool npc_target = GENERATE( false, true );
     const std::string prefix = npc_target ? "npc_" : "u_";
-    const efftype_id bleeding( "bleed" );
+    const efftype_id &bleeding = efftype_bleed;
     const bodypart_id part( "arm_l" );
     for( effect_fixture *fixture : {
              &legacy, &modern
@@ -244,8 +254,8 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
         fixture->target( npc_target ).add_effect( bleeding, 30_turns, part, false, 1, true );
         REQUIRE( fixture->target( npc_target ).get_effect( bleeding, part ).get_intensity() == 1 );
     }
-    legacy.legacy_effect( "{\"" + prefix + "add_effect\": \"bleed\", "
-                          "\"duration\": 0, \"target_part\": \"arm_l\", \"intensity\": -1}" );
+    legacy.legacy_effect( R"({")" + prefix + R"(add_effect": "bleed", )"
+                          R"("duration": 0, "target_part": "arm_l", "intensity": -1})" );
     sol::protected_function adjust = modern.services["effects"]["adjust_intensity"];
     sol::protected_function_result call = adjust( modern.handle( npc_target ),
         cata::lua_platform::script_game_id( "effect", "bleed" ), -1,

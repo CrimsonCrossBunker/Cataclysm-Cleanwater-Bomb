@@ -5927,7 +5927,7 @@ const
                   dmg_type]( const item_location & it ) {
         damage_instance di;
         roll_damage( dmg_type, false, di, true, *it, attack_vector_id::NULL_ID(),
-                     sub_bodypart_str_id::NULL_ID(), 1.f );
+                     sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
         for( damage_unit &du : di.damage_units ) {
             if( du.type == dmg_type && best_weapon.first < du.amount ) {
                 best_weapon = std::make_pair( du.amount, *it );

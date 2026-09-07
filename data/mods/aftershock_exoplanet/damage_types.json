@@ -49,6 +49,10 @@
     "name": { "ctxt": "damage_type", "str": "heat" },
     "skill": "cutting",
     "bash_conversion_factor": 0.7,
+    "melee_crit_dmg_mult": 0.25,
+    "melee_crit_dmg_mult_per_skill": 0.02,
+    "melee_crit_armor_mult": 0.75,
+    "melee_crit_armor_penetration": 5,
     "mon_difficulty": true,
     "derived_from": [ "heat", 1 ],
     "immune_flags": { "character": [ "CUT_IMMUNE" ] }
@@ -73,6 +77,8 @@
     "magic_color": "light_green",
     "name": "toxic pierce",
     "skill": "stabbing",
+    "melee_crit_dmg_mult_per_skill": 0.1,
+    "melee_crit_armor_mult": 0.66,
     "derived_from": [ "stab", 1 ],
     "immune_flags": { "character": [ "STAB_IMMUNE" ] },
     "ondamage_eocs": [ "AFS_TOXIN_DAMAGE_EFFECTS" ]

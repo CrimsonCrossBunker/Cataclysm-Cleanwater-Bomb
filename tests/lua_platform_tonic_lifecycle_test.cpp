@@ -1,9 +1,41 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#include "avatar.h"
+#include "calendar.h"
+#include "cata_catch.h"
+#include "cata_path.h"
+#include "cata_scope_helpers.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "flexbuffer_json.h"
+#include "item.h"
+#include "json.h"
+#include "json_loader.h"
+#include "lua_platform_loader.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_sol.h"
+#include "map.h"
+#include "player_helpers.h"
+#include "type_id.h"
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 #include "lua_platform_test_support.h"
 #include "itype.h"
 #include "lua_platform_runtime_internal.h"
 #include "path_info.h"
 #include "worldfactory.h"
+
+static const efftype_id efftype_lua_first_nano_recovery( "lua_first_nano_recovery" );
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_lua_first_cleanwater_cell( "lua_first_cleanwater_cell" );
+static const itype_id itype_lua_first_nano_tonic( "lua_first_nano_tonic" );
 
 TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
            "[lua][platform][playable_mvp][persistence]" )
@@ -30,8 +62,9 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     PATH_INFO::set_savedir( directory.string() + "/" );
     world_generator->active_world = &isolated_world;
     REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
-    const auto root = PATH_INFO::moddir().get_unrelative_path() / "Lua_First_Example";
-    const platform::mod_source source { "Lua_First_Example", root, root / "main.lua" };
+    const std::filesystem::path root = PATH_INFO::moddir().get_unrelative_path() /
+                                       std::filesystem::u8path( "Lua_First_Example" );
+    const platform::mod_source source { "Lua_First_Example", root, root / std::filesystem::u8path( "main.lua" ) };
     const auto load = [&]( bool new_game ) {
         std::string error;
         REQUIRE( platform::prepare_mods( { source }, error ) );
@@ -54,14 +87,14 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
         std::string error;
         REQUIRE( platform::runtime_save( error ) );
         platform::runtime_after_save( true, error );
-        std::ofstream stream( directory / "avatar.json" );
+        std::ofstream stream( directory / std::filesystem::u8path( "avatar.json" ) );
         JsonOut json( stream );
         player.serialize( json );
     };
     load( true );
-    const itype_id tonic_id( "lua_first_nano_tonic" );
-    const itype_id cell_id( "lua_first_cleanwater_cell" );
-    const efftype_id recovery( "lua_first_nano_recovery" );
+    const itype_id &tonic_id = itype_lua_first_nano_tonic;
+    const itype_id &cell_id = itype_lua_first_cleanwater_cell;
+    const efftype_id &recovery = efftype_lua_first_nano_recovery;
     REQUIRE( tonic_id.is_valid() );
     REQUIRE( recovery.is_valid() );
     item tonic( tonic_id );
@@ -74,7 +107,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     use(); // Empty resource path must not create a task or cooldown.
     CHECK( integer_state( "tonic_ready_at" ) == 0 );
     CHECK_FALSE( player.has_effect( recovery ) );
-    REQUIRE( player.wear_item( item( itype_id( "backpack" ) ), false ) );
+    REQUIRE( player.wear_item( item( itype_backpack ), false ) );
     player.i_add( item( cell_id ) );
     player.i_add( item( cell_id ) );
     REQUIRE( player.amount_of( cell_id ) == 2 );
@@ -97,7 +130,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     platform::clear_active_runtimes();
     clear_avatar();
     REQUIRE( !player.has_effect( recovery ) );
-    std::ifstream stream( directory / "avatar.json" );
+    std::ifstream stream( directory / std::filesystem::u8path( "avatar.json" ) );
     std::stringstream saved;
     saved << stream.rdbuf();
     player.setID( character_id(), true );
