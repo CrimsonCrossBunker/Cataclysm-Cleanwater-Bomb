@@ -144,7 +144,6 @@ void damage_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "melee_crit_dmg_mult_per_skill", melee_crit_dmg_mult_per_skill, 0.0 );
     optional( jo, was_loaded, "melee_crit_armor_mult", melee_crit_armor_mult, 1.0 );
     optional( jo, was_loaded, "melee_crit_armor_penetration", melee_crit_armor_penetration, 0.0 );
-    optional( jo, was_loaded, "bleed_duration_mult_per_skill", bleed_duration_mult_per_skill, 0.0 );
     optional( jo, was_loaded, "edged", edged );
     optional( jo, was_loaded, "environmental", env );
     optional( jo, was_loaded, "material_required", material_required );
