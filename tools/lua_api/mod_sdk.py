@@ -165,6 +165,11 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
              "--logpath=" + directory],
             cwd=mod, capture_output=True, text=True, timeout=120,
         )
+        if result.returncode < 0:
+            raise RuntimeError(
+                f"LuaLS exited {result.returncode} before completing diagnostics: " +
+                (result.stderr or result.stdout)[-2000:]
+            )
         report = Path(directory) / "check.json"
         if not report.is_file():
             raise RuntimeError(
@@ -179,6 +184,20 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
             raise ValueError("LuaLS report must map file URIs to diagnostics")
         diagnostics = []
         for uri, entries in sorted(data.items()):
+            if not isinstance(entries, list):
+                raise ValueError(f"LuaLS report for {uri}: expected diagnostic array")
+            for index, entry in enumerate(entries):
+                location = f"LuaLS report for {uri}, diagnostic {index}"
+                if not isinstance(entry, dict) or not isinstance(entry.get("message"), str):
+                    raise ValueError(f"{location}: missing diagnostic message")
+                span = entry.get("range")
+                start = span.get("start") if isinstance(span, dict) else None
+                if not isinstance(start, dict):
+                    raise ValueError(f"{location}: missing start position")
+                if any(not isinstance(start.get(key), int)
+                       or isinstance(start[key], bool) or start[key] < 0
+                       for key in ("line", "character")):
+                    raise ValueError(f"{location}: invalid start position")
             path = uri
             if uri.startswith("file:"):
                 parsed = urlparse(uri)

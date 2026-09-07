@@ -127,6 +127,43 @@ class ModSdkTest(unittest.TestCase):
             self.assertNotEqual(report["old"]["declarations_sha256"],
                                 report["new"]["declarations_sha256"])
 
+    def test_partial_diagnostics_cannot_hide_a_checker_signal_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.make_sdk(Path(directory), "example")
+
+            def crash(command, **kwargs):
+                log = next(x.split("=", 1)[1] for x in command
+                           if x.startswith("--logpath="))
+                report = {"file:///example.lua": [{
+                    "range": {"start": {"line": 0, "character": 0}},
+                    "message": "partial diagnostic",
+                }]}
+                (Path(log) / "check.json").write_text(json.dumps(report), encoding="utf-8")
+                return subprocess.CompletedProcess(command, -11, "", "crash")
+
+            with patch.object(mod_sdk.subprocess, "run", side_effect=crash):
+                with self.assertRaisesRegex(RuntimeError, "exited -11"):
+                    mod_sdk.check_mod(mod, "luals")
+
+    def test_malformed_diagnostic_has_a_report_error_instead_of_a_traceback(self):
+        cases = [None, [None], [{"message": "missing location"}],
+                 [{"message": "bad position", "range": {
+                     "start": {"line": True, "character": 0}}}]]
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.make_sdk(Path(directory), "example")
+            for entries in cases:
+                def malformed(command, **kwargs):
+                    log = next(x.split("=", 1)[1] for x in command
+                               if x.startswith("--logpath="))
+                    (Path(log) / "check.json").write_text(
+                        json.dumps({"file:///example.lua": entries}), encoding="utf-8")
+                    return subprocess.CompletedProcess(command, 0, "", "")
+
+                with self.subTest(entries=entries), patch.object(
+                        mod_sdk.subprocess, "run", side_effect=malformed):
+                    with self.assertRaisesRegex(ValueError, "LuaLS report for"):
+                        mod_sdk.check_mod(mod, "luals")
+
     def test_checker_crash_is_not_a_clean_report(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.make_sdk(Path(directory), "example")
