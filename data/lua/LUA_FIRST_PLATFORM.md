@@ -196,6 +196,10 @@ replacement preserves only the state explicitly defined by Platform lifecycle
 and persistence rules; external filesystem or process side effects are trusted
 code responsibilities and are not silently rolled back.
 
+Item fingerprints include patch-field presence: omitting a field inherits its
+source value, while explicitly supplying a default value overwrites it.
+物品指纹包含补丁字段是否显式提供：省略字段继承来源值，显式默认值则覆盖来源值。
+
 ## Native content model / 原生内容模型
 
 `ccb.content` is a pure-Lua native typed builder and registrar surface, not a
