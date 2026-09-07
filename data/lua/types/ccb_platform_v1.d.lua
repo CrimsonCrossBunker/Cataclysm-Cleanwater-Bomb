@@ -6196,6 +6196,10 @@ function CcbPlatformDialogueApi.limits() end
 ---@field from_version integer
 ---@field to_version integer
 
+---Supply migrations before tasks with different payload versions are processed.
+---Missing handlers or failed
+---payload migrations discard the affected persistent tasks, including on script reload.
+---Detailed reasons go to debug.log; the message log summarizes discarded task counts.
 ---@param handler_id string
 ---@param from_version integer
 ---@param to_version integer

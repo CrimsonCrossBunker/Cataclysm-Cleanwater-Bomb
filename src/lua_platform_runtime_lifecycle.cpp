@@ -41,6 +41,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "path_info.h"
+#include "translations.h"
 #include "vehicle.h"
 #include "worldfactory.h"
 
@@ -1662,6 +1663,10 @@ void runtime_process_tasks()
             [&retired_task_ids]( const persistent_task & task ) {
                 return retired_task_ids.count( task.id ) != 0;
             } ), owner->tasks.end() );
+            ::add_msg( m_warning, n_gettext(
+                           "Lua Mod '%s' discarded %zu persistent task. See debug.log for details.",
+                           "Lua Mod '%s' discarded %zu persistent tasks. See debug.log for details.",
+                           retired_task_ids.size() ), owner->mod_id, retired_task_ids.size() );
         }
         std::vector<persistent_task> due;
         owner->tasks.erase( std::remove_if( owner->tasks.begin(), owner->tasks.end(),

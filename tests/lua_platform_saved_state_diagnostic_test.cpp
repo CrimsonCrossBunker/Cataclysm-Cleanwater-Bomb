@@ -57,4 +57,51 @@ TEST_CASE( "lua_platform_bad_saved_task_error_identifies_its_record",
     CHECK( error->second.find( "Mod='broken-owner'" ) != std::string::npos );
     CHECK( error->second.find( "task[0], id=42" ) != std::string::npos );
 }
+
+TEST_CASE( "lua_platform_reload_reports_retired_tasks_and_keeps_valid_tasks",
+           "[lua][platform][runtime][persistence][reload]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    Messages::clear_messages();
+    sol::state old_lua;
+    sol::state new_lua;
+    sol::table old_ccb = old_lua.create_table();
+    sol::table new_ccb = new_lua.create_table();
+    const std::shared_ptr<platform::runtime> old_runtime =
+        platform::make_runtime( "retirement-owner", 1905, old_lua );
+    const std::shared_ptr<platform::runtime> new_runtime =
+        platform::make_runtime( "retirement-owner", 1906, new_lua );
+    const on_out_of_scope cleanup( []() {
+        platform::clear_active_runtimes();
+        Messages::clear_messages();
+    } );
+    platform::install_runtime_api( old_runtime, old_lua, old_ccb );
+    platform::install_runtime_api( new_runtime, new_lua, new_ccb );
+    old_lua.set_function( "noop", []() {} );
+    new_lua.set_function( "noop", []() {} );
+    for( const char *handler : { "kept", "removed" } ) {
+        const sol::protected_function_result registered =
+            old_ccb["runtime"]["handler"]( handler, old_lua["noop"] );
+        REQUIRE( registered.valid() );
+    }
+    const sol::protected_function_result registered =
+        new_ccb["runtime"]["handler"]( "kept", new_lua["noop"] );
+    REQUIRE( registered.valid() );
+    platform::set_active_runtimes( { old_runtime } );
+    platform::runtime_world_ready( true );
+    for( const char *handler : { "kept", "removed" } ) {
+        const sol::protected_function_result scheduled = old_ccb["tasks"]["after"](
+                    100, handler, old_lua.create_table(), 1, "world" );
+        REQUIRE( scheduled.valid() );
+    }
+    platform::hot_swap_active_runtimes( { new_runtime } );
+    REQUIRE( new_runtime->tasks.size() == 1 );
+    CHECK( new_runtime->tasks.front().handler_id == "kept" );
+    const auto messages = Messages::recent_messages( 10 );
+    CHECK( std::any_of( messages.begin(), messages.end(), []( const auto &entry ) {
+        return entry.second.find( "retirement-owner" ) != std::string::npos &&
+               entry.second.find( "discarded 1 persistent task" ) != std::string::npos;
+    } ) );
+}
 #endif
