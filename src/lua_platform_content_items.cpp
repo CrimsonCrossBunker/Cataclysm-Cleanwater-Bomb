@@ -2345,7 +2345,7 @@ struct items_content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ) {}
+                handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -2386,7 +2386,7 @@ struct items_content_transaction::impl {
     std::vector<std::pair<material_id, std::optional<material_type>>> material_undo;
     std::vector<std::pair<ammotype, std::optional<ammunition_type>>> ammunition_type_undo;
     std::vector<std::tuple<item_category_id, std::optional<item_category>, float>>
-            item_category_undo;
+    item_category_undo;
     std::vector<std::pair<crafting_category_id, std::optional<crafting_category>>>
     crafting_category_undo;
     std::vector<std::pair<proficiency_category_id, std::optional<proficiency_category>>>
@@ -3815,7 +3815,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
         }
         const auto validate_requirement_groups = [&]( const std::string & id,
-                const std::vector<std::vector<component_requirement>> &groups,
+            const std::vector<std::vector<component_requirement>> &groups,
         const char *kind, const bool tools ) {
             for( const std::vector<component_requirement> &group : groups ) {
                 if( group.empty() ) {
@@ -4062,7 +4062,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( field.field.empty() || !native_nonnegative_int( field.intensity_min ) ||
                     !native_nonnegative_int( field.intensity_max ) || field.intensity_max < field.intensity_min ||
                     !percent( field.chance ) || ( !trail && ( !native_nonnegative_int( field.radius ) ||
-                                                  !native_nonnegative_int( field.height ) || !native_nonnegative_int( field.footprint ) ) ) ||
+                        !native_nonnegative_int( field.height ) || !native_nonnegative_int( field.footprint ) ) ) ||
                     ( check_engine_state && !field_type_str_id( field.field ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( trail ? "trail" : "field burst" ) );
@@ -4079,8 +4079,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( effect.effect.empty() || effect.duration_turns <= 0 || !native_int( effect.duration_turns ) ||
                     effect.intensity_min <= 0 || !native_nonnegative_int( effect.intensity_max ) ||
                     effect.intensity_max < effect.intensity_min || ( area && ( !percent( effect.chance ) ||
-                            !native_nonnegative_int( effect.radius ) || effect.hits_min <= 0 ||
-                            effect.hits_max < effect.hits_min || !native_nonnegative_int( effect.hits_max ) ) ) ||
+                        !native_nonnegative_int( effect.radius ) || effect.hits_min <= 0 ||
+                        effect.hits_max < effect.hits_min || !native_nonnegative_int( effect.hits_max ) ) ) ||
                     ( check_engine_state && !efftype_id( effect.effect ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( area ? "area effect" : "on-hit effect" ) );
@@ -4370,7 +4370,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             const auto validate_recipe_groups = [&]( const std::vector<std::vector<component_requirement>>
-                                                &groups,
+                &groups,
             const char *kind, const bool tools ) {
                 for( const std::vector<component_requirement> &group : groups ) {
                     if( group.empty() ) {
@@ -5240,7 +5240,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     for( const item_group_entry_definition_data &source_entry : source.entries ) {
                         const Single_item_creator::Type entry_type = source_entry.group ?
-                                Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
+                            Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
                         std::string entry_id = source_entry.id;
                         if( !source_entry.group ) {
                             const bool declared_in_transaction = std::any_of(
@@ -5478,7 +5478,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->comestible->quench = static_cast<int>( source.quench );
                         native->comestible->healthy = static_cast<int>( source.healthy );
                         native->comestible->spoils = time_duration::from_turns(
-                                                        static_cast<int>( source.spoils_in_turns ) );
+                                                         static_cast<int>( source.spoils_in_turns ) );
                         native->comestible->set_fun( static_cast<int>( source.fun ) );
                         nutrients nutrition;
                         nutrition.calories = source.calories * 1000;
