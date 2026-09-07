@@ -65,11 +65,11 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
     bool completed = false;
     lua.set_function( "accept", [&]( const sol::table & ) {
         const cata::lua_platform::game_handle handle = cata::lua_platform::game_handle::from_creature(
-                new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
-                              0, 0, 0, {}
-                            },
-                cata::lua_platform::detail::runtime_handle_identity( runtime ),
-                cata::lua_platform::runtime_world_generation() );
+                    new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
+                                  0, 0, 0, {}
+                                },
+                    cata::lua_platform::detail::runtime_handle_identity( runtime ),
+                    cata::lua_platform::runtime_world_generation() );
         sol::table services = ccb["services"];
         const auto query = [&]() {
             sol::protected_function summary = services["bionics"]["summary"];
@@ -79,7 +79,7 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             REQUIRE( result["ok"].get<bool>() );
             sol::table value = result["value"];
             const conditional_t any( json_loader::from_string( R"({")" + prefix +
-                    R"(has_bionics":"ANY"})" ).get_object() );
+                                     R"(has_bionics":"ANY"})" ).get_object() );
             CHECK( any( old_dialogue ) == ( value["installed_count"].get<int>() > 0 ||
                                             value["has_capacity"].get<bool>() ) );
             sol::protected_function has = services["bionics"]["has"];
@@ -88,7 +88,7 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             result = call;
             REQUIRE( result["ok"].get<bool>() );
             const conditional_t specific( json_loader::from_string( R"({")" + prefix +
-                    R"(has_bionics":")" + id + R"("})" ).get_object() );
+                                          R"(has_bionics":")" + id + R"("})" ).get_object() );
             CHECK( specific( old_dialogue ) == result["value"].get<bool>() );
         };
         query();
@@ -102,7 +102,7 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
              } ) {
             talk_effect_t effect;
             effect.parse_sub_effect( json_loader::from_string( std::string( R"({")" ).append( prefix ).append(
-                        operation ).append( R"(":")" ).append( id ).append( R"("})" ) ).get_object(), "bionic_semantics" );
+                                         operation ).append( R"(":")" ).append( id ).append( R"("})" ) ).get_object(), "bionic_semantics" );
             const bool duplicate = operation == "add_bionic" &&
                                    old_target.has_bionic( bionic_id( id ) ) &&
                                    !bionic_id( id )->dupes_allowed;
@@ -114,9 +114,9 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             sol::table result;
             const std::string new_diagnostic = capture_debugmsg_during( [&]() {
                 sol::protected_function function = services["bionics"][operation == "add_bionic" ?
-                    "grant" : "remove_type"];
+                                                   "grant" : "remove_type"];
                 sol::protected_function_result call = function( handle,
-                    cata::lua_platform::script_game_id( "bionic", id ) );
+                                                      cata::lua_platform::script_game_id( "bionic", id ) );
                 REQUIRE( call.valid() );
                 result = call;
                 REQUIRE( result["ok"].get<bool>() );

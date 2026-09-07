@@ -124,7 +124,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     CHECK( integer_state( "lua_first_tonic_ticks" ) == 1 );
     save();
     const std::weak_ptr<platform::runtime> previous = platform::detail::find_active_runtime(
-            source.id );
+                source.id );
     // Keep static definitions cached, but retire the active registry so the loader
     // cannot transfer in-memory character state or tasks during replacement.
     platform::clear_active_runtimes();

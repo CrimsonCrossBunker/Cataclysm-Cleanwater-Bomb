@@ -102,7 +102,7 @@ struct mutation_fixture {
     bool query( const std::string &method, const bool npc_target, const std::string &trait ) {
         sol::protected_function function = services["mutations"][method];
         sol::protected_function_result call = function( handle( npc_target ),
-            cata::lua_platform::script_game_id( "mutation", trait ) );
+                                              cata::lua_platform::script_game_id( "mutation", trait ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -140,7 +140,7 @@ TEST_CASE( "lua_platform_mutations_remove_type_targets_exact_character",
     REQUIRE( target.has_trait( heat ) );
 
     sol::protected_function_result call = fixture.remove_type()( target_handle,
-        "ACCLIMATIZATION" );
+                                          "ACCLIMATIZATION" );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -247,7 +247,7 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
             const cata::lua_platform::game_handle subject = fixture.handle( npc_target );
             const cata::lua_platform::game_handle observer = fixture.handle( !npc_target );
             sol::protected_function_result call = visible( subject, observer,
-                cata::lua_platform::script_game_id( "mutation", trait ) );
+                                                  cata::lua_platform::script_game_id( "mutation", trait ) );
             REQUIRE( call.valid() );
             sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );
@@ -319,7 +319,7 @@ TEST_CASE( "lua_platform_mutations_legacy_writes_require_semantic_choice",
         legacy.legacy_effect( R"({")" + prefix + R"(add_trait":"STRONGER_VULNERABLEWARM"})" );
         sol::protected_function grant = platform.services["mutations"]["grant"];
         sol::protected_function_result call = grant( platform.handle( npc_target ),
-            cata::lua_platform::script_game_id( "mutation", "STRONGER_VULNERABLEWARM" ) );
+                                              cata::lua_platform::script_game_id( "mutation", "STRONGER_VULNERABLEWARM" ) );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
         CHECK_FALSE( old_target.has_trait( trait_VULNERABLECHILL ) );
@@ -333,7 +333,7 @@ TEST_CASE( "lua_platform_mutations_legacy_writes_require_semantic_choice",
         legacy.legacy_effect( R"({")" + prefix + R"(lose_trait":"QUICK"})" );
         sol::protected_function remove = platform.services["mutations"]["remove"];
         sol::protected_function_result call = remove( platform.handle( npc_target ),
-            cata::lua_platform::script_game_id( "mutation", "QUICK" ) );
+                                              cata::lua_platform::script_game_id( "mutation", "QUICK" ) );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
         CHECK_FALSE( old_target.has_trait( trait_QUICK ) );
@@ -365,11 +365,11 @@ TEST_CASE( "lua_platform_mutations_bulk_removal_matches_legacy_effects",
         legacy.legacy_effect( R"({")" + prefix + ( by_type ? "lose_mutation_type" : "lose_category" ) +
                               R"(":")" + ( by_type ? "ACCLIMATIZATION" : "CATTLE" ) + R"("})" );
         sol::protected_function function = platform.services["mutations"][by_type ? "remove_type" :
-            "remove_category"];
+                                           "remove_category"];
         sol::protected_function_result call = by_type ?
                                               function( platform.handle( npc_target ), "ACCLIMATIZATION" ) :
                                               function( platform.handle( npc_target ), cata::lua_platform::script_game_id( "mutation_category",
-                                                  "CATTLE" ) );
+                                                      "CATTLE" ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -406,7 +406,7 @@ TEST_CASE( "lua_platform_mutations_purifiability_write_matches_legacy_effect",
                               R"(set_trait_purifiability":"VULNERABLECHILL","purifiable":)" +
                               ( desired ? "true}" : "false}" ) );
         sol::protected_function_result call = set( platform.handle( npc_target ),
-            cata::lua_platform::script_game_id( "mutation", trait.str() ), desired );
+                                              cata::lua_platform::script_game_id( "mutation", trait.str() ), desired );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -442,7 +442,7 @@ TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
     for( int attempt = 0; attempt < 101; ++attempt ) {
         legacy.legacy_effect( source );
         sol::protected_function_result call = activate( platform.handle( npc_target ),
-            cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true );
+                                              cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
     }
@@ -481,7 +481,7 @@ TEST_CASE( "lua_platform_mutations_seeded_category_matches_legacy_effect",
     rng_set_engine_seed( 4242 );
     sol::protected_function function = platform.services["mutations"]["mutate_category"];
     sol::protected_function_result call = function( platform.handle( npc_target ),
-        cata::lua_platform::script_game_id( "mutation_category", category ), use_vitamins, true_random );
+                                          cata::lua_platform::script_game_id( "mutation_category", category ), use_vitamins, true_random );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
