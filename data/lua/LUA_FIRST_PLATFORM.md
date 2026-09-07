@@ -157,13 +157,15 @@ standard libraries, retains normal package searchers and native loading, and
 inserts a Mod-local searcher before the ordinary searchers. The reserved `ccb`
 entry remains bound to the state-owned Platform table. These changes and their
 regression test source are **source-complete, not compiled or runtime-accepted**.
-Native loading still depends on the host Lua build and module ABI. The first-run
-execution-risk notice remains a separate pending integration requirement.
+Native loading still depends on the host Lua build and module ABI. The Mod manager now presents a session execution-risk notice before discovering
+Lua metadata (stderr for headless hosts); its startup UI ordering still requires
+interactive acceptance. Direct loader embedders must provide their own notice.
 
 实现断点（2026-09-08）：加载器源码已开放 bundled 标准库，保留普通 package 查找器与原生
 加载入口，并优先查找 Mod 本地模块；`require("ccb")` 仍固定返回所属 state 的 Platform
 根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
-构建与 ABI；首次执行风险告知仍待单独集成。不得将源码完成描述为已发布或已通过验收。
+构建与 ABI。Mod 管理器已在元数据发现前加入每会话风险告知（无界面宿主输出到 stderr），
+启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。不得将源码完成描述为已发布或已通过验收。
 
 ## Loading and lifecycle / 加载与生命周期
 
