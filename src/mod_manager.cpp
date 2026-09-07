@@ -254,9 +254,6 @@ void mod_migrations::check()
 
 static void show_lua_execution_notice()
 {
-    if( test_mode ) {
-        return;
-    }
     const std::string message = _(
                                    "Lua Mods are executable programs with access to your files and system. "
                                    "CCB does not sandbox them or protect your system from their actions.\n\n"
@@ -265,12 +262,15 @@ static void show_lua_execution_notice()
                                    "Native libraries can also crash the game.\n\n"
                                    "Continuing will scan the installed Lua Mods. This notice appears once "
                                    "per game session." );
-#if defined(HEADLESS)
-    // Headless launchers must still receive the notice before metadata runs.
-    std::cerr << message << std::endl;
-#else
-    popup( message );
+#if !defined(HEADLESS)
+    if( !test_mode ) {
+        popup( message );
+        return;
+    }
 #endif
+    // --check-mods sets test_mode without initializing the UI. It must still
+    // receive the execution notice, just like a headless launcher.
+    std::cerr << message << std::endl;
 }
 
 mod_manager::mod_manager( std::function<void()> execution_notice ) :
