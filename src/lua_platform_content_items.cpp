@@ -3339,7 +3339,8 @@ bool items_content_transaction::register_definition( const sol::object &value,
     return false;
 }
 
-bool items_content_transaction::validate( const runtime &owner_runtime, // NOLINT(readability-function-size)
+// NOLINTNEXTLINE(readability-function-size)
+bool items_content_transaction::validate( const runtime &owner_runtime,
         const bool check_engine_state, const items_content_validation_context &context,
         std::string &error ) const
 {
@@ -4659,7 +4660,8 @@ bool items_content_transaction::validate_scaled_requirement_set(
     return true;
 }
 
-bool items_content_transaction::apply_phase( const items_content_apply_phase phase, // NOLINT(readability-function-size)
+// NOLINTNEXTLINE(readability-function-size)
+bool items_content_transaction::apply_phase( const items_content_apply_phase phase,
         std::string &error )
 {
     if( pimpl_->applied ) {
