@@ -122,6 +122,18 @@ class tab_player_view : public console_tab_view
         character_edit_state char_edit;
 };
 
+class tab_lua_view : public console_tab_view
+{
+    public:
+        const char *label() const override;
+        void draw_body( debug_console &host ) override;
+
+    private:
+        std::string selected_mod;
+        std::string source = "local ccb = require(\"ccb\")\nreturn ccb.services.turn()";
+        std::string result;
+};
+
 class tab_eoc_view : public console_tab_view
 {
     public:
@@ -429,6 +441,8 @@ class debug_console : public cataimgui::window
             bool ok = true;
         };
         std::optional<eval_result_view> consume_eval_result();
+        void request_lua( const std::string &mod_id, const std::string &source );
+        std::optional<eval_result_view> consume_lua_result();
 
         // Trace tab reads; EOC tab clears when the user pins a per-EOC
         // monitor (raw feed becomes redundant).
@@ -487,6 +501,8 @@ class debug_console : public cataimgui::window
         std::string pending_eval_result;
         bool pending_eval_ok = true;
         bool pending_eval_result_ready = false;
+        std::optional<std::pair<std::string, std::string>> pending_lua;
+        std::optional<eval_result_view> lua_result;
 
         // Owns the step / play / fast-forward state machine plus the footer
         // controls that drive it. Hidden behind pimpl so the host header does

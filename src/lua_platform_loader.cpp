@@ -48,6 +48,7 @@ extern "C" {
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
+#include "catacharset.h"
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -764,6 +765,99 @@ bool reload_active_mods( std::string &error )
     return true;
 }
 
+namespace
+{
+std::string console_string( const char *text, const std::size_t size )
+{
+    // Bound presentation only, without restricting script execution or values.
+    int remaining = static_cast<int>( std::min<std::size_t>( size, 1024 ) );
+    std::string result = "\"";
+    while( remaining > 0 ) {
+        const std::uint32_t ch = UTF8_getch( &text, &remaining );
+        if( ch == '\\' || ch == '"' ) {
+            result += '\\';
+            result += static_cast<char>( ch );
+        } else if( ch < 32 || ch == 127 ) {
+            constexpr char hex[] = "0123456789abcdef";
+            result += "\\x";
+            result += hex[ch >> 4];
+            result += hex[ch & 15];
+        } else {
+            result += utf32_to_utf8( ch );
+        }
+    }
+    result += '"';
+    if( size > 1024 ) {
+        result += " [truncated]";
+    }
+    return result;
+}
+} // namespace
+
+bool execute_console( const std::string &mod_id, const std::string &source,
+                      std::string &output, std::string &error )
+{
+    output.clear();
+    error.clear();
+    if( script_reload_in_progress ) {
+        error = "Lua script reload is in progress; retry after it returns";
+        return false;
+    }
+    const auto found = std::find_if( active_states.begin(), active_states.end(),
+    [&mod_id]( const runtime_state &state ) {
+        return state.id == mod_id;
+    } );
+    if( found == active_states.end() ) {
+        error = "No active Lua Mod named '" + mod_id + "'";
+        return false;
+    }
+    lua_State *const lua = found->lua->lua_state();
+    lua_Debug frame;
+    if( lua_getstack( lua, 0, &frame ) != 0 ) {
+        error = "Lua code is still executing for Mod '" + mod_id + "'";
+        return false;
+    }
+    try {
+        const sol::protected_function_result result = found->lua->safe_script(
+                    source, sol::script_pass_on_error, "=CCB console: " + mod_id, sol::load_mode::text );
+        if( !result.valid() ) {
+            const sol::error script_error = result;
+            error = "Lua console [" + mod_id + "]: " + script_error.what();
+            return false;
+        }
+        const int shown = std::min( result.return_count(), 16 );
+        for( int i = 0; i < shown; ++i ) {
+            const int index = result.stack_index() + i;
+            if( i != 0 ) {
+                output += '\n';
+            }
+            const int type = lua_type( lua, index );
+            if( type == LUA_TSTRING ) {
+                std::size_t size = 0;
+                const char *text = lua_tolstring( lua, index, &size );
+                output += console_string( text, size );
+            } else if( type == LUA_TNUMBER ) {
+                output += lua_tolstring( lua, index, nullptr );
+            } else if( type == LUA_TBOOLEAN ) {
+                output += lua_toboolean( lua, index ) ? "true" : "false";
+            } else if( type == LUA_TNIL ) {
+                output += "nil";
+            } else {
+                output += std::string( "<" ) + lua_typename( lua, type ) + ">";
+            }
+        }
+        if( result.return_count() == 0 ) {
+            output = "Completed (no return values)";
+        } else if( result.return_count() > shown ) {
+            output += "\n[remaining return values omitted]";
+        }
+        return true;
+    } catch( const std::exception &exception ) {
+        error = "Lua console [" + mod_id + "]: " + exception.what();
+        return false;
+    }
+}
+
 void on_world_ready( bool new_game )
 {
     runtime_world_ready( new_game );
@@ -867,6 +961,14 @@ bool reload_active_mods( std::string &error )
 {
     error.clear();
     return true;
+}
+
+bool execute_console( const std::string &, const std::string &,
+                      std::string &output, std::string &error )
+{
+    output.clear();
+    error = disabled_error;
+    return false;
 }
 
 void on_world_ready( bool )
