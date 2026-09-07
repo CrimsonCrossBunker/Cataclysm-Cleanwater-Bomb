@@ -2976,7 +2976,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "extend_item_group", [transaction]( item_group_definition_handle handle ) {
+    content.set_function( "extend_item_group", [transaction]( const item_group_definition_handle &handle ) {
         if( handle.token != transaction->token ) {
             throw std::runtime_error( "cannot register an item group definition owned by another Mod" );
         }
@@ -3221,7 +3221,7 @@ bool items_content_transaction::register_definition( const sol::object &value,
         registrations.push_back( { operation, handle.definition } );
     };
     if( value.is<item_definition_handle>() ) {
-        item_definition_handle handle = value.as<item_definition_handle>();
+        const item_definition_handle &handle = value.as<item_definition_handle>();
         register_catalog( handle, pimpl_->items, "item" );
         return true;
     }
@@ -3339,7 +3339,7 @@ bool items_content_transaction::register_definition( const sol::object &value,
     return false;
 }
 
-bool items_content_transaction::validate( const runtime &owner_runtime,
+bool items_content_transaction::validate( const runtime &owner_runtime, // NOLINT(readability-function-size)
         const bool check_engine_state, const items_content_validation_context &context,
         std::string &error ) const
 {
@@ -4659,7 +4659,7 @@ bool items_content_transaction::validate_scaled_requirement_set(
     return true;
 }
 
-bool items_content_transaction::apply_phase( const items_content_apply_phase phase,
+bool items_content_transaction::apply_phase( const items_content_apply_phase phase, // NOLINT(readability-function-size)
         std::string &error )
 {
     if( pimpl_->applied ) {
@@ -4924,9 +4924,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         } );
                     }
                     if( native._burn_data.empty() ) {
+                        static const damage_type_id damage_heat( "heat" );
                         mat_burn_data default_burn;
-                        default_burn.burn = native._resistances.type_resist(
-                                                damage_type_id( "heat" ) ) <= 0.0F;
+                        default_burn.burn = native._resistances.type_resist( damage_heat ) <= 0.0F;
                         native._burn_data.push_back( default_burn );
                     }
                     for( const auto &[product, efficiency] : source.burn_products ) {
@@ -5101,7 +5101,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         value.chance = static_cast<int>( field.chance );
                         value.size = static_cast<int>( field.footprint );
                         value.check_passable = field.passable_only;
-                        native.aoe_field_types.push_back( std::move( value ) );
+                        native.aoe_field_types.push_back( value );
                     }
                     for( const ammo_field_definition_data &field : source.trails ) {
                         trail_field_effect value;
@@ -5109,7 +5109,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         value.intensity_min = static_cast<int>( field.intensity_min );
                         value.intensity_max = static_cast<int>( field.intensity_max );
                         value.chance = static_cast<int>( field.chance );
-                        native.trail_field_types.push_back( std::move( value ) );
+                        native.trail_field_types.push_back( value );
                     }
                     for( const ammo_character_effect_definition_data &effect : source.on_hit_effects ) {
                         on_hit_effect value;
@@ -5118,7 +5118,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                              static_cast<int>( effect.duration_turns ) );
                         value.intensity = static_cast<int>( effect.intensity_min );
                         value.need_touch_skin = effect.touch_skin;
-                        native.on_hit_effects.push_back( std::move( value ) );
+                        native.on_hit_effects.push_back( value );
                     }
                     for( const ammo_character_effect_definition_data &effect : source.area_effects ) {
                         aoe_effect value;
@@ -5301,7 +5301,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             item_comp native_component( itype_id( component.id ),
                                                         static_cast<int>( component.count ) );
                             native_component.requirement = component.requirement;
-                            group.push_back( std::move( native_component ) );
+                            group.push_back( native_component );
                         }
                         components.push_back( std::move( group ) );
                     }
@@ -5311,13 +5311,14 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         for( const component_requirement &tool : source_group ) {
                             tool_comp native_tool( itype_id( tool.id ), static_cast<int>( tool.count ) );
                             native_tool.requirement = tool.requirement;
-                            group.push_back( std::move( native_tool ) );
+                            group.push_back( native_tool );
                         }
                         tools.push_back( std::move( group ) );
                     }
                     requirement_data::alter_quali_req_vector qualities;
                     for( const std::vector<quality_requirement_definition> &source_group : source.qualities ) {
                         std::vector<quality_requirement> group;
+                        group.reserve( source_group.size() );
                         for( const quality_requirement_definition &quality : source_group ) {
                             group.emplace_back( quality_id( quality.id ),
                                                 static_cast<int>( quality.count ),
@@ -5608,7 +5609,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native_proficiency.time_multiplier = static_cast<float>( source.time_multiplier );
                         native_proficiency.skill_penalty = static_cast<float>( source.skill_penalty );
                         native_proficiency._skill_penalty_assigned = source.skill_penalty_assigned;
-                        native.proficiencies.push_back( std::move( native_proficiency ) );
+                        native.proficiencies.push_back( native_proficiency );
                     }
                     for( const auto &[book, level] : entry.definition->books ) {
                         native.booksets[itype_id( book )].skill_req = static_cast<int>( level );
@@ -5620,7 +5621,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             item_comp native_component( itype_id( component.id ),
                                                         static_cast<int>( component.count ) );
                             native_component.requirement = component.requirement;
-                            alternatives.push_back( std::move( native_component ) );
+                            alternatives.push_back( native_component );
                         }
                         components.push_back( std::move( alternatives ) );
                     }
@@ -5630,7 +5631,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         for( const component_requirement &tool : group ) {
                             tool_comp native_tool( itype_id( tool.id ), static_cast<int>( tool.count ) );
                             native_tool.requirement = tool.requirement;
-                            alternatives.push_back( std::move( native_tool ) );
+                            alternatives.push_back( native_tool );
                         }
                         tools.push_back( std::move( alternatives ) );
                     }
