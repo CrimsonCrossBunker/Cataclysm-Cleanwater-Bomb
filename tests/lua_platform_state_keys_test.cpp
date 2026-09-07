@@ -40,11 +40,11 @@ ccb.runtime.on("world_ready", "initialize")
     platform::commit_prepared_mods();
     platform::runtime_world_ready( true );
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                "state-keys-first" );
+            "state-keys-first" );
     REQUIRE( owner );
-    const auto run = [&owner]( const std::string &source ) {
+    const auto run = [&owner]( const std::string & source ) {
         const sol::protected_function_result result = owner->lua->safe_script(
-                    source, sol::script_pass_on_error );
+                source, sol::script_pass_on_error );
         if( !result.valid() ) {
             const sol::error failure = result;
             INFO( failure.what() );
