@@ -253,6 +253,27 @@ local foo = require("foo")
 if foo.value ~= "foo" or require("foo") ~= foo then
     error("root-local foo.lua require was not cached")
 end
+-- Ordinary Lua semantics: false exports are reloaded; nil exports become true.
+assert(require("false_export") == false)
+assert(require("false_export") == false)
+assert(false_export_loads == 2)
+assert(require("empty_export") == true)
+assert(require("empty_export") == true)
+assert(empty_export_loads == 1)
+
+local searcher_count = #package.searchers
+package.searchers[searcher_count + 1] = function(name)
+    if name == "custom:probe" then
+        return function(requested, loader_data)
+            assert(requested == name and loader_data == "custom-loader-data")
+            return { value = 19 }
+        end, "custom-loader-data"
+    end
+end
+local custom, custom_data = require("custom:probe")
+assert(custom.value == 19 and custom_data == "custom-loader-data")
+package.searchers[searcher_count + 1] = nil
+
 local nested = require("nested")
 if nested.value ~= "nested" then
     error("root-local nested/init.lua require failed")

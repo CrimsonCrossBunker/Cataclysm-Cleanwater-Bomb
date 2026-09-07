@@ -8,7 +8,18 @@ TEST_CASE( "lua_platform_loader_uses_trusted_environment_for_metadata_and_runtim
            "[lua][platform][loader]" )
 {
     platform_lua_test_directory files;
-    files.write( "foo.lua", "return { value = \"foo\" }\n" );
+    files.write( "foo.lua", R"lua(
+local name, path = ...
+assert(name == "foo" and path:match("foo%.lua$"))
+return { value = "foo" }
+)lua" );
+    files.write( "false_export.lua", R"lua(
+false_export_loads = (false_export_loads or 0) + 1
+return false
+)lua" );
+    files.write( "empty_export.lua", R"lua(
+empty_export_loads = (empty_export_loads or 0) + 1
+)lua" );
     files.write( "nested/init.lua", "return { value = \"nested\" }\n" );
     files.write( "broken.lua", "error(\"broken module\")\n" );
     files.write( "mod.lua", std::string( platform_loader_policy_probe ) +
