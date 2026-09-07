@@ -725,7 +725,8 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
 
 void write_scope( const cata_path &path, const std::string &scope )
 {
-    detail::bounded_state_output_buffer storage( static_cast<std::size_t>( maximum_platform_state_file_bytes ),
+    detail::bounded_state_output_buffer storage( static_cast<std::size_t>
+            ( maximum_platform_state_file_bytes ),
             "Platform state file exceeds 16 MiB" );
     std::ostream buffer( &storage );
     buffer.exceptions( std::ios::badbit | std::ios::failbit );

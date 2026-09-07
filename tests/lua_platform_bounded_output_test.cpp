@@ -47,9 +47,11 @@ TEST_CASE( "lua_platform_oversized_encoded_state_does_not_touch_its_destination"
     platform::script_persistent_state state;
     // Raw values fit the 512 KiB state allowance, but JSON escapes exceed the
     // existing 1 MiB codec limit. Only three 64 KiB raw values are needed.
-    for( const char *key : { "one", "two", "three" } ) {
+    for( const char *key : {
+             "one", "two", "three"
+         } ) {
         platform::assign_persistent_value( state, key,
-                                          std::string( platform::persistent_state_max_string_bytes, '\x01' ) );
+                                           std::string( platform::persistent_state_max_string_bytes, '\x01' ) );
     }
     std::ostringstream destination;
     destination << "previous output";
