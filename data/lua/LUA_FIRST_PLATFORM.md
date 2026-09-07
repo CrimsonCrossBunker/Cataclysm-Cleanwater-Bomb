@@ -167,6 +167,16 @@ interactive acceptance. Direct loader embedders must provide their own notice.
 构建与 ABI。Mod 管理器已在元数据发现前加入每会话风险告知（无界面宿主输出到 stderr），
 启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。不得将源码完成描述为已发布或已通过验收。
 
+Ordinary Lua 5.4 `require` returns the module and loader data on its first load.
+If `mod.lua` forwards a module that returns a `ccb.ModDefinition`, use
+`return (require("metadata"))` or assign its first return to a local variable;
+metadata still requires exactly one typed return value. This does not change
+`require("ccb")`, which always returns the reserved Platform root alone.
+
+普通 Lua 5.4 的 `require` 首次加载会返回模块及加载来源两个值。`mod.lua` 若转发返回
+`ccb.ModDefinition` 的模块，应写 `return (require("metadata"))`，或先用局部变量接收第一个
+结果再返回；元数据仍要求恰好一个类型化返回值。`require("ccb")` 只返回固定的 Platform 根表。
+
 ## Loading and lifecycle / 加载与生命周期
 
 The Platform lifecycle is a single transaction around the native engine:

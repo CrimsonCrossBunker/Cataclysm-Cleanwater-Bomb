@@ -467,7 +467,8 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
         const file_execution_result execution = execute_file( lua, path, "Lua-first Mod metadata" );
         if( execution.return_count != 1 ) {
             error = "Lua-first Mod metadata [" + path.generic_u8string() +
-                    "]: expected exactly one ccb.ModDefinition return value";
+                    "]: expected exactly one ccb.ModDefinition return value; "
+                    "use return (require(...)) when forwarding a metadata module";
             return false;
         }
         const sol::object &value = *execution.first;

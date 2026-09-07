@@ -127,6 +127,27 @@ TEST_CASE( "lua_platform_loader_errors_identify_stage_owner_and_script",
     }
 }
 
+TEST_CASE( "lua_platform_metadata_forwarding_uses_one_explicit_module_result",
+           "[lua][platform][loader]" )
+{
+    platform_lua_test_directory files;
+    files.write( "metadata.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "forwarded-metadata" }
+)lua" );
+    files.write( "mod.lua", "return require('metadata')\n" );
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    // Lua 5.4 require forwards loader data on the first load. The metadata
+    // contract still requires precisely one typed result.
+    REQUIRE_FALSE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    CHECK( error.find( "return (require(...))" ) != std::string::npos );
+    files.write( "mod.lua", "return (require('metadata'))\n" );
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    CHECK( metadata.id == "forwarded-metadata" );
+    CHECK( error.empty() );
+}
+
 } // namespace
 
 #endif // CATA_ENABLE_LUA_PLATFORM
