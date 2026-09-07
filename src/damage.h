@@ -34,6 +34,11 @@ struct damage_type {
     cata::flat_set<std::string> immune_flags;
     cata::flat_set<std::string> mon_immune_flags;
     double bash_conversion_factor;
+    double melee_crit_dmg_mult = 0.0;
+    double melee_crit_dmg_mult_per_skill = 0.0;
+    // Armor multiplier applied on critical hits at full crit_mod; 1.0 disables it.
+    double melee_crit_armor_mult = 1.0;
+    double melee_crit_armor_penetration = 0.0;
     nc_color magic_color;
     bool melee_only = false;
     bool physical = false;
