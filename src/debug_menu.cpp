@@ -1034,8 +1034,10 @@ static int game_uilist()
         { uilist_entry( debug_menu_index::QUIT_NOSAVE, true, 'Q', _( "Quit to main menu" ) )  },
         { uilist_entry( debug_menu_index::QUICKLOAD, true, 'q', _( "Quickload" ) )  },
         { uilist_entry( debug_menu_index::SNAPSHOT_MENU, true, 'n', _( "Snapshot save/load menu" ) )  },
-        { uilist_entry( debug_menu_index::RELOAD_LUA_SCRIPTS,
-                        cata::lua_platform::is_enabled(), 'l', _( "Reload Lua Mod scripts" ) ) },
+        {
+            uilist_entry( debug_menu_index::RELOAD_LUA_SCRIPTS,
+                          cata::lua_platform::is_enabled(), 'l', _( "Reload Lua Mod scripts" ) )
+        },
     };
 
     return uilist( _( "Game…" ), uilist_initializer );
@@ -5017,7 +5019,7 @@ const std::vector<debug_action_entry> &all_actions()
                     return;
                 }
                 add_msg( m_info, _( "Replaced Lua script registrations for %zu Mods. "
-                                   "Check the message log for callback errors." ), mods.size() );
+                                    "Check the message log for callback errors." ), mods.size() );
             }
         },
         {

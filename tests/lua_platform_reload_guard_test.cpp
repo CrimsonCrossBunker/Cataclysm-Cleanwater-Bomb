@@ -29,7 +29,7 @@ ccb.runtime.on("world_ready", "try_reload")
     REQUIRE( platform::validate_finalized_prepared_content( error ) );
     platform::commit_prepared_mods();
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                "reload-guard" );
+            "reload-guard" );
     REQUIRE( owner );
     owner->lua->set_function( "attempt_reload", [&]() {
         attempted = true;
@@ -42,7 +42,7 @@ ccb.runtime.on("world_ready", "try_reload")
     CHECK( reload_error.find( "reload-guard" ) != std::string::npos );
     CHECK( platform::detail::find_active_runtime( "reload-guard" ) == owner );
     const sol::protected_function_result still_alive = owner->lua->safe_script(
-                "return 42", sol::script_pass_on_error );
+            "return 42", sol::script_pass_on_error );
     REQUIRE( still_alive.valid() );
     CHECK( still_alive.get<int>() == 42 );
 }
@@ -68,7 +68,7 @@ ccb.runtime.handler("kept", function() return 42 end)
     platform::commit_prepared_mods();
     platform::runtime_world_ready( true );
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                "reload-preserve" );
+            "reload-preserve" );
     REQUIRE( owner );
     owner->world_state.emplace( "reload_marker", std::int64_t( 17 ) );
     sol::protected_function kept = owner->handlers.at( "kept" ).callback;
@@ -132,7 +132,7 @@ ccb.runtime.on("shutdown", "shutdown_reload")
     platform::runtime_world_ready( true );
     {
         const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                    "reload-reentry" );
+                "reload-reentry" );
         REQUIRE( owner );
         owner->lua->set_function( "attempt_reload", [&]() {
             ++attempts;
