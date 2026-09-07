@@ -2400,7 +2400,7 @@ void options_manager::add_options_interface()
         add( "USE_PINYIN_SEARCH", page_id, to_translation( "Use pinyin in search" ),
              to_translation( "If true, pinyin (pronunciation of Chinese characters) can be used in searching/filtering "
                              "(may cause major slowdown when searching through too many entries.)" ),
-             false
+             true
            );
 
         add( "FORCE_CAPITAL_YN", page_id,
