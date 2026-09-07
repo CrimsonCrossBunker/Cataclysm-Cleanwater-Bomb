@@ -1420,22 +1420,13 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
 
     float armor_mult = 1.0f;
     if( crit ) {
-        // FIXME: Hardcoded damage type effects (stab, cut, bash)
-        if( dt == damage_stab ) {
-            // Critical damage bonus for stabbing scales with skill
-            dmg_mul *= 1.0 + ( skill / 10.0 ) * crit_mod;
-            // Stab criticals have extra %arpen
-            armor_mult = 1.f - 0.34f * crit_mod;
-        } else if( dt == damage_cut ) {
-            dmg_mul *= 1.f + 0.25f * crit_mod;
-            arpen += static_cast<int>( 5.f * crit_mod );
-            // 25% armor penetration
-            armor_mult = 1.f - 0.25f * crit_mod;
-        } else if( dt == damage_bash ) {
-            dmg_mul *= 1.f + 0.5f * crit_mod;
-            // 50% armor penetration
-            armor_mult = 1.f - 0.5f * crit_mod;
+        float crit_dmg = dt->melee_crit_dmg_mult;
+        if( !dt->skill.is_null() ) {
+            crit_dmg += dt->melee_crit_dmg_mult_per_skill * skill;
         }
+        dmg_mul *= 1.0f + crit_dmg * crit_mod;
+        armor_mult = 1.0f - ( 1.0f - dt->melee_crit_armor_mult ) * crit_mod;
+        arpen += static_cast<int>( dt->melee_crit_armor_penetration * crit_mod );
     }
 
     di.add_damage( dt, dmg, arpen, armor_mult, dmg_mul );
