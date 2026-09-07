@@ -311,7 +311,7 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     callback_scope scope( owner );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
-        report_callback_error( owner, handler_id, result );
+        report_callback_error( owner, handler_id, result, "event " + name );
     }
 }
 
@@ -1622,7 +1622,8 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
             callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
-                report_callback_error( *owner, handler_id, result );
+                report_callback_error( *owner, handler_id, result,
+                                       "hook " + std::string( name ) );
                 continue;
             }
 
