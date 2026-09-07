@@ -1674,8 +1674,6 @@ void runtime_process_tasks()
             }
             return false;
         } ), owner->tasks.end() );
-        for( const persistent_task &task : due ) {
-        }
         std::sort( due.begin(), due.end(), []( const persistent_task & lhs,
         const persistent_task & rhs ) {
             return std::tie( lhs.due_turn, lhs.id ) < std::tie( rhs.due_turn, rhs.id );
