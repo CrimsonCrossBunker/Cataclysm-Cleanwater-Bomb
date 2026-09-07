@@ -25,7 +25,8 @@ def saved_state() -> dict:
                 "payload_version": 1, "payload": {},
                 "actor_character_id": 12,
                 "participants": [{"role": "target", "kind": "character",
-                                  "stable_id": 12, "pending": True}],
+                                  "stable_id": 12, "pending": True, "hint_scope": "npc",
+                                  "hint_x": 0, "hint_y": 0, "hint_z": 0}],
             }],
         }},
     }
@@ -84,12 +85,28 @@ class StateInspectorTests(unittest.TestCase):
         for field, value in (("id", True), ("id", 0),
                              ("owner_mod_id", "another-mod"),
                              ("interval_turns", -1),
-                             ("payload_version", 0)):
+                             ("payload_version", 0), ("payload_version", 2**31)):
             with self.subTest(field=field, value=value):
                 snapshot = saved_state()
                 snapshot["mods"]["tonic"]["tasks"][0][field] = value
                 with self.assertRaises(ValueError):
                     inspect_state.summarize(snapshot)
+
+    def test_participant_diagnostics_identify_the_bad_record(self):
+        for field, value in (("hint_x", True), ("hint_scope", "a\0b"),
+                             ("stable_id", 2**31), ("pending", "yes"),
+                             ("kind", "unknown")):
+            with self.subTest(field=field):
+                snapshot = saved_state()
+                participant = snapshot["mods"]["tonic"]["tasks"][0]["participants"][0]
+                participant[field] = value
+                with self.assertRaisesRegex(ValueError, r"tonic.tasks\[0\].participants\[0\]"):
+                    inspect_state.summarize(snapshot)
+        snapshot = saved_state()
+        participants = snapshot["mods"]["tonic"]["tasks"][0]["participants"]
+        participants.append(copy.deepcopy(participants[0]))
+        with self.assertRaisesRegex(ValueError, "repeated participant role"):
+            inspect_state.summarize(snapshot)
 
     def test_duplicate_tasks_and_typed_value_mismatch_are_rejected(self):
         snapshot = saved_state()

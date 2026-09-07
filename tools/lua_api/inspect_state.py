@@ -60,6 +60,41 @@ def typed_values(values: object, location: str, show_values: bool) -> list:
     return result
 
 
+
+def task_participants(values: object, location: str) -> list:
+    if not isinstance(values, list):
+        raise ValueError(f"{location}: expected participants array")
+    rows, roles = [], set()
+    for index, participant in enumerate(values):
+        where = f"{location}.participants[{index}]"
+        if not isinstance(participant, dict):
+            raise ValueError(f"{where}: expected participant object")
+        role, kind = participant.get("role"), participant.get("kind")
+        if not isinstance(role, str) or not role or role in roles:
+            raise ValueError(f"{where}: missing or repeated participant role")
+        roles.add(role)
+        if kind not in ("character", "item", "monster", "vehicle"):
+            raise ValueError(f"{where}: invalid participant kind")
+        stable_id = participant.get("stable_id")
+        maximum = 2**31 if kind == "character" else 2**63
+        if not integer(stable_id) or not 0 < stable_id < maximum:
+            raise ValueError(f"{where}: invalid participant stable_id")
+        hint_scope = participant.get("hint_scope")
+        if (not isinstance(hint_scope, str) or "\0" in hint_scope
+                or len(hint_scope.encode("utf-8")) > 64):
+            raise ValueError(f"{where}: invalid participant hint_scope")
+        for key in ("hint_x", "hint_y", "hint_z"):
+            value = participant.get(key)
+            if not integer(value) or not -(2**31) <= value < 2**31:
+                raise ValueError(f"{where}: invalid participant {key}")
+        if not isinstance(participant.get("pending", False), bool):
+            raise ValueError(f"{where}: invalid participant pending flag")
+        rows.append({key: participant[key] for key in
+                     ("role", "kind", "stable_id", "hint_scope", "hint_x", "hint_y", "hint_z")})
+        rows[-1]["pending"] = participant.get("pending", False)
+    return rows
+
+
 def summarize(document: object, mod: str | None = None,
               limit: int = 20, show_values: bool = False) -> dict:
     if not isinstance(document, dict) or not integer(document.get("version")):
@@ -107,16 +142,14 @@ def summarize(document: object, mod: str | None = None,
             if not integer(interval) or not 0 <= interval < 2**63:
                 raise ValueError(f"{location}: invalid interval_turns")
             version = task.get("payload_version")
-            if not integer(version) or version <= 0:
+            if not integer(version) or not 0 < version < 2**31:
                 raise ValueError(f"{location}: invalid payload_version")
             if task.get("owner_mod_id", owner) != owner:
                 raise ValueError(
                     f"{location}: owner_mod_id differs from record")
             payload = typed_values(task.get("payload"), location,
                                    show_values)
-            participants = task.get("participants", [])
-            if not isinstance(participants, list):
-                raise ValueError(f"{location}: expected participants array")
+            participants = task_participants(task.get("participants", []), location)
             row = {key: task[key] for key in ("id", "handler", "due_turn")}
             row["interval_turns"] = interval
             row["payload_version"] = version
