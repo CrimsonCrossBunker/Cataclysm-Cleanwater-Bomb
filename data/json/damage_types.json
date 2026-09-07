@@ -38,7 +38,6 @@
     "melee_crit_dmg_mult_per_skill": 0.02,
     "melee_crit_armor_mult": 0.75,
     "melee_crit_armor_penetration": 5,
-    "bleed_duration_mult_per_skill": 0.025,
     "name": { "ctxt": "damage_type", "str": "cut" },
     "skill": "cutting",
     "bash_conversion_factor": 0.75,
