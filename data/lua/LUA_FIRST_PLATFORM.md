@@ -361,6 +361,16 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
+Task query results (`tasks.get`, `tasks.next`, and `tasks.list`) are detached
+snapshots. The draft lifetime fix copies selected native records before allocating
+Lua result tables, so cancellation during a Lua allocation cannot invalidate the
+records being returned. Native regression source models cancellation at that
+boundary; it has not been compiled or executed.
+
+任务查询 `tasks.get`、`tasks.next`、`tasks.list` 返回独立快照。生命周期修复草稿在
+分配 Lua 返回表前复制选中的原生记录，避免 Lua 分配期间取消任务导致正在返回的记录
+失效。回归测试源码模拟该边界上的取消操作，尚未编译或执行。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy

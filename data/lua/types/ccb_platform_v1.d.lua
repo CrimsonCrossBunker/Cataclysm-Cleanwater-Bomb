@@ -6245,6 +6245,7 @@ function CcbPlatformStateScope.set(key, value) end
 ---@field vehicle_uid? integer Stable Vehicle uid; nil unless kind is 'vehicle'.
 ---@field pending boolean True when this required participant is unavailable; the whole task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
 
+---Detached task data: later cancellation or scheduling does not change this snapshot.
 ---@class CcbPlatformTaskSnapshot
 ---@field id integer
 ---@field handler string
