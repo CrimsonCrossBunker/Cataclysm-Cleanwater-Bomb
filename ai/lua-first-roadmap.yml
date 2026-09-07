@@ -678,3 +678,4 @@ capabilities:
     next_actions:
       - The initial declaration-snapshot, scaffold/editor and static-diagnostic slice passed local tool tests and the real LuaLS gate; it does not implement an in-game debugger, state/task inspector or native compatibility negotiation.
       - Continue runtime debugging, cookbook and author-workflow improvements as independent batches with their own evidence; do not make the whole author-experience capability a core Platform closure dependency.
+      - Draft state-scope key pages expose copied, owner-scoped names with bounded output; native regression source exists but compilation and runtime acceptance have not run.

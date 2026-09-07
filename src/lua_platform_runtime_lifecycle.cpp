@@ -865,6 +865,51 @@ void detail::install_runtime_state_task_api(
             set_persistent_value( owner.get()->*member, key, entry,
                                   "state." + name + ".set" );
         } );
+        scope.set_function( "keys", [weak, member, name]( sol::this_state state,
+        const sol::optional<std::string> &after_key, const sol::optional<std::int64_t> &requested_limit ) {
+            const std::shared_ptr<runtime> owner = weak.lock();
+            if( !owner || !owner->world_is_ready ) {
+                throw std::runtime_error( "state." + name + " is only available after world_ready" );
+            }
+            const std::int64_t limit = requested_limit.value_or( 20 );
+            if( limit < 1 || limit > 200 ) {
+                throw std::invalid_argument( "state.keys limit must be between 1 and 200" );
+            }
+            const persistent_state &values = owner.get()->*member;
+            const std::size_t total = values.size();
+            std::size_t matched = 0;
+            std::set<std::string> keys;
+            for( const auto &entry : values ) {
+                if( after_key && entry.first <= *after_key ) {
+                    continue;
+                }
+                ++matched;
+                keys.insert( entry.first );
+                if( keys.size() > static_cast<std::size_t>( limit ) ) {
+                    auto last = keys.end();
+                    keys.erase( --last );
+                }
+            }
+            // Finish traversing native state before Lua allocation can run GC.
+            // Keep only one page of copied keys, never borrowed value references.
+            sol::state_view lua_state( state );
+            sol::table result = lua_state.create_table();
+            sol::table items = lua_state.create_table();
+            int index = 1;
+            for( const std::string &key : keys ) {
+                items[index++] = key;
+            }
+            result["items"] = std::move( items );
+            result["total"] = total;
+            result["matched"] = matched;
+            result["returned"] = keys.size();
+            result["limit"] = limit;
+            result["truncated"] = matched > keys.size();
+            if( matched > keys.size() ) {
+                result["next_after"] = *keys.rbegin();
+            }
+            return result;
+        } );
         return scope;
     };
     sol::table state_api = lua.create_table();

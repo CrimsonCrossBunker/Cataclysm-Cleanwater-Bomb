@@ -6202,6 +6202,15 @@ function CcbPlatformDialogueApi.limits() end
 ---@param callback fun(payload: table<string, boolean|integer|number|string>, migration: PlatformTaskMigration): table<string, boolean|integer|number|string>
 function CcbPlatformRuntime.migrate_task_payload(handler_id, from_version, to_version, callback) end
 
+---@class CcbPlatformStateKeyPage
+---@field items string[] Copied keys in bytewise lexicographic order; values are not included.
+---@field total integer Number of keys in this Mod and scope at snapshot time.
+---@field matched integer Keys strictly after the cursor, including this page.
+---@field returned integer Number of keys in items.
+---@field limit integer Requested page limit.
+---@field truncated boolean More keys matched than fit in this page.
+---@field next_after? string Exclusive cursor for the next page; nil on the last page.
+
 ---@class CcbPlatformStateScope
 local CcbPlatformStateScope = {}
 
@@ -6213,6 +6222,13 @@ function CcbPlatformStateScope.get(key, fallback) end
 ---@param key string
 ---@param value boolean|integer|number|string|nil
 function CcbPlatformStateScope.set(key, value) end
+
+---Read-only discovery for this Mod's selected scope after world_ready.
+---Each call observes current state; restart pagination if keys change between calls.
+---@param after_key? string Exclusive bytewise cursor, not required to identify an existing key.
+---@param requested_limit? integer 1..200; defaults to 20.
+---@return CcbPlatformStateKeyPage
+function CcbPlatformStateScope.keys(after_key, requested_limit) end
 
 ---@class CcbPlatformState
 ---@field character CcbPlatformStateScope

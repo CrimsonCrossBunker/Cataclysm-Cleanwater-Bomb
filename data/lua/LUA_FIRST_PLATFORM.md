@@ -361,6 +361,21 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
+The draft read-only `ccb.state.world.keys(after_key?, limit?)` and character-scope
+equivalent expose copied keys for the owning Mod after `world_ready`. Pages use
+bytewise lexicographic order, an exclusive string cursor and a default limit of
+20 (1..200). They include total/matched/returned counts and `next_after` only when
+another page exists. Values remain behind `get`; modifying the returned table
+does not mutate state. Each call takes a fresh snapshot, so restart pagination
+if keys change between calls. Native regression source exists; compilation and
+runtime acceptance have not run.
+
+只读草稿接口 `ccb.state.world.keys(after_key?, limit?)` 及角色作用域版本在 world-ready
+后枚举当前 Mod 的键，返回复制的键名，不包含值。按字节字典序排列，字符串游标表示严格
+晚于该键；默认每页 20 项，可选 1–200。结果含总数、匹配数、返回数，仅有下一页时提供
+`next_after`。修改返回表不修改状态；每次调用重新获取快照，分页期间键变化时应重新开始。
+回归测试源码已补，尚未编译或进行运行时验收。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
