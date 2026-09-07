@@ -42,6 +42,51 @@ class ModSdkTest(unittest.TestCase):
         mod_sdk.write_editor_files(mod, source)
         return mod
 
+    def test_initialize_existing_mod_preserves_author_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "target.d.lua"
+            source.write_text(DECLARATIONS, encoding="utf-8")
+            mod = root / "existing"
+            mod.mkdir()
+            main = mod / "main.lua"
+            main.write_text('error("do not execute")', encoding="utf-8")
+            before = main.read_bytes()
+            metadata = mod_sdk.initialize_sdk(mod, source)
+            self.assertEqual(metadata, mod_sdk.read_sdk(mod)[0])
+            self.assertEqual(main.read_bytes(), before)
+            self.assertEqual((mod / ".ccb-sdk/ccb.lua").read_bytes(), source.read_bytes())
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                mod_sdk.initialize_sdk(mod, source)
+
+    def test_initialize_refuses_existing_config_and_cleans_partial_sdk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "target.d.lua"
+            source.write_text(DECLARATIONS, encoding="utf-8")
+            mod = root / "existing"
+            mod.mkdir()
+            config = mod / ".luarc.json"
+            config.write_text("author settings", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                mod_sdk.initialize_sdk(mod, source)
+            self.assertFalse((mod / ".ccb-sdk").exists())
+            self.assertEqual(config.read_text(), "author settings")
+            config.unlink()
+            original_open = Path.open
+
+            def raced_config(path, mode="r", *args, **kwargs):
+                if path == config and mode == "xb":
+                    with original_open(config, "w", encoding="utf-8") as stream:
+                        stream.write("concurrent author settings")
+                return original_open(path, mode, *args, **kwargs)
+
+            with patch.object(Path, "open", raced_config):
+                with self.assertRaises(FileExistsError):
+                    mod_sdk.initialize_sdk(mod, source)
+            self.assertFalse((mod / ".ccb-sdk").exists())
+            self.assertEqual(config.read_text(), "concurrent author settings")
+
     def test_snapshot_survives_source_changes_and_project_move(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

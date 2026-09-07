@@ -59,6 +59,20 @@ editor metadata, not a runtime manifest or executable content; omit them with
 major version before registering content. An exact declaration revision check
 is an author upgrade aid, not a new mandatory runtime version system.
 
+## Add an editor SDK to an existing Mod
+
+```sh
+python3 tools/lua_api/mod_sdk.py init /path/ExistingMod \
+  --declarations /path/game/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This adds the frozen `.ccb-sdk/` snapshot and `.luarc.json` editor configuration
+used by the scaffolder. It does not execute or modify author Lua files. Existing SDKs or
+editor configuration are never overwritten; keep or integrate them manually.
+A failed initialization removes only files created by that attempt. Without
+`--declarations`, the tool snapshots its own checkout's declaration file.
+The added JSON files configure the editor and are not runtime manifests.
+
 ## Diagnose a Mod
 
 With LuaLS installed (the CI/editor gate is tested with 3.19.1):

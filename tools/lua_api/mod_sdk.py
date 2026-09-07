@@ -23,7 +23,7 @@ def digest(contents: bytes) -> str:
 
 
 def write_editor_files(target: Path, declarations: Path) -> None:
-    """Write only inside create_lua_mod's unpublished staging directory."""
+    """Write only inside an unpublished scaffold or SDK staging directory."""
     contents = declarations.read_bytes()
     text = contents.decode("utf-8")
     if "---@class CcbPlatformV1" not in text or "return ccb" not in text:
@@ -55,6 +55,40 @@ def write_editor_files(target: Path, declarations: Path) -> None:
     (target / ".luarc.json").write_text(
         json.dumps(settings, indent=2) + "\n", encoding="utf-8"
     )
+
+
+
+def initialize_sdk(mod: Path, declarations: Path) -> dict:
+    """Add editor metadata to an existing directory without replacing author files."""
+    mod = mod.resolve(strict=True)
+    if not mod.is_dir():
+        raise ValueError(f"{mod}: expected an existing Mod directory")
+    sdk = mod / SDK_DIRECTORY
+    for destination in (sdk, mod / ".luarc.json"):
+        if destination.exists() or destination.is_symlink():
+            raise ValueError(f"{destination}: already exists; keep or integrate the existing editor setup")
+    with tempfile.TemporaryDirectory(prefix="ccb-sdk-init-") as directory:
+        staging = Path(directory)
+        write_editor_files(staging, declarations)
+        created = []
+        sdk.mkdir()  # Exclusive reservation; never adopt an existing directory.
+        try:
+            for relative in (Path(SDK_DIRECTORY) / "ccb.lua",
+                             Path(SDK_DIRECTORY) / "version.json", Path(".luarc.json")):
+                destination = mod / relative
+                with destination.open("xb") as stream:
+                    created.append(destination)
+                    stream.write((staging / relative).read_bytes())
+            return read_sdk(mod)[0]
+        except BaseException:
+            # Remove only files created by this attempt; preserve a raced config.
+            for destination in reversed(created):
+                destination.unlink(missing_ok=True)
+            try:
+                sdk.rmdir()
+            except OSError:
+                pass  # Do not remove any unexpected files added by another process.
+            raise
 
 
 def read_sdk(mod: Path) -> tuple[dict, str]:
@@ -231,6 +265,10 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    initialize = commands.add_parser("init", help="add an editor SDK to an existing Mod directory")
+    initialize.add_argument("mod", type=Path)
+    initialize.add_argument("--declarations", type=Path, default=DEFAULT_DECLARATIONS,
+                            help="declaration file from the target game package")
     compare = commands.add_parser(
         "compare", help="compare two Mod SDK snapshots"
     )
@@ -249,6 +287,10 @@ def main() -> int:
     check.add_argument("--language-server", default="lua-language-server")
     args = parser.parse_args()
     try:
+        if args.command == "init":
+            metadata = initialize_sdk(args.mod, args.declarations)
+            print(json.dumps({"mod": str(args.mod.resolve()), "sdk": metadata}, indent=2))
+            return 0
         if args.command == "compare":
             print(json.dumps(compare_sdks(args.old, args.new),
                              ensure_ascii=False, indent=2))
