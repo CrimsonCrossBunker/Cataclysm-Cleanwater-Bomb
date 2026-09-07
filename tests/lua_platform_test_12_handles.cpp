@@ -115,7 +115,7 @@ TEST_CASE( "lua_platform_vehicle_part_handles_fail_closed_on_remove_and_replace"
             part, first, { "vehicle_part", 0, 0, 0, 0, {} }, runtime, 8 );
     REQUIRE( part_handle.kind() == cata::lua_platform::game_handle_kind::vehicle_part );
     CHECK( part_handle.resolve_vehicle_part_for_vehicle(
-                first_handle, runtime, 8 ).value == &part );
+               first_handle, runtime, 8 ).value == &part );
 
     const std::optional<cata::lua_platform::game_handle_error> wrong_vehicle =
         part_handle.resolve_vehicle_part_for_vehicle(
@@ -144,7 +144,7 @@ TEST_CASE( "lua_platform_vehicle_part_handles_fail_closed_on_remove_and_replace"
     CHECK( replacement_handle.kind() ==
            cata::lua_platform::game_handle_kind::vehicle_part );
     CHECK( replacement_handle.resolve_vehicle_part_for_vehicle(
-                first_handle, runtime, 8 ).value == &part );
+               first_handle, runtime, 8 ).value == &part );
 }
 
 TEST_CASE( "lua_platform_vehicle_handles_fail_closed_after_unload",
@@ -172,7 +172,7 @@ TEST_CASE( "lua_platform_vehicle_api_has_no_implicit_vehicle_selector",
     sol::table services = lua.create_table();
     cata::lua_platform::install_vehicle_api(
         services,
-        []() {
+    []() {
         return cata::lua_platform::game_handle_runtime();
     },
     []() {
@@ -185,6 +185,7 @@ TEST_CASE( "lua_platform_vehicle_api_has_no_implicit_vehicle_selector",
     REQUIRE( vehicles.valid() );
     CHECK( vehicles["parts"].valid() );
     CHECK( vehicles["set_part_enabled"].valid() );
+    CHECK( vehicles["open_part_service"].valid() );
     CHECK_FALSE( vehicles["marked_service_vehicle"].valid() );
     CHECK_FALSE( vehicles["current"].valid() );
     CHECK_FALSE( vehicles["nearest"].valid() );
@@ -204,13 +205,13 @@ TEST_CASE( "lua_platform_vehicle_mutations_use_the_platform_write_gate",
     sol::table services = lua.create_table();
     bool write_called = false;
     cata::lua_platform::install_game_handle_api(
-        lua, services, [&]() {
+    lua, services, [&]() {
         return runtime;
     }, []() {
         return std::size_t( 10 );
     }, []() {} );
     cata::lua_platform::install_vehicle_api(
-        services, [&]() {
+    services, [&]() {
         return runtime;
     }, []() {
         return std::size_t( 10 );
@@ -223,6 +224,108 @@ TEST_CASE( "lua_platform_vehicle_mutations_use_the_platform_write_gate",
     const sol::protected_function_result result = rename( handle, "explicit" );
     REQUIRE( result.valid() );
     CHECK( write_called );
+}
+
+TEST_CASE( "lua_platform_vehicle_part_service_rejects_invalid_requests_before_ui",
+           "[lua][platform][vehicles][vehicle_service]" )
+{
+    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 47 );
+    std::size_t active_world = 11;
+    vehicle target{ vproto_id() };
+    const cata::lua_platform::game_handle vehicle_handle =
+        cata::lua_platform::game_handle::from_vehicle(
+            target, { "map_vehicle", 0, 0, 0, 0, {} }, runtime, active_world );
+    npc mechanic;
+    mechanic.normalize();
+    mechanic.setID( character_id( 1220 ), true );
+    mechanic.set_value( "vehicle_part_service_status", "unchanged" );
+    const cata::lua_platform::game_handle mechanic_handle =
+        cata::lua_platform::game_handle::from_creature(
+            mechanic, { "npc", 1220, 0, 0, 0, {} }, runtime, active_world );
+
+    sol::state lua;
+    sol::table services = lua.create_table();
+    bool allow_write = true;
+    bool write_called = false;
+    cata::lua_platform::install_game_handle_api(
+    lua, services, [&]() {
+        return runtime;
+    }, [&]() {
+        return active_world;
+    }, []() {} );
+    cata::lua_platform::install_vehicle_api(
+    services, [&]() {
+        return runtime;
+    }, [&]() {
+        return active_world;
+    }, []() {}, [&]() {
+        write_called = true;
+        if( !allow_write ) {
+            throw std::runtime_error( "Part service requires a writable runtime phase" );
+        }
+    } );
+    const sol::protected_function open = services["vehicles"]["open_part_service"];
+    REQUIRE( open.valid() );
+    const auto check_error = [&]( const cata::lua_platform::game_handle & vehicle,
+                                  const cata::lua_platform::game_handle & provider,
+    const std::string & code ) {
+        const sol::protected_function_result result = open( vehicle, provider );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE_FALSE( envelope["ok"].get<bool>() );
+        CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() == code );
+    };
+
+    SECTION( "read_only_phase_rejects_before_resolving_or_opening_ui" ) {
+        allow_write = false;
+        const sol::protected_function_result result = open( vehicle_handle, mechanic_handle );
+        REQUIRE_FALSE( result.valid() );
+        const sol::error error = result;
+        CHECK( std::string( error.what() ).find( "Part service requires a writable runtime phase" ) !=
+               std::string::npos );
+    }
+    SECTION( "vehicle_must_be_an_explicit_vehicle_handle" ) {
+        check_error( mechanic_handle, mechanic_handle, "wrong_kind" );
+    }
+    SECTION( "mechanic_must_be_an_explicit_creature_handle" ) {
+        check_error( vehicle_handle, vehicle_handle, "wrong_kind" );
+    }
+    SECTION( "mechanic_must_be_an_npc" ) {
+        monster creature;
+        creature.set_hp( 1 );
+        const cata::lua_platform::game_handle creature_handle =
+            cata::lua_platform::game_handle::from_creature(
+                creature, { "test_creature", 0, 0, 0, 0, {} }, runtime, active_world );
+        check_error( vehicle_handle, creature_handle, "wrong_subtype" );
+    }
+    SECTION( "retired_vehicle_identity_is_rejected" ) {
+        cata::lua_platform::retire_vehicle_handle_identity( target );
+        check_error( vehicle_handle, mechanic_handle, "stale_vehicle" );
+    }
+    SECTION( "replaced_mechanic_identity_is_rejected" ) {
+        mechanic.setID( character_id( 1221 ), true );
+        check_error( vehicle_handle, mechanic_handle, "stale_identity" );
+    }
+    SECTION( "replaced_world_is_rejected" ) {
+        ++active_world;
+        check_error( vehicle_handle, mechanic_handle, "stale_world" );
+    }
+    SECTION( "invalid_repair_and_install_multipliers_are_rejected" ) {
+        for( const double multiplier : {
+                 -1.0, 0.0, 1000.1, std::numeric_limits<double>::infinity(),
+                 std::numeric_limits<double>::quiet_NaN()
+                 } ) {
+            CAPTURE( multiplier );
+            CHECK_FALSE( open( vehicle_handle, mechanic_handle, multiplier, 1.0 ).valid() );
+            CHECK_FALSE( open( vehicle_handle, mechanic_handle, 1.0, multiplier ).valid() );
+        }
+    }
+    CHECK( write_called );
+    CHECK( target.maybe_get_value( "vehicle_part_repair_target" ) == nullptr );
+    CHECK( mechanic.get_value( "vehicle_part_service_status" ).str() == "unchanged" );
+    CHECK( mechanic.maybe_get_value( "vehicle_part_repair_price_multiplier" ) == nullptr );
+    CHECK( mechanic.maybe_get_value( "vehicle_part_install_price_multiplier" ) == nullptr );
 }
 
 TEST_CASE( "lua_platform_vehicle_cargo_requires_part_handle_not_index",
@@ -238,13 +341,13 @@ TEST_CASE( "lua_platform_vehicle_cargo_requires_part_handle_not_index",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [&]() {
+    lua, services, [&]() {
         return runtime;
     }, []() {
         return std::size_t( 1 );
     }, []() {} );
     cata::lua_platform::install_item_api(
-        services, [&]() {
+    services, [&]() {
         return runtime;
     }, []() {
         return std::size_t( 1 );
@@ -254,11 +357,11 @@ TEST_CASE( "lua_platform_vehicle_cargo_requires_part_handle_not_index",
     REQUIRE( item_services.valid() );
     const sol::protected_function page = item_services["page"];
     const sol::table typed_holder = lua.create_table_with(
-                                         "kind", "vehicle_cargo",
-                                         "vehicle", vehicle_handle,
-                                         // Deliberately wrong kind: the
-                                         // resolver must reject it, not scan.
-                                         "part", vehicle_handle );
+                                        "kind", "vehicle_cargo",
+                                        "vehicle", vehicle_handle,
+                                        // Deliberately wrong kind: the
+                                        // resolver must reject it, not scan.
+                                        "part", vehicle_handle );
     const sol::protected_function_result wrong_part = page( typed_holder );
     REQUIRE( wrong_part.valid() );
     const sol::table wrong_part_envelope = wrong_part.get<sol::table>();
@@ -395,7 +498,7 @@ TEST_CASE( "lua_platform_item_page_is_the_only_public_traversal_entry",
     sol::table services = lua.create_table();
     cata::lua_platform::install_item_api(
         services,
-        []() {
+    []() {
         return cata::lua_platform::game_handle_runtime();
     },
     []() {
@@ -435,7 +538,7 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
         item( itype_id( "2x4" ) ), false, false, false );
     item nested_container( itype_id( "debug_backpack" ) );
     REQUIRE( nested_container.put_in(
-                  item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
+                 item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
     character.inv->add_item(
         std::move( nested_container ), false, false, false );
 
@@ -453,9 +556,9 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
         return active_world;
     };
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
 
     const sol::table holder = lua.create_table_with(
                                   "kind", "character",

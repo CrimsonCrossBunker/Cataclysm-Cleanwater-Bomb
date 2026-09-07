@@ -4196,6 +4196,13 @@ class vehicle_part_repair_service_activity_actor : public wait_activity_actor
         explicit vehicle_part_repair_service_activity_actor() = default;
 };
 
+struct vehicle_part_install_service_entry {
+    point_rel_ms mount = point_rel_ms::zero;
+    item reserved_part;
+    bool supplied_by_mechanic = false;
+    int paid_cost = 0;
+};
+
 class vehicle_part_install_service_activity_actor : public wait_activity_actor
 {
     public:
@@ -4206,10 +4213,25 @@ class vehicle_part_install_service_activity_actor : public wait_activity_actor
                 std::string variant, int direction_degrees, bool disable_flyable ) :
             wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
             vehicle_pos( vehicle_pos ), vehicle_snapshot( std::move( vehicle_snapshot ) ),
-            mount( mount ), part_id( part_id ), reserved_part( std::move( reserved_part ) ),
-            supplied_by_mechanic( supplied_by_mechanic ), paid_cost( paid_cost ),
+            part_id( part_id ),
+            variant( std::move( variant ) ), direction_degrees( direction_degrees ),
+            disable_flyable( disable_flyable ) {
+            entries.push_back( { mount, std::move( reserved_part ), supplied_by_mechanic, paid_cost } );
+        }
+
+        vehicle_part_install_service_activity_actor( time_duration initial_wait_time,
+                character_id mechanic_id, const tripoint_abs_ms &vehicle_pos,
+                std::string vehicle_snapshot, const vpart_id &part_id,
+                std::vector<vehicle_part_install_service_entry> entries,
+                std::string variant, int direction_degrees, bool disable_flyable ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
+            vehicle_pos( vehicle_pos ), vehicle_snapshot( std::move( vehicle_snapshot ) ),
+            part_id( part_id ), entries( std::move( entries ) ),
             variant( std::move( variant ) ), direction_degrees( direction_degrees ),
             disable_flyable( disable_flyable ) {}
+
+        static bool can_install_order( map &here, const vehicle &target, const vpart_id &part_id,
+                                       const std::vector<vehicle_part_install_service_entry> &entries );
 
         void start( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
@@ -4232,14 +4254,12 @@ class vehicle_part_install_service_activity_actor : public wait_activity_actor
         character_id mechanic_id;
         tripoint_abs_ms vehicle_pos;
         std::string vehicle_snapshot;
-        point_rel_ms mount = point_rel_ms::zero;
         vpart_id part_id;
-        item reserved_part;
-        bool supplied_by_mechanic = false;
-        int paid_cost = 0;
+        std::vector<vehicle_part_install_service_entry> entries;
         std::string variant;
         int direction_degrees = 0;
         bool disable_flyable = false;
+        bool settled = false;
 
         void settle_failed_order( Character &who, const std::string &status );
         explicit vehicle_part_install_service_activity_actor() = default;

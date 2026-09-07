@@ -2176,6 +2176,13 @@
   },
   {
     "type": "keybinding",
+    "id": "BATCH_INSTALL",
+    "category": "VEH_INTERACT",
+    "name": "Install the same part in a selected rectangle",
+    "bindings": [ { "input_method": "keyboard_any", "key": "v" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "REPAIR",
     "category": "VEH_INTERACT",
     "name": "Repair part",
