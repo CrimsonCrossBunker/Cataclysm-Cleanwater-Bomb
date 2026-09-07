@@ -3661,8 +3661,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 40)
-            self.assertEqual(len(result.partial), 8)
+            self.assertEqual(len(result.converted), 41)
+            self.assertEqual(len(result.partial), 7)
             self.assertIn(
                 ".needs.hunger > 100", main
             )
@@ -3679,7 +3679,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 "services.gameplay.environment.safe_mode_dangerous(", main
             )
-            for partial_index in ("34", "35", "36", "37", "38", "42", "45", "47"):
+            for partial_index in ("34", "35", "36", "37", "42", "45", "47"):
                 self.assertIn(
                     f"EOC cnst_{partial_index} condition TODO: translate the "
                     "legacy condition into a Lua predicate",
@@ -3814,8 +3814,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 15)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 14)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn(
                 "context.actors.npc", main
             )
@@ -3859,7 +3859,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 '.movement.id == "crouch"', main
             )
-            self.assertNotIn(
+            self.assertIn(
                 "EOC dynamic_trait condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )

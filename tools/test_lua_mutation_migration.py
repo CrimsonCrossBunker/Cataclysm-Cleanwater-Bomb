@@ -11,6 +11,91 @@ import migrate_lua_first as migration
 
 
 class MutationMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_trait_query_ids_and_lists_preserve_participants_and_short_circuit(self):
+        queries = []
+        for prefix, target, observer in (("u_", "actor", "partner"), ("npc_", "partner", "actor")):
+            queries.extend([
+                ({prefix + "has_any_trait": []}, "false", None, None),
+                ({prefix + "has_any_trait": ["QUICK", {"context_val": "missing"}]}, "true", target, None),
+                ({prefix + "has_any_trait": ["QUICK"] * 64 + [{"context_val": "trait"}]}, "true", target, None),
+                ({prefix + "is_trait_purifiable": {"context_val": "trait"}}, "true", target, None),
+                ({prefix + "has_visible_trait": {"context_val": "trait"}}, "true", target, observer),
+                ({prefix + "has_trait": {"u_val": "trait"}}, "true", target, None),
+                ({prefix + "has_trait": {"npc_val": "trait"}}, "true", target, None),
+            ])
+        for condition, expected, target, observer in queries:
+            with self.subTest(condition=condition):
+                expression = migration.render_eoc_condition_expression(
+                    condition, avatar_actor_proven=True, npc_actor_expression="partner")
+                self.assertIsNotNone(expression)
+                script = """
+local actor, partner = {}, {}
+local context = {data={trait='FELINE_EARS'}}
+local function service_value(result) assert(result.ok); return result.value end
+local services = {types={}, mutations={}, variables={}}
+services.types.id = function(kind, id) assert(kind == 'mutation' and id ~= ''); return id end
+services.variables.resolve = function(data, owner, scope, key)
+ assert(owner == (scope == 'u' and actor or partner))
+ return {ok=true,value={value='FELINE_EARS'}}
+end
+"""
+                raw = next(iter(condition.values()))
+                script += "local match_quick = " + ("false" if isinstance(raw, list) and len(raw) > 64 else "true") + "\n"
+                if target is not None:
+                    script += f"""
+services.mutations.has = function(owner, id)
+ assert(owner == {target}); return {{ok=true,value=id == 'FELINE_EARS' or match_quick}}
+end
+services.mutations.is_purifiable = function(owner, id)
+ assert(owner == {target} and id == 'FELINE_EARS'); return {{ok=true,value=true}}
+end
+services.mutations.is_visible_to = function(subject, viewer, id)
+ assert(subject == {target} and viewer == {observer or "nil"} and id == 'FELINE_EARS')
+ return {{ok=true,value=true}}
+end
+"""
+                script += f"assert(({expression}) == {expected})"
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_checked_in_trait_condition_fragments(self):
+        root = Path(__file__).resolve().parents[1]
+        cases = [
+            ("data/json/npcs/holdouts/Mr_Lapin.json", "u_has_any_trait"),
+            ("data/json/npcs/refugee_center/surface_visitors/NPC_arsonist.json", "npc_has_visible_trait"),
+            ("data/mods/Xedra_Evolved/mutations/gracken_trait_eocs.json", "u_has_trait"),
+        ]
+
+        def fragments(value, selector):
+            if isinstance(value, dict):
+                if selector in value:
+                    yield {selector: value[selector]}
+                for child in value.values():
+                    yield from fragments(child, selector)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from fragments(child, selector)
+
+        for filename, selector in cases:
+            with self.subTest(filename=filename):
+                found = list(fragments(json.loads((root / filename).read_text()), selector))
+                self.assertTrue(found)
+                for condition in found:
+                    expression = migration.render_eoc_condition_expression(
+                        condition, avatar_actor_proven=True, npc_actor_expression="partner")
+                    self.assertIsNotNone(expression, condition)
+                    self.assertIn("services.mutations.", expression)
+                if selector == "npc_has_visible_trait":
+                    self.assertIn("is_visible_to(partner, actor,", expression)
+                if "gracken" in filename:
+                    dynamic = [condition for condition in found
+                               if isinstance(condition[selector], dict)]
+                    self.assertTrue(dynamic)
+                    expression = migration.render_eoc_condition_expression(
+                        dynamic[0], avatar_actor_proven=True)
+                    self.assertIn('context.data["mutation_id"]', expression)
+
     def test_non_equivalent_mutation_writes_require_an_explicit_choice(self):
         for prefix, event in (("u_", "game_start"), ("npc_", "npc_becomes_hostile")):
             for operation in ("add_trait", "lose_trait", "activate_trait", "deactivate_trait"):
@@ -110,7 +195,7 @@ class MutationMigrationTest(unittest.TestCase):
             selector = prefix + "_is_trait_purifiable"
             self.assertIsNone(migration.render_eoc_condition_expression({selector: "QUICK"}))
             proof = {"avatar_actor_proven" if prefix == "u" else "npc_actor_proven": True}
-            for value in ({"u_val": "trait"}, "", "x" * 257, "trait\0ignored"):
+            for value in ({"npc_val" if prefix == "u" else "u_val": "trait"}, "", "x" * 257, "trait\0ignored"):
                 with self.subTest(selector=selector, value=value):
                     self.assertIsNone(migration.render_eoc_condition_expression(
                         {selector: value}, **proof))
