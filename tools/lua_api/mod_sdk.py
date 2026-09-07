@@ -113,8 +113,13 @@ def declaration_surface(text: str) -> dict[str, list[str]]:
     result: dict[str, list[str]] = {}
     owner = ""
     annotations: list[str] = []
+    alias_lines: list[str] | None = None
     for line in text.splitlines():
         line = line.strip()
+        if line.startswith("---|") and alias_lines is not None:
+            alias_lines.append(line)
+            continue
+        alias_lines = None
         match = re.match(r"---@class\s+(\w+)", line)
         if match:
             owner = match[1]
@@ -123,7 +128,8 @@ def declaration_surface(text: str) -> dict[str, list[str]]:
             continue
         match = re.match(r"---@alias\s+(\w+)", line)
         if match:
-            result[f"alias {match[1]}"] = [line]
+            alias_lines = [line]
+            result[f"alias {match[1]}"] = alias_lines
             annotations = []
             continue
         if line.startswith("---@operator") and owner:

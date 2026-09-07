@@ -116,7 +116,8 @@ python3 tools/lua_api/mod_sdk.py compare /path/OldMod /path/NewVersionScaffold
 ```
 
 The JSON report shows the two SDK identities and added, removed, or changed
-class/field/function declarations, including parameter and return annotations.
+class/field/function and alias declarations, including parameter/return annotations
+and consecutive multiline alias members (`---|`).
 It never overwrites either project. Review changed declarations, read the game's
 release/migration notes, then intentionally update the editor SDK and rerun static
 and affected runtime checks. Unchanged signatures do not prove behavior parity;

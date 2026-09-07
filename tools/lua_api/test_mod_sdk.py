@@ -149,6 +149,22 @@ class ModSdkTest(unittest.TestCase):
                 {path: path.read_bytes() for path in paths}, before)
             self.assertFalse((root / ".ccb-sdk").exists())
 
+    def test_compare_reports_multiline_alias_members_without_mixing_aliases(self):
+        aliases = ("\n---@alias EquipmentError\n"
+                   "---| 'stale_runtime'\n---| 'wrong_holder'\n"
+                   "\n---@alias Operation\n---| 'wield'\n---| 'wear'\n")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before = self.make_sdk(root, "before", DECLARATIONS + aliases)
+            after = self.make_sdk(root, "after", DECLARATIONS + aliases.replace(
+                "---| 'wrong_holder'", "---| 'invalid_holder'"))
+            report = mod_sdk.compare_sdks(before, after)
+            self.assertEqual(set(report["changed"]), {"alias EquipmentError"})
+            difference = report["changed"]["alias EquipmentError"]
+            self.assertIn("---| 'wrong_holder'", difference["before"])
+            self.assertIn("---| 'invalid_holder'", difference["after"])
+            self.assertNotIn("---| 'wear'", difference["after"])
+
     def test_compare_release_rejects_invalid_target_and_tampered_sdk(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
