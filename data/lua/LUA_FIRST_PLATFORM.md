@@ -454,6 +454,20 @@ PR 664 的基础设施范围和后续能力证据保留在 roadmap，不作为�
 可选标准 helper、国际化与作者工具按需求独立推进；候选 `ccb.std` 名称不是冻结公开契约，
 未来实现仍使用唯一 `require("ccb")` 入口。
 
+### Runtime text internationalization / 运行时文本国际化（草稿实现）
+
+The independent draft exposes `ccb.services.translate(text, context?)` and
+`ccb.services.translate_plural(singular, plural, count, context?)` after
+`world_ready`. Both return strings using the current native catalog. Literal
+calls can be extracted by `tools/lua_api/extract_translations.py`; its README
+contains the author example and catalog limitations. This is source-level work,
+not completed native acceptance. Deferred content-name translations, metadata
+translations and live catalog reload are outside this initial slice.
+
+独立草稿提供上述运行时文本接口，复用原生翻译目录、上下文与复数规则。这里只完成实现、
+声明、提取工具与测试源码；原生编译、真实语言目录及切换验收尚未执行。不能据此宣称
+完整国际化已经完成，也不将它加入核心 Platform 或 EOC 全量验收的前置条件。
+
 ## Templates, examples, and maintenance / 模板、样例与维护
 
 `data/lua/templates/minimal/` and `complete/` are authoring scaffolds. The

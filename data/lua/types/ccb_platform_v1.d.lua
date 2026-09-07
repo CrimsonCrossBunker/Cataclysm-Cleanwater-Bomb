@@ -10371,6 +10371,23 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 function CcbPlatformServices.message(text) end
 
+---Translate runtime text using the current game language. Available after world_ready.
+---Missing translations return the source text. Text/context must not contain NUL.
+---@param text string Literal source text for extraction.
+---@param context? string Literal disambiguation context.
+---@return string
+function CcbPlatformServices.translate(text, context) end
+
+---Translate runtime plural text using the native catalog's plural rules.
+---Without a translation, count 1 selects singular; other counts select plural.
+---Available after world_ready. Text/context must not contain NUL.
+---@param singular string Literal singular source text.
+---@param plural string Literal plural source text.
+---@param count integer Nonnegative and representable by the target's native size_t.
+---@param context? string Literal disambiguation context.
+---@return string
+function CcbPlatformServices.translate_plural(singular, plural, count, context) end
+
 ---@return integer
 function CcbPlatformServices.turn() end
 

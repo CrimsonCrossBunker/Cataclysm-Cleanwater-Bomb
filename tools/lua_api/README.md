@@ -116,3 +116,53 @@ python3 tools/test_create_lua_mod.py
 The editor gate checks both real templates and deliberately invalid author code
 for unknown APIs, missing arguments and wrong argument types. It is a static
 acceptance gate and does not trigger a C++ build or a full content audit.
+
+## Extract runtime translations (draft API)
+
+The independent localization implementation adds `ccb.services.translate(text,
+context?)` and `ccb.services.translate_plural(singular, plural, count, context?)`.
+These calls use the current native game catalog after `world_ready`. They return
+plain strings; they do not create deferred translation objects for content names
+or Mod metadata. Missing entries return source text (singular for count 1,
+plural otherwise). Negative counts, counts outside native `size_t`, and embedded
+NUL in text/context are rejected. No new catalog registry or Lua interpreter is
+introduced. Native loading, locale switching and plural-rule acceptance remain
+pending; source implementation is not a shipped-compatibility claim.
+
+Write full calls with literal messages and optional literal context:
+
+```lua
+local ccb = require("ccb")
+ccb.runtime.handler("translated_ready", function()
+    ccb.services.message(ccb.services.translate("Ready", "MyMod status"))
+    local count = 2
+    local message = ccb.services.translate_plural(
+        "%d item is ready", "%d items are ready", count, "MyMod status")
+    ccb.services.message(string.format(message, count))
+end)
+ccb.runtime.on("world_ready", "translated_ready")
+```
+
+Use GNU `xgettext` to extract explicitly named source files without executing
+Lua. Run from the Mod root for stable relative references:
+
+```sh
+python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.lua --output messages.pot
+python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.lua --output messages.pot --check
+```
+
+The tool does not traverse directories. `--check` does not write; exit 1 means a
+missing/stale POT and exit 2 means extraction/setup failure. Output is stable for
+unchanged inputs and the same xgettext version. Calls through renamed aliases,
+computed messages, and dynamic contexts cannot be extracted reliably: keep the
+full `ccb.services` spelling and literals. Review the POT after extraction.
+Formatting is a separate Lua operation; translators must preserve placeholders.
+
+Translate the POT into PO catalogs with normal gettext tooling. For an external
+Mod under the game's configured user Mod directory, the existing native scanner
+accepts `MyMod/lang/mo/<language>/LC_MESSAGES/MyMod.mo`; language is taken from
+the parent of `LC_MESSAGES`. Catalog compilation/installation is a separate
+release step. Bundled Mod catalogs are not automatically discovered by that
+user-directory scan. The native registry is shared: use a distinctive context
+for ambiguous/common messages. This batch does not change catalog precedence or
+add live catalog reload. Restart the game after installing changed catalogs.
