@@ -67,11 +67,11 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
     bool completed = false;
     lua.set_function( "accept", [&]( const sol::table & ) {
         const cata::lua_platform::game_handle handle = cata::lua_platform::game_handle::from_creature(
-                new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
-                              0, 0, 0, {}
-                            },
-                cata::lua_platform::detail::runtime_handle_identity( runtime ),
-                cata::lua_platform::runtime_world_generation() );
+                    new_target, { npc_target ? "npc" : "avatar", new_target.getID().get_value(),
+                                  0, 0, 0, {}
+                                },
+                    cata::lua_platform::detail::runtime_handle_identity( runtime ),
+                    cata::lua_platform::runtime_world_generation() );
         sol::table services = ccb["services"];
         const auto add = [&]() {
             const std::string timing = custom_time ?
@@ -94,7 +94,7 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
             const int before = new_target.has_morale( type );
             sol::protected_function function = services["morale"]["add"];
             sol::protected_function_result call = function( handle,
-                cata::lua_platform::script_game_id( "morale", type.str() ), sign * 12, sign * 20, options );
+                                                  cata::lua_platform::script_game_id( "morale", type.str() ), sign * 12, sign * 20, options );
             REQUIRE( call.valid() );
             sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );
@@ -118,13 +118,13 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
         for( int repeat = 0; repeat < 2; ++repeat ) {
             talk_effect_t effect;
             effect.parse_sub_effect( json_loader::from_string( R"({")" + prefix +
-                    R"(lose_morale": "morale_feeling_good"})" ).get_object(), "morale_semantics" );
+                                     R"(lose_morale": "morale_feeling_good"})" ).get_object(), "morale_semantics" );
             for( const talk_effect_fun_t &function : effect.effects ) {
                 function( old_dialogue );
             }
             sol::protected_function function = services["morale"]["remove"];
             sol::protected_function_result call = function( handle,
-                cata::lua_platform::script_game_id( "morale", type.str() ) );
+                                                  cata::lua_platform::script_game_id( "morale", type.str() ) );
             REQUIRE( call.valid() );
             sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );

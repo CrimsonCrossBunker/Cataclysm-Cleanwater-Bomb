@@ -94,8 +94,8 @@ struct effect_fixture {
                 const std::string &part, const int intensity ) {
         sol::protected_function function = services["effects"]["has"];
         sol::protected_function_result call = function( handle( npc_target ),
-            cata::lua_platform::script_game_id( "effect", id ),
-            cata::lua_platform::script_game_id( "body_part", part ), intensity );
+                                              cata::lua_platform::script_game_id( "effect", id ),
+                                              cata::lua_platform::script_game_id( "body_part", part ), intensity );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -176,9 +176,9 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(, "force": true})" );
         sol::protected_function add = modern.services["effects"]["add"];
         sol::protected_function_result call = add( modern.handle( npc_target ),
-            cata::lua_platform::script_game_id( "effect", "bleed" ),
-            cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
-            options );
+                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
+                                              cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
+                                              options );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -195,8 +195,8 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(lose_effect": "bleed", "target_part": "arm_l"})" );
         sol::protected_function remove = modern.services["effects"]["remove"];
         sol::protected_function_result call = remove( modern.handle( npc_target ),
-            cata::lua_platform::script_game_id( "effect", "bleed" ),
-            cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
+                                              cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -224,8 +224,8 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result call = add( modern.handle( npc_target ),
-        cata::lua_platform::script_game_id( "effect", "bleed" ),
-        cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
+                                          cata::lua_platform::script_game_id( "effect", "bleed" ),
+                                          cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -258,8 +258,8 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
                           R"("duration": 0, "target_part": "arm_l", "intensity": -1})" );
     sol::protected_function adjust = modern.services["effects"]["adjust_intensity"];
     sol::protected_function_result call = adjust( modern.handle( npc_target ),
-        cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
-        cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+                                          cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
+                                          cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
