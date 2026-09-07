@@ -285,6 +285,21 @@ are not claims of full EOC semantic acceptance.
 可净化条件必须读取指定角色的动态状态，不能以定义的静态标记代替。
 当前只自动转换目标明确的受支持参数；其余输入保留明确 TODO，不计为全面语义验收通过。
 
+The migrator does not automatically lower legacy `add_trait`, `lose_trait`,
+`activate_trait` or `deactivate_trait` effects (either actor) to `grant`, `remove`
+or `set_active`. Adding a legacy trait clears other mutations sharing its types;
+`grant` preserves them and emits an event. Removal differs in base-trait
+bookkeeping and event policy. Repeated native activation/deactivation may consume
+resources, transform a mutation or invoke callbacks, whereas `set_active` skips
+an already-satisfied state. These inputs produce a located `semantic_choice`
+TODO, including in false branches. Authors choose the intended ordinary Lua
+composition; the public services retain their existing domain contracts. Their
+ledger entries are primitive availability, not automatic migration equivalence.
+
+旧特质增删与激活/停用不能直接等同于当前 Lua 操作。迁移器对这八个玩家/NPC 效果明确
+报告 `semantic_choice`，而不是静默改变冲突清理、基础特质、事件或重复调用行为。
+这表示已有可用领域接口，但旧行为的替代组合仍需明确设计，不能算迁移等价通过。
+
 Mapgen callbacks may stage bounded static NPC and global zone requests with
 `ScriptMapgenContext:queue_npc` and `queue_zone` (128 of each per callback).
 They validate IDs and current-OMT coordinates without spawning external objects.

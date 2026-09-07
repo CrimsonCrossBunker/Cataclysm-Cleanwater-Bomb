@@ -2655,10 +2655,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_cancel_activity"): "services.activities",
     ("eoc-effects", "u_add_effect"): "services.effects",
     ("eoc-effects", "npc_add_effect"): "services.effects",
-    ("eoc-effects", "u_add_trait"): "services.mutations",
-    ("eoc-effects", "npc_add_trait"): "services.mutations",
-    ("eoc-effects", "u_lose_trait"): "services.mutations",
-    ("eoc-effects", "npc_lose_trait"): "services.mutations",
     ("eoc-effects", "u_add_wet"): "services.wetness",
     ("eoc-effects", "u_forget_martial_art"): "services.martial_arts",
     ("eoc-effects", "npc_forget_martial_art"): "services.martial_arts",
@@ -2679,10 +2675,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_lose_var"): "services.variables",
     ("eoc-effects", "u_message"): "services.message",
     ("eoc-effects", "npc_message"): "services.message",
-    ("eoc-effects", "u_activate_trait"): "services.mutations",
-    ("eoc-effects", "u_deactivate_trait"): "services.mutations",
-    ("eoc-effects", "npc_activate_trait"): "services.mutations",
-    ("eoc-effects", "npc_deactivate_trait"): "services.mutations",
     ("eoc-effects", "sound_effect"): "services.sound",
     ("eoc-effects", "u_wants_to_talk"): "services.characters",
     ("eoc-effects", "npc_wants_to_talk"): "services.npcs",
@@ -4106,6 +4098,14 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
 }
 
 EXPLICIT_PRIMITIVE_EOC = {
+    ("eoc-effects", "u_add_trait"): "services.mutations",
+    ("eoc-effects", "u_lose_trait"): "services.mutations",
+    ("eoc-effects", "u_activate_trait"): "services.mutations",
+    ("eoc-effects", "u_deactivate_trait"): "services.mutations",
+    ("eoc-effects", "npc_add_trait"): "services.mutations",
+    ("eoc-effects", "npc_lose_trait"): "services.mutations",
+    ("eoc-effects", "npc_activate_trait"): "services.mutations",
+    ("eoc-effects", "npc_deactivate_trait"): "services.mutations",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -4133,6 +4133,46 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "u_add_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_lose_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_activate_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_deactivate_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_add_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_lose_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_activate_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_deactivate_trait"): [
+        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
     ("eoc-effects", "add_debt"): [
         "src/npctalk.cpp",
         "src/talker_npc.cpp",

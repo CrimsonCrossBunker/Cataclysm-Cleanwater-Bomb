@@ -71,6 +71,11 @@ entries:
     command: python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
     workdir: .
     cost: fast
+  - id: lua-migration
+    paths: [tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tools/test_lua_mutation_migration.py]
+    command: python3 tools/test_migrate_lua_first.py
+    workdir: .
+    cost: fast
   - id: lua-authoring
     paths: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, tools/lua_api/mod_sdk.py, tools/lua_api/test_mod_sdk.py, data/lua/templates/, data/lua/types/]
     command: python3 tools/test_create_lua_mod.py

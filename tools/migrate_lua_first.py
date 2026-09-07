@@ -4427,39 +4427,29 @@ def render_static_spawn_item_effect(
     ]
 
 
-def render_static_add_trait_effect(
-    effect: dict[str, Any], avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-) -> list[str] | None:
-    key = next(
-        (name for name in ("u_add_trait", "npc_add_trait") if name in effect),
-        None,
-    )
-    if key is None or set(effect) - {key, "variant"}:
+def mutation_semantic_choice(effect: Any) -> str | None:
+    """Do not mistake a domain operation for identical legacy side effects."""
+    if not isinstance(effect, dict):
         return None
-    target = _eoc_actor_expression(
-        key, avatar_actor_proven, npc_actor_proven
-    )
-    if target is None:
-        return None
-    trait = _dynamic_id_expression(effect[key], "mutation", target)
-    if trait is None:
-        return None
-    if "variant" not in effect:
-        return [
-            "    services.mutations.grant(",
-            f"        {target},",
-            f"        {trait})",
-        ]
-    variant = render_eoc_string_expression(effect["variant"], target)
-    if variant is None:
-        return None
-    return [
-        "    services.mutations.grant(",
-        f"        {target},",
-        f"        {trait},",
-        f"        {variant})",
-    ]
+    for prefix in ("u_", "npc_"):
+        if prefix + "add_trait" in effect:
+            return (
+                "choose mutation conflict replacement and event policy: legacy add_trait "
+                "clears other mutations sharing types, while mutations.grant preserves them "
+                "and emits gains_mutation"
+            )
+        if prefix + "lose_trait" in effect:
+            return (
+                "choose mutation removal and event policy: legacy unset_mutation and "
+                "mutations.remove differ in base-trait bookkeeping, absent traits and events"
+            )
+        if any(prefix + name in effect for name in ("activate_trait", "deactivate_trait")):
+            return (
+                "choose mutation activation semantics: repeated legacy activation or "
+                "deactivation can consume resources, transform or run callbacks, while "
+                "mutations.set_active skips an already-satisfied state"
+            )
+    return None
 
 
 def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
@@ -4545,6 +4535,8 @@ def render_static_false_effect(
     Keep the accepted set deliberately narrow; unsupported branches remain a
     visible migration TODO instead of being silently discarded.
     """
+    if mutation_semantic_choice(effect) is not None:
+        return None
     if effect == "nothing":
         return []
     if effect == "u_cancel_activity" and avatar_actor_proven:
@@ -4579,14 +4571,6 @@ def render_static_false_effect(
         )
         rendered = render_static_remove_item_with_effect(
             effect, key, actor_proven, "actor"
-        )
-        if rendered is not None:
-            return [line.replace("    ", "        ", 1) for line in rendered]
-    if isinstance(effect, dict) and (
-        "u_add_trait" in effect or "npc_add_trait" in effect
-    ):
-        rendered = render_static_add_trait_effect(
-            effect, avatar_actor_proven, npc_actor_proven
         )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5032,8 +5016,7 @@ def render_static_false_effect(
                 return [line.replace("    ", "        ", 1) for line in rendered]
         key = next(
             (name for name in (
-                "u_activate_trait", "npc_activate_trait", "u_deactivate_trait",
-                "npc_deactivate_trait", "u_add_bionic", "npc_add_bionic",
+                "u_add_bionic", "npc_add_bionic",
                 "u_lose_bionic", "npc_lose_bionic",
             ) if name in effect),
             None,
@@ -5054,24 +5037,6 @@ def render_static_false_effect(
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
-        for trait_key in ("u_lose_trait", "npc_lose_trait"):
-            if trait_key in effect and set(effect) == {trait_key}:
-                target = _eoc_actor_expression(
-                    trait_key, avatar_actor_proven, npc_actor_proven
-                )
-                values = effect[trait_key]
-                values = values if isinstance(values, list) else [values]
-                if (
-                    target is not None and 0 < len(values) <= 64 and
-                    all(safe_platform_id(value) for value in values)
-                ):
-                    rendered = []
-                    for value in values:
-                        rendered.extend([
-                            "    services.mutations.remove(",
-                            f"        {target}, services.types.id(\"mutation\", {lua_quote(value)}))",
-                        ])
-                    return [line.replace("    ", "        ", 1) for line in rendered]
         for morale_key in ("u_lose_morale", "npc_lose_morale"):
             if morale_key in effect and set(effect) == {morale_key}:
                 target = _eoc_actor_expression(
@@ -18919,42 +18884,19 @@ def render_static_character_effect(
         return None
     if not isinstance(force, bool):
         return None
-    if (
-        isinstance(intensity, int) and not isinstance(intensity, bool) and
-        -NATIVE_MAX_EFFECT_INTENSITY <= intensity < 0 and
-        (raw_duration == 0 or parse_turns(raw_duration) == 0) and
-        not force
-    ):
-        body_part_suffix = (
-            ", services.types.id(\"body_part\", " +
-            lua_quote(target_part) + ")"
-            if target_part is not None else ""
-        )
-        return [
-            "    services.effects.adjust_intensity(",
-            f"        {target_expression},",
-            "        services.types.id(\"effect\", "
-            f"{lua_quote(effect[key])}),",
-            f"        {intensity}{body_part_suffix})",
-        ]
-    # Character::add_effect accepts zero as an already-expired native
-    # duration, while the bounded Lua service intentionally rejects it.  The
-    # legacy EOC shape uses zero for an immediate one-turn application; keep
-    # that observable effect instead of dropping the selector.
-    if raw_duration == 0 or parse_turns(raw_duration) == 0:
-        raw_duration = "1 turn"
+    # Preserve zero duration: native application and later expiry are distinct.
     permanent = raw_duration == "PERMANENT"
     duration = 1 if permanent else parse_turns(raw_duration)
     duration_expression = (
         f"services.time.duration({duration}, \"turn\")"
-        if duration is not None and 1 <= duration <= MAX_EFFECT_DURATION_TURNS
-        else _duration_expression(raw_duration, minimum=1)
+        if duration is not None and 0 <= duration <= MAX_EFFECT_DURATION_TURNS
+        else _duration_expression(raw_duration, minimum=0)
     )
     if duration_expression is None:
         return None
     if (
         not isinstance(intensity, int) or isinstance(intensity, bool) or
-        not 0 <= intensity <= NATIVE_MAX_EFFECT_INTENSITY
+        not -NATIVE_MAX_EFFECT_INTENSITY <= intensity <= NATIVE_MAX_EFFECT_INTENSITY
     ):
         return None
     options: list[str] = []
@@ -24479,10 +24421,6 @@ def render_dynamic_simple_character_effect(
         "npc_learn_martial_art": ("martial_arts.learn", "martial_art"),
         "u_forget_martial_art": ("martial_arts.forget", "martial_art"),
         "npc_forget_martial_art": ("martial_arts.forget", "martial_art"),
-        "u_activate_trait": ("mutations.set_active", "mutation"),
-        "npc_activate_trait": ("mutations.set_active", "mutation"),
-        "u_deactivate_trait": ("mutations.set_active", "mutation"),
-        "npc_deactivate_trait": ("mutations.set_active", "mutation"),
     }
     mapped = mapping.get(key)
     if mapped is None:
@@ -24491,9 +24429,6 @@ def render_dynamic_simple_character_effect(
     identifier = _dynamic_id_expression(effect[key], kind, target_expression)
     if identifier is None:
         return None
-    if key.endswith("activate_trait") or key.endswith("deactivate_trait"):
-        enabled = "true" if key.endswith("activate_trait") else "false"
-        return [f"    services.{service}({target_expression}, {identifier}, {enabled})"]
     if key.endswith("learn_recipe"):
         return [f"    services.{service}({target_expression}, {identifier})"]
     return [f"    services.{service}({target_expression}, {identifier})"]
@@ -25518,27 +25453,28 @@ def render_dynamic_character_condition(
     # Any-of effect lists can carry the same native body-part qualifier as a
     # single effect query.  Keep the body-part argument explicit instead of
     # silently widening the predicate to every body part.
-    for key, actor_proven in (
-        ("u_has_any_effect", avatar_actor_proven),
-        ("npc_has_any_effect", npc_actor_proven),
+    for key, scope in (
+        ("u_has_any_effect", "u"),
+        ("npc_has_any_effect", "npc"),
     ):
         if key not in condition or set(condition) not in ({key}, {key, "bodypart"}):
             continue
+        actor_proven, actor = actor_specs[scope]
         values = condition[key]
         if not actor_proven or not isinstance(values, list) or not values or len(values) > 64:
             return None
-        rendered = [_dynamic_id_expression(value, "effect", "actor") for value in values]
+        rendered = [_dynamic_id_expression(value, "effect", actor) for value in values]
         if any(value is None for value in rendered):
             return None
         bodypart = "nil"
         if "bodypart" in condition:
             bodypart = _dynamic_id_expression(
-                condition["bodypart"], "body_part", "actor"
+                condition["bodypart"], "body_part", actor
             )
             if bodypart is None:
                 return None
         return " or ".join(
-            f"service_value(services.effects.has(actor, {value}, {bodypart}))"
+            f"service_value(services.effects.has({actor}, {value}, {bodypart}))"
             for value in rendered
         )
 
@@ -27969,11 +27905,14 @@ def render_eoc(
                         )
                     ):
                         false_todo = "translate " + _map_mutation_todo()
+                    semantic_choice = mutation_semantic_choice(false_value)
+                    if semantic_choice is not None:
+                        false_todo = semantic_choice
                     lines.append(
                         f"        -- TODO: {false_todo}."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "semantic_choice" if semantic_choice is not None else "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} false_effect "
                         f"#{false_index} TODO: {false_todo}"
                     )
@@ -28000,7 +27939,15 @@ def render_eoc(
     all_effects_converted = false_effect_converted
     if isinstance(effects, list):
         for effect_index, effect in enumerate(effects):
-            if (avatar_fatal_hook or npc_fatal_hook) and effect == "u_prevent_death":
+            semantic_choice = mutation_semantic_choice(effect)
+            if semantic_choice is not None:
+                lines.append(f"    -- TODO: {semantic_choice}.")
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index}: {semantic_choice}"
+                )
+                all_effects_converted = False
+            elif (avatar_fatal_hook or npc_fatal_hook) and effect == "u_prevent_death":
                 lines.append("    prevent_death = true")
                 converted_effect = True
             elif isinstance(effect, dict) and "weighted_list_eocs" in effect:
@@ -28266,28 +28213,6 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, dict) and
-                ("u_add_trait" in effect or "npc_add_trait" in effect)
-            ):
-                rendered = render_static_add_trait_effect(
-                    effect, avatar_actor_proven,
-                    npc_event_character_actor_proven,
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the mutation id/variant through "
-                        "typed mutation services."
-                    )
-                    all_effects_converted = False
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
-                    )
             elif (
                 avatar_actor_proven and
                 isinstance(effect, dict) and
@@ -28654,8 +28579,6 @@ def render_eoc(
                     "u_forget_recipe", "npc_forget_recipe",
                     "u_learn_martial_art", "npc_learn_martial_art",
                     "u_forget_martial_art", "npc_forget_martial_art",
-                    "u_activate_trait", "npc_activate_trait",
-                    "u_deactivate_trait", "npc_deactivate_trait",
                 ))
             ):
                 key = next(key for key in (
@@ -28664,8 +28587,6 @@ def render_eoc(
                     "u_forget_recipe", "npc_forget_recipe",
                     "u_learn_martial_art", "npc_learn_martial_art",
                     "u_forget_martial_art", "npc_forget_martial_art",
-                    "u_activate_trait", "npc_activate_trait",
-                    "u_deactivate_trait", "npc_deactivate_trait",
                 ) if key in effect)
                 target = (
                     "actor" if key.startswith("npc_") and npc_event_character_actor_proven
@@ -28805,170 +28726,6 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_activate_trait"} and
-                safe_platform_id(effect.get("u_activate_trait"))
-            ):
-                lines.append("    services.mutations.set_active(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"mutation\", "
-                    f"{lua_quote(effect['u_activate_trait'])}),"
-                )
-                lines.append("        true)")
-                converted_effect = True
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_deactivate_trait"} and
-                safe_platform_id(effect.get("u_deactivate_trait"))
-            ):
-                lines.append("    services.mutations.set_active(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"mutation\", "
-                    f"{lua_quote(effect['u_deactivate_trait'])}),"
-                )
-                lines.append("        false)")
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_activate_trait"} and
-                safe_platform_id(effect.get("npc_activate_trait"))
-            ):
-                lines.append("    services.mutations.set_active(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"mutation\", "
-                    f"{lua_quote(effect['npc_activate_trait'])}),"
-                )
-                lines.append("        true)")
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_deactivate_trait"} and
-                safe_platform_id(effect.get("npc_deactivate_trait"))
-            ):
-                lines.append("    services.mutations.set_active(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"mutation\", "
-                    f"{lua_quote(effect['npc_deactivate_trait'])}),"
-                )
-                lines.append("        false)")
-                converted_effect = True
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) <= {"u_add_trait", "variant"} and
-                "u_add_trait" in effect and
-                safe_platform_id(effect.get("u_add_trait")) and
-                (
-                    "variant" not in effect or
-                    (
-                        isinstance(effect.get("variant"), str) and
-                        bool(effect["variant"])
-                    )
-                )
-            ):
-                lines.append("    services.mutations.grant(")
-                lines.append("        actor,")
-                if "variant" in effect:
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(effect['u_add_trait'])}),"
-                    )
-                    lines.append(
-                        f"        {lua_quote(effect['variant'])})"
-                    )
-                else:
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(effect['u_add_trait'])}))"
-                    )
-                converted_effect = True
-            elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) <= {"npc_add_trait", "variant"} and
-                "npc_add_trait" in effect and
-                safe_platform_id(effect.get("npc_add_trait")) and
-                (
-                    "variant" not in effect or
-                    (
-                        isinstance(effect.get("variant"), str) and
-                        bool(effect["variant"])
-                    )
-                )
-            ):
-                lines.append("    services.mutations.grant(")
-                lines.append("        actor,")
-                if "variant" in effect:
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(effect['npc_add_trait'])}),"
-                    )
-                    lines.append(
-                        f"        {lua_quote(effect['variant'])})"
-                    )
-                else:
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(effect['npc_add_trait'])}))"
-                    )
-                converted_effect = True
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_lose_trait"} and
-                (
-                    safe_platform_id(effect.get("u_lose_trait")) or
-                    (
-                        isinstance(effect.get("u_lose_trait"), list) and
-                        0 < len(effect["u_lose_trait"]) <= 64 and
-                        all(safe_platform_id(value) for value in effect["u_lose_trait"])
-                    )
-                )
-            ):
-                values = effect["u_lose_trait"]
-                if isinstance(values, str):
-                    values = [values]
-                for mutation_id in values:
-                    lines.append("    services.mutations.remove(")
-                    lines.append("        actor,")
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(mutation_id)}))"
-                    )
-                converted_effect = True
-            elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_lose_trait"} and
-                (
-                    safe_platform_id(effect.get("npc_lose_trait")) or
-                    (
-                        isinstance(effect.get("npc_lose_trait"), list) and
-                        0 < len(effect["npc_lose_trait"]) <= 64 and
-                        all(safe_platform_id(value) for value in effect["npc_lose_trait"])
-                    )
-                )
-            ):
-                values = effect["npc_lose_trait"]
-                if isinstance(values, str):
-                    values = [values]
-                for mutation_id in values:
-                    lines.append("    services.mutations.remove(")
-                    lines.append("        actor,")
-                    lines.append(
-                        "        services.types.id(\"mutation\", "
-                        f"{lua_quote(mutation_id)}))"
-                    )
-                converted_effect = True
             elif (
                 (avatar_actor_proven or creature_actor_proven) and
                 isinstance(effect, dict) and

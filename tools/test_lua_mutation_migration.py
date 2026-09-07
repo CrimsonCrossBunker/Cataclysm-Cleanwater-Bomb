@@ -11,12 +11,64 @@ import migrate_lua_first as migration
 
 
 class MutationMigrationTest(unittest.TestCase):
-    def migrate_effect(self, event, effect):
+    def test_non_equivalent_mutation_writes_require_an_explicit_choice(self):
+        for prefix, event in (("u_", "game_start"), ("npc_", "npc_becomes_hostile")):
+            for operation in ("add_trait", "lose_trait", "activate_trait", "deactivate_trait"):
+                for trait in ("VULNERABLECHILL", {"context_val": "mutation"}):
+                    with self.subTest(prefix=prefix, operation=operation, trait=trait):
+                        effect = {prefix + operation: trait}
+                        result = self.migrate_effect(event, effect)
+                        self.assertEqual(result.converted, [])
+                        self.assertEqual(len(result.partial), 1)
+                        self.assertTrue(any(todo.category == "semantic_choice" for todo in result.todos))
+                        main = result.files[Path("main.lua")]
+                        for method in ("grant", "remove", "set_active"):
+                            self.assertNotIn("services.mutations." + method + "(", main)
+                        self.assertIsNone(migration.render_static_false_effect(
+                            effect, prefix == "u_", prefix == "npc_", {}))
+
+    def test_false_branch_preserves_mutation_semantic_choice(self):
+        for prefix, event in (("u_", "game_start"), ("npc_", "npc_becomes_hostile")):
+            for operation in ("add_trait", "lose_trait", "activate_trait", "deactivate_trait"):
+                with self.subTest(prefix=prefix, operation=operation):
+                    result = self.migrate_effect(
+                        event, "nothing", condition={prefix + "has_trait": "QUICK"},
+                        false_effect={prefix + operation: "VULNERABLECHILL"})
+                    self.assertEqual(result.converted, [])
+                    self.assertTrue(any(todo.category == "semantic_choice" for todo in result.todos))
+                    self.assertIn("false_effect #0", result.files[Path("MIGRATION_REPORT.md")])
+                    for method in ("grant", "remove", "set_active"):
+                        self.assertNotIn("services.mutations." + method + "(",
+                                         result.files[Path("main.lua")])
+
+    def test_shipped_mutation_effects_keep_semantic_choices_located(self):
+        root = Path(__file__).resolve().parents[1]
+        for relative, identifier, expected_choices in (
+            ("data/mods/Magiclysm/Spells/druid.json", "EOC_GAIN_WHISPER_LEAVES", 2),
+            ("data/mods/Xedra_Evolved/mutations/xe_lilin_trait_eocs.json",
+             "EOC_LILIN_TEMPORARY_GLORIOUS_deactivate_future", 2),
+        ):
+            with self.subTest(source=relative):
+                objects = migration.load_objects([root / relative])
+                selected = [source for source in objects if source.value.get("id") == identifier]
+                self.assertEqual(len(selected), 1)
+                result = migration.migrate(selected, "shipped_mutation_regression")
+                choices = [todo for todo in result.todos if todo.category == "semantic_choice"]
+                self.assertGreaterEqual(len(choices), expected_choices)
+                self.assertEqual(result.converted, [])
+                report = result.files[Path("MIGRATION_REPORT.md")]
+                self.assertIn(relative, report)
+                self.assertIn(identifier, report)
+                for method in ("grant", "remove", "set_active"):
+                    self.assertNotIn("services.mutations." + method + "(",
+                                     result.files[Path("main.lua")])
+
+    def migrate_effect(self, event, effect, **extra):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source.json"
             source.write_text(json.dumps({
                 "type": "effect_on_condition", "id": "mutation_effect",
-                "required_event": event, "effect": effect,
+                "required_event": event, "effect": effect, **extra,
             }), encoding="utf-8")
             return migration.migrate(migration.load_objects([source]), "mutation_mod")
 

@@ -9789,8 +9789,54 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@field removed GameId[] Detached GameId<mutation> array; ordering is unspecified.
 ---@field removed_count integer Number of removed mutations; zero when nothing matches.
 
+---@class CcbEffectAddOptions
+---@field body_part? GameId A body part present on the target Creature.
+---@field permanent? boolean Defaults to false.
+---@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
+---@field force? boolean Bypass native immunity checks; defaults to false.
+
+---@class CcbEffectsApi
+local CcbEffectsApi = {}
+
+---Apply an effect through native Creature rules. Zero duration is preserved;
+---it still applies immediately and expires when native effect processing runs.
+---@param character GameHandle
+---@param effect GameId
+---@param duration TimeDuration Between zero turns and 365 days.
+---@param options? CcbEffectAddOptions
+---@return CcbResult
+function CcbEffectsApi.add(character, effect, duration, options) end
+
+---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
+---@param character GameHandle
+---@param effect GameId
+---@param body_part? GameId Omit for native unqualified lookup.
+---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
+---@return CcbResult result `value` is boolean.
+function CcbEffectsApi.has(character, effect, body_part, intensity) end
+
+---Remove an effect, optionally restricted to one body part; repeat removal is harmless.
+---@param character GameHandle
+---@param effect GameId
+---@param body_part? GameId Omit to remove all instances of this effect.
+---@return CcbResult result `value` is whether any instance was removed.
+function CcbEffectsApi.remove(character, effect, body_part) end
+
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
+
+---Read whether the explicit Character has a mutation; compose multiple queries with Lua `or`.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.has(character, mutation) end
+
+---Check a mutation's visibility to the explicit observer, including the native visibility threshold.
+---@param observed GameHandle Character whose mutation is inspected.
+---@param observer GameHandle Character performing the observation.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.is_visible_to(observed, observer, mutation) end
 
 ---Read the explicit Character's current purifiability, including intrinsic overrides.
 ---This is not the static mutation definition's purifiable flag.
@@ -9798,6 +9844,51 @@ local CcbMutationsApi = {}
 ---@param mutation GameId GameId<mutation>.
 ---@return CcbResult result `value` is boolean; stale handles return an error envelope.
 function CcbMutationsApi.is_purifiable(character, mutation) end
+
+---Set a present mutation's intrinsic purifiability override; runtime-callback write only.
+---Absent mutations are unchanged. The definition's own non-purifiable flag still applies.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param mutation GameId GameId<mutation>.
+---@param purifiable boolean
+---@return CcbResult result `value` contains present, before, after and changed booleans.
+function CcbMutationsApi.set_purifiable(character, mutation, purifiable) end
+
+---Grant a new permanent mutation without clearing other mutations sharing its types.
+---An existing mutation returns already_present; success emits gains_mutation.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param variant? string Optional known variant id.
+---@return CcbResult result `value` is a detached mutation state snapshot.
+function CcbMutationsApi.grant(character, mutation, variant) end
+
+---Remove a permanent mutation and synchronize base-trait bookkeeping and native events.
+---An absent permanent mutation returns not_permanent. This is not legacy unset_mutation semantics.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` contains the removed snapshot and remaining present flag.
+function CcbMutationsApi.remove(character, mutation) end
+
+---Request an activatable permanent mutation's state, skipping an already-satisfied state.
+---Not-permanent or non-activatable mutations return errors; accepted indicates the resulting state.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param active boolean
+---@return CcbResult result `value` contains before, after, requested, accepted and present.
+function CcbMutationsApi.set_active(character, mutation, active) end
+
+---Remove all mutations of a category using native unset semantics, without purifier downgrades.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param category GameId Valid GameId<mutation_category>.
+---@return CcbResult result `value` contains category, removed GameId<mutation>[] and removed_count.
+function CcbMutationsApi.remove_category(character, category) end
+
+---Invoke native category mutation selection for the explicit Character.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param category? GameId GameId<mutation_category>; nil selects any category.
+---@param use_vitamins? boolean Defaults to true.
+---@param true_random? boolean Defaults to false.
+---@return CcbResult result `value` contains changed, before_count and after_count.
+function CcbMutationsApi.mutate_category(character, category, use_vitamins, true_random) end
 
 ---Remove all mutations of a type from the explicit avatar or NPC; runtime-callback write only.
 ---Uses native unset semantics, without purifier downgrades or restoring prerequisites.

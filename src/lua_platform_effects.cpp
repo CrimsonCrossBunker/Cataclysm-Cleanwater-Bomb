@@ -168,7 +168,7 @@ const effect *find_effect(
     const std::optional<bodypart_id> &body_part )
 {
     const std::vector<std::reference_wrapper<const effect>> effects =
-                creature.get_effects();
+        creature.get_effects();
     const auto found = std::find_if(
                            effects.begin(), effects.end(),
     [&id, &body_part]( const std::reference_wrapper<const effect> &candidate ) {
@@ -207,7 +207,7 @@ sol::table list_effects(
         return make_game_error_result( state, *error );
     }
     const std::vector<std::reference_wrapper<const effect>> effects =
-                creature->get_effects();
+        creature->get_effects();
     const std::size_t returned = std::min(
                                      effects.size(),
                                      static_cast<std::size_t>( limit ) );
@@ -342,7 +342,7 @@ effect_add_options read_add_options(
                     "services.effects.add intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
-            if( intensity < 0 ||
+            if( intensity < -maximum_effect_assignment_intensity ||
                 intensity > maximum_effect_assignment_intensity ) {
                 throw std::invalid_argument(
                     "services.effects.add intensity is outside its limit" );
@@ -365,15 +365,16 @@ effect_add_options read_add_options(
 
 void validate_effect_duration(
     const script_time_duration &duration,
-    const std::string &api_name )
+    const std::string &api_name, const bool allow_zero = false )
 {
     const std::int64_t maximum =
         to_turns<std::int64_t>( 365_days );
-    if( duration.turns() <= 0 ||
+    if( duration.turns() < ( allow_zero ? 0 : 1 ) ||
         duration.turns() > maximum ) {
         throw std::invalid_argument(
-            api_name +
-            " duration must be between one turn and 365 days" );
+            api_name + ( allow_zero ?
+                         " duration must be between zero turns and 365 days" :
+                         " duration must be between one turn and 365 days" ) );
     }
 }
 
@@ -387,7 +388,7 @@ sol::table add_effect(
 {
     require_id_kind(
         requested_id, "effect", "services.effects.add" );
-    validate_effect_duration( duration, "services.effects.add" );
+    validate_effect_duration( duration, "services.effects.add", true );
     const effect_add_options options =
         read_add_options( requested_options );
     sol::state_view state( lua );

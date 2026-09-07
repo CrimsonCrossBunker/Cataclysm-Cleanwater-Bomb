@@ -48,8 +48,8 @@ summary:
   implemented_verified: 0
   implemented_unverified: 89
   bounded_implemented_verified: 0
-  bounded_implemented_unverified: 670
-  primitive_available_unverified: 0
+  bounded_implemented_unverified: 662
+  primitive_available_unverified: 8
   planned: 0
   private_adapter: 0
   reviewed_not_applicable: 17
@@ -5185,16 +5185,17 @@ entries:
   selector: npc_activate_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
   - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_bionic
@@ -5242,15 +5243,17 @@ entries:
   selector: npc_add_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_var
@@ -5455,16 +5458,17 @@ entries:
   selector: npc_deactivate_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
   - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_deal_damage
@@ -5740,15 +5744,17 @@ entries:
   selector: npc_lose_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_var
@@ -7122,16 +7128,17 @@ entries:
   selector: u_activate_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
   - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_bionic
@@ -7196,15 +7203,17 @@ entries:
   selector: u_add_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_var
@@ -7409,16 +7418,17 @@ entries:
   selector: u_deactivate_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
   - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_deal_damage
@@ -7672,15 +7682,17 @@ entries:
   selector: u_lose_trait
   target_kind: shared_service
   target: services.mutations
-  status: bounded_implemented_unverified
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_mutations.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_var
