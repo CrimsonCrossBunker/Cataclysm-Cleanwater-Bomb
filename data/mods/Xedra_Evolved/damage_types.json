@@ -7,6 +7,10 @@
     "name": "cold iron cut",
     "skill": "cutting",
     "bash_conversion_factor": 0.75,
+    "melee_crit_dmg_mult": 0.25,
+    "melee_crit_dmg_mult_per_skill": 0.02,
+    "melee_crit_armor_mult": 0.75,
+    "melee_crit_armor_penetration": 5,
     "derived_from": [ "cut", 1 ],
     "immune_flags": { "character": [ "IRONSWORN" ], "monster": [ "IRONWROUGHT" ] }
   },
@@ -28,6 +32,9 @@
     "magic_color": "light_gray",
     "name": "cold iron bash",
     "skill": "bashing",
+    "bash_conversion_factor": 1.0,
+    "melee_crit_dmg_mult": 0.5,
+    "melee_crit_armor_mult": 0.5,
     "derived_from": [ "bash", 1 ],
     "immune_flags": { "character": [ "IRONSWORN" ], "monster": [ "IRONWROUGHT" ] }
   },
@@ -50,6 +57,8 @@
     "name": "cold iron stab",
     "skill": "stabbing",
     "bash_conversion_factor": 0.6,
+    "melee_crit_dmg_mult_per_skill": 0.1,
+    "melee_crit_armor_mult": 0.66,
     "derived_from": [ "stab", 1 ],
     "immune_flags": { "character": [ "IRONSWORN" ], "monster": [ "IRONWROUGHT" ] }
   },
