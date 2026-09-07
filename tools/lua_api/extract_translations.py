@@ -30,6 +30,9 @@ def extract(files: list[Path], executable: str = "xgettext") -> str:
     command = [executable, "--language=Lua", "--from-code=UTF-8", "--keyword=",
                "--force-po", "--no-wrap", "--output=-"]
     command.extend(f"--keyword={keyword}" for keyword in KEYWORDS)
+    command.extend(("--flag=ccb.services.translate:1:pass-lua-format",
+                    "--flag=ccb.services.translate_plural:1:pass-lua-format",
+                    "--flag=ccb.services.translate_plural:2:pass-lua-format"))
     command.append("--")
     command.extend(sorted({str(path) for path in files}))
     try:
@@ -43,9 +46,10 @@ def extract(files: list[Path], executable: str = "xgettext") -> str:
         print(result.stderr.rstrip(), file=sys.stderr)
     # Keep xgettext's UTF-8 header during extraction: --omit-header can lose
     # non-ASCII strings in some gettext versions. Replace only after extraction.
-    _, separator, messages = result.stdout.partition("\n\n")
-    if not separator:
+    header, _, messages = result.stdout.partition("\n\n")
+    if 'msgid ""\nmsgstr ""' not in header or '"Content-Type:' not in header:
         raise ValueError("xgettext returned an invalid translation template")
+    # A header-only output is valid when none of the inputs contains messages.
     return HEADER + messages
 
 

@@ -157,6 +157,10 @@ unchanged inputs and the same xgettext version. Calls through renamed aliases,
 computed messages, and dynamic contexts cannot be extracted reliably: keep the
 full `ccb.services` spelling and literals. Review the POT after extraction.
 Formatting is a separate Lua operation; translators must preserve placeholders.
+For automatic gettext format flags, nest the translation call directly inside
+`string.format(ccb.services.translate("%d items", "MyMod status"), count)`.
+A translation stored in an intermediate variable cannot inherit that static
+format-use information.
 
 Translate the POT into PO catalogs with normal gettext tooling. For an external
 Mod under the game's configured user Mod directory, the existing native scanner

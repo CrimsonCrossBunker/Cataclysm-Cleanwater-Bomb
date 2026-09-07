@@ -18,6 +18,22 @@ class ExtractTranslationsTest(unittest.TestCase):
         self.source = self.root / "main.lua"
         self.source.write_text('ccb.services.translate("hello")\n', encoding="utf-8")
 
+    @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
+    def test_no_messages_produces_a_valid_empty_template(self):
+        self.source.write_text("local value = 42\n", encoding="utf-8")
+        output = extract([self.source])
+        self.assertIn('charset=UTF-8', output)
+        self.assertEqual(output.count('msgid '), 1)
+        self.assertNotIn("POT-Creation-Date", output)
+
+    @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
+    def test_format_flags_follow_enclosing_string_format(self):
+        self.source.write_text('string.format(ccb.services.translate_plural('
+                               '"%d apple", "%d apples", n, "fruit"), n)', encoding="utf-8")
+        output = extract([self.source])
+        self.assertIn("#, lua-format", output)
+        self.assertIn('msgctxt "fruit"', output)
+
     def test_failed_extractor_is_not_success(self):
         with patch("extract_translations.subprocess.run", return_value=
                    subprocess.CompletedProcess([], 1, "", "parse error")):
