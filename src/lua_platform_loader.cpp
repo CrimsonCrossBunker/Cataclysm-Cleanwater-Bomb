@@ -857,7 +857,7 @@ bool execute_console( const std::string &mod_id, const std::string &source,
         return false;
     }
     const auto found = std::find_if( active_states.begin(), active_states.end(),
-    [&mod_id]( const runtime_state &state ) {
+    [&mod_id]( const runtime_state & state ) {
         return state.id == mod_id;
     } );
     if( found == active_states.end() ) {
@@ -875,7 +875,7 @@ bool execute_console( const std::string &mod_id, const std::string &source,
         // existing world-ready, owner, handle and domain mutation checks.
         const detail::callback_scope callback( *found->platform );
         const sol::protected_function_result result = found->lua->safe_script(
-                    source, sol::script_pass_on_error, "=CCB console: " + mod_id, sol::load_mode::text );
+                source, sol::script_pass_on_error, "=CCB console: " + mod_id, sol::load_mode::text );
         if( !result.valid() ) {
             const sol::error script_error = result;
             error = "Lua console [" + mod_id + "]: " + script_error.what();

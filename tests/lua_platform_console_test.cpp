@@ -41,7 +41,7 @@ return ccb.services.characters.recalculate_enchantments(ccb.services.handles.ava
     CHECK( output == "true" );
 
     REQUIRE_FALSE( platform::execute_console( "console-first",
-                   "console_counter = 17; error('console sentinel')", output, error ) );
+            "console_counter = 17; error('console sentinel')", output, error ) );
     CHECK( output.empty() );
     CHECK( error.find( "console-first" ) != std::string::npos );
     CHECK( error.find( "console sentinel" ) != std::string::npos );
@@ -103,7 +103,7 @@ return t
     CHECK( output.find( "[remaining fields omitted]" ) != std::string::npos );
 
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                "console-bounds" );
+            "console-bounds" );
     REQUIRE( owner );
     owner->lua->set_function( "recursive_console", []() {
         std::string nested_output;
