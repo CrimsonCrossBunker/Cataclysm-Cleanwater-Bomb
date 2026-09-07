@@ -48,7 +48,7 @@ TEST_CASE( "lua_platform_bad_saved_task_error_identifies_its_record",
     CHECK( runtime->tasks.empty() );
     const auto messages = Messages::recent_messages( 10 );
     const auto error = std::find_if( messages.begin(), messages.end(),
-    []( const auto &entry ) {
+    []( const auto & entry ) {
         return entry.second.find( "handler id cannot be empty" ) != std::string::npos;
     } );
     REQUIRE( error != messages.end() );
@@ -80,7 +80,9 @@ TEST_CASE( "lua_platform_reload_reports_retired_tasks_and_keeps_valid_tasks",
     platform::install_runtime_api( new_runtime, new_lua, new_ccb );
     old_lua.set_function( "noop", []() {} );
     new_lua.set_function( "noop", []() {} );
-    for( const char *handler : { "kept", "removed" } ) {
+    for( const char *handler : {
+             "kept", "removed"
+         } ) {
         const sol::protected_function_result registered =
             old_ccb["runtime"]["handler"]( handler, old_lua["noop"] );
         REQUIRE( registered.valid() );
@@ -90,16 +92,18 @@ TEST_CASE( "lua_platform_reload_reports_retired_tasks_and_keeps_valid_tasks",
     REQUIRE( registered.valid() );
     platform::set_active_runtimes( { old_runtime } );
     platform::runtime_world_ready( true );
-    for( const char *handler : { "kept", "removed" } ) {
+    for( const char *handler : {
+             "kept", "removed"
+         } ) {
         const sol::protected_function_result scheduled = old_ccb["tasks"]["after"](
-                    100, handler, old_lua.create_table(), 1, "world" );
+                100, handler, old_lua.create_table(), 1, "world" );
         REQUIRE( scheduled.valid() );
     }
     platform::hot_swap_active_runtimes( { new_runtime } );
     REQUIRE( new_runtime->tasks.size() == 1 );
     CHECK( new_runtime->tasks.front().handler_id == "kept" );
     const auto messages = Messages::recent_messages( 10 );
-    CHECK( std::any_of( messages.begin(), messages.end(), []( const auto &entry ) {
+    CHECK( std::any_of( messages.begin(), messages.end(), []( const auto & entry ) {
         return entry.second.find( "retirement-owner" ) != std::string::npos &&
                entry.second.find( "discarded 1 persistent task" ) != std::string::npos;
     } ) );

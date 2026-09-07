@@ -24,7 +24,9 @@ TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch"
     lua.set_function( "later_callback", [&later_calls]() {
         ++later_calls;
     } );
-    for( const char *handler : { "failing_callback", "later_callback" } ) {
+    for( const char *handler : {
+             "failing_callback", "later_callback"
+         } ) {
         const sol::protected_function_result registered =
             ccb["runtime"]["handler"]( handler, lua[handler] );
         REQUIRE( registered.valid() );
@@ -40,9 +42,11 @@ TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch"
     cata::lua_platform::dispatch_runtime_hook( "on_craft_result" );
     CHECK( later_calls == 2 );
     const auto messages = Messages::recent_messages( 10 );
-    for( const char *context : { "event world_ready", "hook on_craft_result" } ) {
+    for( const char *context : {
+             "event world_ready", "hook on_craft_result"
+         } ) {
         const auto error = std::find_if( messages.begin(), messages.end(),
-        [context]( const auto &entry ) {
+        [context]( const auto & entry ) {
             return entry.second.find( context ) != std::string::npos;
         } );
         REQUIRE( error != messages.end() );

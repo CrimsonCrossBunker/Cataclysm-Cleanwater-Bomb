@@ -605,7 +605,7 @@ TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance"
     REQUIRE( registered.valid() );
     cata::lua_platform::runtime_world_ready( true );
     const sol::protected_function_result scheduled = ccb["tasks"]["after"](
-                0, "failing_task", lua.create_table(), 1, "world" );
+            0, "failing_task", lua.create_table(), 1, "world" );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
     cata::lua_platform::runtime_process_tasks();
