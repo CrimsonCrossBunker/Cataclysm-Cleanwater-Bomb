@@ -1933,7 +1933,10 @@ void runtime_process_tasks()
             callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
-                report_callback_error( *owner, task.handler_id, result );
+                report_callback_error( *owner, task.handler_id, result,
+                                       "task " + std::to_string( task.id ) +
+                                       ", scope=" + task.owner +
+                                       ", due_turn=" + std::to_string( task.due_turn ) );
             } else if( next_due_turn && result.return_count() > 0 &&
                        result.get_type() == sol::type::boolean &&
                        !result.get<bool>() ) {

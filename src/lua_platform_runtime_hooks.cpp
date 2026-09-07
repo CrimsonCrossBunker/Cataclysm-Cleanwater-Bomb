@@ -93,11 +93,17 @@ bool runtime_callback_is_active( const std::weak_ptr<runtime> &weak )
 }
 
 void report_callback_error( const runtime &owner, std::string_view handler,
-                            const sol::protected_function_result &result )
+                            const sol::protected_function_result &result,
+                            const std::string_view context )
 {
     const sol::error error = result;
-    const std::string message = "Lua-first handler '" + owner.mod_id + ":" +
-                                std::string( handler ) + "' failed: " + error.what();
+    std::string message = "Lua-first handler '" + owner.mod_id + ":" +
+                          std::string( handler ) + "'";
+    if( !context.empty() ) {
+        message += " [" + std::string( context ) + "]";
+    }
+    message += " failed: ";
+    message += error.what();
     DebugLog( D_ERROR, D_MAIN ) << message;
     ::add_msg( m_bad, message );
 }

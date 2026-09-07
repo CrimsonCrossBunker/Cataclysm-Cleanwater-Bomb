@@ -253,7 +253,8 @@ void require_live_runtime( const std::weak_ptr<runtime> &weak,
                            std::string_view operation );
 bool runtime_callback_is_active( const std::weak_ptr<runtime> &weak );
 void report_callback_error( const runtime &owner, std::string_view handler,
-                            const sol::protected_function_result &result );
+                            const sol::protected_function_result &result,
+                            std::string_view context = {} );
 void dispatch_lifecycle( runtime &owner, const std::string &name,
                          const sol::optional<sol::table> &payload = sol::nullopt );
 bool migrate_task_payload( runtime &owner, persistent_task &task,
