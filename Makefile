@@ -1108,6 +1108,16 @@ CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden
 ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
   DEFINES += -DCATA_ENABLE_LUA_PLATFORM=1
   CXXFLAGS += -I$(SRC_DIR)/lua
+  # Native Lua modules resolve the public Lua C API from the host process.
+  # Override hidden visibility only for bundled Lua C objects, not game C++.
+  LUA_NATIVE_CFLAGS := -fvisibility=default
+  ifeq ($(NATIVE),osx)
+    LUA_NATIVE_CFLAGS += -DLUA_USE_DLOPEN
+    LDFLAGS += -Wl,-export_dynamic
+  else ifeq ($(TARGETSYSTEM),LINUX)
+    LUA_NATIVE_CFLAGS += -DLUA_USE_DLOPEN
+    LDFLAGS += -ldl -Wl,--export-dynamic
+  endif
 else
   DEFINES += -DCATA_ENABLE_LUA_PLATFORM=0
   # The disabled stub still exposes sol::table in linkable declarations.
@@ -1401,7 +1411,7 @@ $(ODIR)/third-party/%.o: $(SRC_DIR)/third-party/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -w -MMD -MP $<
 
 $(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
-	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -w -MMD -MP $<
+	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) $(LUA_NATIVE_CFLAGS) -w -MMD -MP $<
 
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $(PCHFLAGS) -MMD -MP $<

@@ -53,6 +53,27 @@ class CMakeContractTests(unittest.TestCase):
         self.assertTrue(
             any("LANGUAGE C" in error for error in errors), errors)
 
+    def test_native_loading_prerequisites_cannot_be_removed(self) -> None:
+        requirements = (
+            "target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)",
+            "C_VISIBILITY_PRESET default",
+            "target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})",
+            '"LINKER:--export-dynamic"',
+            '"LINKER:-export_dynamic"',
+        )
+        for requirement in requirements:
+            with self.subTest(requirement=requirement):
+                changed = self.lua_source.replace(requirement, "")
+                self.assertNotEqual(changed, self.lua_source)
+                errors = validate_cmake_contract(
+                    self.engine_source, changed,
+                    self.sol_config_source, self.main_source,
+                )
+                self.assertTrue(
+                    any("native Lua loading requires" in e for e in errors),
+                    errors,
+                )
+
     def test_sol_cpp_lua_abi_is_rejected(self) -> None:
         sol_config_source = (
             self.sol_config_source + "\n#define SOL_USE_CXX_LUA 1\n"
