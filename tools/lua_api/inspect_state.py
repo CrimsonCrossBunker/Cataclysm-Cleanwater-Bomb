@@ -96,7 +96,8 @@ def task_participants(values: object, location: str) -> list:
 
 
 def summarize(document: object, mod: str | None = None,
-              limit: int = 20, show_values: bool = False) -> dict:
+              limit: int = 20, show_values: bool = False,
+              task_id: int | None = None) -> dict:
     if not isinstance(document, dict) or not integer(document.get("version")):
         raise ValueError("expected Platform state with an integer version")
     if document["version"] != 1:
@@ -112,6 +113,11 @@ def summarize(document: object, mod: str | None = None,
         raise ValueError(f"Mod {mod!r} is absent from this snapshot")
     if not 1 <= limit <= 200:
         raise ValueError("limit must be between 1 and 200")
+    if task_id is not None:
+        if mod is None:
+            raise ValueError("a task ID requires --mod because IDs are local to each Mod")
+        if not integer(task_id) or not 0 < task_id < 2**63:
+            raise ValueError("task ID must be a positive native integer")
     rows = []
     for owner, record in sorted(mods.items()):
         if mod is not None and owner != mod:
@@ -127,12 +133,12 @@ def summarize(document: object, mod: str | None = None,
             location = f"{owner}.tasks[{index}]"
             if not isinstance(task, dict):
                 raise ValueError(f"{location}: expected task object")
-            task_id = task.get("id")
-            if not integer(task_id) or not 0 < task_id < 2**63:
+            stored_id = task.get("id")
+            if not integer(stored_id) or not 0 < stored_id < 2**63:
                 raise ValueError(f"{location}: invalid task id")
-            if task_id in seen:
-                raise ValueError(f"{location}: duplicate task id {task_id}")
-            seen.add(task_id)
+            if stored_id in seen:
+                raise ValueError(f"{location}: duplicate task id {stored_id}")
+            seen.add(stored_id)
             if not isinstance(task.get("handler"), str) or not task["handler"]:
                 raise ValueError(f"{location}: missing handler")
             due = task.get("due_turn")
@@ -161,11 +167,14 @@ def summarize(document: object, mod: str | None = None,
                 key: value for key, value in task.items()
                 if key.startswith("actor_")
             }
-            task_rows.append(row)
+            if task_id is None or task["id"] == task_id:
+                task_rows.append(row)
+        if task_id is not None and not task_rows:
+            raise ValueError(f"{owner}: task {task_id} is absent from this snapshot")
         rows.append({
             "mod": owner, "state_count": len(values),
-            "state": values[:limit], "task_count": len(task_rows),
-            "tasks": sorted(task_rows, key=lambda row: row["id"])[:limit],
+            "state": values[:limit], "task_count": len(tasks),
+            "matched_task_count": len(task_rows), "tasks": sorted(task_rows, key=lambda row: row["id"])[:limit],
         })
     return {"version": 1, "scope": scope, "mod_count": len(mods),
             "matched_mod_count": len(rows), "mods": rows[:limit],
@@ -177,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path)
     parser.add_argument("--mod", help="show only one saved Mod record")
+    parser.add_argument("--task", type=int, help="show one saved task ID; requires --mod")
     parser.add_argument("--limit", type=int, default=20,
                         help="maximum displayed entries per list (1-200)")
     parser.add_argument("--values", action="store_true",
@@ -184,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         report = summarize(read_snapshot(args.file), args.mod,
-                           args.limit, args.values)
+                           args.limit, args.values, args.task)
         report["file"] = str(args.file.resolve())
         print(json.dumps(report, indent=2, ensure_ascii=True, allow_nan=False))
     except (OSError, ValueError, OverflowError, RecursionError) as error:

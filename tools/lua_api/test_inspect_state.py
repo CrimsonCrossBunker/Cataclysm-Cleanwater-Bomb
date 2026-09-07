@@ -81,6 +81,23 @@ class StateInspectorTests(unittest.TestCase):
         self.assertEqual(report["matched_mod_count"], 1)
         self.assertEqual(report["mods"][0]["mod"], "tonic")
 
+    def test_task_filter_reaches_entries_beyond_the_display_limit(self):
+        snapshot = saved_state()
+        record = snapshot["mods"]["tonic"]
+        template = record["tasks"][0]
+        record["tasks"] = [dict(template, id=number) for number in range(1, 251)]
+        row = inspect_state.summarize(snapshot, mod="tonic", limit=1, task_id=225)["mods"][0]
+        self.assertEqual(row["task_count"], 250)
+        self.assertEqual(row["matched_task_count"], 1)
+        self.assertEqual([task["id"] for task in row["tasks"]], [225])
+        with self.assertRaisesRegex(ValueError, "requires --mod"):
+            inspect_state.summarize(snapshot, task_id=225)
+        with self.assertRaisesRegex(ValueError, "task 999 is absent"):
+            inspect_state.summarize(snapshot, mod="tonic", task_id=999)
+        for invalid in (0, -1, True, 2**63):
+            with self.subTest(task_id=invalid), self.assertRaisesRegex(ValueError, "positive"):
+                inspect_state.summarize(snapshot, mod="tonic", task_id=invalid)
+
     def test_invalid_task_identity_and_owner_are_reported(self):
         for field, value in (("id", True), ("id", 0),
                              ("owner_mod_id", "another-mod"),

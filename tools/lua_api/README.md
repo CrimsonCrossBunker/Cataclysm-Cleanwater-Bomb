@@ -87,6 +87,7 @@ loading, and exercise the affected behavior for runtime acceptance.
 ```sh
 python3 tools/lua_api/inspect_state.py /path/world/lua_platform_world.json
 python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --mod MyMod
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --mod MyMod --task 225
 python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --values --limit 50
 ```
 
@@ -97,7 +98,9 @@ only with `--values`. Each displayed list defaults to 20 entries; total counts
 remain visible, and `--limit` accepts 1–200. It never executes Mod metadata or Lua,
 loads native libraries, resolves participants against a world, or rewrites the
 save. The world and character files are separate scopes; inspect both when a Mod
-uses both.
+uses both. Use `--mod MyMod --task ID` to follow a task ID from an error message,
+including records beyond the displayed list limit. Task IDs are local to a Mod,
+so the task filter requires a Mod ID. Total and matched task counts stay separate.
 
 An absent/uninstalled Mod can still have a retained saved record. Finding a
 record does not establish that its handler currently exists, its participants
