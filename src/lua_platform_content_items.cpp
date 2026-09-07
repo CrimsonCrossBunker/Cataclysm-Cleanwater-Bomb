@@ -351,8 +351,8 @@ struct localized_text {
 };
 
 localized_text make_localized_text( const std::string &singular,
-                                   const std::optional<std::string> &plural,
-                                   const sol::optional<std::string> &context )
+                                    const std::optional<std::string> &plural,
+                                    const sol::optional<std::string> &context )
 {
     if( singular.empty() || singular.find( '\0' ) != std::string::npos ||
         ( plural && ( plural->empty() || plural->find( '\0' ) != std::string::npos ) ) ||
@@ -2461,11 +2461,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         sol::table &content )
 {
     ccb.new_usertype<localized_text>( "LocalizedText", sol::no_constructor );
-    content.set_function( "text", []( const std::string &text,
+    content.set_function( "text", []( const std::string & text,
     const sol::optional<std::string> &context ) {
         return make_localized_text( text, std::nullopt, context );
     } );
-    content.set_function( "plural_text", []( const std::string &singular, const std::string &plural,
+    content.set_function( "plural_text", []( const std::string & singular, const std::string & plural,
     const sol::optional<std::string> &context ) {
         return make_localized_text( singular, plural, context );
     } );
@@ -2855,8 +2855,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 present = true;
             }
         };
-        const auto read_text = [&options, &read_string]( const char *key, std::string &raw,
-        bool &present, std::optional<localized_text> &translated, const bool allow_plural ) {
+        const auto read_text = [&options, &read_string]( const char *key, std::string & raw,
+        bool & present, std::optional<localized_text> &translated, const bool allow_plural ) {
             const sol::object value = options[key];
             if( value.is<localized_text>() ) {
                 translated = value.as<localized_text>();

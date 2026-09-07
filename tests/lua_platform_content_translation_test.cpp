@@ -46,7 +46,7 @@ ccb.content.add(ccb.content.Item {
     REQUIRE( prepared );
     REQUIRE( platform::apply_prepared_content( error ) );
     const translation expected_name = translation::pl_translation(
-                                         "item name", "ccb text pebble", "ccb text pebbles" );
+                                          "item name", "ccb text pebble", "ccb text pebbles" );
     const translation expected_description = translation::to_translation(
             "item description", "ccb text description" );
     const itype &parent = itype_id( "lua_text_translated_parent" ).obj();
@@ -77,7 +77,7 @@ TEST_CASE( "lua_platform_item_text_fingerprints_translation_semantics",
         platform::shutdown();
     } );
     const platform::mod_source source { "item-text-hash", files.root, files.root / "main.lua" };
-    const auto fingerprint = [&]( const std::string &name ) {
+    const auto fingerprint = [&]( const std::string & name ) {
         files.write( "main.lua", "local ccb = require('ccb')\n"
                      "ccb.content.add(ccb.content.Item { id = 'lua_text_hash', "
                      "copy_from = 'rock', name = " + name + " })\n" );
