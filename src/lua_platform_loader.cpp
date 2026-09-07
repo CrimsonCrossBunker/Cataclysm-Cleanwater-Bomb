@@ -325,18 +325,19 @@ struct file_execution_result {
     std::optional<sol::object> first;
 };
 
-file_execution_result execute_file( sol::state &lua, const fs::path &path )
+file_execution_result execute_file( sol::state &lua, const fs::path &path,
+                                    const std::string &context )
 {
     sol::load_result loaded = lua.load_file( path.string() );
     if( !loaded.valid() ) {
         const sol::error error = loaded;
-        throw std::runtime_error( path.string() + ": " + error.what() );
+        throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
     }
     sol::protected_function script = loaded;
     sol::protected_function_result result = script();
     if( !result.valid() ) {
         const sol::error error = result;
-        throw std::runtime_error( path.string() + ": " + error.what() );
+        throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
     }
     file_execution_result snapshot;
     snapshot.return_count = result.return_count();
@@ -441,7 +442,7 @@ runtime_state load_source( const mod_source &source )
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
     initialize_state( *result.lua, resolved.root, result.platform );
-    execute_file( *result.lua, resolved.entry );
+    execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
 
@@ -468,16 +469,16 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
                 << path.generic_u8string();
         sol::state lua;
         initialize_state( lua, canonical_root );
-        const file_execution_result execution = execute_file( lua, path );
+        const file_execution_result execution = execute_file( lua, path, "Lua-first Mod metadata" );
         if( execution.return_count != 1 ) {
-            error = path.generic_u8string() +
-                    ": expected exactly one ccb.ModDefinition return value";
+            error = "Lua-first Mod metadata [" + path.generic_u8string() +
+                    "]: expected exactly one ccb.ModDefinition return value";
             return false;
         }
         const sol::object &value = *execution.first;
         if( !value.is<mod_definition>() ) {
-            error = path.generic_u8string() +
-                    ": expected a native ccb.ModDefinition return value";
+            error = "Lua-first Mod metadata [" + path.generic_u8string() +
+                    "]: expected a native ccb.ModDefinition return value";
             return false;
         }
         result = value.as<mod_definition>();

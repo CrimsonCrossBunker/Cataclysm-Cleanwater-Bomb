@@ -79,6 +79,41 @@ assert(native == nil and type(message) == "string")
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_platform_loader_errors_identify_stage_owner_and_script",
+           "[lua][platform][loader]" )
+{
+    platform_lua_test_directory files;
+    std::string error;
+    SECTION( "metadata syntax failure identifies its source before an id exists" ) {
+        files.write( "mod.lua", "return function(\n" );
+        cata::lua_platform::mod_definition metadata;
+        REQUIRE_FALSE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+        CHECK( error.find( "Lua-first Mod metadata" ) != std::string::npos );
+        CHECK( error.find( "mod.lua" ) != std::string::npos );
+    }
+    SECTION( "entry runtime failure identifies the declared owner" ) {
+        files.write( "main.lua", "error('entry diagnostic sentinel')\n" );
+        const cata::lua_platform::mod_source source = {
+            "diagnostic-owner", files.root, files.root / "main.lua"
+        };
+        REQUIRE_FALSE( cata::lua_platform::validate_mods( { source }, error ) );
+        CHECK( error.find( "Lua-first Mod 'diagnostic-owner' entry" ) != std::string::npos );
+        CHECK( error.find( "main.lua" ) != std::string::npos );
+        CHECK( error.find( "entry diagnostic sentinel" ) != std::string::npos );
+    }
+    SECTION( "required module keeps its own source in the entry error" ) {
+        files.write( "main.lua", "require('nested_failure')\n" );
+        files.write( "nested_failure.lua", "error('nested diagnostic sentinel')\n" );
+        const cata::lua_platform::mod_source source = {
+            "diagnostic-owner", files.root, files.root / "main.lua"
+        };
+        REQUIRE_FALSE( cata::lua_platform::validate_mods( { source }, error ) );
+        CHECK( error.find( "Lua-first Mod 'diagnostic-owner' entry" ) != std::string::npos );
+        CHECK( error.find( "nested_failure.lua" ) != std::string::npos );
+        CHECK( error.find( "nested diagnostic sentinel" ) != std::string::npos );
+    }
+}
+
 } // namespace
 
 #endif // CATA_ENABLE_LUA_PLATFORM
