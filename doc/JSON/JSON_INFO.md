@@ -1455,7 +1455,6 @@ When adding a new bionic, if it's not included with another one, you must also a
 | `melee_crit_dmg_mult_per_skill` | _(optional)_ Critical hit damage multiplier gained per level of the associated `skill`; requires a valid `skill` to apply. (defaults to 0)
 | `melee_crit_armor_mult` | _(optional)_ Armor multiplier applied to this damage type on critical hits at full critical strength; 1.0 disables it. (defaults to 1.0)
 | `melee_crit_armor_penetration` | _(optional)_ Extra armor penetration applied to this damage type on critical hits. (defaults to 0)
-| `bleed_duration_mult_per_skill` | _(optional)_ Per-skill-level multiplier applied to the duration of bleeding this damage type inflicts on monsters, capped at +25%. (defaults to 0)
 | `edged`             | _(optional)_ Identifies this damage type as originating from a sharp or pointy weapon or implement. (defaults to false)
 | `environmental`     | _(optional)_ This damage type corresponds to environmental sources. Currently influences whether an item or piece of armor includes environmental resistance against this damage type. (defaults to false)
 | `material_required` | _(optional)_ Determines whether materials must defined a resistance for this damage type. (defaults to false)
