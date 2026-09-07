@@ -51,13 +51,15 @@ query_list = ccb.tasks.list
     platform::commit_prepared_mods();
     platform::runtime_world_ready( true );
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
-                "snapshot-lifetime" );
+            "snapshot-lifetime" );
     REQUIRE( owner );
     lua_State *lua = owner->lua->lua_state();
     REQUIRE( lua_checkstack( lua, 32 ) );
     const auto populate = [&owner]() {
         owner->tasks.clear();
-        for( std::uint64_t id : { 11U, 12U, 13U } ) {
+        for( std::uint64_t id : {
+                 11U, 12U, 13U
+             } ) {
             platform::persistent_task task;
             task.id = id;
             task.handler_id = "tick";
@@ -67,7 +69,9 @@ query_list = ccb.tasks.list
             owner->tasks.push_back( std::move( task ) );
         }
     };
-    for( const char *query : { "query_get", "query_next", "query_list" } ) {
+    for( const char *query : {
+             "query_get", "query_next", "query_list"
+         } ) {
         INFO( query );
         populate();
         const auto push_query = [lua, query]() {
