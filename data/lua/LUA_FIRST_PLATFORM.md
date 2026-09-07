@@ -152,17 +152,18 @@ restricted and unrestricted runtime tiers.
 API 调用弹权限窗口。此告知是待落实的集成要求，不代表现有启动器已实现。普通 Lua 错误应可
 定位与清理，但不承诺无限循环/原生调用可安全中断，也不承诺崩溃隔离或外部副作用回滚。
 
-Implementation checkpoint (2026-09-06): `initialize_state` still uses a
-standard-library whitelist, removes `io`/`os`/`debug` and native package loaders,
-and restricts module resolution to the Mod root. Full-library and external/native
-loading support is **accepted, pending implementation and runtime acceptance**.
-The roadmap's `platform-hardening` entry now tracks this trust-policy transition
-and reliability/diagnostics work; old sandbox and mandatory-budget plans are
-superseded. This documentation update changes no running permissions.
+Implementation checkpoint (2026-09-08): the loader source now opens the bundled
+standard libraries, retains normal package searchers and native loading, and
+inserts a Mod-local searcher before the ordinary searchers. The reserved `ccb`
+entry remains bound to the state-owned Platform table. These changes and their
+regression test source are **source-complete, not compiled or runtime-accepted**.
+Native loading still depends on the host Lua build and module ABI. The first-run
+execution-risk notice remains a separate pending integration requirement.
 
-实现断点：当前加载器仍使用白名单并移除系统库与原生加载入口，因此完整标准库与外部/原生模块
-加载是**已采纳、待实现和运行验证**。roadmap 的 `platform-hardening` 改为跟踪此策略切换及
-可靠性/诊断；旧沙盒和默认强制配额计划作废。本次文档修改不改变运行中的权限。
+实现断点（2026-09-08）：加载器源码已开放 bundled 标准库，保留普通 package 查找器与原生
+加载入口，并优先查找 Mod 本地模块；`require("ccb")` 仍固定返回所属 state 的 Platform
+根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
+构建与 ABI；首次执行风险告知仍待单独集成。不得将源码完成描述为已发布或已通过验收。
 
 ## Loading and lifecycle / 加载与生命周期
 
