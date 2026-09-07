@@ -30,6 +30,34 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 self.assertTrue(expression.endswith(".total > 0"))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_visible_traits_require_and_use_both_proven_participants(self) -> None:
+        for selector, observed, observer in (
+            ("u_has_visible_trait", "actor", "partner"),
+            ("npc_has_visible_trait", "partner", "actor"),
+        ):
+            condition = {selector: "FELINE_EARS"}
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_actor_proven=True))
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                condition, avatar_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = f"""
+local actor, partner = {{}}, {{}}
+local answer = false
+local services = {{types={{id=function(kind,id) return id end}}, mutations={{}}}}
+local function service_value(r) assert(r.ok); return r.value end
+services.mutations.is_visible_to = function(subject, viewer, id)
+ assert(subject == {observed} and viewer == {observer} and id == 'FELINE_EARS')
+ return {{ok=true,value=answer}}
+end
+assert(not ({expression}))
+answer = true
+assert({expression})
+"""
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_knowledge_predicates_execute_for_both_participants(self) -> None:
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
             for key, kind, identifier in (
@@ -12478,11 +12506,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn("services.characters.can_see_location(", main)
-            self.assertIn("services.mutations.is_visible_to(", main)
+            self.assertNotIn("services.mutations.is_visible_to(", main)
 
     def test_npc_population_and_overmap_proximity_conditions_use_typed_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -26783,19 +26783,15 @@ def render_eoc_condition_expression(
                 f"service_value(services.characters.can_see_location({actor}, "
                 f"{target}))"
             )
-    for trait_key, actor_proven in (
-        ("u_has_visible_trait", npc_actor_proven),
-        ("npc_has_visible_trait", npc_actor_proven),
-    ):
+    for trait_key in ("u_has_visible_trait", "npc_has_visible_trait"):
         if (
-            actor_proven and set(condition) == {trait_key} and
-            bounded_platform_id(condition.get(trait_key))
+            avatar_actor_proven and npc_actor_expression is not None and
+            set(condition) == {trait_key} and bounded_platform_id(condition.get(trait_key))
         ):
-            observed = (
-                "services.characters.avatar()"
-                if trait_key.startswith("u_") else "actor"
+            observed, observer = (
+                ("actor", npc_actor_expression) if trait_key.startswith("u_")
+                else (npc_actor_expression, "actor")
             )
-            observer = "actor" if trait_key.startswith("u_") else "services.characters.avatar()"
             return (
                 "service_value(services.mutations.is_visible_to("
                 f"{observed}, {observer}, services.types.id(\"mutation\", "
