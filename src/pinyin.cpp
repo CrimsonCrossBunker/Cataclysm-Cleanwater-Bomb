@@ -13,6 +13,14 @@ namespace pinyin
 {
 bool pinyin_match( const std::u32string_view str, const std::u32string_view qry )
 {
+    // ASCII has no entries in the pronunciation table.  Avoid initializing the
+    // index or allocating conversion buffers for ordinary English names.
+    if( std::all_of( str.begin(), str.end(), []( char32_t ch ) {
+    return ch <= 0x7f;
+} ) ) {
+        return str.find( qry ) != std::u32string_view::npos;
+    }
+
     // we convert the data to an unordered map to lower the cost of looking up entries.
     // O(1) instead of O(n)
     static std::unordered_map<char32_t, std::vector<std::u32string>> indexed_pinyin_map;
@@ -37,6 +45,14 @@ bool pinyin_match( const std::u32string_view str, const std::u32string_view qry 
                 }
             }
         }
+    }
+
+    // Other scripts can also have no convertible characters.  Preserve literal
+    // matching without constructing an identical string for them.
+    if( std::none_of( str.begin(), str.end(), []( char32_t ch ) {
+    return indexed_pinyin_map.find( ch ) != indexed_pinyin_map.end();
+    } ) ) {
+        return str.find( qry ) != std::u32string_view::npos;
     }
 
     int combination_index = 0;                  //how many combinations have we tried

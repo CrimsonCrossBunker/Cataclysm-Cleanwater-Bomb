@@ -4525,8 +4525,23 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
     return false;
 }
 
+SDL_Rect cata_tiles::vehicle_preview_selection_rect( const point_rel_ms &first,
+        const point_rel_ms &second, const point_rel_ms &cursor_vp_mount,
+        const point &center_px, const point &tile_size )
+{
+    const point_rel_ms first_tile = ( first + cursor_vp_mount ).rotate( 3 );
+    const point_rel_ms second_tile = ( second + cursor_vp_mount ).rotate( 3 );
+    const int left = std::min( first_tile.x(), second_tile.x() );
+    const int top = std::min( first_tile.y(), second_tile.y() );
+    const int right = std::max( first_tile.x(), second_tile.x() );
+    const int bottom = std::max( first_tile.y(), second_tile.y() );
+    return SDL_Rect{ center_px.x + left * tile_size.x, center_px.y + top * tile_size.y,
+                     ( right - left + 1 ) *tile_size.x, ( bottom - top + 1 ) *tile_size.y };
+}
+
 bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
-                                       const point_rel_ms &cursor_vp_mount, int &cpart )
+                                       const point_rel_ms &cursor_vp_mount, int &cpart,
+                                       const std::optional<std::pair<point_rel_ms, point_rel_ms>> &selection )
 {
     // Reuses the normal map sprite path (draw_from_id_string, exactly as draw_vpart does) to
     // render the vehicle into an arbitrary curses window, without modifying the core renderer.
@@ -4613,6 +4628,25 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
         }
     }
     cpart = center_part;
+
+    if( selection ) {
+        const SDL_Rect area = vehicle_preview_selection_rect( selection->first, selection->second,
+                              cursor_vp_mount, center_px, point( tile_width, tile_height ) );
+        SDL_BlendMode saved_blend = SDL_BLENDMODE_NONE;
+        GetRenderDrawBlendMode( renderer, saved_blend );
+        SDL_Color saved_color{ 0, 0, 0, 255 };
+        SDL_GetRenderDrawColor( renderer.get(), &saved_color.r, &saved_color.g, &saved_color.b,
+                                &saved_color.a );
+        on_out_of_scope restore_overlay_state( [this, saved_blend, saved_color]() {
+            SetRenderDrawBlendMode( renderer, saved_blend );
+            SetRenderDrawColor( renderer, saved_color.r, saved_color.g, saved_color.b, saved_color.a );
+        } );
+        SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+        // Include empty cells while keeping the vehicle sprites visible below the selection.
+        geometry->rect( renderer, area, SDL_Color{ 64, 160, 255, 72 } );
+        SetRenderDrawColor( renderer, 96, 192, 255, 255 );
+        RenderDrawRect( renderer, &area );
+    }
 
     // Mark the selected cell with the "cursor" sprite (the yellow selection box, the same
     // sprite the look-around cursor uses). The cursor part is at the synthetic origin, i.e.
