@@ -313,6 +313,7 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
         return;
     }
+    std::string context = "scope=" + scope;
     try {
         std::error_code size_error;
         const std::uintmax_t file_size = std::filesystem::file_size(
@@ -333,6 +334,8 @@ void load_scope( const cata_path &path, const std::string &scope,
         }
         const JsonObject mods = root.get_object( "mods" );
         for( const JsonMember member : mods ) {
+            const std::string record_context = "scope=" + scope + ", Mod='" + member.name() + "'";
+            context = record_context;
             const std::shared_ptr<runtime> owner = detail::find_active_runtime( member.name() );
             const JsonObject stored = member.get_object();
             persistent_scope_record record;
@@ -343,9 +346,12 @@ void load_scope( const cata_path &path, const std::string &scope,
                 if( stored_tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
                 }
+                std::size_t task_index = 0;
                 for( const JsonObject task_json : stored_tasks ) {
+                    context = record_context + ", task[" + std::to_string( task_index++ ) + "]";
                     persistent_task task;
                     const std::int64_t stored_id = task_json.get_int64( "id" );
+                    context += ", id=" + std::to_string( stored_id );
                     if( stored_id <= 0 ) {
                         throw std::runtime_error( "Platform task id must be positive" );
                     }
@@ -580,6 +586,7 @@ void load_scope( const cata_path &path, const std::string &scope,
                     task_json.allow_omitted_members();
                 }
             }
+            context = record_context;
             if( owner ) {
                 if( owner->tasks.size() + record.tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
@@ -610,7 +617,8 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
     } catch( const std::exception &exception ) {
         clear_scope( scope );
-        error = path.get_unrelative_path().string() + ": " + exception.what();
+        error = path.get_unrelative_path().generic_u8string() + " [" + context + "]: " +
+                exception.what();
     }
 }
 
