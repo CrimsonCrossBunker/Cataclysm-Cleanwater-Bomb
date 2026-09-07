@@ -13,7 +13,7 @@ TEST_CASE( "lua_platform_item_patch_fingerprint_distinguishes_omitted_fields",
     const platform::mod_source source {
         "item-patch-fingerprint", files.root, files.root / "main.lua"
     };
-    const auto fingerprint = [&]( const std::string &field ) {
+    const auto fingerprint = [&]( const std::string & field ) {
         files.write( "main.lua", "local ccb = require('ccb')\n"
                      "ccb.content.add(ccb.content.Item { id = 'lua_patch_fingerprint_item', "
                      "copy_from = 'rock', " + field + " })\n" );

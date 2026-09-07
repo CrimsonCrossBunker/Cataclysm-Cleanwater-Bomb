@@ -6686,10 +6686,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 // An omitted patch field inherits its source; an explicitly
                 // supplied default value overwrites it. Both have identical
                 // stored values, so include presence in the reload fingerprint.
-                for( const bool present : { v.has_name, v.has_description, v.has_symbol,
-                                           v.has_mass, v.has_volume, v.has_price, v.has_price_postapoc,
-                                           v.has_color, v.has_category, v.has_looks_like, v.has_magazine_capacity
-                                         } ) {
+                for( const bool present : {
+                         v.has_name, v.has_description, v.has_symbol,
+                         v.has_mass, v.has_volume, v.has_price, v.has_price_postapoc,
+                         v.has_color, v.has_category, v.has_looks_like, v.has_magazine_capacity
+                     } ) {
                     hash_part( state, present ? "present" : "absent" );
                 }
                 hash_part( state, v.id );
