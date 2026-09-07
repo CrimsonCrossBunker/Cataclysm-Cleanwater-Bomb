@@ -41,6 +41,36 @@ empty_export_loads = (empty_export_loads or 0) + 1
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_platform_loader_finds_native_modules_beside_the_mod_entry",
+           "[lua][platform][loader]" )
+{
+    platform_lua_test_directory files;
+#if defined(_WIN32)
+    const std::string library_name = "ccb_native_path_probe.dll";
+#else
+    const std::string library_name = "ccb_native_path_probe.so";
+#endif
+    // This checks path resolution only, never loads the placeholder as a DLL/SO.
+    files.write( library_name, "native search path placeholder" );
+    const std::string expected =
+        std::filesystem::canonical( files.root / library_name ).generic_u8string();
+    const std::string probe = "local expected = [=[" + expected + "]=]\n" + R"lua(
+local ccb = require("ccb")
+local path = assert(package.searchpath("ccb_native_path_probe", package.cpath))
+assert(path == expected)
+)lua";
+    files.write( "mod.lua", probe +
+                 "\nreturn ccb.ModDefinition { id = \"native-path-test\" }\n" );
+    files.write( "main.lua", probe );
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    const cata::lua_platform::mod_source source = {
+        metadata.id, files.root, files.root / "main.lua"
+    };
+    REQUIRE( cata::lua_platform::validate_mods( { source }, error ) );
+}
+
 TEST_CASE( "lua_platform_loader_supports_external_paths_and_loader_data",
            "[lua][platform][loader]" )
 {

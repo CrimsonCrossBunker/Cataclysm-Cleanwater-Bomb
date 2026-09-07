@@ -154,7 +154,10 @@ API 调用弹权限窗口。此告知是待落实的集成要求，不代表现�
 
 Implementation checkpoint (2026-09-08): the loader source now opens the bundled
 standard libraries, retains normal package searchers and native loading, and
-inserts a Mod-local searcher before the ordinary searchers. The reserved `ccb`
+inserts a Mod-local searcher before the ordinary searchers. Native search paths
+also start with the Mod root's `?.so` (`?.dll` on Windows), preserving the original
+cpath. Roots containing cpath metacharacters `;` or `?` use explicit
+`package.loadlib` paths instead of an ambiguous automatic prefix. The reserved `ccb`
 entry remains bound to the state-owned Platform table. These changes and their
 regression test source are **source-complete, not compiled or runtime-accepted**.
 Native loading still depends on the host Lua build and module ABI. The Mod manager now presents a session execution-risk notice before discovering

@@ -19,9 +19,11 @@ cc -shared -fPIC -Isrc/lua \
   -o /tmp/ccb-native-probe/ccb_native_probe.so
 ```
 
-Copy this directory's `main.lua` to an otherwise empty optional Lua Mod root.
-Set `CCB_NATIVE_PROBE_DIR=/tmp/ccb-native-probe` when launching the actual game,
-then select/load that Mod. The script changes only its state's package search
+Copy this directory's `main.lua` and the compiled probe to an otherwise empty
+optional Lua Mod root. The loader prepends that root's `?.so` (`?.dll` on Windows)
+to the ordinary native search path. Alternatively, keep the probe externally and
+set `CCB_NATIVE_PROBE_DIR=/tmp/ccb-native-probe` when launching the actual game.
+Select/load that Mod. The script changes only its state's package search
 path and checks native module loading/cache, integer round trips, native
 argument-error handling and stable `require("ccb")` identity. It should produce
 no gameplay effects and no error; absence of errors must be checked against the
@@ -34,3 +36,8 @@ Import-library/runtime packaging still needs separate acceptance; the `.so` reci
 recipe. Do not link a second Lua runtime into this fixture: it must exercise the
 host's Lua state and C API. This does not expose or stabilize CCB's internal C++
 objects.
+
+Lua's cpath grammar cannot escape literal `;` or `?` in directory names. The
+automatic local prefix is omitted for such roots; explicit `package.loadlib`
+paths and the original external searchers remain available. A path-resolution
+regression uses a placeholder library, which is not native loading evidence.

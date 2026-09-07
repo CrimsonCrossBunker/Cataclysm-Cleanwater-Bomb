@@ -1,7 +1,10 @@
 local ccb = require("ccb")
-local directory = assert(os.getenv("CCB_NATIVE_PROBE_DIR"),
-    "set CCB_NATIVE_PROBE_DIR to the absolute directory containing the native probe")
-package.cpath = directory .. "/?.so;" .. package.cpath
+-- Without an override, require uses the native library beside this main.lua.
+local directory = os.getenv("CCB_NATIVE_PROBE_DIR")
+if directory then
+    local extension = package.config:sub(1, 1) == "\\" and ".dll" or ".so"
+    package.cpath = directory .. "/?" .. extension .. ";" .. package.cpath
+end
 local probe = require("ccb_native_probe")
 assert(probe.description == "CCB native Lua acceptance probe")
 assert(probe.round_trip(42) == 42)

@@ -365,6 +365,19 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     }
 
     sol::table package = lua["package"];
+    // Let Lua's native searchers resolve a library shipped beside main.lua,
+    // preserving their entry-symbol rules and all original external paths.
+    // cpath has no escaping for its separators/placeholders. Such roots can
+    // still load native libraries through an explicit package.loadlib path.
+    if( root.generic_u8string().find_first_of( ";?" ) == std::string::npos ) {
+#if defined(_WIN32)
+        const fs::path native_pattern = root / "?.dll";
+#else
+        const fs::path native_pattern = root / "?.so";
+#endif
+        package["cpath"] = native_pattern.generic_u8string() + ";" +
+                           package.get<std::string>( "cpath" );
+    }
     sol::table loaded = package["loaded"];
     loaded["ccb"] = ccb;
 
