@@ -1451,8 +1451,8 @@ void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instanc
                              const item &weap, const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact,
                              float crit_mod, float target_cut_armor ) const
 {
-    // For handling typical melee damage types (bash, cut, stab)
-    if( dt->melee_only ) {
+    // For handling melee damage types, and physical damage types during melee attacks
+    if( dt->melee_only || dt->physical ) {
         roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod,
                                     target_cut_armor );
         return;
@@ -1475,15 +1475,6 @@ void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instanc
     if( other_dam > 0 ) {
         float other_mul = 1.0f * mabuff_damage_mult( dt );
         float armor_mult = 1.0f;
-        if( crit && dt->physical ) {
-            float crit_dmg = dt->melee_crit_dmg_mult;
-            if( !dt->skill.is_null() ) {
-                crit_dmg += dt->melee_crit_dmg_mult_per_skill * get_skill_level( dt->skill );
-            }
-            other_mul *= 1.0f + crit_dmg * crit_mod;
-            armor_mult = 1.0f - ( 1.0f - dt->melee_crit_armor_mult ) * crit_mod;
-            arpen += static_cast<int>( dt->melee_crit_armor_penetration * crit_mod );
-        }
 
         di.add_damage( dt, other_dam, arpen, armor_mult, other_mul );
     }
