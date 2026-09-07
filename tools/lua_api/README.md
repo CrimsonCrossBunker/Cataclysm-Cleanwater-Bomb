@@ -84,7 +84,18 @@ loading, and exercise the affected behavior for runtime acceptance.
 
 ## Review an API upgrade
 
-Create a separate scaffold with the target version's declarations, then compare:
+Compare directly with the target game's bundled declaration file:
+
+```sh
+python3 tools/lua_api/mod_sdk.py compare-release /path/MyMod \
+  --declarations /path/TargetGame/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This requires no second scaffold, never executes Lua, and leaves both the Mod's
+SDK and the target file unchanged. The report records the absolute target path
+and declaration hash; you explicitly choose which game package to inspect.
+
+Alternatively, compare two existing SDK snapshots:
 
 ```sh
 python3 tools/lua_api/mod_sdk.py compare /path/OldMod /path/NewVersionScaffold

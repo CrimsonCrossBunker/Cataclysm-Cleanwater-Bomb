@@ -83,6 +83,40 @@ class ModSdkTest(unittest.TestCase):
             self.assertEqual(report["added"], ["CcbPlatformV1.service"])
             self.assertEqual((before / ".ccb-sdk/ccb.lua").read_bytes(), saved)
 
+    def test_compare_release_needs_no_second_scaffold_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mod = self.make_sdk(root, "installed")
+            release = root / "target-game.d.lua"
+            release.write_text(DECLARATIONS.replace(
+                "---@param name string", "---@param name integer"
+            ), encoding="utf-8")
+            paths = [mod / ".ccb-sdk/ccb.lua", mod / ".ccb-sdk/version.json",
+                     mod / ".luarc.json", release]
+            before = {path: path.read_bytes() for path in paths}
+            report = mod_sdk.compare_release(mod, release)
+            self.assertIn("Runtime.hello", report["changed"])
+            self.assertEqual(
+                report["target_declarations"], str(release.resolve()))
+            self.assertEqual(report["new"]["declarations_sha256"],
+                             mod_sdk.digest(before[release]))
+            self.assertEqual(
+                {path: path.read_bytes() for path in paths}, before)
+            self.assertFalse((root / ".ccb-sdk").exists())
+
+    def test_compare_release_rejects_invalid_target_and_tampered_sdk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mod = self.make_sdk(root, "installed")
+            release = root / "target-game.d.lua"
+            release.write_text("return {}", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Platform v1"):
+                mod_sdk.compare_release(mod, release)
+            release.write_text(DECLARATIONS, encoding="utf-8")
+            (mod / ".ccb-sdk/ccb.lua").write_text("changed", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "checksum"):
+                mod_sdk.compare_release(mod, release)
+
     def test_source_line_movement_does_not_change_signatures(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

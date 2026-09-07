@@ -109,6 +109,31 @@ def declaration_surface(text: str) -> dict[str, list[str]]:
 def compare_sdks(old: Path, new: Path) -> dict:
     old_metadata, old_text = read_sdk(old)
     new_metadata, new_text = read_sdk(new)
+    return compare_declarations(old_metadata, old_text, new_metadata, new_text)
+
+
+def compare_release(mod: Path, declarations: Path) -> dict:
+    """Compare against an explicitly selected game file, without a scaffold."""
+    old_metadata, old_text = read_sdk(mod)
+    content = declarations.read_bytes()
+    new_text = content.decode("utf-8")
+    if ("---@class CcbPlatformV1" not in new_text
+            or "return ccb" not in new_text):
+        raise ValueError("expected CCB Platform v1 LuaLS declarations")
+    new_metadata = {
+        "schema_version": 1,
+        "platform_version": 1,
+        "lua_version": "5.4",
+        "declarations_sha256": digest(content),
+    }
+    report = compare_declarations(
+        old_metadata, old_text, new_metadata, new_text)
+    report["target_declarations"] = str(declarations.resolve())
+    return report
+
+
+def compare_declarations(old_metadata: dict, old_text: str,
+                         new_metadata: dict, new_text: str) -> dict:
     before = declaration_surface(old_text)
     after = declaration_surface(new_text)
     return {
@@ -186,6 +211,12 @@ def main() -> int:
     )
     compare.add_argument("old", type=Path)
     compare.add_argument("new", type=Path)
+    release = commands.add_parser(
+        "compare-release", help="compare an SDK with target game declarations"
+    )
+    release.add_argument("mod", type=Path)
+    release.add_argument("--declarations", type=Path, required=True,
+                         help="declaration file from the target game package")
     check = commands.add_parser(
         "check", help="report LuaLS warnings and errors"
     )
@@ -195,6 +226,10 @@ def main() -> int:
     try:
         if args.command == "compare":
             print(json.dumps(compare_sdks(args.old, args.new),
+                             ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "compare-release":
+            print(json.dumps(compare_release(args.mod, args.declarations),
                              ensure_ascii=False, indent=2))
             return 0
         diagnostics = check_mod(args.mod, args.language_server)
