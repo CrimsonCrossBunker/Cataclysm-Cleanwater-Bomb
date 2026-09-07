@@ -22,12 +22,14 @@ TEST_CASE( "lua_platform_character_recurrence_rejects_unrepresentable_saved_turn
     lua.set_function( "effect", [&effect_calls]() {
         ++effect_calls;
     } );
-    lua.set_function( "interval", [&interval_calls, &first_schedule]( const sol::table &payload ) {
+    lua.set_function( "interval", [&interval_calls, &first_schedule]( const sol::table & payload ) {
         ++interval_calls;
         first_schedule = payload["first_schedule"].get<bool>();
         return 10;
     } );
-    for( const char *handler : { "effect", "interval" } ) {
+    for( const char *handler : {
+             "effect", "interval"
+         } ) {
         const sol::protected_function_result registered =
             ccb["runtime"]["handler"]( handler, lua[handler] );
         REQUIRE( registered.valid() );
