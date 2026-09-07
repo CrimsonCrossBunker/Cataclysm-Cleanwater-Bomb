@@ -1401,17 +1401,6 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
         return; // No negative damage!
     }
 
-    // Cut criticals against poorly-armored targets gain a stat-scaled bonus zone:
-    // triggers when raw damage reaches 250% of the target's cut armor (0 armor always
-    // qualifies); ramp is logistic from sum 16 to sum 56, capped at +50%.
-    if( crit && dt == damage_cut && dmg >= 2.5f * target_cut_armor &&
-        u.get_str() > 8 && u.get_dex() > 8 ) {
-        const int str_val = std::min( u.get_str(), 40 );
-        const int dex_val = std::min( u.get_dex(), 40 );
-        const float zone = 0.5f * ( 1.0f - logarithmic_range( 16, 56, str_val + dex_val ) );
-        dmg *= 1.0f + zone;
-    }
-
     // FIXME: Hardcoded damage type effects (stab)
     if( !dt->skill.is_null() ) {
         if( dt == damage_stab ) {
@@ -1440,6 +1429,17 @@ static void roll_melee_damage_internal( const Character &u, const damage_type_id
         float crit_dmg = dt->melee_crit_dmg_mult;
         if( !dt->skill.is_null() ) {
             crit_dmg += dt->melee_crit_dmg_mult_per_skill * skill;
+        }
+        // Cut criticals against poorly-armored targets gain a stat-scaled bonus zone:
+        // triggers when raw damage reaches 250% of the target's cut armor (0 armor
+        // always qualifies); ramp is logistic from sum 16 to sum 56, capped at +50%.
+        if( dt == damage_cut && dmg >= 2.5f * target_cut_armor &&
+            u.get_str() > 8 && u.get_dex() > 8 ) {
+            const int str_val = std::min( u.get_str(), 40 );
+            const int dex_val = std::min( u.get_dex(), 40 );
+            const float zone = 0.5f *
+                               ( 1.0f - logarithmic_range( 16, 56, str_val + dex_val ) );
+            dmg *= 1.0f + zone;
         }
         dmg_mul *= 1.0f + crit_dmg * crit_mod;
         armor_mult = 1.0f - ( 1.0f - dt->melee_crit_armor_mult ) * crit_mod;
