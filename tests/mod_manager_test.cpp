@@ -16,6 +16,7 @@
 #include "worldfactory.h"
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
+static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
 static const mod_id MOD_INFORMATION_test_third_party_mod( "test_third_party_mod" );
 static const mod_id MOD_INFORMATION_test_third_party_mod_dda( "test_third_party_mod#dda" );
 static const mod_id MOD_INFORMATION_test_user_mod( "test_user_mod" );
@@ -155,7 +156,7 @@ TEST_CASE( "lua_mod_discovery_notifies_once_across_catalog_refreshes",
     } );
     const std::vector<mod_id> discovered = manager.all_mods();
     REQUIRE( std::find( discovered.begin(), discovered.end(),
-                        mod_id( "Lua_First_Example" ) ) != discovered.end() );
+                        MOD_INFORMATION_Lua_First_Example ) != discovered.end() );
     CHECK( notices == 1 );
     manager.refresh_mod_list();
     CHECK( notices == 1 );

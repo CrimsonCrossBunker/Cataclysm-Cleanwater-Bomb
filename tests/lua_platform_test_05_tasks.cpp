@@ -1,6 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "messages.h"
+#include <algorithm>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
 
 TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_dispatch",
            "[lua][platform][runtime][tasks][handles]" )
