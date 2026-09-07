@@ -117,6 +117,20 @@ class ModSdkTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum"):
                 mod_sdk.compare_release(mod, release)
 
+    def test_sdk_metadata_must_identify_the_supported_platform_and_lua(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.make_sdk(Path(directory), "example")
+            metadata_path = mod / ".ccb-sdk/version.json"
+            original = json.loads(metadata_path.read_text(encoding="utf-8"))
+            for key, value in (("schema_version", True), ("platform_version", True),
+                               ("platform_version", 5), ("lua_version", "5.3"),
+                               ("lua_version", None)):
+                with self.subTest(key=key, value=value):
+                    changed = dict(original, **{key: value})
+                    metadata_path.write_text(json.dumps(changed), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "unsupported"):
+                        mod_sdk.read_sdk(mod)
+
     def test_source_line_movement_does_not_change_signatures(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

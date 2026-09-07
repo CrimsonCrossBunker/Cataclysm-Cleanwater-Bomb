@@ -60,8 +60,14 @@ def write_editor_files(target: Path, declarations: Path) -> None:
 def read_sdk(mod: Path) -> tuple[dict, str]:
     sdk = mod / SDK_DIRECTORY
     metadata = json.loads((sdk / "version.json").read_text(encoding="utf-8"))
-    if not isinstance(metadata, dict) or metadata.get("schema_version") != 1:
+    if (not isinstance(metadata, dict)
+            or type(metadata.get("schema_version")) is not int
+            or metadata["schema_version"] != 1):
         raise ValueError(f"{sdk}: unsupported SDK metadata format")
+    if (type(metadata.get("platform_version")) is not int
+            or metadata["platform_version"] != 1
+            or metadata.get("lua_version") != "5.4"):
+        raise ValueError(f"{sdk}: unsupported Platform/Lua version in SDK metadata")
     contents = (sdk / "ccb.lua").read_bytes()
     if metadata.get("declarations_sha256") != digest(contents):
         raise ValueError(f"{sdk}: declaration checksum mismatch")
