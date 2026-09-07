@@ -34,12 +34,18 @@ TEST_CASE( "lua_platform_console_uses_the_selected_mod_and_preserves_errors",
     CHECK( error.empty() );
     REQUIRE( platform::execute_console( "console-second", "return console_counter", output, error ) );
     CHECK( output == "9" );
+    REQUIRE( platform::execute_console( "console-first", R"lua(
+local ccb = require("ccb")
+return ccb.services.characters.recalculate_enchantments(ccb.services.handles.avatar()).ok
+)lua", output, error ) );
+    CHECK( output == "true" );
 
     REQUIRE_FALSE( platform::execute_console( "console-first",
                    "console_counter = 17; error('console sentinel')", output, error ) );
     CHECK( output.empty() );
     CHECK( error.find( "console-first" ) != std::string::npos );
     CHECK( error.find( "console sentinel" ) != std::string::npos );
+    CHECK( platform::detail::find_active_runtime( "console-first" )->callback_depth == 0 );
     REQUIRE( platform::execute_console( "console-first", "return console_counter", output, error ) );
     CHECK( output == "17" ); // Console execution does not promise rollback.
     REQUIRE_FALSE( platform::execute_console( "console-first", "local = invalid", output, error ) );

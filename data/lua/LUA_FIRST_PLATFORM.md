@@ -214,6 +214,8 @@ text chunk in a selected, already loaded Mod's state. Use `require("ccb")` as
 usual and `return` to display values. Execution is deferred until outside the
 ImGui drawing frame; it neither creates another runtime nor automatically runs
 saved input. Console changes are immediate and are not rolled back on error.
+The explicit call enters the selected owner's callback scope; normal world-ready,
+handle-generation and domain checks still apply to services.
 Return display shows at most 16 values and 1024 source bytes per string, escaping
 control bytes and replacing invalid UTF-8; other objects appear as type labels
 without invoking `__tostring`. These are display limits, not script quotas.
@@ -224,6 +226,7 @@ have not received interactive acceptance.
 “调试菜单 → 控制台 → Lua”草稿页在选定的已加载 Mod 状态中执行手动提交的文本代码。
 继续使用 `require("ccb")`，用 `return` 显示结果；执行安排在 ImGui 绘制帧之外，
 不创建第二套运行时，也不自动执行保存的输入。修改立即生效，后续报错不会回滚。
+手动调用进入所选 owner 的回调上下文，服务继续检查 world-ready、句柄代次和领域规则。
 最多展示 16 个返回值，每个字符串最多读取 1024 字节，转义控制字节、替换无效 UTF-8；
 其他对象只展示类型，不调用 `__tostring`。这只是显示限制，不是脚本配额。
 同一状态递归执行以及重载过程中的执行会被拒绝。源码和回归测试源码尚未编译或交互验收。

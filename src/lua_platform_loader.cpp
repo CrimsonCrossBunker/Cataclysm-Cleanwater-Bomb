@@ -46,6 +46,7 @@ extern "C" {
 #endif
 
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
@@ -818,6 +819,9 @@ bool execute_console( const std::string &mod_id, const std::string &source,
         return false;
     }
     try {
+        // The explicit console invocation is a runtime callback. Keep the
+        // existing world-ready, owner, handle and domain mutation checks.
+        const detail::callback_scope callback( *found->platform );
         const sol::protected_function_result result = found->lua->safe_script(
                     source, sol::script_pass_on_error, "=CCB console: " + mod_id, sol::load_mode::text );
         if( !result.valid() ) {
