@@ -3464,9 +3464,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             for( const profession_trait_definition_data &value : definition.traits ) {
                 require_valid_id( value.trait, "profession trait" );
                 const trait_id trait( value.trait );
+                const bool staged = index_defines( index.defines_trait, value.trait );
                 if( !unique.insert( value.trait ).second ||
-                    ( check_engine_state && !trait.is_valid() ) ||
-                    ( check_engine_state && !value.variant.empty() && trait.is_valid() &&
+                    ( check_engine_state && !staged && !trait.is_valid() ) ||
+                    ( check_engine_state && !staged && !value.variant.empty() && trait.is_valid() &&
                       trait->variant( value.variant ) == nullptr ) ) {
                     throw std::runtime_error( "profession '" + definition.id +
                                               "' has an unknown, duplicate, or invalid trait '" +
@@ -3476,7 +3477,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             for( const std::string &trait : definition.forbidden_traits ) {
                 require_valid_id( trait, "profession forbidden trait" );
                 if( !unique.insert( trait ).second ||
-                    ( check_engine_state && !trait_id( trait ).is_valid() ) ) {
+                    ( check_engine_state && !index_defines( index.defines_trait, trait ) &&
+                      !trait_id( trait ).is_valid() ) ) {
                     throw std::runtime_error( "profession '" + definition.id +
                                               "' has an unknown, duplicate, or contradictory trait '" +
                                               trait + "'" );
@@ -5066,6 +5068,24 @@ bool character_content_transaction::validate_finalized( std::string &error ) con
         if( !require_valid( profession_id( entry.definition->id ).is_valid(),
                             "profession", entry.definition->id ) ) {
             return false;
+        }
+        // Staged mutations (including replacements of existing ids) are installed
+        // after professions. Resolve their variants against the final definitions.
+        for( const profession_trait_definition_data &value : entry.definition->traits ) {
+            const trait_id trait( value.trait );
+            if( !trait.is_valid() ||
+                ( !value.variant.empty() && trait->variant( value.variant ) == nullptr ) ) {
+                error = "profession '" + entry.definition->id +
+                        "' has an unknown or invalid finalized trait '" + value.trait + "'";
+                return false;
+            }
+        }
+        for( const std::string &value : entry.definition->forbidden_traits ) {
+            if( !trait_id( value ).is_valid() ) {
+                error = "profession '" + entry.definition->id +
+                        "' has an unknown finalized forbidden trait '" + value + "'";
+                return false;
+            }
         }
     }
     for( const profession_group_registration &entry : pimpl_->profession_groups ) {
