@@ -1,4 +1,5 @@
 #include <functional>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -21,6 +23,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "veh_appliance.h"
+#include "veh_interact.h"
 #include "veh_type.h"
 #include "vehicle.h"
 
@@ -37,10 +40,88 @@ static const itype_id itype_welding_wire_steel( "welding_wire_steel" );
 static const skill_id skill_mechanics( "mechanics" );
 
 static const vpart_id vpart_ap_test_storage_battery( "ap_test_storage_battery" );
+static const vpart_id vpart_board( "board" );
+static const vpart_id vpart_frame( "frame" );
 
 static const vpart_location_id vpart_location_structure( "structure" );
 
 static const vproto_id vehicle_prototype_car( "car" );
+static const vproto_id vehicle_prototype_none( "none" );
+
+TEST_CASE( "dealership_batch_installation_selects_compatible_mounts", "[vehicle][vehicle_service]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, tripoint_bub_ms( 60, 60, 0 ),
+                                     90_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 1 ), vpart_frame ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_board ) >= 0 );
+    here.add_vehicle_to_cache( veh );
+
+    SECTION( "occupied_and_frameless_tiles_are_skipped_inclusively" ) {
+        const std::vector<point_rel_ms> expected{ point_rel_ms( 1, 0 ), point_rel_ms( 1, 1 ) };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms( 1, 1 ), vpart_board.obj() ) == expected );
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms( 1, 1 ),
+                point_rel_ms::zero, vpart_board.obj() ) == expected );
+        CHECK( veh->part_count_real() == 4 );
+    }
+
+    SECTION( "a_single_tile_uses_the_same_installation_rules" ) {
+        const point_rel_ms mount( 1, 0 );
+        const std::vector<point_rel_ms> expected{ mount };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, mount, mount,
+                vpart_board.obj() ) == expected );
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms::zero, vpart_board.obj() ).empty() );
+    }
+
+    SECTION( "later_orders_skip_parts_that_have_already_been_installed" ) {
+        REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_board ) >= 0 );
+        const std::vector<point_rel_ms> expected{ point_rel_ms( 1, 1 ) };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms( 1, 1 ), vpart_board.obj() ) == expected );
+    }
+
+    SECTION( "blocked_terrain_is_skipped_at_each_rotated_mount" ) {
+        const point_rel_ms blocked_mount( 1, 0 );
+        here.ter_set( veh->pos_bub( here ) + veh->coord_translate( blocked_mount ), ter_id( "t_wall" ) );
+        const std::vector<point_rel_ms> expected{ point_rel_ms( 1, 1 ) };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms( 1, 1 ), vpart_board.obj() ) == expected );
+        CHECK( veh_interact::service_installation_position_denial( here, *veh, blocked_mount,
+                vpart_board.obj() ).has_value() );
+    }
+
+    SECTION( "creatures_prevent_installing_obstacles_on_their_tile" ) {
+        const point_rel_ms blocked_mount( 1, 0 );
+        spawn_test_monster( "mon_zombie", veh->pos_bub( here ) + veh->coord_translate( blocked_mount ),
+                            false );
+        const std::vector<point_rel_ms> expected{ point_rel_ms( 1, 1 ) };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms( 1, 1 ), vpart_board.obj() ) == expected );
+    }
+
+    SECTION( "rectangles_crossing_negative_mount_coordinates_are_supported" ) {
+        REQUIRE( veh->install_part( here, point_rel_ms( -1, 0 ), vpart_frame ) >= 0 );
+        const std::vector<point_rel_ms> expected{ point_rel_ms( -1, 0 ), point_rel_ms( 1, 0 ) };
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms( -1, 0 ),
+                point_rel_ms( 1, 0 ), vpart_board.obj() ) == expected );
+    }
+
+    SECTION( "oversized_and_extreme_rectangles_are_rejected" ) {
+        CHECK( veh_interact::service_installation_mounts( here, *veh, point_rel_ms::zero,
+                point_rel_ms( veh_interact::service_installation_area_limit, 0 ),
+                vpart_board.obj() ).empty() );
+        CHECK( veh_interact::service_installation_mounts( here, *veh,
+                point_rel_ms( std::numeric_limits<int>::min(), 0 ),
+                point_rel_ms( std::numeric_limits<int>::max(), 0 ), vpart_board.obj() ).empty() );
+    }
+}
 
 static void test_repair( const std::vector<item> &tools, bool plug_in_tools, bool expect_craftable )
 {

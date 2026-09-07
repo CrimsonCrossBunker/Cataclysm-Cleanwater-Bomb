@@ -8370,6 +8370,9 @@ function CcbPlatformPresentation.notice_top(message) end
 ---@field part_stale boolean True when the operation removed/replaced the part.
 ---@field part_error? string Stable stale diagnostic when no part handle remains.
 
+---@class CcbVehiclePartServiceResult
+---@field status "cancelled"|"no_vehicle"|"no_value"|"no_output"|"payment_cancelled"|"invalidated"|"repairing"|"removing"|"installing" Immediate outcome of the service UI; a started activity has not yet completed.
+
 ---@class CcbVehiclesApi
 local CcbVehiclesApi = {}
 
@@ -8448,11 +8451,22 @@ function CcbVehiclesApi.quote_full_repair(vehicle, mechanic, repair_multiplier) 
 ---@param repair_multiplier? number
 ---@return CcbResult
 function CcbVehiclesApi.start_full_repair(vehicle, mechanic, repair_multiplier) end
+--- Open the native vehicle-service UI for any Mod's chosen vehicle and mechanic; requires a writable runtime phase.
+--- The vehicle must belong to the current player and must not be under the player's control.
+--- Offers single-part repair, removal, installation, and rectangular batch installation of one part type.
+--- The BATCH_INSTALL action selects an inclusive rectangle of at most 4096 mount positions.
+--- When some positions and parts remain available, incompatible positions and shortages each require a choice
+--- to cancel or install partially. Joint installation constraints can still reject the resulting order.
+--- Accepted partial orders charge and reserve parts only for actual installations, with time based on that count.
+--- Returns after cancellation or activity assignment. UI cancellation returns ok=true with status="cancelled";
+--- payment cancellation uses "payment_cancelled". Handle failures return ok=false; invalid multipliers raise an error.
+--- Uses the supplied mechanic's stock, trading prices, and credit ledger. Removal requires a loaded f_counter
+--- near the mechanic in their faction's VEHICLE_SERVICE_OUTPUT zone. No Mod identity or NPC template is required.
 ---@param vehicle GameHandle Exact live Vehicle handle.
----@param mechanic GameHandle Exact live NPC/Character mechanic handle.
----@param repair_multiplier? number
----@param install_multiplier? number
----@return CcbResult
+---@param mechanic GameHandle Exact live NPC/Character mechanic handle resolving to an NPC.
+---@param repair_multiplier? number Finite value in (0, 1000]; defaults to 1.
+---@param install_multiplier? number Finite value in (0, 1000]; defaults to 1.
+---@return CcbResult result `value` is a CcbVehiclePartServiceResult.
 function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, install_multiplier) end
 
 ---@class MissionToken
