@@ -1,6 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
+#include <initializer_list>
+#include <optional>
+#include <string>
+
 #include "avatar.h"
+#include "coordinates.h"
+#include "lua_platform_sol.h"
+#include "point.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character_id.h"
@@ -51,7 +59,7 @@ TEST_CASE( "lua_platform_npc_follow_preserves_native_state_transitions",
     namespace platform = cata::lua_platform;
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto owner = platform::make_game_handle_runtime_owner();
+    const platform::game_handle_runtime_owner_ptr owner = platform::make_game_handle_runtime_owner();
     const platform::game_handle_runtime runtime{ owner, 1 };
     platform::install_value_type_api( lua, services, []() {} );
     platform::install_game_handle_api( lua, services, [&]() {
@@ -67,12 +75,12 @@ TEST_CASE( "lua_platform_npc_follow_preserves_native_state_transitions",
         return 1;
     }, []() {}, []() {}, []() {} );
     platform::register_npc_handle_identity( migrated );
-    const auto npc_handle = platform::game_handle::from_creature(
-                                migrated, { "npc", migrated.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
-    const auto avatar_handle = platform::game_handle::from_creature(
-                                   player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+    const platform::game_handle npc_handle = platform::game_handle::from_creature(
+                migrated, { "npc", migrated.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+    const platform::game_handle avatar_handle = platform::game_handle::from_creature(
+                player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     sol::protected_function function = services["npcs"][temporary ? "follow_temporarily" :
-        "join_player"];
+                                       "join_player"];
     sol::protected_function_result call = temporary ? function( npc_handle ) :
                                           function( npc_handle, avatar_handle );
     REQUIRE( call.valid() );

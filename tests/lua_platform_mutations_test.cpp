@@ -29,6 +29,7 @@
 #include "talker.h"
 #include "type_id.h"
 
+static const trait_id trait_FELINE_EARS( "FELINE_EARS" );
 static const trait_id trait_QUICK( "QUICK" );
 static const trait_id trait_SNAIL_TRAIL( "SNAIL_TRAIL" );
 static const trait_id trait_STRONGER_VULNERABLEWARM( "STRONGER_VULNERABLEWARM" );
@@ -275,8 +276,8 @@ TEST_CASE( "lua_platform_mutations_query_variable_owners_and_list_boundaries",
            "[lua][platform][mutations][semantic]" )
 {
     mutation_fixture fixture;
-    fixture.player.set_mutation( trait_id( "QUICK" ) );
-    fixture.other.set_mutation( trait_id( "FELINE_EARS" ) );
+    fixture.player.set_mutation( trait_QUICK );
+    fixture.other.set_mutation( trait_FELINE_EARS );
     fixture.player.set_value( "trait", "QUICK" );
     fixture.other.set_value( "trait", "FELINE_EARS" );
     dialogue context( get_talker_for( fixture.player ), get_talker_for( fixture.other ) );
@@ -288,18 +289,18 @@ TEST_CASE( "lua_platform_mutations_query_variable_owners_and_list_boundaries",
          } ) {
         const std::string id = scope == "u_val" ? "QUICK" : "FELINE_EARS";
         CAPTURE( npc_target, scope );
-        const std::string source = "{\"" + prefix + "has_trait\":{\"" + scope + "\":\"trait\"}}";
+        const std::string source = R"({")" + prefix + R"(has_trait":{")" + scope + R"(":"trait"}})";
         const conditional_t legacy( json_loader::from_string( source ).get_object() );
         CHECK( legacy( context ) == fixture.query( "has", npc_target, id ) );
         CHECK( legacy( context ) == ( npc_target == ( scope != "u_val" ) ) );
     }
-    CHECK_FALSE( fixture.legacy_condition( "{\"" + prefix + "has_any_trait\":[]}" ) );
+    CHECK_FALSE( fixture.legacy_condition( R"({")" + prefix + R"(has_any_trait":[]})" ) );
     std::string list;
     for( int i = 0; i < 64; ++i ) {
-        list += "\"QUICK\",";
+        list += R"("QUICK",)";
     }
-    list += "\"FELINE_EARS\"";
-    CHECK( fixture.legacy_condition( "{\"" + prefix + "has_any_trait\":[" + list + "]}" ) );
+    list += R"("FELINE_EARS")";
+    CHECK( fixture.legacy_condition( R"({")" + prefix + R"(has_any_trait":[)" + list + "]}" ) );
     CHECK( ( fixture.query( "has", npc_target, "QUICK" ) ||
              fixture.query( "has", npc_target, "FELINE_EARS" ) ) );
 }
