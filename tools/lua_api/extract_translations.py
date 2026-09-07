@@ -13,6 +13,10 @@ KEYWORDS = (
     "ccb.services.translate:1,2c,2t",
     "ccb.services.translate_plural:1,2,3t",
     "ccb.services.translate_plural:1,2,4c,4t",
+    "ccb.content.text:1,1t",
+    "ccb.content.text:1,2c,2t",
+    "ccb.content.plural_text:1,2,2t",
+    "ccb.content.plural_text:1,2,3c,3t",
 )
 HEADER = (
     'msgid ""\nmsgstr ""\n'

@@ -98,6 +98,22 @@ ccb.services.translate(variable)
         self.assertEqual(output, extract([self.source, self.source]))
 
     @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
+    def test_static_content_markers_extract_context_and_plural_forms(self):
+        self.source.write_text('''
+local item = ccb.content.Item {
+    name = ccb.content.plural_text("bottle", "bottles", "container"),
+    description = ccb.content.text("A small bottle.", "item description")
+}
+local other_name = ccb.content.plural_text("fish", "fish")
+local other_description = ccb.content.text("Fresh water.")
+''', encoding="utf-8")
+        output = extract([self.source])
+        self.assertIn('msgctxt "container"\nmsgid "bottle"\nmsgid_plural "bottles"', output)
+        self.assertIn('msgctxt "item description"\nmsgid "A small bottle."', output)
+        self.assertIn('msgid "fish"\nmsgid_plural "fish"', output)
+        self.assertIn('msgid "Fresh water."', output)
+
+    @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
     def test_check_does_not_write_and_rejects_input_overwrite(self):
         destination = self.root / "messages.pot"
         args = [str(self.source), "--output", str(destination)]

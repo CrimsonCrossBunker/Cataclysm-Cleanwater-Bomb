@@ -117,7 +117,7 @@ The editor gate checks both real templates and deliberately invalid author code
 for unknown APIs, missing arguments and wrong argument types. It is a static
 acceptance gate and does not trigger a C++ build or a full content audit.
 
-## Extract runtime translations (draft API)
+## Extract translations (draft API)
 
 The independent localization implementation adds `ccb.services.translate(text,
 context?)` and `ccb.services.translate_plural(singular, plural, count, context?)`.
@@ -143,6 +143,27 @@ end)
 ccb.runtime.on("world_ready", "translated_ready")
 ```
 
+Static Item names and descriptions instead accept deferred values. Plain strings
+remain untranslated; other content builders and Mod metadata do not yet accept
+these values. Source forms must be nonempty and all arguments must exclude NUL:
+
+```lua
+local ccb = require("ccb")
+ccb.content.add(ccb.content.Item {
+    id = "MyMod_water_bottle", mass_grams = 500, volume_ml = 500,
+    name = ccb.content.plural_text("bottle of water", "bottles of water", "MyMod item"),
+    description = ccb.content.text("A sealed bottle.", "MyMod description")
+})
+```
+
+These immutable values preserve source text for native translation when displayed,
+including after a language change. Descriptions reject plural values. A name
+marked with `text` uses the same source as its plural fallback; use `plural_text`
+for distinct forms. Inheritance preserves an omitted translated field, while an
+explicit plain string replaces it. Changes to text context, plural forms or
+translation status require static content reload. Native/locale acceptance remains
+pending; the extractor's passing checks alone do not prove game integration.
+
 Use GNU `xgettext` to extract explicitly named source files without executing
 Lua. Run from the Mod root for stable relative references:
 
@@ -157,7 +178,8 @@ input source. `--check` does not write; exit 1 means a
 missing/stale POT and exit 2 means extraction/setup failure. Output is stable for
 unchanged inputs and the same xgettext version. Calls through renamed aliases,
 computed messages, and dynamic contexts cannot be extracted reliably: keep the
-full `ccb.services` spelling and literals. Review the POT after extraction.
+full `ccb.services.translate`/`translate_plural` or `ccb.content.text`/`plural_text`
+spelling and literals. Review the POT after extraction.
 Formatting is a separate Lua operation; translators must preserve placeholders.
 For automatic gettext format flags, nest the translation call directly inside
 `string.format(ccb.services.translate("%d items", "MyMod status"), count)`.

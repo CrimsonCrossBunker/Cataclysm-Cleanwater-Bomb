@@ -461,12 +461,29 @@ The independent draft exposes `ccb.services.translate(text, context?)` and
 `world_ready`. Both return strings using the current native catalog. Literal
 calls can be extracted by `tools/lua_api/extract_translations.py`; its README
 contains the author example and catalog limitations. This is source-level work,
-not completed native acceptance. Deferred content-name translations, metadata
-translations and live catalog reload are outside this initial slice.
+not completed native acceptance. Metadata translations, other content builders
+and live catalog reload remain outside this slice.
+
+For Item names/descriptions, the draft also accepts immutable `LocalizedText`
+values from `ccb.content.text(text, context?)` and
+`ccb.content.plural_text(singular, plural, context?)`. These retain source text
+for native deferred translation; ordinary strings keep their untranslated
+behavior. Item descriptions reject plural values. A singular marked name uses
+the same source for plural fallback; use `plural_text` to supply a distinct
+plural. Source forms must be nonempty and all inputs must exclude NUL. Inherited
+fields retain the parent's translation object; explicit strings replace it.
+Context, plural form and literal/translated status enter the static fingerprint.
 
 独立草稿提供上述运行时文本接口，复用原生翻译目录、上下文与复数规则。这里只完成实现、
 声明、提取工具与测试源码；原生编译、真实语言目录及切换验收尚未执行。不能据此宣称
 完整国际化已经完成，也不将它加入核心 Platform 或 EOC 全量验收的前置条件。
+
+物品名称与说明还可接收 `ccb.content.text(text, context?)` 或
+`ccb.content.plural_text(singular, plural, context?)` 构造的不可变 `LocalizedText`。
+它保留源文本供原生层延迟翻译；普通字符串仍不翻译，说明字段不接受复数值。
+仅标记单数的名称以相同源文本作为复数回退；需要不同复数时使用 `plural_text`。
+源文本不能为空，所有输入均不允许 NUL。继承字段保留父定义的翻译对象，显式字符串替换它；
+上下文、复数和是否翻译均计入静态指纹。其他内容 builder、Mod 元数据及目录热重载仍待推进。
 
 ## Templates, examples, and maintenance / 模板、样例与维护
 

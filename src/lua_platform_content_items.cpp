@@ -39,6 +39,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <list>
+#include <optional>
 
 namespace cata::lua_platform::detail
 {
@@ -334,6 +335,33 @@ struct quality_level {
     std::int64_t level = 1;
 };
 
+struct localized_text {
+    std::string singular;
+    std::optional<std::string> plural;
+    std::optional<std::string> context;
+
+    translation native() const {
+        if( plural ) {
+            return context ? translation::pl_translation( *context, singular, *plural ) :
+                   translation::pl_translation( singular, *plural );
+        }
+        return context ? translation::to_translation( *context, singular ) :
+               translation::to_translation( singular );
+    }
+};
+
+localized_text make_localized_text( const std::string &singular,
+                                   const std::optional<std::string> &plural,
+                                   const sol::optional<std::string> &context )
+{
+    if( singular.empty() || singular.find( '\0' ) != std::string::npos ||
+        ( plural && ( plural->empty() || plural->find( '\0' ) != std::string::npos ) ) ||
+        ( context && context->find( '\0' ) != std::string::npos ) ) {
+        throw std::runtime_error( "localized content text requires nonempty source forms without NUL" );
+    }
+    return { singular, plural, context ? std::optional<std::string>( *context ) : std::nullopt };
+}
+
 struct item_definition_data {
     struct comestible_data {
         std::string type;
@@ -358,6 +386,8 @@ struct item_definition_data {
     std::string copy_from;
     std::string name;
     std::string description;
+    std::optional<localized_text> translated_name;
+    std::optional<localized_text> translated_description;
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
     std::int64_t volume_ml = 0;
@@ -2430,6 +2460,15 @@ items_content_transaction::~items_content_transaction() = default;
 void items_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         sol::table &content )
 {
+    ccb.new_usertype<localized_text>( "LocalizedText", sol::no_constructor );
+    content.set_function( "text", []( const std::string &text,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( text, std::nullopt, context );
+    } );
+    content.set_function( "plural_text", []( const std::string &singular, const std::string &plural,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( singular, plural, context );
+    } );
     ccb.new_usertype<tool_quality_definition_handle>(
         "ToolQualityDefinition", sol::no_constructor,
         "id", sol::property( &tool_quality_definition_handle::id ),
@@ -2816,8 +2855,23 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 present = true;
             }
         };
-        read_string( "name", definition->name, definition->has_name );
-        read_string( "description", definition->description, definition->has_description );
+        const auto read_text = [&options, &read_string]( const char *key, std::string &raw,
+        bool &present, std::optional<localized_text> &translated, const bool allow_plural ) {
+            const sol::object value = options[key];
+            if( value.is<localized_text>() ) {
+                translated = value.as<localized_text>();
+                if( translated->plural && !allow_plural ) {
+                    throw std::runtime_error( "item description does not accept plural text" );
+                }
+                raw = translated->singular;
+                present = true;
+            } else {
+                read_string( key, raw, present );
+            }
+        };
+        read_text( "name", definition->name, definition->has_name, definition->translated_name, true );
+        read_text( "description", definition->description, definition->has_description,
+                   definition->translated_description, false );
         read_string( "symbol", definition->symbol, definition->has_symbol );
         read_string( "color", definition->color, definition->has_color );
         read_string( "category", definition->category, definition->has_category );
@@ -5414,10 +5468,15 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native->id = id;
                     if( definition.has_name ) {
-                        native->name = no_translation( definition.name );
+                        native->name = definition.translated_name ? definition.translated_name->native() :
+                                       no_translation( definition.name );
+                        if( definition.translated_name ) {
+                            native->name.make_plural();
+                        }
                     }
                     if( definition.has_description ) {
-                        native->description = no_translation( definition.description );
+                        native->description = definition.translated_description ?
+                                              definition.translated_description->native() : no_translation( definition.description );
                     }
                     if( definition.has_symbol ) {
                         native->sym = definition.symbol;
@@ -6687,6 +6746,17 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.copy_from );
                 hash_part( state, v.name );
                 hash_part( state, v.description );
+                const auto hash_text = [&state]( const std::optional<localized_text> &text ) {
+                    hash_part( state, text ? "localized" : "literal" );
+                    if( text ) {
+                        hash_part( state, text->context ? "context" : "no_context" );
+                        hash_part( state, text->context.value_or( "" ) );
+                        hash_part( state, text->plural ? "plural" : "no_plural" );
+                        hash_part( state, text->plural.value_or( "" ) );
+                    }
+                };
+                hash_text( v.translated_name );
+                hash_text( v.translated_description );
                 hash_part( state, v.symbol );
                 hash_part( state, std::to_string( v.mass_grams ) );
                 hash_part( state, std::to_string( v.volume_ml ) );

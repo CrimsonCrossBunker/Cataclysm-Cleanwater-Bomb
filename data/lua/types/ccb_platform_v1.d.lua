@@ -356,11 +356,15 @@ local ModDefinition = {}
 ---@field y integer Absolute map-square y coordinate.
 ---@field z integer Absolute map-square z coordinate.
 
+---Immutable deferred translation value. Currently accepted by Item name and description.
+---Create with content.text or content.plural_text; ordinary strings remain untranslated.
+---@class LocalizedText
+
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
 ---@field copy_from? string Existing item id used as the patch base.
----@field name? string Display name; defaults to id.
----@field description? string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Explicit plural text supplies counted names.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field symbol? string Map symbol; defaults to `?`.
 ---@field color? string Native color id.
 ---@field category? string Native item-category id.
@@ -4993,6 +4997,19 @@ function CcbPlatformTilesetApi.limits() end
 function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
 local CcbPlatformContent = {}
+
+---Mark static content text for deferred translation, including after language changes.
+---@param text string Nonempty source text without NUL.
+---@param context? string Translation context without NUL.
+---@return LocalizedText
+function CcbPlatformContent.text(text, context) end
+
+---Mark singular/plural static content text. Translation is deferred until native display.
+---@param singular string Nonempty source text without NUL.
+---@param plural string Nonempty plural source text without NUL.
+---@param context? string Translation context without NUL.
+---@return LocalizedText
+function CcbPlatformContent.plural_text(singular, plural, context) end
 
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
