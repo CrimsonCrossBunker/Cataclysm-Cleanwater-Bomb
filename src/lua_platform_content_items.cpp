@@ -3535,9 +3535,16 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         for( const damage_type_registration &entry : pimpl_->damage_types ) {
             const damage_type_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "damage type" );
-            if( definition.name.empty() || !finite_native_float( definition.bash_conversion_factor ) ||
+            if( definition.name.empty() || !damage_type_ids.insert( definition.id ).second ||
+                !finite_native_float( definition.bash_conversion_factor ) ||
                 definition.bash_conversion_factor < 0.0 ||
-                !damage_type_ids.insert( definition.id ).second ) {
+                !finite_native_float( definition.melee_crit_dmg_mult ) ||
+                definition.melee_crit_dmg_mult < 0.0 ||
+                !finite_native_float( definition.melee_crit_dmg_mult_per_skill ) ||
+                definition.melee_crit_dmg_mult_per_skill < 0.0 ||
+                !finite_native_float( definition.melee_crit_armor_mult ) ||
+                !finite_native_float( definition.melee_crit_armor_penetration ) ||
+                definition.melee_crit_armor_penetration < 0.0 ) {
                 throw std::runtime_error( "damage type '" + definition.id +
                                           "' has invalid values or a duplicate registration" );
             }
