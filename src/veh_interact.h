@@ -91,6 +91,7 @@ class veh_interact
     public:
         enum class service_action : int {
             install,
+            install_batch,
             repair,
             remove
         };
@@ -98,6 +99,7 @@ class veh_interact
         struct service_selection {
             service_action action = service_action::repair;
             point_rel_ms mount = point_rel_ms::zero;
+            std::vector<point_rel_ms> mounts;
             vpart_id part_id;
             int part_index = -1;
         };
@@ -116,16 +118,28 @@ class veh_interact
         static std::optional<vpart_reference> select_part_at_grid( map &here, vehicle &veh,
                 const part_selector &sel );
 
-        /** Select a dealership install, repair, or removal from one shared vehicle grid. */
+        /** Select a mechanic's single/batch install, repair, or removal from one vehicle grid. */
         static std::optional<service_selection> select_service_action_at_grid(
             map &here, vehicle &veh, const std::set<itype_id> &available_base_items,
             const part_selector &repair_selector );
 
-        /** Structural/content denial for a dealership installation; skills and resources are ignored. */
+        /** Structural/content denial for a service installation; skills and resources are ignored. */
         static std::optional<std::string> service_installation_denial( const vehicle &veh,
                 const point_rel_ms &mount, const vpart_info &vpart );
 
-        /** Structural/content denial for a dealership removal; skills and resources are ignored. */
+        /** Map obstruction denial, checked against the live vehicle rather than a planning copy. */
+        static std::optional<std::string> service_installation_position_denial( map &here,
+                const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart );
+
+        static constexpr int service_installation_area_limit = 4096;
+
+        /** Eligible mounts in an inclusive rectangle, using the vehicle's current structure.
+         * Returns no mounts for a rectangle larger than service_installation_area_limit.
+         */
+        static std::vector<point_rel_ms> service_installation_mounts( map &here, const vehicle &veh,
+                const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart );
+
+        /** Structural/content denial for a service removal; skills and resources are ignored. */
         static std::optional<std::string> service_removal_denial( const vehicle &veh,
                 int part_index );
 
@@ -187,6 +201,8 @@ class veh_interact
         bool vehicle_service_mode = false;
         const std::set<itype_id> *service_install_items = nullptr;
         part_selector service_repair_filter;
+        std::optional<point_rel_ms> service_area_start;
+        std::optional<point_rel_ms> service_area_end;
 
         int highlight_part = -1;
 
@@ -364,6 +380,7 @@ class veh_interact
         void allocate_windows();
         void do_main_loop( map &here );
         std::optional<service_selection> do_vehicle_service_loop( map &here );
+        std::optional<service_selection> do_service_batch_install( map &here );
         std::optional<int> do_part_selection_loop( map &here );
         std::optional<int> select_part_at_cursor( map &here );
 

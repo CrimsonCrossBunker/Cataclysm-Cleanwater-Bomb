@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>
@@ -326,6 +327,7 @@ veh_interact::select_service_action_at_grid( map &here, vehicle &veh,
 {
     veh_interact vehint( here, veh );
     vehint.vehicle_service_mode = true;
+    vehint.main_context.register_action( "BATCH_INSTALL" );
     vehint.service_install_items = &available_base_items;
     vehint.service_repair_filter = repair_selector;
     vehint.move_cursor( here, point_rel_ms::zero );
@@ -376,6 +378,61 @@ std::optional<std::string> veh_interact::service_installation_denial( const vehi
         return can_mount.str();
     }
     return std::nullopt;
+}
+
+std::optional<std::string> veh_interact::service_installation_position_denial( map &here,
+        const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart )
+{
+    const tripoint_bub_ms position = veh.pos_bub( here ) + veh.coord_translate( mount );
+    if( !here.inbounds( position ) ) {
+        return _( "The installation position is outside the loaded map." );
+    }
+    if( here.impassable_ter_furn( position ) ) {
+        return _( "Terrain or furniture blocks the installation position." );
+    }
+    const optional_vpart_position other = here.veh_at( position );
+    if( other && &other->vehicle() != &veh ) {
+        return _( "Another vehicle blocks the installation position." );
+    }
+    if( vpart.has_flag( VPFLAG_OBSTACLE ) && get_creature_tracker().creature_at( position ) ) {
+        return _( "A creature blocks the installation position." );
+    }
+    return std::nullopt;
+}
+
+static int service_installation_area_size( const point_rel_ms &first, const point_rel_ms &second )
+{
+    const int64_t width = std::abs( static_cast<int64_t>( first.x() ) - second.x() ) + 1;
+    const int64_t height = std::abs( static_cast<int64_t>( first.y() ) - second.y() ) + 1;
+    if( width > veh_interact::service_installation_area_limit ||
+        height > veh_interact::service_installation_area_limit ||
+        width * height > veh_interact::service_installation_area_limit ) {
+        return 0;
+    }
+    return static_cast<int>( width * height );
+}
+
+std::vector<point_rel_ms> veh_interact::service_installation_mounts( map &here, const vehicle &veh,
+        const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart )
+{
+    std::vector<point_rel_ms> result;
+    if( service_installation_area_size( first, second ) == 0 ) {
+        return result;
+    }
+    const int min_x = std::min( first.x(), second.x() );
+    const int min_y = std::min( first.y(), second.y() );
+    const int width = std::max( first.x(), second.x() ) - min_x + 1;
+    const int height = std::max( first.y(), second.y() ) - min_y + 1;
+    for( int x = 0; x < width; ++x ) {
+        for( int y = 0; y < height; ++y ) {
+            const point_rel_ms mount( min_x + x, min_y + y );
+            if( !service_installation_position_denial( here, veh, mount, vpart ) &&
+                !service_installation_denial( veh, mount, vpart ) ) {
+                result.push_back( mount );
+            }
+        }
+    }
+    return result;
 }
 
 std::optional<std::string> veh_interact::service_removal_denial( const vehicle &veh,
@@ -783,11 +840,21 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
         msg.reset();
         if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
             move_cursor( here, vec->xy() );
+        } else if( action == "BATCH_INSTALL" ) {
+            if( service_install_items == nullptr || service_install_items->empty() ) {
+                msg = _( "Neither side has a tradable vehicle part available for installation." );
+                continue;
+            }
+            if( const std::optional<service_selection> selected = do_service_batch_install( here ) ) {
+                return selected;
+            }
+            move_cursor( here, point_rel_ms::zero );
         } else if( action == "INSTALL" ) {
             if( service_install_items == nullptr || service_install_items->empty() ) {
                 msg = _( "Neither side has a tradable vehicle part available for installation." );
                 continue;
             }
+            sel_cmd = VEHICLE_QUIT;
             do_install( here );
             if( sel_cmd == VEHICLE_INSTALL && sel_vpart_info != nullptr ) {
                 service_selection result;
@@ -838,6 +905,79 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
             move_cursor( here, point_rel_ms::zero, description_scroll_lines );
         } else if( action == "PAGE_UP" ) {
             move_cursor( here, point_rel_ms::zero, -description_scroll_lines );
+        }
+    }
+}
+
+std::optional<veh_interact::service_selection> veh_interact::do_service_batch_install( map &here )
+{
+    restore_on_out_of_scope restore_start( service_area_start );
+    restore_on_out_of_scope restore_end( service_area_end );
+    restore_on_out_of_scope restore_title( title );
+    service_area_start = -cursor_vp_mount;
+    service_area_end.reset();
+    bool first_corner_selected = false;
+    while( true ) {
+        if( !first_corner_selected ) {
+            service_area_start = -cursor_vp_mount;
+        }
+        title = first_corner_selected ? _( "Batch install: choose the opposite corner" ) :
+                _( "Batch install: choose the first corner" );
+        msg = string_format( _( "Move the cursor and use %1$s to select a corner.  %2$s cancels "
+                                "the selection and returns to vehicle services.\n"
+                                "The selected rectangle may contain at most %3$d tiles." ),
+                             main_context.get_desc( "CONFIRM" ), main_context.get_desc( "QUIT" ),
+                             service_installation_area_limit );
+        calc_overview( here );
+        ui_manager::redraw();
+        const std::string action = main_context.handle_input();
+        if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
+            move_cursor( here, vec->xy() );
+        } else if( action == "QUIT" ) {
+            msg.reset();
+            return std::nullopt;
+        } else if( action == "CONFIRM" || action == "BATCH_INSTALL" ) {
+            if( !first_corner_selected ) {
+                first_corner_selected = true;
+                continue;
+            }
+            if( service_installation_area_size( *service_area_start, -cursor_vp_mount ) == 0 ) {
+                popup( _( "Select a smaller rectangle (at most %d tiles)." ),
+                       service_installation_area_limit );
+                continue;
+            }
+            service_area_end = -cursor_vp_mount;
+            move_cursor( here, point_rel_ms::zero );
+            sel_cmd = VEHICLE_QUIT;
+            do_install( here );
+            if( sel_cmd != VEHICLE_INSTALL || sel_vpart_info == nullptr ) {
+                return std::nullopt;
+            }
+            service_selection result;
+            result.action = service_action::install_batch;
+            result.part_id = sel_vpart_info->id;
+            result.mounts = service_installation_mounts( here, *veh, *service_area_start,
+                            *service_area_end, *sel_vpart_info );
+            if( result.mounts.empty() ) {
+                return std::nullopt;
+            }
+            const int skipped = service_installation_area_size( *service_area_start,
+                                *service_area_end ) - static_cast<int>( result.mounts.size() );
+            if( skipped > 0 ) {
+                uilist menu;
+                menu.text = string_format( _( "%1$d tiles in the selected rectangle cannot accept %2$s.  "
+                                              "%3$d tiles can accept it.  How would you like to proceed?" ),
+                                           skipped, sel_vpart_info->name(), result.mounts.size() );
+                menu.addentry( 0, true, MENU_AUTOASSIGN, _( "Cancel installation" ) );
+                menu.addentry( 1, true, MENU_AUTOASSIGN,
+                               _( "Ignore incompatible tiles and install on the remaining tiles" ) );
+                menu.query();
+                if( menu.ret != 1 ) {
+                    return std::nullopt;
+                }
+            }
+            result.mount = result.mounts.front();
+            return result;
         }
     }
 }
@@ -1097,7 +1237,18 @@ bool veh_interact::update_part_requirements( map &here )
 
     if( vehicle_service_mode ) {
         std::string nmsg =
-            _( "The dealership supplies all skills, tools, lifting, and installation materials.\n" );
+            _( "The mechanic supplies all skills, tools, lifting, and installation materials.\n" );
+        if( service_area_end ) {
+            const int total = service_installation_area_size( *service_area_start, *service_area_end );
+            const int eligible = static_cast<int>( service_installation_mounts( here, *veh,
+                                                   *service_area_start, *service_area_end, *sel_vpart_info ).size() );
+            nmsg += string_format( _( "Install one identical part at each of %1$d eligible tiles.\n"
+                                      "%2$d tiles in the selected rectangle cannot accept this part.\n" ),
+                                   eligible, total - eligible );
+            sel_vpart_info->format_description( nmsg, c_light_gray, getmaxx( w_msg ) - 4 );
+            msg = colorize( nmsg, c_light_gray );
+            return eligible > 0;
+        }
         const std::optional<std::string> denial = service_installation_denial(
                     *veh, -cursor_vp_mount, *sel_vpart_info );
         if( denial ) {
@@ -1258,12 +1409,14 @@ void veh_interact::do_install( map &here )
                                cant_do( here, VEHICLE_INSTALL );
 
     if( reason == task_reason::INVALID_TARGET ) {
-        msg = _( "Cannot install any part here." );
+        msg = service_area_end ? _( "No available part can be installed in the selected rectangle." ) :
+              _( "Cannot install any part here." );
         return;
     }
 
     restore_on_out_of_scope prev_title( title );
-    title = _( "Choose new part to install here:" );
+    title = service_area_end ? _( "Choose one part type to install throughout the selected area:" ) :
+            _( "Choose new part to install here:" );
 
     restore_on_out_of_scope prev_install_info( std::move(
                 install_info ) );
@@ -2536,10 +2689,10 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
     }
 
     can_mount.clear();
-    if( !obstruct ) {
+    if( !obstruct || service_area_end ) {
         std::vector<const vpart_info *> req_missing;
         for( const vpart_info &vpi : vehicles::parts::get_all() ) {
-            if( has_critter && vpi.has_flag( VPFLAG_OBSTACLE ) ) {
+            if( !service_area_end && has_critter && vpi.has_flag( VPFLAG_OBSTACLE ) ) {
                 continue;
             }
             if( vpi.has_flag( "NO_INSTALL_HIDDEN" ) ||
@@ -2549,6 +2702,10 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
             if( vehicle_service_mode &&
                 ( service_install_items == nullptr ||
                   service_install_items->count( vpi.base_item ) == 0 ) ) {
+                continue;
+            }
+            if( service_area_end && service_installation_mounts( here, *veh, *service_area_start,
+                    *service_area_end, vpi ).empty() ) {
                 continue;
             }
             if( can_potentially_install( vpi ) ) {
@@ -2638,7 +2795,12 @@ void veh_interact::display_veh( map &here )
     if( use_tiles && get_option<bool>( "VEHICLE_EDIT_TILES" ) ) {
         werase( w_disp );
         wnoutrefresh( w_disp );
-        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart ) ) {
+        std::optional<std::pair<point_rel_ms, point_rel_ms>> selection;
+        if( service_area_start ) {
+            selection = std::make_pair( *service_area_start,
+                                        service_area_end.value_or( -cursor_vp_mount ) );
+        }
+        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart, selection ) ) {
             return;
         }
     }
@@ -2674,6 +2836,28 @@ void veh_interact::display_veh( map &here )
     mvwvline( w_disp, point( h_size.x, 0 ), c_dark_gray, LINE_XOXO, getmaxy( w_disp ) );
     mvwhline( w_disp, point( 0, h_size.y ), c_dark_gray, LINE_OXOX, getmaxx( w_disp ) );
 
+    const auto in_service_area = [&]( const point_rel_ms & mount ) {
+        if( !service_area_start ) {
+            return false;
+        }
+        const point_rel_ms end = service_area_end.value_or( -cursor_vp_mount );
+        return mount.x() >= std::min( service_area_start->x(), end.x() ) &&
+               mount.x() <= std::max( service_area_start->x(), end.x() ) &&
+               mount.y() >= std::min( service_area_start->y(), end.y() ) &&
+               mount.y() <= std::max( service_area_start->y(), end.y() );
+    };
+    if( service_area_start ) {
+        for( int x = 0; x < getmaxx( w_disp ); ++x ) {
+            for( int y = 0; y < getmaxy( w_disp ); ++y ) {
+                const point screen( x, y );
+                const point_rel_ms mount = point_rel_ms( screen - h_size ).rotate( 1 ) - cursor_vp_mount;
+                if( in_service_area( mount ) ) {
+                    mvwputch( w_disp, screen, hilite( c_dark_gray ), ' ' );
+                }
+            }
+        }
+    }
+
     nc_color col_at_cursor = c_black;
     int sym_at_cursor = ' ';
     //Iterate over structural parts so we only hit each square once
@@ -2683,7 +2867,8 @@ void veh_interact::display_veh( map &here )
         const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
 
         if( q != point_rel_ms::zero ) { // cursor is not on this part
-            mvwputch( w_disp, h_size + q.raw(), vd.color, vd.symbol_curses );
+            mvwputch( w_disp, h_size + q.raw(), in_service_area( vp.mount ) ? hilite( vd.color ) :
+                      vd.color, vd.symbol_curses );
             continue;
         }
         cpart = structural_part_idx;
@@ -3026,7 +3211,7 @@ void veh_interact::display_mode( const map &here )
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         print_colored_text( w_mode, point( 1, 0 ), title_col, title_col, title.value() );
     } else if( part_selection_mode || vehicle_service_mode ) {
-        constexpr size_t maximum_action_count = 4;
+        constexpr size_t maximum_action_count = 5;
         const size_t action_cnt = vehicle_service_mode ? maximum_action_count : 2;
         const std::array<std::string, maximum_action_count> actions = { {
                 veh_act_desc( main_context, vehicle_service_mode ? "INSTALL" : "CONFIRM",
@@ -3039,6 +3224,9 @@ void veh_interact::display_mode( const map &here )
                               task_reason::CAN_DO ),
                 vehicle_service_mode ? veh_act_desc( main_context, "REMOVE",
                                                      pgettext( "veh_interact", "remove" ), task_reason::CAN_DO ) :
+                std::string(),
+                vehicle_service_mode ? veh_act_desc( main_context, "BATCH_INSTALL",
+                                                     pgettext( "veh_interact", "batch install" ), task_reason::CAN_DO ) :
                 std::string(),
                 veh_act_desc( main_context, "QUIT",
                               pgettext( "veh_interact", "back" ),

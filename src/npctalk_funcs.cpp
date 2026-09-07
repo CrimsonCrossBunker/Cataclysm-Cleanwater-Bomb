@@ -766,7 +766,7 @@ static std::optional<int> choose_vehicle_part_direction( map &here, vehicle &veh
     return static_cast<int>( std::lround( units::to_degrees( direction ) ) );
 }
 
-static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
+static std::vector<vehicle_part_install_candidate> vehicle_part_sources(
     avatar &player_character, npc &mechanic, const vpart_info &part,
     const time_duration &install_time, const trade_ui::item_locations_t &trade_items )
 {
@@ -789,6 +789,13 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
     };
     append_candidates( trade_items.you, false );
     append_candidates( trade_items.trader, true );
+    return candidates;
+}
+
+static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
+    const std::vector<vehicle_part_install_candidate> &candidates,
+    const time_duration &install_time )
+{
     if( candidates.empty() ) {
         return std::nullopt;
     }
@@ -800,7 +807,7 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
     menu.text = _( "Choose the exact part and supplier:" );
     for( size_t index = 0; index < candidates.size(); ++index ) {
         const vehicle_part_install_candidate &candidate = candidates[index];
-        const std::string source = candidate.supplied_by_mechanic ? _( "dealership" ) : _( "yours" );
+        const std::string source = candidate.supplied_by_mechanic ? _( "mechanic" ) : _( "yours" );
         const std::string price = candidate.supplied_by_mechanic ?
                                   string_format( _( "part %1$s + labor %2$s = %3$s" ),
                                           format_money( candidate.item_cost ),
@@ -817,6 +824,86 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
         return std::nullopt;
     }
     return candidates[menu.ret];
+}
+
+static std::vector<vehicle_part_install_candidate> choose_vehicle_part_batch_sources(
+    const std::vector<vehicle_part_install_candidate> &candidates, const size_t count )
+{
+    // A vehicle part can contain another matching item.  Reserve only disjoint item trees.
+    std::vector<vehicle_part_install_candidate> sources;
+    std::unordered_set<const item *> seen;
+    for( const vehicle_part_install_candidate &candidate : candidates ) {
+        item_location parent = candidate.location;
+        bool nested = false;
+        while( parent.where() == item_location::type::container ) {
+            parent = parent.parent_item();
+            if( parent && std::any_of( candidates.begin(), candidates.end(),
+            [&parent]( const vehicle_part_install_candidate & other ) {
+            return other.location == parent;
+        } ) ) {
+                nested = true;
+                break;
+            }
+        }
+        if( !nested && seen.insert( &*candidate.location ).second ) {
+            sources.push_back( candidate );
+        }
+    }
+    if( sources.empty() ) {
+        popup( _( "Neither side has a tradable vehicle part available for installation." ) );
+        return {};
+    }
+    const size_t install_count = std::min( count, sources.size() );
+    if( install_count < count ) {
+        uilist shortage_menu;
+        shortage_menu.text = string_format(
+                                 _( "This area needs %1$d parts, but only %2$d are available between you and "
+                                    "the mechanic.  Installing these would leave %3$d compatible tiles unchanged." ),
+                                 count, install_count, count - install_count );
+        shortage_menu.addentry( 0, true, MENU_AUTOASSIGN, _( "Cancel installation" ) );
+        shortage_menu.addentry( 1, true, MENU_AUTOASSIGN,
+                                string_format( _( "Install as many as possible (%d parts)" ), install_count ) );
+        shortage_menu.query();
+        if( shortage_menu.ret != 1 ) {
+            return {};
+        }
+    }
+
+    uilist menu;
+    menu.text = _( "Choose supplies for the batch installation (one part per position):" );
+    std::vector<std::vector<vehicle_part_install_candidate>> orders;
+    for( const bool shop_first : {
+             false, true
+         } ) {
+        std::vector<vehicle_part_install_candidate> order = sources;
+        std::stable_sort( order.begin(), order.end(),
+                          [shop_first]( const vehicle_part_install_candidate & lhs,
+        const vehicle_part_install_candidate & rhs ) {
+            if( lhs.supplied_by_mechanic != rhs.supplied_by_mechanic ) {
+                return lhs.supplied_by_mechanic == shop_first;
+            }
+            return lhs.total_cost < rhs.total_cost;
+        } );
+        order.resize( install_count );
+        int64_t total_cost = 0;
+        int shop_count = 0;
+        for( const vehicle_part_install_candidate &source : order ) {
+            total_cost += source.total_cost;
+            shop_count += source.supplied_by_mechanic ? 1 : 0;
+        }
+        const bool valid_cost = total_cost <= std::numeric_limits<int>::max();
+        menu.addentry( static_cast<int>( orders.size() ), valid_cost, MENU_AUTOASSIGN,
+                       valid_cost ? string_format( _( "%1$s: %2$d yours, %3$d from mechanic; total %4$s" ),
+                               shop_first ? _( "Buy from mechanic first" ) : _( "Use your parts first" ),
+                               install_count - shop_count, shop_count, format_money( static_cast<int>( total_cost ) ) ) :
+                       _( "The total price is too high.  Choose a smaller area." ) );
+        orders.push_back( std::move( order ) );
+    }
+    menu.query();
+    if( menu.ret < 0 || menu.ret >= static_cast<int>( orders.size() ) ) {
+        return {};
+    }
+    return orders[menu.ret];
 }
 
 static std::optional<tripoint_abs_ms> vehicle_service_output_position( map &here,
@@ -858,10 +945,14 @@ void talk_function::select_vehicle_part_service( npc &p )
     vehicle *veh = marked_vehicle_part_repair_target( here );
     if( veh == nullptr ) {
         p.set_value( vehicle_part_service_status, "no_vehicle" );
-        popup( _( "No eligible player vehicle is marked for dealership service." ) );
+        popup( _( "No eligible player vehicle is marked for service." ) );
         return;
     }
 
+    // Checkout performs these steps too.  Finish them before retaining item locations
+    // so a restock cannot remove reserved stock while its trade-ignore flags are set.
+    p.shop_restock();
+    p.drop_invalid_inventory();
     const trade_ui::item_locations_t trade_items = trade_ui::get_item_locations( player_character, p );
     std::set<itype_id> available_base_items;
     for( const item_location &location : trade_items.you ) {
@@ -934,13 +1025,13 @@ void talk_function::select_vehicle_part_service( npc &p )
         if( selection->part_index < 0 || selection->part_index >= veh->part_count() ||
             veh_interact::service_removal_denial( *veh, selection->part_index ) ) {
             p.set_value( vehicle_part_service_status, "invalidated" );
-            popup( _( "The selected vehicle part cannot be removed by the dealership." ) );
+            popup( _( "The selected vehicle part cannot be removed by the mechanic." ) );
             return;
         }
         const std::optional<tripoint_abs_ms> output = vehicle_service_output_position( here, p );
         if( !output ) {
             p.set_value( vehicle_part_service_status, "no_output" );
-            popup( _( "No valid dealership service counter is available for the removed items." ) );
+            popup( _( "No valid vehicle service output zone is available for the removed items." ) );
             return;
         }
         const vehicle_part &part = veh->part( selection->part_index );
@@ -992,11 +1083,51 @@ void talk_function::select_vehicle_part_service( npc &p )
 
     const vpart_info &part = selection->part_id.obj();
     const time_duration install_time = std::max( 1_seconds, part.install_time( p ) );
-    std::optional<vehicle_part_install_candidate> candidate = choose_vehicle_part_source(
-                player_character, p, part, install_time, trade_items );
-    if( !candidate ) {
+    const bool batch = selection->action == veh_interact::service_action::install_batch;
+    std::vector<point_rel_ms> mounts = batch ? selection->mounts :
+                                       std::vector<point_rel_ms> { selection->mount };
+    if( mounts.empty() ) {
         return;
     }
+    const std::vector<vehicle_part_install_candidate> sources = vehicle_part_sources(
+                player_character, p, part, install_time, trade_items );
+    std::vector<vehicle_part_install_candidate> candidates;
+    if( batch ) {
+        candidates = choose_vehicle_part_batch_sources( sources, mounts.size() );
+    } else if( const std::optional<vehicle_part_install_candidate> candidate =
+                   choose_vehicle_part_source( sources, install_time ) ) {
+        candidates.push_back( *candidate );
+    }
+    if( candidates.empty() ) {
+        return;
+    }
+    mounts.resize( candidates.size() );
+    if( to_turns<int64_t>( install_time ) >
+        std::numeric_limits<int>::max() / 100 / static_cast<int64_t>( candidates.size() ) ) {
+        popup( _( "The installation would take too long.  Choose a smaller area." ) );
+        return;
+    }
+    const time_duration total_time = install_time * static_cast<int>( candidates.size() );
+    int64_t sum_cost = 0;
+    std::vector<vehicle_part_install_service_entry> entries;
+    for( size_t index = 0; index < candidates.size(); ++index ) {
+        const vehicle_part_install_candidate &candidate = candidates[index];
+        sum_cost += candidate.total_cost;
+        entries.push_back( { mounts[index], *candidate.location, candidate.supplied_by_mechanic,
+                             candidate.total_cost } );
+    }
+    if( sum_cost > std::numeric_limits<int>::max() ||
+        static_cast<int64_t>( p.op_of_u.owed ) - sum_cost < std::numeric_limits<int>::min() ) {
+        popup( _( "The total price is too high.  Choose a smaller area." ) );
+        return;
+    }
+    if( !vehicle_part_install_service_activity_actor::can_install_order(
+            here, *veh, selection->part_id, entries ) ) {
+        popup( _( "These parts cannot all be installed together as one order.  "
+                  "Choose a smaller area or a different part." ) );
+        return;
+    }
+    const int total_cost = static_cast<int>( sum_cost );
     const std::optional<std::string> variant = choose_vehicle_part_variant( part );
     if( !variant ) {
         return;
@@ -1016,9 +1147,15 @@ void talk_function::select_vehicle_part_service( npc &p )
             _( "Installing this part will make the vehicle no longer flightworthy.  Continue?" ) ) ) {
         return;
     }
-    if( !query_yn( _( "Install %1$s into the %2$s for %3$s?  Estimated time: %4$s." ),
-                   candidate->location->tname(), veh->name, format_money( candidate->total_cost ),
-                   to_string_approx( install_time ) ) ) {
+    const std::string confirmation = batch ?
+                                     string_format( _( "Install %1$d copies of %2$s in the selected area of the %3$s "
+                                             "for %4$s?  Estimated total time: %5$s." ),
+                                             entries.size(), part.name(), veh->name, format_money( total_cost ),
+                                             to_string_approx( total_time ) ) :
+                                     string_format( _( "Install %1$s into the %2$s for %3$s?  Estimated time: %4$s." ),
+                                             candidates.front().location->tname(), veh->name, format_money( total_cost ),
+                                             to_string_approx( total_time ) );
+    if( !query_yn( confirmation ) ) {
         return;
     }
 
@@ -1043,8 +1180,10 @@ void talk_function::select_vehicle_part_service( npc &p )
             protected_location = protected_location.parent_item();
         }
     };
-    protect_location_tree( candidate->location );
-    const bool paid = candidate->total_cost <= 0 || npc_trading::pay_npc( p, candidate->total_cost );
+    for( const vehicle_part_install_candidate &candidate : candidates ) {
+        protect_location_tree( candidate.location );
+    }
+    const bool paid = total_cost <= 0 || npc_trading::pay_npc( p, total_cost );
     for( item *protected_item : protected_trade_items ) {
         protected_item->erase_var( VAR_TRADE_IGNORE );
     }
@@ -1053,13 +1192,18 @@ void talk_function::select_vehicle_part_service( npc &p )
         return;
     }
 
-    const bool order_valid = candidate->location && candidate->location->typeId() == part.base_item &&
+    const bool valid_sources = std::all_of( candidates.begin(), candidates.end(),
+    [&part]( const vehicle_part_install_candidate & candidate ) {
+        return candidate.location && candidate.location->typeId() == part.base_item;
+    } );
+    const bool order_valid = valid_sources &&
                              marked_vehicle_part_repair_target( here ) == veh &&
                              vehicle_service_state_snapshot( *veh ) == vehicle_snapshot &&
-                             !veh_interact::service_installation_denial( *veh, selection->mount, part );
+                             vehicle_part_install_service_activity_actor::can_install_order(
+                                 here, *veh, selection->part_id, entries );
     if( !order_valid ) {
-        if( candidate->total_cost > 0 ) {
-            p.op_of_u.owed += candidate->total_cost;
+        if( total_cost > 0 ) {
+            p.op_of_u.owed += total_cost;
         }
         p.set_value( vehicle_part_service_status, "invalidated" );
         add_msg( m_bad,
@@ -1068,19 +1212,21 @@ void talk_function::select_vehicle_part_service( npc &p )
         return;
     }
 
-    item reserved_part = *candidate->location;
-    candidate->location.remove_item();
-    reserved_part.erase_var( VAR_TRADE_IGNORE );
-    reserved_part.set_owner( player_character );
+    for( size_t index = 0; index < candidates.size(); ++index ) {
+        item &reserved_part = entries[index].reserved_part;
+        reserved_part = *candidates[index].location;
+        candidates[index].location.remove_item();
+        reserved_part.erase_var( VAR_TRADE_IGNORE );
+        reserved_part.set_owner( player_character );
+    }
     player_character.assign_activity( vehicle_part_install_service_activity_actor(
-                                          install_time, p.getID(), veh->pos_abs(), vehicle_snapshot,
-                                          selection->mount, selection->part_id, std::move( reserved_part ),
-                                          candidate->supplied_by_mechanic, candidate->total_cost,
+                                          total_time, p.getID(), veh->pos_abs(), vehicle_snapshot,
+                                          selection->part_id, std::move( entries ),
                                           *variant, *direction, disable_flyable ) );
-    p.add_effect( effect_currently_busy, install_time );
+    p.add_effect( effect_currently_busy, total_time );
     p.set_value( vehicle_part_service_status, "installing" );
-    add_msg( m_info, _( "%1$s begins installing the %2$s into the %3$s." ),
-             p.get_name(), part.name(), veh->name );
+    add_msg( m_info, _( "%1$s begins installing %2$d × %3$s into the %4$s." ),
+             p.get_name(), candidates.size(), part.name(), veh->name );
 }
 
 void talk_function::do_chop_trees( npc &p )
