@@ -1704,6 +1704,15 @@ sol::table record_npc_refusal(
                    state, std::move( value ) ) );
 }
 
+void reset_npc_follow_destination( npc &entry )
+{
+    entry.set_mission( NPC_MISSION_NULL );
+    entry.goal = npc::no_goal_point;
+    entry.guard_pos = std::nullopt;
+    entry.clear_ai_guard_pos();
+    entry.clear_committed_goal();
+}
+
 sol::table set_npc_relationship_state(
     sol::this_state lua, const game_handle &handle,
     const npc_attitude attitude, const bool reset_stranger_topic,
@@ -1722,8 +1731,15 @@ sol::table set_npc_relationship_state(
     const npc_attitude attitude_before = entry->get_attitude();
     const std::string topic_before = entry->chatbin.first_topic;
     const bool blocked_by_ally = non_ally_only && entry->is_player_ally();
+    bool follow_state_changed = false;
     if( !blocked_by_ally ) {
         entry->set_attitude( attitude );
+        if( attitude == NPCATT_FOLLOW ) {
+            follow_state_changed = entry->mission != NPC_MISSION_NULL ||
+                                   entry->goal != npc::no_goal_point || entry->guard_pos.has_value() ||
+                                   entry->get_ai_guard_pos().has_value() || !entry->get_committed_goal().empty();
+            reset_npc_follow_destination( *entry );
+        }
         if( reset_stranger_topic ) {
             entry->chatbin.first_topic =
                 entry->chatbin.talk_stranger_neutral;
@@ -1736,7 +1752,7 @@ sol::table set_npc_relationship_state(
     value["topic_before"] = topic_before;
     value["topic_after"] = entry->chatbin.first_topic;
     value["changed"] =
-        attitude_before != entry->get_attitude() ||
+        follow_state_changed || attitude_before != entry->get_attitude() ||
         topic_before != entry->chatbin.first_topic;
     value["blocked_by_ally"] = blocked_by_ally;
     return make_game_value_result(
@@ -1772,6 +1788,7 @@ sol::table join_npc_to_player(
     owner->follower_ids.insert( entry->getID() );
     entry->set_attitude( NPCATT_FOLLOW );
     entry->set_fac( faction_your_followers );
+    reset_npc_follow_destination( *entry );
     owner->cash += transferred_cash;
     entry->cash = 0;
     entry->custom_profession.clear();

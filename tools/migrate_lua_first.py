@@ -25418,8 +25418,6 @@ def render_dynamic_character_condition(
     simple_id_queries: tuple[tuple[str, str, str], ...] = (
         ("u_has_effect", "effects.has", "effect"),
         ("npc_has_effect", "effects.has", "effect"),
-        ("u_has_trait", "mutations.has", "mutation"),
-        ("npc_has_trait", "mutations.has", "mutation"),
         ("u_has_bionics", "bionics.has", "bionic"),
         ("npc_has_bionics", "bionics.has", "bionic"),
         ("u_know_recipe", "recipes.knows", "recipe"),
@@ -25489,8 +25487,6 @@ def render_dynamic_character_condition(
     # Any-of lists are common in bundled EOCs and may contain variable-backed
     # ids.  Preserve ordinary Lua short-circuit semantics.
     for key, service, kind in (
-        ("u_has_any_trait", "mutations.has", "mutation"),
-        ("npc_has_any_trait", "mutations.has", "mutation"),
         ("u_has_any_effect", "effects.has", "effect"),
         ("npc_has_any_effect", "effects.has", "effect"),
     ):
@@ -25627,6 +25623,59 @@ def render_dynamic_character_condition(
         return f"service_value(services.characters.snapshot({actor})).{('stats.' + field_name) if field_name != 'cash' else field_name} >= ({amount})"
 
     return None
+
+
+TRAIT_QUERY_SELECTORS = frozenset(
+    prefix + name for prefix in ("u_", "npc_")
+    for name in ("has_trait", "has_any_trait", "has_visible_trait", "is_trait_purifiable")
+)
+
+
+def render_trait_condition(
+    condition: dict[str, Any], alpha: str | None, beta: str | None,
+) -> str | None:
+    """Keep the queried Character distinct from the owner of a variable ID."""
+    if len(condition) != 1:
+        return None
+    selector, raw = next(iter(condition.items()))
+    target = beta if selector.startswith("npc_") else alpha
+    if target is None:
+        return None
+    observer = alpha if selector.startswith("npc_") else beta
+    method = "is_visible_to" if selector.endswith("has_visible_trait") else (
+        "is_purifiable" if selector.endswith("is_trait_purifiable") else "has")
+    if method == "is_visible_to" and observer is None:
+        return None
+
+    def query(identifier: Any) -> str | None:
+        variable_actor = target
+        if isinstance(identifier, dict):
+            if "u_val" in identifier:
+                variable_actor = alpha
+            elif "npc_val" in identifier:
+                variable_actor = beta
+            elif "var_val" in identifier:
+                # An indirect reference can switch owners at runtime. The
+                # single-owner resolver cannot prove that participant yet.
+                return None
+        if variable_actor is None:
+            return None
+        value = _dynamic_id_expression(identifier, "mutation", variable_actor)
+        if value is None:
+            return None
+        participants = f"{target}, {observer}" if method == "is_visible_to" else target
+        return f"service_value(services.mutations.{method}({participants}, {value}))"
+
+    if selector.endswith("has_any_trait"):
+        if not isinstance(raw, list):
+            return None
+        rendered = [query(value) for value in raw]
+        if any(value is None for value in rendered):
+            return None
+        # Do not eagerly evaluate variable IDs: the native loop stops at its
+        # first match, so later missing variables must remain unread.
+        return " or ".join(f"({value})" for value in rendered) or "false"
+    return query(raw)
 
 
 def render_eoc_condition_expression(
@@ -26024,6 +26073,12 @@ def render_eoc_condition_expression(
         return None
     if not isinstance(condition, dict):
         return None
+    if set(condition) & TRAIT_QUERY_SELECTORS:
+        return render_trait_condition(
+            condition, "actor" if avatar_actor_proven or (
+                generic_character_actor_proven and not npc_actor_proven) else None,
+            npc_query_actor,
+        )
 
     if set(condition) == {"test_eoc"} and eoc_conditions is not None:
         referenced = condition.get("test_eoc")
@@ -26783,20 +26838,6 @@ def render_eoc_condition_expression(
                 f"service_value(services.characters.can_see_location({actor}, "
                 f"{target}))"
             )
-    for trait_key in ("u_has_visible_trait", "npc_has_visible_trait"):
-        if (
-            avatar_actor_proven and npc_actor_expression is not None and
-            set(condition) == {trait_key} and bounded_platform_id(condition.get(trait_key))
-        ):
-            observed, observer = (
-                ("actor", npc_actor_expression) if trait_key.startswith("u_")
-                else (npc_actor_expression, "actor")
-            )
-            return (
-                "service_value(services.mutations.is_visible_to("
-                f"{observed}, {observer}, services.types.id(\"mutation\", "
-                f"{lua_quote(condition[trait_key])})))"
-            )
     for condition_key, native_call, is_field in (
         ("u_is_on_terrain", "terrain_id", False),
         ("npc_is_on_terrain", "terrain_id", False),
@@ -26982,20 +27023,6 @@ def render_eoc_condition_expression(
             return (
                 "true" if condition[bodytype_key] == "human" else "false"
             )
-    for purifiable_key, target in (
-        ("u_is_trait_purifiable", "actor" if avatar_actor_proven else None),
-        ("npc_is_trait_purifiable", npc_query_actor),
-    ):
-        if (
-            target is not None and
-            set(condition) == {purifiable_key} and
-            bounded_platform_id(condition.get(purifiable_key))
-        ):
-            return (
-                f"service_value(services.mutations.is_purifiable({target}, "
-                "services.types.id(\"mutation\", "
-                f"{lua_quote(condition[purifiable_key])})))"
-            )
     for part_flag_key, actor_proven in (
         ("u_has_part_flag", avatar_actor_proven),
         ("npc_has_part_flag", npc_actor_proven),
@@ -27072,35 +27099,6 @@ def render_eoc_condition_expression(
                     f".needs.{condition[need_key]} > 0"
                 )
     if (
-        (avatar_actor_proven or generic_character_actor_proven) and
-        set(condition) == {"u_has_trait"} and
-        safe_platform_id(condition.get("u_has_trait"))
-    ):
-        return (
-            "service_value(services.mutations.has("
-            "actor, "
-            "services.types.id(\"mutation\", "
-            f"{lua_quote(condition['u_has_trait'])})))"
-        )
-    if (
-        avatar_actor_proven or generic_character_actor_proven
-    ) and set(condition) == {"u_has_any_trait"}:
-        traits = condition.get("u_has_any_trait")
-        if (
-            not isinstance(traits, list) or
-            not traits or
-            not all(safe_platform_id(trait) for trait in traits)
-        ):
-            return None
-        queries = [
-            "service_value(services.mutations.has("
-            "actor, "
-            "services.types.id(\"mutation\", "
-            f"{lua_quote(trait)})))"
-            for trait in traits
-        ]
-        return " or ".join(f"({query})" for query in queries)
-    if (
         avatar_actor_proven and
         set(condition) == {"u_has_martial_art"} and
         safe_platform_id(condition.get("u_has_martial_art"))
@@ -27134,7 +27132,6 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_has_proficiency'])}))).known"
         )
     for npc_key, u_key in (
-        ("npc_has_trait", "u_has_trait"),
         ("npc_has_martial_art", "u_has_martial_art"),
         ("npc_using_martial_art", "u_using_martial_art"),
         ("npc_has_proficiency", "u_has_proficiency"),
@@ -27160,22 +27157,7 @@ def render_eoc_condition_expression(
                 f"services.types.id(\"{native_kind}\", "
                 f"{lua_quote(condition[npc_key])}))){field}"
             )
-    if npc_actor_proven and set(condition) == {"npc_has_any_trait"}:
-        traits = condition.get("npc_has_any_trait")
-        if (
-            not isinstance(traits, list) or
-            not traits or
-            not all(safe_platform_id(trait) for trait in traits)
-        ):
-            return None
-        queries = [
-            "service_value(services.mutations.has("
-            "actor, "
-            "services.types.id(\"mutation\", "
-            f"{lua_quote(trait)})))"
-            for trait in traits
-        ]
-        return " or ".join(f"({query})" for query in queries)
+
     if (
         avatar_actor_proven and
         set(condition) == {"u_has_profession"} and

@@ -27,6 +27,7 @@
 #include "rng.h"
 #include "type_id.h"
 
+static const trait_id trait_FELINE_EARS( "FELINE_EARS" );
 static const trait_id trait_QUICK( "QUICK" );
 static const trait_id trait_SNAIL_TRAIL( "SNAIL_TRAIL" );
 static const trait_id trait_STRONGER_VULNERABLEWARM( "STRONGER_VULNERABLEWARM" );
@@ -267,6 +268,39 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
                 R"(is_trait_purifiable":"VULNERABLECHILL"})" ) );
         CHECK( fixture.query( "is_purifiable", !npc_target, "VULNERABLECHILL" ) );
     }
+}
+
+TEST_CASE( "lua_platform_mutations_query_variable_owners_and_list_boundaries",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture fixture;
+    fixture.player.set_mutation( trait_QUICK );
+    fixture.other.set_mutation( trait_FELINE_EARS );
+    fixture.player.set_value( "trait", "QUICK" );
+    fixture.other.set_value( "trait", "FELINE_EARS" );
+    dialogue context( get_talker_for( fixture.player ), get_talker_for( fixture.other ) );
+    context.set_value( "trait", "FELINE_EARS" );
+    const bool npc_target = GENERATE( false, true );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    for( const std::string scope : {
+             "u_val", "npc_val", "context_val"
+         } ) {
+        const std::string id = scope == "u_val" ? "QUICK" : "FELINE_EARS";
+        CAPTURE( npc_target, scope );
+        const std::string source = R"({")" + prefix + R"(has_trait":{")" + scope + R"(":"trait"}})";
+        const conditional_t legacy( json_loader::from_string( source ).get_object() );
+        CHECK( legacy( context ) == fixture.query( "has", npc_target, id ) );
+        CHECK( legacy( context ) == ( npc_target == ( scope != "u_val" ) ) );
+    }
+    CHECK_FALSE( fixture.legacy_condition( R"({")" + prefix + R"(has_any_trait":[]})" ) );
+    std::string list;
+    for( int i = 0; i < 64; ++i ) {
+        list += R"("QUICK",)";
+    }
+    list += R"("FELINE_EARS")";
+    CHECK( fixture.legacy_condition( R"({")" + prefix + R"(has_any_trait":[)" + list + "]}" ) );
+    CHECK( ( fixture.query( "has", npc_target, "QUICK" ) ||
+             fixture.query( "has", npc_target, "FELINE_EARS" ) ) );
 }
 
 TEST_CASE( "lua_platform_mutations_legacy_writes_require_semantic_choice",
