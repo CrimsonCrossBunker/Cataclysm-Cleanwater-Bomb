@@ -1,5 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
+#include <set>
+
 #include "lua_platform_mutations.h"
 
 #include <enums.h>
@@ -86,9 +88,15 @@ std::vector<trait_and_var> mutation_state( const Character &character )
         result.begin(), result.end(),
     []( const trait_and_var & lhs, const trait_and_var & rhs ) {
         if( lhs.trait.str() != rhs.trait.str() ) {
-            return lhs.trait.str() < rhs.trait.str();
+            // Stable API identifiers must not depend on the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
+            return lhs.trait.str() <
+                   rhs.trait.str();
         }
-        return lhs.variant < rhs.variant;
+        // Stable API identifiers must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
+        return lhs.variant <
+               rhs.variant;
     } );
     return result;
 }
@@ -473,7 +481,10 @@ sol::table list_definitions(
         definitions.begin(), definitions.end(),
         []( const mutation_branch * lhs,
     const mutation_branch * rhs ) {
-        return lhs->id.str() < rhs->id.str();
+        // Stable API identifiers must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
+        return lhs->id.str() <
+               rhs->id.str();
     } );
     const std::size_t offset = std::min(
                                    options.offset,
@@ -646,7 +657,10 @@ sol::table list_states(
         mutations.begin(), mutations.end(),
         []( const trait_and_var & lhs,
     const trait_and_var & rhs ) {
-        return lhs.trait.str() < rhs.trait.str();
+        // Stable API identifiers must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
+        return lhs.trait.str() <
+               rhs.trait.str();
     } );
     const std::size_t offset = std::min(
                                    options.offset,
@@ -1299,10 +1313,10 @@ sol::table set_variant_state(
 
 void install_mutation_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table mutations = lua.create_table();

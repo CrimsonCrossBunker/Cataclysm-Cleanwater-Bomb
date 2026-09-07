@@ -1,7 +1,33 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#include "avatar.h"
+#include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "character.h"
+#include "character_id.h"
+#include "dialogue.h"
+#include "flexbuffer_json.h"
+#include "item.h"
+#include "json_loader.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_sol.h"
+#include "npc.h"
+#include "type_id.h"
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 #include "lua_platform_test_support.h"
 #include "condition.h"
 #include "skill.h"
+
+static const itype_id itype_longsword( "longsword" );
+static const proficiency_id proficiency_prof_carving( "prof_carving" );
+static const skill_id skill_fabrication( "fabrication" );
 
 TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
            "[lua][platform][skills][semantic]" )
@@ -35,7 +61,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                        cata::lua_platform::runtime_world_generation() );
         };
         sol::table services = ccb["services"];
-        const auto value_of = [&]( sol::protected_function function, const auto & ...args ) {
+        const auto value_of = [&]( const sol::protected_function & function, const auto & ...args ) {
             sol::protected_function_result call = function( args... );
             REQUIRE( call.valid() );
             sol::table result = call;
@@ -47,13 +73,14 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
              } ) {
             Character &teacher = is_npc ? static_cast<Character &>( partner ) : player;
             Character &student = is_npc ? static_cast<Character &>( player ) : partner;
-            const auto teacher_handle = handle_for( teacher, is_npc );
-            const auto student_handle = handle_for( student, !is_npc );
+            const cata::lua_platform::game_handle teacher_handle = handle_for( teacher, is_npc );
+            const cata::lua_platform::game_handle student_handle = handle_for( student, !is_npc );
             const std::string prefix = is_npc ? "npc_" : "u_";
             CAPTURE( prefix );
             const auto legacy = [&]( const std::string & selector, const std::string & id ) {
                 const conditional_t condition( json_loader::from_string(
-                                                   "{\"" + prefix + selector + "\":\"" + id + "\"}" ).get_object() );
+                                                   std::string( R"({")" ).append( prefix ).append( selector ).append( R"(":")" ).append( id ).append(
+                                                       R"("})" ) ).get_object() );
                 return condition( conversation );
             };
             // Teaching depends on student knowledge, not training enabled or practical level.
@@ -61,7 +88,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 teacher.set_skill_level( definition.ident(), 0 );
                 student.set_skill_level( definition.ident(), 0 );
             }
-            const skill_id fabrication( "fabrication" );
+            const skill_id &fabrication = skill_fabrication;
             for( const int teacher_level : {
                      0, 3
                  } ) {
@@ -86,7 +113,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     }
                 }
             }
-            const proficiency_id carving( "prof_carving" );
+            const proficiency_id &carving = proficiency_prof_carving;
             teacher.lose_proficiency( carving );
             for( const bool known : {
                      false, true
@@ -104,7 +131,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                      false, true
                  } ) {
                 if( wielded ) {
-                    teacher.set_wielded_item( item( itype_id( "longsword" ) ) );
+                    teacher.set_wielded_item( item( itype_longsword ) );
                 }
                 for( const auto &criterion : std::vector<std::pair<std::string, std::string>> {
                 { "skill", "cutting" }, { "skill", "pistol" },
