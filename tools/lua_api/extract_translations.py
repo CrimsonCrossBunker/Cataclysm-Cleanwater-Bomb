@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 KEYWORDS = (
     "ccb.services.translate:1,1t",
@@ -53,6 +54,23 @@ def extract(files: list[Path], executable: str = "xgettext") -> str:
     return HEADER + messages
 
 
+
+def write_template(path: Path, content: str) -> None:
+    """Stage beside the destination so a failed write leaves its old file intact."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.",
+                                         suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(content.encode("utf-8"))
+        if path.is_file():
+            temporary.chmod(path.stat().st_mode & 0o777)
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("files", nargs="+", type=Path, help="explicit Lua source files")
@@ -63,15 +81,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.check and args.output is None:
         parser.error("--check requires --output")
     try:
-        if args.output and args.output.resolve() in {path.resolve() for path in args.files}:
-            raise ValueError("output must not overwrite an input source")
+        if args.output:
+            for path in args.files:
+                if (args.output.resolve() == path.resolve()
+                        or (args.output.exists() and path.exists() and args.output.samefile(path))):
+                    raise ValueError("output must not overwrite an input source")
         content = extract(args.files, args.xgettext)
         if args.check:
             if not args.output.is_file() or args.output.read_bytes() != content.encode("utf-8"):
                 print(f"translation template is out of date: {args.output}", file=sys.stderr)
                 return 1
         elif args.output:
-            args.output.write_bytes(content.encode("utf-8"))
+            write_template(args.output, content)
         else:
             sys.stdout.write(content)
         return 0

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from extract_translations import extract, main
+from extract_translations import extract, main, write_template
 
 
 class ExtractTranslationsTest(unittest.TestCase):
@@ -33,6 +33,29 @@ class ExtractTranslationsTest(unittest.TestCase):
         output = extract([self.source])
         self.assertIn("#, lua-format", output)
         self.assertIn('msgctxt "fruit"', output)
+
+    def test_failed_replacement_preserves_the_previous_template(self):
+        destination = self.root / "messages.pot"
+        destination.write_text("existing template", encoding="utf-8")
+        with patch.object(Path, "replace", side_effect=OSError("replacement failed")):
+            with self.assertRaisesRegex(OSError, "replacement failed"):
+                write_template(destination, "new template")
+        self.assertEqual(destination.read_text(), "existing template")
+        self.assertEqual(list(self.root.glob(".messages.pot.*.tmp")), [])
+        write_template(destination, "new template")
+        self.assertEqual(destination.read_text(), "new template")
+
+    def test_hardlinked_input_cannot_be_the_output(self):
+        destination = self.root / "messages.pot"
+        try:
+            destination.hardlink_to(self.source)
+        except OSError as error:
+            self.skipTest(f"hard links unavailable: {error}")
+        before = self.source.read_bytes()
+        with contextlib.redirect_stderr(io.StringIO()), patch("extract_translations.extract") as run:
+            self.assertEqual(main([str(self.source), "--output", str(destination)]), 2)
+            run.assert_not_called()
+        self.assertEqual(self.source.read_bytes(), before)
 
     def test_failed_extractor_is_not_success(self):
         with patch("extract_translations.subprocess.run", return_value=

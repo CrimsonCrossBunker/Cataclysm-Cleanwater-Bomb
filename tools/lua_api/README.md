@@ -151,7 +151,9 @@ python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.
 python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.lua --output messages.pot --check
 ```
 
-The tool does not traverse directories. `--check` does not write; exit 1 means a
+The tool does not traverse directories. It stages output before replacing the
+POT so write failures preserve the previous template; output cannot alias an
+input source. `--check` does not write; exit 1 means a
 missing/stale POT and exit 2 means extraction/setup failure. Output is stable for
 unchanged inputs and the same xgettext version. Calls through renamed aliases,
 computed messages, and dynamic contexts cannot be extracted reliably: keep the
