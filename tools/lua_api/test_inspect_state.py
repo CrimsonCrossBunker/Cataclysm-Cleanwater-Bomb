@@ -59,6 +59,36 @@ class StateInspectorTests(unittest.TestCase):
         self.assertEqual(row["state"], [
             {"key": "active", "type": "boolean", "value": True}])
 
+    def test_actor_reports_known_identity_and_hints_only(self):
+        snapshot = saved_state()
+        task = snapshot["mods"]["tonic"]["tasks"][0]
+        del task["actor_character_id"]
+        actor = {"actor_item_uid": 99, "actor_item_pending": True,
+                 "actor_item_hint_scope": "map", "actor_item_hint_x": -4,
+                 "actor_item_hint_y": 5, "actor_item_hint_z": 0}
+        task.update(actor, actor_unrecognized={"large": ["not native actor data"]})
+        report = inspect_state.summarize(snapshot)
+        self.assertEqual(report["mods"][0]["tasks"][0]["actor"], actor)
+
+    def test_malformed_actor_records_report_the_task_location(self):
+        cases = [
+            {"actor_character_id": True},
+            {"actor_character_id": 2**31},
+            {"actor_character_id": 1, "actor_item_uid": 2},
+            {"actor_item_uid": 0},
+            {"actor_item_pending": True},
+            {"actor_item_uid": 1, "actor_item_hint_x": 0},
+            {"actor_monster_uid": 2, "actor_monster_pending": "yes"},
+        ]
+        for actor in cases:
+            with self.subTest(actor=actor):
+                snapshot = saved_state()
+                task = snapshot["mods"]["tonic"]["tasks"][0]
+                del task["actor_character_id"]
+                task.update(actor)
+                with self.assertRaisesRegex(ValueError, r"tonic\.tasks\[0\]"):
+                    inspect_state.summarize(snapshot)
+
     def test_mod_filter_does_not_drop_unknown_saved_owners(self):
         snapshot = saved_state()
         snapshot["mods"]["uninstalled-mod"] = {"values": {}, "tasks": []}

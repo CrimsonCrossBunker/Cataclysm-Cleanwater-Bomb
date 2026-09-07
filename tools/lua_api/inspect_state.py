@@ -95,6 +95,48 @@ def task_participants(values: object, location: str) -> list:
     return rows
 
 
+def task_actor(task: dict, location: str) -> dict:
+    """Report only native actor fields, validating saved identity and hint shape."""
+    result = {}
+    actor_count = 0
+    for kind in ("character", "item", "monster", "vehicle"):
+        prefix = f"actor_{kind}"
+        identity_key = prefix + ("_id" if kind == "character" else "_uid")
+        hint_keys = [prefix + "_hint_" + axis for axis in ("scope", "x", "y", "z")]
+        pending_key = prefix + "_pending"
+        metadata = [] if kind == "character" else hint_keys + [pending_key]
+        if identity_key not in task:
+            if any(key in task for key in metadata):
+                raise ValueError(f"{location}: actor metadata requires {identity_key}")
+            continue
+        actor_count += 1
+        identity = task[identity_key]
+        maximum = 2**31 if kind == "character" else 2**63
+        if not integer(identity) or not 0 < identity < maximum:
+            raise ValueError(f"{location}: invalid {identity_key}")
+        result[identity_key] = identity
+        if kind == "character":
+            continue
+        if any(key in task for key in hint_keys):
+            if not all(key in task for key in hint_keys):
+                raise ValueError(f"{location}: incomplete {prefix} hint")
+            scope = task[hint_keys[0]]
+            if (not isinstance(scope, str) or "\0" in scope
+                    or len(scope.encode("utf-8")) > 64):
+                raise ValueError(f"{location}: invalid {prefix} hint scope")
+            for key in hint_keys[1:]:
+                if not integer(task[key]) or not -(2**31) <= task[key] < 2**31:
+                    raise ValueError(f"{location}: invalid {key}")
+            result.update((key, task[key]) for key in hint_keys)
+        if pending_key in task:
+            if not isinstance(task[pending_key], bool):
+                raise ValueError(f"{location}: invalid {pending_key}")
+            result[pending_key] = task[pending_key]
+    if actor_count > 1:
+        raise ValueError(f"{location}: multiple actor identities")
+    return result
+
+
 def summarize(document: object, mod: str | None = None,
               limit: int = 20, show_values: bool = False,
               task_id: int | None = None) -> dict:
@@ -163,10 +205,7 @@ def summarize(document: object, mod: str | None = None,
             row["payload_count"] = len(payload)
             row["participants"] = participants[:limit]
             row["participant_count"] = len(participants)
-            row["actor"] = {
-                key: value for key, value in task.items()
-                if key.startswith("actor_")
-            }
+            row["actor"] = task_actor(task, location)
             if task_id is None or task["id"] == task_id:
                 task_rows.append(row)
         if task_id is not None and not task_rows:

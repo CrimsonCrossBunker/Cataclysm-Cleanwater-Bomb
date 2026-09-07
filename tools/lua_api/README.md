@@ -93,8 +93,10 @@ python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --values -
 
 The inspector reads one explicit Platform v1 save file and emits JSON containing
 saved Mod owners, state key/type summaries, task IDs, handler names, due turns,
-recurrence intervals and saved participant/actor records. Values are included
-only with `--values`. Each displayed list defaults to 20 entries; total counts
+recurrence intervals and saved participant/actor records. State/payload values are
+included only with `--values`. Actor output includes only native identity/hint
+fields and checks their range, completeness and mutual exclusivity.
+Each displayed list defaults to 20 entries; total counts
 remain visible, and `--limit` accepts 1–200. It never executes Mod metadata or Lua,
 loads native libraries, resolves participants against a world, or rewrites the
 save. The world and character files are separate scopes; inspect both when a Mod
