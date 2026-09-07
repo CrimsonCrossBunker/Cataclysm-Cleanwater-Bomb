@@ -2898,7 +2898,8 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_knockback"): "services.characters",
     ("eoc-effects", "npc_level_spell_class"): "services.characters",
     ("eoc-effects", "npc_lose_category"): "services.mutations",
-    ("eoc-effects", "npc_lose_mutation_type"): "services.mutations.remove_type",
+    ("eoc-effects", "npc_lose_mutation_type"):
+        "services.mutations.remove_type",
     ("eoc-effects", "npc_lose_effect"): "services.effects",
     ("eoc-effects", "npc_make_radio_representative"): "services.npcs",
     ("eoc-effects", "npc_make_sound"): "services.sound",
@@ -4134,42 +4135,50 @@ EXPLICIT_PRIMITIVE_EOC = {
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "u_add_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_lose_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_activate_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_deactivate_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_add_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_lose_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_activate_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_deactivate_trait"): [
-        "src/lua_platform_mutations.cpp", "tests/lua_platform_mutations_test.cpp",
+        "src/lua_platform_mutations.cpp",
+        "tests/lua_platform_mutations_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_lua_mutation_migration.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],

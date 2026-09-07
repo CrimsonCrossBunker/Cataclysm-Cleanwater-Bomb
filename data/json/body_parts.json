@@ -36,7 +36,7 @@
         "dmg_type": "cut",
         "dmg_threshold": 3,
         "dmg_scale_increment": 2,
-        "duration": 60,
+        "duration": 120,
         "duration_dmg_scaling": 45,
         "max_duration": 1800
       },

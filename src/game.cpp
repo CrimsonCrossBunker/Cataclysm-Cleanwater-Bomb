@@ -12012,10 +12012,10 @@ pulp_data game::calculate_character_ability_to_pulp( const Character &you )
     // bash is good, but the rest physical damages can be useful also
     damage_instance di;
     u.roll_damage( damage_cut, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f );
+                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
     u.roll_damage( damage_stab, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f );
+                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
     for( const damage_unit &du : di ) {
         // potentially move it to json, if someone find necrotic mace +3 should pulp faster for some reason
