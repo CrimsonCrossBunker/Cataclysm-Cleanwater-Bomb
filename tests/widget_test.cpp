@@ -22,6 +22,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character_attire.h"
+#include "color.h"
 #include "coordinates.h"
 #include "display.h"
 #include "effect.h"
@@ -3072,4 +3073,32 @@ TEST_CASE( "widgets_using_custom_vars", "[widget]" )
             CHECK( dynamic_range_w.layout( ava ) == "STR: <color_c_green>11</color>" );
         }
     }
+}
+
+TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
+{
+    clear_avatar();
+    avatar &ava = get_avatar();
+    widget sound = widget_id( "sound_num" ).obj();
+    ava.volume = 6;
+    REQUIRE_FALSE( ava.is_deaf() );
+    const std::string hearing = sound.show( ava, 20 );
+    CHECK( remove_color_tags( hearing ) == "6" );
+
+    SECTION( "earplugs" ) {
+        ava.wear_item( item( itype_ear_plugs ), false );
+    }
+    SECTION( "temporary_deafness" ) {
+        ava.add_effect( efftype_id( "deaf" ), 1_minutes, false, 3 );
+    }
+
+    REQUIRE( ava.is_deaf() );
+    CHECK( sound.show( ava, 20 ) == colorize( _( "Deaf!" ), c_red ) );
+    // The volume remains available to game logic while its display is overridden.
+    CHECK( sound.get_var_value( ava ) == 6 );
+
+    clear_avatar();
+    ava.volume = 6;
+    REQUIRE_FALSE( ava.is_deaf() );
+    CHECK( sound.show( ava, 20 ) == hearing );
 }
