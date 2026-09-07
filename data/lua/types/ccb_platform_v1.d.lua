@@ -9413,6 +9413,7 @@ function CcbNpcsApi.make_thankful(handle) end
 function CcbNpcsApi.record_refusal(handle, request) end
 ---@param handle GameHandle Exact NPC handle.
 ---@return CcbResult
+---Clear prior mission, destination and guard goals without joining the player faction.
 function CcbNpcsApi.follow_temporarily(handle) end
 function CcbNpcsApi.stop_temporary_following(handle) end
 function CcbNpcsApi.make_neutral(handle) end
@@ -9420,6 +9421,7 @@ function CcbNpcsApi.start_fleeing(handle) end
 function CcbNpcsApi.start_mugging(handle) end
 ---@param handle GameHandle Exact NPC handle.
 ---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
+---Join the player faction, transfer cash and clear previous mission, destination and guard goals.
 function CcbNpcsApi.join_player(handle, avatar) end
 ---@param handle GameHandle Exact NPC handle.
 ---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
