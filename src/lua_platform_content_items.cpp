@@ -276,6 +276,8 @@ extern "C" {
 #include "worldfactory.h"
 #include "wound.h"
 
+static const damage_type_id damage_heat( "heat" );
+
 namespace cata::lua_platform
 {
 
@@ -4927,7 +4929,6 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         } );
                     }
                     if( native._burn_data.empty() ) {
-                        static const damage_type_id damage_heat( "heat" );
                         mat_burn_data default_burn;
                         default_burn.burn = native._resistances.type_resist( damage_heat ) <= 0.0F;
                         native._burn_data.push_back( default_burn );
