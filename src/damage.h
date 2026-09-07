@@ -39,6 +39,8 @@ struct damage_type {
     // Armor multiplier applied on critical hits at full crit_mod; 1.0 disables it.
     double melee_crit_armor_mult = 1.0;
     double melee_crit_armor_penetration = 0.0;
+    // Per-skill-level bleed duration multiplier on monster targets; capped in code.
+    double bleed_duration_mult_per_skill = 0.0;
     nc_color magic_color;
     bool melee_only = false;
     bool physical = false;
