@@ -104,4 +104,47 @@ ccb.content.add(item)
     REQUIRE( result.valid() );
     CHECK( result.get<int>() == 42 );
 }
+TEST_CASE( "lua_platform_reload_rejects_reentry_during_replacement",
+           "[lua][platform][runtime][reload]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const platform_lua_test_directory files;
+    int attempts = 0;
+    bool nested_accepted = true;
+    std::string nested_error;
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    files.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("shutdown_reload", function()
+    if attempt_reload then attempt_reload() end
+end)
+ccb.runtime.on("shutdown", "shutdown_reload")
+)lua" );
+    const platform::mod_source source { "reload-reentry", files.root, files.root / "main.lua" };
+    std::string error;
+    REQUIRE( platform::prepare_mods( { source }, error ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+    platform::commit_prepared_mods();
+    platform::runtime_world_ready( true );
+    {
+        const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
+                    "reload-reentry" );
+        REQUIRE( owner );
+        owner->lua->set_function( "attempt_reload", [&]() {
+            ++attempts;
+            nested_accepted = platform::reload_active_mods( nested_error );
+        } );
+    } // Do not retain Lua references across a successful replacement.
+    REQUIRE( platform::reload_active_mods( error ) );
+    CHECK( attempts == 1 );
+    CHECK_FALSE( nested_accepted );
+    CHECK( nested_error.find( "already in progress" ) != std::string::npos );
+    // The scope guard must release the transaction after the outer reload.
+    REQUIRE( platform::reload_active_mods( error ) );
+    CHECK( attempts == 1 );
+}
 #endif
