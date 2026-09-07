@@ -51,7 +51,11 @@ struct mod_source {
     std::filesystem::path entry;
 };
 
-/** Execute root/mod.lua and require exactly one native ccb.ModDefinition result. */
+/** Execute root/mod.lua and require exactly one native ccb.ModDefinition result.
+ * This executes trusted code, including external/native modules. User-facing
+ * callers must present the execution-risk notice before invoking discovery;
+ * the low-level loader cannot assume an initialized UI or prompt safely.
+ */
 bool read_mod_definition( const std::filesystem::path &root, mod_definition &result,
                           std::string &error );
 

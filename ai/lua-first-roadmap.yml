@@ -643,7 +643,7 @@ capabilities:
     next_actions: []
   - id: platform-hardening
     phase: hardening
-    status: planned
+    status: in_progress
     target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Loader source now opens standard libraries and preserves normal external/native package searchers; native build/runtime acceptance and startup notice UI acceptance remain pending."
     legacy_dependency: none
     evidence: [src/lua_platform_runtime.cpp, src/lua_platform_loader.cpp, tests/lua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
