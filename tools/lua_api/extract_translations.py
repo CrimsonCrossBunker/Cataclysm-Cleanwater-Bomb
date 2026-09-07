@@ -33,7 +33,7 @@ def extract(files: list[Path], executable: str = "xgettext") -> str:
     if not files:
         raise ValueError("at least one Lua source file is required")
     command = [executable, "--language=Lua", "--from-code=UTF-8", "--keyword=",
-               "--force-po", "--no-wrap", "--output=-"]
+               "--force-po", "--no-wrap", "--add-comments=TRANSLATORS:", "--output=-"]
     command.extend(f"--keyword={keyword}" for keyword in KEYWORDS)
     command.extend(("--flag=ccb.services.translate:1:pass-lua-format",
                     "--flag=ccb.services.translate_plural:1:pass-lua-format",

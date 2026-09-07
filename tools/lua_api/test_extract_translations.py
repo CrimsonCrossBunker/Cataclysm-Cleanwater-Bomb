@@ -114,6 +114,18 @@ local other_description = ccb.content.text("Fresh water.")
         self.assertIn('msgid "Fresh water."', output)
 
     @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
+    def test_explicit_translator_notes_are_retained(self):
+        self.source.write_text('''
+-- TRANSLATORS: This is a button action, not a door state.
+ccb.services.translate("Open", "MyMod action")
+-- This implementation comment is not a translator note.
+ccb.content.text("A description.")
+''', encoding="utf-8")
+        output = extract([self.source])
+        self.assertIn("TRANSLATORS: This is a button action, not a door state.", output)
+        self.assertNotIn("This implementation comment", output)
+
+    @unittest.skipUnless(shutil.which("xgettext"), "GNU xgettext is not installed")
     def test_check_does_not_write_and_rejects_input_overwrite(self):
         destination = self.root / "messages.pot"
         args = [str(self.source), "--output", str(destination)]

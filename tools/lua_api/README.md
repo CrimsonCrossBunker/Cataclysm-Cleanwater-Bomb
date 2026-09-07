@@ -180,6 +180,8 @@ unchanged inputs and the same xgettext version. Calls through renamed aliases,
 computed messages, and dynamic contexts cannot be extracted reliably: keep the
 full `ccb.services.translate`/`translate_plural` or `ccb.content.text`/`plural_text`
 spelling and literals. Review the POT after extraction.
+An immediately preceding `-- TRANSLATORS: ...` comment is retained for translators;
+ordinary implementation comments are not added to the template.
 Formatting is a separate Lua operation; translators must preserve placeholders.
 For automatic gettext format flags, nest the translation call directly inside
 `string.format(ccb.services.translate("%d items", "MyMod status"), count)`.
