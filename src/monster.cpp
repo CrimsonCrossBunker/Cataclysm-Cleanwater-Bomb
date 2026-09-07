@@ -2536,7 +2536,20 @@ void monster::deal_damage_handle_type( const effect_source &source, const damage
         }
     }
     if( du.type == damage_bullet || du.type->edged ) {
-        make_bleed( source, 1_minutes * rng( 0, adjusted_damage ) );
+        time_duration bleed_dur = 1_minutes * rng( 0, adjusted_damage );
+        if( du.type->bleed_duration_mult_per_skill > 0.0 ) {
+            const Creature *src_creature = source.resolve_creature();
+            if( src_creature != nullptr && src_creature->as_character() != nullptr &&
+                !du.type->skill.is_null() ) {
+                const Character &chr_src = *src_creature->as_character();
+                const double bonus = du.type->bleed_duration_mult_per_skill *
+                                     chr_src.get_skill_level( du.type->skill );
+                // Cap the skill-scaled bonus at +25%.
+                const int bonus_pct = static_cast<int>( std::min( bonus, 0.25 ) * 100 );
+                bleed_dur = bleed_dur * ( 100 + bonus_pct ) / 100;
+            }
+        }
+        make_bleed( source, bleed_dur );
     }
 
     Creature::deal_damage_handle_type( source, du,  bp, damage, pain );
