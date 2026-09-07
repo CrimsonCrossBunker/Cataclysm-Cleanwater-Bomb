@@ -274,6 +274,8 @@ local custom, custom_data = require("custom:probe")
 assert(custom.value == 19 and custom_data == "custom-loader-data")
 package.searchers[searcher_count + 1] = nil
 
+assert(require("模块") == 23)
+assert(require("nested..value") == 29)
 local nested = require("nested")
 if nested.value ~= "nested" then
     error("root-local nested/init.lua require failed")

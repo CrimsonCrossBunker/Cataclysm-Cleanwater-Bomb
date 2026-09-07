@@ -261,12 +261,12 @@ static void show_lua_execution_notice()
                                    "is selected for a world. Only install Mods you choose to trust. "
                                    "Native libraries can also crash the game.\n\n"
                                    "Continuing will scan the installed Lua Mods. This notice appears once "
-                                   "per game session. Press any key to continue." );
+                                   "per game session." );
 #if !defined(HEADLESS)
     if( !test_mode ) {
         // The manager is constructed before load_static_data initializes
         // keybindings. Accept a raw key instead of requiring CONFIRM/QUIT.
-        popup( message, PF_GET_KEY );
+        popup( message + "\n\n" + _( "Press any key to continue." ), PF_GET_KEY );
         return;
     }
 #endif

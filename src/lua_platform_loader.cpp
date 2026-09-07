@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -88,29 +87,25 @@ bool path_is_within( const fs::path &path, const fs::path &directory )
     return true;
 }
 
-bool is_safe_module_name( const std::string_view name )
-{
-    if( name.empty() || name.size() > 256 || name.front() == '.' ||
-        name.back() == '.' || name.find( ".." ) != std::string_view::npos ) {
-        return false;
-    }
-    return std::all_of( name.begin(), name.end(), []( const unsigned char value ) {
-        return std::isalnum( value ) != 0 || value == '_' || value == '-' || value == '.';
-    } );
-}
-
 std::optional<fs::path> resolve_local_module( const fs::path &root,
         const std::string &module_name )
 {
-    if( !is_safe_module_name( module_name ) ) {
+    // This is a preferred search path, not a module-name permission filter.
+    // Keep ordinary Lua names, including UTF-8 and repeated dot separators.
+    if( module_name.empty() || module_name.find( '\0' ) != std::string::npos ) {
         return std::nullopt;
     }
     std::string relative = module_name;
     std::replace( relative.begin(), relative.end(), '.',
                   static_cast<char>( fs::path::preferred_separator ) );
+    const fs::path relative_path = fs::u8path( relative );
+    if( relative_path.is_absolute() || relative_path.has_root_name() ) {
+        // Absolute names belong to the caller's ordinary package searchers.
+        return std::nullopt;
+    }
     const std::array<fs::path, 2> candidates = {
-        root / ( relative + ".lua" ),
-        root / relative / "init.lua"
+        root / fs::u8path( relative + ".lua" ),
+        root / relative_path / "init.lua"
     };
     for( const fs::path &candidate : candidates ) {
         std::error_code filesystem_error;
@@ -328,7 +323,7 @@ struct file_execution_result {
 file_execution_result execute_file( sol::state &lua, const fs::path &path,
                                     const std::string &context )
 {
-    sol::load_result loaded = lua.load_file( path.string() );
+    sol::load_result loaded = lua.load_file( path.generic_u8string() );
     if( !loaded.valid() ) {
         const sol::error error = loaded;
         throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
@@ -386,10 +381,10 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
             result.push_back( sol::make_object( lua, "\n\tno Mod-local module '" + module_name + "'" ) );
             return result;
         }
-        sol::load_result loaded_file = lua.load_file( path->string() );
+        sol::load_result loaded_file = lua.load_file( path->generic_u8string() );
         if( !loaded_file.valid() ) {
             const sol::error error = loaded_file;
-            throw std::runtime_error( path->string() + ": " + error.what() );
+            throw std::runtime_error( path->generic_u8string() + ": " + error.what() );
         }
         result.push_back( loaded_file.get<sol::function>() );
         result.push_back( sol::make_object( lua, path->generic_u8string() ) );

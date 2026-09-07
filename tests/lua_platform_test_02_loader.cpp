@@ -21,6 +21,8 @@ return false
 empty_export_loads = (empty_export_loads or 0) + 1
 )lua" );
     files.write( "nested/init.lua", "return { value = \"nested\" }\n" );
+    files.write( std::filesystem::u8path( "模块.lua" ), "return 23\n" );
+    files.write( "nested/value.lua", "return 29\n" );
     files.write( "broken.lua", "error(\"broken module\")\n" );
     files.write( "mod.lua", std::string( platform_loader_policy_probe ) +
                  "\nreturn ccb.ModDefinition { id = \"platform-loader-policy-test\" }\n" );
