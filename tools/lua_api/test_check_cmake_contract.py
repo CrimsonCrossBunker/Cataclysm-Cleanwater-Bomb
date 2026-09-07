@@ -55,6 +55,7 @@ class CMakeContractTests(unittest.TestCase):
 
     def test_native_loading_prerequisites_cannot_be_removed(self) -> None:
         requirements = (
+            "target_compile_definitions(liblua PRIVATE LUA_BUILD_AS_DLL)",
             "target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)",
             "C_VISIBILITY_PRESET default",
             "target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})",

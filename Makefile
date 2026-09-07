@@ -1117,6 +1117,10 @@ ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
   else ifeq ($(TARGETSYSTEM),LINUX)
     LUA_NATIVE_CFLAGS += -DLUA_USE_DLOPEN
     LDFLAGS += -ldl -Wl,--export-dynamic
+  else ifeq ($(TARGETSYSTEM),WINDOWS)
+    # Lua's own LUA_CORE/LUA_LIB headers mark public functions dllexport.
+    # Do not apply LUA_BUILD_AS_DLL to game C++ callers of the static library.
+    LUA_NATIVE_CFLAGS += -DLUA_BUILD_AS_DLL
   endif
 else
   DEFINES += -DCATA_ENABLE_LUA_PLATFORM=0

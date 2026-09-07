@@ -58,6 +58,7 @@ def validate_cmake_contract(
             "src/lua/CMakeLists.txt: bundled Lua sources must use LANGUAGE C"
         )
     native_loading_requirements = (
+        "target_compile_definitions(liblua PRIVATE LUA_BUILD_AS_DLL)",
         "target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)",
         "set_target_properties(liblua PROPERTIES C_VISIBILITY_PRESET default)",
         "target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})",

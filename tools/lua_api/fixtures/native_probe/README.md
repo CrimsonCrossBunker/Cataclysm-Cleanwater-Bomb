@@ -29,8 +29,8 @@ actual Mod load result, not assumed from a successful compiler invocation.
 
 On macOS, the equivalent fixture link needs `-undefined dynamic_lookup`; verify
 the real game binary exports the Lua API. Android needs an ABI-matched shared
-object and an OS-permitted library location. Windows import-library/runtime
-packaging needs separate acceptance; the `.so` recipe above is not a Windows
+object and an OS-permitted library location. Windows public Lua functions are marked for export by the build configuration.
+Import-library/runtime packaging still needs separate acceptance; the `.so` recipe above is not a Windows
 recipe. Do not link a second Lua runtime into this fixture: it must exercise the
 host's Lua state and C API. This does not expose or stabilize CCB's internal C++
 objects.

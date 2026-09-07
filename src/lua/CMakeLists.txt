@@ -50,7 +50,11 @@ target_include_directories(liblua SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Native modules need both dlopen and visible Lua C API symbols. Keep this
 # scoped to bundled Lua; the game's internal C++ ABI stays hidden/unsupported.
-if(UNIX)
+if(WIN32)
+    # Lua C sources define LUA_CORE/LUA_LIB, selecting dllexport rather than
+    # dllimport. Keep this private: game C++ statically calls the embedded Lua.
+    target_compile_definitions(liblua PRIVATE LUA_BUILD_AS_DLL)
+elseif(UNIX)
     target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)
     set_target_properties(liblua PROPERTIES C_VISIBILITY_PRESET default)
     target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})
