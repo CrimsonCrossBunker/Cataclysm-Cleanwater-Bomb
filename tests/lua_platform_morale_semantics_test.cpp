@@ -1,5 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
@@ -16,15 +21,13 @@
 #include "lua_platform_sol.h"
 #include "npc.h"
 #include "type_id.h"
-#include <functional>
-#include <memory>
-#include <string>
-#include <vector>
-#include "lua_platform_test_support.h"
-#include "condition.h"
-#include "morale_types.h"
 
-static const morale_type morale_type_morale_feeling_good( "morale_feeling_good" );
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
+
+static const morale_type morale_feeling_good( "morale_feeling_good" );
 
 TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
            "[lua][platform][morale][semantic]" )
@@ -50,7 +53,7 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
     const int sign = GENERATE( -1, 1 );
     const bool capped = GENERATE( false, true );
     const bool custom_time = GENERATE( false, true );
-    const morale_type &type = morale_type_morale_feeling_good;
+    const morale_type &type = morale_feeling_good;
     Character &old_target = npc_target ? static_cast<Character &>( old_npc ) : old_player;
     Character &new_target = npc_target ? static_cast<Character &>( new_npc ) : new_player;
     Character &untouched = npc_target ? static_cast<Character &>( new_player ) : new_npc;

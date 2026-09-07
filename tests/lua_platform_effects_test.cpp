@@ -1,34 +1,32 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include "dialogue_helpers.h"
-#include "flexbuffer_json.h"
-#include "lua_platform_sol.h"
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
-#include <vector>
-
-#include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "effect.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
+#include "effect.h"
+#include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
 #include "lua_platform_effects.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_sol.h"
 #include "npc.h"
-#include "talker.h"
 #include "type_id.h"
 
-static const efftype_id efftype_bleed( "bleed" );
+static const efftype_id effect_bleed( "bleed" );
 
 namespace
 {
@@ -124,13 +122,13 @@ TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
     const std::string prefix = npc_target ? "npc_" : "u_";
     Character &target = fixture.target( npc_target );
     // The other actor has both effects so checking the wrong actor is observable.
-    fixture.target( !npc_target ).add_effect( efftype_bleed, 10_turns,
+    fixture.target( !npc_target ).add_effect( effect_bleed, 10_turns,
             body_part_arm_l.id(), false, 2, true );
     for( const bool present : {
              false, true
          } ) {
         if( present ) {
-            target.add_effect( efftype_bleed, 10_turns,
+            target.add_effect( effect_bleed, 10_turns,
                                body_part_arm_l.id(), false, 1, true );
         }
         const std::string qualifiers = R"(, "bodypart": ")" + part +
@@ -155,7 +153,7 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
     const bool permanent = GENERATE( false, true );
     const int intensity = GENERATE( -1, 0, 1 );
     const std::string prefix = npc_target ? "npc_" : "u_";
-    const efftype_id &bleeding = efftype_bleed;
+    const efftype_id &bleeding = effect_bleed;
     const bodypart_id left( "arm_l" );
     const bodypart_id right( "arm_r" );
     for( effect_fixture *fixture : {
@@ -230,9 +228,9 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
     const effect &before = legacy.target( npc_target ).get_effect(
-                               efftype_bleed, body_part_arm_l.id() );
+                               effect_bleed, body_part_arm_l.id() );
     const effect &after = modern.target( npc_target ).get_effect(
-                              efftype_bleed, body_part_arm_l.id() );
+                              effect_bleed, body_part_arm_l.id() );
     REQUIRE_FALSE( before.is_null() );
     REQUIRE_FALSE( after.is_null() );
     CHECK( before.get_duration() == 0_turns );
@@ -246,7 +244,7 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
     effect_fixture modern( 3700 );
     const bool npc_target = GENERATE( false, true );
     const std::string prefix = npc_target ? "npc_" : "u_";
-    const efftype_id &bleeding = efftype_bleed;
+    const efftype_id &bleeding = effect_bleed;
     const bodypart_id part( "arm_l" );
     for( effect_fixture *fixture : {
              &legacy, &modern

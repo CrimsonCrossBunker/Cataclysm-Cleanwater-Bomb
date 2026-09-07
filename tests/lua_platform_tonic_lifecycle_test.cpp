@@ -32,7 +32,7 @@
 #include "path_info.h"
 #include "worldfactory.h"
 
-static const efftype_id efftype_lua_first_nano_recovery( "lua_first_nano_recovery" );
+static const efftype_id effect_lua_first_nano_recovery( "lua_first_nano_recovery" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_lua_first_cleanwater_cell( "lua_first_cleanwater_cell" );
 static const itype_id itype_lua_first_nano_tonic( "lua_first_nano_tonic" );
@@ -94,7 +94,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     load( true );
     const itype_id &tonic_id = itype_lua_first_nano_tonic;
     const itype_id &cell_id = itype_lua_first_cleanwater_cell;
-    const efftype_id &recovery = efftype_lua_first_nano_recovery;
+    const efftype_id &recovery = effect_lua_first_nano_recovery;
     REQUIRE( tonic_id.is_valid() );
     REQUIRE( recovery.is_valid() );
     item tonic( tonic_id );
