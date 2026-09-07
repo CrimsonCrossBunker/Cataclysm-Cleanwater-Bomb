@@ -1103,6 +1103,10 @@ bool widget::has_flag( const std::string &flag ) const
 std::string widget::show( const avatar &ava, const unsigned int max_width )
 {
     set_default_var_range( ava );
+    // Hearing loss takes precedence over emitted volume in every sound widget.
+    if( _var == widget_var::sound && ava.is_deaf() ) {
+        return colorize( _( "Deaf!" ), c_red );
+    }
     if( uses_text_function() ) {
         // Text functions are a carry-over from before widgets, with existing functions generating
         // descriptive colorized text for avatar attributes.  The "value" for these is immaterial;
