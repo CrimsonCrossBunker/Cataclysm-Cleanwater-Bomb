@@ -46,6 +46,7 @@ extern "C" {
 
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "cata_scope_helpers.h"
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -71,6 +72,7 @@ std::vector<runtime_state> prepared_states;
 bool candidate_is_prepared = false;
 bool candidate_content_is_applied = false;
 bool candidate_content_is_finalized = false;
+bool script_reload_in_progress = false;
 std::size_t generation_counter = 0;
 
 bool path_is_within( const fs::path &path, const fs::path &directory )
@@ -685,6 +687,10 @@ std::string prepared_content_fingerprint()
 
 bool reload_active_mods( std::string &error )
 {
+    if( script_reload_in_progress ) {
+        error = "Lua script reload is already in progress; retry after it returns";
+        return false;
+    }
     if( active_states.empty() ) {
         error.clear();
         return true;
@@ -694,11 +700,23 @@ bool reload_active_mods( std::string &error )
     std::vector<mod_source> sources;
     sources.reserve( active_states.size() );
     for( const runtime_state &state : active_states ) {
+        lua_Debug frame;
+        if( lua_getstack( state.lua->lua_state(), 0, &frame ) != 0 ) {
+            error = "Lua code is still executing for Mod '" + state.id +
+                    "'; retry script reload after it returns";
+            return false;
+        }
         active_fingerprint << state.id.size() << ':' << state.id << ':'
                            << runtime_fingerprint( state.platform ) << ';';
         sources.push_back( { state.id, state.root, state.entry } );
     }
 
+    // Candidate entry scripts and replacement lifecycle callbacks can enter
+    // native code. In particular, new world_ready callbacks execute before
+    // prepared_states becomes active_states, so the old stack check is not
+    // sufficient to protect the transaction from a nested reload.
+    const restore_on_out_of_scope<bool> restore_reload_flag( script_reload_in_progress );
+    script_reload_in_progress = true;
     if( !prepare_mods( sources, error ) ) {
         return false;
     }

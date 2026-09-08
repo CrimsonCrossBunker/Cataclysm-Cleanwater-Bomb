@@ -85,6 +85,7 @@
 #include "list.h"
 #include "localized_comparator.h"
 #include "lua_platform_hooks.h"
+#include "lua_platform_loader.h"
 #include "magic.h"
 #include "map.h"
 #include "map_extras.h"
@@ -310,6 +311,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::VEHICLE_EFFECTS: return "VEHICLE_EFFECTS";
         case debug_menu::debug_menu_index::WISHPROFICIENCY: return "WISHPROFICIENCY";
         case debug_menu::debug_menu_index::RELOAD_GPU_SHADERS: return "RELOAD_GPU_SHADERS";
+        case debug_menu::debug_menu_index::RELOAD_LUA_SCRIPTS: return "RELOAD_LUA_SCRIPTS";
         // *INDENT-ON*
         case debug_menu::debug_menu_index::last:
             break;
@@ -1032,6 +1034,10 @@ static int game_uilist()
         { uilist_entry( debug_menu_index::QUIT_NOSAVE, true, 'Q', _( "Quit to main menu" ) )  },
         { uilist_entry( debug_menu_index::QUICKLOAD, true, 'q', _( "Quickload" ) )  },
         { uilist_entry( debug_menu_index::SNAPSHOT_MENU, true, 'n', _( "Snapshot save/load menu" ) )  },
+        {
+            uilist_entry( debug_menu_index::RELOAD_LUA_SCRIPTS,
+                          cata::lua_platform::is_enabled(), 'l', _( "Reload Lua Mod scripts" ) )
+        },
     };
 
     return uilist( _( "Game…" ), uilist_initializer );
@@ -4986,6 +4992,34 @@ const std::vector<debug_action_entry> &all_actions()
             debug_menu_index::IMGUI_DEMO, translate_marker( "ImGui demo" ), "imgui demo", "Game", []()
             {
                 run_imgui_demo();
+            }
+        },
+        {
+            debug_menu_index::RELOAD_LUA_SCRIPTS, translate_marker( "Reload Lua Mod scripts" ),
+            "reload lua mod scripts platform", "Game", []()
+            {
+                if( !cata::lua_platform::is_enabled() ) {
+                    popup( _( "This build does not include Lua Platform support." ) );
+                    return;
+                }
+                const std::vector<std::string> mods = cata::lua_platform::loaded_mod_ids();
+                if( mods.empty() ) {
+                    popup( _( "No Lua Mods are active in this world." ) );
+                    return;
+                }
+                std::string error;
+                if( !cata::lua_platform::reload_active_mods( error ) ) {
+                    if( error.find( "requires_full_data_reload:" ) == 0 ) {
+                        popup( _( "Lua static content changed. Restart the game to reload its definitions. "
+                                  "The previous script registrations remain active.\n\n%s" ), error );
+                    } else {
+                        popup( _( "Lua script reload failed. The previous script registrations remain "
+                                  "active.\n\n%s" ), error );
+                    }
+                    return;
+                }
+                add_msg( m_info, _( "Replaced Lua script registrations for %zu Mods. "
+                                    "Check the message log for callback errors." ), mods.size() );
             }
         },
         {
