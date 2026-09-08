@@ -6404,17 +6404,21 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.companion_combat_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_survival_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_industry_rank_factor ) );
+                hash_part( state, "tags" );
                 for( const auto &tag : v.tags ) {
                     hash_part( state, tag );
                 }
+                hash_part( state, "companion_practice" );
                 for( const auto &[id, weight] : v.companion_practice ) {
                     hash_part( state, id );
                     hash_part( state, std::to_string( weight ) );
                 }
+                hash_part( state, "theory_descriptions" );
                 for( const auto &[level, description] : v.theory_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );
                 }
+                hash_part( state, "practice_descriptions" );
                 for( const auto &[level, description] : v.practice_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );

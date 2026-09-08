@@ -164,10 +164,11 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    const auto fingerprint = [&]( const std::string & text ) {
+    const auto fingerprint = [&]( const std::string & text, const std::string &configure = "" ) {
         files.write( "main.lua", "local ccb = require('ccb')\n"
-                     "ccb.content.add(ccb.content.Skill {id='lua_skill_text_hash', "
-                     "name=" + text + ", description='description'})\n" );
+                     "local skill = ccb.content.Skill {id='lua_skill_text_hash', "
+                     "name=" + text + ", description='description'}\n" +
+                     configure + "\nccb.content.add(skill)\n" );
         std::string error;
         const bool prepared = platform::prepare_mods( {
             { "skill-text-hash", files.root, files.root / "main.lua" }
@@ -178,6 +179,8 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
         platform::discard_prepared_mods();
         return result;
     };
+    CHECK( fingerprint( "'same source'", "skill:level_description(1, 'same text')" ) !=
+           fingerprint( "'same source'", "skill:level_description_practice(1, 'same text')" ) );
     const std::string marked = fingerprint( "ccb.content.text('same source')" );
     CHECK( fingerprint( "ccb.content.text('same source')" ) == marked );
     CHECK( fingerprint( "'same source'" ) != marked );
