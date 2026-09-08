@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -45,8 +46,10 @@ extern "C" {
 #endif
 
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
+#include "catacharset.h"
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -743,6 +746,140 @@ bool reload_active_mods( std::string &error )
     return true;
 }
 
+namespace
+{
+std::string console_string( const char *text, const std::size_t size )
+{
+    // Bound presentation only, without restricting script execution or values.
+    int remaining = static_cast<int>( std::min<std::size_t>( size, 1024 ) );
+    std::string result = "\"";
+    while( remaining > 0 ) {
+        const std::uint32_t ch = UTF8_getch( &text, &remaining );
+        if( ch == '\\' || ch == '"' ) {
+            result += '\\';
+            result += static_cast<char>( ch );
+        } else if( ch < 32 || ch == 127 ) {
+            constexpr char hex[] = "0123456789abcdef";
+            result += "\\x";
+            result += hex[ch >> 4];
+            result += hex[ch & 15];
+        } else {
+            result += utf32_to_utf8( ch );
+        }
+    }
+    result += '"';
+    if( size > 1024 ) {
+        result += " [truncated]";
+    }
+    return result;
+}
+
+std::string console_value( lua_State *lua, const int index, const bool expand_table )
+{
+    const int type = lua_type( lua, index );
+    if( type == LUA_TSTRING ) {
+        std::size_t size = 0;
+        const char *text = lua_tolstring( lua, index, &size );
+        return console_string( text, size );
+    }
+    if( type == LUA_TNUMBER ) {
+        // Do not convert a live lua_next numeric key into a string on the stack.
+        if( lua_isinteger( lua, index ) ) {
+            return std::to_string( lua_tointeger( lua, index ) );
+        }
+        std::ostringstream number;
+        number << std::setprecision( std::numeric_limits<lua_Number>::max_digits10 ) <<
+               lua_tonumber( lua, index );
+        return number.str();
+    }
+    if( type == LUA_TBOOLEAN ) {
+        return lua_toboolean( lua, index ) ? "true" : "false";
+    }
+    if( type == LUA_TNIL ) {
+        return "nil";
+    }
+    if( type == LUA_TTABLE && expand_table ) {
+        if( !lua_checkstack( lua, 2 ) ) {
+            return "<table: insufficient stack space>";
+        }
+        const int top = lua_gettop( lua );
+        const on_out_of_scope restore_stack( [lua, top]() {
+            lua_settop( lua, top );
+        } );
+        const int table = lua_absindex( lua, index );
+        int count = 0;
+        std::string result = "{";
+        lua_pushnil( lua );
+        while( lua_next( lua, table ) != 0 ) {
+            if( count == 20 ) {
+                result += "\n  [remaining fields omitted]";
+                break;
+            }
+            result += "\n  [" + console_value( lua, -2, false ) + "] = " +
+                      console_value( lua, -1, false );
+            ++count;
+            lua_pop( lua, 1 );
+        }
+        return result + ( count == 0 ? "}" : "\n}" );
+    }
+    return std::string( "<" ) + lua_typename( lua, type ) + ">";
+}
+} // namespace
+
+bool execute_console( const std::string &mod_id, const std::string &source,
+                      std::string &output, std::string &error )
+{
+    output.clear();
+    error.clear();
+    if( script_reload_in_progress ) {
+        error = "Lua script reload is in progress; retry after it returns";
+        return false;
+    }
+    const auto found = std::find_if( active_states.begin(), active_states.end(),
+    [&mod_id]( const runtime_state & state ) {
+        return state.id == mod_id;
+    } );
+    if( found == active_states.end() ) {
+        error = "No active Lua Mod named '" + mod_id + "'";
+        return false;
+    }
+    lua_State *const lua = found->lua->lua_state();
+    lua_Debug frame;
+    if( lua_getstack( lua, 0, &frame ) != 0 ) {
+        error = "Lua code is still executing for Mod '" + mod_id + "'";
+        return false;
+    }
+    try {
+        // The explicit console invocation is a runtime callback. Keep the
+        // existing world-ready, owner, handle and domain mutation checks.
+        const detail::callback_scope callback( *found->platform );
+        const sol::protected_function_result result = found->lua->safe_script(
+                source, sol::script_pass_on_error, "=CCB console: " + mod_id, sol::load_mode::text );
+        if( !result.valid() ) {
+            const sol::error script_error = result;
+            error = "Lua console [" + mod_id + "]: " + script_error.what();
+            return false;
+        }
+        const int shown = std::min( result.return_count(), 16 );
+        for( int i = 0; i < shown; ++i ) {
+            const int index = result.stack_index() + i;
+            if( i != 0 ) {
+                output += '\n';
+            }
+            output += console_value( lua, index, true );
+        }
+        if( result.return_count() == 0 ) {
+            output = "Completed (no return values)";
+        } else if( result.return_count() > shown ) {
+            output += "\n[remaining return values omitted]";
+        }
+        return true;
+    } catch( const std::exception &exception ) {
+        error = "Lua console [" + mod_id + "]: " + exception.what();
+        return false;
+    }
+}
+
 void on_world_ready( bool new_game )
 {
     runtime_world_ready( new_game );
@@ -846,6 +983,14 @@ bool reload_active_mods( std::string &error )
 {
     error.clear();
     return true;
+}
+
+bool execute_console( const std::string &, const std::string &,
+                      std::string &output, std::string &error )
+{
+    output.clear();
+    error = disabled_error;
+    return false;
 }
 
 void on_world_ready( bool )
