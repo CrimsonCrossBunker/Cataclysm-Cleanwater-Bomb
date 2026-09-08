@@ -73,9 +73,10 @@ static double weapon_dps_trials( avatar &attacker, monster &defender, item &weap
             attacker.clear_effects();
             attacker.clear_miss_reasons();
             attacker.set_moves( 0 );
-            if( attacker.used_weapon() ) {
-                attacker.used_weapon()->set_damage( 0 );
-            }
+            // CCB melee wear can add faults independently of ordinary damage.
+            // Restore the original weapon, not just its damage indicator.
+            attacker.remove_weapon();
+            attacker.wield( weapon );
 
             int before_moves = attacker.get_moves();
 
