@@ -361,6 +361,19 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
+The draft task-counter persistence fix stores each Mod's `last_task_id` in both
+state scopes, including records with no pending tasks. Loading takes the maximum
+counter across loaded scopes and pending records; exhausted signed task-ID space
+remains exhausted. Absent-Mod records retain the counter when resaved. Older
+version-1 records without this optional field still load using their pending task
+IDs; IDs already discarded before that legacy save cannot be reconstructed.
+No compilation or native save/load acceptance has run for this draft.
+
+任务计数器持久化草稿在两个存档作用域的 Mod 记录中保存 `last_task_id`，任务列表为空时
+也保留。加载时合并所加载作用域的最大计数，耗尽的有符号 ID 空间不会因重进而重置；
+暂未加载的 Mod 记录再次保存时也保留计数。旧版 v1 记录缺少该可选字段时，仍按尚存任务
+推导计数；旧存档写入前已丢弃的任务 ID 无法追溯恢复。该草稿尚未编译或进行原生存取验收。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
