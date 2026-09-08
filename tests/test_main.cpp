@@ -358,6 +358,7 @@ int main( int argc, const char *argv[] )
             Json::globally_report_unvisited_members( false );
             // Destroy the game before function-local Lua registries are torn down.
             g.reset();
+            deinitDebug();
         } };
     Catch::Session session;
 
@@ -539,6 +540,18 @@ int main( int argc, const char *argv[] )
         DebugLog( D_INFO, DC_ALL ) << "Treating result as failure due to error logged during tests.";
         return 1;
     }
+
+#if defined(__MINGW32__)
+    // MinGW static teardown is unreliable after game state cleanup.
+    test_shutdown_guard.cancel();
+    Json::globally_report_unvisited_members( false );
+    g.reset();
+    deinitDebug();
+    std::cout.flush();
+    std::cerr.flush();
+    std::fflush( nullptr );
+    std::_Exit( result );
+#endif
 
     return result;
 }
