@@ -41,3 +41,16 @@ Lua's cpath grammar cannot escape literal `;` or `?` in directory names. The
 automatic local prefix is omitted for such roots; explicit `package.loadlib`
 paths and the original external searchers remain available. A path-resolution
 regression uses a placeholder library, which is not native loading evidence.
+
+A dedicated hidden Catch2 case exercises this fixture through the real Platform
+loader in the native test executable. Compile the shared object as above and
+copy this directory's `main.lua` beside it, then run:
+
+```sh
+CCB_NATIVE_PROBE_DIR=/tmp/ccb-native-probe ./tests/cata_test \
+  lua_platform_native_module_uses_host_lua_abi --rng-seed 20260908
+```
+
+This explicit test requires the prepared directory; it does not silently skip a
+missing probe. The ordinary Platform suite does not require a compiled external
+module. The fixture links against the host Lua ABI, never a second Lua runtime.

@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <cstdlib>
 
 namespace
 {
@@ -155,6 +156,23 @@ TEST_CASE( "lua_platform_loader_errors_identify_stage_owner_and_script",
         CHECK( error.find( "nested_failure.lua" ) != std::string::npos );
         CHECK( error.find( "nested diagnostic sentinel" ) != std::string::npos );
     }
+}
+
+TEST_CASE( "lua_platform_native_module_uses_host_lua_abi",
+           "[.][native_module]" )
+{
+    // This explicit acceptance case needs the separately compiled probe.
+    const char *directory = std::getenv( "CCB_NATIVE_PROBE_DIR" );
+    REQUIRE( directory != nullptr );
+    REQUIRE( directory[0] != '\0' );
+    const std::filesystem::path root = std::filesystem::u8path( directory );
+    const cata::lua_platform::mod_source source = {
+        "native-abi-probe", root, root / "main.lua"
+    };
+    std::string error;
+    const bool valid = cata::lua_platform::validate_mods( { source }, error );
+    INFO( error );
+    REQUIRE( valid );
 }
 
 TEST_CASE( "lua_platform_metadata_forwarding_uses_one_explicit_module_result",
