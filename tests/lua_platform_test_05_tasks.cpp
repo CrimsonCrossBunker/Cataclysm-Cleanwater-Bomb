@@ -2,6 +2,7 @@
 // NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "messages.h"
+#include "debug.h"
 #include <algorithm>
 #include <cstdint>
 #include <stdexcept>
@@ -658,7 +659,10 @@ TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance"
                 0, "failing_task", lua.create_table(), 1, "world" );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     cata::lua_platform::runtime_process_tasks();
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     const auto messages = Messages::recent_messages( 10 );
     const auto error = std::find_if( messages.begin(), messages.end(),
     []( const auto & entry ) {

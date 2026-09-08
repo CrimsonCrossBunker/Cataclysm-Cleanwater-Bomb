@@ -86,7 +86,9 @@ TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
     CHECK( cata::lua_platform::loaded_mod_ids().empty() );
 
     REQUIRE( cata::lua_platform::prepare_mods( {}, error ) );
-    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
     REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
     cata::lua_platform::commit_prepared_mods();
     CHECK( error.empty() );
@@ -130,7 +132,9 @@ TEST_CASE( "lua_first_platform_playable_mvp_is_discovered_and_activated",
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods( { source }, error ) );
     CHECK( error.empty() );
-    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
     CHECK( error.empty() );
     REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
     CHECK( error.empty() );

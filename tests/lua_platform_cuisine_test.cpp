@@ -1,4 +1,36 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <initializer_list>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+#include "avatar.h"
+#include "calendar.h"
+#include "cata_scope_helpers.h"
+#include "coordinates.h"
+#include "dialogue.h"
+#include "dialogue_helpers.h"
+#include "flexbuffer_json.h"
+#include "item.h"
+#include "json_loader.h"
+#include "lua_platform_loader.h"
+#include "map.h"
+#include "map_helpers.h"
+#include "npc.h"
+#include "point.h"
+#include "recipe.h"
+#include "ret_val.h"
+#include "stomach.h"
+#include "talker.h"
+#include "type_id.h"
+#include "units.h"
+#include "value_ptr.h"
+#include "veh_type.h"
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include <limits>
 #include <stdexcept>
 
@@ -366,6 +398,7 @@ TEST_CASE( "lua_first_resolves_deferred_native_item_parents_before_validation",
             "type": "ITEM", "id": "ccb_deferred_native_parent",
             "copy-from": "rock", "name": "deferred parent", "weight": "123 g"
         })json" ).get_object();
+        REQUIRE( jo.get_string( "type" ) == "ITEM" );
         items::load( jo, "dda" );
     };
     on_out_of_scope cleanup( [&]() {
@@ -382,6 +415,7 @@ TEST_CASE( "lua_first_resolves_deferred_native_item_parents_before_validation",
         "type": "ITEM", "id": "ccb_deferred_native_child",
         "copy-from": "ccb_deferred_native_parent", "name": "deferred child"
     })json" ).get_object();
+    REQUIRE( child_json.get_string( "type" ) == "ITEM" );
     items::load( child_json, "dda" );
     REQUIRE_FALSE( factory.is_valid( child ) );
     // An early pass must retain dependencies that cannot be resolved yet.
@@ -421,7 +455,9 @@ ccb.content.add(ccb.content.Item {
     REQUIRE( cata::lua_platform::prepare_mods(
                  { test_mod.source( "ccb_deferred_native_inheritance" ) }, error ) );
     CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
-    CHECK( error.find( "copies unknown item" ) != std::string::npos );
+    INFO( error );
+    CHECK( error.find( "unknown copy_from parent" ) != std::string::npos );
+    CHECK( error.find( "ccb_truly_missing_native_parent" ) != std::string::npos );
     CHECK_FALSE( item::type_is_defined( result ) );
 }
 
@@ -481,7 +517,13 @@ TEST_CASE( "lua_platform_item_group_extensions_preserve_native_and_prior_mod_ent
     REQUIRE( definition.valid() );
     REQUIRE( fixture.register_definition( definition.get<sol::object>(), 0 ) );
     std::string error;
-    REQUIRE( fixture.apply_phase( cata::lua_platform::items_content_apply_phase::item_groups, error ) );
+    using phase = cata::lua_platform::items_content_apply_phase;
+    for( const phase step : { phase::foundations, phase::materials, phase::catalogs,
+                             phase::ammunition_effects, phase::metadata, phase::item_groups } ) {
+        const bool applied = fixture.apply_phase( step, error );
+        INFO( error );
+        REQUIRE( applied );
+    }
     Item_group *const original = dynamic_cast<Item_group *>( item_controller->get_group( group_id ) );
     REQUIRE( original != nullptr );
 

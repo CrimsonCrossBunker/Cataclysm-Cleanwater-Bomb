@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "messages.h"
+#include "debug.h"
 #include <cata_scope_helpers.h>
 #include <lua_platform_runtime.h>
 #include <algorithm>
@@ -53,9 +54,15 @@ TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch"
             ccb["runtime"]["hook"]( "on_craft_result", handler );
         REQUIRE( hook_subscription.valid() );
     }
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     cata::lua_platform::runtime_world_ready( true );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( later_calls == 1 );
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     cata::lua_platform::dispatch_runtime_hook( "on_craft_result" );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( later_calls == 2 );
     const auto messages = Messages::recent_messages( 10 );
     for( const char *context : {

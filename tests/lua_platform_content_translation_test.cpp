@@ -177,7 +177,10 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
     } );
     const auto fingerprint = [&]( const std::string & text, const std::string &configure = "" ) {
         files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
+                     "ccb.content.add(ccb.content.SkillDisplay {id='lua_skill_text_hash_display', "
+                     "label='Hash test skills'})\n"
                      "local skill = ccb.content.Skill {id='lua_skill_text_hash', "
+                     "display_category='lua_skill_text_hash_display', "
                      "name=" + text + ", description='description'}\n" +
                      configure + "\nccb.content.add(skill)\n" );
         std::string error;
