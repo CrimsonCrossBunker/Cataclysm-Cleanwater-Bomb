@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "avatar.h"
 #include "calendar.h"
@@ -53,15 +54,58 @@
 #include "shop_cons_rate.h"
 #include "trap.h"
 
+static const item_group_id
+Item_spawn_data_ccb_platform_extended_group( "ccb_platform_extended_group" );
+static const item_group_id
+Item_spawn_data_ccb_platform_extension_native( "ccb_platform_extension_native" );
+static const item_group_id
+Item_spawn_data_ccb_platform_extension_stock( "ccb_platform_extension_stock" );
+static const npc_class_id NC_CCB_DYNAMIC_WHITELIST( "NC_CCB_DYNAMIC_WHITELIST" );
+static const damage_type_id damage_bash( "bash" );
+static const damage_type_id damage_cut( "cut" );
+static const efftype_id effect_ccb_platform_cuisine_effect( "ccb_platform_cuisine_effect" );
+static const enchantment_id
+enchantment_ccb_platform_cuisine_enchantment( "ccb_platform_cuisine_enchantment" );
+static const furn_str_id furn_f_platform_movement_test( "f_platform_movement_test" );
+static const furn_str_id furn_f_platform_overflow_test( "f_platform_overflow_test" );
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_ccb_deferred_lua_child( "ccb_deferred_lua_child" );
+static const itype_id itype_ccb_deferred_native_child( "ccb_deferred_native_child" );
+static const itype_id itype_ccb_deferred_native_parent( "ccb_deferred_native_parent" );
+static const itype_id itype_ccb_platform_cuisine_book( "ccb_platform_cuisine_book" );
+static const itype_id itype_ccb_platform_cuisine_food( "ccb_platform_cuisine_food" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_sandwich_deluxe( "sandwich_deluxe" );
+static const itype_id itype_stick( "stick" );
+static const mtype_id mon_platform_missing_reference( "mon_platform_missing_reference" );
+static const mtype_id mon_platform_native_references( "mon_platform_native_references" );
+static const recipe_id recipe_ccb_platform_cuisine_recipe( "ccb_platform_cuisine_recipe" );
+static const string_id<scenario>
+scenario_platform_calendar_json_reference( "platform_calendar_json_reference" );
+static const string_id<scenario>
+scenario_platform_calendar_lua_scenario( "platform_calendar_lua_scenario" );
+static const skill_id skill_cooking( "cooking" );
+static const ter_str_id ter_t_cuisine_door_closed( "t_cuisine_door_closed" );
+static const ter_str_id ter_t_cuisine_door_open( "t_cuisine_door_open" );
+static const ter_str_id ter_t_floor( "t_floor" );
+static const vproto_id
+vehicle_prototype_ccb_platform_delayed_turret_extension( "ccb_platform_delayed_turret_extension" );
+static const vproto_id
+vehicle_prototype_ccb_platform_delayed_turret_vehicle( "ccb_platform_delayed_turret_vehicle" );
+static const vproto_id
+vehicle_prototype_ccb_platform_invalid_placement( "ccb_platform_invalid_placement" );
+static const vitamin_id vitamin_vitC( "vitC" );
+static const vpart_id vpart_turret_laser_rifle( "turret_laser_rifle" );
+
 namespace
 {
 struct cuisine_test_mod : platform_lua_test_directory {
-    explicit cuisine_test_mod( const std::string & ) {}
+    explicit cuisine_test_mod( std::string_view ) {}
     ~cuisine_test_mod() {
         cata::lua_platform::shutdown();
     }
     cata::lua_platform::mod_source source( const std::string &id ) const {
-        return { id, root, root / "main.lua" };
+        return { id, root, root / std::filesystem::u8path( "main.lua" ) };
     }
 };
 } // namespace
@@ -113,7 +157,7 @@ TEST_CASE( "lua_platform_presentation_canvas_is_registered_but_not_available_at_
 {
     cata::lua_platform::shutdown();
     cuisine_test_mod test_mod( "ccb_platform_canvas_registration" );
-    test_mod.write( "main.lua", R"lua(
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 assert(type(ccb.presentation.canvas) == "function")
 assert(type(ccb.presentation.play_sound) == "function")
@@ -135,7 +179,7 @@ TEST_CASE( "lua_first_comestible_book_recipe_and_effect_enchantment_content_is_t
 {
     cata::lua_platform::shutdown();
     cuisine_test_mod test_mod( "ccb_platform_cuisine_content" );
-    test_mod.write( "main.lua", R"lua(
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 
 local invalid_item = ccb.content.Item {
@@ -231,14 +275,14 @@ ccb.content.add(effect)
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
 
     const itype *food = item_controller->find_template(
-                            itype_id( "ccb_platform_cuisine_food" ) );
+                            itype_ccb_platform_cuisine_food );
     REQUIRE( food != nullptr );
     REQUIRE( food->comestible );
     CHECK_FALSE( food->book );
     CHECK( food->comestible->comesttype == "FOOD" );
     CHECK( food->comestible->default_nutrition_read_only().kcal() == 420 );
     CHECK( food->comestible->default_nutrition_read_only().get_vitamin(
-               vitamin_id( "vitC" ) ) == 7 );
+               vitamin_vitC ) == 7 );
     CHECK( food->comestible->get_fun() == 12 );
     CHECK( food->comestible->healthy == 3 );
     CHECK( food->comestible->quench == -2 );
@@ -247,36 +291,36 @@ ccb.content.add(effect)
     CHECK( food->comestible->stack_size == 4 );
 
     const itype *book = item_controller->find_template(
-                            itype_id( "ccb_platform_cuisine_book" ) );
+                            itype_ccb_platform_cuisine_book );
     REQUIRE( book != nullptr );
     REQUIRE( book->book );
     CHECK_FALSE( book->comestible );
-    CHECK( book->book->skill == skill_id( "cooking" ) );
+    CHECK( book->book->skill == skill_cooking );
     CHECK( book->book->req == 2 );
     CHECK( book->book->level == 6 );
     CHECK( book->book->intel == 9 );
     CHECK( book->book->time == 1800_turns );
     CHECK( book->book->fun == 4 );
 
-    const recipe_id recipe_key( "ccb_platform_cuisine_recipe" );
+    const recipe_id &recipe_key = recipe_ccb_platform_cuisine_recipe;
     REQUIRE( recipe_key.is_valid() );
     CHECK( recipe_key->makes_amount() == 3 );
-    CHECK( recipe_key->booksets.count( itype_id( "ccb_platform_cuisine_book" ) ) == 1 );
+    CHECK( recipe_key->booksets.count( itype_ccb_platform_cuisine_book ) == 1 );
 
-    const efftype_id effect_key( "ccb_platform_cuisine_effect" );
-    const enchantment_id enchantment_key( "ccb_platform_cuisine_enchantment" );
+    const efftype_id &effect_key = effect_ccb_platform_cuisine_effect;
+    const enchantment_id &enchantment_key = enchantment_ccb_platform_cuisine_enchantment;
     REQUIRE( effect_key.is_valid() );
     REQUIRE( enchantment_key.is_valid() );
     REQUIRE( effect_key->enchantments.size() == 1 );
     CHECK( effect_key->enchantments.front() == enchantment_key );
     CHECK( enchantment_key->values_add.count( enchant_vals::mod::STRENGTH ) == 1 );
     CHECK( enchantment_key->values_multiply.count( enchant_vals::mod::STRENGTH ) == 1 );
-    CHECK( enchantment_key->armor_values_add.count( damage_type_id( "bash" ) ) == 1 );
-    CHECK( enchantment_key->armor_values_multiply.count( damage_type_id( "bash" ) ) == 1 );
+    CHECK( enchantment_key->armor_values_add.count( damage_bash ) == 1 );
+    CHECK( enchantment_key->armor_values_multiply.count( damage_bash ) == 1 );
 
     cata::lua_platform::discard_prepared_mods();
-    CHECK_FALSE( item_controller->has_template( itype_id( "ccb_platform_cuisine_food" ) ) );
-    CHECK_FALSE( item_controller->has_template( itype_id( "ccb_platform_cuisine_book" ) ) );
+    CHECK_FALSE( item_controller->has_template( itype_ccb_platform_cuisine_food ) );
+    CHECK_FALSE( item_controller->has_template( itype_ccb_platform_cuisine_book ) );
     CHECK_FALSE( recipe_key.is_valid() );
     CHECK_FALSE( effect_key.is_valid() );
     CHECK_FALSE( enchantment_key.is_valid() );
@@ -287,7 +331,7 @@ TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",
 {
     cata::lua_platform::shutdown();
     cuisine_test_mod test_mod( "ccb_platform_dynamic_shopkeeper_whitelist" );
-    test_mod.write( "main.lua", R"lua(
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 
 ccb.runtime.handler("accept_food", function(payload)
@@ -337,7 +381,7 @@ end
     cata::lua_platform::commit_prepared_mods();
     cata::lua_platform::on_world_ready( true );
 
-    const npc_class_id class_id( "NC_CCB_DYNAMIC_WHITELIST" );
+    const npc_class_id &class_id = NC_CCB_DYNAMIC_WHITELIST;
     REQUIRE( class_id.is_valid() );
     REQUIRE( class_id->has_whitelist() );
     const shopkeeper_whitelist &whitelist = class_id->get_shopkeeper_whitelist();
@@ -356,8 +400,8 @@ end
         CHECK( trader.wants_to_buy( candidate, 100, seller ).success() == expected );
     };
 
-    item gourmet( itype_id( "sandwich_deluxe" ) );
-    item non_food( itype_id( "rock" ) );
+    item gourmet( itype_sandwich_deluxe );
+    item non_food( itype_rock );
     REQUIRE_FALSE( gourmet.rotten() );
     check_acceptance( gourmet, true );
     check_acceptance( non_food, false );
@@ -375,7 +419,7 @@ end
     // Native conditions must still see the exact seller, not an implicit avatar.
     shopkeeper_whitelist conditional = whitelist;
     icg_entry native_rule;
-    native_rule.itype = itype_id( "rock" );
+    native_rule.itype = itype_rock;
     native_rule.condition = [&seller]( const const_dialogue &dialogue ) {
         return dialogue.const_actor( false )->get_const_character() == &seller;
     };
@@ -390,9 +434,9 @@ TEST_CASE( "lua_first_resolves_deferred_native_item_parents_before_validation",
 {
     cata::lua_platform::shutdown();
     auto &factory = item_controller->get_generic_factory();
-    const itype_id parent( "ccb_deferred_native_parent" );
-    const itype_id child( "ccb_deferred_native_child" );
-    const itype_id result( "ccb_deferred_lua_child" );
+    const itype_id &parent = itype_ccb_deferred_native_parent;
+    const itype_id &child = itype_ccb_deferred_native_child;
+    const itype_id &result = itype_ccb_deferred_lua_child;
     const auto load_parent = [&]() {
         JsonObject jo = json_loader::from_string( R"json({
             "type": "ITEM", "id": "ccb_deferred_native_parent",
@@ -425,7 +469,7 @@ TEST_CASE( "lua_first_resolves_deferred_native_item_parents_before_validation",
     REQUIRE_FALSE( factory.is_valid( child ) );
 
     cuisine_test_mod test_mod( "ccb_deferred_native_inheritance" );
-    test_mod.write( "main.lua", R"lua(
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Item {
     id = "ccb_deferred_lua_child",
@@ -444,7 +488,7 @@ ccb.content.add(ccb.content.Item {
     CHECK_FALSE( item::type_is_defined( result ) );
     CHECK( factory.is_valid( child ) );
 
-    test_mod.write( "main.lua", R"lua(
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Item {
     id = "ccb_deferred_lua_child",
@@ -466,7 +510,7 @@ TEST_CASE( "lua_platform_terrain_forward_links_and_empty_traps",
 {
     cata::lua_platform::shutdown();
     cuisine_test_mod files( "terrain_links" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Terrain {
     id = "t_cuisine_door_closed", name = "Closed door", symbol = "+",
@@ -480,8 +524,8 @@ ccb.content.add(ccb.content.Terrain {
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods( { files.source( "terrain_links" ) }, error ) );
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    const ter_str_id closed( "t_cuisine_door_closed" );
-    const ter_str_id open( "t_cuisine_door_open" );
+    const ter_str_id &closed = ter_t_cuisine_door_closed;
+    const ter_str_id &open = ter_t_cuisine_door_open;
     REQUIRE( closed.is_valid() );
     REQUIRE( open.is_valid() );
     CHECK( closed->open == open );
@@ -496,7 +540,7 @@ TEST_CASE( "lua_platform_item_group_extensions_preserve_native_and_prior_mod_ent
     cata::lua_platform::shutdown();
     const bool collection = GENERATE( true, false );
     const std::string kind = collection ? "collection" : "distribution";
-    const item_group_id group_id( "ccb_platform_extension_native" );
+    const item_group_id &group_id = Item_spawn_data_ccb_platform_extension_native;
     REQUIRE_FALSE( item_group::group_is_defined( group_id ) );
     // Create a native baseline outside the loader's candidate transaction.
     sol::state fixture_lua;
@@ -529,7 +573,7 @@ TEST_CASE( "lua_platform_item_group_extensions_preserve_native_and_prior_mod_ent
 
     cuisine_test_mod provider( "extension_provider" );
     cuisine_test_mod consumer( "extension_consumer" );
-    provider.write( "main.lua", "local kind = '" + kind + R"lua('
+    provider.write( std::filesystem::u8path( "main.lua" ), "local kind = '" + kind + R"lua('
 local ccb = require("ccb")
 local stock = ccb.content.ItemGroup {
     id = "ccb_platform_extension_stock", kind = "collection",
@@ -568,7 +612,7 @@ assert(not pcall(extension.item, extension, "stick", 100))
         with_magazine = 25;
         expected_error = "may only append entries";
     }
-    consumer.write( "main.lua", "local ccb = require('ccb')\n"
+    consumer.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                     "local extension = ccb.content.ItemGroup { id = '" + target +
                     "', kind = '" + extension_kind + "', with_ammo = " + std::to_string( with_ammo ) +
                     ", with_magazine = " + std::to_string( with_magazine ) + " }\n"
@@ -583,13 +627,13 @@ assert(not pcall(extension.item, extension, "stick", 100))
         REQUIRE( applied );
         CHECK( original->entry_count() == 3 );
         CHECK( item_controller->get_group( group_id ) == original );
-        CHECK( item_group::group_contains_item( group_id, itype_id( "rock" ) ) );
-        CHECK( item_group::group_contains_item( group_id, itype_id( "stick" ) ) );
-        CHECK( item_group::group_contains_item( group_id, itype_id( "battery" ) ) );
+        CHECK( item_group::group_contains_item( group_id, itype_rock ) );
+        CHECK( item_group::group_contains_item( group_id, itype_stick ) );
+        CHECK( item_group::group_contains_item( group_id, itype_battery ) );
         if( collection ) {
             int battery_charges = 0;
             for( const item &spawned : item_group::items_from( group_id ) ) {
-                if( spawned.typeId() == itype_id( "battery" ) ) {
+                if( spawned.typeId() == itype_battery ) {
                     battery_charges += spawned.charges;
                 }
             }
@@ -604,13 +648,13 @@ assert(not pcall(extension.item, extension, "stick", 100))
     cata::lua_platform::discard_prepared_mods();
     CHECK( item_controller->get_group( group_id ) == original );
     CHECK( original->entry_count() == 1 );
-    CHECK_FALSE( item_group::group_is_defined( item_group_id( "ccb_platform_extension_stock" ) ) );
-    CHECK_FALSE( item_group::group_contains_item( group_id, itype_id( "stick" ) ) );
+    CHECK_FALSE( item_group::group_is_defined( Item_spawn_data_ccb_platform_extension_stock ) );
+    CHECK_FALSE( item_group::group_contains_item( group_id, itype_stick ) );
     // Exercise distribution bookkeeping after truncating the appended entries.
     for( int trial = 0; trial < 8; ++trial ) {
-        const auto spawned = item_group::items_from( group_id );
+        const std::vector<item> spawned = item_group::items_from( group_id );
         REQUIRE( spawned.size() == 1 );
-        CHECK( spawned.front().typeId() == itype_id( "rock" ) );
+        CHECK( spawned.front().typeId() == itype_rock );
     }
 }
 
@@ -620,13 +664,13 @@ TEST_CASE( "lua_platform_item_group_extensions_can_target_earlier_mod_definition
     cata::lua_platform::shutdown();
     cuisine_test_mod provider( "extension_provider" );
     cuisine_test_mod consumer( "extension_consumer" );
-    provider.write( "main.lua", R"lua(
+    provider.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local group = ccb.content.ItemGroup { id = "ccb_platform_extended_group", kind = "collection" }
 group:item("rock", 100)
 ccb.content.add(group)
 )lua" );
-    consumer.write( "main.lua", R"lua(
+    consumer.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local extension = ccb.content.ItemGroup { id = "ccb_platform_extended_group", kind = "collection" }
 extension:item("stick", 100)
@@ -637,9 +681,9 @@ ccb.content.extend_item_group(extension)
         provider.source( "extension_provider" ), consumer.source( "extension_consumer" )
     }, error ) );
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    const item_group_id group_id( "ccb_platform_extended_group" );
-    CHECK( item_group::group_contains_item( group_id, itype_id( "rock" ) ) );
-    CHECK( item_group::group_contains_item( group_id, itype_id( "stick" ) ) );
+    const item_group_id &group_id = Item_spawn_data_ccb_platform_extended_group;
+    CHECK( item_group::group_contains_item( group_id, itype_rock ) );
+    CHECK( item_group::group_contains_item( group_id, itype_stick ) );
     cata::lua_platform::discard_prepared_mods();
     CHECK_FALSE( item_group::group_is_defined( group_id ) );
 }
@@ -651,7 +695,7 @@ TEST_CASE( "lua_platform_furniture_accepts_native_impassable_movement_costs",
     clear_map();
     const int movement = GENERATE( -10, -1, 0, 2 );
     cuisine_test_mod files( "furniture_movement" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Furniture {
     id = "f_platform_movement_test", name = "Movement test", symbol = "6",
@@ -661,7 +705,7 @@ ccb.content.add(ccb.content.Furniture {
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods( { files.source( "furniture_movement" ) }, error ) );
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    const furn_str_id furniture( "f_platform_movement_test" );
+    const furn_str_id &furniture = furn_f_platform_movement_test;
     REQUIRE( furniture.is_valid() );
     CHECK( furniture->movecost == movement );
     map &here = get_map();
@@ -673,7 +717,7 @@ ccb.content.add(ccb.content.Furniture {
             here.furn_set( position, previous_furniture );
             here.ter_set( position, previous_terrain );
         } );
-        here.ter_set( position, ter_str_id( "t_floor" ).id() );
+        here.ter_set( position, ter_t_floor.id() );
         here.furn_set( position, furniture.id() );
         CHECK( here.move_cost( position ) == ( movement < 0 ? 0 : 2 + movement ) );
     }
@@ -689,7 +733,7 @@ TEST_CASE( "lua_platform_furniture_rejects_movement_cost_integer_overflow",
                                      static_cast<std::int64_t>( std::numeric_limits<int>::min() ) - 1,
                                      static_cast<std::int64_t>( std::numeric_limits<int>::max() ) + 1 );
     cuisine_test_mod files( "furniture_overflow" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Furniture {
     id = "f_platform_overflow_test", name = "Invalid movement", symbol = "6",
@@ -699,16 +743,17 @@ ccb.content.add(ccb.content.Furniture {
     std::string error;
     CHECK_FALSE( cata::lua_platform::prepare_mods( { files.source( "furniture_overflow" ) }, error ) );
     CHECK( error.find( "invalid ranges" ) != std::string::npos );
-    CHECK_FALSE( furn_str_id( "f_platform_overflow_test" ).is_valid() );
+    CHECK_FALSE( furn_f_platform_overflow_test.is_valid() );
 }
 
 TEST_CASE( "lua_platform_vehicle_part_references_wait_for_native_finalization",
            "[lua][platform][content][vehicle]" )
 {
     cata::lua_platform::shutdown();
-    const vpart_id turret( "turret_laser_rifle" );
+    const vpart_id &turret = vpart_turret_laser_rifle;
     REQUIRE( turret.is_valid() );
-    const vpart_info saved_turret = turret.obj();
+    // The registry entry is erased below; the rollback snapshot must own a copy.
+    const vpart_info saved_turret = turret.obj(); // NOLINT(performance-unnecessary-copy-initialization)
     auto &parts = cata::lua_platform::detail::vehicle_part_registry();
     on_out_of_scope cleanup( [&parts, &saved_turret]() {
         cata::lua_platform::shutdown();
@@ -719,7 +764,7 @@ TEST_CASE( "lua_platform_vehicle_part_references_wait_for_native_finalization",
     parts.erase( turret );
     REQUIRE_FALSE( turret.is_valid() );
     cuisine_test_mod files( "delayed_vehicle_parts" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.content.add(ccb.content.Vehicle {
     id = "ccb_platform_delayed_turret_vehicle", name = "Deferred turret vehicle",
@@ -742,8 +787,8 @@ ccb.content.add(ccb.content.Vehicle {
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods( { files.source( "delayed_vehicle_parts" ) }, error ) );
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    const vproto_id base( "ccb_platform_delayed_turret_vehicle" );
-    const vproto_id extended( "ccb_platform_delayed_turret_extension" );
+    const vproto_id &base = vehicle_prototype_ccb_platform_delayed_turret_vehicle;
+    const vproto_id &extended = vehicle_prototype_ccb_platform_delayed_turret_extension;
     REQUIRE( base.is_valid() );
     REQUIRE( extended.is_valid() );
     CHECK( base->parts.size() == 3 );
@@ -777,7 +822,7 @@ TEST_CASE( "lua_platform_vehicle_part_placement_ranges_are_checked_before_finali
     const bool patch = GENERATE( false, true );
     cuisine_test_mod files( "invalid_vehicle_placement" );
     const std::string placement = "{ x = 1, y = 2, part = 'turret_laser_rifle', " + invalid + " }";
-    files.write( "main.lua", "local ccb = require('ccb')\n"
+    files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                  "ccb.content.add(ccb.content.Vehicle { id = 'ccb_platform_invalid_placement', " +
                  ( patch ? "copy_from = 'car', patch = { extend_parts = { " + placement + " } }" :
                    "name = 'Invalid vehicle', parts = { " + placement + " }" ) + " })\n" );
@@ -785,7 +830,7 @@ TEST_CASE( "lua_platform_vehicle_part_placement_ranges_are_checked_before_finali
     CHECK_FALSE( cata::lua_platform::prepare_mods( { files.source( "invalid_vehicle_placement" ) }, error ) );
     CHECK( error.find( "turret_laser_rifle" ) != std::string::npos );
     CHECK( error.find( "(1, 2)" ) != std::string::npos );
-    CHECK_FALSE( vproto_id( "ccb_platform_invalid_placement" ).is_valid() );
+    CHECK_FALSE( vehicle_prototype_ccb_platform_invalid_placement.is_valid() );
 }
 
 TEST_CASE( "lua_platform_monster_bootstrap_accepts_native_damage_and_catalog_references",
@@ -793,7 +838,7 @@ TEST_CASE( "lua_platform_monster_bootstrap_accepts_native_damage_and_catalog_ref
 {
     cata::lua_platform::shutdown();
     cuisine_test_mod files( "native_monster_references" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local monster = ccb.content.Monster {
     id = "mon_platform_native_references", name = "Native reference test",
@@ -816,19 +861,19 @@ ccb.content.add(monster)
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods( { files.source( "native_monster_references" ) }, error ) );
     REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    const mtype_id monster( "mon_platform_native_references" );
+    const mtype_id &monster = mon_platform_native_references;
     REQUIRE( monster.is_valid() );
-    CHECK( monster->melee_damage.type_damage( damage_type_id( "bash" ) ) == 22.0f );
-    CHECK( monster->melee_damage.type_damage( damage_type_id( "cut" ) ) == 10.0f );
-    CHECK( monster->armor.type_resist( damage_type_id( "bash" ) ) == 30.0f );
+    CHECK( monster->melee_damage.type_damage( damage_bash ) == 22.0f );
+    CHECK( monster->melee_damage.type_damage( damage_cut ) == 10.0f );
+    CHECK( monster->armor.type_resist( damage_bash ) == 30.0f );
     for( const damage_unit &unit : monster->melee_damage.damage_units ) {
-        if( unit.type == damage_type_id( "bash" ) ) {
+        if( unit.type == damage_bash ) {
             CHECK( unit.res_pen == 8.0f );
-        } else if( unit.type == damage_type_id( "cut" ) ) {
+        } else if( unit.type == damage_cut ) {
             CHECK( unit.res_pen == 5.0f );
         }
     }
-    CHECK( monster->starting_ammo.at( itype_id( "battery" ) ) == 2 );
+    CHECK( monster->starting_ammo.at( itype_battery ) == 2 );
     cata::lua_platform::discard_prepared_mods();
     CHECK_FALSE( monster.is_valid() );
 }
@@ -844,7 +889,7 @@ TEST_CASE( "lua_platform_monster_unknown_references_are_rejected_before_apply",
                                      std::string( "starting_ammo('missing_platform_item', 2)" ),
                                      std::string( "regeneration_modifier('missing_platform_effect', 1)" ) );
     cuisine_test_mod files( "missing_monster_reference" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local monster = ccb.content.Monster {
     id = "mon_platform_missing_reference", name = "Invalid reference test",
@@ -858,7 +903,7 @@ ccb.content.add(monster)
     REQUIRE( cata::lua_platform::prepare_mods( { files.source( "missing_monster_reference" ) }, error ) );
     CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
     CHECK( error.find( "mon_platform_missing_reference" ) != std::string::npos );
-    CHECK_FALSE( mtype_id( "mon_platform_missing_reference" ).is_valid() );
+    CHECK_FALSE( mon_platform_missing_reference.is_valid() );
 }
 
 TEST_CASE( "lua_platform_scenario_calendar_defaults_match_json",
@@ -868,8 +913,8 @@ TEST_CASE( "lua_platform_scenario_calendar_defaults_match_json",
     const int season_days = GENERATE( 91, 30, 73 );
     CAPTURE( season_days );
     override_option season_length( "SEASON_LENGTH", std::to_string( season_days ) );
-    const string_id<scenario> json_id( "platform_calendar_json_reference" );
-    const string_id<scenario> lua_id( "platform_calendar_lua_scenario" );
+    const string_id<scenario> &json_id = scenario_platform_calendar_json_reference;
+    const string_id<scenario> &lua_id = scenario_platform_calendar_lua_scenario;
     REQUIRE_FALSE( json_id.is_valid() );
     REQUIRE_FALSE( lua_id.is_valid() );
     on_out_of_scope remove_reference( [&]() {
@@ -890,7 +935,7 @@ TEST_CASE( "lua_platform_scenario_calendar_defaults_match_json",
     const time_point expected_cataclysm = json_id->start_of_cataclysm();
 
     cuisine_test_mod files( "scenario_calendar" );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local scenario = ccb.content.Scenario {
     id = "platform_calendar_lua_scenario",
