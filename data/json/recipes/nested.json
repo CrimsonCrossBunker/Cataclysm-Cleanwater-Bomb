@@ -6784,7 +6784,16 @@
     "subcategory": "CSC_AMMO_RIFLE",
     "name": ".50 BMG ammo",
     "description": "Recipes related to reloading .50 BMG ammo.",
-    "nested_category_data": [ "reloaded_50bmg", "reloaded_50_incendiary", "reloaded_50ss", "bp_50match", "bp_50_incendiary", "bp_50ss" ]
+    "nested_category_data": [
+      "reloaded_50bmg",
+      "reloaded_50_incendiary",
+      "reloaded_50ss",
+      "bp_50match",
+      "bp_50_incendiary",
+      "bp_50ss",
+      "reloaded_50bmgfmj",
+      "bp_50bmgfmj"
+    ]
   },
   {
     "id": "nested_545",
@@ -7522,5 +7531,15 @@
       "apple_canned_canned_medium",
       "apple_canned_canned_big"
     ]
+  },
+  {
+    "id": "nested_steel_cores",
+    "type": "nested_category",
+    "activity_level": "LIGHT_EXERCISE",
+    "category": "CC_AMMO",
+    "subcategory": "CSC_AMMO_COMPONENTS",
+    "name": "steel cores",
+    "description": "Recipes for creating steel cores for making ap ammo.",
+    "nested_category_data": [ "9x18_steel_core", "3006_steel_core", "123_steel_core", "545_steel_core", "50_steel_core" ]
   }
 ]
