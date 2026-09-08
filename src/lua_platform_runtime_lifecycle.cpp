@@ -1507,8 +1507,11 @@ void runtime_process_character_recurring( Character &character )
             if( const diag_value *stored = character.maybe_get_value(
                                                registration.due_variable ) ) {
                 const double raw = stored->dbl();
-                if( std::isfinite( raw ) && raw >= 0.0 &&
-                    raw <= static_cast<double>( std::numeric_limits<std::int64_t>::max() ) &&
+                // INT64_MAX rounds up to 2^63 as a double. That value must not
+                // reach the integer cast; use the exact, exclusive upper bound.
+                const double upper_bound =
+                    -static_cast<double>( std::numeric_limits<std::int64_t>::min() );
+                if( std::isfinite( raw ) && raw >= 0.0 && raw < upper_bound &&
                     std::trunc( raw ) == raw ) {
                     due = static_cast<std::int64_t>( raw );
                 }
