@@ -170,6 +170,10 @@ def summarize(document: object, mod: str | None = None,
         tasks = record.get("tasks", [])
         if not isinstance(tasks, list):
             raise ValueError(f"{owner}.tasks: expected array")
+        counter_persisted = "last_task_id" in record
+        last_task_id = record.get("last_task_id", 0)
+        if not integer(last_task_id) or not 0 <= last_task_id < 2**63:
+            raise ValueError(f"{owner}: invalid last_task_id")
         task_rows, seen = [], set()
         for index, task in enumerate(tasks):
             location = f"{owner}.tasks[{index}]"
@@ -178,6 +182,9 @@ def summarize(document: object, mod: str | None = None,
             stored_id = task.get("id")
             if not integer(stored_id) or not 0 < stored_id < 2**63:
                 raise ValueError(f"{location}: invalid task id")
+            if counter_persisted and stored_id > last_task_id:
+                raise ValueError(f"{location}: task id exceeds saved last_task_id")
+            last_task_id = max(last_task_id, stored_id)
             if stored_id in seen:
                 raise ValueError(f"{location}: duplicate task id {stored_id}")
             seen.add(stored_id)
@@ -211,7 +218,9 @@ def summarize(document: object, mod: str | None = None,
         if task_id is not None and not task_rows:
             raise ValueError(f"{owner}: task {task_id} is absent from this snapshot")
         rows.append({
-            "mod": owner, "state_count": len(values),
+            "mod": owner, "last_task_id": last_task_id,
+            "task_counter_persisted": counter_persisted,
+            "state_count": len(values),
             "state": values[:limit], "task_count": len(tasks),
             "matched_task_count": len(task_rows), "tasks": sorted(task_rows, key=lambda row: row["id"])[:limit],
         })

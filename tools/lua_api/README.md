@@ -148,3 +148,9 @@ python3 tools/test_create_lua_mod.py
 The editor gate checks both real templates and deliberately invalid author code
 for unknown APIs, missing arguments and wrong argument types. It is a static
 acceptance gate and does not trigger a C++ build or a full content audit.
+
+The saved-state inspector also reports each Mod's `last_task_id` and
+`task_counter_persisted`. New counter-bearing records retain allocated IDs even
+with no pending tasks. For older records, the displayed counter is derived only
+from remaining task IDs; completed IDs cannot be reconstructed. Counters outside
+the signed task-ID range, or below a stored task ID, are rejected.

@@ -59,6 +59,26 @@ class StateInspectorTests(unittest.TestCase):
         self.assertEqual(row["state"], [
             {"key": "active", "type": "boolean", "value": True}])
 
+    def test_saved_task_counter_and_legacy_pending_id_fallback(self):
+        snapshot = saved_state()
+        legacy = inspect_state.summarize(snapshot)["mods"][0]
+        self.assertEqual(legacy["last_task_id"], 3)
+        self.assertFalse(legacy["task_counter_persisted"])
+        record = snapshot["mods"]["tonic"]
+        record["last_task_id"] = 77
+        saved = inspect_state.summarize(snapshot)["mods"][0]
+        self.assertEqual(saved["last_task_id"], 77)
+        self.assertTrue(saved["task_counter_persisted"])
+        for invalid in (-1, True, 2**63, 3.5, 2):
+            record["last_task_id"] = invalid
+            with self.subTest(counter=invalid), self.assertRaisesRegex(
+                    ValueError, "last_task_id"):
+                inspect_state.summarize(snapshot)
+        record["tasks"] = []
+        record["last_task_id"] = 2**63 - 1
+        self.assertEqual(inspect_state.summarize(snapshot)["mods"][0]["last_task_id"],
+                         2**63 - 1)
+
     def test_actor_reports_known_identity_and_hints_only(self):
         snapshot = saved_state()
         task = snapshot["mods"]["tonic"]["tasks"][0]
