@@ -774,6 +774,10 @@ void write_scope( const cata_path &path, const std::string &scope )
 bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
                                    std::string &error )
 {
+    // Metadata/result conversion can also allocate Lua objects and run GC.
+    // Keep the task container stable for the entire migration transaction.
+    restore_on_out_of_scope restore_task_migration_active( owner.task_migration_active );
+    owner.task_migration_active = true;
     const auto handler = owner.handlers.find( task.handler_id );
     if( handler == owner.handlers.end() ) {
         error = "missing handler '" + task.handler_id + "'";
@@ -809,14 +813,8 @@ bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
         metadata["from_version"] = candidate.payload_version;
         metadata["to_version"] = transition->second.target_version;
         sol::protected_function callback = transition->second.callback;
-        const sol::protected_function_result result = [&]() {
-            restore_on_out_of_scope restore_task_migration_active(
-                owner.task_migration_active );
-            owner.task_migration_active = true;
-            return callback(
-                       persistent_table( *owner.lua, candidate.payload ), metadata );
-        }
-        ();
+        const sol::protected_function_result result = callback(
+                persistent_table( *owner.lua, candidate.payload ), metadata );
         if( !result.valid() ) {
             const sol::error callback_error = result;
             error = callback_error.what();
@@ -1146,10 +1144,13 @@ void detail::install_runtime_state_task_api(
     sol::table tasks = lua.create_table();
     const auto task_snapshot = []( runtime & owner,
     const persistent_task & task ) {
-        sol::table result = owner.lua->create_table();
         const std::int64_t now =
             to_turn<std::int64_t>( calendar::turn );
         const auto handler = owner.handlers.find( task.handler_id );
+        const bool handler_available = handler != owner.handlers.end();
+        const bool payload_current = handler_available &&
+                                     handler->second.payload_version == task.payload_version;
+        sol::table result = owner.lua->create_table();
         result["id"] = static_cast<std::int64_t>( task.id );
         result["handler"] = task.handler_id;
         result["due_turn"] = task.due_turn;
@@ -1235,10 +1236,8 @@ void detail::install_runtime_state_task_api(
         }
         result["participants"] = std::move( participant_snapshots );
         result["payload_version"] = task.payload_version;
-        result["handler_available"] = handler != owner.handlers.end();
-        result["payload_current"] =
-            handler != owner.handlers.end() &&
-            handler->second.payload_version == task.payload_version;
+        result["handler_available"] = handler_available;
+        result["payload_current"] = payload_current;
         result["payload"] = persistent_table( *owner.lua, task.payload );
         return result;
     };
@@ -1310,8 +1309,11 @@ void detail::install_runtime_state_task_api(
         if( found == owner->tasks.end() ) {
             return sol::make_object( lua_state, sol::nil );
         }
+        // Lua allocation may run a finalizer that cancels or schedules tasks.
+        // Detach the native record before creating any Lua return values.
+        const persistent_task snapshot = *found;
         return sol::make_object(
-                   lua_state, task_snapshot( *owner, *found ) );
+                   lua_state, task_snapshot( *owner, snapshot ) );
     } );
     tasks.set_function( "next", [weak, task_snapshot](
                             sol::this_state state, const std::string & handler_id,
@@ -1342,8 +1344,9 @@ void detail::install_runtime_state_task_api(
         if( next == nullptr ) {
             return sol::make_object( lua_state, sol::nil );
         }
+        const persistent_task snapshot = *next;
         return sol::make_object(
-                   lua_state, task_snapshot( *owner, *next ) );
+                   lua_state, task_snapshot( *owner, snapshot ) );
     } );
     tasks.set_function( "list", [weak, task_snapshot](
                             sol::this_state state,
@@ -1380,12 +1383,19 @@ void detail::install_runtime_state_task_api(
         const std::size_t returned = std::min(
                                          matches.size(),
                                          static_cast<std::size_t>( limit ) );
+        // Copy only the selected page, before allocations can invalidate any
+        // pointer into owner->tasks. Remaining matches are never dereferenced.
+        std::vector<persistent_task> snapshots;
+        snapshots.reserve( returned );
+        for( std::size_t index = 0; index < returned; ++index ) {
+            snapshots.push_back( *matches[index] );
+        }
         sol::state_view lua_state( state );
         sol::table entries = lua_state.create_table(
                                  static_cast<int>( returned ), 0 );
         for( std::size_t index = 0; index < returned; ++index ) {
             entries[index + 1] =
-                task_snapshot( *owner, *matches[index] );
+                task_snapshot( *owner, snapshots[index] );
         }
         sol::table result = lua_state.create_table();
         result["items"] = std::move( entries );

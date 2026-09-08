@@ -382,6 +382,23 @@ Lua 存档输出草稿同时覆盖通用 JSON 写入器的固定小数精度，�
 有限状态数值与任务 payload 的 double 使用往返精度，保留小数和大数量级，不改变其他
 游戏 JSON 写入器。旧文件仍可读取，但此前保存时已经损失的精度无法恢复；新增原生
 浮点往返回归源码尚未编译或执行。
+Task query results (`tasks.get`, `tasks.next`, and `tasks.list`) are detached
+snapshots. The draft lifetime fix copies selected native records before allocating
+Lua result tables, so cancellation during a Lua allocation cannot invalidate the
+records being returned. Native regression source models cancellation at that
+boundary; it has not been compiled or executed.
+
+任务查询 `tasks.get`、`tasks.next`、`tasks.list` 返回独立快照。生命周期修复草稿在
+分配 Lua 返回表前复制选中的原生记录，避免 Lua 分配期间取消任务导致正在返回的记录
+失效。回归测试源码模拟该边界上的取消操作，尚未编译或执行。
+
+The same task-lifetime draft keeps the existing migration mutation guard active
+while constructing metadata, invoking the callback, decoding its result and
+committing the candidate. It restores the previous flag on success or failure;
+this does not introduce a sandbox or roll back unrelated callback side effects.
+
+同一任务生命周期草稿把已有迁移保护覆盖到元数据构造、回调、返回值解码与候选提交全程，
+成功或失败都会恢复此前的标记；这不引入沙盒，也不回滚无关的回调副作用。
 
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
