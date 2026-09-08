@@ -662,12 +662,15 @@ capabilities:
     next_actions: [Evaluate candidate shared helpers in an independent design and acceptance batch; add declarations, examples, and tests only after a public shape is chosen; do not make this capability a platform-capability-closure or final-acceptance dependency.]
   - id: platform-internationalization
     phase: internationalization
-    status: planned
-    target_surface: "Recommended future author-facing internationalization: a Lua translation surface and extraction/plural/context workflow aligned with native text operations; exact function names and public shape remain to be designed."
+    status: in_progress
+    target_surface: "Draft runtime text helpers reuse native catalogs; Item names/descriptions and singular Skill/SkillDisplay texts also accept deferred text values. Literal gettext extraction covers both routes; native/locale acceptance and wider content/catalog lifecycle work remain pending."
     legacy_dependency: none
-    evidence: [src/translation_manager.cpp, src/translations.h, src/lua_platform_world_content.cpp, tests/translation_system_test.cpp, data/lua/types/ccb_platform_v1.d.lua]
+    evidence: [src/translation_manager.cpp, src/lua_platform_runtime_services.cpp, src/lua_platform_content_items.cpp, tests/lua_platform_translation_test.cpp, tests/lua_platform_content_translation_test.cpp, tools/lua_api/extract_translations.py, data/lua/types/ccb_platform_v1.d.lua]
     verification: not_run
-    next_actions: [Design and implement internationalization in an independent follow-on batch with its own extraction, declaration, example, test, and acceptance evidence; do not make it a platform-capability-closure or final-acceptance dependency.]
+    next_actions:
+      - Runtime helper and extraction source is an independent draft; focused Python extraction tests passed, but no native build or runtime acceptance was executed.
+      - Review the draft API and refresh generated inventories at acceptance; verify real catalogs, context, plural rules, language changes and nonlocalized builds before claiming support.
+      - Native regression source covers Item deferred text, inheritance, literal replacement and static fingerprints; other content builders, metadata translation and catalog lifecycle remain deferred. This slice is not a platform-capability-closure or final-acceptance dependency.
   - id: author-experience
     phase: tooling
     status: in_progress

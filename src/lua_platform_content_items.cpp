@@ -39,6 +39,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <list>
+#include <optional>
 
 namespace cata::lua_platform::detail
 {
@@ -334,6 +335,63 @@ struct quality_level {
     std::int64_t level = 1;
 };
 
+struct localized_text {
+    std::string singular;
+    std::optional<std::string> plural;
+    std::optional<std::string> context;
+
+    translation native() const {
+        if( plural ) {
+            return context ? translation::pl_translation( *context, singular, *plural ) :
+                   translation::pl_translation( singular, *plural );
+        }
+        return context ? translation::to_translation( *context, singular ) :
+               translation::to_translation( singular );
+    }
+};
+
+localized_text make_localized_text( const std::string &singular,
+                                    const std::optional<std::string> &plural,
+                                    const sol::optional<std::string> &context )
+{
+    if( singular.empty() || singular.find( '\0' ) != std::string::npos ||
+        ( plural && ( plural->empty() || plural->find( '\0' ) != std::string::npos ) ) ||
+        ( context && context->find( '\0' ) != std::string::npos ) ) {
+        throw std::runtime_error( "localized content text requires nonempty source forms without NUL" );
+    }
+    return { singular, plural, context ? std::optional<std::string>( *context ) : std::nullopt };
+}
+
+// Native text fields can retain either a literal or explicit translation data.
+struct authored_text {
+    std::string raw;
+    std::optional<localized_text> translated;
+
+    bool empty() const {
+        return raw.empty();
+    }
+
+    translation native() const {
+        return translated ? translated->native() : no_translation( raw );
+    }
+};
+
+authored_text read_singular_text( const sol::object &value, const std::string &fallback,
+                                  const std::string &field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return { fallback, std::nullopt };
+    }
+    if( value.is<localized_text>() ) {
+        const localized_text text = value.as<localized_text>();
+        if( text.plural ) {
+            throw std::runtime_error( field + " does not accept plural text" );
+        }
+        return { text.singular, text };
+    }
+    return { value.as<std::string>(), std::nullopt };
+}
+
 struct item_definition_data {
     struct comestible_data {
         std::string type;
@@ -358,6 +416,8 @@ struct item_definition_data {
     std::string copy_from;
     std::string name;
     std::string description;
+    std::optional<localized_text> translated_name;
+    std::optional<localized_text> translated_description;
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
     std::int64_t volume_ml = 0;
@@ -583,20 +643,20 @@ struct tool_quality_definition_data {
 
 struct skill_display_definition_data {
     std::string id;
-    std::string label;
+    authored_text label;
     bool registered = false;
 };
 
 struct skill_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string display_category = "none";
     std::int64_t sort_rank = 1000000;
     std::set<std::string> tags;
     std::map<std::string, std::int64_t> companion_practice;
-    std::map<std::int64_t, std::string> theory_descriptions;
-    std::map<std::int64_t, std::string> practice_descriptions;
+    std::map<std::int64_t, authored_text> theory_descriptions;
+    std::map<std::int64_t, authored_text> practice_descriptions;
     std::set<std::string> requires_all_traits;
     std::set<std::string> requires_any_traits;
     std::int64_t attack_min_time = 50;
@@ -1405,27 +1465,32 @@ struct skill_definition_handle {
     }
 
     skill_definition_handle &level_description( std::int64_t level,
-            const std::string &theory, const sol::optional<std::string> &practice ) {
+            const sol::object &theory_value, const sol::optional<sol::object> &practice_value ) {
         require_building_handle( token, *definition, "skill" );
+        authored_text theory = read_singular_text( theory_value, "", "skill theory description" );
+        std::optional<authored_text> practice;
+        if( practice_value ) {
+            practice = read_singular_text( *practice_value, "", "skill practice description" );
+        }
         if( level < 0 || level > MAX_SKILL || theory.empty() ) {
             throw std::runtime_error( "skill level description is invalid" );
         }
-        definition->theory_descriptions[level] = theory;
-        // Legacy stores the theory and practice maps independently; only an
-        // explicit practice argument fills the practice side.
+        // Parse both texts before changing either independent description map.
+        definition->theory_descriptions[level] = std::move( theory );
         if( practice ) {
-            definition->practice_descriptions[level] = *practice;
+            definition->practice_descriptions[level] = std::move( *practice );
         }
         return *this;
     }
 
     skill_definition_handle &level_description_practice( std::int64_t level,
-            const std::string &practice ) {
+            const sol::object &practice_value ) {
         require_building_handle( token, *definition, "skill" );
+        authored_text practice = read_singular_text( practice_value, "", "skill practice description" );
         if( level < 0 || level > MAX_SKILL || practice.empty() ) {
             throw std::runtime_error( "skill level description is invalid" );
         }
-        definition->practice_descriptions[level] = practice;
+        definition->practice_descriptions[level] = std::move( practice );
         return *this;
     }
 
@@ -2332,6 +2397,18 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ";" );
 }
 
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 template<typename Registration>
 bool defines_registration(
     const std::vector<Registration> &entries, const std::string_view id )
@@ -2430,6 +2507,15 @@ items_content_transaction::~items_content_transaction() = default;
 void items_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         sol::table &content )
 {
+    ccb.new_usertype<localized_text>( "LocalizedText", sol::no_constructor );
+    content.set_function( "text", []( const std::string & text,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( text, std::nullopt, context );
+    } );
+    content.set_function( "plural_text", []( const std::string & singular, const std::string & plural,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( singular, plural, context );
+    } );
     ccb.new_usertype<tool_quality_definition_handle>(
         "ToolQualityDefinition", sol::no_constructor,
         "id", sol::property( &tool_quality_definition_handle::id ),
@@ -2611,7 +2697,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<skill_display_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->label = options.get_or( "label", definition->id );
+        definition->label = read_singular_text( options.get<sol::object>( "label" ),
+                                                definition->id, "skill display label" );
         return skill_display_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Skill", [transaction]( const sol::table & options ) {
@@ -2620,8 +2707,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<skill_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text( options.get<sol::object>( "name" ),
+                                               definition->id, "skill name" );
+        definition->description = read_singular_text( options.get<sol::object>( "description" ),
+            "", "skill description" );
         definition->display_category = options.get_or( "display_category", std::string( "none" ) );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 1000000 );
         definition->teachable = options.get_or( "teachable", true );
@@ -2816,8 +2905,23 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 present = true;
             }
         };
-        read_string( "name", definition->name, definition->has_name );
-        read_string( "description", definition->description, definition->has_description );
+        const auto read_text = [&options, &read_string]( const char *key, std::string & raw,
+        bool & present, std::optional<localized_text> &translated, const bool allow_plural ) {
+            const sol::object value = options[key];
+            if( value.is<localized_text>() ) {
+                translated = value.as<localized_text>();
+                if( translated->plural && !allow_plural ) {
+                    throw std::runtime_error( "item description does not accept plural text" );
+                }
+                raw = translated->singular;
+                present = true;
+            } else {
+                read_string( key, raw, present );
+            }
+        };
+        read_text( "name", definition->name, definition->has_name, definition->translated_name, true );
+        read_text( "description", definition->description, definition->has_description,
+                   definition->translated_description, false );
         read_string( "symbol", definition->symbol, definition->has_symbol );
         read_string( "color", definition->color, definition->has_color );
         read_string( "category", definition->category, definition->has_category );
@@ -4748,7 +4852,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     } ),
                     SkillDisplayType::skillTypes.end() );
                     SkillDisplayType::skillTypes.emplace_back(
-                        id, no_translation( entry.definition->label ) );
+                        id, entry.definition->label.native() );
                 }
 
                 for( const skill_registration &entry : pimpl_->skills ) {
@@ -4761,7 +4865,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     } ), Skill::skills.end() );
                     Skill::contextual_skills.erase( id );
                     const skill_definition_data &source = *entry.definition;
-                    Skill native( id, no_translation( source.name ), no_translation( source.description ),
+                    Skill native( id, source.name.native(), source.description.native(),
                                   source.tags, skill_displayType_id( source.display_category ) );
                     native._sort_rank = static_cast<int>( source.sort_rank );
                     native.consumes_focus = source.consumes_focus;
@@ -4783,11 +4887,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     for( const auto &[level, description] : source.theory_descriptions ) {
                         native._level_descriptions_theory[static_cast<int>( level )] =
-                            no_translation( description );
+                            description.native();
                     }
                     for( const auto &[level, description] : source.practice_descriptions ) {
                         native._level_descriptions_practice[static_cast<int>( level )] =
-                            no_translation( description );
+                            description.native();
                     }
                     native._requires_all_traits = source.requires_all_traits;
                     native._requires_any_traits = source.requires_any_traits;
@@ -5414,10 +5518,15 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native->id = id;
                     if( definition.has_name ) {
-                        native->name = no_translation( definition.name );
+                        native->name = definition.translated_name ? definition.translated_name->native() :
+                                       no_translation( definition.name );
+                        if( definition.translated_name ) {
+                            native->name.make_plural();
+                        }
                     }
                     if( definition.has_description ) {
-                        native->description = no_translation( definition.description );
+                        native->description = definition.translated_description ?
+                                              definition.translated_description->native() : no_translation( definition.description );
                     }
                     if( definition.has_symbol ) {
                         native->sym = definition.symbol;
@@ -6295,17 +6404,21 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.companion_combat_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_survival_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_industry_rank_factor ) );
+                hash_part( state, "tags" );
                 for( const auto &tag : v.tags ) {
                     hash_part( state, tag );
                 }
+                hash_part( state, "companion_practice" );
                 for( const auto &[id, weight] : v.companion_practice ) {
                     hash_part( state, id );
                     hash_part( state, std::to_string( weight ) );
                 }
+                hash_part( state, "theory_descriptions" );
                 for( const auto &[level, description] : v.theory_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );
                 }
+                hash_part( state, "practice_descriptions" );
                 for( const auto &[level, description] : v.practice_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );
@@ -6697,6 +6810,17 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.copy_from );
                 hash_part( state, v.name );
                 hash_part( state, v.description );
+                const auto hash_text = [&state]( const std::optional<localized_text> &text ) {
+                    hash_part( state, text ? "localized" : "literal" );
+                    if( text ) {
+                        hash_part( state, text->context ? "context" : "no_context" );
+                        hash_part( state, text->context.value_or( "" ) );
+                        hash_part( state, text->plural ? "plural" : "no_plural" );
+                        hash_part( state, text->plural.value_or( "" ) );
+                    }
+                };
+                hash_text( v.translated_name );
+                hash_text( v.translated_description );
                 hash_part( state, v.symbol );
                 hash_part( state, std::to_string( v.mass_grams ) );
                 hash_part( state, std::to_string( v.volume_ml ) );

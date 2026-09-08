@@ -356,11 +356,15 @@ local ModDefinition = {}
 ---@field y integer Absolute map-square y coordinate.
 ---@field z integer Absolute map-square z coordinate.
 
+---Immutable deferred translation value for Item text and Skill/SkillDisplay text.
+---Create with content.text or content.plural_text; ordinary strings remain untranslated.
+---@class LocalizedText
+
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
 ---@field copy_from? string Existing item id used as the patch base.
----@field name? string Display name; defaults to id.
----@field description? string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Explicit plural text supplies counted names.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field symbol? string Map symbol; defaults to `?`.
 ---@field color? string Native color id.
 ---@field category? string Native item-category id.
@@ -3989,7 +3993,7 @@ function ToolQualityDefinition:usage(level, text) end
 
 ---@class SkillDisplayDefinitionOptions
 ---@field id string Stable skill display-category id.
----@field label? string Player-facing category label; defaults to id.
+---@field label? string|LocalizedText Player-facing category label; defaults to id. Plural text is rejected.
 
 ---@class SkillDisplayDefinition
 ---@field id string
@@ -3997,8 +4001,8 @@ local SkillDisplayDefinition = {}
 
 ---@class SkillDefinitionOptions
 ---@field id string Stable skill id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 ---@field display_category? string SkillDisplay id; defaults to `none`.
 ---@field sort_rank? integer Native display ordering rank.
 ---@field teachable? boolean Whether NPCs may teach the skill.
@@ -4019,14 +4023,14 @@ function SkillDefinition:tag(tag) end
 function SkillDefinition:companion_practice(practice_id, weight) end
 
 ---@param level integer Level from zero through the native skill maximum.
----@param theory string Theory-level description.
----@param practice? string Practical-level description; omitted means theory-only,
+---@param theory string|LocalizedText Theory-level description; plural text is rejected.
+---@param practice? string|LocalizedText Practical-level description; plural text is rejected. Omitted means theory-only,
 --- matching the legacy independent theory/practice maps.
 ---@return SkillDefinition self
 function SkillDefinition:level_description(level, theory, practice) end
 
 ---@param level integer Level from zero through the native skill maximum.
----@param practice string Practical-level description for a practice-only level.
+---@param practice string|LocalizedText Practical-level description for a practice-only level; plural text is rejected.
 ---@return SkillDefinition self
 function SkillDefinition:level_description_practice(level, practice) end
 
@@ -4993,6 +4997,19 @@ function CcbPlatformTilesetApi.limits() end
 function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
 local CcbPlatformContent = {}
+
+---Mark static content text for deferred translation, including after language changes.
+---@param text string Nonempty source text without NUL.
+---@param context? string Translation context without NUL.
+---@return LocalizedText
+function CcbPlatformContent.text(text, context) end
+
+---Mark singular/plural static content text. Translation is deferred until native display.
+---@param singular string Nonempty source text without NUL.
+---@param plural string Nonempty plural source text without NUL.
+---@param context? string Translation context without NUL.
+---@return LocalizedText
+function CcbPlatformContent.plural_text(singular, plural, context) end
 
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
@@ -10392,6 +10409,23 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 ---@field wind_direction number
 
 function CcbPlatformServices.message(text) end
+
+---Translate runtime text using the current game language. Available after world_ready.
+---Missing translations return the source text. Text/context must not contain NUL.
+---@param text string Literal source text for extraction.
+---@param context? string Literal disambiguation context.
+---@return string
+function CcbPlatformServices.translate(text, context) end
+
+---Translate runtime plural text using the native catalog's plural rules.
+---Without a translation, count 1 selects singular; other counts select plural.
+---Available after world_ready. Text/context must not contain NUL.
+---@param singular string Literal singular source text.
+---@param plural string Literal plural source text.
+---@param count integer Nonnegative and representable by the target's native size_t.
+---@param context? string Literal disambiguation context.
+---@return string
+function CcbPlatformServices.translate_plural(singular, plural, count, context) end
 
 ---@return integer
 function CcbPlatformServices.turn() end

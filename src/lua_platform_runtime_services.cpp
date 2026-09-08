@@ -227,6 +227,7 @@ extern "C" {
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
+#include "translation_manager.h"
 #include "trap.h"
 #include "type_id.h"
 #include "uilist.h"
@@ -257,6 +258,13 @@ using detail::runtime_callback_is_active;
 
 namespace
 {
+
+void require_translation_text( const std::string &text )
+{
+    if( text.find( '\0' ) != std::string::npos ) {
+        throw std::runtime_error( "translation text and context must not contain NUL" );
+    }
+}
 
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
@@ -1699,6 +1707,47 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
 
     sol::table services = lua.create_table();
+    services.set_function( "translate", [weak]( const std::string & text,
+    const sol::optional<std::string> &context ) -> std::string {
+        require_live_runtime( weak, "services.translate" );
+        require_translation_text( text );
+        if( context )
+    {
+        require_translation_text( *context );
+        }
+#if defined(LOCALIZE)
+        TranslationManager &manager = TranslationManager::GetInstance();
+        return context ? manager.TranslateWithContext( context->c_str(), text.c_str() ) :
+                                manager.Translate( text );
+#else
+        return text;
+#endif
+    } );
+    services.set_function( "translate_plural", [weak]( const std::string & singular,
+            const std::string & plural, const std::int64_t count,
+    const sol::optional<std::string> &context ) -> std::string {
+        require_live_runtime( weak, "services.translate_plural" );
+        require_translation_text( singular );
+        require_translation_text( plural );
+        if( context )
+    {
+        require_translation_text( *context );
+        }
+        const std::size_t native_count = static_cast<std::size_t>( count );
+        if( count < 0 || static_cast<std::uint64_t>( native_count ) !=
+            static_cast<std::uint64_t>( count ) )
+    {
+        throw std::runtime_error( "translation count is outside the native nonnegative range" );
+        }
+#if defined(LOCALIZE)
+        TranslationManager &manager = TranslationManager::GetInstance();
+        return context ? manager.TranslatePluralWithContext( context->c_str(), singular.c_str(),
+            plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
+                plural.c_str(), native_count );
+#else
+        return count == 1 ? singular : plural;
+#endif
+    } );
     services.set_function( "message", [weak]( const std::string & message ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {

@@ -592,6 +592,51 @@ PR 664 的基础设施范围和后续能力证据保留在 roadmap，不作为�
 可选标准 helper、国际化与作者工具按需求独立推进；候选 `ccb.std` 名称不是冻结公开契约，
 未来实现仍使用唯一 `require("ccb")` 入口。
 
+### Runtime text internationalization / 运行时文本国际化（草稿实现）
+
+The independent draft exposes `ccb.services.translate(text, context?)` and
+`ccb.services.translate_plural(singular, plural, count, context?)` after
+`world_ready`. Both return strings using the current native catalog. Literal
+calls can be extracted by `tools/lua_api/extract_translations.py`; its README
+contains the author example and catalog limitations. This is source-level work,
+not completed native acceptance. Metadata translations, content builders beyond
+Item/Skill/SkillDisplay, and live catalog reload remain outside this slice.
+
+For Item names/descriptions, the draft also accepts immutable `LocalizedText`
+values from `ccb.content.text(text, context?)` and
+`ccb.content.plural_text(singular, plural, context?)`. These retain source text
+for native deferred translation; ordinary strings keep their untranslated
+behavior. Item descriptions reject plural values. A singular marked name uses
+the same source for plural fallback; use `plural_text` to supply a distinct
+plural. Source forms must be nonempty and all inputs must exclude NUL. Inherited
+fields retain the parent's translation object; explicit strings replace it.
+Context, plural form and literal/translated status enter the static fingerprint.
+
+独立草稿提供上述运行时文本接口，复用原生翻译目录、上下文与复数规则。这里只完成实现、
+声明、提取工具与测试源码；原生编译、真实语言目录及切换验收尚未执行。不能据此宣称
+完整国际化已经完成，也不将它加入核心 Platform 或 EOC 全量验收的前置条件。
+
+物品名称与说明还可接收 `ccb.content.text(text, context?)` 或
+`ccb.content.plural_text(singular, plural, context?)` 构造的不可变 `LocalizedText`。
+它保留源文本供原生层延迟翻译；普通字符串仍不翻译，说明字段不接受复数值。
+仅标记单数的名称以相同源文本作为复数回退；需要不同复数时使用 `plural_text`。
+源文本不能为空，所有输入均不允许 NUL。继承字段保留父定义的翻译对象，显式字符串替换它；
+上下文、复数和是否翻译均计入静态指纹。除下述 Skill／SkillDisplay 外的其他内容 builder、
+Mod 元数据及目录热重载仍待推进。
+
+The same `content.text` marker now also covers Skill names/descriptions,
+SkillDisplay labels, and theory/practice level descriptions. All of these fields
+are singular-only and reject `content.plural_text`. Plain strings remain literal;
+omitting a practice description still leaves the independent practice map alone.
+Translation context participates in static fingerprints. Native source tests cover
+fallback display, invalid plural input, atomic method failure and rollback;
+locale/catalog execution remains unverified.
+
+同一个 `content.text` 也可用于 Skill 名称、说明、SkillDisplay 分类名称以及理论／实践
+等级说明。这些字段只接收单数文本，拒绝 `content.plural_text`；普通字符串仍保持字面值，
+省略实践说明时仍不改动独立的实践映射。翻译上下文参与静态指纹。原生测试源码覆盖源文本
+显示、拒绝复数、方法失败时不部分改写以及回滚；语言／目录运行验收仍未执行。
+
 ## Templates, examples, and maintenance / 模板、样例与维护
 
 `data/lua/templates/minimal/` and `complete/` are authoring scaffolds. The
