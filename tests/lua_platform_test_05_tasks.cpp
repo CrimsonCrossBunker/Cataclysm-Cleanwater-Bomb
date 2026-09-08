@@ -43,7 +43,11 @@
 namespace cata::lua_platform
 {
 class runtime;
-}
+} // namespace cata::lua_platform
+
+static const itype_id itype_rock( "rock" );
+static const mtype_id mon_zombie( "mon_zombie" );
+static const vproto_id vehicle_prototype_bicycle( "bicycle" );
 
 TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_dispatch",
            "[lua][platform][runtime][tasks][handles]" )
@@ -162,7 +166,7 @@ TEST_CASE( "lua_platform_persistent_task_item_actor_payload_uses_live_handle_onl
         cata::lua_platform::runtime_world_generation();
 
     item &avatar_inventory_item = get_avatar().inv->add_item(
-                                      item( itype_id( "rock" ), calendar::turn_zero ),
+                                      item( itype_rock, calendar::turn_zero ),
                                       false, false, false );
     item_location avatar_item_location( get_avatar(), &avatar_inventory_item );
     REQUIRE( avatar_item_location );
@@ -279,7 +283,7 @@ TEST_CASE( "lua_platform_persistent_task_monster_actor_reacquires_persistent_ide
 
     const tripoint_bub_ms monster_position( 5, 5, get_avatar().pos_bub().z() );
     const shared_ptr_fast<monster> actor_monster =
-        make_shared_fast<monster>( mtype_id( "mon_zombie" ), monster_position );
+        make_shared_fast<monster>( mon_zombie, monster_position );
     REQUIRE( get_creature_tracker().add( actor_monster ) );
     on_out_of_scope monster_cleanup( [&actor_monster]() {
         if( actor_monster &&
@@ -382,7 +386,7 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
 
     const tripoint_bub_ms monster_position( 5, 5, get_avatar().pos_bub().z() );
     const shared_ptr_fast<monster> actor_monster =
-        make_shared_fast<monster>( mtype_id( "mon_zombie" ), monster_position );
+        make_shared_fast<monster>( mon_zombie, monster_position );
     REQUIRE( get_creature_tracker().add( actor_monster ) );
     on_out_of_scope monster_cleanup( [&actor_monster]() {
         if( actor_monster &&
@@ -468,8 +472,12 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
     const sol::object callback_beta_object = callback_participants["beta"];
     REQUIRE( callback_alpha_object.is<cata::lua_platform::game_handle>() );
     REQUIRE( callback_beta_object.is<cata::lua_platform::game_handle>() );
+    // Keep a value snapshot independent of later callback mutations.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const cata::lua_platform::game_handle callback_alpha =
         callback_alpha_object.as<cata::lua_platform::game_handle>();
+    // Keep a value snapshot independent of later callback mutations.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const cata::lua_platform::game_handle callback_beta =
         callback_beta_object.as<cata::lua_platform::game_handle>();
 
@@ -560,7 +568,7 @@ TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_ide
     }
     REQUIRE( vehicle_position );
     vehicle *actor_vehicle = here.add_vehicle(
-                                 vproto_id( "bicycle" ), *vehicle_position,
+                                 vehicle_prototype_bicycle, *vehicle_position,
                                  0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( actor_vehicle != nullptr );
     REQUIRE( actor_vehicle->uid().is_valid() );

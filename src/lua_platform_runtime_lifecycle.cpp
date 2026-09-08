@@ -49,9 +49,7 @@
 #include <item_location.h>
 #include <item_uid.h>
 extern "C" {
-    extern "C" {
 #include <lua.h>
-    }
 }
 #include <lua_platform_handle.h>
 #include <lua_platform_runtime.h>
@@ -613,6 +611,8 @@ void load_scope( const cata_path &path, const std::string &scope,
                         std::sort( task.participants.begin(), task.participants.end(),
                                    []( const persistent_task_participant & lhs,
                         const persistent_task_participant & rhs ) {
+                            // Participant roles are stable protocol keys, not display text.
+                            // NOLINTNEXTLINE(cata-use-localized-sorting)
                             return lhs.role < rhs.role;
                         } );
                     }
@@ -1152,6 +1152,8 @@ void detail::install_runtime_state_task_api(
                     throw std::invalid_argument(
                         "persistent task participant role is invalid or repeated" );
                 }
+                // Keep a value snapshot independent of later callback mutations.
+                // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
                 const cata::lua_platform::game_handle handle =
                     raw_handle.as<cata::lua_platform::game_handle>();
                 participant.hint = handle.locator();
@@ -1223,6 +1225,8 @@ void detail::install_runtime_state_task_api(
             std::sort( task.participants.begin(), task.participants.end(),
                        []( const persistent_task_participant & lhs,
             const persistent_task_participant & rhs ) {
+                // Participant roles are stable protocol keys, not display text.
+                // NOLINTNEXTLINE(cata-use-localized-sorting)
                 return lhs.role < rhs.role;
             } );
         }

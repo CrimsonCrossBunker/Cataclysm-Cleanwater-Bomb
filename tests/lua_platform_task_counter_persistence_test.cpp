@@ -17,7 +17,6 @@
 #include <string>
 #include <vector>
 #include "cata_catch.h"
-#include "flexbuffer_json.h"
 #include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_task_counter_survives_empty_save_and_exhaustion",

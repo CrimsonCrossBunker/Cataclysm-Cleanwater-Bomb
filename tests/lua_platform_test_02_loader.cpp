@@ -17,7 +17,7 @@ TEST_CASE( "lua_platform_loader_uses_trusted_environment_for_metadata_and_runtim
 {
     platform_lua_test_directory files;
     files.write( std::filesystem::u8path( "foo.lua" ), R"lua(
-local name, path = ...
+local name, path = ... -- NOLINT(cata-text-style)
 assert(name == "foo" and path:match("foo%.lua$"))
 return { value = "foo" }
 )lua" );
@@ -59,9 +59,9 @@ TEST_CASE( "lua_platform_loader_finds_native_modules_beside_the_mod_entry",
     const std::string library_name = "ccb_native_path_probe.so";
 #endif
     // This checks path resolution only, never loads the placeholder as a DLL/SO.
-    files.write( library_name, "native search path placeholder" );
+    files.write( std::filesystem::u8path( library_name ), "native search path placeholder" );
     const std::string expected =
-        std::filesystem::canonical( files.root / library_name ).generic_u8string();
+        std::filesystem::canonical( files.root / std::filesystem::u8path( library_name ) ).generic_u8string();
     const std::string probe = "local expected = [=[" + expected + "]=]\n" + R"lua(
 local ccb = require("ccb")
 local path = assert(package.searchpath("ccb_native_path_probe", package.cpath))
@@ -86,7 +86,7 @@ TEST_CASE( "lua_platform_loader_supports_external_paths_and_loader_data",
     platform_lua_test_directory external;
     external.write( std::filesystem::u8path( "dofile_probe.lua" ), "return 42\n" );
     external.write( std::filesystem::u8path( "external_probe.lua" ), R"lua(
-local name, path = ...
+local name, path = ... -- NOLINT(cata-text-style)
 assert(name == "external_probe")
 assert(type(path) == "string")
 return { value = 42, path = path }
@@ -112,7 +112,7 @@ assert(file:read("*a") == "trusted")
 assert(file:close())
 assert(os.remove(marker))
 -- A missing native library must return the standard error tuple, not a
--- removed/disabled entry point. A real shared-library smoke test is separate.
+-- removed/disabled entry point.  A real shared-library smoke test is separate.
 local native, message = package.loadlib(external_root .. "/missing-native-module", "luaopen_probe")
 assert(native == nil and type(message) == "string")
 )lua";

@@ -111,9 +111,11 @@ extern "C" {
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
+#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "worldfactory.h"
+#include "widget.h"
 #include "wound.h"
 #include <pimpl.h>
 #include <cstddef>
@@ -128,8 +130,9 @@ extern "C" {
 #include "lua_platform_sol.h"
 
 class recipe;
-enum class cardinal_direction : int;
 struct bionic;
+
+static const efftype_id effect_sleep( "sleep" );
 
 namespace cata::lua_platform
 {
@@ -219,7 +222,7 @@ struct use_context_data {
         return used_item->charges;
     }
 
-    void set_charges( std::int64_t value ) {
+    void set_charges( std::int64_t value ) const {
         require_active();
         if( value < 0 || value > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "item charges are outside the native range" );
@@ -256,11 +259,11 @@ constexpr std::size_t maximum_computer_value_nodes = 512;
 constexpr std::size_t maximum_computer_value_bytes = 8192;
 constexpr int maximum_computer_value_depth = 8;
 
-void require_computer_value_key( const std::string &key )
+void require_computer_value_key( std::string_view key )
 {
     if( key.empty() || key.size() > 128 ||
     std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
             "computer value keys must contain 1 to 128 printable bytes" );
@@ -399,7 +402,7 @@ struct computer_access_context {
         return terminal->name;
     }
 
-    void set_name( const std::string &value ) {
+    void set_name( const std::string &value ) const {
         require_active();
         if( value.empty() || value.size() > 4096 ||
             value.find( '\0' ) != std::string::npos ) {
@@ -414,7 +417,7 @@ struct computer_access_context {
         return terminal->access_denied;
     }
 
-    void set_access_denied( const std::string &value ) {
+    void set_access_denied( const std::string &value ) const {
         require_active();
         if( value.size() > 4096 || value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -428,7 +431,7 @@ struct computer_access_context {
         return terminal->security;
     }
 
-    void set_security( const std::int64_t value ) {
+    void set_security( const std::int64_t value ) const {
         require_active();
         if( value < -1000000 || value > 1000000 ) {
             throw std::invalid_argument(
@@ -442,7 +445,7 @@ struct computer_access_context {
         return terminal->alerts;
     }
 
-    void set_alerts( const std::int64_t value ) {
+    void set_alerts( const std::int64_t value ) const {
         require_active();
         if( value < 0 || value > 1000000 ) {
             throw std::invalid_argument(
@@ -456,7 +459,7 @@ struct computer_access_context {
         return terminal->mission_id;
     }
 
-    void set_mission_id( const std::int64_t value ) {
+    void set_mission_id( const std::int64_t value ) const {
         require_active();
         if( value < -1 || value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
@@ -492,7 +495,7 @@ struct computer_access_context {
         return computer_value_to_lua( sol::state_view( state ), *stored, 0, nodes );
     }
 
-    void set_value( const std::string &key, const sol::object &value ) {
+    void set_value( const std::string &key, const sol::object &value ) const {
         require_active();
         require_computer_value_key( key );
         if( value.get_type() == sol::type::nil ) {
@@ -509,7 +512,7 @@ struct computer_access_context {
             key, computer_value_from_lua( value, key, 0, nodes ) );
     }
 
-    bool remove_value( const std::string &key ) {
+    bool remove_value( const std::string &key ) const {
         require_active();
         require_computer_value_key( key );
         const bool existed = terminal->maybe_get_value( key ) != nullptr;
@@ -570,12 +573,12 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( !owner || !owner->world_is_ready ) {
-        character->add_msg_if_player( "Lua-first Mod runtime is not ready." );
+        character->add_msg_if_player( _( "Lua-first Mod runtime is not ready." ) );
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
-        character->add_msg_if_player( "Lua-first item handler is no longer registered." );
+        character->add_msg_if_player( _( "Lua-first item handler is no longer registered." ) );
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
@@ -600,13 +603,13 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( returned.get_type() != sol::type::number || !returned.is<lua_Integer>() ) {
-        ::add_msg( m_bad, "Lua-first item handler must return an integer or nil." );
+        ::add_msg( m_bad, _( "Lua-first item handler must return an integer or nil." ) );
         return std::nullopt;
     }
     const lua_Integer native_result = returned.as<lua_Integer>();
     if( native_result < std::numeric_limits<int>::min() ||
         native_result > std::numeric_limits<int>::max() ) {
-        ::add_msg( m_bad, "Lua-first item handler result is outside the native range." );
+        ::add_msg( m_bad, _( "Lua-first item handler result is outside the native range." ) );
         return std::nullopt;
     }
     return static_cast<int>( native_result );
@@ -1225,7 +1228,7 @@ bool platform_tileset_relative_file(
         return false;
     }
     for( const std::filesystem::path &part : relative ) {
-        if( part == "." || part == ".." ) {
+        if( part == std::filesystem::u8path( "." ) || part == std::filesystem::u8path( ".." ) ) {
             return false;
         }
     }
@@ -1549,6 +1552,8 @@ std::string register_platform_tileset( runtime &owner,
 
 } // namespace
 
+// Keep the Platform service registration table together for contract extraction.
+// NOLINTNEXTLINE(readability-function-size)
 void install_runtime_api( const std::shared_ptr<runtime> &value,
                           sol::state &lua, sol::table &ccb )
 {
@@ -2538,7 +2543,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     cata::lua_platform::install_world_info_api( services, require_read, require_write,
             has_callback );
 
-    const auto require_snippet_key = []( const std::string & value,
+    const auto require_snippet_key = []( std::string_view value,
     const std::string_view api_name ) {
         if( value.empty() || value.size() > 512 ||
             value.find( '\0' ) != std::string::npos ) {
@@ -2773,7 +2778,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.messages audible message exceeds its native string limit" );
         }
         avatar &player = get_avatar();
-        static const efftype_id effect_sleep( "sleep" );
         if( player.has_effect( effect_sleep ) || player.is_deaf() ) {
             return false;
         }
@@ -2965,7 +2969,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 const std::string key = entry.first.as<std::string>();
                 if( key.empty() || key.size() > 128 ||
                 std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-                return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+                return ch < 0x20U || ch == 0x7fU;
             } ) ) {
                     throw std::invalid_argument(
                         "services.gameplay.math context keys must be printable and bounded" );
@@ -3001,7 +3005,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table math = lua.create_table();
     math.set_function( "evaluate", [require_read, make_math_dialogue](
-                           sol::this_state state, const std::string & source,
+                           sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
     const sol::optional<sol::table> &context ) {
         require_read();
@@ -3025,7 +3029,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, result ) );
     } );
     math.set_function( "apply", [require_write, make_math_dialogue](
-                           sol::this_state state, const std::string & source,
+                           sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
     const sol::optional<sol::table> &context ) {
         require_write();
@@ -3125,7 +3129,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     gameplay["mods"] = std::move( mods );
 
-    const auto require_option_id = []( const std::string & id ) {
+    const auto require_option_id = []( std::string_view id ) {
         if( id.empty() || id.size() > 256 ||
             !std::all_of(
                 id.begin(), id.end(),
@@ -3449,7 +3453,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     cata::lua_platform::install_game_interaction_api( services, require_write, has_callback );
     const auto play_audible_sound = [weak, require_write](
-                                        const std::string & id, const std::string & variant,
+                                        std::string_view id, const std::string & variant,
                                         const sol::optional<int> &requested_volume,
     const bool from_outdoors ) {
         require_write();
@@ -3465,7 +3469,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.sound audible playback volume must be within 0..128" );
         }
         avatar &player = get_avatar();
-        static const efftype_id effect_sleep( "sleep" );
         if( player.has_effect( effect_sleep ) || player.is_deaf() ) {
             return false;
         }
@@ -3639,6 +3642,8 @@ sol::object select_platform_mapgen_value(
     throw std::runtime_error( "mapgen weighted choice failed to select a value" );
 }
 
+// Own the Lua reference across reentrant mapgen callbacks.
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
 void invoke_platform_mapgen_callback(
     runtime &owner, sol::protected_function callback,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
@@ -3745,6 +3750,8 @@ sol::table platform_mapgen_table(
     return source.as<sol::table>();
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_computer(
     runtime &owner,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
@@ -3820,6 +3827,8 @@ void apply_platform_mapgen_computer(
     }
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_sealed_item(
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const sol::object &source, const int x, const int y )
@@ -3844,6 +3853,8 @@ void apply_platform_mapgen_sealed_item(
         platform_mapgen_string( descriptor, "faction" ) );
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 [[noreturn]] void apply_platform_mapgen_zone(
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const sol::object &source, const int x, const int y )
@@ -3860,6 +3871,8 @@ void apply_platform_mapgen_sealed_item(
         platform_mapgen_string( descriptor, "filter" ) );
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_symbol(
     runtime &owner,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
@@ -4769,7 +4782,7 @@ void hot_swap_active_runtimes(
         owner->world_state = std::move( old.world_state );
         owner->tasks = std::move( old.tasks );
         owner->next_task_id = old.next_task_id;
-        owner->random_engine = std::move( old.random_engine );
+        owner->random_engine = old.random_engine;
         owner->world_is_ready = previously_ready.count( owner->mod_id ) != 0;
         owner->tileset_registry_generation = old.tileset_registry_generation;
         old.tileset_registry_generation.reset();

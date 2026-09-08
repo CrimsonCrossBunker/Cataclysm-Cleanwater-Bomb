@@ -894,7 +894,7 @@ bool save_persistent_state( std::string &error )
     return runtime_save( error );
 }
 
-void after_save( bool success, const std::string &error )
+void after_save( bool success, std::string_view error )
 {
     runtime_after_save( success, error );
 }
@@ -1006,7 +1006,7 @@ bool save_persistent_state( std::string &error )
     return true;
 }
 
-void after_save( bool, const std::string & )
+void after_save( bool, std::string_view )
 {
 }
 

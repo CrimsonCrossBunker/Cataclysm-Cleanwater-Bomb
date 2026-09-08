@@ -16,7 +16,7 @@
 namespace cata::lua_platform
 {
 class runtime;
-}
+} // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch",
            "[lua][platform][runtime][callbacks]" )

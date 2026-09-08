@@ -67,7 +67,7 @@ TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
     REQUIRE( world_generator != nullptr );
     mod_manager &manager = world_generator->get_mod_manager();
     manager.refresh_mod_list();
-    const mod_id bundled_example( "Lua_First_Example" );
+    const mod_id &bundled_example = MOD_INFORMATION_Lua_First_Example;
     REQUIRE( bundled_example.is_valid() );
     CHECK( bundled_example->lua_platform_version ==
            cata::lua_platform::platform_version );
@@ -109,7 +109,7 @@ TEST_CASE( "lua_first_platform_playable_mvp_is_discovered_and_activated",
     mod_manager &manager = world_generator->get_mod_manager();
     manager.refresh_mod_list();
 
-    const mod_id bundled_example( "Lua_First_Example" );
+    const mod_id &bundled_example = MOD_INFORMATION_Lua_First_Example;
     REQUIRE( bundled_example.is_valid() );
     const MOD_INFORMATION &info = bundled_example.obj();
     REQUIRE( info.lua_platform_version == cata::lua_platform::platform_version );
@@ -117,10 +117,10 @@ TEST_CASE( "lua_first_platform_playable_mvp_is_discovered_and_activated",
     REQUIRE( info.version == "0.1.0" );
     REQUIRE( info.dependencies == std::vector<mod_id> { MOD_INFORMATION_dda } );
     REQUIRE( info.mod_root_path.get_unrelative_path() ==
-             PATH_INFO::moddir().get_unrelative_path() / "Lua_First_Example" );
+             PATH_INFO::moddir().get_unrelative_path() / std::filesystem::u8path( "Lua_First_Example" ) );
     REQUIRE( info.lua_platform_entry.get_unrelative_path() ==
              PATH_INFO::moddir().get_unrelative_path() /
-             "Lua_First_Example" / "main.lua" );
+             std::filesystem::u8path( "Lua_First_Example" ) / std::filesystem::u8path( "main.lua" ) );
 
     const cata::lua_platform::mod_source source = {
         bundled_example.str(),

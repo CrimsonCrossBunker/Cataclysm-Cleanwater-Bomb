@@ -53,9 +53,7 @@
 #include <item_uid.h>
 #include <item_wakeup.h>
 extern "C" {
-    extern "C" {
 #include <lua.h>
-    }
 }
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
@@ -82,7 +80,7 @@ namespace cata::lua_platform
 namespace detail
 {
 
-int platform_event_dispatch_depth = 0;
+static int platform_event_dispatch_depth = 0;
 
 int current_platform_event_dispatch_depth() noexcept
 {
@@ -134,7 +132,7 @@ void report_callback_error( const runtime &owner, std::string_view handler,
 static sol::object platform_callback_entity_to_lua(
     runtime &owner, const cata::lua_platform::native_callback_entity &entity )
 {
-    sol::state_view lua( *owner.lua );
+    sol::state_view lua( owner.lua->lua_state() );
     switch( entity.kind() ) {
         case cata::lua_platform::native_callback_entity_kind::creature: {
             const safe_reference<Creature> reference = entity.creature_reference();
@@ -177,7 +175,7 @@ static sol::object platform_callback_entity_to_lua(
 sol::object platform_callback_talker_to_lua(
     runtime &owner, const cata::lua_platform::native_callback_talker &talker )
 {
-    sol::state_view lua( *owner.lua );
+    sol::state_view lua( owner.lua->lua_state() );
     if( talker.entity ) {
         return platform_callback_entity_to_lua( owner, *talker.entity );
     }
@@ -338,6 +336,8 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     }
 }
 
+// Own the payload reference throughout callbacks that may mutate Lua state.
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
 static void dispatch_event( runtime &owner, const std::string &name, sol::object payload )
 {
     const auto subscription = owner.subscriptions.find( name );
@@ -461,7 +461,7 @@ cata::lua_platform::game_handle platform_vehicle_handle(
 sol::object platform_talker_to_lua( runtime &owner, const const_talker &talker )
 {
     constexpr std::size_t maximum_detached_participant_name_bytes = 256;
-    sol::state_view lua( *owner.lua );
+    sol::state_view lua( owner.lua->lua_state() );
     if( const Creature *creature = talker.get_const_creature() ) {
         return sol::make_object( lua, platform_creature_handle( owner, *creature ) );
     }
@@ -512,7 +512,7 @@ sol::object platform_talker_to_lua( runtime &owner, const const_talker &talker )
 static sol::object platform_callback_value_to_lua(
     runtime &owner, const cata::lua_platform::native_callback_value &value )
 {
-    sol::state_view lua( *owner.lua );
+    sol::state_view lua( owner.lua->lua_state() );
     return std::visit( [&owner, lua]( const auto & entry ) -> sol::object {
         using value_type = std::decay_t<decltype( entry )>;
         if constexpr( std::is_same_v<value_type,
@@ -1343,6 +1343,8 @@ static void dispatch_platform_event( const cata::event &event, const item *event
     }
 }
 
+namespace
+{
 class platform_event_bridge : public event_subscriber
 {
     public:
@@ -1359,6 +1361,7 @@ class platform_event_bridge : public event_subscriber
 };
 
 std::unique_ptr<platform_event_bridge> event_bridge;
+} // namespace
 
 void start_runtime_event_bridge()
 {

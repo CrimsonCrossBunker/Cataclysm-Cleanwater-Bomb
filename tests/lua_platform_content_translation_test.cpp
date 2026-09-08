@@ -9,7 +9,7 @@ static const itype_id itype_lua_text_same_plural( "lua_text_same_plural" );
 static const itype_id itype_lua_text_translated_child( "lua_text_translated_child" );
 static const itype_id itype_lua_text_translated_parent( "lua_text_translated_parent" );
 static const skill_displayType_id
-skill_displayType_lua_translated_skill_display( "lua_translated_skill_display" );
+SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
 static const skill_id skill_lua_translated_skill( "lua_translated_skill" );
 
 TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
@@ -155,7 +155,7 @@ ccb.content.add(skill)
     REQUIRE( skill_lua_translated_skill.is_valid() );
     CHECK( skill_lua_translated_skill.obj().name() == "ccb skill name" );
     CHECK( skill_lua_translated_skill.obj().description() == "ccb skill description" );
-    CHECK( skill_displayType_lua_translated_skill_display.obj().display_string() ==
+    CHECK( SkillDisplayType_lua_translated_skill_display.obj().display_string() ==
            "ccb skill category" );
     CHECK( skill_lua_translated_skill.obj().get_level_description( 1, false ) == "ccb skill theory" );
     CHECK( skill_lua_translated_skill.obj().get_level_description( 1, true ) == "ccb skill practice" );
@@ -163,7 +163,7 @@ ccb.content.add(skill)
     CHECK( skill_lua_translated_skill.obj().get_level_description( 3, false ) == "literal theory" );
     platform::discard_prepared_mods();
     CHECK_FALSE( skill_lua_translated_skill.is_valid() );
-    CHECK_FALSE( skill_displayType_lua_translated_skill_display.is_valid() );
+    CHECK_FALSE( SkillDisplayType_lua_translated_skill_display.is_valid() );
 }
 
 TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",

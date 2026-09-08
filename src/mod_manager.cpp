@@ -43,7 +43,7 @@ static std::string bounded_lua_platform_diagnostic( const std::string &reason )
 {
     std::string result = reason;
     std::replace( result.begin(), result.end(), '\0', '?' );
-    static constexpr std::string_view suffix = "... [diagnostic truncated]";
+    static constexpr std::string_view suffix = "…[diagnostic truncated]";
     if( result.size() > LUA_PLATFORM_DIAGNOSTIC_LIMIT ) {
         result.resize( LUA_PLATFORM_DIAGNOSTIC_LIMIT - suffix.size() );
         result += std::string( suffix );
@@ -769,6 +769,8 @@ bool mod_manager::copy_mod_contents( const t_mod_list &mods_to_copy,
         input_files.insert( input_files.end(), lua_files.begin(), lua_files.end() );
         std::sort( input_files.begin(), input_files.end(), []( const cata_path & lhs,
         const cata_path & rhs ) {
+            // File discovery order must be independent of the UI language.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.generic_u8string() < rhs.generic_u8string();
         } );
         input_files.erase( std::unique( input_files.begin(), input_files.end() ), input_files.end() );

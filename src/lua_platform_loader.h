@@ -120,7 +120,7 @@ void before_save();
 bool save_persistent_state( std::string &error );
 
 /** Report the final save outcome to lifecycle subscribers. */
-void after_save( bool success, const std::string &error );
+void after_save( bool success, std::string_view error );
 
 /** Run due named persistent tasks at the current game turn. */
 void on_turn();

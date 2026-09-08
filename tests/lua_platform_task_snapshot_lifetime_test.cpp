@@ -3,9 +3,7 @@
 #include "lua_platform_runtime_internal.h"
 #include <cata_scope_helpers.h>
 extern "C" {
-    extern "C" {
 #include <lua.h>
-    }
 }
 #include <lua_platform_loader.h>
 #include <lua_platform_runtime.h>

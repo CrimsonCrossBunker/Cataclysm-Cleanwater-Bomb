@@ -130,9 +130,11 @@ namespace cata::lua_platform
 class runtime;
 }  // namespace cata::lua_platform
 
+// Split domain tests intentionally retain translation-unit-local fixture types.
+// NOLINTNEXTLINE(cert-dcl59-cpp,misc-anonymous-namespace-in-header)
 namespace
 {
-static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
+const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
 
 struct registrar_graph_entry {
     std::string id;
@@ -159,11 +161,13 @@ decltype( &Type::buy_quoted_item )>> : std::true_type {
 
 
 struct platform_lua_test_directory {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_lua_test_directory() {
         const std::filesystem::path temporary_root = std::filesystem::temp_directory_path();
         for( std::size_t attempt = 0; attempt < 100; ++attempt ) {
             const std::filesystem::path candidate = temporary_root /
-                                                    ( "cata-lua-platform-loader-" + std::to_string( attempt ) );
+                                                    std::filesystem::u8path( "cata-lua-platform-loader-" + std::to_string( attempt ) );
             std::error_code filesystem_error;
             if( std::filesystem::create_directory( candidate, filesystem_error ) ) {
                 root = candidate;
@@ -185,6 +189,8 @@ struct platform_lua_test_directory {
         std::filesystem::remove_all( root, filesystem_error );
     }
 
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     void write( const std::filesystem::path &relative, const std::string &contents ) const {
         const std::filesystem::path destination = root / relative;
         std::error_code filesystem_error;
@@ -324,6 +330,8 @@ npc_ptr make_platform_test_npc( const character_id id, const faction_id &owner,
 }
 
 struct platform_npc_dialogue_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_npc_dialogue_fixture() :
         runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
         other_runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
@@ -391,6 +399,8 @@ struct platform_npc_dialogue_fixture {
 };
 
 struct platform_registered_dialogue_call_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_registered_dialogue_call_fixture(
         const cata::lua_platform::game_handle_runtime &runtime_identity,
         const std::size_t world_generation,
@@ -590,7 +600,7 @@ struct platform_food_state_scope {
         saved( owner.debug_food_supply() ), consumes_food( owner.consumes_food ) {}
 
     ~platform_food_state_scope() {
-        owner.debug_food_supply() = saved;
+        owner.debug_food_supply().swap( saved );
         owner.consumes_food = consumes_food;
     }
 
@@ -600,6 +610,8 @@ struct platform_food_state_scope {
 };
 
 struct platform_trade_quote_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_trade_quote_fixture( const std::size_t runtime_number,
                                   const std::size_t world_number,
                                   const int seller_number,
@@ -758,6 +770,8 @@ struct platform_trade_quote_fixture {
 };
 
 struct platform_trade_commit_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_trade_commit_fixture( const std::size_t runtime_number,
                                    const std::size_t world_number,
                                    const int seller_number,
@@ -978,6 +992,8 @@ struct platform_weather_read_fixture {
 };
 
 struct platform_zones_read_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_zones_read_fixture() :
         runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
         runtime( runtime_owner, 1 ),

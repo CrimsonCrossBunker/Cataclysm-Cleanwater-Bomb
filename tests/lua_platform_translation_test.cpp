@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <string_view>
 
 TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
            "[lua][platform][runtime][translations]" )
@@ -17,7 +18,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
     cata::lua_platform::set_active_runtimes( { runtime } );
     lua["ccb"] = ccb;
 
-    const auto run = [&lua]( const std::string & source ) {
+    const auto run = [&lua]( std::string_view source ) {
         const sol::protected_function_result result = lua.safe_script(
                     source, sol::script_pass_on_error );
         if( !result.valid() ) {

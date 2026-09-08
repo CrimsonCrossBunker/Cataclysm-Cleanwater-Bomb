@@ -6,6 +6,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -44,7 +45,7 @@ std::size_t state_storage_size( const script_persistent_state &state )
     return result;
 }
 
-void validate_key_and_value( const std::string &key, const script_persistent_value &value )
+void validate_key_and_value( std::string_view key, const script_persistent_value &value )
 {
     if( key.empty() ) {
         throw std::invalid_argument( "Lua persistent state keys cannot be empty" );
