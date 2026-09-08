@@ -232,6 +232,8 @@ void apply_ammo_effects( Creature *source, const tripoint_bub_ms &p,
                 dialogue d( get_talker_for( *source ), impact_target == nullptr ?
                             nullptr : get_talker_for( impact_target ) );
                 write_var_value( var_type::context, "proj_damage", &d, dealt_damage );
+                const tripoint_abs_ms target_location = here.get_abs( p );
+                write_var_value( var_type::context, "targeted_location", &d, target_location );
                 eoc->activate( d );
             }
 
