@@ -4,6 +4,21 @@
 #include "lua_platform_runtime_internal.h"
 #include "path_info.h"
 #include "worldfactory.h"
+#include <cata_scope_helpers.h>
+#include <flexbuffer_json.h>
+#include <json_loader.h>
+#include <lua_platform_runtime.h>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
+#include "flexbuffer_json.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_task_counter_survives_empty_save_and_exhaustion",
            "[lua][platform][tasks][persistence]" )

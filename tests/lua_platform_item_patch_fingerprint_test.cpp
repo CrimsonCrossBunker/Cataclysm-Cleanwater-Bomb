@@ -1,5 +1,13 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_loader.h>
+#include <filesystem>
+#include <functional>
+#include <initializer_list>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
 
 TEST_CASE( "lua_platform_item_patch_fingerprint_distinguishes_omitted_fields",
            "[lua][platform][content][reload]" )
@@ -11,10 +19,10 @@ TEST_CASE( "lua_platform_item_patch_fingerprint_distinguishes_omitted_fields",
         platform::shutdown();
     } );
     const platform::mod_source source {
-        "item-patch-fingerprint", files.root, files.root / "main.lua"
+        "item-patch-fingerprint", files.root, files.root / std::filesystem::u8path( "main.lua" )
     };
     const auto fingerprint = [&]( const std::string & field ) {
-        files.write( "main.lua", "local ccb = require('ccb')\n"
+        files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                      "ccb.content.add(ccb.content.Item { id = 'lua_patch_fingerprint_item', "
                      "copy_from = 'rock', " + field + " })\n" );
         std::string error;

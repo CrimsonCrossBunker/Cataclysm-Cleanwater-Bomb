@@ -5,6 +5,19 @@
 #include "messages.h"
 #include "path_info.h"
 #include "worldfactory.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_runtime.h>
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_bad_saved_task_error_identifies_its_record",
            "[lua][platform][runtime][persistence]" )
@@ -31,7 +44,8 @@ TEST_CASE( "lua_platform_bad_saved_task_error_identifies_its_record",
     world_generator->active_world = &isolated_world;
     const std::filesystem::path directory = isolated_world.folder_path().get_unrelative_path();
     REQUIRE( std::filesystem::create_directory( directory ) );
-    const std::filesystem::path state_path = directory / "lua_platform_world.json";
+    const std::filesystem::path state_path = directory /
+            std::filesystem::u8path( "lua_platform_world.json" );
     {
         std::ofstream stream( state_path );
         REQUIRE( stream.good() );

@@ -1,6 +1,13 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_runtime.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_due_task_can_be_cancelled_by_an_earlier_callback",
            "[lua][platform][tasks]" )

@@ -1,6 +1,16 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_loader.h>
+#include <lua_platform_runtime.h>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_state_keys_are_paged_and_owner_scoped",
            "[lua][platform][state]" )
@@ -12,7 +22,7 @@ TEST_CASE( "lua_platform_state_keys_are_paged_and_owner_scoped",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    first.write( "main.lua", R"lua(
+    first.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 assert(not pcall(ccb.state.world.keys))
 ccb.runtime.handler("initialize", function()
@@ -23,7 +33,7 @@ ccb.runtime.handler("initialize", function()
 end)
 ccb.runtime.on("world_ready", "initialize")
 )lua" );
-    second.write( "main.lua", R"lua(
+    second.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.runtime.handler("initialize", function()
     ccb.state.world.set("other_mod_only", 99)
@@ -32,8 +42,8 @@ ccb.runtime.on("world_ready", "initialize")
 )lua" );
     std::string error;
     REQUIRE( platform::prepare_mods( {
-        { "state-keys-first", first.root, first.root / "main.lua" },
-        { "state-keys-second", second.root, second.root / "main.lua" }
+        { "state-keys-first", first.root, first.root / std::filesystem::u8path( "main.lua" ) },
+        { "state-keys-second", second.root, second.root / std::filesystem::u8path( "main.lua" ) }
     }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
     REQUIRE( platform::validate_finalized_prepared_content( error ) );
@@ -42,7 +52,7 @@ ccb.runtime.on("world_ready", "initialize")
     const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime(
             "state-keys-first" );
     REQUIRE( owner );
-    const auto run = [&owner]( const std::string & source ) {
+    const auto run = [&owner]( const std::string_view source ) {
         const sol::protected_function_result result = owner->lua->safe_script(
                 source, sol::script_pass_on_error );
         if( !result.valid() ) {

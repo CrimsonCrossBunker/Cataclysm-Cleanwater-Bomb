@@ -1,11 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 #include "cata_catch.h"
 #include "lua_platform_state.h"
+#include <functional>
+#include <initializer_list>
 
 TEST_CASE( "lua_platform_state_output_stops_at_its_byte_limit",
            "[lua][platform][state]" )

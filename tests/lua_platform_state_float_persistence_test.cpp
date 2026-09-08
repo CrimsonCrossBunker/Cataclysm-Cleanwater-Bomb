@@ -6,6 +6,7 @@
 
 #include "cata_path.h"
 #include "lua_platform_state.h"
+#include "lua_platform_runtime_internal.h"
 #include "path_info.h"
 #include "worldfactory.h"
 

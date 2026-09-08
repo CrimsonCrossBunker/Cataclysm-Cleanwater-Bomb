@@ -1,6 +1,27 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
+#include <cata_scope_helpers.h>
+extern "C" {
+    extern "C" {
+#include <lua.h>
+    }
+}
+#include <lua_platform_loader.h>
+#include <lua_platform_runtime.h>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 namespace
 {
@@ -18,7 +39,7 @@ struct task_snapshot_allocator {
 
     static void *allocate( void *data, void *pointer, std::size_t old_size,
                            std::size_t new_size ) {
-        auto &probe = *static_cast<task_snapshot_allocator *>( data );
+        task_snapshot_allocator &probe = *static_cast<task_snapshot_allocator *>( data );
         if( probe.armed && new_size > 0 ) {
             if( probe.observe_migration ) {
                 probe.migration_guarded = probe.migration_guarded && probe.owner->task_migration_active;
@@ -43,7 +64,7 @@ TEST_CASE( "lua_platform_task_queries_detach_records_before_lua_allocation",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    directory.write( "main.lua", R"lua(
+    directory.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.runtime.handler("tick", function() end)
 query_get = ccb.tasks.get
@@ -52,7 +73,7 @@ query_list = ccb.tasks.list
 )lua" );
     std::string error;
     REQUIRE( platform::prepare_mods( {
-        { "snapshot-lifetime", directory.root, directory.root / "main.lua" }
+        { "snapshot-lifetime", directory.root, directory.root / std::filesystem::u8path( "main.lua" ) }
     }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
     REQUIRE( platform::validate_finalized_prepared_content( error ) );

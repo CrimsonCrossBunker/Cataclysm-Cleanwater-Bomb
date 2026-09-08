@@ -1,7 +1,19 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
 #include <cmath>
+#include <cata_scope_helpers.h>
+#include <character_id.h>
+#include <lua_platform_runtime.h>
+#include <npc.h>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_character_recurrence_rejects_unrepresentable_saved_turns",
            "[lua][platform][runtime][recurring]" )

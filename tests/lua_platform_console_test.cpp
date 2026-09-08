@@ -1,6 +1,16 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_loader.h>
+#include <lua_platform_runtime.h>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_console_uses_the_selected_mod_and_preserves_errors",
            "[lua][platform][console]" )
@@ -12,12 +22,12 @@ TEST_CASE( "lua_platform_console_uses_the_selected_mod_and_preserves_errors",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    first.write( "main.lua", "console_counter = 3" );
-    second.write( "main.lua", "console_counter = 9" );
+    first.write( std::filesystem::u8path( "main.lua" ), "console_counter = 3" );
+    second.write( std::filesystem::u8path( "main.lua" ), "console_counter = 9" );
     std::string error;
     REQUIRE( platform::prepare_mods( {
-        { "console-first", first.root, first.root / "main.lua" },
-        { "console-second", second.root, second.root / "main.lua" }
+        { "console-first", first.root, first.root / std::filesystem::u8path( "main.lua" ) },
+        { "console-second", second.root, second.root / std::filesystem::u8path( "main.lua" ) }
     }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
     REQUIRE( platform::validate_finalized_prepared_content( error ) );
@@ -69,10 +79,10 @@ TEST_CASE( "lua_platform_console_bounds_display_and_rejects_recursive_execution"
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", "-- console fixture" );
+    files.write( std::filesystem::u8path( "main.lua" ), "-- console fixture" );
     std::string error;
     REQUIRE( platform::prepare_mods( {
-        { "console-bounds", files.root, files.root / "main.lua" }
+        { "console-bounds", files.root, files.root / std::filesystem::u8path( "main.lua" ) }
     }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
     REQUIRE( platform::validate_finalized_prepared_content( error ) );

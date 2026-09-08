@@ -4,6 +4,14 @@
 #include "skill.h"
 #include "translation.h"
 
+static const itype_id itype_lua_text_literal_child( "lua_text_literal_child" );
+static const itype_id itype_lua_text_same_plural( "lua_text_same_plural" );
+static const itype_id itype_lua_text_translated_child( "lua_text_translated_child" );
+static const itype_id itype_lua_text_translated_parent( "lua_text_translated_parent" );
+static const skill_displayType_id
+skill_displayType_lua_translated_skill_display( "lua_translated_skill_display" );
+static const skill_id skill_lua_translated_skill( "lua_translated_skill" );
+
 TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
            "[lua][platform][content][translations]" )
 {
@@ -13,7 +21,7 @@ TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 assert(not pcall(ccb.content.text, ""))
 assert(not pcall(ccb.content.text, "a\0b"))
@@ -40,7 +48,7 @@ ccb.content.add(ccb.content.Item {
     name = ccb.content.text("ccb text water")
 })
 )lua" );
-    const platform::mod_source source { "item-text", files.root, files.root / "main.lua" };
+    const platform::mod_source source { "item-text", files.root, files.root / std::filesystem::u8path( "main.lua" ) };
     std::string error;
     const bool prepared = platform::prepare_mods( { source }, error );
     INFO( error );
@@ -50,22 +58,26 @@ ccb.content.add(ccb.content.Item {
                                           "item name", "ccb text pebble", "ccb text pebbles" );
     const translation expected_description = translation::to_translation(
             "item description", "ccb text description" );
-    const itype &parent = itype_id( "lua_text_translated_parent" ).obj();
-    CHECK( parent.name == expected_name );
+    const itype &parent = itype_lua_text_translated_parent.obj();
+    CHECK( parent.nname( 1 ) == expected_name.translated( 1 ) );
+    CHECK( parent.nname( 2 ) == expected_name.translated( 2 ) );
     CHECK( parent.description == expected_description );
-    const itype &child = itype_id( "lua_text_translated_child" ).obj();
-    CHECK( child.name == expected_name );
+    const itype &child = itype_lua_text_translated_child.obj();
+    CHECK( child.nname( 1 ) == expected_name.translated( 1 ) );
+    CHECK( child.nname( 2 ) == expected_name.translated( 2 ) );
     CHECK( child.description == expected_description );
-    const itype &literal = itype_id( "lua_text_literal_child" ).obj();
-    CHECK( literal.name == translation::no_translation( "literal name" ) );
+    const itype &literal = itype_lua_text_literal_child.obj();
+    CHECK( literal.nname( 1 ) == "literal name" );
+    CHECK( literal.nname( 2 ) == "literal name" );
     CHECK( literal.description == expected_description );
     translation uncounted = translation::to_translation( "ccb text water" );
     uncounted.make_plural();
-    CHECK( itype_id( "lua_text_same_plural" ).obj().name == uncounted );
+    CHECK( itype_lua_text_same_plural.obj().nname( 1 ) == uncounted.translated( 1 ) );
+    CHECK( itype_lua_text_same_plural.obj().nname( 2 ) == uncounted.translated( 2 ) );
     // Candidate application remains reversible, including translation objects.
     platform::discard_prepared_mods();
-    CHECK_FALSE( itype_id( "lua_text_translated_parent" ).is_valid() );
-    CHECK_FALSE( itype_id( "lua_text_translated_child" ).is_valid() );
+    CHECK_FALSE( itype_lua_text_translated_parent.is_valid() );
+    CHECK_FALSE( itype_lua_text_translated_child.is_valid() );
 }
 
 TEST_CASE( "lua_platform_item_text_fingerprints_translation_semantics",
@@ -77,9 +89,9 @@ TEST_CASE( "lua_platform_item_text_fingerprints_translation_semantics",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    const platform::mod_source source { "item-text-hash", files.root, files.root / "main.lua" };
+    const platform::mod_source source { "item-text-hash", files.root, files.root / std::filesystem::u8path( "main.lua" ) };
     const auto fingerprint = [&]( const std::string & name ) {
-        files.write( "main.lua", "local ccb = require('ccb')\n"
+        files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                      "ccb.content.add(ccb.content.Item { id = 'lua_text_hash', "
                      "copy_from = 'rock', name = " + name + " })\n" );
         std::string error;
@@ -110,7 +122,7 @@ TEST_CASE( "lua_platform_skill_text_accepts_deferred_markers_and_rolls_back",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local plural = ccb.content.plural_text("one", "many")
 assert(not pcall(ccb.content.SkillDisplay, {id="bad_label", label=plural}))
@@ -135,24 +147,23 @@ ccb.content.add(skill)
 )lua" );
     std::string error;
     const bool prepared = platform::prepare_mods( {
-        { "skill-text", files.root, files.root / "main.lua" }
+        { "skill-text", files.root, files.root / std::filesystem::u8path( "main.lua" ) }
     }, error );
     INFO( error );
     REQUIRE( prepared );
     REQUIRE( platform::apply_prepared_content( error ) );
-    const skill_id id( "lua_translated_skill" );
-    REQUIRE( id.is_valid() );
-    CHECK( id.obj().name() == "ccb skill name" );
-    CHECK( id.obj().description() == "ccb skill description" );
-    CHECK( skill_displayType_id( "lua_translated_skill_display" ).obj().display_string() ==
+    REQUIRE( skill_lua_translated_skill.is_valid() );
+    CHECK( skill_lua_translated_skill.obj().name() == "ccb skill name" );
+    CHECK( skill_lua_translated_skill.obj().description() == "ccb skill description" );
+    CHECK( skill_displayType_lua_translated_skill_display.obj().display_string() ==
            "ccb skill category" );
-    CHECK( id.obj().get_level_description( 1, false ) == "ccb skill theory" );
-    CHECK( id.obj().get_level_description( 1, true ) == "ccb skill practice" );
-    CHECK( id.obj().get_level_description( 2, true ) == "ccb advanced practice" );
-    CHECK( id.obj().get_level_description( 3, false ) == "literal theory" );
+    CHECK( skill_lua_translated_skill.obj().get_level_description( 1, false ) == "ccb skill theory" );
+    CHECK( skill_lua_translated_skill.obj().get_level_description( 1, true ) == "ccb skill practice" );
+    CHECK( skill_lua_translated_skill.obj().get_level_description( 2, true ) == "ccb advanced practice" );
+    CHECK( skill_lua_translated_skill.obj().get_level_description( 3, false ) == "literal theory" );
     platform::discard_prepared_mods();
-    CHECK_FALSE( id.is_valid() );
-    CHECK_FALSE( skill_displayType_id( "lua_translated_skill_display" ).is_valid() );
+    CHECK_FALSE( skill_lua_translated_skill.is_valid() );
+    CHECK_FALSE( skill_displayType_lua_translated_skill_display.is_valid() );
 }
 
 TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
@@ -165,13 +176,13 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
         platform::shutdown();
     } );
     const auto fingerprint = [&]( const std::string & text, const std::string &configure = "" ) {
-        files.write( "main.lua", "local ccb = require('ccb')\n"
+        files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                      "local skill = ccb.content.Skill {id='lua_skill_text_hash', "
                      "name=" + text + ", description='description'}\n" +
                      configure + "\nccb.content.add(skill)\n" );
         std::string error;
         const bool prepared = platform::prepare_mods( {
-            { "skill-text-hash", files.root, files.root / "main.lua" }
+            { "skill-text-hash", files.root, files.root / std::filesystem::u8path( "main.lua" ) }
         }, error );
         INFO( error );
         REQUIRE( prepared );

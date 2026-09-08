@@ -1,6 +1,22 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
 #include "messages.h"
+#include <cata_scope_helpers.h>
+#include <lua_platform_runtime.h>
+#include <algorithm>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}
 
 TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch",
            "[lua][platform][runtime][callbacks]" )

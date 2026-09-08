@@ -1,10 +1,49 @@
+// Preserve the established numbered domain test filenames.
+// NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
 #include "messages.h"
 #include <algorithm>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <avatar.h>
+#include <basecamp.h>
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <creature_tracker.h>
+#include <enums.h>
+#include <inventory.h>
+#include <item.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_runtime.h>
+#include <map.h>
+#include <memory_fast.h>
+#include <monster.h>
+#include <monster_uid.h>
+#include <pimpl.h>
+#include <point.h>
+#include <type_id.h>
+#include <units.h>
+#include <vehicle.h>
+#include <vehicle_uid.h>
+#include <vpart_position.h>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}
 
 TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_dispatch",
            "[lua][platform][runtime][tasks][handles]" )
@@ -625,3 +664,5 @@ TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance"
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM
+
+// NOLINTEND(cata-test-filename)

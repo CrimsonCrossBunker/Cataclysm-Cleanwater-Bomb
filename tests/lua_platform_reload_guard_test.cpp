@@ -2,6 +2,18 @@
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
 #include <variant>
+#include <cata_scope_helpers.h>
+#include <lua_platform_loader.h>
+#include <lua_platform_runtime.h>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 
 TEST_CASE( "lua_platform_reload_rejects_an_active_lua_call_stack",
            "[lua][platform][runtime][reload]" )
@@ -15,14 +27,14 @@ TEST_CASE( "lua_platform_reload_rejects_an_active_lua_call_stack",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.runtime.handler("try_reload", function()
     attempt_reload()
 end)
 ccb.runtime.on("world_ready", "try_reload")
 )lua" );
-    const platform::mod_source source { "reload-guard", files.root, files.root / "main.lua" };
+    const platform::mod_source source { "reload-guard", files.root, files.root / std::filesystem::u8path( "main.lua" ) };
     std::string error;
     REQUIRE( platform::prepare_mods( { source }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
@@ -56,11 +68,11 @@ TEST_CASE( "lua_platform_failed_reload_keeps_the_active_runtime_and_state",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.runtime.handler("kept", function() return 42 end)
 )lua" );
-    const platform::mod_source source { "reload-preserve", files.root, files.root / "main.lua" };
+    const platform::mod_source source { "reload-preserve", files.root, files.root / std::filesystem::u8path( "main.lua" ) };
     std::string error;
     REQUIRE( platform::prepare_mods( { source }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
@@ -74,14 +86,14 @@ ccb.runtime.handler("kept", function() return 42 end)
     sol::protected_function kept = owner->handlers.at( "kept" ).callback;
     std::string expected_error;
     SECTION( "syntax failure" ) {
-        files.write( "main.lua", "local = invalid syntax" );
+        files.write( std::filesystem::u8path( "main.lua" ), "local = invalid syntax" );
     }
     SECTION( "entry execution failure" ) {
-        files.write( "main.lua", "error('candidate execution sentinel')" );
+        files.write( std::filesystem::u8path( "main.lua" ), "error('candidate execution sentinel')" );
         expected_error = "candidate execution sentinel";
     }
     SECTION( "static definitions changed" ) {
-        files.write( "main.lua", R"lua(
+        files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local item = ccb.content.Item {
     id = "lua_reload_preserve_new_item", name = "reload fixture",
@@ -116,14 +128,14 @@ TEST_CASE( "lua_platform_reload_rejects_reentry_during_replacement",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    files.write( "main.lua", R"lua(
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 ccb.runtime.handler("shutdown_reload", function()
     if attempt_reload then attempt_reload() end
 end)
 ccb.runtime.on("shutdown", "shutdown_reload")
 )lua" );
-    const platform::mod_source source { "reload-reentry", files.root, files.root / "main.lua" };
+    const platform::mod_source source { "reload-reentry", files.root, files.root / std::filesystem::u8path( "main.lua" ) };
     std::string error;
     REQUIRE( platform::prepare_mods( { source }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
