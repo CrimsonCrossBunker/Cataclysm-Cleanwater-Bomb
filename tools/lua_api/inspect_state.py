@@ -44,12 +44,12 @@ def typed_values(values: object, location: str, show_values: bool) -> list:
             raise ValueError(f"{location}.{key}: missing typed value")
         kind, value = entry.get("type"), entry["value"]
         valid = (
-            (kind == "boolean" and isinstance(value, bool))
-            or (kind == "integer" and integer(value)
-                and -(2**63) <= value < 2**63)
-            or (kind == "float" and isinstance(value, (int, float))
-                and not isinstance(value, bool) and math.isfinite(value))
-            or (kind == "string" and isinstance(value, str))
+            (kind == "boolean" and isinstance(value, bool)) or
+            (kind == "integer" and integer(value) and
+                -(2**63) <= value < 2**63) or
+            (kind == "float" and isinstance(value, (int, float)) and
+                not isinstance(value, bool) and math.isfinite(value)) or
+            (kind == "string" and isinstance(value, str))
         )
         if not valid:
             raise ValueError(f"{location}.{key}: invalid {kind!r} value")
@@ -58,7 +58,6 @@ def typed_values(values: object, location: str, show_values: bool) -> list:
             row["value"] = value
         result.append(row)
     return result
-
 
 
 def task_participants(values: object, location: str) -> list:
@@ -80,8 +79,8 @@ def task_participants(values: object, location: str) -> list:
         if not integer(stable_id) or not 0 < stable_id < maximum:
             raise ValueError(f"{where}: invalid participant stable_id")
         hint_scope = participant.get("hint_scope")
-        if (not isinstance(hint_scope, str) or "\0" in hint_scope
-                or len(hint_scope.encode("utf-8")) > 64):
+        if (not isinstance(hint_scope, str) or "\0" in hint_scope or
+                len(hint_scope.encode("utf-8")) > 64):
             raise ValueError(f"{where}: invalid participant hint_scope")
         for key in ("hint_x", "hint_y", "hint_z"):
             value = participant.get(key)
@@ -89,25 +88,34 @@ def task_participants(values: object, location: str) -> list:
                 raise ValueError(f"{where}: invalid participant {key}")
         if not isinstance(participant.get("pending", False), bool):
             raise ValueError(f"{where}: invalid participant pending flag")
-        rows.append({key: participant[key] for key in
-                     ("role", "kind", "stable_id", "hint_scope", "hint_x", "hint_y", "hint_z")})
+        rows.append({key: participant[key] for key in (
+            "role", "kind", "stable_id", "hint_scope",
+            "hint_x", "hint_y", "hint_z")})
         rows[-1]["pending"] = participant.get("pending", False)
     return rows
 
 
 def task_actor(task: dict, location: str) -> dict:
-    """Report only native actor fields, validating saved identity and hint shape."""
+    """Validate and report native actor identity and hint fields."""
     result = {}
     actor_count = 0
     for kind in ("character", "item", "monster", "vehicle"):
         prefix = f"actor_{kind}"
         identity_key = prefix + ("_id" if kind == "character" else "_uid")
-        hint_keys = [prefix + "_hint_" + axis for axis in ("scope", "x", "y", "z")]
+        hint_keys = [
+            prefix +
+            "_hint_" +
+            axis for axis in (
+                "scope",
+                "x",
+                "y",
+                "z")]
         pending_key = prefix + "_pending"
         metadata = [] if kind == "character" else hint_keys + [pending_key]
         if identity_key not in task:
             if any(key in task for key in metadata):
-                raise ValueError(f"{location}: actor metadata requires {identity_key}")
+                raise ValueError(
+                    f"{location}: actor metadata requires {identity_key}")
             continue
         actor_count += 1
         identity = task[identity_key]
@@ -121,8 +129,8 @@ def task_actor(task: dict, location: str) -> dict:
             if not all(key in task for key in hint_keys):
                 raise ValueError(f"{location}: incomplete {prefix} hint")
             scope = task[hint_keys[0]]
-            if (not isinstance(scope, str) or "\0" in scope
-                    or len(scope.encode("utf-8")) > 64):
+            if (not isinstance(scope, str) or "\0" in scope or
+                    len(scope.encode("utf-8")) > 64):
                 raise ValueError(f"{location}: invalid {prefix} hint scope")
             for key in hint_keys[1:]:
                 if not integer(task[key]) or not -(2**31) <= task[key] < 2**31:
@@ -157,7 +165,8 @@ def summarize(document: object, mod: str | None = None,
         raise ValueError("limit must be between 1 and 200")
     if task_id is not None:
         if mod is None:
-            raise ValueError("a task ID requires --mod because IDs are local to each Mod")
+            raise ValueError(
+                "a task ID requires --mod because IDs are local to each Mod")
         if not integer(task_id) or not 0 < task_id < 2**63:
             raise ValueError("task ID must be a positive native integer")
     rows = []
@@ -183,7 +192,8 @@ def summarize(document: object, mod: str | None = None,
             if not integer(stored_id) or not 0 < stored_id < 2**63:
                 raise ValueError(f"{location}: invalid task id")
             if counter_persisted and stored_id > last_task_id:
-                raise ValueError(f"{location}: task id exceeds saved last_task_id")
+                raise ValueError(
+                    f"{location}: task id exceeds saved last_task_id")
             last_task_id = max(last_task_id, stored_id)
             if stored_id in seen:
                 raise ValueError(f"{location}: duplicate task id {stored_id}")
@@ -204,7 +214,8 @@ def summarize(document: object, mod: str | None = None,
                     f"{location}: owner_mod_id differs from record")
             payload = typed_values(task.get("payload"), location,
                                    show_values)
-            participants = task_participants(task.get("participants", []), location)
+            participants = task_participants(
+                task.get("participants", []), location)
             row = {key: task[key] for key in ("id", "handler", "due_turn")}
             row["interval_turns"] = interval
             row["payload_version"] = version
@@ -216,14 +227,18 @@ def summarize(document: object, mod: str | None = None,
             if task_id is None or task["id"] == task_id:
                 task_rows.append(row)
         if task_id is not None and not task_rows:
-            raise ValueError(f"{owner}: task {task_id} is absent from this snapshot")
-        rows.append({
-            "mod": owner, "last_task_id": last_task_id,
-            "task_counter_persisted": counter_persisted,
-            "state_count": len(values),
-            "state": values[:limit], "task_count": len(tasks),
-            "matched_task_count": len(task_rows), "tasks": sorted(task_rows, key=lambda row: row["id"])[:limit],
-        })
+            raise ValueError(
+                f"{owner}: task {task_id} is absent from this snapshot")
+        rows.append({"mod": owner,
+                     "last_task_id": last_task_id,
+                     "task_counter_persisted": counter_persisted,
+                     "state_count": len(values),
+                     "state": values[:limit],
+                     "task_count": len(tasks),
+                     "matched_task_count": len(task_rows),
+                     "tasks": sorted(task_rows,
+                                     key=lambda row: row["id"])[:limit],
+                     })
     return {"version": 1, "scope": scope, "mod_count": len(mods),
             "matched_mod_count": len(rows), "mods": rows[:limit],
             "note": "Saved snapshot only; handler availability, participant "
@@ -234,7 +249,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path)
     parser.add_argument("--mod", help="show only one saved Mod record")
-    parser.add_argument("--task", type=int, help="show one saved task ID; requires --mod")
+    parser.add_argument(
+        "--task",
+        type=int,
+        help="show one saved task ID; requires --mod")
     parser.add_argument("--limit", type=int, default=20,
                         help="maximum displayed entries per list (1-200)")
     parser.add_argument("--values", action="store_true",

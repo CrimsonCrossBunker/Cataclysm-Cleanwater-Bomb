@@ -25,7 +25,8 @@ def saved_state() -> dict:
                 "payload_version": 1, "payload": {},
                 "actor_character_id": 12,
                 "participants": [{"role": "target", "kind": "character",
-                                  "stable_id": 12, "pending": True, "hint_scope": "npc",
+                                  "stable_id": 12, "pending": True,
+                                  "hint_scope": "npc",
                                   "hint_x": 0, "hint_y": 0, "hint_z": 0}],
             }],
         }},
@@ -76,8 +77,8 @@ class StateInspectorTests(unittest.TestCase):
                 inspect_state.summarize(snapshot)
         record["tasks"] = []
         record["last_task_id"] = 2**63 - 1
-        self.assertEqual(inspect_state.summarize(snapshot)["mods"][0]["last_task_id"],
-                         2**63 - 1)
+        self.assertEqual(inspect_state.summarize(snapshot)[
+                         "mods"][0]["last_task_id"], 2**63 - 1)
 
     def test_actor_reports_known_identity_and_hints_only(self):
         snapshot = saved_state()
@@ -86,7 +87,9 @@ class StateInspectorTests(unittest.TestCase):
         actor = {"actor_item_uid": 99, "actor_item_pending": True,
                  "actor_item_hint_scope": "map", "actor_item_hint_x": -4,
                  "actor_item_hint_y": 5, "actor_item_hint_z": 0}
-        task.update(actor, actor_unrecognized={"large": ["not native actor data"]})
+        task.update(
+            actor, actor_unrecognized={
+                "large": ["not native actor data"]})
         report = inspect_state.summarize(snapshot)
         self.assertEqual(report["mods"][0]["tasks"][0]["actor"], actor)
 
@@ -135,8 +138,10 @@ class StateInspectorTests(unittest.TestCase):
         snapshot = saved_state()
         record = snapshot["mods"]["tonic"]
         template = record["tasks"][0]
-        record["tasks"] = [dict(template, id=number) for number in range(1, 251)]
-        row = inspect_state.summarize(snapshot, mod="tonic", limit=1, task_id=225)["mods"][0]
+        record["tasks"] = [dict(template, id=number)
+                           for number in range(1, 251)]
+        row = inspect_state.summarize(
+            snapshot, mod="tonic", limit=1, task_id=225)["mods"][0]
         self.assertEqual(row["task_count"], 250)
         self.assertEqual(row["matched_task_count"], 1)
         self.assertEqual([task["id"] for task in row["tasks"]], [225])
@@ -145,14 +150,16 @@ class StateInspectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "task 999 is absent"):
             inspect_state.summarize(snapshot, mod="tonic", task_id=999)
         for invalid in (0, -1, True, 2**63):
-            with self.subTest(task_id=invalid), self.assertRaisesRegex(ValueError, "positive"):
+            with self.subTest(task_id=invalid), self.assertRaisesRegex(
+                    ValueError, "positive"):
                 inspect_state.summarize(snapshot, mod="tonic", task_id=invalid)
 
     def test_invalid_task_identity_and_owner_are_reported(self):
         for field, value in (("id", True), ("id", 0),
                              ("owner_mod_id", "another-mod"),
                              ("interval_turns", -1),
-                             ("payload_version", 0), ("payload_version", 2**31)):
+                             ("payload_version", 0),
+                             ("payload_version", 2**31)):
             with self.subTest(field=field, value=value):
                 snapshot = saved_state()
                 snapshot["mods"]["tonic"]["tasks"][0][field] = value
@@ -165,9 +172,11 @@ class StateInspectorTests(unittest.TestCase):
                              ("kind", "unknown")):
             with self.subTest(field=field):
                 snapshot = saved_state()
-                participant = snapshot["mods"]["tonic"]["tasks"][0]["participants"][0]
+                task = snapshot["mods"]["tonic"]["tasks"][0]
+                participant = task["participants"][0]
                 participant[field] = value
-                with self.assertRaisesRegex(ValueError, r"tonic.tasks\[0\].participants\[0\]"):
+                with self.assertRaisesRegex(
+                        ValueError, r"tonic.tasks\[0\].participants\[0\]"):
                     inspect_state.summarize(snapshot)
         snapshot = saved_state()
         participants = snapshot["mods"]["tonic"]["tasks"][0]["participants"]
