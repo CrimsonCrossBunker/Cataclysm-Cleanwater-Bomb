@@ -57,51 +57,58 @@ def write_editor_files(target: Path, declarations: Path) -> None:
     )
 
 
-
 def initialize_sdk(mod: Path, declarations: Path) -> dict:
-    """Add editor metadata to an existing directory without replacing author files."""
+    """Add editor metadata without replacing existing author files."""
     mod = mod.resolve(strict=True)
     if not mod.is_dir():
         raise ValueError(f"{mod}: expected an existing Mod directory")
     sdk = mod / SDK_DIRECTORY
     for destination in (sdk, mod / ".luarc.json"):
         if destination.exists() or destination.is_symlink():
-            raise ValueError(f"{destination}: already exists; keep or integrate the existing editor setup")
+            raise ValueError(
+                f"{destination}: already exists; "
+                "keep or integrate the existing editor setup")
     with tempfile.TemporaryDirectory(prefix="ccb-sdk-init-") as directory:
         staging = Path(directory)
         write_editor_files(staging, declarations)
         created = []
-        sdk.mkdir()  # Exclusive reservation; never adopt an existing directory.
+        # Exclusive reservation; never adopt an existing directory.
+        sdk.mkdir()
         try:
-            for relative in (Path(SDK_DIRECTORY) / "ccb.lua",
-                             Path(SDK_DIRECTORY) / "version.json", Path(".luarc.json")):
+            for relative in (
+                    Path(SDK_DIRECTORY) / "ccb.lua",
+                    Path(SDK_DIRECTORY) / "version.json",
+                    Path(".luarc.json")):
                 destination = mod / relative
                 with destination.open("xb") as stream:
                     created.append(destination)
                     stream.write((staging / relative).read_bytes())
             return read_sdk(mod)[0]
         except BaseException:
-            # Remove only files created by this attempt; preserve a raced config.
+            # Remove only files created by this attempt; preserve a raced
+            # config.
             for destination in reversed(created):
                 destination.unlink(missing_ok=True)
             try:
                 sdk.rmdir()
             except OSError:
-                pass  # Do not remove any unexpected files added by another process.
+                # Do not remove any unexpected files added by another process.
+                pass
             raise
 
 
 def read_sdk(mod: Path) -> tuple[dict, str]:
     sdk = mod / SDK_DIRECTORY
     metadata = json.loads((sdk / "version.json").read_text(encoding="utf-8"))
-    if (not isinstance(metadata, dict)
-            or type(metadata.get("schema_version")) is not int
-            or metadata["schema_version"] != 1):
+    if (not isinstance(metadata, dict) or
+            type(metadata.get("schema_version")) is not int or
+            metadata["schema_version"] != 1):
         raise ValueError(f"{sdk}: unsupported SDK metadata format")
-    if (type(metadata.get("platform_version")) is not int
-            or metadata["platform_version"] != 1
-            or metadata.get("lua_version") != "5.4"):
-        raise ValueError(f"{sdk}: unsupported Platform/Lua version in SDK metadata")
+    if (type(metadata.get("platform_version")) is not int or
+            metadata["platform_version"] != 1 or
+            metadata.get("lua_version") != "5.4"):
+        raise ValueError(
+            f"{sdk}: unsupported Platform/Lua version in SDK metadata")
     contents = (sdk / "ccb.lua").read_bytes()
     if metadata.get("declarations_sha256") != digest(contents):
         raise ValueError(f"{sdk}: declaration checksum mismatch")
@@ -163,8 +170,8 @@ def compare_release(mod: Path, declarations: Path) -> dict:
     old_metadata, old_text = read_sdk(mod)
     content = declarations.read_bytes()
     new_text = content.decode("utf-8")
-    if ("---@class CcbPlatformV1" not in new_text
-            or "return ccb" not in new_text):
+    if ("---@class CcbPlatformV1" not in new_text or
+            "return ccb" not in new_text):
         raise ValueError("expected CCB Platform v1 LuaLS declarations")
     new_metadata = {
         "schema_version": 1,
@@ -213,7 +220,8 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
         )
         if result.returncode < 0:
             raise RuntimeError(
-                f"LuaLS exited {result.returncode} before completing diagnostics: " +
+                f"LuaLS exited {result.returncode} "
+                "before completing diagnostics: " +
                 (result.stderr or result.stdout)[-2000:]
             )
         report = Path(directory) / "check.json"
@@ -231,17 +239,20 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
         diagnostics = []
         for uri, entries in sorted(data.items()):
             if not isinstance(entries, list):
-                raise ValueError(f"LuaLS report for {uri}: expected diagnostic array")
+                raise ValueError(
+                    f"LuaLS report for {uri}: expected diagnostic array")
             for index, entry in enumerate(entries):
                 location = f"LuaLS report for {uri}, diagnostic {index}"
-                if not isinstance(entry, dict) or not isinstance(entry.get("message"), str):
+                if not isinstance(
+                        entry, dict) or not isinstance(
+                        entry.get("message"), str):
                     raise ValueError(f"{location}: missing diagnostic message")
                 span = entry.get("range")
                 start = span.get("start") if isinstance(span, dict) else None
                 if not isinstance(start, dict):
                     raise ValueError(f"{location}: missing start position")
-                if any(not isinstance(start.get(key), int)
-                       or isinstance(start[key], bool) or start[key] < 0
+                if any(not isinstance(start.get(key), int) or
+                       isinstance(start[key], bool) or start[key] < 0
                        for key in ("line", "character")):
                     raise ValueError(f"{location}: invalid start position")
             path = uri
@@ -271,10 +282,14 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    initialize = commands.add_parser("init", help="add an editor SDK to an existing Mod directory")
+    initialize = commands.add_parser(
+        "init", help="add an editor SDK to an existing Mod directory")
     initialize.add_argument("mod", type=Path)
-    initialize.add_argument("--declarations", type=Path, default=DEFAULT_DECLARATIONS,
-                            help="declaration file from the target game package")
+    initialize.add_argument(
+        "--declarations",
+        type=Path,
+        default=DEFAULT_DECLARATIONS,
+        help="declaration file from the target game package")
     compare = commands.add_parser(
         "compare", help="compare two Mod SDK snapshots"
     )
@@ -295,7 +310,8 @@ def main() -> int:
     try:
         if args.command == "init":
             metadata = initialize_sdk(args.mod, args.declarations)
-            print(json.dumps({"mod": str(args.mod.resolve()), "sdk": metadata}, indent=2))
+            print(json.dumps(
+                {"mod": str(args.mod.resolve()), "sdk": metadata}, indent=2))
             return 0
         if args.command == "compare":
             print(json.dumps(compare_sdks(args.old, args.new),

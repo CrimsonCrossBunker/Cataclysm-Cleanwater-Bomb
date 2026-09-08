@@ -55,7 +55,9 @@ class ModSdkTest(unittest.TestCase):
             metadata = mod_sdk.initialize_sdk(mod, source)
             self.assertEqual(metadata, mod_sdk.read_sdk(mod)[0])
             self.assertEqual(main.read_bytes(), before)
-            self.assertEqual((mod / ".ccb-sdk/ccb.lua").read_bytes(), source.read_bytes())
+            self.assertEqual(
+                (mod / ".ccb-sdk/ccb.lua").read_bytes(),
+                source.read_bytes())
             with self.assertRaisesRegex(ValueError, "already exists"):
                 mod_sdk.initialize_sdk(mod, source)
 
@@ -77,7 +79,8 @@ class ModSdkTest(unittest.TestCase):
 
             def raced_config(path, mode="r", *args, **kwargs):
                 if path == config and mode == "xb":
-                    with original_open(config, "w", encoding="utf-8") as stream:
+                    with original_open(
+                            config, "w", encoding="utf-8") as stream:
                         stream.write("concurrent author settings")
                 return original_open(path, mode, *args, **kwargs)
 
@@ -149,15 +152,21 @@ class ModSdkTest(unittest.TestCase):
                 {path: path.read_bytes() for path in paths}, before)
             self.assertFalse((root / ".ccb-sdk").exists())
 
-    def test_compare_reports_multiline_alias_members_without_mixing_aliases(self):
+    def test_compare_reports_multiline_alias_members_without_mixing_aliases(
+            self):
         aliases = ("\n---@alias EquipmentError\n"
                    "---| 'stale_runtime'\n---| 'wrong_holder'\n"
                    "\n---@alias Operation\n---| 'wield'\n---| 'wear'\n")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             before = self.make_sdk(root, "before", DECLARATIONS + aliases)
-            after = self.make_sdk(root, "after", DECLARATIONS + aliases.replace(
-                "---| 'wrong_holder'", "---| 'invalid_holder'"))
+            after = self.make_sdk(
+                root,
+                "after",
+                DECLARATIONS +
+                aliases.replace(
+                    "---| 'wrong_holder'",
+                    "---| 'invalid_holder'"))
             report = mod_sdk.compare_sdks(before, after)
             self.assertEqual(set(report["changed"]), {"alias EquipmentError"})
             difference = report["changed"]["alias EquipmentError"]
@@ -183,12 +192,14 @@ class ModSdkTest(unittest.TestCase):
             mod = self.make_sdk(Path(directory), "example")
             metadata_path = mod / ".ccb-sdk/version.json"
             original = json.loads(metadata_path.read_text(encoding="utf-8"))
-            for key, value in (("schema_version", True), ("platform_version", True),
+            for key, value in (("schema_version", True),
+                               ("platform_version", True),
                                ("platform_version", 5), ("lua_version", "5.3"),
                                ("lua_version", None)):
                 with self.subTest(key=key, value=value):
                     changed = dict(original, **{key: value})
-                    metadata_path.write_text(json.dumps(changed), encoding="utf-8")
+                    metadata_path.write_text(
+                        json.dumps(changed), encoding="utf-8")
                     with self.assertRaisesRegex(ValueError, "unsupported"):
                         mod_sdk.read_sdk(mod)
 
@@ -213,14 +224,16 @@ class ModSdkTest(unittest.TestCase):
                     "range": {"start": {"line": 0, "character": 0}},
                     "message": "partial diagnostic",
                 }]}
-                (Path(log) / "check.json").write_text(json.dumps(report), encoding="utf-8")
+                (Path(log) / "check.json").write_text(
+                    json.dumps(report), encoding="utf-8")
                 return subprocess.CompletedProcess(command, -11, "", "crash")
 
             with patch.object(mod_sdk.subprocess, "run", side_effect=crash):
                 with self.assertRaisesRegex(RuntimeError, "exited -11"):
                     mod_sdk.check_mod(mod, "luals")
 
-    def test_malformed_diagnostic_has_a_report_error_instead_of_a_traceback(self):
+    def test_malformed_diagnostic_has_a_report_error_instead_of_a_traceback(
+            self):
         cases = [None, [None], [{"message": "missing location"}],
                  [{"message": "bad position", "range": {
                      "start": {"line": True, "character": 0}}}]]
@@ -230,13 +243,14 @@ class ModSdkTest(unittest.TestCase):
                 def malformed(command, **kwargs):
                     log = next(x.split("=", 1)[1] for x in command
                                if x.startswith("--logpath="))
-                    (Path(log) / "check.json").write_text(
-                        json.dumps({"file:///example.lua": entries}), encoding="utf-8")
+                    (Path(log) / "check.json").write_text(json.dumps(
+                        {"file:///example.lua": entries}), encoding="utf-8")
                     return subprocess.CompletedProcess(command, 0, "", "")
 
                 with self.subTest(entries=entries), patch.object(
                         mod_sdk.subprocess, "run", side_effect=malformed):
-                    with self.assertRaisesRegex(ValueError, "LuaLS report for"):
+                    with self.assertRaisesRegex(
+                            ValueError, "LuaLS report for"):
                         mod_sdk.check_mod(mod, "luals")
 
     def test_checker_crash_is_not_a_clean_report(self):
