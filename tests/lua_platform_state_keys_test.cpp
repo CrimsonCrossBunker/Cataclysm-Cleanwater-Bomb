@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "cata_catch.h"
 #include "lua_platform_sol.h"

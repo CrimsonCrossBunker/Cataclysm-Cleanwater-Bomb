@@ -1,6 +1,19 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include <array>
+#include <cata_scope_helpers.h>
+#include <json_loader.h>
+#include <lua_platform_runtime.h>
+#include <cstddef>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <variant>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include <cmath>
 #include <limits>
 

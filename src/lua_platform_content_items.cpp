@@ -23,12 +23,6 @@
 #include <initializer_list>
 #include <optional>
 
-namespace cata::lua_platform::detail
-{
-struct event_statistic_snapshot;
-struct event_transformation_snapshot;
-}  // namespace cata::lua_platform::detail
-
 #include <algorithm>
 #include <cctype>
 #include <cmath>

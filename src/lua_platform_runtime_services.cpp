@@ -111,7 +111,6 @@ extern "C" {
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
-#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "worldfactory.h"
@@ -573,12 +572,14 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( !owner || !owner->world_is_ready ) {
-        character->add_msg_if_player( _( "Lua-first Mod runtime is not ready." ) );
+        character->add_msg_if_player(
+            to_translation( "Lua-first Mod runtime is not ready." ).translated() );
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
-        character->add_msg_if_player( _( "Lua-first item handler is no longer registered." ) );
+        character->add_msg_if_player(
+            to_translation( "Lua-first item handler is no longer registered." ).translated() );
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
@@ -603,13 +604,15 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( returned.get_type() != sol::type::number || !returned.is<lua_Integer>() ) {
-        ::add_msg( m_bad, _( "Lua-first item handler must return an integer or nil." ) );
+        ::add_msg( m_bad,
+                   to_translation( "Lua-first item handler must return an integer or nil." ).translated() );
         return std::nullopt;
     }
     const lua_Integer native_result = returned.as<lua_Integer>();
     if( native_result < std::numeric_limits<int>::min() ||
         native_result > std::numeric_limits<int>::max() ) {
-        ::add_msg( m_bad, _( "Lua-first item handler result is outside the native range." ) );
+        ::add_msg( m_bad,
+                   to_translation( "Lua-first item handler result is outside the native range." ).translated() );
         return std::nullopt;
     }
     return static_cast<int>( native_result );
@@ -3453,7 +3456,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     cata::lua_platform::install_game_interaction_api( services, require_write, has_callback );
     const auto play_audible_sound = [weak, require_write](
-                                        std::string_view id, const std::string & variant,
+                                        std::string_view id, std::string_view variant,
                                         const sol::optional<int> &requested_volume,
     const bool from_outdoors ) {
         require_write();
@@ -3504,12 +3507,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table platform_sound = services["sound"];
     platform_sound.set_function( "play_if_audible", [play_audible_sound](
-                                     const std::string & id, const std::string & variant,
+                                     std::string_view id, std::string_view variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, false );
     } );
     platform_sound.set_function( "play_from_outdoors", [play_audible_sound](
-                                     const std::string & id, const std::string & variant,
+                                     std::string_view id, std::string_view variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, true );
     } );
@@ -3643,8 +3646,8 @@ sol::object select_platform_mapgen_value(
 }
 
 // Own the Lua reference across reentrant mapgen callbacks.
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
 void invoke_platform_mapgen_callback(
+    // NOLINTNEXTLINE(performance-unnecessary-value-param)
     runtime &owner, sol::protected_function callback,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const std::optional<int> x = std::nullopt,
