@@ -59,6 +59,20 @@ editor metadata, not a runtime manifest or executable content; omit them with
 major version before registering content. An exact declaration revision check
 is an author upgrade aid, not a new mandatory runtime version system.
 
+## Add an editor SDK to an existing Mod
+
+```sh
+python3 tools/lua_api/mod_sdk.py init /path/ExistingMod \
+  --declarations /path/game/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This adds the frozen `.ccb-sdk/` snapshot and `.luarc.json` editor configuration
+used by the scaffolder. It does not execute or modify author Lua files. Existing SDKs or
+editor configuration are never overwritten; keep or integrate them manually.
+A failed initialization removes only files created by that attempt. Without
+`--declarations`, the tool snapshots its own checkout's declaration file.
+The added JSON files configure the editor and are not runtime manifests.
+
 ## Diagnose a Mod
 
 With LuaLS installed (the CI/editor gate is tested with 3.19.1):
@@ -116,14 +130,26 @@ Actual restoration still requires the native game and its acceptance checks.
 
 ## Review an API upgrade
 
-Create a separate scaffold with the target version's declarations, then compare:
+Compare directly with the target game's bundled declaration file:
+
+```sh
+python3 tools/lua_api/mod_sdk.py compare-release /path/MyMod \
+  --declarations /path/TargetGame/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This requires no second scaffold, never executes Lua, and leaves both the Mod's
+SDK and the target file unchanged. The report records the absolute target path
+and declaration hash; you explicitly choose which game package to inspect.
+
+Alternatively, compare two existing SDK snapshots:
 
 ```sh
 python3 tools/lua_api/mod_sdk.py compare /path/OldMod /path/NewVersionScaffold
 ```
 
 The JSON report shows the two SDK identities and added, removed, or changed
-class/field/function declarations, including parameter and return annotations.
+class/field/function and alias declarations, including parameter/return annotations
+and consecutive multiline alias members (`---|`).
 It never overwrites either project. Review changed declarations, read the game's
 release/migration notes, then intentionally update the editor SDK and rerun static
 and affected runtime checks. Unchanged signatures do not prove behavior parity;
