@@ -12,7 +12,6 @@
 #include <iterator>
 #include <iostream>
 #include <memory>
-#include <ostream>
 #include <queue>
 #include <system_error>
 
@@ -255,12 +254,12 @@ void mod_migrations::check()
 static void show_lua_execution_notice()
 {
     const std::string message = _(
-                                    "Lua Mods are executable programs with access to your files and system. "
+                                    "Lua Mods are executable programs with access to your files and system.  "
                                     "CCB does not sandbox them or protect your system from their actions.\n\n"
                                     "Reading the Mod list can already execute mod.lua metadata, before a Mod "
-                                    "is selected for a world. Only install Mods you choose to trust. "
+                                    "is selected for a world.  Only install Mods you choose to trust.  "
                                     "Native libraries can also crash the game.\n\n"
-                                    "Continuing will scan the installed Lua Mods. This notice appears once "
+                                    "Continuing will scan the installed Lua Mods.  This notice appears once "
                                     "per game session." );
 #if !defined(HEADLESS)
     if( !test_mode ) {

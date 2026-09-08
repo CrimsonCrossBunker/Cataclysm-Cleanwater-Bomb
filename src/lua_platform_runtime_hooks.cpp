@@ -15,7 +15,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -23,22 +22,16 @@
 #include "calendar.h"
 #include "cata_variant.h"
 #include "character.h"
-#include "computer.h"
 #include "creature.h"
-#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
-#include "effect.h"
 #include "event.h"
 #include "event_bus.h"
-#include "event_field_transformations.h"
-#include "event_statistics.h"
 #include "event_subscriber.h"
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
 #include "lua_platform_bindings_values.h"
-#include "lua_platform_dialogue.h"
 #include "lua_platform_missions.h"
 #include "map.h"
 #include "messages.h"
@@ -52,6 +45,36 @@
 #include "type_id.h"
 #include "vehicle.h"
 #include "weakpoint.h"
+#include <character_id.h>
+#include <coordinates.h>
+#include <enum_conversions.h>
+#include <enums.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <item_wakeup.h>
+extern "C" {
+    extern "C" {
+#include <lua.h>
+    }
+}
+#include <lua_platform_handle.h>
+#include <lua_platform_hooks.h>
+#include <lua_platform_runtime.h>
+#include <magic.h>
+#include <monster_uid.h>
+#include <point.h>
+#include <safe_reference.h>
+#include <units.h>
+#include <value_ptr.h>
+#include <vehicle_uid.h>
+#include <weather_gen.h>
+#include <cstddef>
+#include <exception>
+#include <ostream>
+#include <type_traits>
+#include <unordered_map>
+#include <variant>
+#include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {

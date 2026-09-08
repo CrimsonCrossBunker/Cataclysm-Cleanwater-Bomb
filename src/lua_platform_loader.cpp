@@ -19,11 +19,6 @@
 
 #include "debug.h"
 
-namespace cata::lua_platform
-{
-class runtime;
-}  // namespace cata::lua_platform
-
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #ifdef __clang__
@@ -35,7 +30,6 @@ class runtime;
     #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 extern "C" {
-#include <lauxlib.h>
 #include <lua.h>
 }
 #ifdef __clang__
@@ -53,6 +47,7 @@ extern "C" {
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
+#include <functional>
 
 namespace cata::lua_platform
 {
@@ -110,7 +105,7 @@ std::optional<fs::path> resolve_local_module( const fs::path &root,
     }
     const std::array<fs::path, 2> candidates = {
         root / fs::u8path( relative + ".lua" ),
-        root / relative_path / "init.lua"
+        root / relative_path / fs::u8path( "init.lua" )
     };
     for( const fs::path &candidate : candidates ) {
         std::error_code filesystem_error;
@@ -376,9 +371,9 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     // still load native libraries through an explicit package.loadlib path.
     if( root.generic_u8string().find_first_of( ";?" ) == std::string::npos ) {
 #if defined(_WIN32)
-        const fs::path native_pattern = root / "?.dll";
+        const fs::path native_pattern = root / fs::u8path( "?.dll" );
 #else
-        const fs::path native_pattern = root / "?.so";
+        const fs::path native_pattern = root / fs::u8path( "?.so" );
 #endif
         package["cpath"] = native_pattern.generic_u8string() + ";" +
                            package.get<std::string>( "cpath" );
@@ -396,6 +391,8 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
         sol::variadic_results result;
         const std::optional<fs::path> path = resolve_local_module( root, module_name );
         if( !path ) {
+            // Match the standard Lua searcher diagnostic prefix.
+            // NOLINTNEXTLINE(cata-text-style)
             result.push_back( sol::make_object( lua, "\n\tno Mod-local module '" + module_name + "'" ) );
             return result;
         }
@@ -471,7 +468,7 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
             throw std::runtime_error( "Cannot resolve Lua-first Mod root '" +
                                       root.generic_u8string() + "'" );
         }
-        const fs::path path = fs::canonical( canonical_root / "mod.lua", filesystem_error );
+        const fs::path path = fs::canonical( canonical_root / fs::u8path( "mod.lua" ), filesystem_error );
         if( filesystem_error || !path_is_within( path, canonical_root ) ||
             !fs::is_regular_file( path, filesystem_error ) || filesystem_error ) {
             throw std::runtime_error( "Lua-first mod.lua escapes its Mod root or is not a regular file" );
@@ -486,6 +483,8 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
         if( execution.return_count != 1 ) {
             error = "Lua-first Mod metadata [" + path.generic_u8string() +
                     "]: expected exactly one ccb.ModDefinition return value; "
+                    // Lua source syntax uses three literal dots.
+                    // NOLINTNEXTLINE(cata-text-style)
                     "use return (require(...)) when forwarding a metadata module";
             return false;
         }

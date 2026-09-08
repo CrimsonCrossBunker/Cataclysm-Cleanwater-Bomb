@@ -5010,15 +5010,15 @@ const std::vector<debug_action_entry> &all_actions()
                 std::string error;
                 if( !cata::lua_platform::reload_active_mods( error ) ) {
                     if( error.find( "requires_full_data_reload:" ) == 0 ) {
-                        popup( _( "Lua static content changed. Restart the game to reload its definitions. "
+                        popup( _( "Lua static content changed.  Restart the game to reload its definitions.  "
                                   "The previous script registrations remain active.\n\n%s" ), error );
                     } else {
-                        popup( _( "Lua script reload failed. The previous script registrations remain "
+                        popup( _( "Lua script reload failed.  The previous script registrations remain "
                                   "active.\n\n%s" ), error );
                     }
                     return;
                 }
-                add_msg( m_info, _( "Replaced Lua script registrations for %zu Mods. "
+                add_msg( m_info, _( "Replaced Lua script registrations for %zu Mods.  "
                                     "Check the message log for callback errors." ), mods.size() );
             }
         },

@@ -100,6 +100,10 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
+#include <coordinates.h>
+#include <debug.h>
+#include <flat_set.h>
+#include <type_id.h>
 
 namespace debug_menu
 {

@@ -4,12 +4,8 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <character_id.h>
-#include <common_types.h>
 #include <enums.h>
-#include <game_constants.h>
 #include <item_uid.h>
-#include <lua_platform_hooks.h>
-#include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
 #include <point.h>
 
@@ -26,7 +22,6 @@ struct event_transformation_snapshot;
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <iomanip>
 extern "C" {
 #include <lua.h>
 }
@@ -36,89 +31,31 @@ extern "C" {
 #include <set>
 #include <sstream>
 #include <stdexcept>
-#include <system_error>
-#include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 
 #include "achievement.h"
-#include "ammo.h"
-#include "ammo_effect.h"
-#include "anatomy.h"
-#include "ascii_art.h"
 #include "avatar.h"
-#include "behavior.h"
-#include "behavior_oracle.h"
-#include "behavior_strategy.h"
-#include "bionics.h"
-#include "bodygraph.h"
 #include "bodypart.h"
-#include "butchery.h"
-#include "butchery_requirements.h"
 #include "calendar.h"
 #include "cata_path.h"
-#include "cata_scope_helpers.h"
-#include "cata_utility.h"
-#include "cata_variant.h"
 #include "catacharset.h"
 #include "character.h"
 #include "character_martial_arts.h"
-#include "character_modifier.h"
-#include "city.h"
-#include "climbing.h"
-#include "clothing_mod.h"
-#include "clzones.h"
-#include "color.h"
 #include "computer.h"
-#include "construction.h"
-#include "construction_category.h"
-#include "construction_group.h"
 #include "coordinates.h"
 #include "crafting_gui.h"
 #include "creature.h"
-#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
-#include "dialogue_helpers.h"
-#include "disease.h"
-#include "effect.h"
-#include "emit.h"
-#include "end_screen.h"
 #include "enum_conversions.h"
 #include "event.h"
 #include "event_bus.h"
-#include "event_field_transformations.h"
-#include "event_statistics.h"
-#include "event_subscriber.h"
-#include "explosion_light.h"
-#include "faction_camp.h"
-#include "fault.h"
 #include "field.h"
-#include "field_type.h"
-#include "filesystem.h"
-#include "flag.h"
-#include "flexbuffer_json.h"
 #include "game.h"
-#include "gates.h"
-#include "generic_factory.h"
-#include "harvest.h"
-#include "help.h"
-#include "hsv_color.h"
-#include "init.h"
 #include "item.h"
-#include "item_action.h"
-#include "item_category.h"
-#include "item_factory.h"
-#include "item_group.h"
 #include "item_location.h"
-#include "item_wakeup.h"
-#include "itype.h"
-#include "iuse.h"
-#include "json.h"
-#include "json_loader.h"
 #include "lua_platform_achievements.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_addictions.h"
@@ -126,7 +63,6 @@ extern "C" {
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_bionics.h"
 #include "lua_platform_camps.h"
-#include "lua_platform_content.h"
 #include "lua_platform_crafting.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_dialogue.h"
@@ -148,7 +84,6 @@ extern "C" {
 #include "lua_platform_registry.h"
 #include "lua_platform_skills.h"
 #include "lua_platform_snapshots.h"
-#include "lua_platform_state.h"
 #include "lua_platform_statistics.h"
 #include "lua_platform_time.h"
 #include "lua_platform_trade.h"
@@ -157,93 +92,44 @@ extern "C" {
 #include "lua_platform_vitamins.h"
 #include "lua_platform_weather.h"
 #include "lua_platform_world.h"
-#include "lua_platform_world_content.h"
 #include "lua_platform_world_info.h"
 #include "lua_platform_world_services.h"
 #include "lua_platform_zones.h"
-#include "magic_enchantment.h"
-#include "magic_ter_furn_transform.h"
-#include "magic_type.h"
 #include "map.h"
-#include "map_accessories.h"
-#include "map_extras.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "mapgen_functions.h"
-#include "mapgen_post_process.h"
 #include "mapgendata.h"
-#include "martialarts.h"
-#include "material.h"
 #include "math_parser.h"
-#include "math_parser_diag.h"
-#include "math_parser_jmath.h"
-#include "mattack_actors.h"
-#include "mattack_common.h"
 #include "messages.h"
-#include "mission.h"
 #include "mod_tileset.h"
-#include "mondefense.h"
-#include "monfaction.h"
-#include "mongroup.h"
-#include "monster.h"
-#include "monstergenerator.h"
-#include "mood_face.h"
-#include "morale_types.h"
-#include "move_mode.h"
-#include "mtype.h"
-#include "mutation.h"
 #include "npc.h"
-#include "omdata.h"
 #include "options.h"
-#include "output.h"
-#include "overlay_ordering.h"
-#include "overmap_connection.h"
-#include "overmap_location.h"
-#include "overmap_map_data_cache.h"
-#include "overmap_worldgen.h"
 #include "path_info.h"
-#include "player_activity.h"
-#include "profession.h"
-#include "profession_group.h"
-#include "proficiency.h"
-#include "recipe.h"
 #include "recipe_dictionary.h"
-#include "recipe_groups.h"
-#include "regional_settings.h"
-#include "relic.h"
-#include "requirements.h"
-#include "safe_reference.h"
-#include "scenario.h"
-#include "scent_map.h"
-#include "shop_cons_rate.h"
-#include "skill.h"
 #include "sounds.h"
-#include "speech.h"
-#include "speed_description.h"
-#include "start_location.h"
-#include "string_input_popup.h"
-#include "subbodypart.h"
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
-#include "translation_manager.h"
-#include "trap.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "units.h"
-#include "veh_type.h"
-#include "vehicle.h"
-#include "vehicle_group.h"
-#include "vehicle_palette.h"
-#include "vehicle_part_location.h"
-#include "vitamin.h"
-#include "weakpoint.h"
-#include "weather_gen.h"
-#include "weather_type.h"
-#include "widget.h"
 #include "worldfactory.h"
 #include "wound.h"
+#include <pimpl.h>
+#include <cstddef>
+#include <exception>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+#include "lua_platform_sol.h"
+
+class recipe;
+enum class cardinal_direction : int;
+struct bionic;
 
 namespace cata::lua_platform
 {
@@ -259,7 +145,7 @@ using detail::runtime_callback_is_active;
 namespace
 {
 
-void require_translation_text( const std::string &text )
+void require_translation_text( const std::string_view text )
 {
     if( text.find( '\0' ) != std::string::npos ) {
         throw std::runtime_error( "translation text and context must not contain NUL" );

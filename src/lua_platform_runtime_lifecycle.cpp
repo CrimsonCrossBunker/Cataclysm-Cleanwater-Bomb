@@ -26,10 +26,8 @@
 #include "character.h"
 #include "creature_tracker.h"
 #include "debug.h"
-#include "field_type.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
-#include "game.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
@@ -45,6 +43,32 @@
 #include "translations.h"
 #include "vehicle.h"
 #include "worldfactory.h"
+#include <cata_utility.h>
+#include <character_id.h>
+#include <enums.h>
+#include <item_location.h>
+#include <item_uid.h>
+extern "C" {
+    extern "C" {
+#include <lua.h>
+    }
+}
+#include <lua_platform_handle.h>
+#include <lua_platform_runtime.h>
+#include <lua_platform_state.h>
+#include <math_parser_diag_value.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
+#include <vehicle_uid.h>
+#include <cctype>
+#include <cstddef>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <system_error>
+#include <unordered_map>
+#include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {
@@ -913,6 +937,8 @@ void detail::install_runtime_state_task_api(
             std::size_t matched = 0;
             std::set<std::string> keys;
             for( const auto &entry : values ) {
+                // API cursors are bytewise keys, independent of UI language.
+                // NOLINTNEXTLINE(cata-use-localized-sorting)
                 if( after_key && entry.first <= *after_key ) {
                     continue;
                 }
@@ -1385,6 +1411,7 @@ void detail::install_runtime_state_task_api(
         }
         // Lua allocation may run a finalizer that cancels or schedules tasks.
         // Detach the native record before creating any Lua return values.
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
         const persistent_task snapshot = *found;
         return sol::make_object(
                    lua_state, task_snapshot( *owner, snapshot ) );
@@ -1748,8 +1775,8 @@ void runtime_process_tasks()
                 return retired_task_ids.count( task.id ) != 0;
             } ), owner->tasks.end() );
             ::add_msg( m_warning, n_gettext(
-                           "Lua Mod '%s' discarded %zu persistent task. See debug.log for details.",
-                           "Lua Mod '%s' discarded %zu persistent tasks. See debug.log for details.",
+                           "Lua Mod '%s' discarded %zu persistent task.  See debug.log for details.",
+                           "Lua Mod '%s' discarded %zu persistent tasks.  See debug.log for details.",
                            retired_task_ids.size() ), owner->mod_id, retired_task_ids.size() );
         }
         // Snapshot this pass, but keep unstarted tasks cancellable and visible
