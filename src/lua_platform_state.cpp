@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -147,6 +148,9 @@ void write_persistent_state( std::ostream &output, const script_persistent_state
     std::ostream buffer( &storage );
     buffer.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut json( buffer, true );
+    // JsonOut defaults to fixed precision; persistent doubles must round-trip.
+    buffer.unsetf( std::ios_base::floatfield );
+    buffer.precision( std::numeric_limits<double>::max_digits10 );
     json.start_object();
     json.member( "version", persistent_state_format_version );
     json.member( "values" );

@@ -731,6 +731,9 @@ void write_scope( const cata_path &path, const std::string &scope )
     std::ostream buffer( &storage );
     buffer.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut json( buffer, true );
+    // JsonOut defaults to fixed precision; persistent doubles must round-trip.
+    buffer.unsetf( std::ios_base::floatfield );
+    buffer.precision( std::numeric_limits<double>::max_digits10 );
     json.start_object();
     json.member( "version", 1 );
     json.member( "scope", scope );

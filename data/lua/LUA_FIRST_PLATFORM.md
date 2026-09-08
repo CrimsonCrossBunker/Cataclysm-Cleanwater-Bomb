@@ -371,6 +371,18 @@ file formats are unchanged; native regression source has not been compiled or ru
 状态 codec 仍为 1 MiB，运行时作用域文件仍为 16 MiB；序列化失败前不会开始写入目标。
 键、值额度与文件格式不变；原生回归测试源码尚未编译或运行。
 
+The Lua save-output draft also overrides the generic JSON writer's fixed decimal
+precision on these private staging streams. Finite state and payload doubles use
+round-trip precision, preserving small fractions and large magnitudes without
+changing other game JSON writers. Old files remain readable, but precision lost
+in earlier saves cannot be recovered. Native float round-trip regression source
+has not been compiled or run.
+
+Lua 存档输出草稿同时覆盖通用 JSON 写入器的固定小数精度，只作用于其私有临时流。
+有限状态数值与任务 payload 的 double 使用往返精度，保留小数和大数量级，不改变其他
+游戏 JSON 写入器。旧文件仍可读取，但此前保存时已经损失的精度无法恢复；新增原生
+浮点往返回归源码尚未编译或执行。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
