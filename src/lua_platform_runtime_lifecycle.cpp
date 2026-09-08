@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -724,8 +725,15 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
 
 void write_scope( const cata_path &path, const std::string &scope )
 {
-    std::ostringstream buffer;
+    detail::bounded_state_output_buffer storage( static_cast<std::size_t>
+            ( maximum_platform_state_file_bytes ),
+            "Platform state file exceeds 16 MiB" );
+    std::ostream buffer( &storage );
+    buffer.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut json( buffer, true );
+    // JsonOut defaults to fixed precision; persistent doubles must round-trip.
+    buffer.unsetf( std::ios_base::floatfield );
+    buffer.precision( std::numeric_limits<double>::max_digits10 );
     json.start_object();
     json.member( "version", 1 );
     json.member( "scope", scope );
@@ -755,10 +763,7 @@ void write_scope( const cata_path &path, const std::string &scope )
     }
     json.end_object();
     json.end_object();
-    const std::string serialized = buffer.str();
-    if( serialized.size() > maximum_platform_state_file_bytes ) {
-        throw std::runtime_error( "Platform state file exceeds 16 MiB" );
-    }
+    const std::string &serialized = storage.str();
     write_to_file( path, [&serialized]( std::ostream & output ) {
         output << serialized;
     } );

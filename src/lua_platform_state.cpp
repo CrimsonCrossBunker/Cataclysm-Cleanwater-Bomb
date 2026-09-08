@@ -2,7 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
+#include <limits>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -78,6 +79,38 @@ void validate_state( const script_persistent_state &state )
 
 } // namespace
 
+detail::bounded_state_output_buffer::bounded_state_output_buffer(
+    const std::size_t maximum_bytes, std::string limit_error ) :
+    maximum_bytes_( maximum_bytes ), limit_error_( std::move( limit_error ) )
+{}
+
+const std::string &detail::bounded_state_output_buffer::str() const noexcept
+{
+    return output_;
+}
+
+std::streamsize detail::bounded_state_output_buffer::xsputn( const char *data,
+        const std::streamsize count )
+{
+    if( count < 0 || static_cast<std::uintmax_t>( count ) > maximum_bytes_ - output_.size() ) {
+        throw std::invalid_argument( limit_error_ );
+    }
+    if( count != 0 ) {
+        output_.append( data, static_cast<std::size_t>( count ) );
+    }
+    return count;
+}
+
+std::streambuf::int_type detail::bounded_state_output_buffer::overflow( const int_type ch )
+{
+    if( traits_type::eq_int_type( ch, traits_type::eof() ) ) {
+        return traits_type::not_eof( ch );
+    }
+    const char value = traits_type::to_char_type( ch );
+    xsputn( &value, 1 );
+    return ch;
+}
+
 void assign_persistent_value( script_persistent_state &state, const std::string &key,
                               const script_persistent_value &value )
 {
@@ -110,8 +143,14 @@ void write_persistent_state( std::ostream &output, const script_persistent_state
     }
     std::sort( keys.begin(), keys.end() );
 
-    std::ostringstream buffer;
+    detail::bounded_state_output_buffer storage( persistent_state_max_file_bytes,
+            "Lua persistent state file exceeds 1 MiB after JSON encoding" );
+    std::ostream buffer( &storage );
+    buffer.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut json( buffer, true );
+    // JsonOut defaults to fixed precision; persistent doubles must round-trip.
+    buffer.unsetf( std::ios_base::floatfield );
+    buffer.precision( std::numeric_limits<double>::max_digits10 );
     json.start_object();
     json.member( "version", persistent_state_format_version );
     json.member( "values" );
@@ -138,10 +177,7 @@ void write_persistent_state( std::ostream &output, const script_persistent_state
     json.end_object();
     json.end_object();
 
-    const std::string serialized = buffer.str();
-    if( serialized.size() > persistent_state_max_file_bytes ) {
-        throw std::invalid_argument( "Lua persistent state file exceeds 1 MiB after JSON encoding" );
-    }
+    const std::string &serialized = storage.str();
     output << serialized;
     if( !output ) {
         throw std::runtime_error( "Unable to write Lua persistent state" );

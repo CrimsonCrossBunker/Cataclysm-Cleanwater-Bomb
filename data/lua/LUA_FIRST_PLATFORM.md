@@ -361,6 +361,28 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
+A draft serializer change enforces the existing encoded-size limits while
+staging JSON, rather than first constructing an arbitrarily larger buffer. The
+state codec retains its 1 MiB limit and runtime scope files retain 16 MiB. Failed
+serialization does not begin writing to the destination. Value/key limits and
+file formats are unchanged; native regression source has not been compiled or run.
+
+序列化草稿在暂存 JSON 时就执行现有编码大小限制，避免先完整生成过大的缓冲区再拒绝。
+状态 codec 仍为 1 MiB，运行时作用域文件仍为 16 MiB；序列化失败前不会开始写入目标。
+键、值额度与文件格式不变；原生回归测试源码尚未编译或运行。
+
+The Lua save-output draft also overrides the generic JSON writer's fixed decimal
+precision on these private staging streams. Finite state and payload doubles use
+round-trip precision, preserving small fractions and large magnitudes without
+changing other game JSON writers. Old files remain readable, but precision lost
+in earlier saves cannot be recovered. Native float round-trip regression source
+has not been compiled or run.
+
+Lua 存档输出草稿同时覆盖通用 JSON 写入器的固定小数精度，只作用于其私有临时流。
+有限状态数值与任务 payload 的 double 使用往返精度，保留小数和大数量级，不改变其他
+游戏 JSON 写入器。旧文件仍可读取，但此前保存时已经损失的精度无法恢复；新增原生
+浮点往返回归源码尚未编译或执行。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
