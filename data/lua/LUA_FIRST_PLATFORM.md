@@ -252,6 +252,10 @@ have not received interactive acceptance.
 这只是显示限制，不是脚本配额。
 同一状态递归执行以及重载过程中的执行会被拒绝。源码和回归测试源码尚未编译或交互验收。
 
+Item fingerprints include patch-field presence: omitting a field inherits its
+source value, while explicitly supplying a default value overwrites it.
+物品指纹包含补丁字段是否显式提供：省略字段继承来源值，显式默认值则覆盖来源值。
+
 ## Native content model / 原生内容模型
 
 `ccb.content` is a pure-Lua native typed builder and registrar surface, not a
