@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -88,34 +87,30 @@ bool path_is_within( const fs::path &path, const fs::path &directory )
     return true;
 }
 
-bool is_safe_module_name( const std::string_view name )
-{
-    if( name.empty() || name.size() > 256 || name.front() == '.' ||
-        name.back() == '.' || name.find( ".." ) != std::string_view::npos ) {
-        return false;
-    }
-    return std::all_of( name.begin(), name.end(), []( const unsigned char value ) {
-        return std::isalnum( value ) != 0 || value == '_' || value == '-' || value == '.';
-    } );
-}
-
 std::optional<fs::path> resolve_local_module( const fs::path &root,
         const std::string &module_name )
 {
-    if( !is_safe_module_name( module_name ) ) {
+    // This is a preferred search path, not a module-name permission filter.
+    // Keep ordinary Lua names, including UTF-8 and repeated dot separators.
+    if( module_name.empty() || module_name.find( '\0' ) != std::string::npos ) {
         return std::nullopt;
     }
     std::string relative = module_name;
     std::replace( relative.begin(), relative.end(), '.',
                   static_cast<char>( fs::path::preferred_separator ) );
+    const fs::path relative_path = fs::u8path( relative );
+    if( relative_path.is_absolute() || relative_path.has_root_name() ) {
+        // Absolute names belong to the caller's ordinary package searchers.
+        return std::nullopt;
+    }
     const std::array<fs::path, 2> candidates = {
-        root / ( relative + ".lua" ),
-        root / relative / "init.lua"
+        root / fs::u8path( relative + ".lua" ),
+        root / relative_path / "init.lua"
     };
     for( const fs::path &candidate : candidates ) {
         std::error_code filesystem_error;
         const fs::path canonical_candidate = fs::canonical( candidate, filesystem_error );
-        if( !filesystem_error && path_is_within( canonical_candidate, root ) &&
+        if( !filesystem_error &&
             fs::is_regular_file( canonical_candidate, filesystem_error ) && !filesystem_error ) {
             return canonical_candidate;
         }
@@ -325,18 +320,19 @@ struct file_execution_result {
     std::optional<sol::object> first;
 };
 
-file_execution_result execute_file( sol::state &lua, const fs::path &path )
+file_execution_result execute_file( sol::state &lua, const fs::path &path,
+                                    const std::string &context )
 {
-    sol::load_result loaded = lua.load_file( path.string() );
+    sol::load_result loaded = lua.load_file( path.generic_u8string() );
     if( !loaded.valid() ) {
         const sol::error error = loaded;
-        throw std::runtime_error( path.string() + ": " + error.what() );
+        throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
     }
     sol::protected_function script = loaded;
     sol::protected_function_result result = script();
     if( !result.valid() ) {
         const sol::error error = result;
-        throw std::runtime_error( path.string() + ": " + error.what() );
+        throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
     }
     file_execution_result snapshot;
     snapshot.return_count = result.return_count();
@@ -348,58 +344,11 @@ file_execution_result execute_file( sol::state &lua, const fs::path &path )
     return snapshot;
 }
 
-sol::object require_local_module( sol::state &lua, const fs::path &root,
-                                  const int platform_root_registry_index,
-                                  const std::string &module_name )
-{
-    if( !is_safe_module_name( module_name ) ) {
-        throw std::runtime_error( "invalid local module name '" + module_name + "'" );
-    }
-    if( module_name == "ccb" ) {
-        return sol::object( lua.lua_state(),
-                            sol::ref_index( platform_root_registry_index ) );
-    }
-    sol::table package = lua["package"];
-    sol::table loaded_modules = package["loaded"];
-    const sol::object cached = loaded_modules.raw_get<sol::object>( module_name );
-    if( cached.valid() && cached.get_type() != sol::type::nil &&
-        ( !cached.is<bool>() || cached.as<bool>() ) ) {
-        return cached;
-    }
-    const std::optional<fs::path> path = resolve_local_module( root, module_name );
-    if( !path ) {
-        throw std::runtime_error( "module '" + module_name +
-                                  "' was not found inside the Mod root" );
-    }
-
-    // Match Lua require's recursive-load behavior while keeping resolution
-    // independent from author-mutated package.path/searchers.
-    loaded_modules[module_name] = true;
-    try {
-        const file_execution_result execution = execute_file( lua, *path );
-        sol::object exported = loaded_modules.raw_get<sol::object>( module_name );
-        if( execution.first && execution.first->get_type() != sol::type::nil ) {
-            exported = *execution.first;
-        } else if( !exported.valid() || exported.get_type() == sol::type::nil ) {
-            exported = sol::make_object( lua, true );
-        }
-        loaded_modules[module_name] = exported;
-        return exported;
-    } catch( ... ) {
-        loaded_modules[module_name] = sol::make_object( lua, sol::lua_nil );
-        throw;
-    }
-}
-
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr )
 {
-    // Platform Mods use one restricted in-process Lua contract.  This is a
-    // capability boundary for the Platform API, not a process-level sandbox
-    // for untrusted code.
-    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string,
-                        sol::lib::table, sol::lib::utf8, sol::lib::coroutine,
-                        sol::lib::package );
+    // Mods are trusted executable code. State ownership is not a sandbox.
+    lua.open_libraries();
 
     std::error_code filesystem_error;
     const fs::path root = fs::canonical( requested_root, filesystem_error );
@@ -416,53 +365,82 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     }
 
     sol::table package = lua["package"];
+    // Let Lua's native searchers resolve a library shipped beside main.lua,
+    // preserving their entry-symbol rules and all original external paths.
+    // cpath has no escaping for its separators/placeholders. Such roots can
+    // still load native libraries through an explicit package.loadlib path.
+    if( root.generic_u8string().find_first_of( ";?" ) == std::string::npos ) {
+#if defined(_WIN32)
+        const fs::path native_pattern = root / "?.dll";
+#else
+        const fs::path native_pattern = root / "?.so";
+#endif
+        package["cpath"] = native_pattern.generic_u8string() + ";" +
+                           package.get<std::string>( "cpath" );
+    }
     sol::table loaded = package["loaded"];
     loaded["ccb"] = ccb;
 
-    // Keep one raw registry reference in the state so require("ccb") remains
-    // anchored to this Platform root even if Lua code changes package.loaded.
-    // The integer is owned by the Lua registry and is reclaimed with the state;
-    // no sol::reference is captured by the long-lived C++ closure.
-    ccb.push( lua.lua_state() );
-    const int platform_root_registry_index =
-        luaL_ref( lua.lua_state(), LUA_REGISTRYINDEX );
-
-    // The Platform resolver below is the only supported module loader.  Keep
-    // package.loaded for its cache, but remove every package field that could
-    // expose an alternate filesystem or native-code loading path.
-    const std::array<const char *, 7> package_fields = {
-        "config", "cpath", "loadlib", "path", "preload", "searchers", "searchpath"
-    };
-    for( const char *field : package_fields ) {
-        package[field] = sol::lua_nil;
+    // Keep Lua's normal loaders, cache and loader-data return semantics. Insert
+    // the Mod-local searcher first, without restricting the remaining searchers.
+    sol::table searchers = package["searchers"];
+    for( std::size_t index = searchers.size(); index > 0; --index ) {
+        searchers[index + 1] = searchers.get<sol::object>( index );
     }
-
-    // These libraries are deliberately not part of the Platform whitelist.
-    // Assign nil explicitly so this remains true if the selected Lua build
-    // initializes any of them as part of its base setup.
-    const std::array<const char *, 3> forbidden_libraries = { "io", "os", "debug" };
-    for( const char *library : forbidden_libraries ) {
-        lua[library] = sol::lua_nil;
-    }
-    const std::array<const char *, 5> forbidden_globals = {
-        "dofile", "loadfile", "load", "loadstring", "collectgarbage"
-    };
-    for( const char *global : forbidden_globals ) {
-        lua[global] = sol::lua_nil;
-    }
-
-    lua.set_function( "require", [&lua, root, platform_root_registry_index](
-    const std::string & module_name ) {
-        return require_local_module( lua, root, platform_root_registry_index, module_name );
+    searchers.set_function( 1, [&lua, root]( const std::string & module_name ) {
+        sol::variadic_results result;
+        const std::optional<fs::path> path = resolve_local_module( root, module_name );
+        if( !path ) {
+            result.push_back( sol::make_object( lua, "\n\tno Mod-local module '" + module_name + "'" ) );
+            return result;
+        }
+        sol::load_result loaded_file = lua.load_file( path->generic_u8string() );
+        if( !loaded_file.valid() ) {
+            const sol::error error = loaded_file;
+            throw std::runtime_error( path->generic_u8string() + ": " + error.what() );
+        }
+        result.push_back( loaded_file.get<sol::function>() );
+        result.push_back( sol::make_object( lua, path->generic_u8string() ) );
+        return result;
     } );
+
+    // Lua-owned upvalues keep the original require and Platform table alive
+    // without retaining a C++ sol::reference inside a state-owned closure.
+    sol::load_result wrapper = lua.load( R"lua(
+return function(original_require, platform)
+    return function(name)
+        if name == "ccb" then
+            return platform
+        end
+        return original_require(name)
+    end
+end
+)lua" );
+    if( !wrapper.valid() ) {
+        const sol::error error = wrapper;
+        throw std::runtime_error( error.what() );
+    }
+    sol::protected_function factory = wrapper;
+    sol::protected_function_result factory_result = factory();
+    if( !factory_result.valid() ) {
+        const sol::error error = factory_result;
+        throw std::runtime_error( error.what() );
+    }
+    sol::protected_function bind = factory_result.get<sol::protected_function>();
+    sol::protected_function_result bound = bind( lua["require"], ccb );
+    if( !bound.valid() ) {
+        const sol::error error = bound;
+        throw std::runtime_error( error.what() );
+    }
+    lua["require"] = bound.get<sol::function>();
 }
 
 runtime_state load_source( const mod_source &source )
 {
     const mod_source resolved = resolve_source( source );
     DebugLog( D_WARNING, D_MAIN )
-            << "Executing Lua-first Platform Mod entry in the restricted in-process environment "
-            << "(not a process-level sandbox): "
+            << "Executing Lua-first Platform Mod entry as trusted executable code "
+            << "(with access to the player system): "
             << resolved.entry.generic_u8string();
     runtime_state result;
     result.id = resolved.id;
@@ -472,7 +450,7 @@ runtime_state load_source( const mod_source &source )
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
     initialize_state( *result.lua, resolved.root, result.platform );
-    execute_file( *result.lua, resolved.entry );
+    execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
 
@@ -494,21 +472,22 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
             throw std::runtime_error( "Lua-first mod.lua escapes its Mod root or is not a regular file" );
         }
         DebugLog( D_WARNING, D_MAIN )
-                << "Executing Lua-first Platform Mod metadata in the restricted in-process environment "
-                << "(not a process-level sandbox): "
+                << "Executing Lua-first Platform Mod metadata as trusted executable code "
+                << "(with access to the player system): "
                 << path.generic_u8string();
         sol::state lua;
         initialize_state( lua, canonical_root );
-        const file_execution_result execution = execute_file( lua, path );
+        const file_execution_result execution = execute_file( lua, path, "Lua-first Mod metadata" );
         if( execution.return_count != 1 ) {
-            error = path.generic_u8string() +
-                    ": expected exactly one ccb.ModDefinition return value";
+            error = "Lua-first Mod metadata [" + path.generic_u8string() +
+                    "]: expected exactly one ccb.ModDefinition return value; "
+                    "use return (require(...)) when forwarding a metadata module";
             return false;
         }
         const sol::object &value = *execution.first;
         if( !value.is<mod_definition>() ) {
-            error = path.generic_u8string() +
-                    ": expected a native ccb.ModDefinition return value";
+            error = "Lua-first Mod metadata [" + path.generic_u8string() +
+                    "]: expected a native ccb.ModDefinition return value";
             return false;
         }
         result = value.as<mod_definition>();

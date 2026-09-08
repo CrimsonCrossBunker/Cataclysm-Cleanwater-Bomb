@@ -14,8 +14,9 @@ tracked in `ai/lua-first-roadmap.yml`.
 - The accepted trust policy in `LUA_FIRST_PLATFORM.md` permits full standard
   libraries and external/native modules at the player's risk. Do not reintroduce
   sandbox tiers or mandatory global runtime quotas; preserve supported `ccb`
-  correctness and lifetime checks. The current loader restrictions still need
-  implementation changes, so do not describe the accepted policy as shipped.
+  correctness and lifetime checks. Trusted loading and discovery notices are
+  implemented in source but still require native and startup acceptance; do not
+  describe the accepted policy as shipped merely because source exists.
 - Never hand-edit generated reference inventories; run their named generator.
 - Do not add a second Lua runtime, `game.*` surface, capability sandbox,
   authored manifest, JSON loader, EOC runner, or EOC-key-shaped API. Useful

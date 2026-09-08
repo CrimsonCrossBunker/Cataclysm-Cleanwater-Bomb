@@ -93,11 +93,17 @@ bool runtime_callback_is_active( const std::weak_ptr<runtime> &weak )
 }
 
 void report_callback_error( const runtime &owner, std::string_view handler,
-                            const sol::protected_function_result &result )
+                            const sol::protected_function_result &result,
+                            const std::string_view context )
 {
     const sol::error error = result;
-    const std::string message = "Lua-first handler '" + owner.mod_id + ":" +
-                                std::string( handler ) + "' failed: " + error.what();
+    std::string message = "Lua-first handler '" + owner.mod_id + ":" +
+                          std::string( handler ) + "'";
+    if( !context.empty() ) {
+        message += " [" + std::string( context ) + "]";
+    }
+    message += " failed: ";
+    message += error.what();
     DebugLog( D_ERROR, D_MAIN ) << message;
     ::add_msg( m_bad, message );
 }
@@ -305,7 +311,7 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     callback_scope scope( owner );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
-        report_callback_error( owner, handler_id, result );
+        report_callback_error( owner, handler_id, result, "event " + name );
     }
 }
 
@@ -1616,7 +1622,8 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
             callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
-                report_callback_error( *owner, handler_id, result );
+                report_callback_error( *owner, handler_id, result,
+                                       "hook " + std::string( name ) );
                 continue;
             }
 

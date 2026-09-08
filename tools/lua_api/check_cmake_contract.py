@@ -57,6 +57,20 @@ def validate_cmake_contract(
         errors.append(
             "src/lua/CMakeLists.txt: bundled Lua sources must use LANGUAGE C"
         )
+    native_loading_requirements = (
+        "target_compile_definitions(liblua PRIVATE LUA_BUILD_AS_DLL)",
+        "target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)",
+        "set_target_properties(liblua PROPERTIES C_VISIBILITY_PRESET default)",
+        "target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})",
+        'target_link_options(liblua INTERFACE "LINKER:--export-dynamic")',
+        'target_link_options(liblua INTERFACE "LINKER:-export_dynamic")',
+    )
+    for requirement in native_loading_requirements:
+        if requirement not in normalized_lua:
+            errors.append(
+                "src/lua/CMakeLists.txt: native Lua loading requires " +
+                requirement
+            )
     if "#define SOL_USE_CXX_LUA" in sol_config_source:
         errors.append(
             "src/sol/config.hpp: sol must use the bundled Lua C ABI"

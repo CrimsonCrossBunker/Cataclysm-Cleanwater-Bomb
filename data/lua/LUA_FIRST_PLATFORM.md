@@ -152,17 +152,34 @@ restricted and unrestricted runtime tiers.
 API 调用弹权限窗口。此告知是待落实的集成要求，不代表现有启动器已实现。普通 Lua 错误应可
 定位与清理，但不承诺无限循环/原生调用可安全中断，也不承诺崩溃隔离或外部副作用回滚。
 
-Implementation checkpoint (2026-09-06): `initialize_state` still uses a
-standard-library whitelist, removes `io`/`os`/`debug` and native package loaders,
-and restricts module resolution to the Mod root. Full-library and external/native
-loading support is **accepted, pending implementation and runtime acceptance**.
-The roadmap's `platform-hardening` entry now tracks this trust-policy transition
-and reliability/diagnostics work; old sandbox and mandatory-budget plans are
-superseded. This documentation update changes no running permissions.
+Implementation checkpoint (2026-09-08): the loader source now opens the bundled
+standard libraries, retains normal package searchers and native loading, and
+inserts a Mod-local searcher before the ordinary searchers. Native search paths
+also start with the Mod root's `?.so` (`?.dll` on Windows), preserving the original
+cpath. Roots containing cpath metacharacters `;` or `?` use explicit
+`package.loadlib` paths instead of an ambiguous automatic prefix. The reserved `ccb`
+entry remains bound to the state-owned Platform table. These changes and their
+regression test source are **source-complete, not compiled or runtime-accepted**.
+Native loading still depends on the host Lua build and module ABI. The Mod manager now presents a session execution-risk notice before discovering
+Lua metadata (stderr for headless hosts); its startup UI ordering still requires
+interactive acceptance. Direct loader embedders must provide their own notice.
 
-实现断点：当前加载器仍使用白名单并移除系统库与原生加载入口，因此完整标准库与外部/原生模块
-加载是**已采纳、待实现和运行验证**。roadmap 的 `platform-hardening` 改为跟踪此策略切换及
-可靠性/诊断；旧沙盒和默认强制配额计划作废。本次文档修改不改变运行中的权限。
+实现断点（2026-09-08）：加载器源码已开放 bundled 标准库，保留普通 package 查找器与原生
+加载入口，并优先查找 Mod 本地模块。原生库搜索路径增加 Mod 根目录的 `?.so`（Windows
+为 `?.dll`），同时保留原有路径；根目录含 `;` 或 `?` 时可使用明确的 `package.loadlib`
+路径，避免 cpath 语法歧义。`require("ccb")` 仍固定返回所属 state 的 Platform 根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
+构建与 ABI。Mod 管理器已在元数据发现前加入每会话风险告知（无界面宿主输出到 stderr），
+启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。不得将源码完成描述为已发布或已通过验收。
+
+Ordinary Lua 5.4 `require` returns the module and loader data on its first load.
+If `mod.lua` forwards a module that returns a `ccb.ModDefinition`, use
+`return (require("metadata"))` or assign its first return to a local variable;
+metadata still requires exactly one typed return value. This does not change
+`require("ccb")`, which always returns the reserved Platform root alone.
+
+普通 Lua 5.4 的 `require` 首次加载会返回模块及加载来源两个值。`mod.lua` 若转发返回
+`ccb.ModDefinition` 的模块，应写 `return (require("metadata"))`，或先用局部变量接收第一个
+结果再返回；元数据仍要求恰好一个类型化返回值。`require("ccb")` 只返回固定的 Platform 根表。
 
 ## Loading and lifecycle / 加载与生命周期
 

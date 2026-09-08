@@ -1,5 +1,6 @@
 #include <cata_path.h>
 #include <type_id.h>
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -15,6 +16,7 @@
 #include "worldfactory.h"
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
+static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
 static const mod_id MOD_INFORMATION_test_third_party_mod( "test_third_party_mod" );
 static const mod_id MOD_INFORMATION_test_third_party_mod_dda( "test_third_party_mod#dda" );
 static const mod_id MOD_INFORMATION_test_user_mod( "test_user_mod" );
@@ -139,5 +141,24 @@ TEST_CASE( "lua_first_platform_playable_mvp_is_discovered_and_activated",
 
     cata::lua_platform::shutdown();
     CHECK( cata::lua_platform::loaded_mod_ids().empty() );
+}
+#endif
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+TEST_CASE( "lua_mod_discovery_notifies_once_across_catalog_refreshes",
+           "[mod_manager][lua][platform][loader]" )
+{
+    // The bundled Platform example ensures that the real discovery path has
+    // Lua candidates. Supplying a notice callback keeps this test noninteractive.
+    int notices = 0;
+    mod_manager manager( [&notices]() {
+        ++notices;
+    } );
+    const std::vector<mod_id> discovered = manager.all_mods();
+    REQUIRE( std::find( discovered.begin(), discovered.end(),
+                        MOD_INFORMATION_Lua_First_Example ) != discovered.end() );
+    CHECK( notices == 1 );
+    manager.refresh_mod_list();
+    CHECK( notices == 1 );
 }
 #endif

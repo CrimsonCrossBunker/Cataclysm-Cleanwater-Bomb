@@ -643,14 +643,14 @@ capabilities:
     next_actions: []
   - id: platform-hardening
     phase: hardening
-    status: planned
-    target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Current loader whitelist and package restrictions do not yet implement this policy."
+    status: in_progress
+    target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Loader source now opens standard libraries and preserves normal external/native package searchers; native build/runtime acceptance and startup notice UI acceptance remain pending."
     legacy_dependency: none
     evidence: [src/lua_platform_runtime.cpp, src/lua_platform_loader.cpp, tests/lua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
     verification: not_run
     next_actions:
-      - Replace library/package restrictions while preserving the reserved ccb entrypoint and local module resolution; verify full standard libraries and ordinary external/native loading on supported platforms.
-      - Document executable metadata discovery and provide execution-risk notice before downloaded Mod code first runs; do not claim existing catalog or launcher integration supplies this notice.
+      - Loader policy implementation and regression source are present but deliberately uncompiled. Run the loader tests and real external/native-module acceptance on supported platforms before claiming this slice verified.
+      - Mod-manager source now notifies once per manager before Lua metadata discovery; validate normal and headless startup, refresh behavior and direct-loader host documentation. The notice is not a sandbox or per-API permission gate.
       - Validate handle safety, reload and error cleanup; add profiling or optional diagnostic limits only when useful. Supersede sandbox/process-isolation and mandatory-budget plans rather than introducing another runtime or permission manifest.
   - id: shared-ccb-std
     phase: standard-library

@@ -1,5 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "messages.h"
+#include <algorithm>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
 
 TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_dispatch",
            "[lua][platform][runtime][tasks][handles]" )
@@ -574,6 +579,46 @@ TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_ide
     REQUIRE( static_cast<bool>( resolved ) );
     CHECK( resolved.value == actor_vehicle );
     CHECK( resolved.value->uid().get_value() == vehicle_uid );
+}
+
+
+TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance",
+           "[lua][platform][runtime][tasks]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    Messages::clear_messages();
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> runtime =
+        cata::lua_platform::make_runtime( "task-diagnostic-owner", 905, lua );
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+        Messages::clear_messages();
+    } );
+    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
+    cata::lua_platform::set_active_runtimes( { runtime } );
+    lua.set_function( "failing_task", []() {
+        throw std::runtime_error( "task diagnostic sentinel" );
+    } );
+    const sol::protected_function_result registered =
+        ccb["runtime"]["handler"]( "failing_task", lua["failing_task"] );
+    REQUIRE( registered.valid() );
+    cata::lua_platform::runtime_world_ready( true );
+    const sol::protected_function_result scheduled = ccb["tasks"]["after"](
+            0, "failing_task", lua.create_table(), 1, "world" );
+    REQUIRE( scheduled.valid() );
+    const std::int64_t task_id = scheduled.get<std::int64_t>();
+    cata::lua_platform::runtime_process_tasks();
+    const auto messages = Messages::recent_messages( 10 );
+    const auto error = std::find_if( messages.begin(), messages.end(),
+    []( const auto & entry ) {
+        return entry.second.find( "task diagnostic sentinel" ) != std::string::npos;
+    } );
+    REQUIRE( error != messages.end() );
+    CHECK( error->second.find( "task-diagnostic-owner:failing_task" ) != std::string::npos );
+    CHECK( error->second.find( "task " + std::to_string( task_id ) ) != std::string::npos );
+    CHECK( error->second.find( "scope=world" ) != std::string::npos );
+    CHECK( error->second.find( "due_turn=" ) != std::string::npos );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

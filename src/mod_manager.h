@@ -3,6 +3,7 @@
 #define CATA_SRC_MOD_MANAGER_H
 
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -130,7 +131,11 @@ class mod_manager
     public:
         using t_mod_list = std::vector<mod_id>;
 
-        mod_manager();
+        /** Notify once before discovery executes any Lua metadata.
+         * The default displays an execution-risk notice. Embedders may supply
+         * their own user-facing notification before creating this manager.
+         */
+        explicit mod_manager( std::function<void()> lua_execution_notice = {} );
         ~mod_manager();
         /**
          * Reload the map of available mods (@ref mod_map).
@@ -214,6 +219,9 @@ class mod_manager
         void load_modfile( const JsonObject &jo, const cata_path &path );
 
         bool set_default_mods( const mod_id &ident );
+
+        std::function<void()> lua_execution_notice;
+        bool lua_execution_notice_shown = false;
 
         pimpl<dependency_tree> tree;
 

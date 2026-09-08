@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <functional>
 #include <iterator>
+#include <iostream>
 #include <memory>
 #include <ostream>
 #include <queue>
@@ -251,7 +252,32 @@ void mod_migrations::check()
     }
 }
 
-mod_manager::mod_manager()
+static void show_lua_execution_notice()
+{
+    const std::string message = _(
+                                    "Lua Mods are executable programs with access to your files and system. "
+                                    "CCB does not sandbox them or protect your system from their actions.\n\n"
+                                    "Reading the Mod list can already execute mod.lua metadata, before a Mod "
+                                    "is selected for a world. Only install Mods you choose to trust. "
+                                    "Native libraries can also crash the game.\n\n"
+                                    "Continuing will scan the installed Lua Mods. This notice appears once "
+                                    "per game session." );
+#if !defined(HEADLESS)
+    if( !test_mode ) {
+        // The manager is constructed before load_static_data initializes
+        // keybindings. Accept a raw key instead of requiring CONFIRM/QUIT.
+        popup( message + "\n\n" + _( "Press any key to continue." ), PF_GET_KEY );
+        return;
+    }
+#endif
+    // --check-mods sets test_mode without initializing the UI. It must still
+    // receive the execution notice, just like a headless launcher.
+    std::cerr << message << std::endl;
+}
+
+mod_manager::mod_manager( std::function<void()> execution_notice ) :
+    lua_execution_notice( execution_notice ? std::move( execution_notice ) :
+                          show_lua_execution_notice )
 {
     refresh_mod_list();
     set_usable_mods();
@@ -408,6 +434,14 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         // only its optional Platform entry.
         record_rejection( "Lua-first Platform is not enabled in this build" );
         return;
+    }
+
+    // Discovery itself executes metadata, so a world-load notice is too late.
+    // Keep this before read_mod_definition and before accepting main.lua-only
+    // candidates. Refreshing the catalog does not repeat the session notice.
+    if( !lua_execution_notice_shown ) {
+        lua_execution_notice();
+        lua_execution_notice_shown = true;
     }
 
     if( has_metadata ) {

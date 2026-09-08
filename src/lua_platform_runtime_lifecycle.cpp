@@ -42,6 +42,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "path_info.h"
+#include "translations.h"
 #include "vehicle.h"
 #include "worldfactory.h"
 
@@ -315,6 +316,7 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
         return;
     }
+    std::string context = "scope=" + scope;
     try {
         std::error_code size_error;
         const std::uintmax_t file_size = std::filesystem::file_size(
@@ -335,6 +337,8 @@ void load_scope( const cata_path &path, const std::string &scope,
         }
         const JsonObject mods = root.get_object( "mods" );
         for( const JsonMember member : mods ) {
+            const std::string record_context = "scope=" + scope + ", Mod='" + member.name() + "'";
+            context = record_context;
             const std::shared_ptr<runtime> owner = detail::find_active_runtime( member.name() );
             const JsonObject stored = member.get_object();
             persistent_scope_record record;
@@ -353,9 +357,12 @@ void load_scope( const cata_path &path, const std::string &scope,
                 if( stored_tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
                 }
+                std::size_t task_index = 0;
                 for( const JsonObject task_json : stored_tasks ) {
+                    context = record_context + ", task[" + std::to_string( task_index++ ) + "]";
                     persistent_task task;
                     const std::int64_t stored_id = task_json.get_int64( "id" );
+                    context += ", id=" + std::to_string( stored_id );
                     if( stored_id <= 0 ) {
                         throw std::runtime_error( "Platform task id must be positive" );
                     }
@@ -594,6 +601,7 @@ void load_scope( const cata_path &path, const std::string &scope,
                     task_json.allow_omitted_members();
                 }
             }
+            context = record_context;
             if( owner ) {
                 if( owner->tasks.size() + record.tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
@@ -624,7 +632,8 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
     } catch( const std::exception &exception ) {
         clear_scope( scope );
-        error = path.get_unrelative_path().string() + ": " + exception.what();
+        error = path.get_unrelative_path().generic_u8string() + " [" + context + "]: " +
+                exception.what();
     }
 }
 
@@ -1353,7 +1362,6 @@ void detail::install_runtime_state_task_api(
         [task_id]( const persistent_task & task ) {
             return task.id == task_id;
         } ), owner->tasks.end() );
-        owner->reported_task_migration_failures.erase( task_id );
         return owner->tasks.size() != old_size;
     } );
     tasks.set_function( "get", [weak, task_snapshot](
@@ -1722,7 +1730,6 @@ void runtime_process_tasks()
                 continue;
             }
             if( handler->second.payload_version == task.payload_version ) {
-                owner->reported_task_migration_failures.erase( task.id );
                 continue;
             }
             std::string migration_error;
@@ -1732,8 +1739,6 @@ void runtime_process_tasks()
                                               << owner->mod_id << ':' << task.handler_id
                                               << "': " << migration_error;
                 retired_task_ids.insert( task.id );
-            } else {
-                owner->reported_task_migration_failures.erase( task.id );
             }
         }
         if( !retired_task_ids.empty() ) {
@@ -1742,9 +1747,10 @@ void runtime_process_tasks()
             [&retired_task_ids]( const persistent_task & task ) {
                 return retired_task_ids.count( task.id ) != 0;
             } ), owner->tasks.end() );
-            for( const std::uint64_t task_id : retired_task_ids ) {
-                owner->reported_task_migration_failures.erase( task_id );
-            }
+            ::add_msg( m_warning, n_gettext(
+                           "Lua Mod '%s' discarded %zu persistent task. See debug.log for details.",
+                           "Lua Mod '%s' discarded %zu persistent tasks. See debug.log for details.",
+                           retired_task_ids.size() ), owner->mod_id, retired_task_ids.size() );
         }
         // Snapshot this pass, but keep unstarted tasks cancellable and visible
         // to queries until immediately before their own dispatch.
@@ -1755,9 +1761,6 @@ void runtime_process_tasks()
                 handler->second.payload_version == task.payload_version ) {
                 due.push_back( task );
             }
-        }
-        for( const persistent_task &task : due ) {
-            owner->reported_task_migration_failures.erase( task.id );
         }
         std::sort( due.begin(), due.end(), []( const persistent_task & lhs,
         const persistent_task & rhs ) {
@@ -2024,7 +2027,10 @@ void runtime_process_tasks()
             callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
-                report_callback_error( *owner, task.handler_id, result );
+                report_callback_error( *owner, task.handler_id, result,
+                                       "task " + std::to_string( task.id ) +
+                                       ", scope=" + task.owner +
+                                       ", due_turn=" + std::to_string( task.due_turn ) );
             } else if( next_due_turn && result.return_count() > 0 &&
                        result.get_type() == sol::type::boolean &&
                        !result.get<bool>() ) {
