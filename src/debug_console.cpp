@@ -1,7 +1,8 @@
 #include "debug_console.h"
 #include "lua_platform_loader.h"
 
-#include "flat_set.h"
+// Flag containers instantiate cata::transparent_less_than in this translation unit.
+#include "flat_set.h" // IWYU pragma: keep
 
 #include <algorithm>
 #include <array>
