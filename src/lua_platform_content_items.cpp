@@ -2710,7 +2710,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_singular_text( options.get<sol::object>( "name" ),
                                                definition->id, "skill name" );
         definition->description = read_singular_text( options.get<sol::object>( "description" ),
-            "", "skill description" );
+                                  "", "skill description" );
         definition->display_category = options.get_or( "display_category", std::string( "none" ) );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 1000000 );
         definition->teachable = options.get_or( "teachable", true );

@@ -844,7 +844,7 @@ bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
         metadata["to_version"] = transition->second.target_version;
         sol::protected_function callback = transition->second.callback;
         const sol::protected_function_result result = callback(
-                persistent_table( *owner.lua, candidate.payload ), metadata );
+                    persistent_table( *owner.lua, candidate.payload ), metadata );
         if( !result.valid() ) {
             const sol::error callback_error = result;
             error = callback_error.what();

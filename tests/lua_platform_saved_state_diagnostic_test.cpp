@@ -96,7 +96,7 @@ TEST_CASE( "lua_platform_reload_reports_retired_tasks_and_keeps_valid_tasks",
              "kept", "removed"
          } ) {
         const sol::protected_function_result scheduled = old_ccb["tasks"]["after"](
-                100, handler, old_lua.create_table(), 1, "world" );
+                    100, handler, old_lua.create_table(), 1, "world" );
         REQUIRE( scheduled.valid() );
     }
     platform::hot_swap_active_runtimes( { new_runtime } );

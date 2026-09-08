@@ -26,7 +26,7 @@ TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_
     std::optional<cata::lua_platform::game_handle> callback_actor;
     bool callback_called = false;
     lua.set_function( "task_callback", [&callback_payload, &callback_actor,
-                                         &callback_called]( const sol::table &payload ) {
+                       &callback_called]( const sol::table & payload ) {
         callback_called = true;
         callback_payload = payload["payload"].get<sol::table>();
         const sol::object actor = payload["actor"];
@@ -53,7 +53,7 @@ TEST_CASE( "lua_platform_persistent_task_actor_payload_uses_live_handle_only_at_
     sol::table persistent_payload = lua.create_table();
     persistent_payload["marker"] = 42;
     const sol::protected_function_result scheduled = ccb["tasks"]["after"](
-            0, "task_callback", persistent_payload, 1, "world", avatar_handle );
+                0, "task_callback", persistent_payload, 1, "world", avatar_handle );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
 
@@ -103,7 +103,7 @@ TEST_CASE( "lua_platform_persistent_task_item_actor_payload_uses_live_handle_onl
     std::optional<cata::lua_platform::game_handle> callback_actor;
     bool callback_called = false;
     lua.set_function( "task_callback", [&callback_payload, &callback_actor,
-                                         &callback_called]( const sol::table &payload ) {
+                       &callback_called]( const sol::table & payload ) {
         callback_called = true;
         callback_payload = payload["payload"].get<sol::table>();
         const sol::object actor = payload["actor"];
@@ -138,8 +138,8 @@ TEST_CASE( "lua_platform_persistent_task_item_actor_payload_uses_live_handle_onl
     const cata::lua_platform::game_handle avatar_item_handle =
         cata::lua_platform::game_handle::from_item(
             *avatar_item,
-            { "avatar_inventory", avatar_item_uid, 0, 0, 0, {} },
-            runtime_identity, world_generation );
+    { "avatar_inventory", avatar_item_uid, 0, 0, 0, {} },
+    runtime_identity, world_generation );
 
     sol::table persistent_payload = lua.create_table();
     persistent_payload["marker"] = 42;
@@ -156,7 +156,7 @@ TEST_CASE( "lua_platform_persistent_task_item_actor_payload_uses_live_handle_onl
     CHECK( empty_tasks.get<sol::table>()["total"].get<std::size_t>() == 0 );
 
     const sol::protected_function_result scheduled = ccb["tasks"]["after"](
-            0, "task_callback", persistent_payload, 1, "world", avatar_item_handle );
+                0, "task_callback", persistent_payload, 1, "world", avatar_item_handle );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
 
@@ -253,10 +253,11 @@ TEST_CASE( "lua_platform_persistent_task_monster_actor_reacquires_persistent_ide
     const tripoint_abs_ms absolute_position = actor_monster->pos_abs();
     const cata::lua_platform::game_handle monster_handle =
         cata::lua_platform::game_handle::from_creature(
-            *actor_monster,
-            { "monster", 0, absolute_position.x(), absolute_position.y(),
-              absolute_position.z(), {} },
-            runtime_identity, world_generation );
+    *actor_monster, {
+        "monster", 0, absolute_position.x(), absolute_position.y(),
+        absolute_position.z(), {}
+    },
+    runtime_identity, world_generation );
     CHECK( monster_handle.locator().stable_id == monster_uid );
 
     sol::table persistent_payload = lua.create_table();
@@ -319,7 +320,7 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
     sol::table callback_envelope;
     bool callback_called = false;
     lua.set_function( "participant_task_callback",
-    [&callback_envelope, &callback_called]( const sol::table &payload ) {
+    [&callback_envelope, &callback_called]( const sol::table & payload ) {
         callback_called = true;
         callback_envelope = payload;
     } );
@@ -355,10 +356,11 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
     const tripoint_abs_ms absolute_position = actor_monster->pos_abs();
     const cata::lua_platform::game_handle monster_handle =
         cata::lua_platform::game_handle::from_creature(
-            *actor_monster,
-            { "monster", 0, absolute_position.x(), absolute_position.y(),
-              absolute_position.z(), {} },
-            runtime_identity, world_generation );
+    *actor_monster, {
+        "monster", 0, absolute_position.x(), absolute_position.y(),
+        absolute_position.z(), {}
+    },
+    runtime_identity, world_generation );
 
     sol::table persistent_payload = lua.create_table();
     persistent_payload["marker"] = 905;
@@ -366,8 +368,8 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
     sol::table invalid_participants = lua.create_table();
     invalid_participants["bad-role"] = avatar_handle;
     const sol::protected_function_result rejected = ccb["tasks"]["after"](
-            0, "participant_task_callback", persistent_payload, 1, "world",
-            sol::nil, invalid_participants );
+                0, "participant_task_callback", persistent_payload, 1, "world",
+                sol::nil, invalid_participants );
     CHECK_FALSE( rejected.valid() );
     const sol::protected_function_result empty_tasks = ccb["tasks"]["list"]();
     REQUIRE( empty_tasks.valid() );
@@ -377,8 +379,8 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
     participants["alpha"] = avatar_handle;
     participants["beta"] = monster_handle;
     const sol::protected_function_result scheduled = ccb["tasks"]["after"](
-            0, "participant_task_callback", persistent_payload, 1, "world",
-            sol::nil, participants );
+                0, "participant_task_callback", persistent_payload, 1, "world",
+                sol::nil, participants );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
 
@@ -532,10 +534,11 @@ TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_ide
     const tripoint_abs_ms absolute_position = actor_vehicle->pos_abs();
     const cata::lua_platform::game_handle vehicle_handle =
         cata::lua_platform::game_handle::from_vehicle(
-            *actor_vehicle,
-            { "vehicle", 0, absolute_position.x(), absolute_position.y(),
-              absolute_position.z(), {} },
-            runtime_identity, world_generation );
+    *actor_vehicle, {
+        "vehicle", 0, absolute_position.x(), absolute_position.y(),
+        absolute_position.z(), {}
+    },
+    runtime_identity, world_generation );
     CHECK( vehicle_handle.locator().stable_id == vehicle_uid );
 
     sol::table persistent_payload = lua.create_table();
@@ -605,7 +608,7 @@ TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance"
     REQUIRE( registered.valid() );
     cata::lua_platform::runtime_world_ready( true );
     const sol::protected_function_result scheduled = ccb["tasks"]["after"](
-            0, "failing_task", lua.create_table(), 1, "world" );
+                0, "failing_task", lua.create_table(), 1, "world" );
     REQUIRE( scheduled.valid() );
     const std::int64_t task_id = scheduled.get<std::int64_t>();
     cata::lua_platform::runtime_process_tasks();

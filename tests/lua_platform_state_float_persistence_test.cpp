@@ -25,7 +25,7 @@ TEST_CASE( "lua_platform_state_codec_preserves_double_precision_and_signed_zero"
     std::ostringstream output;
     platform::write_persistent_state( output, source );
     const platform::script_persistent_state restored = platform::read_persistent_state(
-            json_loader::from_string( output.str() ) );
+                json_loader::from_string( output.str() ) );
     REQUIRE( restored.size() == values.size() );
     for( std::size_t index = 0; index < values.size(); ++index ) {
         INFO( index );
@@ -56,7 +56,7 @@ TEST_CASE( "lua_platform_runtime_scope_files_preserve_small_and_adjacent_doubles
     world_generator->active_world = &isolated_world;
     REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
     const std::shared_ptr<platform::runtime> before = platform::make_runtime( "float-owner", 2014,
-        old_lua );
+            old_lua );
     platform::set_active_runtimes( { before } );
     platform::assign_persistent_value( before->world_state, "tiny", 1.0e-20 );
     const double adjacent = std::nextafter( 1.0, 2.0 );
@@ -65,7 +65,7 @@ TEST_CASE( "lua_platform_runtime_scope_files_preserve_small_and_adjacent_doubles
     REQUIRE( platform::runtime_save( error ) );
     platform::clear_active_runtimes();
     const std::shared_ptr<platform::runtime> after = platform::make_runtime( "float-owner", 2015,
-        new_lua );
+            new_lua );
     platform::set_active_runtimes( { after } );
     platform::runtime_world_ready( false );
     REQUIRE( after->world_state.size() == 1 );

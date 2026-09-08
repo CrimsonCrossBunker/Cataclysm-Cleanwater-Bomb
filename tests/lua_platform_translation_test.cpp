@@ -19,7 +19,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
 
     const auto run = [&lua]( const std::string & source ) {
         const sol::protected_function_result result = lua.safe_script(
-                source, sol::script_pass_on_error );
+                    source, sol::script_pass_on_error );
         if( !result.valid() ) {
             const sol::error error = result;
             INFO( error.what() );

@@ -27,20 +27,20 @@ TEST_CASE( "lua_platform_task_counter_survives_empty_save_and_exhaustion",
     REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
     const auto install = []( sol::state & lua ) {
         const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-                "counter-owner", 2010, lua );
+                    "counter-owner", 2010, lua );
         sol::table ccb = lua.create_table();
         platform::install_runtime_api( owner, lua, ccb );
         lua["ccb"] = ccb;
         lua.set_function( "noop", []() {} );
         const sol::protected_function_result registered = ccb["runtime"]["handler"](
-                "tick", lua["noop"] );
+                    "tick", lua["noop"] );
         REQUIRE( registered.valid() );
         platform::set_active_runtimes( { owner } );
         return owner;
     };
     const auto schedule = []( sol::state & lua ) {
         const sol::protected_function_result result = lua["ccb"]["tasks"]["after"](
-                100, "tick", lua.create_table(), 1, "world" );
+                    100, "tick", lua.create_table(), 1, "world" );
         REQUIRE( result.valid() );
         return result.get<std::int64_t>();
     };
@@ -77,14 +77,14 @@ TEST_CASE( "lua_platform_task_counter_survives_empty_save_and_exhaustion",
     CHECK( after->next_task_id == expected_next );
     if( exhausted ) {
         const sol::protected_function_result result = new_lua["ccb"]["tasks"]["after"](
-                100, "tick", new_lua.create_table(), 1, "world" );
+                    100, "tick", new_lua.create_table(), 1, "world" );
         CHECK_FALSE( result.valid() );
         CHECK( after->tasks.empty() );
     } else {
         const std::int64_t new_id = schedule( new_lua );
         CHECK( static_cast<std::uint64_t>( new_id ) == expected_next );
         const sol::protected_function_result cancelled = new_lua["ccb"]["tasks"]["cancel"](
-                new_id - 1 );
+                    new_id - 1 );
         REQUIRE( cancelled.valid() );
         CHECK_FALSE( cancelled.get<bool>() );
         CHECK( after->tasks.size() == 1 );

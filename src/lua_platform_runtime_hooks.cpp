@@ -225,9 +225,9 @@ static const item *platform_event_item( const cata::event &event, const talker *
 }
 
 static sol::table event_to_lua( runtime &owner, const cata::event &event,
-                         const std::map<std::string, Character *> &characters,
-                         const item *event_item, const talker *speaker_actor,
-                         const talker *interlocutor_actor )
+                                const std::map<std::string, Character *> &characters,
+                                const item *event_item, const talker *speaker_actor,
+                                const talker *interlocutor_actor )
 {
     sol::table result = owner.lua->create_table();
     sol::table data = owner.lua->create_table();
@@ -1128,8 +1128,8 @@ static std::optional<std::string> platform_hook_string( const sol::table &table,
 }
 
 static void apply_platform_hook_table( const std::string_view name, const sol::table &table,
-                                cata::lua_platform::native_hook_result &aggregate,
-                                bool &stop, const bool shared_results )
+                                       cata::lua_platform::native_hook_result &aggregate,
+                                       bool &stop, const bool shared_results )
 {
     using cata::lua_platform::native_hook_supports_result_field;
     if( native_hook_supports_result_field( name, "allow" ) ) {
@@ -1253,8 +1253,8 @@ static void apply_platform_hook_table( const std::string_view name, const sol::t
 }
 
 static void dispatch_platform_event( const cata::event &event, const item *event_item,
-                              const talker *alpha_actor,
-                              const talker *beta_actor )
+                                     const talker *alpha_actor,
+                                     const talker *beta_actor )
 {
     if( g == nullptr || event.type() == event_type::num_event_types ) {
         return;
@@ -1781,7 +1781,8 @@ void invoke_overmap_terrain_handler(
     const tripoint_abs_omt &old_position, const tripoint_abs_omt &new_position,
     const Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -1856,7 +1857,8 @@ std::optional<bool> invoke_overmap_special_condition_handler(
     const int rotation, const std::string_view city_name, const int city_size,
     const int city_population )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -1904,7 +1906,8 @@ void invoke_overmap_special_placement_handler(
     const int rotation, const std::string_view city_name, const int city_size,
     const int city_population )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -1940,7 +1943,8 @@ void invoke_vehicle_part_activation_handler(
     const std::string_view part_id, vehicle &subject, vehicle_part &part,
     Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2133,7 +2137,8 @@ void invoke_plant_lifecycle_handlers(
     const std::string seed_id( seed_id_value );
     const std::string furniture_id = here.furn( position ).id().str();
     const tripoint_abs_ms absolute = here.get_abs( position );
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner || !owner->world_is_ready ) {
             continue;
@@ -2195,7 +2200,8 @@ void invoke_martial_art_handler( const std::string_view martial_art_id,
                                  const std::string_view phase,
                                  Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2442,7 +2448,7 @@ std::optional<bool> invoke_shopkeeper_whitelist_handler(
     item_value["food"] = candidate.is_food();
     item_value["medication"] = candidate.is_medication();
     item_value["base_enjoyment"] = candidate.is_comestible() ?
-                                     candidate.get_comestible()->get_fun() : 0;
+                                   candidate.get_comestible()->get_fun() : 0;
     item_value["fresh"] = candidate.is_fresh();
     item_value["going_bad"] = candidate.is_going_bad();
     item_value["rotten"] = candidate.rotten();
@@ -2745,7 +2751,8 @@ void invoke_damage_type_handler( const std::string_view damage_id,
                                  const double total_damage,
                                  const double damage_taken )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2800,7 +2807,8 @@ void invoke_ammo_effect_handler( const std::string_view ammo_effect_id,
                                  const tripoint_bub_ms &position,
                                  const int dealt_damage )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2857,7 +2865,8 @@ std::optional<bool> invoke_addiction_type_handler(
     const std::string_view addiction_type_id, Character &character,
     const int intensity, const std::int64_t sated_turns )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2902,7 +2911,8 @@ std::optional<double> invoke_character_modifier_handler(
     const std::string_view modifier_id, const Character &character,
     const std::string_view skill_id_value )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -2953,7 +2963,8 @@ std::optional<double> invoke_character_modifier_handler(
 std::optional<bool> invoke_weather_type_handler(
     const std::string_view weather_type_id_value, const w_point &sample )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3008,7 +3019,8 @@ std::optional<bool> invoke_weather_type_handler(
 std::optional<bool> invoke_end_screen_handler(
     const std::string_view end_screen_id_value, const Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3052,7 +3064,8 @@ bool invoke_activity_type_handler(
     const std::string_view activity_type_id_value, const std::string_view phase,
     player_activity &activity, Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3180,7 +3193,8 @@ bool invoke_snippet_examine_handler( const std::string_view snippet_id_value,
                                      const std::string_view item_type_id,
                                      Character &character )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3220,7 +3234,8 @@ std::optional<double> invoke_magic_type_number_handler(
     const std::string_view magic_type_id, const std::string_view phase,
     const std::string_view spell_id, const Creature *caster, const double input )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3302,7 +3317,8 @@ void invoke_magic_type_failure_handler( const std::string_view magic_type_id,
                                         const std::string_view spell_id,
                                         Character &caster )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;
@@ -3345,7 +3361,8 @@ std::optional<emission_profile> invoke_emission_profile_handler(
     const std::string_view emission_id, const tripoint_bub_ms &position,
     const emission_profile &fallback )
 {
-    for( auto iterator = detail::active_runtime_values().rbegin(); iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner ) {
             continue;

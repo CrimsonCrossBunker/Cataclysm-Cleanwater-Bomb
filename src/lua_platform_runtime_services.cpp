@@ -1712,38 +1712,38 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         require_live_runtime( weak, "services.translate" );
         require_translation_text( text );
         if( context )
-    {
-        require_translation_text( *context );
+        {
+            require_translation_text( *context );
         }
 #if defined(LOCALIZE)
         TranslationManager &manager = TranslationManager::GetInstance();
         return context ? manager.TranslateWithContext( context->c_str(), text.c_str() ) :
-                                manager.Translate( text );
+        manager.Translate( text );
 #else
         return text;
 #endif
     } );
     services.set_function( "translate_plural", [weak]( const std::string & singular,
-            const std::string & plural, const std::int64_t count,
+                           const std::string & plural, const std::int64_t count,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate_plural" );
         require_translation_text( singular );
         require_translation_text( plural );
         if( context )
-    {
-        require_translation_text( *context );
+        {
+            require_translation_text( *context );
         }
         const std::size_t native_count = static_cast<std::size_t>( count );
         if( count < 0 || static_cast<std::uint64_t>( native_count ) !=
             static_cast<std::uint64_t>( count ) )
-    {
-        throw std::runtime_error( "translation count is outside the native nonnegative range" );
+        {
+            throw std::runtime_error( "translation count is outside the native nonnegative range" );
         }
 #if defined(LOCALIZE)
         TranslationManager &manager = TranslationManager::GetInstance();
         return context ? manager.TranslatePluralWithContext( context->c_str(), singular.c_str(),
-            plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
-                plural.c_str(), native_count );
+                plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
+                        plural.c_str(), native_count );
 #else
         return count == 1 ? singular : plural;
 #endif
