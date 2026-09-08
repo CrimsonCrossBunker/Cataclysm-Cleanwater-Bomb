@@ -361,6 +361,17 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
+The draft due-task cancellation fix keeps selected tasks visible to queries and
+cancellable until their individual dispatch starts. A preceding callback can
+cancel a later task due in the same processing pass. Selection still snapshots
+the pass and uses due-turn/ID ordering: newly scheduled tasks wait for a later
+processing pass. Native regression source exists; compilation and execution
+remain pending.
+
+同轮到期任务取消修复草稿让尚未开始派发的任务继续可查、可取消：前一个回调可以取消
+同一处理轮中后续到期任务。该轮候选仍为快照，按到期回合与 ID 排序；回调新建的任务
+留到下一次处理。原生回归测试源码已补，尚未编译或执行。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy
