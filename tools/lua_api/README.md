@@ -59,6 +59,20 @@ editor metadata, not a runtime manifest or executable content; omit them with
 major version before registering content. An exact declaration revision check
 is an author upgrade aid, not a new mandatory runtime version system.
 
+## Add an editor SDK to an existing Mod
+
+```sh
+python3 tools/lua_api/mod_sdk.py init /path/ExistingMod \
+  --declarations /path/game/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This adds the frozen `.ccb-sdk/` snapshot and `.luarc.json` editor configuration
+used by the scaffolder. It does not execute or modify author Lua files. Existing SDKs or
+editor configuration are never overwritten; keep or integrate them manually.
+A failed initialization removes only files created by that attempt. Without
+`--declarations`, the tool snapshots its own checkout's declaration file.
+The added JSON files configure the editor and are not runtime manifests.
+
 ## Diagnose a Mod
 
 With LuaLS installed (the CI/editor gate is tested with 3.19.1):
@@ -78,20 +92,64 @@ native content IDs, or prove gameplay/save correctness. The library has existing
 annotation gaps, so dynamically typed/undeclared portions need runtime validation.
 
 Lua runtime failures still use the engine's existing Mod/handler context and
-Lua error text in `debug.log`. This tooling does not add an in-game debugger or
-state/task inspector. Use the game's existing `--check-mods` path for actual
+Lua error text in `debug.log`. The SDK checker does not add an in-game debugger. The separate saved-state
+inspector below reads persisted records without starting the game. Use the game's existing `--check-mods` path for actual
 loading, and exercise the affected behavior for runtime acceptance.
+
+## Inspect saved state without starting the game
+
+```sh
+python3 tools/lua_api/inspect_state.py /path/world/lua_platform_world.json
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --mod MyMod
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --mod MyMod --task 225
+python3 tools/lua_api/inspect_state.py /path/player.lua_platform.json --values --limit 50
+```
+
+The inspector reads one explicit Platform v1 save file and emits JSON containing
+saved Mod owners, state key/type summaries, task IDs, handler names, due turns,
+recurrence intervals and saved participant/actor records. State/payload values are
+included only with `--values`. Actor output includes only native identity/hint
+fields and checks their range, completeness and mutual exclusivity.
+Each displayed list defaults to 20 entries; total counts
+remain visible, and `--limit` accepts 1–200. It never executes Mod metadata or Lua,
+loads native libraries, resolves participants against a world, or rewrites the
+save. The world and character files are separate scopes; inspect both when a Mod
+uses both. Use `--mod MyMod --task ID` to follow a task ID from an error message,
+including records beyond the displayed list limit. Task IDs are local to a Mod,
+so the task filter requires a Mod ID. Total and matched task counts stay separate.
+
+An absent/uninstalled Mod can still have a retained saved record. Finding a
+record does not establish that its handler currently exists, its participants
+are live, or its task will run. This is a saved-snapshot diagnostic, not a runtime
+debugger or a replacement for the engine's save loader. Basic malformed input,
+duplicate IDs/members and unsupported versions produce an error and exit code 2;
+successful inspection returns 0. A report is not full save compatibility proof.
+
+The Python tool regressions exercise snapshot reporting and malformed input.
+Actual restoration still requires the native game and its acceptance checks.
 
 ## Review an API upgrade
 
-Create a separate scaffold with the target version's declarations, then compare:
+Compare directly with the target game's bundled declaration file:
+
+```sh
+python3 tools/lua_api/mod_sdk.py compare-release /path/MyMod \
+  --declarations /path/TargetGame/data/lua/types/ccb_platform_v1.d.lua
+```
+
+This requires no second scaffold, never executes Lua, and leaves both the Mod's
+SDK and the target file unchanged. The report records the absolute target path
+and declaration hash; you explicitly choose which game package to inspect.
+
+Alternatively, compare two existing SDK snapshots:
 
 ```sh
 python3 tools/lua_api/mod_sdk.py compare /path/OldMod /path/NewVersionScaffold
 ```
 
 The JSON report shows the two SDK identities and added, removed, or changed
-class/field/function declarations, including parameter and return annotations.
+class/field/function and alias declarations, including parameter/return annotations
+and consecutive multiline alias members (`---|`).
 It never overwrites either project. Review changed declarations, read the game's
 release/migration notes, then intentionally update the editor SDK and rerun static
 and affected runtime checks. Unchanged signatures do not prove behavior parity;
@@ -116,3 +174,95 @@ python3 tools/test_create_lua_mod.py
 The editor gate checks both real templates and deliberately invalid author code
 for unknown APIs, missing arguments and wrong argument types. It is a static
 acceptance gate and does not trigger a C++ build or a full content audit.
+
+The saved-state inspector also reports each Mod's `last_task_id` and
+`task_counter_persisted`. New counter-bearing records retain allocated IDs even
+with no pending tasks. For older records, the displayed counter is derived only
+from remaining task IDs; completed IDs cannot be reconstructed. Counters outside
+the signed task-ID range, or below a stored task ID, are rejected.
+
+## Extract translations (draft API)
+
+The independent localization implementation adds `ccb.services.translate(text,
+context?)` and `ccb.services.translate_plural(singular, plural, count, context?)`.
+These calls use the current native game catalog after `world_ready`. They return
+plain strings; they do not create deferred translation objects for content names
+or Mod metadata. Missing entries return source text (singular for count 1,
+plural otherwise). Negative counts, counts outside native `size_t`, and embedded
+NUL in text/context are rejected. No new catalog registry or Lua interpreter is
+introduced. Native loading, locale switching and plural-rule acceptance remain
+pending; source implementation is not a shipped-compatibility claim.
+
+Write full calls with literal messages and optional literal context:
+
+```lua
+local ccb = require("ccb")
+ccb.runtime.handler("translated_ready", function()
+    ccb.services.message(ccb.services.translate("Ready", "MyMod status"))
+    local count = 2
+    local message = ccb.services.translate_plural(
+        "%d item is ready", "%d items are ready", count, "MyMod status")
+    ccb.services.message(string.format(message, count))
+end)
+ccb.runtime.on("world_ready", "translated_ready")
+```
+
+Static Item names and descriptions instead accept deferred values. Plain strings
+remain untranslated. Skill fields also accept singular markers as described below;
+other content builders and Mod metadata do not yet accept these values. Source forms must be nonempty and all arguments must exclude NUL:
+
+```lua
+local ccb = require("ccb")
+ccb.content.add(ccb.content.Item {
+    id = "MyMod_water_bottle", mass_grams = 500, volume_ml = 500,
+    name = ccb.content.plural_text("bottle of water", "bottles of water", "MyMod item"),
+    description = ccb.content.text("A sealed bottle.", "MyMod description")
+})
+```
+
+These immutable values preserve source text for native translation when displayed,
+including after a language change. Descriptions reject plural values. A name
+marked with `text` uses the same source as its plural fallback; use `plural_text`
+for distinct forms. Inheritance preserves an omitted translated field, while an
+explicit plain string replaces it. Changes to text context, plural forms or
+translation status require static content reload. Native/locale acceptance remains
+pending; the extractor's passing checks alone do not prove game integration.
+
+Use GNU `xgettext` to extract explicitly named source files without executing
+Lua. Run from the Mod root for stable relative references:
+
+```sh
+python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.lua --output messages.pot
+python3 /path/CCB/tools/lua_api/extract_translations.py main.lua runtime/status.lua --output messages.pot --check
+```
+
+The tool does not traverse directories. It stages output before replacing the
+POT so write failures preserve the previous template; output cannot alias an
+input source. `--check` does not write; exit 1 means a
+missing/stale POT and exit 2 means extraction/setup failure. Output is stable for
+unchanged inputs and the same xgettext version. Calls through renamed aliases,
+computed messages, and dynamic contexts cannot be extracted reliably: keep the
+full `ccb.services.translate`/`translate_plural` or `ccb.content.text`/`plural_text`
+spelling and literals. Review the POT after extraction.
+An immediately preceding `-- TRANSLATORS: ...` comment is retained for translators;
+ordinary implementation comments are not added to the template.
+Formatting is a separate Lua operation; translators must preserve placeholders.
+For automatic gettext format flags, nest the translation call directly inside
+`string.format(ccb.services.translate("%d items", "MyMod status"), count)`.
+A translation stored in an intermediate variable cannot inherit that static
+format-use information.
+
+Translate the POT into PO catalogs with normal gettext tooling. For an external
+Mod under the game's configured user Mod directory, the existing native scanner
+accepts `MyMod/lang/mo/<language>/LC_MESSAGES/MyMod.mo`; language is taken from
+the parent of `LC_MESSAGES`. Catalog compilation/installation is a separate
+release step. Bundled Mod catalogs are not automatically discovered by that
+user-directory scan. The native registry is shared: use a distinctive context
+for ambiguous/common messages. This batch does not change catalog precedence or
+add live catalog reload. Restart the game after installing changed catalogs.
+
+The same `ccb.content.text` marker is accepted by Skill names/descriptions,
+SkillDisplay labels and Skill theory/practice level descriptions. These fields
+reject plural markers and keep ordinary strings literal. Use the full helper
+name with literal source/context arguments so the existing extractor can find
+these strings; no separate Skill extraction command is required.

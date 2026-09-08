@@ -130,9 +130,11 @@ namespace cata::lua_platform
 class runtime;
 }  // namespace cata::lua_platform
 
+// Split domain tests intentionally retain translation-unit-local fixture types.
+// NOLINTNEXTLINE(cert-dcl59-cpp,misc-anonymous-namespace-in-header)
 namespace
 {
-static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
+const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
 
 struct registrar_graph_entry {
     std::string id;
@@ -159,11 +161,13 @@ decltype( &Type::buy_quoted_item )>> : std::true_type {
 
 
 struct platform_lua_test_directory {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_lua_test_directory() {
         const std::filesystem::path temporary_root = std::filesystem::temp_directory_path();
         for( std::size_t attempt = 0; attempt < 100; ++attempt ) {
             const std::filesystem::path candidate = temporary_root /
-                                                    ( "cata-lua-platform-loader-" + std::to_string( attempt ) );
+                                                    std::filesystem::u8path( "cata-lua-platform-loader-" + std::to_string( attempt ) );
             std::error_code filesystem_error;
             if( std::filesystem::create_directory( candidate, filesystem_error ) ) {
                 root = candidate;
@@ -185,6 +189,8 @@ struct platform_lua_test_directory {
         std::filesystem::remove_all( root, filesystem_error );
     }
 
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     void write( const std::filesystem::path &relative, const std::string &contents ) const {
         const std::filesystem::path destination = root / relative;
         std::error_code filesystem_error;
@@ -218,44 +224,64 @@ for _, name in ipairs({ "math", "string", "table", "utf8", "coroutine" }) do
         error("missing allowed library " .. name)
     end
 end
-for _, name in ipairs({ "io", "os", "debug", "dofile", "loadfile", "load", "loadstring", "collectgarbage" }) do
-    if _G[name] ~= nil then
-        error("forbidden global is exposed: " .. name)
-    end
+for _, name in ipairs({ "io", "os", "debug" }) do
+    assert(type(_G[name]) == "table", "missing standard library " .. name)
 end
-
-if type(package) ~= "table" or type(package.loaded) ~= "table" then
-    error("controlled package.loaded state is missing")
+for _, name in ipairs({ "dofile", "loadfile", "load", "collectgarbage" }) do
+    assert(type(_G[name]) == "function", "missing standard function " .. name)
 end
-if package.loaded["ccb"] ~= ccb then
-    error("package.loaded[ccb] does not contain the Platform root")
-end
-package.loaded["../outside"] = { value = "spoofed" }
-local unsafe_ok = pcall(require, "../outside")
-if unsafe_ok then
-    error("unsafe module name bypassed validation through package.loaded")
-end
-package.loaded["../outside"] = nil
+assert(load("return 6 * 7")() == 42)
+assert(type(debug.traceback("probe")) == "string")
+assert(type(os.date("!%Y")) == "string")
+assert(type(package.path) == "string" and type(package.cpath) == "string")
+assert(type(package.loadlib) == "function")
+assert(type(package.searchpath) == "function")
+assert(type(package.searchers) == "table")
+assert(type(package.preload) == "table")
+assert(package.loaded["ccb"] == ccb)
 package.loaded["ccb"] = { value = "spoofed" }
-if require("ccb") ~= ccb then
-    error("require[ccb] did not return the original Platform root")
-end
+assert(require("ccb") == ccb, "Platform root must remain stable")
 package.loaded["ccb"] = ccb
-for _, name in ipairs({ "config", "cpath", "loadlib", "path", "preload", "searchers", "searchpath" }) do
-    if package[name] ~= nil then
-        error("forbidden package field is exposed: " .. name)
-    end
+
+package.preload["preloaded_probe"] = function(name, loader_data)
+    assert(name == "preloaded_probe")
+    return { value = 42 }
 end
-for name in pairs(package) do
-    if name ~= "loaded" then
-        error("unexpected package field is exposed: " .. name)
-    end
-end
+assert(require("preloaded_probe").value == 42)
+package.loaded["../external-cache"] = { value = 7 }
+assert(require("../external-cache").value == 7)
+package.loaded["../external-cache"] = nil
+
+-- Local modules take priority over ordinary preload and path searchers.
+package.preload["foo"] = function() error("preload shadowed local module") end
 
 local foo = require("foo")
 if foo.value ~= "foo" or require("foo") ~= foo then
     error("root-local foo.lua require was not cached")
 end
+-- Ordinary Lua semantics: false exports are reloaded; nil exports become true.
+assert(require("false_export") == false)
+assert(require("false_export") == false)
+assert(false_export_loads == 2)
+assert(require("empty_export") == true)
+assert(require("empty_export") == true)
+assert(empty_export_loads == 1)
+
+local searcher_count = #package.searchers
+package.searchers[searcher_count + 1] = function(name)
+    if name == "custom:probe" then
+        return function(requested, loader_data)
+            assert(requested == name and loader_data == "custom-loader-data")
+            return { value = 19 }
+        end, "custom-loader-data"
+    end
+end
+local custom, custom_data = require("custom:probe")
+assert(custom.value == 19 and custom_data == "custom-loader-data")
+package.searchers[searcher_count + 1] = nil
+
+assert(require("模块") == 23)
+assert(require("nested..value") == 29)
 local nested = require("nested")
 if nested.value ~= "nested" then
     error("root-local nested/init.lua require failed")
@@ -304,6 +330,8 @@ npc_ptr make_platform_test_npc( const character_id id, const faction_id &owner,
 }
 
 struct platform_npc_dialogue_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_npc_dialogue_fixture() :
         runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
         other_runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
@@ -371,6 +399,8 @@ struct platform_npc_dialogue_fixture {
 };
 
 struct platform_registered_dialogue_call_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_registered_dialogue_call_fixture(
         const cata::lua_platform::game_handle_runtime &runtime_identity,
         const std::size_t world_generation,
@@ -570,7 +600,7 @@ struct platform_food_state_scope {
         saved( owner.debug_food_supply() ), consumes_food( owner.consumes_food ) {}
 
     ~platform_food_state_scope() {
-        owner.debug_food_supply() = saved;
+        owner.debug_food_supply().swap( saved );
         owner.consumes_food = consumes_food;
     }
 
@@ -580,6 +610,8 @@ struct platform_food_state_scope {
 };
 
 struct platform_trade_quote_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_trade_quote_fixture( const std::size_t runtime_number,
                                   const std::size_t world_number,
                                   const int seller_number,
@@ -738,6 +770,8 @@ struct platform_trade_quote_fixture {
 };
 
 struct platform_trade_commit_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_trade_commit_fixture( const std::size_t runtime_number,
                                    const std::size_t world_number,
                                    const int seller_number,
@@ -958,6 +992,8 @@ struct platform_weather_read_fixture {
 };
 
 struct platform_zones_read_fixture {
+    // TU-local fixture setup stays with its owning test helper.
+    // NOLINTNEXTLINE(cata-large-inline-function)
     platform_zones_read_fixture() :
         runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
         runtime( runtime_owner, 1 ),

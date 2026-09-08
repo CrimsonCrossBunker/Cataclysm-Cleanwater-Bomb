@@ -196,7 +196,10 @@ def validate_platform_entrypoint() -> None:
     loader = loader_path.read_text(encoding="utf-8")
     required_markers = (
         'loaded["ccb"] = ccb',
-        'lua.set_function( "require"',
+        'lua["require"] = bound.get<sol::function>()',
+        'if name == "ccb" then',
+        'return platform',
+        'return original_require(name)',
     )
     missing = [marker for marker in required_markers if marker not in loader]
     if missing:

@@ -1,4 +1,15 @@
+// This file is one domain slice of the shared Lua Platform test suite.
+// NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <cstddef>
+#include <functional>
+#include <set>
+#include <string>
+#include "lua_platform_dialogue.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_trade.h"
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
 
 namespace
@@ -12,14 +23,14 @@ TEST_CASE( "lua_platform_dialogue_context_has_no_legacy_trade_helpers",
     CHECK_FALSE( has_legacy_dialogue_buy_quoted_item<context>::value );
 }
 
-TEST_CASE( "lua_platform_trade_root_exposes_only_explicit_quote_get_commit",
+TEST_CASE( "lua_platform_trade_root_exposes_supported_operations",
            "[lua][platform][trade][contract]" )
 {
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_trade_api(
         services,
-        []() {
+    []() {
         return cata::lua_platform::game_handle_runtime();
     },
     []() {
@@ -30,7 +41,7 @@ TEST_CASE( "lua_platform_trade_root_exposes_only_explicit_quote_get_commit",
 
     const sol::table trade = services["trade"];
     REQUIRE( trade.valid() );
-    const std::set<std::string> expected = { "commit", "get", "quote" };
+    const std::set<std::string> expected = { "commit", "get", "open", "order_price", "pay", "quote" };
     std::set<std::string> exposed;
     for( const auto &entry : trade ) {
         REQUIRE( entry.first.is<std::string>() );
@@ -42,8 +53,9 @@ TEST_CASE( "lua_platform_trade_root_exposes_only_explicit_quote_get_commit",
     CHECK( trade["commit"].valid() );
     CHECK_FALSE( trade["transfer"].valid() );
     CHECK_FALSE( trade["transfer_matching"].valid() );
-    CHECK_FALSE( trade["open"].valid() );
-    CHECK_FALSE( trade["pay"].valid() );
+    CHECK( trade["open"].is<sol::function>() );
+    CHECK( trade["pay"].is<sol::function>() );
+    CHECK( trade["order_price"].is<sol::function>() );
     CHECK_FALSE( trade["settle"].valid() );
     CHECK_FALSE( trade["settle_credit"].valid() );
     CHECK_FALSE( trade["buy_monsters"].valid() );
@@ -58,3 +70,5 @@ TEST_CASE( "lua_platform_trade_root_exposes_only_explicit_quote_get_commit",
 } // namespace
 
 #endif // CATA_ENABLE_LUA_PLATFORM
+
+// NOLINTEND(cata-test-filename)

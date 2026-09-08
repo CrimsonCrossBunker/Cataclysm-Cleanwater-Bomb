@@ -1,6 +1,8 @@
 #include "debug_console.h"
+#include "lua_platform_loader.h"
 
-// IWYU pragma: no_include "flat_set.h"
+// Flag containers instantiate cata::transparent_less_than in this translation unit.
+#include "flat_set.h" // IWYU pragma: keep
 
 #include <algorithm>
 #include <array>
@@ -99,6 +101,9 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
+#include <coordinates.h>
+#include <debug.h>
+#include <type_id.h>
 
 namespace debug_menu
 {
@@ -160,6 +165,7 @@ const std::vector<tab_descriptor> &tab_registry()
         r.push_back( { "creatures", [] { return std::make_unique<tab_creatures_view>(); }, {} } );
         r.push_back( { "items",     [] { return std::make_unique<tab_items_view>(); },     {} } );
         r.push_back( { "tiles",     [] { return std::make_unique<tab_tiles_view>(); },     {} } );
+        r.push_back( { "lua",       [] { return std::make_unique<tab_lua_view>(); },       {} } );
         return r;
     }();
     return reg;
@@ -792,6 +798,22 @@ void debug_console::execute()
             continue;
         }
 
+        if( pending_lua ) {
+            const auto request = std::move( *pending_lua );
+            pending_lua.reset();
+            // Lua services can open popups. Execute only between ImGui frames.
+            suspend_draw_ = true;
+            const on_out_of_scope restore_draw( [this]() {
+                suspend_draw_ = false;
+            } );
+            std::string output;
+            std::string error;
+            const bool ok = cata::lua_platform::execute_console(
+                                request.first, request.second, output, error );
+            lua_result = eval_result_view{ ok ? "[" + request.first + "]\n" + output : error, ok };
+            continue;
+        }
+
         if( eval_pending ) {
             eval_pending = false;
             pending_eval_ok = true;
@@ -916,6 +938,18 @@ std::optional<debug_console::eval_result_view> debug_console::consume_eval_resul
     pending_eval_result.clear();
     pending_eval_result_ready = false;
     return rv;
+}
+
+void debug_console::request_lua( const std::string &mod_id, const std::string &source )
+{
+    pending_lua = std::make_pair( mod_id, source );
+}
+
+std::optional<debug_console::eval_result_view> debug_console::consume_lua_result()
+{
+    std::optional<eval_result_view> result = std::move( lua_result );
+    lua_result.reset();
+    return result;
 }
 
 void debug_console::set_eoc_trace_visible( bool v )
@@ -3499,6 +3533,55 @@ void tab_items_view::draw_body( debug_console &host )
     }
 }
 
+
+const char *tab_lua_view::label() const
+{
+    return "Lua";
+}
+
+void tab_lua_view::draw_body( debug_console &host )
+{
+    if( auto completed = host.consume_lua_result() ) {
+        result = ( completed->ok ? "" : "Error: " ) + completed->result;
+    }
+    if( !cata::lua_platform::is_enabled() ) {
+        ImGui::TextUnformatted( "Lua Platform is not enabled in this build." );
+        return;
+    }
+    const std::vector<std::string> mods = cata::lua_platform::loaded_mod_ids();
+    if( mods.empty() ) {
+        ImGui::TextUnformatted( "No Lua Mods are loaded in this world." );
+        return;
+    }
+    if( selected_mod.empty() ) {
+        selected_mod = mods.front();
+    }
+    if( ImGui::BeginCombo( "Mod", selected_mod.c_str() ) ) {
+        for( const std::string &mod : mods ) {
+            if( ImGui::Selectable( mod.c_str(), mod == selected_mod ) ) {
+                selected_mod = mod;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::TextWrapped( "Runs in the selected Mod's existing Lua state.  Changes are not "
+                        "rolled back on error.  Use return to display values; return a nested "
+                        "field explicitly to inspect it." );
+    ImGui::InputTextMultiline( "##lua_source", &source, ImVec2( -1.0f, 180.0f ) );
+    const bool selected_loaded = std::find( mods.begin(), mods.end(), selected_mod ) != mods.end();
+    if( !selected_loaded ) {
+        ImGui::TextUnformatted( "The selected Mod is no longer loaded.  Choose another Mod explicitly." );
+    }
+    ImGui::BeginDisabled( !selected_loaded );
+    if( ImGui::Button( "Run Lua" ) ) {
+        host.request_lua( selected_mod, source );
+    }
+    ImGui::EndDisabled();
+    if( !result.empty() ) {
+        ImGui::Separator();
+        ImGui::TextWrapped( "%s", result.c_str() );
+    }
+}
 
 const char *tab_eoc_view::label() const
 {

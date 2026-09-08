@@ -15,6 +15,7 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "map.h"
+#include "mod_manager.h"
 #include "player_helpers.h"
 #include "type_id.h"
 #include <filesystem>
@@ -33,15 +34,21 @@
 #include "worldfactory.h"
 
 static const efftype_id effect_lua_first_nano_recovery( "lua_first_nano_recovery" );
+
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_lua_first_cleanwater_cell( "lua_first_cleanwater_cell" );
 static const itype_id itype_lua_first_nano_tonic( "lua_first_nano_tonic" );
 
+static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
+static const mod_id MOD_INFORMATION_dda( "dda" );
+
 TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
-           "[lua][platform][playable_mvp][persistence]" )
+           "[lua][platform][playable_mvp][persistence][mod_manager]" )
 {
     namespace platform = cata::lua_platform;
+    REQUIRE( platform::is_enabled() );
     platform::shutdown();
+    REQUIRE( platform::loaded_mod_ids().empty() );
     clear_avatar();
     avatar &player = get_avatar();
     player.setID( character_id( 4401 ), true );
@@ -51,7 +58,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     WORLD *old_world = world_generator->active_world;
     const platform_lua_test_directory temporary;
     const std::filesystem::path &directory = temporary.root;
-    WORLD isolated_world( directory.filename().string() + "_tonic" );
+    WORLD isolated_world( directory.filename().u8string() + "_tonic" );
     const on_out_of_scope cleanup( [&]() {
         platform::shutdown();
         world_generator->active_world = old_world;
@@ -59,23 +66,41 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
         calendar::turn = old_turn;
         clear_avatar();
     } );
-    PATH_INFO::set_savedir( directory.string() + "/" );
+    PATH_INFO::set_savedir( directory.u8string() + "/" );
     world_generator->active_world = &isolated_world;
     REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
+    // A committed static catalog lasts until the game data is unloaded. Keep
+    // discovery, activation and reload acceptance in one case so this shared
+    // test world never registers the bundled example twice.
+    mod_manager &manager = world_generator->get_mod_manager();
+    manager.refresh_mod_list();
+    REQUIRE( MOD_INFORMATION_Lua_First_Example.is_valid() );
+    const MOD_INFORMATION &info = MOD_INFORMATION_Lua_First_Example.obj();
+    REQUIRE( info.lua_platform_version == platform::platform_version );
+    REQUIRE( info.lua_platform_error.empty() );
+    REQUIRE( info.version == "0.1.0" );
+    REQUIRE( info.dependencies == std::vector<mod_id> { MOD_INFORMATION_dda } );
     const std::filesystem::path root = PATH_INFO::moddir().get_unrelative_path() /
                                        std::filesystem::u8path( "Lua_First_Example" );
-    const platform::mod_source source { "Lua_First_Example", root, root / std::filesystem::u8path( "main.lua" ) };
+    REQUIRE( info.mod_root_path.get_unrelative_path() == root );
+    REQUIRE( info.lua_platform_entry.get_unrelative_path() ==
+             root / std::filesystem::u8path( "main.lua" ) );
+    const platform::mod_source source { MOD_INFORMATION_Lua_First_Example.str(),
+                                        info.mod_root_path.get_unrelative_path(),
+                                        info.lua_platform_entry.get_unrelative_path() };
     const auto load = [&]( bool new_game ) {
         std::string error;
         REQUIRE( platform::prepare_mods( { source }, error ) );
-        REQUIRE( platform::apply_prepared_content( error ) );
+        const bool applied = platform::apply_prepared_content( error );
+        INFO( error );
+        REQUIRE( applied );
         REQUIRE( platform::validate_finalized_prepared_content( error ) );
         platform::commit_prepared_mods();
         REQUIRE( platform::loaded_mod_ids() == std::vector<std::string> { source.id } );
         platform::runtime_world_ready( new_game );
     };
     const auto integer_state = [&]( const std::string & key ) {
-        const auto owner = platform::detail::find_active_runtime( source.id );
+        const std::shared_ptr<platform::runtime> owner = platform::detail::find_active_runtime( source.id );
         REQUIRE( owner );
         sol::table ccb = ( *owner->lua )["package"]["loaded"]["ccb"];
         sol::protected_function_result call = ccb["state"]["character"]["get"]( key, 0 );
@@ -99,7 +124,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     REQUIRE( recovery.is_valid() );
     item tonic( tonic_id );
     const auto use = [&]() {
-        const auto used = tonic.type->invoke( &player, tonic, &get_map(), player.pos_bub() );
+        const std::optional<int> used = tonic.type->invoke( &player, tonic, &get_map(), player.pos_bub() );
         REQUIRE( used );
         CHECK( *used == 0 );
     };
@@ -144,7 +169,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     REQUIRE( reloaded );
     REQUIRE( previous.expired() );
     {
-        const auto fresh = platform::detail::find_active_runtime( source.id );
+        const std::shared_ptr<platform::runtime> fresh = platform::detail::find_active_runtime( source.id );
         REQUIRE( fresh );
         REQUIRE( fresh->character_state.empty() );
         REQUIRE( fresh->tasks.empty() );
@@ -173,5 +198,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     CHECK( player.amount_of( cell_id ) == 0 );
     CHECK( integer_state( "tonic_events" ) == 2 );
     CHECK( player.has_effect( recovery ) );
+    platform::shutdown();
+    CHECK( platform::loaded_mod_ids().empty() );
 }
 #endif

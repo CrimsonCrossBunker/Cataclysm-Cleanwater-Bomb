@@ -51,7 +51,11 @@ struct mod_source {
     std::filesystem::path entry;
 };
 
-/** Execute root/mod.lua and require exactly one native ccb.ModDefinition result. */
+/** Execute root/mod.lua and require exactly one native ccb.ModDefinition result.
+ * This executes trusted code, including external/native modules. User-facing
+ * callers must present the execution-risk notice before invoking discovery;
+ * the low-level loader cannot assume an initialized UI or prompt safely.
+ */
 bool read_mod_definition( const std::filesystem::path &root, mod_definition &result,
                           std::string &error );
 
@@ -91,9 +95,20 @@ std::string prepared_content_fingerprint();
 /**
  * Re-execute active entries and swap runtime registrations only when their
  * static content fingerprint is unchanged.  A changed fingerprint returns
- * false with `requires_full_data_reload` in @p error.
+ * false with `requires_full_data_reload` in @p error. Reentrant calls while
+ * an active Mod is executing Lua, or another reload is replacing registrations,
+ * are rejected before touching its state.
  */
 bool reload_active_mods( std::string &error );
+
+/**
+ * Run an explicitly submitted console chunk in an existing Mod state. This is
+ * not a sandbox or a transaction: changes survive a later script error.
+ * Output describes up to 16 return values, expanding at most 20 raw fields of
+ * each returned table without traversing nested tables or invoking metamethods.
+ */
+bool execute_console( const std::string &mod_id, const std::string &source,
+                      std::string &output, std::string &error );
 
 /** Activate world-bound services and load engine-owned Platform sidecars. */
 void on_world_ready( bool new_game );
@@ -105,7 +120,7 @@ void before_save();
 bool save_persistent_state( std::string &error );
 
 /** Report the final save outcome to lifecycle subscribers. */
-void after_save( bool success, const std::string &error );
+void after_save( bool success, std::string_view error );
 
 /** Run due named persistent tasks at the current game turn. */
 void on_turn();

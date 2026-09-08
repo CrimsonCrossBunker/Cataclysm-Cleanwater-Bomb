@@ -393,6 +393,12 @@
       "synchronized": true
     },
     {
+      "declared_class": "LocalizedText",
+      "in_public_contract": true,
+      "native_name": "LocalizedText",
+      "synchronized": true
+    },
+    {
       "declared_class": "MagicTypeDefinition",
       "in_public_contract": true,
       "native_name": "MagicTypeDefinition",
@@ -1073,13 +1079,13 @@
   ],
   "platform_sync": {
     "contract_export_roots_missing_from_inventory": [],
-    "luals_class_count": 679,
-    "luals_function_count": 1257,
-    "native_export_root_count": 178,
-    "native_export_roots_declared": 178,
-    "native_export_roots_in_public_contract": 178,
+    "luals_class_count": 681,
+    "luals_function_count": 1262,
+    "native_export_root_count": 179,
+    "native_export_roots_declared": 179,
+    "native_export_roots_in_public_contract": 179,
     "native_registration_file_count": 120,
-    "public_contract_export_root_count": 178,
+    "public_contract_export_root_count": 179,
     "synchronized": true,
     "unmatched_native_export_roots": []
   },

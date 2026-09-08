@@ -4,20 +4,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <character_id.h>
-#include <common_types.h>
 #include <enums.h>
-#include <game_constants.h>
 #include <item_uid.h>
-#include <lua_platform_hooks.h>
-#include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
 #include <point.h>
-
-namespace cata::lua_platform::detail
-{
-struct event_statistic_snapshot;
-struct event_transformation_snapshot;
-}  // namespace cata::lua_platform::detail
 
 #include <algorithm>
 #include <array>
@@ -26,7 +16,6 @@ struct event_transformation_snapshot;
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <iomanip>
 extern "C" {
 #include <lua.h>
 }
@@ -36,89 +25,31 @@ extern "C" {
 #include <set>
 #include <sstream>
 #include <stdexcept>
-#include <system_error>
-#include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 
 #include "achievement.h"
-#include "ammo.h"
-#include "ammo_effect.h"
-#include "anatomy.h"
-#include "ascii_art.h"
 #include "avatar.h"
-#include "behavior.h"
-#include "behavior_oracle.h"
-#include "behavior_strategy.h"
-#include "bionics.h"
-#include "bodygraph.h"
 #include "bodypart.h"
-#include "butchery.h"
-#include "butchery_requirements.h"
 #include "calendar.h"
 #include "cata_path.h"
-#include "cata_scope_helpers.h"
-#include "cata_utility.h"
-#include "cata_variant.h"
 #include "catacharset.h"
 #include "character.h"
 #include "character_martial_arts.h"
-#include "character_modifier.h"
-#include "city.h"
-#include "climbing.h"
-#include "clothing_mod.h"
-#include "clzones.h"
-#include "color.h"
 #include "computer.h"
-#include "construction.h"
-#include "construction_category.h"
-#include "construction_group.h"
 #include "coordinates.h"
 #include "crafting_gui.h"
 #include "creature.h"
-#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
-#include "dialogue_helpers.h"
-#include "disease.h"
-#include "effect.h"
-#include "emit.h"
-#include "end_screen.h"
 #include "enum_conversions.h"
 #include "event.h"
 #include "event_bus.h"
-#include "event_field_transformations.h"
-#include "event_statistics.h"
-#include "event_subscriber.h"
-#include "explosion_light.h"
-#include "faction_camp.h"
-#include "fault.h"
 #include "field.h"
-#include "field_type.h"
-#include "filesystem.h"
-#include "flag.h"
-#include "flexbuffer_json.h"
 #include "game.h"
-#include "gates.h"
-#include "generic_factory.h"
-#include "harvest.h"
-#include "help.h"
-#include "hsv_color.h"
-#include "init.h"
 #include "item.h"
-#include "item_action.h"
-#include "item_category.h"
-#include "item_factory.h"
-#include "item_group.h"
 #include "item_location.h"
-#include "item_wakeup.h"
-#include "itype.h"
-#include "iuse.h"
-#include "json.h"
-#include "json_loader.h"
 #include "lua_platform_achievements.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_addictions.h"
@@ -126,7 +57,6 @@ extern "C" {
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_bionics.h"
 #include "lua_platform_camps.h"
-#include "lua_platform_content.h"
 #include "lua_platform_crafting.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_dialogue.h"
@@ -148,7 +78,6 @@ extern "C" {
 #include "lua_platform_registry.h"
 #include "lua_platform_skills.h"
 #include "lua_platform_snapshots.h"
-#include "lua_platform_state.h"
 #include "lua_platform_statistics.h"
 #include "lua_platform_time.h"
 #include "lua_platform_trade.h"
@@ -157,92 +86,47 @@ extern "C" {
 #include "lua_platform_vitamins.h"
 #include "lua_platform_weather.h"
 #include "lua_platform_world.h"
-#include "lua_platform_world_content.h"
 #include "lua_platform_world_info.h"
 #include "lua_platform_world_services.h"
 #include "lua_platform_zones.h"
-#include "magic_enchantment.h"
-#include "magic_ter_furn_transform.h"
-#include "magic_type.h"
 #include "map.h"
-#include "map_accessories.h"
-#include "map_extras.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "mapgen_functions.h"
-#include "mapgen_post_process.h"
 #include "mapgendata.h"
-#include "martialarts.h"
-#include "material.h"
 #include "math_parser.h"
-#include "math_parser_diag.h"
-#include "math_parser_jmath.h"
-#include "mattack_actors.h"
-#include "mattack_common.h"
 #include "messages.h"
-#include "mission.h"
 #include "mod_tileset.h"
-#include "mondefense.h"
-#include "monfaction.h"
-#include "mongroup.h"
-#include "monster.h"
-#include "monstergenerator.h"
-#include "mood_face.h"
-#include "morale_types.h"
-#include "move_mode.h"
-#include "mtype.h"
-#include "mutation.h"
 #include "npc.h"
-#include "omdata.h"
 #include "options.h"
-#include "output.h"
-#include "overlay_ordering.h"
-#include "overmap_connection.h"
-#include "overmap_location.h"
-#include "overmap_map_data_cache.h"
-#include "overmap_worldgen.h"
 #include "path_info.h"
-#include "player_activity.h"
-#include "profession.h"
-#include "profession_group.h"
-#include "proficiency.h"
-#include "recipe.h"
 #include "recipe_dictionary.h"
-#include "recipe_groups.h"
-#include "regional_settings.h"
-#include "relic.h"
-#include "requirements.h"
-#include "safe_reference.h"
-#include "scenario.h"
-#include "scent_map.h"
-#include "shop_cons_rate.h"
-#include "skill.h"
 #include "sounds.h"
-#include "speech.h"
-#include "speed_description.h"
-#include "start_location.h"
-#include "string_input_popup.h"
-#include "subbodypart.h"
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
-#include "trap.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "units.h"
-#include "veh_type.h"
-#include "vehicle.h"
-#include "vehicle_group.h"
-#include "vehicle_palette.h"
-#include "vehicle_part_location.h"
-#include "vitamin.h"
-#include "weakpoint.h"
-#include "weather_gen.h"
-#include "weather_type.h"
-#include "widget.h"
 #include "worldfactory.h"
+// Supplies enum_traits<cardinal_direction> for string_to_enum_optional.
+#include "widget.h" // IWYU pragma: keep
 #include "wound.h"
+#include <pimpl.h>
+#include <cstddef>
+#include <exception>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+#include "lua_platform_sol.h"
+
+class recipe;
+struct bionic;
+
+static const efftype_id effect_sleep( "sleep" );
 
 namespace cata::lua_platform
 {
@@ -257,6 +141,13 @@ using detail::runtime_callback_is_active;
 
 namespace
 {
+
+void require_translation_text( const std::string_view text )
+{
+    if( text.find( '\0' ) != std::string::npos ) {
+        throw std::runtime_error( "translation text and context must not contain NUL" );
+    }
+}
 
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
@@ -325,7 +216,7 @@ struct use_context_data {
         return used_item->charges;
     }
 
-    void set_charges( std::int64_t value ) {
+    void set_charges( std::int64_t value ) const {
         require_active();
         if( value < 0 || value > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "item charges are outside the native range" );
@@ -362,11 +253,11 @@ constexpr std::size_t maximum_computer_value_nodes = 512;
 constexpr std::size_t maximum_computer_value_bytes = 8192;
 constexpr int maximum_computer_value_depth = 8;
 
-void require_computer_value_key( const std::string &key )
+void require_computer_value_key( std::string_view key )
 {
     if( key.empty() || key.size() > 128 ||
     std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
             "computer value keys must contain 1 to 128 printable bytes" );
@@ -505,7 +396,7 @@ struct computer_access_context {
         return terminal->name;
     }
 
-    void set_name( const std::string &value ) {
+    void set_name( const std::string &value ) const {
         require_active();
         if( value.empty() || value.size() > 4096 ||
             value.find( '\0' ) != std::string::npos ) {
@@ -520,7 +411,7 @@ struct computer_access_context {
         return terminal->access_denied;
     }
 
-    void set_access_denied( const std::string &value ) {
+    void set_access_denied( const std::string &value ) const {
         require_active();
         if( value.size() > 4096 || value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -534,7 +425,7 @@ struct computer_access_context {
         return terminal->security;
     }
 
-    void set_security( const std::int64_t value ) {
+    void set_security( const std::int64_t value ) const {
         require_active();
         if( value < -1000000 || value > 1000000 ) {
             throw std::invalid_argument(
@@ -548,7 +439,7 @@ struct computer_access_context {
         return terminal->alerts;
     }
 
-    void set_alerts( const std::int64_t value ) {
+    void set_alerts( const std::int64_t value ) const {
         require_active();
         if( value < 0 || value > 1000000 ) {
             throw std::invalid_argument(
@@ -562,7 +453,7 @@ struct computer_access_context {
         return terminal->mission_id;
     }
 
-    void set_mission_id( const std::int64_t value ) {
+    void set_mission_id( const std::int64_t value ) const {
         require_active();
         if( value < -1 || value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
@@ -598,7 +489,7 @@ struct computer_access_context {
         return computer_value_to_lua( sol::state_view( state ), *stored, 0, nodes );
     }
 
-    void set_value( const std::string &key, const sol::object &value ) {
+    void set_value( const std::string &key, const sol::object &value ) const {
         require_active();
         require_computer_value_key( key );
         if( value.get_type() == sol::type::nil ) {
@@ -615,7 +506,7 @@ struct computer_access_context {
             key, computer_value_from_lua( value, key, 0, nodes ) );
     }
 
-    bool remove_value( const std::string &key ) {
+    bool remove_value( const std::string &key ) const {
         require_active();
         require_computer_value_key( key );
         const bool existed = terminal->maybe_get_value( key ) != nullptr;
@@ -676,12 +567,14 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( !owner || !owner->world_is_ready ) {
-        character->add_msg_if_player( "Lua-first Mod runtime is not ready." );
+        character->add_msg_if_player(
+            to_translation( "Lua-first Mod runtime is not ready." ).translated() );
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
-        character->add_msg_if_player( "Lua-first item handler is no longer registered." );
+        character->add_msg_if_player(
+            to_translation( "Lua-first item handler is no longer registered." ).translated() );
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
@@ -706,13 +599,15 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     if( returned.get_type() != sol::type::number || !returned.is<lua_Integer>() ) {
-        ::add_msg( m_bad, "Lua-first item handler must return an integer or nil." );
+        ::add_msg( m_bad,
+                   to_translation( "Lua-first item handler must return an integer or nil." ).translated() );
         return std::nullopt;
     }
     const lua_Integer native_result = returned.as<lua_Integer>();
     if( native_result < std::numeric_limits<int>::min() ||
         native_result > std::numeric_limits<int>::max() ) {
-        ::add_msg( m_bad, "Lua-first item handler result is outside the native range." );
+        ::add_msg( m_bad,
+                   to_translation( "Lua-first item handler result is outside the native range." ).translated() );
         return std::nullopt;
     }
     return static_cast<int>( native_result );
@@ -1331,7 +1226,7 @@ bool platform_tileset_relative_file(
         return false;
     }
     for( const std::filesystem::path &part : relative ) {
-        if( part == "." || part == ".." ) {
+        if( part == std::filesystem::u8path( "." ) || part == std::filesystem::u8path( ".." ) ) {
             return false;
         }
     }
@@ -1655,6 +1550,8 @@ std::string register_platform_tileset( runtime &owner,
 
 } // namespace
 
+// Keep the Platform service registration table together for contract extraction.
+// NOLINTNEXTLINE(readability-function-size)
 void install_runtime_api( const std::shared_ptr<runtime> &value,
                           sol::state &lua, sol::table &ccb )
 {
@@ -1699,6 +1596,47 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
 
     sol::table services = lua.create_table();
+    services.set_function( "translate", [weak]( const std::string & text,
+    const sol::optional<std::string> &context ) -> std::string {
+        require_live_runtime( weak, "services.translate" );
+        require_translation_text( text );
+        if( context )
+        {
+            require_translation_text( *context );
+        }
+#if defined(LOCALIZE)
+        TranslationManager &manager = TranslationManager::GetInstance();
+        return context ? manager.TranslateWithContext( context->c_str(), text.c_str() ) :
+        manager.Translate( text );
+#else
+        return text;
+#endif
+    } );
+    services.set_function( "translate_plural", [weak]( const std::string & singular,
+                           const std::string & plural, const std::int64_t count,
+    const sol::optional<std::string> &context ) -> std::string {
+        require_live_runtime( weak, "services.translate_plural" );
+        require_translation_text( singular );
+        require_translation_text( plural );
+        if( context )
+        {
+            require_translation_text( *context );
+        }
+        const std::size_t native_count = static_cast<std::size_t>( count );
+        if( count < 0 || static_cast<std::uint64_t>( native_count ) !=
+            static_cast<std::uint64_t>( count ) )
+        {
+            throw std::runtime_error( "translation count is outside the native nonnegative range" );
+        }
+#if defined(LOCALIZE)
+        TranslationManager &manager = TranslationManager::GetInstance();
+        return context ? manager.TranslatePluralWithContext( context->c_str(), singular.c_str(),
+                plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
+                        plural.c_str(), native_count );
+#else
+        return count == 1 ? singular : plural;
+#endif
+    } );
     services.set_function( "message", [weak]( const std::string & message ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
@@ -2603,7 +2541,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     cata::lua_platform::install_world_info_api( services, require_read, require_write,
             has_callback );
 
-    const auto require_snippet_key = []( const std::string & value,
+    const auto require_snippet_key = []( std::string_view value,
     const std::string_view api_name ) {
         if( value.empty() || value.size() > 512 ||
             value.find( '\0' ) != std::string::npos ) {
@@ -2838,7 +2776,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.messages audible message exceeds its native string limit" );
         }
         avatar &player = get_avatar();
-        static const efftype_id effect_sleep( "sleep" );
         if( player.has_effect( effect_sleep ) || player.is_deaf() ) {
             return false;
         }
@@ -3030,7 +2967,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 const std::string key = entry.first.as<std::string>();
                 if( key.empty() || key.size() > 128 ||
                 std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-                return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+                return ch < 0x20U || ch == 0x7fU;
             } ) ) {
                     throw std::invalid_argument(
                         "services.gameplay.math context keys must be printable and bounded" );
@@ -3066,7 +3003,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table math = lua.create_table();
     math.set_function( "evaluate", [require_read, make_math_dialogue](
-                           sol::this_state state, const std::string & source,
+                           sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
     const sol::optional<sol::table> &context ) {
         require_read();
@@ -3090,7 +3027,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, result ) );
     } );
     math.set_function( "apply", [require_write, make_math_dialogue](
-                           sol::this_state state, const std::string & source,
+                           sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
     const sol::optional<sol::table> &context ) {
         require_write();
@@ -3190,7 +3127,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     gameplay["mods"] = std::move( mods );
 
-    const auto require_option_id = []( const std::string & id ) {
+    const auto require_option_id = []( std::string_view id ) {
         if( id.empty() || id.size() > 256 ||
             !std::all_of(
                 id.begin(), id.end(),
@@ -3514,7 +3451,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     cata::lua_platform::install_game_interaction_api( services, require_write, has_callback );
     const auto play_audible_sound = [weak, require_write](
-                                        const std::string & id, const std::string & variant,
+                                        std::string_view id, std::string_view variant,
                                         const sol::optional<int> &requested_volume,
     const bool from_outdoors ) {
         require_write();
@@ -3530,7 +3467,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.sound audible playback volume must be within 0..128" );
         }
         avatar &player = get_avatar();
-        static const efftype_id effect_sleep( "sleep" );
         if( player.has_effect( effect_sleep ) || player.is_deaf() ) {
             return false;
         }
@@ -3566,12 +3502,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table platform_sound = services["sound"];
     platform_sound.set_function( "play_if_audible", [play_audible_sound](
-                                     const std::string & id, const std::string & variant,
+                                     std::string_view id, std::string_view variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, false );
     } );
     platform_sound.set_function( "play_from_outdoors", [play_audible_sound](
-                                     const std::string & id, const std::string & variant,
+                                     std::string_view id, std::string_view variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, true );
     } );
@@ -3704,7 +3640,9 @@ sol::object select_platform_mapgen_value(
     throw std::runtime_error( "mapgen weighted choice failed to select a value" );
 }
 
+// Own the Lua reference across reentrant mapgen callbacks.
 void invoke_platform_mapgen_callback(
+    // NOLINTNEXTLINE(performance-unnecessary-value-param)
     runtime &owner, sol::protected_function callback,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const std::optional<int> x = std::nullopt,
@@ -3810,6 +3748,8 @@ sol::table platform_mapgen_table(
     return source.as<sol::table>();
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_computer(
     runtime &owner,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
@@ -3885,6 +3825,8 @@ void apply_platform_mapgen_computer(
     }
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_sealed_item(
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const sol::object &source, const int x, const int y )
@@ -3909,6 +3851,8 @@ void apply_platform_mapgen_sealed_item(
         platform_mapgen_string( descriptor, "faction" ) );
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 [[noreturn]] void apply_platform_mapgen_zone(
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
     const sol::object &source, const int x, const int y )
@@ -3925,6 +3869,8 @@ void apply_platform_mapgen_sealed_item(
         platform_mapgen_string( descriptor, "filter" ) );
 }
 
+// Coordinates mirror the authored mapgen callback arguments.
+// NOLINTNEXTLINE(cata-xy)
 void apply_platform_mapgen_symbol(
     runtime &owner,
     const std::shared_ptr<cata::lua_platform::script_mapgen_context> &context,
@@ -4833,10 +4779,8 @@ void hot_swap_active_runtimes(
         owner->character_state = std::move( old.character_state );
         owner->world_state = std::move( old.world_state );
         owner->tasks = std::move( old.tasks );
-        owner->reported_task_migration_failures =
-            std::move( old.reported_task_migration_failures );
         owner->next_task_id = old.next_task_id;
-        owner->random_engine = std::move( old.random_engine );
+        owner->random_engine = old.random_engine;
         owner->world_is_ready = previously_ready.count( owner->mod_id ) != 0;
         owner->tileset_registry_generation = old.tileset_registry_generation;
         old.tileset_registry_generation.reset();

@@ -6,6 +6,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     from .generate_platform_contract import (
@@ -13,6 +14,7 @@ try:
         parse_luals_declarations,
         read_declarations,
         serialize_contract,
+        validate_platform_entrypoint,
     )
 except ImportError:
     from generate_platform_contract import (  # type: ignore
@@ -20,6 +22,7 @@ except ImportError:
         parse_luals_declarations,
         read_declarations,
         serialize_contract,
+        validate_platform_entrypoint,
     )
 
 
@@ -74,6 +77,29 @@ class PlatformContractGeneratorTest(unittest.TestCase):
             '"contract_id": "ccb_platform_api_v1"',
             serialize_contract(contract),
         )
+
+    def test_entrypoint_requires_platform_binding_and_ordinary_require(
+        self,
+    ) -> None:
+        loader = '\n'.join((
+            'loaded["ccb"] = ccb;',
+            'lua["require"] = bound.get<sol::function>();',
+            'if name == "ccb" then',
+            'return platform',
+            'return original_require(name)',
+        ))
+        with patch.object(Path, "read_text", return_value=loader):
+            validate_platform_entrypoint()
+        for required in loader.splitlines():
+            with self.subTest(missing=required):
+                incomplete = loader.replace(required, "")
+                with patch.object(Path, "read_text", return_value=incomplete):
+                    with self.assertRaisesRegex(RuntimeError, "entrypoint"):
+                        validate_platform_entrypoint()
+        legacy_loader = loader + '\nloaded["game"] = game;'
+        with patch.object(Path, "read_text", return_value=legacy_loader):
+            with self.assertRaisesRegex(RuntimeError, "forbidden"):
+                validate_platform_entrypoint()
 
     def test_forbidden_game_surface_is_rejected_by_build_validation(
         self,

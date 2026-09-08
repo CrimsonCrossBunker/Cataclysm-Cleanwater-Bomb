@@ -643,14 +643,14 @@ capabilities:
     next_actions: []
   - id: platform-hardening
     phase: hardening
-    status: planned
-    target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Current loader whitelist and package restrictions do not yet implement this policy."
+    status: in_progress
+    target_surface: "Accepted trusted-code policy: complete Lua standard libraries, ordinary external Lua and platform-supported native module loading, per-Mod state ownership, no security-sandbox promise and no mandatory global instruction/memory quotas by default. Preserve supported ccb API correctness/lifetime checks; provide reliability and opt-in diagnostics. Loader source now opens standard libraries and preserves normal external/native package searchers; native build/runtime acceptance and startup notice UI acceptance remain pending."
     legacy_dependency: none
     evidence: [src/lua_platform_runtime.cpp, src/lua_platform_loader.cpp, tests/lua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
     verification: not_run
     next_actions:
-      - Replace library/package restrictions while preserving the reserved ccb entrypoint and local module resolution; verify full standard libraries and ordinary external/native loading on supported platforms.
-      - Document executable metadata discovery and provide execution-risk notice before downloaded Mod code first runs; do not claim existing catalog or launcher integration supplies this notice.
+      - Loader policy implementation and regression source are present but deliberately uncompiled. Run the loader tests and real external/native-module acceptance on supported platforms before claiming this slice verified.
+      - Mod-manager source now notifies once per manager before Lua metadata discovery; validate normal and headless startup, refresh behavior and direct-loader host documentation. The notice is not a sandbox or per-API permission gate.
       - Validate handle safety, reload and error cleanup; add profiling or optional diagnostic limits only when useful. Supersede sandbox/process-isolation and mandatory-budget plans rather than introducing another runtime or permission manifest.
   - id: shared-ccb-std
     phase: standard-library
@@ -662,12 +662,15 @@ capabilities:
     next_actions: [Evaluate candidate shared helpers in an independent design and acceptance batch; add declarations, examples, and tests only after a public shape is chosen; do not make this capability a platform-capability-closure or final-acceptance dependency.]
   - id: platform-internationalization
     phase: internationalization
-    status: planned
-    target_surface: "Recommended future author-facing internationalization: a Lua translation surface and extraction/plural/context workflow aligned with native text operations; exact function names and public shape remain to be designed."
+    status: in_progress
+    target_surface: "Runtime text helpers reuse native catalogs; Item names/descriptions and singular Skill/SkillDisplay texts also accept deferred text values. Literal gettext extraction covers both routes; native/locale acceptance and wider content/catalog lifecycle work remain pending."
     legacy_dependency: none
-    evidence: [src/translation_manager.cpp, src/translations.h, src/lua_platform_world_content.cpp, tests/translation_system_test.cpp, data/lua/types/ccb_platform_v1.d.lua]
+    evidence: [src/translation_manager.cpp, src/lua_platform_runtime_services.cpp, src/lua_platform_content_items.cpp, tests/lua_platform_translation_test.cpp, tests/lua_platform_content_translation_test.cpp, tools/lua_api/extract_translations.py, data/lua/types/ccb_platform_v1.d.lua]
     verification: not_run
-    next_actions: [Design and implement internationalization in an independent follow-on batch with its own extraction, declaration, example, test, and acceptance evidence; do not make it a platform-capability-closure or final-acceptance dependency.]
+    next_actions:
+      - 'Runtime helper and extraction source is implemented; tool extraction tests passed. Integration build and native acceptance evidence is tracked in source PR #768; actual catalog and language-switch acceptance remains separate.'
+      - 'Generated inventories and the public-contract gate are current. Verify real catalogs, context, plural rules and language changes before claiming complete localization support; source PR #768 records tested build configurations.'
+      - Native regression source covers Item deferred text, inheritance, literal replacement and static fingerprints; other content builders, metadata translation and catalog lifecycle remain deferred. This slice is not a platform-capability-closure or final-acceptance dependency.
   - id: author-experience
     phase: tooling
     status: in_progress
@@ -677,4 +680,7 @@ capabilities:
     verification: not_run
     next_actions:
       - The initial declaration-snapshot, scaffold/editor and static-diagnostic slice passed local tool tests and the real LuaLS gate; it does not implement an in-game debugger, state/task inspector or native compatibility negotiation.
+      - A read-only saved-state inspector and test source now summarize state keys, task identities and participant records without starting the game; its tool tests passed in the Lua tool gate and it is not a live runtime inspector.
+      - 'A Console Lua tab executes explicit chunks in an existing selected Mod state; native regression source covers ownership, errors, return formatting and reentry. Source PR #768 tracks native backend acceptance; interactive UI acceptance remains separate. This is not a breakpoint debugger.'
       - Continue runtime debugging, cookbook and author-workflow improvements as independent batches with their own evidence; do not make the whole author-experience capability a core Platform closure dependency.
+      - 'State-scope key pages expose copied, owner-scoped names with bounded output; source PR #768 records their integration build and native regression results.'

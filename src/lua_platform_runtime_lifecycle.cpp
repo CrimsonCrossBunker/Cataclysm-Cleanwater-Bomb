@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -25,10 +26,8 @@
 #include "character.h"
 #include "creature_tracker.h"
 #include "debug.h"
-#include "field_type.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
-#include "game.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
@@ -41,8 +40,33 @@
 #include "messages.h"
 #include "monster.h"
 #include "path_info.h"
+#include "translations.h"
 #include "vehicle.h"
 #include "worldfactory.h"
+#include <cata_utility.h>
+#include <character_id.h>
+#include <enums.h>
+#include <item_location.h>
+#include <item_uid.h>
+extern "C" {
+#include <lua.h>
+}
+#include <lua_platform_handle.h>
+#include <lua_platform_runtime.h>
+#include <lua_platform_state.h>
+#include <math_parser_diag_value.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
+#include <vehicle_uid.h>
+#include <cctype>
+#include <cstddef>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <system_error>
+#include <unordered_map>
+#include "lua_platform_sol.h"
 
 namespace cata::lua_platform
 {
@@ -56,6 +80,7 @@ using persistent_value = script_persistent_value;
 struct persistent_scope_record {
     persistent_state values;
     std::vector<persistent_task> tasks;
+    std::uint64_t last_task_id = 0;
 };
 
 constexpr std::uintmax_t maximum_platform_state_file_bytes =
@@ -313,6 +338,7 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
         return;
     }
+    std::string context = "scope=" + scope;
     try {
         std::error_code size_error;
         const std::uintmax_t file_size = std::filesystem::file_size(
@@ -333,9 +359,19 @@ void load_scope( const cata_path &path, const std::string &scope,
         }
         const JsonObject mods = root.get_object( "mods" );
         for( const JsonMember member : mods ) {
+            const std::string record_context = "scope=" + scope + ", Mod='" + member.name() + "'";
+            context = record_context;
             const std::shared_ptr<runtime> owner = detail::find_active_runtime( member.name() );
             const JsonObject stored = member.get_object();
             persistent_scope_record record;
+            const bool has_last_task_id = stored.has_member( "last_task_id" );
+            if( has_last_task_id ) {
+                const std::int64_t last_task_id = stored.get_int64( "last_task_id" );
+                if( last_task_id < 0 ) {
+                    throw std::runtime_error( "Platform last task id must be non-negative" );
+                }
+                record.last_task_id = static_cast<std::uint64_t>( last_task_id );
+            }
             record.values = read_typed_values( stored.get_object( "values" ) );
             std::set<std::uint64_t> stored_task_ids;
             if( stored.has_array( "tasks" ) ) {
@@ -343,13 +379,20 @@ void load_scope( const cata_path &path, const std::string &scope,
                 if( stored_tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
                 }
+                std::size_t task_index = 0;
                 for( const JsonObject task_json : stored_tasks ) {
+                    context = record_context + ", task[" + std::to_string( task_index++ ) + "]";
                     persistent_task task;
                     const std::int64_t stored_id = task_json.get_int64( "id" );
+                    context += ", id=" + std::to_string( stored_id );
                     if( stored_id <= 0 ) {
                         throw std::runtime_error( "Platform task id must be positive" );
                     }
                     task.id = static_cast<std::uint64_t>( stored_id );
+                    if( has_last_task_id && task.id > record.last_task_id ) {
+                        throw std::runtime_error( "Platform task id exceeds its saved counter" );
+                    }
+                    record.last_task_id = std::max( record.last_task_id, task.id );
                     if( !stored_task_ids.insert( task.id ).second ) {
                         throw std::runtime_error( "Platform state repeats a persistent task id" );
                     }
@@ -568,6 +611,8 @@ void load_scope( const cata_path &path, const std::string &scope,
                         std::sort( task.participants.begin(), task.participants.end(),
                                    []( const persistent_task_participant & lhs,
                         const persistent_task_participant & rhs ) {
+                            // Participant roles are stable protocol keys, not display text.
+                            // NOLINTNEXTLINE(cata-use-localized-sorting)
                             return lhs.role < rhs.role;
                         } );
                     }
@@ -580,6 +625,7 @@ void load_scope( const cata_path &path, const std::string &scope,
                     task_json.allow_omitted_members();
                 }
             }
+            context = record_context;
             if( owner ) {
                 if( owner->tasks.size() + record.tasks.size() > maximum_tasks_per_mod ) {
                     throw std::runtime_error( "Platform state exceeds 1024 persistent tasks per Mod" );
@@ -596,8 +642,8 @@ void load_scope( const cata_path &path, const std::string &scope,
                 persistent_state &state = scope == "character" ?
                                           owner->character_state : owner->world_state;
                 state = std::move( record.values );
+                owner->next_task_id = std::max( owner->next_task_id, record.last_task_id + 1 );
                 for( persistent_task &task : record.tasks ) {
-                    owner->next_task_id = std::max( owner->next_task_id, task.id + 1 );
                     owner->tasks.push_back( std::move( task ) );
                 }
             } else {
@@ -610,15 +656,21 @@ void load_scope( const cata_path &path, const std::string &scope,
         error.clear();
     } catch( const std::exception &exception ) {
         clear_scope( scope );
-        error = path.get_unrelative_path().string() + ": " + exception.what();
+        error = path.get_unrelative_path().generic_u8string() + " [" + context + "]: " +
+                exception.what();
     }
 }
 
 void write_scope_record( JsonOut &json, const persistent_state &state,
                          const std::vector<persistent_task> &tasks,
+                         const std::uint64_t last_task_id,
                          const std::string &scope, const std::string &mod_id )
 {
+    if( last_task_id > static_cast<std::uint64_t>( std::numeric_limits<std::int64_t>::max() ) ) {
+        throw std::runtime_error( "Platform last task id is outside the native range" );
+    }
     json.start_object();
+    json.member( "last_task_id", static_cast<std::int64_t>( last_task_id ) );
     json.member( "values" );
     write_typed_values( json, state );
     json.member( "tasks" );
@@ -630,6 +682,9 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
         if( !task.owner_mod_id.empty() && task.owner_mod_id != mod_id ) {
             throw std::runtime_error(
                 "Platform task owner Mod does not match its runtime" );
+        }
+        if( task.id == 0 || task.id > last_task_id ) {
+            throw std::runtime_error( "Platform task id exceeds its saved counter" );
         }
         json.start_object();
         json.member( "id", static_cast<std::int64_t>( task.id ) );
@@ -724,8 +779,15 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
 
 void write_scope( const cata_path &path, const std::string &scope )
 {
-    std::ostringstream buffer;
+    detail::bounded_state_output_buffer storage( static_cast<std::size_t>
+            ( maximum_platform_state_file_bytes ),
+            "Platform state file exceeds 16 MiB" );
+    std::ostream buffer( &storage );
+    buffer.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut json( buffer, true );
+    // JsonOut defaults to fixed precision; persistent doubles must round-trip.
+    buffer.unsetf( std::ios_base::floatfield );
+    buffer.precision( std::numeric_limits<double>::max_digits10 );
     json.start_object();
     json.member( "version", 1 );
     json.member( "scope", scope );
@@ -742,7 +804,7 @@ void write_scope( const cata_path &path, const std::string &scope )
             continue;
         }
         json.member( mod_id );
-        write_scope_record( json, record.values, record.tasks, scope, mod_id );
+        write_scope_record( json, record.values, record.tasks, record.last_task_id, scope, mod_id );
     }
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner ) {
@@ -751,14 +813,11 @@ void write_scope( const cata_path &path, const std::string &scope )
         const persistent_state &state = scope == "character" ?
                                         owner->character_state : owner->world_state;
         json.member( owner->mod_id );
-        write_scope_record( json, state, owner->tasks, scope, owner->mod_id );
+        write_scope_record( json, state, owner->tasks, owner->next_task_id - 1, scope, owner->mod_id );
     }
     json.end_object();
     json.end_object();
-    const std::string serialized = buffer.str();
-    if( serialized.size() > maximum_platform_state_file_bytes ) {
-        throw std::runtime_error( "Platform state file exceeds 16 MiB" );
-    }
+    const std::string &serialized = storage.str();
     write_to_file( path, [&serialized]( std::ostream & output ) {
         output << serialized;
     } );
@@ -769,6 +828,10 @@ void write_scope( const cata_path &path, const std::string &scope )
 bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
                                    std::string &error )
 {
+    // Metadata/result conversion can also allocate Lua objects and run GC.
+    // Keep the task container stable for the entire migration transaction.
+    restore_on_out_of_scope restore_task_migration_active( owner.task_migration_active );
+    owner.task_migration_active = true;
     const auto handler = owner.handlers.find( task.handler_id );
     if( handler == owner.handlers.end() ) {
         error = "missing handler '" + task.handler_id + "'";
@@ -804,14 +867,8 @@ bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
         metadata["from_version"] = candidate.payload_version;
         metadata["to_version"] = transition->second.target_version;
         sol::protected_function callback = transition->second.callback;
-        const sol::protected_function_result result = [&]() {
-            restore_on_out_of_scope restore_task_migration_active(
-                owner.task_migration_active );
-            owner.task_migration_active = true;
-            return callback(
-                       persistent_table( *owner.lua, candidate.payload ), metadata );
-        }
-        ();
+        const sol::protected_function_result result = callback(
+                    persistent_table( *owner.lua, candidate.payload ), metadata );
         if( !result.valid() ) {
             const sol::error callback_error = result;
             error = callback_error.what();
@@ -864,6 +921,53 @@ void detail::install_runtime_state_task_api(
             }
             set_persistent_value( owner.get()->*member, key, entry,
                                   "state." + name + ".set" );
+        } );
+        scope.set_function( "keys", [weak, member, name]( sol::this_state state,
+        const sol::optional<std::string> &after_key, const sol::optional<std::int64_t> &requested_limit ) {
+            const std::shared_ptr<runtime> owner = weak.lock();
+            if( !owner || !owner->world_is_ready ) {
+                throw std::runtime_error( "state." + name + " is only available after world_ready" );
+            }
+            const std::int64_t limit = requested_limit.value_or( 20 );
+            if( limit < 1 || limit > 200 ) {
+                throw std::invalid_argument( "state.keys limit must be between 1 and 200" );
+            }
+            const persistent_state &values = owner.get()->*member;
+            const std::size_t total = values.size();
+            std::size_t matched = 0;
+            std::set<std::string> keys;
+            for( const auto &entry : values ) {
+                // API cursors are bytewise keys, independent of UI language.
+                // NOLINTNEXTLINE(cata-use-localized-sorting)
+                if( after_key && entry.first <= *after_key ) {
+                    continue;
+                }
+                ++matched;
+                keys.insert( entry.first );
+                if( keys.size() > static_cast<std::size_t>( limit ) ) {
+                    auto last = keys.end();
+                    keys.erase( --last );
+                }
+            }
+            // Finish traversing native state before Lua allocation can run GC.
+            // Keep only one page of copied keys, never borrowed value references.
+            sol::state_view lua_state( state );
+            sol::table result = lua_state.create_table();
+            sol::table items = lua_state.create_table();
+            int index = 1;
+            for( const std::string &key : keys ) {
+                items[index++] = key;
+            }
+            result["items"] = std::move( items );
+            result["total"] = total;
+            result["matched"] = matched;
+            result["returned"] = keys.size();
+            result["limit"] = limit;
+            result["truncated"] = matched > keys.size();
+            if( matched > keys.size() ) {
+                result["next_after"] = *keys.rbegin();
+            }
+            return result;
         } );
         return scope;
     };
@@ -1048,6 +1152,8 @@ void detail::install_runtime_state_task_api(
                     throw std::invalid_argument(
                         "persistent task participant role is invalid or repeated" );
                 }
+                // Keep a value snapshot independent of later callback mutations.
+                // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
                 const cata::lua_platform::game_handle handle =
                     raw_handle.as<cata::lua_platform::game_handle>();
                 participant.hint = handle.locator();
@@ -1119,6 +1225,8 @@ void detail::install_runtime_state_task_api(
             std::sort( task.participants.begin(), task.participants.end(),
                        []( const persistent_task_participant & lhs,
             const persistent_task_participant & rhs ) {
+                // Participant roles are stable protocol keys, not display text.
+                // NOLINTNEXTLINE(cata-use-localized-sorting)
                 return lhs.role < rhs.role;
             } );
         }
@@ -1141,10 +1249,13 @@ void detail::install_runtime_state_task_api(
     sol::table tasks = lua.create_table();
     const auto task_snapshot = []( runtime & owner,
     const persistent_task & task ) {
-        sol::table result = owner.lua->create_table();
         const std::int64_t now =
             to_turn<std::int64_t>( calendar::turn );
         const auto handler = owner.handlers.find( task.handler_id );
+        const bool handler_available = handler != owner.handlers.end();
+        const bool payload_current = handler_available &&
+                                     handler->second.payload_version == task.payload_version;
+        sol::table result = owner.lua->create_table();
         result["id"] = static_cast<std::int64_t>( task.id );
         result["handler"] = task.handler_id;
         result["due_turn"] = task.due_turn;
@@ -1230,10 +1341,8 @@ void detail::install_runtime_state_task_api(
         }
         result["participants"] = std::move( participant_snapshots );
         result["payload_version"] = task.payload_version;
-        result["handler_available"] = handler != owner.handlers.end();
-        result["payload_current"] =
-            handler != owner.handlers.end() &&
-            handler->second.payload_version == task.payload_version;
+        result["handler_available"] = handler_available;
+        result["payload_current"] = payload_current;
         result["payload"] = persistent_table( *owner.lua, task.payload );
         return result;
     };
@@ -1283,7 +1392,6 @@ void detail::install_runtime_state_task_api(
         [task_id]( const persistent_task & task ) {
             return task.id == task_id;
         } ), owner->tasks.end() );
-        owner->reported_task_migration_failures.erase( task_id );
         return owner->tasks.size() != old_size;
     } );
     tasks.set_function( "get", [weak, task_snapshot](
@@ -1305,8 +1413,12 @@ void detail::install_runtime_state_task_api(
         if( found == owner->tasks.end() ) {
             return sol::make_object( lua_state, sol::nil );
         }
+        // Lua allocation may run a finalizer that cancels or schedules tasks.
+        // Detach the native record before creating any Lua return values.
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+        const persistent_task snapshot = *found;
         return sol::make_object(
-                   lua_state, task_snapshot( *owner, *found ) );
+                   lua_state, task_snapshot( *owner, snapshot ) );
     } );
     tasks.set_function( "next", [weak, task_snapshot](
                             sol::this_state state, const std::string & handler_id,
@@ -1337,8 +1449,9 @@ void detail::install_runtime_state_task_api(
         if( next == nullptr ) {
             return sol::make_object( lua_state, sol::nil );
         }
+        const persistent_task snapshot = *next;
         return sol::make_object(
-                   lua_state, task_snapshot( *owner, *next ) );
+                   lua_state, task_snapshot( *owner, snapshot ) );
     } );
     tasks.set_function( "list", [weak, task_snapshot](
                             sol::this_state state,
@@ -1375,12 +1488,19 @@ void detail::install_runtime_state_task_api(
         const std::size_t returned = std::min(
                                          matches.size(),
                                          static_cast<std::size_t>( limit ) );
+        // Copy only the selected page, before allocations can invalidate any
+        // pointer into owner->tasks. Remaining matches are never dereferenced.
+        std::vector<persistent_task> snapshots;
+        snapshots.reserve( returned );
+        for( std::size_t index = 0; index < returned; ++index ) {
+            snapshots.push_back( *matches[index] );
+        }
         sol::state_view lua_state( state );
         sol::table entries = lua_state.create_table(
                                  static_cast<int>( returned ), 0 );
         for( std::size_t index = 0; index < returned; ++index ) {
             entries[index + 1] =
-                task_snapshot( *owner, *matches[index] );
+                task_snapshot( *owner, snapshots[index] );
         }
         sol::table result = lua_state.create_table();
         result["items"] = std::move( entries );
@@ -1507,8 +1627,11 @@ void runtime_process_character_recurring( Character &character )
             if( const diag_value *stored = character.maybe_get_value(
                                                registration.due_variable ) ) {
                 const double raw = stored->dbl();
-                if( std::isfinite( raw ) && raw >= 0.0 &&
-                    raw <= static_cast<double>( std::numeric_limits<std::int64_t>::max() ) &&
+                // INT64_MAX rounds up to 2^63 as a double. That value must not
+                // reach the integer cast; use the exact, exclusive upper bound.
+                const double upper_bound =
+                    -static_cast<double>( std::numeric_limits<std::int64_t>::min() );
+                if( std::isfinite( raw ) && raw >= 0.0 && raw < upper_bound &&
                     std::trunc( raw ) == raw ) {
                     due = static_cast<std::int64_t>( raw );
                 }
@@ -1638,7 +1761,6 @@ void runtime_process_tasks()
                 continue;
             }
             if( handler->second.payload_version == task.payload_version ) {
-                owner->reported_task_migration_failures.erase( task.id );
                 continue;
             }
             std::string migration_error;
@@ -1648,8 +1770,6 @@ void runtime_process_tasks()
                                               << owner->mod_id << ':' << task.handler_id
                                               << "': " << migration_error;
                 retired_task_ids.insert( task.id );
-            } else {
-                owner->reported_task_migration_failures.erase( task.id );
             }
         }
         if( !retired_task_ids.empty() ) {
@@ -1658,29 +1778,34 @@ void runtime_process_tasks()
             [&retired_task_ids]( const persistent_task & task ) {
                 return retired_task_ids.count( task.id ) != 0;
             } ), owner->tasks.end() );
-            for( const std::uint64_t task_id : retired_task_ids ) {
-                owner->reported_task_migration_failures.erase( task_id );
-            }
+            ::add_msg( m_warning, n_gettext(
+                           "Lua Mod '%s' discarded %zu persistent task.  See debug.log for details.",
+                           "Lua Mod '%s' discarded %zu persistent tasks.  See debug.log for details.",
+                           retired_task_ids.size() ), owner->mod_id, retired_task_ids.size() );
         }
+        // Snapshot this pass, but keep unstarted tasks cancellable and visible
+        // to queries until immediately before their own dispatch.
         std::vector<persistent_task> due;
-        owner->tasks.erase( std::remove_if( owner->tasks.begin(), owner->tasks.end(),
-        [&due, &owner, now]( const persistent_task & task ) {
+        for( const persistent_task &task : owner->tasks ) {
             const auto handler = owner->handlers.find( task.handler_id );
             if( task.due_turn <= now && handler != owner->handlers.end() &&
                 handler->second.payload_version == task.payload_version ) {
                 due.push_back( task );
-                return true;
             }
-            return false;
-        } ), owner->tasks.end() );
-        for( const persistent_task &task : due ) {
-            owner->reported_task_migration_failures.erase( task.id );
         }
         std::sort( due.begin(), due.end(), []( const persistent_task & lhs,
         const persistent_task & rhs ) {
             return std::tie( lhs.due_turn, lhs.id ) < std::tie( rhs.due_turn, rhs.id );
         } );
         for( const persistent_task &task : due ) {
+            const auto pending = std::find_if( owner->tasks.begin(), owner->tasks.end(),
+            [&task]( const persistent_task & candidate ) {
+                return candidate.id == task.id;
+            } );
+            if( pending == owner->tasks.end() ) {
+                continue; // A preceding callback cancelled this task.
+            }
+            owner->tasks.erase( pending );
             const auto handler = owner->handlers.find( task.handler_id );
             if( handler == owner->handlers.end() ) {
                 DebugLog( D_ERROR, D_MAIN ) << "Discarding Lua-first task " << task.id
@@ -1689,7 +1814,7 @@ void runtime_process_tasks()
                 continue;
             }
             if( handler->second.payload_version != task.payload_version ) {
-                // Invalid tasks are retired before due extraction.  Keep this
+                // Invalid tasks are retired before due selection.  Keep this
                 // guard for corrupted in-memory input copied into the due list.
                 DebugLog( D_ERROR, D_MAIN ) << "Discarding Lua-first task " << task.id
                                             << " because payload version "
@@ -1933,7 +2058,10 @@ void runtime_process_tasks()
             callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
-                report_callback_error( *owner, task.handler_id, result );
+                report_callback_error( *owner, task.handler_id, result,
+                                       "task " + std::to_string( task.id ) +
+                                       ", scope=" + task.owner +
+                                       ", due_turn=" + std::to_string( task.due_turn ) );
             } else if( next_due_turn && result.return_count() > 0 &&
                        result.get_type() == sol::type::boolean &&
                        !result.get<bool>() ) {

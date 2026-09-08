@@ -139,6 +139,8 @@ class runtime : public std::enable_shared_from_this<runtime>
             std::map<std::string, sol::object> symbols;
         };
 
+        // These fields mirror independently authored mapgen descriptor offsets.
+        // NOLINTNEXTLINE(cata-xy)
         struct declarative_mapgen_definition {
             std::uint64_t registration_id = 0;
             std::string id;
@@ -188,7 +190,6 @@ class runtime : public std::enable_shared_from_this<runtime>
         script_persistent_state character_state;
         script_persistent_state world_state;
         std::vector<persistent_task> tasks;
-        std::set<std::uint64_t> reported_task_migration_failures;
         std::uint64_t next_task_id = 1;
         bool task_migration_active = false;
         std::mt19937_64 random_engine;
@@ -250,10 +251,11 @@ class callback_scope
 };
 
 void require_live_runtime( const std::weak_ptr<runtime> &weak,
-                           std::string_view operation );
+                           std::string_view api_name );
 bool runtime_callback_is_active( const std::weak_ptr<runtime> &weak );
 void report_callback_error( const runtime &owner, std::string_view handler,
-                            const sol::protected_function_result &result );
+                            const sol::protected_function_result &result,
+                            std::string_view context = {} );
 void dispatch_lifecycle( runtime &owner, const std::string &name,
                          const sol::optional<sol::table> &payload = sol::nullopt );
 bool migrate_task_payload( runtime &owner, persistent_task &task,
@@ -275,7 +277,7 @@ Character *platform_event_character( const character_id &id );
 game_handle platform_creature_handle( const runtime &owner,
                                       const Creature &creature );
 game_handle platform_item_handle( const runtime &owner,
-                                  item_location &value,
+                                  item_location &location,
                                   const game_handle_locator &stored_hint );
 game_handle platform_vehicle_handle( const runtime &owner,
                                      vehicle &value );

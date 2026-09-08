@@ -48,6 +48,24 @@ file(GLOB LUA_HEADERS CONFIGURE_DEPENDS
 add_library(liblua ${LUA_SOURCES} ${LUA_HEADERS})
 target_include_directories(liblua SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Native modules need both dlopen and visible Lua C API symbols. Keep this
+# scoped to bundled Lua; the game's internal C++ ABI stays hidden/unsupported.
+if(WIN32)
+    # Lua C sources define LUA_CORE/LUA_LIB, selecting dllexport rather than
+    # dllimport. Keep this private: game C++ statically calls the embedded Lua.
+    target_compile_definitions(liblua PRIVATE LUA_BUILD_AS_DLL)
+elseif(UNIX)
+    target_compile_definitions(liblua PRIVATE LUA_USE_DLOPEN)
+    set_target_properties(liblua PROPERTIES C_VISIBILITY_PRESET default)
+    target_link_libraries(liblua PUBLIC ${CMAKE_DL_LIBS})
+    if(APPLE)
+        target_link_options(liblua INTERFACE "LINKER:-export_dynamic")
+    else()
+        target_link_options(liblua INTERFACE "LINKER:--export-dynamic")
+    endif()
+endif()
+
+
 # Lua is third-party code.  Keep its diagnostics isolated from the game's
 # warning-as-error policy while preserving its standard C ABI.
 if(MSVC)

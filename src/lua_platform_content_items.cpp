@@ -1,280 +1,81 @@
 #include "lua_platform_content_items.h"
 #include "lua_platform_runtime.h"
-#include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <body_part_set.h>
 #include <character_id.h>
-#include <clone_ptr.h>
-#include <common_types.h>
 #include <damage.h>
-#include <enum_bitset.h>
 #include <enums.h>
 #include <explosion.h>
 #include <fire.h>
 #include <flat_set.h>
 #include <game_constants.h>
-#include <iexamine.h>
 #include <item_pocket.h>
 #include <item_uid.h>
-#include <lua_platform_hooks.h>
 #include <magic.h>
-#include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
-#include <memory_fast.h>
 #include <monster_uid.h>
-#include <npc_opinion.h>
-#include <overmap_ui.h>
-#include <pimpl.h>
 #include <pocket_type.h>
-#include <point.h>
-#include <sleep.h>
 #include <stomach.h>
 #include <value_ptr.h>
 #include <vehicle_uid.h>
-#include <weighted_list.h>
-#include <bitset>
 #include <exception>
 #include <initializer_list>
-#include <iterator>
-#include <list>
-
-namespace cata::lua_platform::detail
-{
-struct event_statistic_snapshot;
-struct event_transformation_snapshot;
-}  // namespace cata::lua_platform::detail
+#include <optional>
 
 #include <algorithm>
-#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
-#include <filesystem>
 #include <functional>
-#include <iomanip>
 extern "C" {
 #include <lua.h>
 }
 #include <limits>
 #include <map>
-#include <random>
 #include <set>
 #include <sstream>
 #include <stdexcept>
-#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
-#include <variant>
 
-#include "achievement.h"
-#include "activity_actor.h"
-#include "activity_handlers.h"
-#include "activity_type.h"
-#include "addiction.h"
 #include "ammo.h"
 #include "ammo_effect.h"
-#include "anatomy.h"
-#include "ascii_art.h"
-#include "avatar.h"
-#include "behavior.h"
-#include "behavior_oracle.h"
-#include "behavior_strategy.h"
-#include "bionics.h"
-#include "bodygraph.h"
-#include "bodypart.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
 #include "calendar.h"
-#include "cata_path.h"
-#include "cata_scope_helpers.h"
-#include "cata_utility.h"
-#include "cata_variant.h"
-#include "catacharset.h"
-#include "character.h"
-#include "character_martial_arts.h"
-#include "character_modifier.h"
-#include "city.h"
-#include "climbing.h"
-#include "clothing_mod.h"
-#include "clzones.h"
 #include "color.h"
-#include "computer.h"
-#include "construction.h"
-#include "construction_category.h"
-#include "construction_group.h"
 #include "coordinates.h"
 #include "crafting_gui.h"
 #include "creature.h"
-#include "creature_tracker.h"
 #include "debug.h"
-#include "dialogue.h"
-#include "dialogue_helpers.h"
-#include "disease.h"
-#include "effect.h"
-#include "emit.h"
-#include "end_screen.h"
-#include "enum_conversions.h"
-#include "event.h"
-#include "event_bus.h"
-#include "event_field_transformations.h"
-#include "event_statistics.h"
-#include "event_subscriber.h"
-#include "explosion_light.h"
-#include "faction_camp.h"
-#include "fault.h"
-#include "field.h"
-#include "field_type.h"
-#include "filesystem.h"
 #include "flag.h"
-#include "flexbuffer_json.h"
-#include "game.h"
-#include "gates.h"
 #include "generic_factory.h"
-#include "harvest.h"
-#include "help.h"
-#include "hsv_color.h"
-#include "init.h"
 #include "item.h"
 #include "item_action.h"
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_group.h"
-#include "item_location.h"
-#include "item_wakeup.h"
 #include "itype.h"
 #include "iuse.h"
-#include "json.h"
-#include "json_loader.h"
-#include "lua_platform_achievements.h"
-#include "lua_platform_activities.h"
-#include "lua_platform_addictions.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_bionics.h"
-#include "lua_platform_camps.h"
 #include "lua_platform_content.h"
-#include "lua_platform_content_presentation.h"
-#include "lua_platform_crafting.h"
-#include "lua_platform_creatures.h"
-#include "lua_platform_dialogue.h"
-#include "lua_platform_effects.h"
-#include "lua_platform_factions.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_hordes.h"
-#include "lua_platform_interaction.h"
-#include "lua_platform_items.h"
-#include "lua_platform_magic.h"
-#include "lua_platform_mapgen.h"
-#include "lua_platform_martial_arts.h"
-#include "lua_platform_missions.h"
-#include "lua_platform_mutations.h"
-#include "lua_platform_needs.h"
-#include "lua_platform_npcs.h"
-#include "lua_platform_overmap.h"
-#include "lua_platform_proficiencies.h"
-#include "lua_platform_registry.h"
-#include "lua_platform_skills.h"
-#include "lua_platform_snapshots.h"
-#include "lua_platform_state.h"
-#include "lua_platform_statistics.h"
-#include "lua_platform_time.h"
-#include "lua_platform_trade.h"
-#include "lua_platform_variables.h"
-#include "lua_platform_vehicles.h"
-#include "lua_platform_vitamins.h"
-#include "lua_platform_weather.h"
-#include "lua_platform_world.h"
-#include "lua_platform_world_content.h"
-#include "lua_platform_world_info.h"
-#include "lua_platform_world_services.h"
-#include "lua_platform_zones.h"
-#include "magic_enchantment.h"
-#include "magic_ter_furn_transform.h"
-#include "magic_type.h"
-#include "map.h"
-#include "map_accessories.h"
-#include "map_extras.h"
-#include "map_scale_constants.h"
-#include "mapdata.h"
-#include "mapgen.h"
-#include "mapgen_functions.h"
-#include "mapgen_post_process.h"
-#include "mapgendata.h"
 #include "martialarts.h"
 #include "material.h"
-#include "math_parser.h"
 #include "math_parser_diag.h"
 #include "math_parser_jmath.h"
-#include "mattack_actors.h"
-#include "mattack_common.h"
-#include "messages.h"
-#include "mission.h"
-#include "mod_tileset.h"
-#include "mondefense.h"
-#include "monfaction.h"
-#include "mongroup.h"
-#include "monster.h"
-#include "monstergenerator.h"
-#include "mood_face.h"
-#include "morale_types.h"
-#include "move_mode.h"
-#include "mtype.h"
-#include "mutation.h"
-#include "npc.h"
-#include "omdata.h"
-#include "options.h"
-#include "output.h"
-#include "overlay_ordering.h"
-#include "overmap_connection.h"
-#include "overmap_location.h"
-#include "overmap_map_data_cache.h"
-#include "overmap_worldgen.h"
-#include "path_info.h"
-#include "player_activity.h"
-#include "profession.h"
-#include "profession_group.h"
 #include "proficiency.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "recipe_groups.h"
-#include "regional_settings.h"
-#include "relic.h"
 #include "requirements.h"
-#include "safe_reference.h"
-#include "scenario.h"
 #include "scent_map.h"
-#include "shop_cons_rate.h"
 #include "skill.h"
-#include "sounds.h"
-#include "speech.h"
-#include "speed_description.h"
-#include "start_location.h"
-#include "string_input_popup.h"
-#include "subbodypart.h"
-#include "talker.h"
-#include "text_snippets.h"
 #include "translation.h"
-#include "trap.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "units.h"
-#include "veh_type.h"
-#include "vehicle.h"
-#include "vehicle_group.h"
-#include "vehicle_palette.h"
-#include "vehicle_part_location.h"
 #include "vitamin.h"
-#include "weakpoint.h"
-#include "weather_gen.h"
-#include "weather_type.h"
-#include "widget.h"
-#include "worldfactory.h"
-#include "wound.h"
 
 static const damage_type_id damage_heat( "heat" );
 
@@ -334,6 +135,63 @@ struct quality_level {
     std::int64_t level = 1;
 };
 
+struct localized_text {
+    std::string singular;
+    std::optional<std::string> plural;
+    std::optional<std::string> context;
+
+    translation native() const {
+        if( plural ) {
+            return context ? translation::pl_translation( *context, singular, *plural ) :
+                   translation::pl_translation( singular, *plural );
+        }
+        return context ? translation::to_translation( *context, singular ) :
+               translation::to_translation( singular );
+    }
+};
+
+localized_text make_localized_text( const std::string &singular,
+                                    const std::optional<std::string> &plural,
+                                    const sol::optional<std::string> &context )
+{
+    if( singular.empty() || singular.find( '\0' ) != std::string::npos ||
+        ( plural && ( plural->empty() || plural->find( '\0' ) != std::string::npos ) ) ||
+        ( context && context->find( '\0' ) != std::string::npos ) ) {
+        throw std::runtime_error( "localized content text requires nonempty source forms without NUL" );
+    }
+    return { singular, plural, context ? std::optional<std::string>( *context ) : std::nullopt };
+}
+
+// Native text fields can retain either a literal or explicit translation data.
+struct authored_text {
+    std::string raw;
+    std::optional<localized_text> translated;
+
+    bool empty() const {
+        return raw.empty();
+    }
+
+    translation native() const {
+        return translated ? translated->native() : no_translation( raw );
+    }
+};
+
+authored_text read_singular_text( const sol::object &value, const std::string &fallback,
+                                  const std::string &field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return { fallback, std::nullopt };
+    }
+    if( value.is<localized_text>() ) {
+        const localized_text &text = value.as<const localized_text &>();
+        if( text.plural ) {
+            throw std::runtime_error( field + " does not accept plural text" );
+        }
+        return { text.singular, text };
+    }
+    return { value.as<std::string>(), std::nullopt };
+}
+
 struct item_definition_data {
     struct comestible_data {
         std::string type;
@@ -358,6 +216,8 @@ struct item_definition_data {
     std::string copy_from;
     std::string name;
     std::string description;
+    std::optional<localized_text> translated_name;
+    std::optional<localized_text> translated_description;
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
     std::int64_t volume_ml = 0;
@@ -583,20 +443,20 @@ struct tool_quality_definition_data {
 
 struct skill_display_definition_data {
     std::string id;
-    std::string label;
+    authored_text label;
     bool registered = false;
 };
 
 struct skill_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string display_category = "none";
     std::int64_t sort_rank = 1000000;
     std::set<std::string> tags;
     std::map<std::string, std::int64_t> companion_practice;
-    std::map<std::int64_t, std::string> theory_descriptions;
-    std::map<std::int64_t, std::string> practice_descriptions;
+    std::map<std::int64_t, authored_text> theory_descriptions;
+    std::map<std::int64_t, authored_text> practice_descriptions;
     std::set<std::string> requires_all_traits;
     std::set<std::string> requires_any_traits;
     std::int64_t attack_min_time = 50;
@@ -1405,27 +1265,32 @@ struct skill_definition_handle {
     }
 
     skill_definition_handle &level_description( std::int64_t level,
-            const std::string &theory, const sol::optional<std::string> &practice ) {
+            const sol::object &theory_value, const sol::optional<sol::object> &practice_value ) {
         require_building_handle( token, *definition, "skill" );
+        authored_text theory = read_singular_text( theory_value, "", "skill theory description" );
+        std::optional<authored_text> practice;
+        if( practice_value ) {
+            practice = read_singular_text( *practice_value, "", "skill practice description" );
+        }
         if( level < 0 || level > MAX_SKILL || theory.empty() ) {
             throw std::runtime_error( "skill level description is invalid" );
         }
-        definition->theory_descriptions[level] = theory;
-        // Legacy stores the theory and practice maps independently; only an
-        // explicit practice argument fills the practice side.
+        // Parse both texts before changing either independent description map.
+        definition->theory_descriptions[level] = std::move( theory );
         if( practice ) {
-            definition->practice_descriptions[level] = *practice;
+            definition->practice_descriptions[level] = std::move( *practice );
         }
         return *this;
     }
 
     skill_definition_handle &level_description_practice( std::int64_t level,
-            const std::string &practice ) {
+            const sol::object &practice_value ) {
         require_building_handle( token, *definition, "skill" );
+        authored_text practice = read_singular_text( practice_value, "", "skill practice description" );
         if( level < 0 || level > MAX_SKILL || practice.empty() ) {
             throw std::runtime_error( "skill level description is invalid" );
         }
-        definition->practice_descriptions[level] = practice;
+        definition->practice_descriptions[level] = std::move( practice );
         return *this;
     }
 
@@ -2332,6 +2197,18 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ";" );
 }
 
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 template<typename Registration>
 bool defines_registration(
     const std::vector<Registration> &entries, const std::string_view id )
@@ -2430,6 +2307,15 @@ items_content_transaction::~items_content_transaction() = default;
 void items_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         sol::table &content )
 {
+    ccb.new_usertype<localized_text>( "LocalizedText", sol::no_constructor );
+    content.set_function( "text", []( const std::string & text,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( text, std::nullopt, context );
+    } );
+    content.set_function( "plural_text", []( const std::string & singular, const std::string & plural,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( singular, plural, context );
+    } );
     ccb.new_usertype<tool_quality_definition_handle>(
         "ToolQualityDefinition", sol::no_constructor,
         "id", sol::property( &tool_quality_definition_handle::id ),
@@ -2611,7 +2497,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<skill_display_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->label = options.get_or( "label", definition->id );
+        definition->label = read_singular_text( options.get<sol::object>( "label" ),
+                                                definition->id, "skill display label" );
         return skill_display_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Skill", [transaction]( const sol::table & options ) {
@@ -2620,8 +2507,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<skill_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text( options.get<sol::object>( "name" ),
+                                               definition->id, "skill name" );
+        definition->description = read_singular_text( options.get<sol::object>( "description" ),
+                                  "", "skill description" );
         definition->display_category = options.get_or( "display_category", std::string( "none" ) );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 1000000 );
         definition->teachable = options.get_or( "teachable", true );
@@ -2816,8 +2705,23 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 present = true;
             }
         };
-        read_string( "name", definition->name, definition->has_name );
-        read_string( "description", definition->description, definition->has_description );
+        const auto read_text = [&options, &read_string]( const char *key, std::string & raw,
+        bool & present, std::optional<localized_text> &translated, const bool allow_plural ) {
+            const sol::object value = options[key];
+            if( value.is<localized_text>() ) {
+                translated = value.as<localized_text>();
+                if( translated->plural && !allow_plural ) {
+                    throw std::runtime_error( "item description does not accept plural text" );
+                }
+                raw = translated->singular;
+                present = true;
+            } else {
+                read_string( key, raw, present );
+            }
+        };
+        read_text( "name", definition->name, definition->has_name, definition->translated_name, true );
+        read_text( "description", definition->description, definition->has_description,
+                   definition->translated_description, false );
         read_string( "symbol", definition->symbol, definition->has_symbol );
         read_string( "color", definition->color, definition->has_color );
         read_string( "category", definition->category, definition->has_category );
@@ -4748,7 +4652,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     } ),
                     SkillDisplayType::skillTypes.end() );
                     SkillDisplayType::skillTypes.emplace_back(
-                        id, no_translation( entry.definition->label ) );
+                        id, entry.definition->label.native() );
                 }
 
                 for( const skill_registration &entry : pimpl_->skills ) {
@@ -4761,7 +4665,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     } ), Skill::skills.end() );
                     Skill::contextual_skills.erase( id );
                     const skill_definition_data &source = *entry.definition;
-                    Skill native( id, no_translation( source.name ), no_translation( source.description ),
+                    Skill native( id, source.name.native(), source.description.native(),
                                   source.tags, skill_displayType_id( source.display_category ) );
                     native._sort_rank = static_cast<int>( source.sort_rank );
                     native.consumes_focus = source.consumes_focus;
@@ -4783,11 +4687,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     for( const auto &[level, description] : source.theory_descriptions ) {
                         native._level_descriptions_theory[static_cast<int>( level )] =
-                            no_translation( description );
+                            description.native();
                     }
                     for( const auto &[level, description] : source.practice_descriptions ) {
                         native._level_descriptions_practice[static_cast<int>( level )] =
-                            no_translation( description );
+                            description.native();
                     }
                     native._requires_all_traits = source.requires_all_traits;
                     native._requires_any_traits = source.requires_any_traits;
@@ -5414,10 +5318,15 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native->id = id;
                     if( definition.has_name ) {
-                        native->name = no_translation( definition.name );
+                        native->name = definition.translated_name ? definition.translated_name->native() :
+                                       no_translation( definition.name );
+                        if( definition.translated_name ) {
+                            native->name.make_plural();
+                        }
                     }
                     if( definition.has_description ) {
-                        native->description = no_translation( definition.description );
+                        native->description = definition.translated_description ?
+                                              definition.translated_description->native() : no_translation( definition.description );
                     }
                     if( definition.has_symbol ) {
                         native->sym = definition.symbol;
@@ -6295,17 +6204,21 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.companion_combat_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_survival_rank_factor ) );
                 hash_part( state, std::to_string( v.companion_industry_rank_factor ) );
+                hash_part( state, "tags" );
                 for( const auto &tag : v.tags ) {
                     hash_part( state, tag );
                 }
+                hash_part( state, "companion_practice" );
                 for( const auto &[id, weight] : v.companion_practice ) {
                     hash_part( state, id );
                     hash_part( state, std::to_string( weight ) );
                 }
+                hash_part( state, "theory_descriptions" );
                 for( const auto &[level, description] : v.theory_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );
                 }
+                hash_part( state, "practice_descriptions" );
                 for( const auto &[level, description] : v.practice_descriptions ) {
                     hash_part( state, std::to_string( level ) );
                     hash_part( state, description );
@@ -6683,10 +6596,31 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 const auto &v = *entry.definition;
                 hash_part( state, "item" );
                 hash_part( state, operation_name( entry.operation ) );
+                // An omitted patch field inherits its source; an explicitly
+                // supplied default value overwrites it. Both have identical
+                // stored values, so include presence in the reload fingerprint.
+                for( const bool present : {
+                         v.has_name, v.has_description, v.has_symbol,
+                         v.has_mass, v.has_volume, v.has_price, v.has_price_postapoc,
+                         v.has_color, v.has_category, v.has_looks_like, v.has_magazine_capacity
+                     } ) {
+                    hash_part( state, present ? "present" : "absent" );
+                }
                 hash_part( state, v.id );
                 hash_part( state, v.copy_from );
                 hash_part( state, v.name );
                 hash_part( state, v.description );
+                const auto hash_text = [&state]( const std::optional<localized_text> &text ) {
+                    hash_part( state, text ? "localized" : "literal" );
+                    if( text ) {
+                        hash_part( state, text->context ? "context" : "no_context" );
+                        hash_part( state, text->context.value_or( "" ) );
+                        hash_part( state, text->plural ? "plural" : "no_plural" );
+                        hash_part( state, text->plural.value_or( "" ) );
+                    }
+                };
+                hash_text( v.translated_name );
+                hash_text( v.translated_description );
                 hash_part( state, v.symbol );
                 hash_part( state, std::to_string( v.mass_grams ) );
                 hash_part( state, std::to_string( v.volume_ml ) );
