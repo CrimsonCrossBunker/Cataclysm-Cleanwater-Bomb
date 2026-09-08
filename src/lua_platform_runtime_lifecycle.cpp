@@ -57,6 +57,7 @@ using persistent_value = script_persistent_value;
 struct persistent_scope_record {
     persistent_state values;
     std::vector<persistent_task> tasks;
+    std::uint64_t last_task_id = 0;
 };
 
 constexpr std::uintmax_t maximum_platform_state_file_bytes =
@@ -337,6 +338,14 @@ void load_scope( const cata_path &path, const std::string &scope,
             const std::shared_ptr<runtime> owner = detail::find_active_runtime( member.name() );
             const JsonObject stored = member.get_object();
             persistent_scope_record record;
+            const bool has_last_task_id = stored.has_member( "last_task_id" );
+            if( has_last_task_id ) {
+                const std::int64_t last_task_id = stored.get_int64( "last_task_id" );
+                if( last_task_id < 0 ) {
+                    throw std::runtime_error( "Platform last task id must be non-negative" );
+                }
+                record.last_task_id = static_cast<std::uint64_t>( last_task_id );
+            }
             record.values = read_typed_values( stored.get_object( "values" ) );
             std::set<std::uint64_t> stored_task_ids;
             if( stored.has_array( "tasks" ) ) {
@@ -351,6 +360,10 @@ void load_scope( const cata_path &path, const std::string &scope,
                         throw std::runtime_error( "Platform task id must be positive" );
                     }
                     task.id = static_cast<std::uint64_t>( stored_id );
+                    if( has_last_task_id && task.id > record.last_task_id ) {
+                        throw std::runtime_error( "Platform task id exceeds its saved counter" );
+                    }
+                    record.last_task_id = std::max( record.last_task_id, task.id );
                     if( !stored_task_ids.insert( task.id ).second ) {
                         throw std::runtime_error( "Platform state repeats a persistent task id" );
                     }
@@ -597,8 +610,8 @@ void load_scope( const cata_path &path, const std::string &scope,
                 persistent_state &state = scope == "character" ?
                                           owner->character_state : owner->world_state;
                 state = std::move( record.values );
+                owner->next_task_id = std::max( owner->next_task_id, record.last_task_id + 1 );
                 for( persistent_task &task : record.tasks ) {
-                    owner->next_task_id = std::max( owner->next_task_id, task.id + 1 );
                     owner->tasks.push_back( std::move( task ) );
                 }
             } else {
@@ -617,9 +630,14 @@ void load_scope( const cata_path &path, const std::string &scope,
 
 void write_scope_record( JsonOut &json, const persistent_state &state,
                          const std::vector<persistent_task> &tasks,
+                         const std::uint64_t last_task_id,
                          const std::string &scope, const std::string &mod_id )
 {
+    if( last_task_id > static_cast<std::uint64_t>( std::numeric_limits<std::int64_t>::max() ) ) {
+        throw std::runtime_error( "Platform last task id is outside the native range" );
+    }
     json.start_object();
+    json.member( "last_task_id", static_cast<std::int64_t>( last_task_id ) );
     json.member( "values" );
     write_typed_values( json, state );
     json.member( "tasks" );
@@ -631,6 +649,9 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
         if( !task.owner_mod_id.empty() && task.owner_mod_id != mod_id ) {
             throw std::runtime_error(
                 "Platform task owner Mod does not match its runtime" );
+        }
+        if( task.id == 0 || task.id > last_task_id ) {
+            throw std::runtime_error( "Platform task id exceeds its saved counter" );
         }
         json.start_object();
         json.member( "id", static_cast<std::int64_t>( task.id ) );
@@ -750,7 +771,7 @@ void write_scope( const cata_path &path, const std::string &scope )
             continue;
         }
         json.member( mod_id );
-        write_scope_record( json, record.values, record.tasks, scope, mod_id );
+        write_scope_record( json, record.values, record.tasks, record.last_task_id, scope, mod_id );
     }
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner ) {
@@ -759,7 +780,7 @@ void write_scope( const cata_path &path, const std::string &scope )
         const persistent_state &state = scope == "character" ?
                                         owner->character_state : owner->world_state;
         json.member( owner->mod_id );
-        write_scope_record( json, state, owner->tasks, scope, owner->mod_id );
+        write_scope_record( json, state, owner->tasks, owner->next_task_id - 1, scope, owner->mod_id );
     }
     json.end_object();
     json.end_object();
