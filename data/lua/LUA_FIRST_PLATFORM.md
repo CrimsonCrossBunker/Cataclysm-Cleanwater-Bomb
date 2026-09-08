@@ -461,8 +461,8 @@ The independent draft exposes `ccb.services.translate(text, context?)` and
 `world_ready`. Both return strings using the current native catalog. Literal
 calls can be extracted by `tools/lua_api/extract_translations.py`; its README
 contains the author example and catalog limitations. This is source-level work,
-not completed native acceptance. Metadata translations, other content builders
-and live catalog reload remain outside this slice.
+not completed native acceptance. Metadata translations, content builders beyond
+Item/Skill/SkillDisplay, and live catalog reload remain outside this slice.
 
 For Item names/descriptions, the draft also accepts immutable `LocalizedText`
 values from `ccb.content.text(text, context?)` and
@@ -483,7 +483,21 @@ Context, plural form and literal/translated status enter the static fingerprint.
 它保留源文本供原生层延迟翻译；普通字符串仍不翻译，说明字段不接受复数值。
 仅标记单数的名称以相同源文本作为复数回退；需要不同复数时使用 `plural_text`。
 源文本不能为空，所有输入均不允许 NUL。继承字段保留父定义的翻译对象，显式字符串替换它；
-上下文、复数和是否翻译均计入静态指纹。其他内容 builder、Mod 元数据及目录热重载仍待推进。
+上下文、复数和是否翻译均计入静态指纹。除下述 Skill／SkillDisplay 外的其他内容 builder、
+Mod 元数据及目录热重载仍待推进。
+
+The same `content.text` marker now also covers Skill names/descriptions,
+SkillDisplay labels, and theory/practice level descriptions. All of these fields
+are singular-only and reject `content.plural_text`. Plain strings remain literal;
+omitting a practice description still leaves the independent practice map alone.
+Translation context participates in static fingerprints. Native source tests cover
+fallback display, invalid plural input, atomic method failure and rollback;
+locale/catalog execution remains unverified.
+
+同一个 `content.text` 也可用于 Skill 名称、说明、SkillDisplay 分类名称以及理论／实践
+等级说明。这些字段只接收单数文本，拒绝 `content.plural_text`；普通字符串仍保持字面值，
+省略实践说明时仍不改动独立的实践映射。翻译上下文参与静态指纹。原生测试源码覆盖源文本
+显示、拒绝复数、方法失败时不部分改写以及回滚；语言／目录运行验收仍未执行。
 
 ## Templates, examples, and maintenance / 模板、样例与维护
 

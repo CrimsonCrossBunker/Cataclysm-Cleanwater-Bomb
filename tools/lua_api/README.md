@@ -196,3 +196,9 @@ release step. Bundled Mod catalogs are not automatically discovered by that
 user-directory scan. The native registry is shared: use a distinctive context
 for ambiguous/common messages. This batch does not change catalog precedence or
 add live catalog reload. Restart the game after installing changed catalogs.
+
+The same `ccb.content.text` marker is accepted by Skill names/descriptions,
+SkillDisplay labels and Skill theory/practice level descriptions. These fields
+reject plural markers and keep ordinary strings literal. Use the full helper
+name with literal source/context arguments so the existing extractor can find
+these strings; no separate Skill extraction command is required.

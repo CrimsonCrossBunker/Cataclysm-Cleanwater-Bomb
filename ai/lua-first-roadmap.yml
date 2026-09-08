@@ -663,7 +663,7 @@ capabilities:
   - id: platform-internationalization
     phase: internationalization
     status: in_progress
-    target_surface: "Draft runtime text helpers reuse native catalogs; Item names/descriptions also accept deferred content.text/plural_text values. Literal gettext extraction covers both routes; native/locale acceptance and wider content/catalog lifecycle work remain pending."
+    target_surface: "Draft runtime text helpers reuse native catalogs; Item names/descriptions and singular Skill/SkillDisplay texts also accept deferred text values. Literal gettext extraction covers both routes; native/locale acceptance and wider content/catalog lifecycle work remain pending."
     legacy_dependency: none
     evidence: [src/translation_manager.cpp, src/lua_platform_runtime_services.cpp, src/lua_platform_content_items.cpp, tests/lua_platform_translation_test.cpp, tests/lua_platform_content_translation_test.cpp, tools/lua_api/extract_translations.py, data/lua/types/ccb_platform_v1.d.lua]
     verification: not_run

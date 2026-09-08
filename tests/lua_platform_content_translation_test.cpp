@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "itype.h"
+#include "skill.h"
 #include "translation.h"
 
 TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
@@ -98,5 +99,90 @@ TEST_CASE( "lua_platform_item_text_fingerprints_translation_semantics",
            fingerprint( "ccb.content.text('stone', 'material')" ) );
     CHECK( fingerprint( "ccb.content.plural_text('stone', 'stones')" ) !=
            fingerprint( "ccb.content.plural_text('stone', 'stone pieces')" ) );
+}
+
+TEST_CASE( "lua_platform_skill_text_accepts_deferred_markers_and_rolls_back",
+           "[lua][platform][content][translations]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const platform_lua_test_directory files;
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    files.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local plural = ccb.content.plural_text("one", "many")
+assert(not pcall(ccb.content.SkillDisplay, {id="bad_label", label=plural}))
+assert(not pcall(ccb.content.Skill, {id="bad_name", name=plural, description="text"}))
+assert(not pcall(ccb.content.Skill, {id="bad_description", description=plural}))
+ccb.content.add(ccb.content.SkillDisplay {
+    id = "lua_translated_skill_display", label = ccb.content.text("ccb skill category", "skill category")
+})
+local skill = ccb.content.Skill {
+    id = "lua_translated_skill", name = ccb.content.text("ccb skill name", "skill name"),
+    description = ccb.content.text("ccb skill description", "skill description"),
+    display_category = "lua_translated_skill_display"
+}
+skill:level_description(1, ccb.content.text("ccb skill theory", "skill theory"),
+                          ccb.content.text("ccb skill practice", "skill practice"))
+assert(not pcall(function() skill:level_description(1, "must not replace", plural) end))
+assert(not pcall(function() skill:level_description_practice(2, plural) end))
+skill:level_description_practice(2, ccb.content.text("ccb advanced practice", "skill practice"))
+skill:level_description(3, ccb.content.text("marked then replaced"))
+skill:level_description(3, "literal theory")
+ccb.content.add(skill)
+)lua" );
+    std::string error;
+    const bool prepared = platform::prepare_mods( {
+        { "skill-text", files.root, files.root / "main.lua" }
+    }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    const skill_id id( "lua_translated_skill" );
+    REQUIRE( id.is_valid() );
+    CHECK( id.obj().name() == "ccb skill name" );
+    CHECK( id.obj().description() == "ccb skill description" );
+    CHECK( skill_displayType_id( "lua_translated_skill_display" ).obj().display_string() ==
+           "ccb skill category" );
+    CHECK( id.obj().get_level_description( 1, false ) == "ccb skill theory" );
+    CHECK( id.obj().get_level_description( 1, true ) == "ccb skill practice" );
+    CHECK( id.obj().get_level_description( 2, true ) == "ccb advanced practice" );
+    CHECK( id.obj().get_level_description( 3, false ) == "literal theory" );
+    platform::discard_prepared_mods();
+    CHECK_FALSE( id.is_valid() );
+    CHECK_FALSE( skill_displayType_id( "lua_translated_skill_display" ).is_valid() );
+}
+
+TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
+           "[lua][platform][content][translations][reload]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const platform_lua_test_directory files;
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    const auto fingerprint = [&]( const std::string & text ) {
+        files.write( "main.lua", "local ccb = require('ccb')\n"
+                     "ccb.content.add(ccb.content.Skill {id='lua_skill_text_hash', "
+                     "name=" + text + ", description='description'})\n" );
+        std::string error;
+        const bool prepared = platform::prepare_mods( {
+            { "skill-text-hash", files.root, files.root / "main.lua" }
+        }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string result = platform::prepared_content_fingerprint();
+        platform::discard_prepared_mods();
+        return result;
+    };
+    const std::string marked = fingerprint( "ccb.content.text('same source')" );
+    CHECK( fingerprint( "ccb.content.text('same source')" ) == marked );
+    CHECK( fingerprint( "'same source'" ) != marked );
+    CHECK( fingerprint( "ccb.content.text('same source', '')" ) != marked );
+    CHECK( fingerprint( "ccb.content.text('same source', 'skill name')" ) !=
+           fingerprint( "ccb.content.text('same source', 'other context')" ) );
 }
 #endif

@@ -356,7 +356,7 @@ local ModDefinition = {}
 ---@field y integer Absolute map-square y coordinate.
 ---@field z integer Absolute map-square z coordinate.
 
----Immutable deferred translation value. Currently accepted by Item name and description.
+---Immutable deferred translation value for Item text and Skill/SkillDisplay text.
 ---Create with content.text or content.plural_text; ordinary strings remain untranslated.
 ---@class LocalizedText
 
@@ -3993,7 +3993,7 @@ function ToolQualityDefinition:usage(level, text) end
 
 ---@class SkillDisplayDefinitionOptions
 ---@field id string Stable skill display-category id.
----@field label? string Player-facing category label; defaults to id.
+---@field label? string|LocalizedText Player-facing category label; defaults to id. Plural text is rejected.
 
 ---@class SkillDisplayDefinition
 ---@field id string
@@ -4001,8 +4001,8 @@ local SkillDisplayDefinition = {}
 
 ---@class SkillDefinitionOptions
 ---@field id string Stable skill id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 ---@field display_category? string SkillDisplay id; defaults to `none`.
 ---@field sort_rank? integer Native display ordering rank.
 ---@field teachable? boolean Whether NPCs may teach the skill.
@@ -4023,14 +4023,14 @@ function SkillDefinition:tag(tag) end
 function SkillDefinition:companion_practice(practice_id, weight) end
 
 ---@param level integer Level from zero through the native skill maximum.
----@param theory string Theory-level description.
----@param practice? string Practical-level description; omitted means theory-only,
+---@param theory string|LocalizedText Theory-level description; plural text is rejected.
+---@param practice? string|LocalizedText Practical-level description; plural text is rejected. Omitted means theory-only,
 --- matching the legacy independent theory/practice maps.
 ---@return SkillDefinition self
 function SkillDefinition:level_description(level, theory, practice) end
 
 ---@param level integer Level from zero through the native skill maximum.
----@param practice string Practical-level description for a practice-only level.
+---@param practice string|LocalizedText Practical-level description for a practice-only level; plural text is rejected.
 ---@return SkillDefinition self
 function SkillDefinition:level_description_practice(level, practice) end
 
