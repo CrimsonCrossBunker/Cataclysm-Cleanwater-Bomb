@@ -54,20 +54,24 @@
 #include "shop_cons_rate.h"
 #include "trap.h"
 
+static const damage_type_id damage_bash( "bash" );
+static const damage_type_id damage_cut( "cut" );
+
+static const efftype_id effect_ccb_platform_cuisine_effect( "ccb_platform_cuisine_effect" );
+
+static const enchantment_id
+enchantment_ccb_platform_cuisine_enchantment( "ccb_platform_cuisine_enchantment" );
+
+static const furn_str_id furn_f_platform_movement_test( "f_platform_movement_test" );
+static const furn_str_id furn_f_platform_overflow_test( "f_platform_overflow_test" );
+
 static const item_group_id
 Item_spawn_data_ccb_platform_extended_group( "ccb_platform_extended_group" );
 static const item_group_id
 Item_spawn_data_ccb_platform_extension_native( "ccb_platform_extension_native" );
 static const item_group_id
 Item_spawn_data_ccb_platform_extension_stock( "ccb_platform_extension_stock" );
-static const npc_class_id NC_CCB_DYNAMIC_WHITELIST( "NC_CCB_DYNAMIC_WHITELIST" );
-static const damage_type_id damage_bash( "bash" );
-static const damage_type_id damage_cut( "cut" );
-static const efftype_id effect_ccb_platform_cuisine_effect( "ccb_platform_cuisine_effect" );
-static const enchantment_id
-enchantment_ccb_platform_cuisine_enchantment( "ccb_platform_cuisine_enchantment" );
-static const furn_str_id furn_f_platform_movement_test( "f_platform_movement_test" );
-static const furn_str_id furn_f_platform_overflow_test( "f_platform_overflow_test" );
+
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_ccb_deferred_lua_child( "ccb_deferred_lua_child" );
 static const itype_id itype_ccb_deferred_native_child( "ccb_deferred_native_child" );
@@ -77,25 +81,35 @@ static const itype_id itype_ccb_platform_cuisine_food( "ccb_platform_cuisine_foo
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_sandwich_deluxe( "sandwich_deluxe" );
 static const itype_id itype_stick( "stick" );
+
 static const mtype_id mon_platform_missing_reference( "mon_platform_missing_reference" );
 static const mtype_id mon_platform_native_references( "mon_platform_native_references" );
+
+static const npc_class_id NC_CCB_DYNAMIC_WHITELIST( "NC_CCB_DYNAMIC_WHITELIST" );
+
 static const recipe_id recipe_ccb_platform_cuisine_recipe( "ccb_platform_cuisine_recipe" );
+
+static const skill_id skill_cooking( "cooking" );
+
 static const string_id<scenario>
 scenario_platform_calendar_json_reference( "platform_calendar_json_reference" );
 static const string_id<scenario>
 scenario_platform_calendar_lua_scenario( "platform_calendar_lua_scenario" );
-static const skill_id skill_cooking( "cooking" );
+
 static const ter_str_id ter_t_cuisine_door_closed( "t_cuisine_door_closed" );
 static const ter_str_id ter_t_cuisine_door_open( "t_cuisine_door_open" );
 static const ter_str_id ter_t_floor( "t_floor" );
+
+static const vitamin_id vitamin_vitC( "vitC" );
+
+static const vpart_id vpart_turret_laser_rifle( "turret_laser_rifle" );
+
 static const vproto_id
 vehicle_prototype_ccb_platform_delayed_turret_extension( "ccb_platform_delayed_turret_extension" );
 static const vproto_id
 vehicle_prototype_ccb_platform_delayed_turret_vehicle( "ccb_platform_delayed_turret_vehicle" );
 static const vproto_id
 vehicle_prototype_ccb_platform_invalid_placement( "ccb_platform_invalid_placement" );
-static const vitamin_id vitamin_vitC( "vitC" );
-static const vpart_id vpart_turret_laser_rifle( "turret_laser_rifle" );
 
 namespace
 {

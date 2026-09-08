@@ -33,12 +33,14 @@
 #include "path_info.h"
 #include "worldfactory.h"
 
-static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
-static const mod_id MOD_INFORMATION_dda( "dda" );
 static const efftype_id effect_lua_first_nano_recovery( "lua_first_nano_recovery" );
+
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_lua_first_cleanwater_cell( "lua_first_cleanwater_cell" );
 static const itype_id itype_lua_first_nano_tonic( "lua_first_nano_tonic" );
+
+static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
+static const mod_id MOD_INFORMATION_dda( "dda" );
 
 TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
            "[lua][platform][playable_mvp][persistence][mod_manager]" )
