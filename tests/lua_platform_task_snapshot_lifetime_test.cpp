@@ -12,14 +12,22 @@ struct task_snapshot_allocator {
     cata::lua_platform::runtime *owner = nullptr;
     bool armed = false;
     bool cancelled = false;
+    bool observe_migration = false;
+    bool migration_guarded = true;
+    int observed_allocations = 0;
 
     static void *allocate( void *data, void *pointer, std::size_t old_size,
                            std::size_t new_size ) {
         auto &probe = *static_cast<task_snapshot_allocator *>( data );
         if( probe.armed && new_size > 0 ) {
-            probe.armed = false;
-            probe.owner->tasks.erase( probe.owner->tasks.begin() );
-            probe.cancelled = true;
+            if( probe.observe_migration ) {
+                probe.migration_guarded = probe.migration_guarded && probe.owner->task_migration_active;
+                ++probe.observed_allocations;
+            } else {
+                probe.armed = false;
+                probe.owner->tasks.erase( probe.owner->tasks.begin() );
+                probe.cancelled = true;
+            }
         }
         return probe.original( probe.original_data, pointer, old_size, new_size );
     }
@@ -123,5 +131,63 @@ query_list = ccb.tasks.list
         }
         lua_pop( lua, 1 );
     }
+}
+
+TEST_CASE( "lua_platform_task_migration_guards_all_lua_allocation_boundaries",
+           "[lua][platform][tasks][persistence]" )
+{
+    namespace platform = cata::lua_platform;
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    const std::shared_ptr<platform::runtime> owner = platform::make_runtime( "migration-guard", 2013,
+        lua );
+    sol::table ccb = lua.create_table();
+    platform::install_runtime_api( owner, lua, ccb );
+    lua["ccb"] = ccb;
+    owner->world_is_ready = true;
+    bool valid_result = true;
+    SECTION( "valid migrated payload" ) {}
+    SECTION( "invalid result preserves the original task and restores the guard" ) {
+        valid_result = false;
+    }
+    lua["valid_result"] = valid_result;
+    const sol::protected_function_result setup = lua.safe_script( R"lua(
+ccb.runtime.handler("tick", function() end, 2)
+ccb.runtime.migrate_task_payload("tick", 1, 2, function(payload)
+    assert(not pcall(ccb.tasks.cancel, 41))
+    if valid_result then return {value = payload.value + 1} end
+    return nil
+end)
+)lua", sol::script_pass_on_error );
+    REQUIRE( setup.valid() );
+    platform::persistent_task task;
+    task.id = 41;
+    task.handler_id = "tick";
+    task.payload["value"] = std::int64_t( 1 );
+    owner->tasks.push_back( std::move( task ) );
+    task_snapshot_allocator probe;
+    probe.owner = owner.get();
+    probe.observe_migration = true;
+    probe.original = lua_getallocf( lua.lua_state(), &probe.original_data );
+    bool migrated = false;
+    std::string error;
+    {
+        const on_out_of_scope restore_allocator( [&]() {
+            lua_setallocf( lua.lua_state(), probe.original, probe.original_data );
+        } );
+        lua_setallocf( lua.lua_state(), task_snapshot_allocator::allocate, &probe );
+        probe.armed = true;
+        migrated = platform::detail::migrate_task_payload( *owner, owner->tasks.front(), error );
+        probe.armed = false;
+    }
+    CHECK( probe.observed_allocations > 0 );
+    CHECK( probe.migration_guarded );
+    CHECK_FALSE( owner->task_migration_active );
+    CHECK( migrated == valid_result );
+    REQUIRE( owner->tasks.size() == 1 );
+    CHECK( owner->tasks.front().payload_version == ( valid_result ? 2 : 1 ) );
+    CHECK( std::get<std::int64_t>( owner->tasks.front().payload.at( "value" ) ) ==
+           ( valid_result ? 2 : 1 ) );
+    CHECK( error.empty() == valid_result );
 }
 #endif

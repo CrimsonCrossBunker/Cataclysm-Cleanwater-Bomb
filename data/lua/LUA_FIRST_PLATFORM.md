@@ -371,6 +371,14 @@ boundary; it has not been compiled or executed.
 分配 Lua 返回表前复制选中的原生记录，避免 Lua 分配期间取消任务导致正在返回的记录
 失效。回归测试源码模拟该边界上的取消操作，尚未编译或执行。
 
+The same task-lifetime draft keeps the existing migration mutation guard active
+while constructing metadata, invoking the callback, decoding its result and
+committing the candidate. It restores the previous flag on success or failure;
+this does not introduce a sandbox or roll back unrelated callback side effects.
+
+同一任务生命周期草稿把已有迁移保护覆盖到元数据构造、回调、返回值解码与候选提交全程，
+成功或失败都会恢复此前的标记；这不引入沙盒，也不回滚无关的回调副作用。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy

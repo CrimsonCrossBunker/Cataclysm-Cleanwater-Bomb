@@ -769,6 +769,10 @@ void write_scope( const cata_path &path, const std::string &scope )
 bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
                                    std::string &error )
 {
+    // Metadata/result conversion can also allocate Lua objects and run GC.
+    // Keep the task container stable for the entire migration transaction.
+    restore_on_out_of_scope restore_task_migration_active( owner.task_migration_active );
+    owner.task_migration_active = true;
     const auto handler = owner.handlers.find( task.handler_id );
     if( handler == owner.handlers.end() ) {
         error = "missing handler '" + task.handler_id + "'";
@@ -804,14 +808,8 @@ bool detail::migrate_task_payload( runtime &owner, persistent_task &task,
         metadata["from_version"] = candidate.payload_version;
         metadata["to_version"] = transition->second.target_version;
         sol::protected_function callback = transition->second.callback;
-        const sol::protected_function_result result = [&]() {
-            restore_on_out_of_scope restore_task_migration_active(
-                owner.task_migration_active );
-            owner.task_migration_active = true;
-            return callback(
-                       persistent_table( *owner.lua, candidate.payload ), metadata );
-        }
-        ();
+        const sol::protected_function_result result = callback(
+                persistent_table( *owner.lua, candidate.payload ), metadata );
         if( !result.valid() ) {
             const sol::error callback_error = result;
             error = callback_error.what();
