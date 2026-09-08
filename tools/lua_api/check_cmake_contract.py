@@ -68,8 +68,8 @@ def validate_cmake_contract(
     for requirement in native_loading_requirements:
         if requirement not in normalized_lua:
             errors.append(
-                "src/lua/CMakeLists.txt: native Lua loading requires "
-                + requirement
+                "src/lua/CMakeLists.txt: native Lua loading requires " +
+                requirement
             )
     if "#define SOL_USE_CXX_LUA" in sol_config_source:
         errors.append(
