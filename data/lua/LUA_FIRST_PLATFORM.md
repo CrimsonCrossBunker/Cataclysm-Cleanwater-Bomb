@@ -152,14 +152,17 @@ restricted and unrestricted runtime tiers.
 API 调用弹权限窗口。此告知是待落实的集成要求，不代表现有启动器已实现。普通 Lua 错误应可
 定位与清理，但不承诺无限循环/原生调用可安全中断，也不承诺崩溃隔离或外部副作用回滚。
 
+Integration acceptance evidence is maintained in [PR #768](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/pull/768), including the tested build configurations and native runtime results. The behavior below is the source contract; test source alone is not passing evidence. Interactive UI checks and native module packaging on each target platform require their own evidence.
+
+本批整合的编译配置、原生运行结果与验收边界统一记录在 [PR #768](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/pull/768)。下文描述源码契约，测试源码存在本身不代表通过；交互界面与各目标平台原生模块打包仍需各自证据。
+
 Implementation checkpoint (2026-09-08): the loader source now opens the bundled
 standard libraries, retains normal package searchers and native loading, and
 inserts a Mod-local searcher before the ordinary searchers. Native search paths
 also start with the Mod root's `?.so` (`?.dll` on Windows), preserving the original
 cpath. Roots containing cpath metacharacters `;` or `?` use explicit
 `package.loadlib` paths instead of an ambiguous automatic prefix. The reserved `ccb`
-entry remains bound to the state-owned Platform table. These changes and their
-regression test source are **source-complete, not compiled or runtime-accepted**.
+entry remains bound to the state-owned Platform table.
 Native loading still depends on the host Lua build and module ABI. The Mod manager now presents a session execution-risk notice before discovering
 Lua metadata (stderr for headless hosts); its startup UI ordering still requires
 interactive acceptance. Direct loader embedders must provide their own notice.
@@ -167,9 +170,9 @@ interactive acceptance. Direct loader embedders must provide their own notice.
 实现断点（2026-09-08）：加载器源码已开放 bundled 标准库，保留普通 package 查找器与原生
 加载入口，并优先查找 Mod 本地模块。原生库搜索路径增加 Mod 根目录的 `?.so`（Windows
 为 `?.dll`），同时保留原有路径；根目录含 `;` 或 `?` 时可使用明确的 `package.loadlib`
-路径，避免 cpath 语法歧义。`require("ccb")` 仍固定返回所属 state 的 Platform 根表。实现与回归测试源码已提交，但**尚未编译、尚未运行验收**。原生模块仍取决于宿主 Lua
+路径，避免 cpath 语法歧义。`require("ccb")` 仍固定返回所属 state 的 Platform 根表。原生模块仍取决于宿主 Lua
 构建与 ABI。Mod 管理器已在元数据发现前加入每会话风险告知（无界面宿主输出到 stderr），
-启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。不得将源码完成描述为已发布或已通过验收。
+启动 UI 顺序仍待交互验收；直接调用加载器的宿主应自行提供告知。
 
 Ordinary Lua 5.4 `require` returns the module and loader data on its first load.
 If `mod.lua` forwards a module that returns a `ccb.ModDefinition`, use
@@ -213,20 +216,20 @@ replacement preserves only the state explicitly defined by Platform lifecycle
 and persistence rules; external filesystem or process side effects are trusted
 code responsibilities and are not silently rolled back.
 
-A draft author-tool entry under **Debug menu → Game → Reload Lua Mod scripts**
+An author-tool entry under **Debug menu → Game → Reload Lua Mod scripts**
 also appears in the searchable debug action list. It calls the existing runtime
 swap operation for active Mods, preserves its static-content gate, and displays
 loader failures. Reload is rejected while an active Mod still has an executing
 Lua call stack. A successful swap does not imply callbacks succeeded; inspect
-the message log. This UI integration has not been compiled or interactively
-accepted. Restart the game when static definitions change.
+the message log. Interactive UI acceptance remains separate from native backend
+tests. Restart the game when static definitions change.
 
-调试菜单的“游戏 → 重新加载 Lua Mod 脚本”草稿入口调用已有脚本替换后端，也可通过调试
+调试菜单的“游戏 → 重新加载 Lua Mod 脚本”入口调用已有脚本替换后端，也可通过调试
 动作搜索找到。活动 Mod 仍在执行 Lua 或静态定义发生变化时会拒绝替换并显示原因；
 成功替换注册表不代表回调无错误，
-应查看消息日志。修改静态定义后重启游戏；菜单集成尚未编译或完成交互验收。
+应查看消息日志。修改静态定义后重启游戏；菜单交互验收仍独立于后端原生回归。
 
-A draft **Debug menu → Console → Lua** tab executes an explicitly submitted
+The **Debug menu → Console → Lua** tab executes an explicitly submitted
 text chunk in a selected, already loaded Mod's state. Use `require("ccb")` as
 usual and `return` to display values. Execution is deferred until outside the
 ImGui drawing frame; it neither creates another runtime nor automatically runs
@@ -239,10 +242,9 @@ fields in unspecified order; nested tables and other objects appear as type
 labels. No `__pairs` or `__tostring` runs. Return a nested field explicitly to
 inspect it. These are display limits, not script quotas.
 Recursive execution in the same state and execution during a script reload are
-rejected. This console source and its regression source remain uncompiled and
-have not received interactive acceptance.
+rejected. Interactive console acceptance remains separate from native backend tests.
 
-“调试菜单 → 控制台 → Lua”草稿页在选定的已加载 Mod 状态中执行手动提交的文本代码。
+“调试菜单 → 控制台 → Lua”页在选定的已加载 Mod 状态中执行手动提交的文本代码。
 继续使用 `require("ccb")`，用 `return` 显示结果；执行安排在 ImGui 绘制帧之外，
 不创建第二套运行时，也不自动执行保存的输入。修改立即生效，后续报错不会回滚。
 手动调用进入所选 owner 的回调上下文，服务继续检查 world-ready、句柄代次和领域规则。
@@ -250,7 +252,7 @@ have not received interactive acceptance.
 返回表最多展示 20 个原始字段，顺序不作保证；嵌套表和其他对象仅显示类型，
 不调用 `__pairs` 或 `__tostring`。要进一步查看，显式返回嵌套字段即可。
 这只是显示限制，不是脚本配额。
-同一状态递归执行以及重载过程中的执行会被拒绝。源码和回归测试源码尚未编译或交互验收。
+同一状态递归执行以及重载过程中的执行会被拒绝。控制台交互验收仍独立于后端原生回归。
 
 Item fingerprints include patch-field presence: omitting a field inherits its
 source value, while explicitly supplying a default value overwrites it.
@@ -421,83 +423,77 @@ to use the exact-Item `quote/get/commit` API.
 使用；快照不是可写引擎对象，失效 token 不可复用。内容注册回滚不等于任意世界操作有事务，
 只有接口明确声明的操作才保证原子性；外部文件、进程和原生扩展副作用不在回滚承诺内。
 
-A draft serializer change enforces the existing encoded-size limits while
+The serializer enforces the existing encoded-size limits while
 staging JSON, rather than first constructing an arbitrarily larger buffer. The
 state codec retains its 1 MiB limit and runtime scope files retain 16 MiB. Failed
 serialization does not begin writing to the destination. Value/key limits and
-file formats are unchanged; native regression source has not been compiled or run.
+file formats are unchanged.
 
-序列化草稿在暂存 JSON 时就执行现有编码大小限制，避免先完整生成过大的缓冲区再拒绝。
+序列化在暂存 JSON 时就执行现有编码大小限制，避免先完整生成过大的缓冲区再拒绝。
 状态 codec 仍为 1 MiB，运行时作用域文件仍为 16 MiB；序列化失败前不会开始写入目标。
-键、值额度与文件格式不变；原生回归测试源码尚未编译或运行。
+键、值额度与文件格式不变。
 
-The Lua save-output draft also overrides the generic JSON writer's fixed decimal
+Lua save output also overrides the generic JSON writer's fixed decimal
 precision on these private staging streams. Finite state and payload doubles use
 round-trip precision, preserving small fractions and large magnitudes without
 changing other game JSON writers. Old files remain readable, but precision lost
-in earlier saves cannot be recovered. Native float round-trip regression source
-has not been compiled or run.
+in earlier saves cannot be recovered.
 
-Lua 存档输出草稿同时覆盖通用 JSON 写入器的固定小数精度，只作用于其私有临时流。
+Lua 存档输出同时覆盖通用 JSON 写入器的固定小数精度，只作用于其私有临时流。
 有限状态数值与任务 payload 的 double 使用往返精度，保留小数和大数量级，不改变其他
-游戏 JSON 写入器。旧文件仍可读取，但此前保存时已经损失的精度无法恢复；新增原生
-浮点往返回归源码尚未编译或执行。
+游戏 JSON 写入器。旧文件仍可读取，但此前保存时已经损失的精度无法恢复。
 Task query results (`tasks.get`, `tasks.next`, and `tasks.list`) are detached
-snapshots. The draft lifetime fix copies selected native records before allocating
+snapshots. The lifetime fix copies selected native records before allocating
 Lua result tables, so cancellation during a Lua allocation cannot invalidate the
 records being returned. Native regression source models cancellation at that
-boundary; it has not been compiled or executed.
+boundary.
 
-任务查询 `tasks.get`、`tasks.next`、`tasks.list` 返回独立快照。生命周期修复草稿在
+任务查询 `tasks.get`、`tasks.next`、`tasks.list` 返回独立快照。生命周期修复在
 分配 Lua 返回表前复制选中的原生记录，避免 Lua 分配期间取消任务导致正在返回的记录
-失效。回归测试源码模拟该边界上的取消操作，尚未编译或执行。
+失效。回归测试源码模拟该边界上的取消操作。
 
-The same task-lifetime draft keeps the existing migration mutation guard active
+The same task-lifetime fix keeps the existing migration mutation guard active
 while constructing metadata, invoking the callback, decoding its result and
 committing the candidate. It restores the previous flag on success or failure;
 this does not introduce a sandbox or roll back unrelated callback side effects.
 
-同一任务生命周期草稿把已有迁移保护覆盖到元数据构造、回调、返回值解码与候选提交全程，
+同一任务生命周期修复把已有迁移保护覆盖到元数据构造、回调、返回值解码与候选提交全程，
 成功或失败都会恢复此前的标记；这不引入沙盒，也不回滚无关的回调副作用。
 
-The draft task-counter persistence fix stores each Mod's `last_task_id` in both
+Task-counter persistence stores each Mod's `last_task_id` in both
 state scopes, including records with no pending tasks. Loading takes the maximum
 counter across loaded scopes and pending records; exhausted signed task-ID space
 remains exhausted. Absent-Mod records retain the counter when resaved. Older
 version-1 records without this optional field still load using their pending task
 IDs; IDs already discarded before that legacy save cannot be reconstructed.
-No compilation or native save/load acceptance has run for this draft.
 
-任务计数器持久化草稿在两个存档作用域的 Mod 记录中保存 `last_task_id`，任务列表为空时
+任务计数器持久化在两个存档作用域的 Mod 记录中保存 `last_task_id`，任务列表为空时
 也保留。加载时合并所加载作用域的最大计数，耗尽的有符号 ID 空间不会因重进而重置；
 暂未加载的 Mod 记录再次保存时也保留计数。旧版 v1 记录缺少该可选字段时，仍按尚存任务
-推导计数；旧存档写入前已丢弃的任务 ID 无法追溯恢复。该草稿尚未编译或进行原生存取验收。
+推导计数；旧存档写入前已丢弃的任务 ID 无法追溯恢复。
 
-The draft due-task cancellation fix keeps selected tasks visible to queries and
+The due-task cancellation fix keeps selected tasks visible to queries and
 cancellable until their individual dispatch starts. A preceding callback can
 cancel a later task due in the same processing pass. Selection still snapshots
 the pass and uses due-turn/ID ordering: newly scheduled tasks wait for a later
-processing pass. Native regression source exists; compilation and execution
-remain pending.
+processing pass.
 
-同轮到期任务取消修复草稿让尚未开始派发的任务继续可查、可取消：前一个回调可以取消
+同轮到期任务取消修复让尚未开始派发的任务继续可查、可取消：前一个回调可以取消
 同一处理轮中后续到期任务。该轮候选仍为快照，按到期回合与 ID 排序；回调新建的任务
-留到下一次处理。原生回归测试源码已补，尚未编译或执行。
+留到下一次处理。
 
-The draft read-only `ccb.state.world.keys(after_key?, limit?)` and character-scope
+The read-only `ccb.state.world.keys(after_key?, limit?)` and character-scope
 equivalent expose copied keys for the owning Mod after `world_ready`. Pages use
 bytewise lexicographic order, an exclusive string cursor and a default limit of
 20 (1..200). They include total/matched/returned counts and `next_after` only when
 another page exists. Values remain behind `get`; modifying the returned table
 does not mutate state. Each call takes a fresh snapshot, so restart pagination
-if keys change between calls. Native regression source exists; compilation and
-runtime acceptance have not run.
+if keys change between calls.
 
-只读草稿接口 `ccb.state.world.keys(after_key?, limit?)` 及角色作用域版本在 world-ready
+只读接口 `ccb.state.world.keys(after_key?, limit?)` 及角色作用域版本在 world-ready
 后枚举当前 Mod 的键，返回复制的键名，不包含值。按字节字典序排列，字符串游标表示严格
 晚于该键；默认每页 20 项，可选 1–200。结果含总数、匹配数、返回数，仅有下一页时提供
 `next_after`。修改返回表不修改状态；每次调用重新获取快照，分页期间键变化时应重新开始。
-回归测试源码已补，尚未编译或进行运行时验收。
 
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 

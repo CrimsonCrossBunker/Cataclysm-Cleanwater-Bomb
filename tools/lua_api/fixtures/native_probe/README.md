@@ -1,10 +1,10 @@
 # Optional native-module acceptance probe
 
 This fixture is source only. It is not a bundled gameplay Mod, a shared-library
-binary, or part of the normal Python tool test run. It has not been compiled or
-run as part of the overnight implementation work.
+binary, or part of the normal Python tool test run. Integration acceptance results
+and tested configurations are recorded in [PR #768](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/pull/768).
 
-After native builds are permitted, use it to check the actual game executable's
+Use it to check the actual game executable's
 exported Lua C ABI, rather than testing against the system `lua` executable.
 The game must have been built with the trusted loader changes. Run the probe
 with a disposable Mod/world and repeat through the supported Make and CMake

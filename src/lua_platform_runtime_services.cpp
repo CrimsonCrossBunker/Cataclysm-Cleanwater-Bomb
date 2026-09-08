@@ -9,12 +9,6 @@
 #include <math_parser_diag_value.h>
 #include <point.h>
 
-namespace cata::lua_platform::detail
-{
-struct event_statistic_snapshot;
-struct event_transformation_snapshot;
-}  // namespace cata::lua_platform::detail
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -114,7 +108,8 @@ extern "C" {
 #include "type_id.h"
 #include "units.h"
 #include "worldfactory.h"
-#include "widget.h"
+// Supplies enum_traits<cardinal_direction> for string_to_enum_optional.
+#include "widget.h" // IWYU pragma: keep
 #include "wound.h"
 #include <pimpl.h>
 #include <cstddef>

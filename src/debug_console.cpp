@@ -1,7 +1,7 @@
 #include "debug_console.h"
 #include "lua_platform_loader.h"
 
-// IWYU pragma: no_include "flat_set.h"
+#include "flat_set.h"
 
 #include <algorithm>
 #include <array>

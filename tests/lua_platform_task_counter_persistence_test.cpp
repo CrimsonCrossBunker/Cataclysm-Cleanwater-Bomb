@@ -5,7 +5,7 @@
 #include "path_info.h"
 #include "worldfactory.h"
 #include <cata_scope_helpers.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <json_loader.h>
 #include <lua_platform_runtime.h>
 #include <cstdint>

@@ -27338,7 +27338,7 @@
         "lua_name": "ComputerAccessContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 1576,
+          "line": 1571,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
@@ -27898,7 +27898,7 @@
         "lua_name": "ItemUseContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 1566,
+          "line": 1561,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
