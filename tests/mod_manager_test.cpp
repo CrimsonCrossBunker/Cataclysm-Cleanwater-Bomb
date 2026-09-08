@@ -1,19 +1,22 @@
+#if !defined(CATA_ENABLE_LUA_PLATFORM) || !CATA_ENABLE_LUA_PLATFORM
+    #include <filesystem>
+    #include <memory>
+    #include <string>
+    #include "lua_platform_loader.h"
+    #include "worldfactory.h"
+#endif
+
 #include <cata_path.h>
 #include <type_id.h>
 #include <algorithm>
-#include <filesystem>
 #include <functional>
-#include <memory>
-#include <string>
 #include <vector>
 
 #include "cached_options.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "lua_platform_loader.h"
 #include "mod_manager.h"
 #include "path_info.h"
-#include "worldfactory.h"
 
 static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
 static const mod_id MOD_INFORMATION_dda( "dda" );
