@@ -413,6 +413,17 @@ No compilation or native save/load acceptance has run for this draft.
 暂未加载的 Mod 记录再次保存时也保留计数。旧版 v1 记录缺少该可选字段时，仍按尚存任务
 推导计数；旧存档写入前已丢弃的任务 ID 无法追溯恢复。该草稿尚未编译或进行原生存取验收。
 
+The draft due-task cancellation fix keeps selected tasks visible to queries and
+cancellable until their individual dispatch starts. A preceding callback can
+cancel a later task due in the same processing pass. Selection still snapshots
+the pass and uses due-turn/ID ordering: newly scheduled tasks wait for a later
+processing pass. Native regression source exists; compilation and execution
+remain pending.
+
+同轮到期任务取消修复草稿让尚未开始派发的任务继续可查、可取消：前一个回调可以取消
+同一处理轮中后续到期任务。该轮候选仍为快照，按到期回合与 ID 排序；回调新建的任务
+留到下一次处理。原生回归测试源码已补，尚未编译或执行。
+
 ## Behaviour instead of EOC / 用 Lua 行为表达能力
 
 Lua expresses conditions, effects, branching, loops, composition, and policy

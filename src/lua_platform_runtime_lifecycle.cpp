@@ -1701,17 +1701,16 @@ void runtime_process_tasks()
                 owner->reported_task_migration_failures.erase( task_id );
             }
         }
+        // Snapshot this pass, but keep unstarted tasks cancellable and visible
+        // to queries until immediately before their own dispatch.
         std::vector<persistent_task> due;
-        owner->tasks.erase( std::remove_if( owner->tasks.begin(), owner->tasks.end(),
-        [&due, &owner, now]( const persistent_task & task ) {
+        for( const persistent_task &task : owner->tasks ) {
             const auto handler = owner->handlers.find( task.handler_id );
             if( task.due_turn <= now && handler != owner->handlers.end() &&
                 handler->second.payload_version == task.payload_version ) {
                 due.push_back( task );
-                return true;
             }
-            return false;
-        } ), owner->tasks.end() );
+        }
         for( const persistent_task &task : due ) {
             owner->reported_task_migration_failures.erase( task.id );
         }
@@ -1720,6 +1719,14 @@ void runtime_process_tasks()
             return std::tie( lhs.due_turn, lhs.id ) < std::tie( rhs.due_turn, rhs.id );
         } );
         for( const persistent_task &task : due ) {
+            const auto pending = std::find_if( owner->tasks.begin(), owner->tasks.end(),
+            [&task]( const persistent_task & candidate ) {
+                return candidate.id == task.id;
+            } );
+            if( pending == owner->tasks.end() ) {
+                continue; // A preceding callback cancelled this task.
+            }
+            owner->tasks.erase( pending );
             const auto handler = owner->handlers.find( task.handler_id );
             if( handler == owner->handlers.end() ) {
                 DebugLog( D_ERROR, D_MAIN ) << "Discarding Lua-first task " << task.id
@@ -1728,7 +1735,7 @@ void runtime_process_tasks()
                 continue;
             }
             if( handler->second.payload_version != task.payload_version ) {
-                // Invalid tasks are retired before due extraction.  Keep this
+                // Invalid tasks are retired before due selection.  Keep this
                 // guard for corrupted in-memory input copied into the due list.
                 DebugLog( D_ERROR, D_MAIN ) << "Discarding Lua-first task " << task.id
                                             << " because payload version "

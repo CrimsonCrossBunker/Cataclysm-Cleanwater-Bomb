@@ -6290,6 +6290,7 @@ local CcbPlatformTasks = {}
 ---@return integer task_id
 function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, scope, actor, participants) end
 
+---Cancels a pending task, including one due this turn whose callback has not started.
 ---@param task_id integer
 ---@return boolean cancelled
 function CcbPlatformTasks.cancel(task_id) end
