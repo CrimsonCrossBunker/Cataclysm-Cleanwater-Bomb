@@ -16,6 +16,35 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_removal_lists_keep_native_empty_and_long_sequences(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for count in (0, 65, 1001):
+                with self.subTest(prefix=prefix, count=count):
+                    ids = ["bleed" if i % 2 else "poison" for i in range(count)]
+                    lines = migrate_lua_first.render_static_remove_effects(
+                        {prefix + "lose_effect": ids}, prefix + "lose_effect", "partner")
+                    self.assertIsNotNone(lines)
+                    script = """
+local partner = {}
+local calls = 0
+local function service_value(r) assert(r.ok); return r.value end
+local services = {
+ types = {id=function(kind,id) assert(kind=='effect'); return id end},
+ effects = {remove=function(target,id,part)
+  assert(target==partner and part==nil)
+  assert(id==(calls%2==0 and 'poison' or 'bleed'))
+  calls=calls+1
+  return {ok=true}
+ end}
+}
+BODY
+assert(calls==COUNT)
+""".replace("BODY", "\n".join(lines)).replace("COUNT", str(count))
+                    result = subprocess.run(["lua", "-"], input=script, text=True,
+                                            capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_lists_accept_empty_and_large_native_shapes(self) -> None:
         for count in (0, 65, 1001):
             with self.subTest(count=count):

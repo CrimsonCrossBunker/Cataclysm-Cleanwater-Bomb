@@ -4480,8 +4480,8 @@ def render_static_remove_effects(
         return None
     raw_ids = effect[key]
     if isinstance(raw_ids, list):
-        if not 0 < len(raw_ids) <= 64:
-            return None
+        # Native f_remove_effect accepts an empty vector and imposes no list
+        # limit. Emit separate calls to preserve order and repeated removals.
         effect_ids = [
             _dynamic_id_expression(
                 value, "effect", target_expression
