@@ -4501,6 +4501,11 @@ def render_static_remove_effects(
         return _dynamic_id_expression(value, kind, target_expression)
 
     raw_ids = effect[key]
+    # Native f_remove_effect only populates its vector for a string or array.
+    # A standalone variable object is ignored natively; translating it would
+    # activate a removal that never happened. Leave it for explicit review.
+    if not isinstance(raw_ids, (str, list)):
+        return None
     if isinstance(raw_ids, list):
         # Native f_remove_effect accepts an empty vector and imposes no list
         # limit. Emit separate calls to preserve order and repeated removals.

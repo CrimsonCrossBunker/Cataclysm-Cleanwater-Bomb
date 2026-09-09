@@ -15,6 +15,24 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_ignored_remove_shapes_are_not_activated_by_migration(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for value in ({"context_val": "effect_id"}, 1, True, None):
+                with self.subTest(prefix=prefix, value=value), tempfile.TemporaryDirectory() as temporary:
+                    key = prefix + "lose_effect"
+                    effect = {key: value}
+                    self.assertIsNone(migrate_lua_first.render_static_remove_effects(effect, key, "actor"))
+                    self.assertIsNone(migrate_lua_first.render_static_false_effect(effect, True, True, {}))
+                    source = Path(temporary) / "eoc.json"
+                    source.write_text(json.dumps({
+                        "type": "effect_on_condition", "id": "ignored_remove",
+                        "required_event": "game_start", "effect": [effect],
+                    }))
+                    result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "ignored_test")
+                    self.assertTrue(result.partial)
+                    self.assertTrue(result.todos)
+                    self.assertNotIn("services.effects.remove(", result.files[Path("main.lua")])
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_all_removal_event_beta_uses_actual_creature_kind(self) -> None:
         for event, kind in (("character_melee_attacks_monster", "monster"),
@@ -3276,10 +3294,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "variable_remove_bug_compatibility",
+                            "id": "variable_remove_array",
                             "required_event": "game_start",
                             "effect": {
-                                "u_lose_effect": {"context_val": "effect_id"}
+                                "u_lose_effect": [{"context_val": "effect_id"}]
                             },
                         },
                     ]
