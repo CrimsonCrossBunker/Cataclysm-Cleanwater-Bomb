@@ -85,6 +85,7 @@ struct effect_fixture {
         dialogue context( get_talker_for( player ), get_talker_for( other ) );
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "effect_acceptance" );
+        finalize_conditions();
         for( const talk_effect_fun_t &operation : effect.effects ) {
             operation( context );
         }
@@ -299,6 +300,38 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
             CHECK( fixture->target( !npc_target ).has_effect( bleeding, left ) );
         }
     }
+}
+
+TEST_CASE( "lua_platform_effects_fractional_duration_matches_legacy_truncation",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture legacy( 3900 );
+    effect_fixture modern( 4000 );
+    const bool npc_target = GENERATE( false, true );
+    const double turns = GENERATE( 0.8, 1.8, 2.9 );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    legacy.legacy_effect( R"({")" + prefix + R"(add_effect": "bleed", )"
+                          R"("duration": {"math": [")" + std::to_string( turns ) +
+                          R"("]}, "target_part": "arm_l", "intensity": 1})" );
+    sol::table options = modern.lua.create_table();
+    options["body_part"] = cata::lua_platform::script_game_id( "body_part", "arm_l" );
+    options["intensity"] = 1;
+    sol::protected_function add = modern.services["effects"]["add"];
+    sol::protected_function_result call = add( modern.handle( npc_target ),
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native(
+            time_duration::from_turns( static_cast<int>( turns ) ) ), options );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    const effect &before = legacy.target( npc_target ).get_effect(
+                               effect_bleed, body_part_arm_l.id() );
+    const effect &after = modern.target( npc_target ).get_effect(
+                              effect_bleed, body_part_arm_l.id() );
+    REQUIRE_FALSE( before.is_null() );
+    REQUIRE_FALSE( after.is_null() );
+    CHECK( before.get_duration() == time_duration::from_turns( static_cast<int>( turns ) ) );
+    CHECK( before.get_duration() == after.get_duration() );
 }
 
 TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",

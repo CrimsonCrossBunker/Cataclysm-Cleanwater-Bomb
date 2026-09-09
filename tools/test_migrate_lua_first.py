@@ -16,6 +16,63 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_shipped_incense_duration_truncates_resonance_ratio(self) -> None:
+        entries = json.loads((REPOSITORY_ROOT / "data/json/items/relics/highland_censer.json").read_text())
+        eoc = next(entry for entry in entries if entry.get("id") == "EOC_BLUE_INCENSE")
+        effect = next(effect for effect in eoc["effect"] if isinstance(effect, dict) and "u_add_effect" in effect)
+        self.assertEqual(effect["u_add_effect"], "invisibility")
+        lines = migrate_lua_first.render_static_character_effect(effect, "u_add_effect", "actor")
+        self.assertIsNotNone(lines)
+        script = """
+local actor={}
+local context={data={}}
+local called=false
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ gameplay={math={evaluate=function(expression,character)
+  assert(expression=='(u_artifact_resonance() / 150)' and character==actor)
+  return {ok=true,value=270/150}
+ end}},
+ time={duration=function(value,unit) assert(value==1 and unit=='turn');return value end},
+ effects={add=function(character,id,duration)
+  assert(character==actor and id=='invisibility' and duration==1)
+  called=true;return {ok=true}
+ end}
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_duration_truncates_fractional_turns(self) -> None:
+        for duration in ({"context_val": "duration"}, {"math": ["1.8"]},
+                         [{"math": ["1.8"]}, {"math": ["2.8"]}]):
+            with self.subTest(duration=duration):
+                lines = migrate_lua_first.render_dynamic_character_effect(
+                    {"u_add_effect": "bleed", "duration": duration}, "u_add_effect", "actor")
+                self.assertIsNotNone(lines)
+                script = """
+local actor={}
+local context={data={duration=1.8}}
+local called=false
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ time={duration=function(value,unit) assert(value==1 and unit=='turn');return value end},
+ gameplay={math={evaluate=function(expression) return {ok=true,value=tonumber(expression)} end}},
+ random={int=function(lo,hi) assert(lo==1 and hi==2);return lo end},
+ effects={add=function(target,id,duration) assert(duration==1);called=true;return {ok=true} end}
+}
+BODY
+assert(called)
+""".replace("BODY", "\n".join(lines))
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_add_fields_keep_variable_owners(self) -> None:
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
             for scope, owner in (("u_val", "actor"), ("npc_val", "partner"),

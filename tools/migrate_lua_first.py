@@ -18923,7 +18923,7 @@ def render_static_character_effect(
     duration_expression = (
         f"services.time.duration({duration}, \"turn\")"
         if duration is not None and 0 <= duration <= MAX_EFFECT_DURATION_TURNS
-        else _duration_expression(raw_duration, minimum=0)
+        else _duration_expression(raw_duration, minimum=0, truncate=True)
     )
     if duration_expression is None:
         return None
@@ -19094,12 +19094,12 @@ def render_dynamic_character_effect(
         turns = numeric(raw_duration)
         duration = None if turns is None else (
             "services.time.duration(math.max(0, math.min(" + str(MAX_EFFECT_DURATION_TURNS) +
-            ', math.floor((' + turns + ') + 0.5))), "turn")'
+            ', math.floor((' + turns + ')))), "turn")'
         )
     else:
         duration = _duration_expression(
             "1 turn" if permanent else raw_duration,
-            minimum=0, actor_expression=alpha or target_expression,
+            minimum=0, actor_expression=alpha or target_expression, truncate=True,
         )
     if effect_id is None or duration is None:
         return None
@@ -23055,8 +23055,10 @@ def _literal_nonnegative_integer(
 
 
 def _duration_expression(
-    value: Any, *, minimum: int = 0, actor_expression: str = "actor"
+    value: Any, *, minimum: int = 0, actor_expression: str = "actor",
+    truncate: bool = False
 ) -> str | None:
+    rounding = "" if truncate else " + 0.5"
     if isinstance(value, list):
         if len(value) != 2:
             return None
@@ -23092,7 +23094,7 @@ def _duration_expression(
                 expression = (
                     "math.max(" + str(minimum) + ", math.min(" +
                     str(MAX_EFFECT_DURATION_TURNS) + ", math.floor((" +
-                    expression + ") + 0.5)))"
+                    expression + ")" + rounding + ")))"
                 )
             rendered_bounds.append(expression)
         lower, upper = rendered_bounds
@@ -23115,7 +23117,7 @@ def _duration_expression(
     return (
         "services.time.duration(math.max(" + str(minimum) + ", math.min(" +
         str(MAX_EFFECT_DURATION_TURNS) + ", math.floor((" + rendered +
-        ") + 0.5))), \"turn\")"
+        ")" + rounding + "))), \"turn\")"
     )
 
 
