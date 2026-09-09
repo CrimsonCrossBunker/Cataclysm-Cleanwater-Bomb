@@ -15,6 +15,50 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_random_parts_use_the_real_player_with_npc_dialogue_actors(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for mode in ("static", "dynamic", "remove"):
+                with self.subTest(prefix=prefix, mode=mode):
+                    key = prefix + ("lose_effect" if mode == "remove" else "add_effect")
+                    effect = {key: "bleed", "target_part": "RANDOM"}
+                    if mode != "remove":
+                        effect["duration"] = 1
+                    if mode == "dynamic":
+                        effect[key] = {"context_val": "effect"}
+                    renderer = {
+                        "static": migrate_lua_first.render_static_character_effect,
+                        "dynamic": migrate_lua_first.render_dynamic_character_effect,
+                        "remove": migrate_lua_first.render_static_remove_effects,
+                    }[mode]
+                    lines = renderer(effect, key, "speaker")
+                    self.assertIsNotNone(lines)
+                    script = """
+local player,speaker={},{}
+local context={data={effect='bleed'}}
+local changed=false
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ time={duration=function(value,unit) return value end},
+ characters={avatar=function() return player end,random_body_part=function(character,main)
+  assert(character==player and character~=speaker and main)
+  return {ok=true,value='arm_l'}
+ end},
+ effects={add=function(target,id,duration,options)
+  assert(target==speaker and id=='bleed' and options.body_part=='arm_l')
+  changed=true;return {ok=true}
+ end,remove=function(target,id,part)
+  assert(target==speaker and id=='bleed' and part=='arm_l')
+  changed=true;return {ok=true}
+ end}
+}
+BODY
+assert(changed)
+""".replace("BODY", "\n".join(lines))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_noncharacter_all_removal_keeps_the_unqualified_operation(self) -> None:
         lines = migrate_lua_first.render_static_false_effect(
             {"u_lose_effect": "bleed", "target_part": "ALL"}, False, False, {},
@@ -179,7 +223,7 @@ local function service_value(r) assert(r.ok); return r.value end
 local services={
  types={id=function(kind,id) assert(kind=='effect'); return id end},
  time={duration=function(value,unit) assert(value==600 and unit=='turn'); return value end},
- characters={random_body_part=function(character,main)
+ characters={avatar=function() return actor end,random_body_part=function(character,main)
   assert(character==actor and main); return {ok=true,value='arm_l'}
  end},
  effects={add=function(character,id,duration,options)
@@ -207,7 +251,7 @@ local calls = 0
 local function service_value(r) assert(r.ok); return r.value end
 local services = {
  types={id=function(kind,id) assert(id~='RANDOM'); return id end},
- characters={random_body_part=function(character,main)
+ characters={avatar=function() return actor end,random_body_part=function(character,main)
   assert(character==actor and main)
   calls=calls+1
   return {ok=true,value=calls==1 and 'arm_l' or 'arm_r'}
@@ -224,7 +268,7 @@ assert(calls==2)
             result = subprocess.run(["lua", "-"], input=script, text=True,
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIsNone(migrate_lua_first.render_static_remove_effects(
+        self.assertIsNotNone(migrate_lua_first.render_static_remove_effects(
             {"npc_lose_effect": "bleed", "target_part": "RANDOM"}, "npc_lose_effect", "partner"))
 
     def test_effect_removal_unknown_variable_owner_stays_unresolved(self) -> None:

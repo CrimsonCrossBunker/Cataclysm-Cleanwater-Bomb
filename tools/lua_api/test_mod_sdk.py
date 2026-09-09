@@ -333,7 +333,9 @@ end
             source.write_text('''local ccb = require("ccb")
 ---@param character GameHandle
 return function(character)
-    local result = ccb.services.characters.random_body_part(character, true)
+    ---@type GameHandle
+    local player = ccb.services.characters.avatar()
+    local result = ccb.services.characters.random_body_part(player, true)
     if result.ok then
         ---@type GameId
         local part = assert(result.value)

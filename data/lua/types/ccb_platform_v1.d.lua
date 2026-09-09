@@ -7399,6 +7399,10 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
+--- Return the actual game avatar, independently of dialogue participants.
+---@return GameHandle player Generation-checked player handle.
+function CcbCharactersApi.avatar() end
+
 --- Return a detached complete list without sorting or truncation; the unqualified part is not included.
 ---@param character GameHandle Exact live Character handle.
 ---@return CcbBodyPartsResult

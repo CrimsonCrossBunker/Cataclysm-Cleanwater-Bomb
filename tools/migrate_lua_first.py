@@ -4523,11 +4523,9 @@ def render_static_remove_effects(
     if raw_part is None or raw_part in ("ALL", "bp_null"):
         part_expression = None
     elif raw_part == "RANDOM":
-        # Native talker_character samples the avatar anatomy, even when the
-        # removal target is the other participant. Do not substitute target.
-        if alpha is None:
-            return None
-        part_expression = f"service_value(services.characters.random_body_part({alpha}, true))"
+        # Native talker_character uses the actual game player, independently
+        # of both dialogue participants.
+        part_expression = "service_value(services.characters.random_body_part(services.characters.avatar(), true))"
     else:
         part_expression = identifier(raw_part, "body_part")
         if part_expression is None:
@@ -5037,8 +5035,7 @@ def render_static_false_effect(
                     target = npc_actor_expression or target
                 elif alpha is not None:
                     target = alpha
-                rendered = render_static_character_effect(
-                    effect, key, target, avatar_expression=alpha)
+                rendered = render_static_character_effect(effect, key, target)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target, avatar_expression=alpha,
@@ -18917,7 +18914,6 @@ def render_static_character_effect(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
-    *, avatar_expression: str | None = None,
 ) -> list[str] | None:
     """Render one static u_/npc_add_effect without preserving EOC syntax."""
     if target_expression is None or not safe_platform_id(effect.get(key)):
@@ -18952,10 +18948,7 @@ def render_static_character_effect(
         return None
     options: list[str] = []
     if target_part == "RANDOM":
-        alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
-        if alpha is None:
-            return None
-        options.append(f"body_part = service_value(services.characters.random_body_part({alpha}, true))")
+        options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
     elif target_part is not None and target_part != "bp_null":
         options.append(
             "body_part = services.types.id(\"body_part\", "
@@ -19135,10 +19128,7 @@ def render_dynamic_character_effect(
     target_part = effect.get("target_part")
     options: list[str] = []
     if target_part == "RANDOM":
-        alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
-        if alpha is None:
-            return None
-        options.append(f"body_part = service_value(services.characters.random_body_part({alpha}, true))")
+        options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
     elif target_part is not None and target_part != "bp_null":
         part = identifier(target_part, "body_part")
         if part is None:
@@ -28806,10 +28796,7 @@ def render_eoc(
                     )
                     else None
                 )
-                rendered = render_static_character_effect(
-                    effect, key, target_expression,
-                    avatar_expression="actor" if character_actor_proven else None,
-                )
+                rendered = render_static_character_effect(effect, key, target_expression)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target_expression,
