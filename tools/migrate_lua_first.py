@@ -4471,6 +4471,17 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
     ]
 
 
+def _effect_part_expression(raw_expression: str) -> str:
+    """Resolve native Character part sentinels after evaluating a string."""
+    return (
+        '(function(part) if part == "bp_null" then return nil '
+        'elseif part == "RANDOM" then return service_value('
+        'services.characters.random_body_part(services.characters.avatar(), true)) '
+        'else return services.types.id("body_part", part) end end)(' +
+        raw_expression + ')'
+    )
+
+
 def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
@@ -4526,6 +4537,11 @@ def render_static_remove_effects(
         # Native talker_character uses the actual game player, independently
         # of both dialogue participants.
         part_expression = "service_value(services.characters.random_body_part(services.characters.avatar(), true))"
+    elif isinstance(raw_part, dict):
+        raw_expression = render_participant_string_expression(raw_part, target_expression, alpha, beta)
+        if raw_expression is None:
+            return None
+        part_expression = _effect_part_expression(raw_expression)
     else:
         part_expression = identifier(raw_part, "body_part")
         if part_expression is None:
@@ -4538,6 +4554,20 @@ def render_static_remove_effects(
         rendered.append(
             f"    service_value(services.effects.remove("
             f"{target_expression}, {effect_id}{suffix}))"
+        )
+    if isinstance(raw_part, dict):
+        # Native first evaluates the string to select ALL, then reevaluates it
+        # for each non-ALL removal. Keep those reads and per-part ID evaluation.
+        all_lines = render_static_remove_effects(
+            {key: raw_ids, "target_part": "ALL"}, key, target_expression,
+            avatar_expression=alpha, npc_expression=beta,
+            character_target_proven=character_target_proven,
+        )
+        assert all_lines is not None
+        return (
+            [f'    if {raw_expression} == "ALL" then'] +
+            ["    " + line for line in all_lines] + ["    else"] +
+            ["    " + line for line in rendered] + ["    end"]
         )
     return rendered
 
@@ -19129,6 +19159,11 @@ def render_dynamic_character_effect(
     options: list[str] = []
     if target_part == "RANDOM":
         options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
+    elif isinstance(target_part, dict):
+        raw_part = render_participant_string_expression(target_part, target_expression, alpha, beta)
+        if raw_part is None:
+            return None
+        options.append(f"body_part = {_effect_part_expression(raw_part)}")
     elif target_part is not None and target_part != "bp_null":
         part = identifier(target_part, "body_part")
         if part is None:

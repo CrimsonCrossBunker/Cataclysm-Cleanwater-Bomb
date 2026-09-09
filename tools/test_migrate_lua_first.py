@@ -16,6 +16,94 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_dynamic_effect_parts_resolve_native_sentinels(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for mode in ("add", "remove"):
+                for value in ("bp_null", "RANDOM", "arm_r", "ALL"):
+                    if mode == "add" and value == "ALL":
+                        continue  # ALL is only a native removal sentinel.
+                    with self.subTest(prefix=prefix, mode=mode, value=value):
+                        key = prefix + ("add_effect" if mode == "add" else "lose_effect")
+                        effect = {key: "bleed", "target_part": {"npc_val": "part"}}
+                        if mode == "add":
+                            effect["duration"] = 10
+                        lines = migrate_lua_first.render_static_false_effect(
+                            effect, True, True, {}, npc_actor_expression="partner")
+                        self.assertIsNotNone(lines)
+                        script = r"""
+local actor,partner,player={},{},{}
+local context={data={}}
+local selected=SELECTED
+local reads,calls,random_calls=0,0,0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner and key=='part');reads=reads+1
+  return {ok=true,value={value=selected}}
+ end},
+ types={id=function(kind,id)
+  assert(id~='bp_null' and id~='RANDOM' and id~='ALL');return id
+ end},
+ time={duration=function(value,unit) assert(value==10);return value end},
+ characters={avatar=function() return player end,
+ random_body_part=function(character,main)
+  assert(character==player and main);random_calls=random_calls+1
+  return {ok=true,value='arm_l'}
+ end,body_parts=function(character)
+  assert(character==TARGET);return {ok=true,value={'arm_l','arm_r'}}
+ end},
+ effects={}
+}
+local expected=selected=='RANDOM' and 'arm_l' or selected
+if selected=='bp_null' then expected=nil end
+services.effects.add=function(character,id,duration,options)
+ assert(character==TARGET and id=='bleed' and options.body_part==expected)
+ calls=calls+1;return {ok=true}
+end
+services.effects.remove=function(character,id,part)
+ assert(character==TARGET and id=='bleed');calls=calls+1
+ if selected=='ALL' then
+  assert(part==({'arm_l','arm_r'})[calls])
+ else assert(part==expected) end
+ return {ok=true}
+end
+BODY
+assert(calls==(selected=='ALL' and 3 or 1))
+assert(reads==READS)
+assert(random_calls==(selected=='RANDOM' and 1 or 0))
+""".replace("SELECTED", migrate_lua_first.lua_quote(value)).replace("TARGET", target)
+                        script = script.replace("BODY", "\n".join(lines)).replace(
+                            "READS", str(1 if mode == "add" or value == "ALL" else 2))
+                        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                                capture_output=True, timeout=10)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_dynamic_remove_part_is_reevaluated_after_each_effect(self) -> None:
+        lines = migrate_lua_first.render_static_remove_effects(
+            {"u_lose_effect": ["bleed", "poison"], "target_part": {"context_val": "part"}},
+            "u_lose_effect", "actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={part='arm_l'}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={types={id=function(kind,id) return id end},effects={}}
+services.effects.remove=function(character,id,part)
+ calls=calls+1
+ assert(character==actor and id==({'bleed','poison'})[calls])
+ assert(part==(calls==1 and 'arm_l' or nil))
+ context.data.part='bp_null'
+ return {ok=true}
+end
+BODY
+assert(calls==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_random_parts_use_the_real_player_with_npc_dialogue_actors(self) -> None:
         for prefix in ("u_", "npc_"):
             for mode in ("static", "dynamic", "remove"):
@@ -18335,11 +18423,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("context.actors.beta", main)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.variables.set", main)
-            self.assertEqual(main.count("services.effects.remove"), 2)
-            self.assertIn(
-                'services.types.id("body_part", tostring((context.data["part"]',
-                main,
-            )
+            # Each ID now has ALL per-part/unqualified calls and a normal
+            # branch; the dynamic-part execution tests check runtime counts.
+            self.assertEqual(main.count("services.effects.remove"), 6)
+            self.assertIn('if part == "bp_null" then return nil', main)
+            self.assertIn('context.data["part"]', main)
 
     def test_switch_branches_are_normalized_to_actor_aware_lua_callbacks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
