@@ -4906,16 +4906,28 @@ function CcbPlatformContent.edit_widget(id) end
 ---@param dimension string
 ---@return any
 function CcbPlatformEnvironmentQueries.clear_saved_dimension(dimension) end
+---@class CcbGameplayOptionSnapshot
+---@field id string
+---@field type string Native option type, such as string_select, string_input, bool, int, or float.
+---@field value string Native serialized value; not the localized display text.
+---@field display_value string Localized value shown to players.
+---@field default_value string Native default description.
+---@field name string Localized menu text.
+---@field description string Localized tooltip.
+---@field page string Native options page.
+---@field hidden boolean
+---@field prerequisite_satisfied boolean
+
 ---@class CcbPlatformGameplayOptionsApi
 local CcbPlatformGameplayOptionsApi = {}
----@param id string
----@return any
+---@param id string Existing or unknown bounded native option name.
+---@return CcbGameplayOptionSnapshot? Nil when the option is unknown.
 function CcbPlatformGameplayOptionsApi.get(id) end
 ---@param id string
----@return any
+---@return boolean
 function CcbPlatformGameplayOptionsApi.has(id) end
 ---@param id string
----@return any
+---@return string? Native serialized value, or nil for an unknown option.
 function CcbPlatformGameplayOptionsApi.value(id) end
 ---@class CcbPlatformLoreApi
 local CcbPlatformLoreApi = {}

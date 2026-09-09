@@ -305,6 +305,24 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_gameplay_option_snapshot_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "options.lua"
+            source.write_text('''local ccb = require("ccb")
+local option = ccb.services.gameplay.options.get("USE_LANG")
+if option ~= nil then
+    ---@type CcbGameplayOptionSnapshot
+    local snapshot = option
+    ---@type string
+    local value = snapshot.value
+    return value, snapshot.prerequisite_satisfied
+end
+return ccb.services.gameplay.options.value("USE_LANG")
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_complete_body_parts_have_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")

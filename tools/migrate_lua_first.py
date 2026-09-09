@@ -24558,6 +24558,21 @@ def render_participant_string_expression(
     avatar_expression: str | None, npc_expression: str | None,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
+    if isinstance(value, dict) and value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_participant_string_expression(
+            value["option"], target_expression, avatar_expression, npc_expression)
+        if option is None:
+            return None
+        # Native get_option<string> reads the stored string, not the formatted
+        # value of a numeric/bool option. Keep invalid types explicit.
+        return (
+            '(function(option) if option == nil then error("unknown game option") end; '
+            'if option.type ~= "string_select" and '
+            'option.type ~= "string_input" then error("string game option required") end; '
+            f'return option.value end)(services.gameplay.options.get({option}))'
+        )
     owner = target_expression
     if isinstance(value, dict):
         for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
@@ -24952,11 +24967,11 @@ def render_static_character_string_var(
         if isinstance(value, dict) and isinstance(value.get("mutator"), str):
             mutator = value["mutator"]
             if mutator == "game_option" and set(value) == {"mutator", "option"}:
-                option = render_eoc_string_expression(
-                    value.get("option"), actor_expression
+                rendered = render_participant_string_expression(
+                    value, actor_expression,
+                    "actor" if avatar_actor_proven else None,
+                    npc_actor_expression or ("actor" if npc_actor_proven else None),
                 )
-                if option is not None:
-                    rendered = f"services.options.get({option})"
             elif mutator == "valid_technique" and set(value) <= {
                 "mutator", "blacklist", "crit", "dodge_counter",
                 "block_counter",

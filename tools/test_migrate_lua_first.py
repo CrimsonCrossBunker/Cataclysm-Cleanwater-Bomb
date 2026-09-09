@@ -16,6 +16,60 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_option_mutator_uses_public_api_and_correct_variable_owner(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for scope, owner in (("u_val", "actor"), ("npc_val", "partner")):
+                with self.subTest(prefix=prefix, scope=scope):
+                    value = {"mutator": "game_option", "option": {scope: "option_name"}}
+                    lines = migrate_lua_first.render_dynamic_simple_character_effect(
+                        {prefix + "add_bionic": value}, prefix + "add_bionic", target,
+                        avatar_expression="actor", npc_expression="partner")
+                    stored = migrate_lua_first.render_static_character_string_var(
+                        {"set_string_var": value, "target_var": {"context_val": "output"}},
+                        True, True, "partner")
+                    self.assertIsNotNone(lines)
+                    self.assertIsNotNone(stored)
+                    script = r"""
+local actor={option_name='ALPHA_OPTION'}
+local partner={option_name='BETA_OPTION'}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,character,scope,key)
+  assert(character==OWNER and key=='option_name');return {ok=true,value={value=character[key]}}
+ end},
+ gameplay={options={get=function(id)
+  assert(id==OWNER.option_name);return {type='string_select',value='bio_power_storage'}
+ end}},
+ types={id=function(kind,id) assert(kind=='bionic');return id end},
+ bionics={grant=function(character,id)
+  assert(character==TARGET and id=='bio_power_storage');calls=calls+1;return {ok=true}
+ end}
+}
+BODY
+STORE
+assert(calls==1 and context.data.output=='bio_power_storage')
+""".replace("TARGET", target).replace("OWNER", owner).replace("BODY", "\n".join(lines))
+                    script = script.replace("STORE", "\n".join(stored))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_option_mutator_does_not_use_numeric_display_value(self) -> None:
+        expression = migrate_lua_first.render_participant_string_expression(
+            {"mutator": "game_option", "option": "TEST_OPTION"}, "actor", "actor", None)
+        self.assertIsNotNone(expression)
+        script = r"""
+local services={gameplay={options={get=function() return {type='int',value='42'} end}}}
+assert(not pcall(function() return EXPR end))
+services.gameplay.options.get=function() return nil end
+assert(not pcall(function() return EXPR end))
+""".replace("EXPR", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_durations_preserve_signed_and_long_values(self) -> None:
         durations = [(-1.8, -1), ("-10 turns", -10), ("366 days", 31622400),
                      ({"npc_val": "duration"}, -1), ({"math": ["-1.8"]}, -1)]
@@ -19107,7 +19161,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 'context.data["raised_position"] = location', main
             )
-            self.assertIn('services.options.get("USE_LANG")', main)
+            self.assertIn('services.gameplay.options.get("USE_LANG")', main)
             self.assertIn(
                 "services.martial_arts.technique_definition(", main
             )
