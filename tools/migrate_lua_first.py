@@ -25014,17 +25014,24 @@ def render_static_character_string_var(
             actor_expression = "actor"
 
     def render_value(value: Any) -> str | None:
+        if i18n and (isinstance(value, str) or (
+                isinstance(value, dict) and ("str" in value or "str_sp" in value))):
+            literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
+            translation_context = value.get("ctxt") if isinstance(value, dict) else None
+            if not bounded_utf8_string(literal, 8192, allow_empty=True):
+                return None
+            if translation_context is not None and not bounded_utf8_string(
+                    translation_context, 8192, allow_empty=True):
+                return None
+            arguments = lua_quote(literal)
+            if translation_context is not None:
+                arguments += ", " + lua_quote(translation_context)
+            return f"services.translate({arguments})"
         rendered = render_participant_string_expression(
             value, actor_expression,
             "actor" if avatar_actor_proven else None,
             npc_actor_expression or ("actor" if npc_actor_proven else None),
         )
-        if rendered is None and i18n and isinstance(value, dict):
-            literal = value.get("str", value.get("str_sp"))
-            if isinstance(literal, str) and bounded_utf8_string(
-                literal, 8192, allow_empty=True
-            ):
-                rendered = lua_quote(literal)
         if rendered is None:
             return None
         return rendered

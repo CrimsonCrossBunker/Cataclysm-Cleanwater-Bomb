@@ -16,6 +16,40 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_i18n_translates_literals_but_not_stored_variables(self) -> None:
+        cases = [("Hello", True, "translated", "nil"),
+                 ({"str": "Hello", "ctxt": "greeting"}, True, "translated", '"greeting"'),
+                 ({"str_sp": "Hello"}, True, "translated", "nil"),
+                 ({"npc_val": "input"}, True, "stored translation", "nil"),
+                 ("Hello", False, "Hello", "nil")]
+        for value, i18n, expected, translation_context in cases:
+            lines = migrate_lua_first.render_static_character_string_var(
+                {"set_string_var": value, "i18n": i18n, "target_var": {"context_val": "output"}},
+                True, True, "partner")
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor={}
+local partner={input='stored translation'}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ translate=function(text,ctxt)
+  assert(text=='Hello' and ctxt==CTXT);calls=calls+1;return 'translated'
+ end,
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner and scope=='npc');return {ok=true,value={value=owner[key]}}
+ end}
+}
+BODY
+assert(context.data.output==EXPECTED and calls==CALLS)
+""".replace("CTXT", translation_context).replace("BODY", "\n".join(lines))
+            script = script.replace("EXPECTED", migrate_lua_first.lua_quote(expected))
+            script = script.replace("CALLS", "1" if expected == "translated" else "0")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_tags_expand_after_input_with_dialogue_participants(self) -> None:
         for accepted in (True, False):
             for proven in (True, False):
