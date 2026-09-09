@@ -24397,6 +24397,46 @@ def render_dynamic_character_wound(
     return lines
 
 
+def render_bionic_string_expression(
+    value: Any, target_expression: str,
+    avatar_expression: str | None, npc_expression: str | None,
+) -> str | None:
+    """Resolve an ID independently of the character whose bionics are used."""
+    owner = target_expression
+    if isinstance(value, dict):
+        for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
+            if key in value:
+                if expression is None:
+                    return None
+                owner = expression
+        if "var_val" in value:
+            if (
+                set(value) - {"var_val", "default"} or
+                not bounded_utf8_string(value["var_val"], 1024, allow_empty=False) or
+                not isinstance(value.get("default", ""), str) or
+                not bounded_utf8_string(value.get("default", ""), 8192, allow_empty=True) or
+                avatar_expression is None or npc_expression is None
+            ):
+                return None
+            fallback = lua_quote(value.get("default", ""))
+            # process_variable interprets u_, n_, _, and an unprefixed global
+            # name. Resolve the resulting owner before calling the single-
+            # character service; passing var scope would lose that distinction.
+            return (
+                '(function() local name = context.data[' + lua_quote(value["var_val"]) + ']; '
+                'if name == nil then return ' + fallback + ' end; '
+                'local scope, owner = "global", nil; '
+                'if name:sub(1, 2) == "u_" then scope, owner, name = "u", ' +
+                avatar_expression + ', name:sub(3) '
+                'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
+                npc_expression + ', name:sub(3) '
+                'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
+                'return tostring(service_value(services.variables.resolve('
+                'context.data, owner, scope, name)).value or ' + fallback + ') end)()'
+            )
+    return render_eoc_string_expression(value, owner)
+
+
 def render_dynamic_simple_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
@@ -24429,18 +24469,15 @@ def render_dynamic_simple_character_effect(
     if mapped is None:
         return None
     service, kind = mapped
-    variable_actor = target_expression
     if kind == "bionic" and isinstance(effect[key], dict):
-        owners = {
-            "u_val": avatar_expression or (target_expression if key.startswith("u_") else None),
-            "npc_val": npc_expression or (target_expression if key.startswith("npc_") else None),
-        }
-        for variable_key, owner in owners.items():
-            if variable_key in effect[key]:
-                if owner is None:
-                    return None
-                variable_actor = owner
-    identifier = _dynamic_id_expression(effect[key], kind, variable_actor)
+        raw_id = render_bionic_string_expression(
+            effect[key], target_expression,
+            avatar_expression or (target_expression if key.startswith("u_") else None),
+            npc_expression or (target_expression if key.startswith("npc_") else None),
+        )
+        identifier = None if raw_id is None else f'services.types.id("bionic", {raw_id})'
+    else:
+        identifier = _dynamic_id_expression(effect[key], kind, target_expression)
     if identifier is None:
         return None
     if key.endswith("learn_recipe"):
@@ -25458,16 +25495,11 @@ def render_dynamic_character_condition(
             if condition[key] == "ANY":
                 return f"character_has_any_bionic_or_capacity({actor})"
             if not isinstance(condition[key], str):
-                # A selector chooses the queried character; u_val/npc_val
-                # independently choose the dialogue variable's owner.
-                variable_actor = actor
-                if isinstance(condition[key], dict):
-                    for variable_key, variable_scope in (("u_val", "u"), ("npc_val", "npc")):
-                        if variable_key in condition[key]:
-                            owner_proven, variable_actor = actor_specs[variable_scope]
-                            if not owner_proven:
-                                return None
-                raw_id = render_eoc_string_expression(condition[key], variable_actor)
+                raw_id = render_bionic_string_expression(
+                    condition[key], actor,
+                    actor_specs["u"][1] if actor_specs["u"][0] else None,
+                    actor_specs["npc"][1] if actor_specs["npc"][0] else None,
+                )
                 if raw_id is None:
                     return None
                 return (

@@ -333,6 +333,86 @@ assert(called)
                                                 text=True, capture_output=True, timeout=10)
                         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_indirect_variable_keeps_resolved_owner(self) -> None:
+        for reference, expected in (("u_selected", "alpha_id"), ("n_selected", "beta_id"),
+                                    ("_selected", "context_id"), ("selected", "global_id")):
+            for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+                with self.subTest(reference=reference, prefix=prefix):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + "has_bionics": {"var_val": "reference"}},
+                        avatar_actor_proven=True, npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    effects = []
+                    for operation in ("add_bionic", "lose_bionic"):
+                        lines = migrate_lua_first.render_static_false_effect(
+                            {prefix + operation: {"var_val": "reference"}}, True, True, {},
+                            npc_actor_expression="partner")
+                        self.assertIsNotNone(lines)
+                        effects.extend(lines)
+                    script = """
+local actor, partner = {selected='alpha_id'}, {selected='beta_id'}
+local context = {data={reference=REFERENCE, selected='context_id'}}
+local function service_value(r) assert(r.ok); return r.value end
+local services = {
+ variables = {resolve=function(data, character, scope, key)
+   if scope == 'var' then
+     local ref = data[key]
+     if ref:sub(1,2) == 'u_' or ref:sub(1,2) == 'n_' then
+       key = ref:sub(3)
+     elseif ref:sub(1,1) == '_' then
+       return {ok=true,value={value=data[ref:sub(2)]}}
+     else return {ok=true,value={value='global_id'}} end
+   end
+   local value
+   if scope == 'global' then value='global_id'
+   elseif scope == 'context' then value=data[key]
+   else value=character[key] end
+   return {ok=true,value={value=value}}
+ end},
+ types = {id=function(kind,id) return id end},
+ bionics = {has=function(character,id)
+   assert(character == TARGET)
+   assert(id == EXPECTED)
+   return {ok=true,value=true}
+ end}
+}
+assert(EXPRESSION)
+services.bionics.grant = services.bionics.has
+services.bionics.remove_type = services.bionics.has
+EFFECTS
+""".replace("EFFECTS", "\n".join(effects)).replace("REFERENCE", json.dumps(reference)).replace("EXPECTED", json.dumps(expected)).replace("TARGET", target).replace("EXPRESSION", expression)
+                    result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_indirect_defaults_preserve_empty_values(self) -> None:
+        expression = migrate_lua_first.render_bionic_string_expression(
+            {"var_val": "reference", "default": "fallback"}, "actor", "actor", "partner")
+        self.assertIsNotNone(expression)
+        script = """
+local actor, partner = {}, {}
+local context = {data={}}
+local function service_value(r) assert(r.ok); return r.value end
+local services = {variables={resolve=function(data, character, scope, key)
+ return {ok=true,value={value=character and character[key] or data[key]}}
+end}}
+local function read() return EXPRESSION end
+assert(read() == 'fallback')
+context.data.reference = 'n_selected'
+assert(read() == 'fallback')
+partner.selected = ''
+assert(read() == '')
+partner.selected = 'bio_batteries'
+assert(read() == 'bio_batteries')
+""".replace("EXPRESSION", expression)
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_bionic_string_expression(
+            {"var_val": "reference"}, "actor", "actor", None))
+
     def test_bionic_variable_owner_must_be_proven(self) -> None:
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"u_has_bionics": {"npc_val": "selected"}}, avatar_actor_proven=True))
