@@ -16,6 +16,49 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_probability_operands_preserve_large_values_and_single_owner_reads(self) -> None:
+        for chance in ({"x": 1000000000000, "y": 2000000000000},
+                       {"x": {"u_val": "x"}, "y": {"npc_val": "y"}}):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"x_in_y_chance": chance}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = r"""
+local actor={x=1000000000000}
+local partner={y=2000000000000}
+local context={data={}}
+local reads={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ assert((key=='x' and owner==actor) or (key=='y' and owner==partner))
+ reads[key]=(reads[key] or 0)+1;assert(reads[key]==1)
+ return {ok=true,value={exists=true,value=owner[key]}}
+end},random={probability=function(x,y)
+ assert(x==1000000000000 and y==2000000000000 and x/y==0.5);return true
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_probability_ranges_preserve_integer_sampling(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"x_in_y_chance": {"x": [2.5, 2.5], "y": [4.9, 4.9]}})
+        self.assertIsNotNone(expression)
+        script = r"""
+local samples=0
+local services={random={int=function(lo,hi)
+ assert(lo==hi);samples=samples+1;return lo
+end,probability=function(x,y)
+ assert(samples==2 and x==2 and y==4);return true
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_defaults_distinguish_stored_null_from_missing(self) -> None:
         for key in ("u_val", "npc_val", "global_val", "var_val"):
             for present in (True, False):

@@ -26829,55 +26829,22 @@ def render_eoc_condition_expression(
             return None
         numerator = finite_number_literal(chance["x"])
         denominator = finite_number_literal(chance["y"])
-        if numerator is None:
-            numerator_expression = render_eoc_numeric_expression(
-                chance["x"], "0", "actor"
-            )
-            if numerator_expression is None:
-                return None
-            numerator_expression = (
-                "math.max(0, math.min(1000000000, (" +
-                numerator_expression + ")))"
-            )
-        else:
-            if numerator < 0 or numerator > 1000000000:
-                return None
-            numerator_expression = lua_number(numerator)
-        if denominator is None:
-            denominator_expression = render_eoc_numeric_expression(
-                chance["y"], "1", "actor"
-            )
-            if denominator_expression is None:
-                return None
-            denominator_expression = (
-                "math.max(1, math.min(1000000000, (" +
-                denominator_expression + ")))"
-            )
-        else:
-            if denominator <= 0 or denominator > 1000000000:
-                return None
-            denominator_expression = lua_number(denominator)
+        if numerator is not None and numerator < 0:
+            return None
+        if denominator is not None and denominator <= 0:
+            return None
         if numerator is not None and denominator is not None and numerator > denominator:
             return None
-        if numerator is not None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is not None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        return (
-            "services.random.probability("
-            f"{numerator_expression}, {denominator_expression})"
-        )
+        expressions = [_effect_numeric_expression(
+            chance[key], "actor", "actor" if character_actor_proven else None, npc_query_actor)
+            for key in ("x", "y")]
+        if any(expression is None for expression in expressions):
+            return None
+        # Each operand is evaluated once. The public service accepts finite
+        # fractional values without the integer random service's range bound.
+        # Invalid ratios remain explicit errors instead of being clamped to a
+        # different probability.
+        return f"services.random.probability({expressions[0]}, {expressions[1]})"
 
     if set(condition) <= {"roll_contested", "difficulty", "die_size"} and {
         "roll_contested", "difficulty"
