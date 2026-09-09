@@ -388,7 +388,7 @@ EFFECTS
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_bionic_indirect_defaults_preserve_empty_values(self) -> None:
-        expression = migrate_lua_first.render_bionic_string_expression(
+        expression = migrate_lua_first.render_participant_string_expression(
             {"var_val": "reference", "default": "fallback"}, "actor", "actor", "partner")
         self.assertIsNotNone(expression)
         script = """
@@ -410,7 +410,7 @@ assert(read() == 'bio_batteries')
         result = subprocess.run([shutil.which("lua"), "-"], input=script,
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIsNone(migrate_lua_first.render_bionic_string_expression(
+        self.assertIsNone(migrate_lua_first.render_participant_string_expression(
             {"var_val": "reference"}, "actor", "actor", None))
 
     def test_bionic_variable_owner_must_be_proven(self) -> None:

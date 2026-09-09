@@ -24397,11 +24397,11 @@ def render_dynamic_character_wound(
     return lines
 
 
-def render_bionic_string_expression(
+def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
 ) -> str | None:
-    """Resolve an ID independently of the character whose bionics are used."""
+    """Resolve a string independently of the character being queried or changed."""
     owner = target_expression
     if isinstance(value, dict):
         for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
@@ -24470,7 +24470,7 @@ def render_dynamic_simple_character_effect(
         return None
     service, kind = mapped
     if kind == "bionic" and isinstance(effect[key], dict):
-        raw_id = render_bionic_string_expression(
+        raw_id = render_participant_string_expression(
             effect[key], target_expression,
             avatar_expression or (target_expression if key.startswith("u_") else None),
             npc_expression or (target_expression if key.startswith("npc_") else None),
@@ -25495,7 +25495,7 @@ def render_dynamic_character_condition(
             if condition[key] == "ANY":
                 return f"character_has_any_bionic_or_capacity({actor})"
             if not isinstance(condition[key], str):
-                raw_id = render_bionic_string_expression(
+                raw_id = render_participant_string_expression(
                     condition[key], actor,
                     actor_specs["u"][1] if actor_specs["u"][0] else None,
                     actor_specs["npc"][1] if actor_specs["npc"][0] else None,
