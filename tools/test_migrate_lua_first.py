@@ -16,6 +16,29 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_selector_example_string_setup_preserves_translation(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/example_eocs.json").read_text())
+        eoc = next(entry for entry in source if entry.get("id") == "EOC_selector_test")
+        effects = eoc["effect"][:3]
+        self.assertTrue(all("set_string_var" in effect for effect in effects))
+        bodies = [migrate_lua_first.render_static_character_string_var(effect, False, False) for effect in effects]
+        self.assertTrue(all(body is not None for body in bodies))
+        script = r"""
+local context={data={}}
+local translated={}
+local services={translate=function(text)
+ translated[#translated+1]=text;return 'localized:'..text
+end}
+BODY
+assert(context.data.title=='localized:EOC Selector Test')
+assert(context.data.name=='name_3')
+assert(context.data.description=='localized:option 3')
+assert(#translated==2)
+""".replace("BODY", "\n".join(line for body in bodies for line in body))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_input_translated_variables_preserve_native_evaluation_order(self) -> None:
         lines = migrate_lua_first.render_static_character_string_var(
             {"set_string_var": "original", "target_var": {"context_val": "output"},
