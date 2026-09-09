@@ -16,6 +16,31 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_false_branch_string_assignment_preserves_beta_expression(self) -> None:
+        lines = migrate_lua_first.render_static_false_effect(
+            {"set_string_var": {"npc_val": "input"}, "target_var": {"npc_val": "output"}},
+            True, True, {}, npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local context={data={}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={
+ resolve=function(data,owner,scope,key)
+  assert(owner==partner and scope=='npc');return {ok=true,value={value=owner[key]}}
+ end,
+ set=function(owner,key,value) assert(owner==partner);owner[key]=value end
+}}
+if false then error('wrong branch') else
+BODY
+end
+assert(partner.output=='beta' and actor.output==nil)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_real_selector_example_string_setup_preserves_translation(self) -> None:
         source = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/example_eocs.json").read_text())
         eoc = next(entry for entry in source if entry.get("id") == "EOC_selector_test")

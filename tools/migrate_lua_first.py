@@ -4999,7 +4999,7 @@ def render_static_false_effect(
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "set_string_var" in effect:
         rendered = render_static_character_string_var(
-            effect, avatar_actor_proven, npc_actor_proven
+            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
         )
         if rendered is None:
             return None
