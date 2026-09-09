@@ -7393,8 +7393,16 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbBodyPartIdResult : CcbResult
 ---@field value GameId|nil Anatomy-weighted selected body part; present on success.
 
+---@class CcbBodyPartsResult : CcbResult
+---@field value GameId[]|nil Complete body-part IDs in native anatomy order; present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+--- Return a detached complete list without sorting or truncation; the unqualified part is not included.
+---@param character GameHandle Exact live Character handle.
+---@return CcbBodyPartsResult
+function CcbCharactersApi.body_parts(character) end
 
 --- Select using the character anatomy weights. Unlike pick_body_part, this is not uniform over parts.
 ---@param character GameHandle Exact live Character handle.

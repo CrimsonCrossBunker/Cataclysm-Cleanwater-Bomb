@@ -15,6 +15,59 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_noncharacter_all_removal_keeps_the_unqualified_operation(self) -> None:
+        lines = migrate_lua_first.render_static_false_effect(
+            {"u_lose_effect": "bleed", "target_part": "ALL"}, False, False, {},
+            creature_actor_proven=True)
+        self.assertIsNotNone(lines)
+        self.assertNotIn("characters.body_parts", "\n".join(lines))
+        self.assertEqual(len(lines), 1)
+        self.assertIn("services.effects.remove(actor", lines[0])
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_all_effect_removal_preserves_part_then_global_order(self) -> None:
+        entries = json.loads((REPOSITORY_ROOT / "data/mods/Xedra_Evolved/mutations/vampire_trait_eocs.json").read_text())
+        eoc = next(entry for entry in entries if entry.get("id") == "EOC_COAGULANTWEAVE_activated")
+        shipped = next(effect for effect in eoc["effect"][0]["run_eocs"][0]["effect"]
+                       if isinstance(effect, dict) and effect.get("target_part") == "ALL")
+        self.assertEqual(shipped["u_lose_effect"], "bleed")
+        for effect, target in (
+            ({"u_lose_effect": ["bleed", "poison"], "target_part": "ALL"}, "actor"),
+            ({"npc_lose_effect": ["bleed", "poison"], "target_part": "ALL"}, "partner"),
+            (shipped, "actor"),
+        ):
+            ids = effect.get("u_lose_effect", effect.get("npc_lose_effect"))
+            ids = ids if isinstance(ids, list) else [ids]
+            expected = "{" + ",".join(
+                "{" + migrate_lua_first.lua_quote(identifier) + "," +
+                (migrate_lua_first.lua_quote(part) if part else "nil") + "}"
+                for identifier in ids for part in ("arm_l", "arm_r", None)) + "}"
+            lines = migrate_lua_first.render_static_false_effect(
+                effect,
+                True, True, {}, npc_actor_expression="partner")
+            self.assertIsNotNone(lines)
+            script = """
+local actor,partner={},{}
+local expected=EXPECTED
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ characters={body_parts=function(character)
+  assert(character==TARGET);return {ok=true,value={'arm_l','arm_r'}}
+ end},
+ effects={remove=function(character,id,part)
+  calls=calls+1
+  assert(character==TARGET and id==expected[calls][1] and part==expected[calls][2])
+  return {ok=true}
+ end}
+}
+BODY
+assert(calls==#expected)
+""".replace("TARGET", target).replace("BODY", "\n".join(lines)).replace("EXPECTED", expected)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_shipped_incense_duration_truncates_resonance_ratio(self) -> None:
         entries = json.loads((REPOSITORY_ROOT / "data/json/items/relics/highland_censer.json").read_text())

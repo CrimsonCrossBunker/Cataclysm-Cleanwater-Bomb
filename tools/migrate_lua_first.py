@@ -4474,6 +4474,7 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
 def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
+    character_target_proven: bool = True,
 ) -> list[str] | None:
     if target_expression is None or key not in effect:
         return None
@@ -4503,6 +4504,21 @@ def render_static_remove_effects(
         if effect_id is None:
             return None
         effect_ids = [effect_id]
+    if effect.get("target_part") == "ALL" and character_target_proven:
+        if not effect_ids:
+            return []
+        rendered = [
+            "    do",
+            f"        local parts = service_value(services.characters.body_parts({target_expression}))",
+        ]
+        for effect_id in effect_ids:
+            rendered.extend([
+                "        for _, part in ipairs(parts) do",
+                f"            service_value(services.effects.remove({target_expression}, {effect_id}, part))",
+                "        end",
+                f"        service_value(services.effects.remove({target_expression}, {effect_id}))",
+            ])
+        return rendered + ["    end"]
     raw_part = effect.get("target_part")
     if raw_part is None or raw_part in ("ALL", "bp_null"):
         part_expression = None
@@ -4684,7 +4700,9 @@ def render_static_false_effect(
         elif alpha is not None:
             target = alpha
         rendered = render_static_remove_effects(
-            effect, key, target, avatar_expression=alpha, npc_expression=beta)
+            effect, key, target, avatar_expression=alpha, npc_expression=beta,
+            character_target_proven=avatar_actor_proven if key.startswith("u_") else (
+                npc_actor_proven or npc_actor_expression is not None))
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
@@ -28837,6 +28855,7 @@ def render_eoc(
                     avatar_expression="actor" if character_actor_proven else None,
                     npc_expression=npc_actor_expression or (
                         "actor" if npc_event_character_actor_proven else None),
+                    character_target_proven=character_actor_proven if key.startswith("u_") else True,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
