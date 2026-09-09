@@ -16,6 +16,37 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_is_day_real_conditions_use_live_environment_without_actor(self) -> None:
+        # Real content uses this parameterless predicate both directly and negated.
+        source = json.loads((REPOSITORY_ROOT / "data/json/npcs/TALK_TEST.json").read_text())
+        predicates = []
+        for topic in source:
+            for response in topic.get("responses", []):
+                condition = response.get("condition")
+                if condition == "is_day" or condition == {"not": "is_day"}:
+                    predicates.append(condition)
+        self.assertEqual(len(predicates), 2)
+        for condition in predicates:
+            expression = migrate_lua_first.render_eoc_condition_expression(condition)
+            self.assertIsNotNone(expression)
+            expected = "night" if isinstance(condition, dict) else "not night"
+            script = """
+local night=false
+local reads=0
+local services={gameplay={environment={is_night=function()
+ reads=reads+1;return night
+end}}}
+local function predicate() return EXPRESSION end
+for _,value in ipairs({false,true,false}) do
+ night=value
+ assert(predicate()==(EXPECTED))
+end
+assert(reads==3)
+""".replace("EXPRESSION", expression).replace("EXPECTED", expected)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_probability_operands_preserve_large_values_and_single_owner_reads(self) -> None:
         for chance in ({"x": 1000000000000, "y": 2000000000000},
                        {"x": {"u_val": "x"}, "y": {"npc_val": "y"}}):
@@ -2065,7 +2096,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {"is_season": "spring"},
                 {"is_weather": "rain"},
                 "is_day",
-                "is_night",
                 {"u_has_trait": "SAMPLE_TRAIT"},
                 {"u_has_any_trait": ["SAMPLE_TRAIT", "TOUGH"]},
                 {"u_has_martial_art": "style_karate"},
@@ -3256,6 +3286,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 ),
                 1,
             )
+
+    def test_unregistered_night_condition_is_not_invented_during_migration(self) -> None:
+        path = REPOSITORY_ROOT / "data/reference/json/ccb_eoc_conditions.json"
+        inventory = json.loads(path.read_text())
+        self.assertNotIn("is_night", {entry["key"] for entry in inventory["entries"]})
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression("is_night"))
 
     def test_dynamic_or_unproven_is_day_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

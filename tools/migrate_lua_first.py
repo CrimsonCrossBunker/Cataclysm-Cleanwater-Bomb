@@ -26055,8 +26055,6 @@ def render_eoc_condition_expression(
             )
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
-        if condition == "is_night":
-            return "services.gameplay.environment.is_night()"
         if npc_query_actor is not None:
             if condition == "npc_is_alive":
                 return (

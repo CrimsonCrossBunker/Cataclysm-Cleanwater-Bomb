@@ -305,6 +305,19 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_day_predicate_has_boolean_editor_type(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            (mod / "day.lua").write_text('''local ccb = require("ccb")
+---@return boolean
+return function()
+    local services = ccb.services
+    return not services.gameplay.environment.is_night()
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_native_variable_copy_has_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")
