@@ -16,6 +16,48 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_tags_expand_after_input_with_dialogue_participants(self) -> None:
+        for accepted in (True, False):
+            for proven in (True, False):
+                lines = migrate_lua_first.render_static_character_string_var(
+                    {"set_string_var": "original <tag>", "parse_tags": True,
+                     "string_input": {"title": "Title"},
+                     "target_var": {"npc_val": "output"} if proven else {"context_val": "output"}},
+                    proven, proven, "partner" if proven else None)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor={}
+local partner={}
+local player={}
+local context={data={}}
+local phase=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ characters={avatar=function() return player end},
+ interaction={input_text=function(title,options)
+  assert(phase==0 and title=='Title');phase=1
+  if ACCEPTED then return 'entered <tag>' end
+ end},
+ text={expand_for=function(value,alpha,beta)
+  assert(phase==1 and alpha==ALPHA and beta==BETA);phase=2
+  assert(value==(ACCEPTED and 'entered <tag>' or 'original <tag>'))
+  return {ok=true,value='expanded'}
+ end},
+ variables={set=function(owner,key,value)
+  assert(phase==2 and owner==partner);owner[key]=value
+ end}
+}
+BODY
+assert(phase==2 and DESTINATION.output=='expanded')
+""".replace("ACCEPTED", "true" if accepted else "false")
+                script = script.replace("ALPHA", "actor" if proven else "player")
+                script = script.replace("BETA", "partner" if proven else "player")
+                script = script.replace("DESTINATION", "partner" if proven else "context.data")
+                script = script.replace("BODY", "\n".join(lines))
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_random_choice_evaluates_only_selected_candidate_after_rng(self) -> None:
         lines = migrate_lua_first.render_static_character_string_var(
             {"set_string_var": [{"u_val": "first"}, {"npc_val": "second"}],

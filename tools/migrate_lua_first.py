@@ -25027,12 +25027,6 @@ def render_static_character_string_var(
                 rendered = lua_quote(literal)
         if rendered is None:
             return None
-        if parse_tags:
-            beta = npc_actor_expression or "(context.actors and context.actors.beta)"
-            rendered = (
-                "service_value(services.text.expand_for("
-                f"{rendered}, {actor_expression}, {beta}))"
-            )
         return rendered
 
     rendered_values = [render_value(value) for value in values]
@@ -25068,6 +25062,14 @@ def render_static_character_string_var(
             "    end",
         ])
         value_expression = "value"
+
+    if parse_tags:
+        alpha = "actor" if avatar_actor_proven else "services.characters.avatar()"
+        beta = npc_actor_expression or (
+            "actor" if npc_actor_proven else "services.characters.avatar()")
+        value_expression = (
+            "service_value(services.text.expand_for("
+            f"{value_expression}, {alpha}, {beta}))")
 
     if target[0] == "context":
         lines.append(
