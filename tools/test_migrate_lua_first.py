@@ -266,6 +266,84 @@ assert(predicate() == true)
                                     text=True, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_condition_variables_keep_dialogue_owner(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for scope, owner in (("u_val", "actor"), ("npc_val", "partner")):
+                with self.subTest(prefix=prefix, scope=scope):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + "has_bionics": {scope: "selected"}},
+                        avatar_actor_proven=True, npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    script = """
+local actor = { selected = 'bio_batteries' }
+local partner = { selected = 'bio_power_storage' }
+local context = { data = {} }
+local function service_value(r) assert(r.ok); return r.value end
+local services = {
+ variables = { resolve = function(data, character, scope, key)
+   return {ok=true, value={value=character[key]}}
+ end },
+ types = { id = function(kind, id) assert(kind == 'bionic'); return id end },
+ bionics = { has = function(character, id)
+   assert(character == TARGET)
+   assert(id == OWNER.selected)
+   return {ok=true, value=true}
+ end }
+}
+assert(EXPRESSION)
+""".replace("TARGET", target).replace("OWNER", owner).replace("EXPRESSION", expression)
+                    result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_bionic_effect_variables_keep_dialogue_owner(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for operation in ("add_bionic", "lose_bionic"):
+                for scope, owner in (("u_val", "actor"), ("npc_val", "partner")):
+                    with self.subTest(prefix=prefix, operation=operation, scope=scope):
+                        lines = migrate_lua_first.render_static_false_effect(
+                            {prefix + operation: {scope: "selected"}}, True, True, {},
+                            npc_actor_expression="partner")
+                        self.assertIsNotNone(lines)
+                        script = """
+local actor = { selected = 'bio_batteries' }
+local partner = { selected = 'bio_power_storage' }
+local context = { data = {} }
+local function service_value(r) assert(r.ok); return r.value end
+local called = false
+local function change(character, id)
+ assert(character == TARGET)
+ assert(id == OWNER.selected)
+ called = true
+ return {ok=true, value={changed=true}}
+end
+local services = {
+ variables = { resolve = function(data, character, scope, key)
+   return {ok=true, value={value=character[key]}}
+ end },
+ types = { id = function(kind, id) assert(kind == 'bionic'); return id end },
+ bionics = { grant=change, remove_type=change }
+}
+BODY
+assert(called)
+""".replace("TARGET", target).replace("OWNER", owner).replace("BODY", "\n".join(lines))
+                        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                                text=True, capture_output=True, timeout=10)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_bionic_variable_owner_must_be_proven(self) -> None:
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_bionics": {"npc_val": "selected"}}, avatar_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_bionics": {"u_val": "selected"}}, npc_actor_proven=True))
+        for operation in ("add_bionic", "lose_bionic"):
+            self.assertIsNone(migrate_lua_first.render_dynamic_simple_character_effect(
+                {"u_" + operation: {"npc_val": "selected"}}, "u_" + operation, "actor"))
+            self.assertIsNone(migrate_lua_first.render_dynamic_simple_character_effect(
+                {"npc_" + operation: {"u_val": "selected"}}, "npc_" + operation, "partner"))
+
     def test_zero_duration_effect_migration_preserves_native_duration(self) -> None:
         for prefix in ("u_", "npc_"):
             for duration in (0, "0 turns"):

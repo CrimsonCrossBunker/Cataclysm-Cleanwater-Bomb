@@ -5023,7 +5023,14 @@ def render_static_false_effect(
         )
         if key is not None:
             target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
-            rendered = render_dynamic_simple_character_effect(effect, key, target)
+            npc_target = npc_actor_expression or ("actor" if npc_actor_proven else None)
+            if key.startswith("npc_"):
+                target = npc_target
+            rendered = render_dynamic_simple_character_effect(
+                effect, key, target,
+                avatar_expression="actor" if avatar_actor_proven else None,
+                npc_expression=npc_target,
+            )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
         # The false branch is still a normal effect list.  Keep the common
@@ -24392,6 +24399,7 @@ def render_dynamic_character_wound(
 
 def render_dynamic_simple_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
+    *, avatar_expression: str | None = None, npc_expression: str | None = None,
 ) -> list[str] | None:
     """Render id-only character mutations with dynamic variable support."""
     comment_keys = {
@@ -24421,7 +24429,18 @@ def render_dynamic_simple_character_effect(
     if mapped is None:
         return None
     service, kind = mapped
-    identifier = _dynamic_id_expression(effect[key], kind, target_expression)
+    variable_actor = target_expression
+    if kind == "bionic" and isinstance(effect[key], dict):
+        owners = {
+            "u_val": avatar_expression or (target_expression if key.startswith("u_") else None),
+            "npc_val": npc_expression or (target_expression if key.startswith("npc_") else None),
+        }
+        for variable_key, owner in owners.items():
+            if variable_key in effect[key]:
+                if owner is None:
+                    return None
+                variable_actor = owner
+    identifier = _dynamic_id_expression(effect[key], kind, variable_actor)
     if identifier is None:
         return None
     if key.endswith("learn_recipe"):
@@ -25439,7 +25458,16 @@ def render_dynamic_character_condition(
             if condition[key] == "ANY":
                 return f"character_has_any_bionic_or_capacity({actor})"
             if not isinstance(condition[key], str):
-                raw_id = render_eoc_string_expression(condition[key], actor)
+                # A selector chooses the queried character; u_val/npc_val
+                # independently choose the dialogue variable's owner.
+                variable_actor = actor
+                if isinstance(condition[key], dict):
+                    for variable_key, variable_scope in (("u_val", "u"), ("npc_val", "npc")):
+                        if variable_key in condition[key]:
+                            owner_proven, variable_actor = actor_specs[variable_scope]
+                            if not owner_proven:
+                                return None
+                raw_id = render_eoc_string_expression(condition[key], variable_actor)
                 if raw_id is None:
                     return None
                 return (
@@ -28588,7 +28616,14 @@ def render_eoc(
                     else "services.characters.avatar()"
                     if key.startswith("u_") and npc_event_character_actor_proven else None
                 )
-                rendered = render_dynamic_simple_character_effect(effect, key, target)
+                rendered = render_dynamic_simple_character_effect(
+                    effect, key, target,
+                    avatar_expression=(
+                        "actor" if avatar_actor_proven else
+                        "services.characters.avatar()" if npc_event_character_actor_proven else None
+                    ),
+                    npc_expression="actor" if npc_event_character_actor_proven else None,
+                )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
