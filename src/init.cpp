@@ -619,7 +619,7 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
 
         for( const cata_path &f : interaction_folders ) {
             const mod_id associated_mod = canonical_mod_id( mod_id(
-                    f.get_unrelative_path().filename().string() ) );
+                                              f.get_unrelative_path().filename().string() ) );
             bool is_mod_loaded = std::find( loaded_mods.begin(), loaded_mods.end(),
                                             associated_mod ) != loaded_mods.end();
 
