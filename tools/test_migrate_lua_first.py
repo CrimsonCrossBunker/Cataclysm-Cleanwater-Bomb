@@ -15,6 +15,64 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_intensity_ranges_preserve_integer_endpoints_and_lazy_reads(self) -> None:
+        ranges = [([2.9, -1.9], -1, 2), ([-1.9, 2.9], -1, 2),
+                  ([{"u_val": "lo"}, {"npc_val": "hi"}], -1, 2)]
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for value, lower, upper in ranges:
+                with self.subTest(prefix=prefix, value=value):
+                    expression = migrate_lua_first.render_effect_condition(
+                        {prefix + "has_any_effect": ["absent", "bleed"], "intensity": value}, "actor", "partner")
+                    self.assertIsNotNone(expression)
+                    added = migrate_lua_first.render_dynamic_character_effect(
+                        {prefix + "add_effect": "bleed", "duration": 10, "intensity": value},
+                        prefix + "add_effect", target, avatar_expression="actor", npc_expression="partner")
+                    self.assertIsNotNone(added)
+                    script = r"""
+local actor={lo='2.9'}
+local partner={hi='-1.9'}
+local context={data={}}
+local queries,random_calls,reads,adds=0,0,0,0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ variables={resolve=function(data,owner,scope,key)
+  assert((owner==actor and key=='lo') or (owner==partner and key=='hi'))
+  reads=reads+1;return {ok=true,value={value=owner[key]}}
+ end},
+ random={int=function(lo,hi)
+  assert(lo==LOWER and hi==UPPER);random_calls=random_calls+1;return hi
+ end},
+ time={duration=function(value,unit) return value end},
+ effects={get=function(character,id,part)
+  assert(character==TARGET);queries=queries+1
+  if id=='absent' then
+   assert(random_calls==0 and reads==0);return {ok=false,error={code='not_found'}}
+  end
+  return {ok=true,value={intensity=2}}
+ end,add=function(character,id,duration,options)
+  assert(character==TARGET and id=='bleed' and options.intensity==2)
+  adds=adds+1;return {ok=true}
+ end}
+}
+assert(QUERY)
+assert(queries==2 and random_calls==1)
+ADD
+assert(adds==1 and random_calls==2 and reads==READS)
+""".replace("TARGET", target).replace("LOWER", str(lower)).replace("UPPER", str(upper))
+                    script = script.replace("QUERY", expression).replace("ADD", "\n".join(added)).replace(
+                        "READS", "4" if isinstance(value[0], dict) else "0")
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_effect_intensity_rejects_malformed_ranges(self) -> None:
+        for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 1000000001]):
+            self.assertIsNone(migrate_lua_first.render_effect_condition(
+                {"u_has_effect": "bleed", "intensity": value}, "actor", None))
+            self.assertIsNone(migrate_lua_first.render_dynamic_character_effect(
+                {"u_add_effect": "bleed", "duration": 10, "intensity": value}, "u_add_effect", "actor"))
+
     def test_ignored_remove_shapes_are_not_activated_by_migration(self) -> None:
         for prefix in ("u_", "npc_"):
             for value in ({"context_val": "effect_id"}, 1, True, None):

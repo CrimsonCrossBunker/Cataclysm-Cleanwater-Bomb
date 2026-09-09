@@ -19113,6 +19113,40 @@ def render_dynamic_character_morale(
     ]
 
 
+def _effect_numeric_expression(
+    value: Any, target: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(endpoint, list) for endpoint in value):
+            return None
+        for endpoint in value:
+            literal = finite_number_literal(endpoint)
+            if literal is not None and abs(math.trunc(literal)) > 1000000000:
+                return None
+        endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
+        if any(endpoint is None for endpoint in endpoints):
+            return None
+        # Native dbl_or_var calls integer rng: truncate toward zero before
+        # ordering the endpoints. Keep runtime errors outside the random API's
+        # supported bounds instead of silently clamping the distribution.
+        return (
+            '(function(lo, hi) lo = lo < 0 and math.ceil(lo) or math.floor(lo); '
+            'hi = hi < 0 and math.ceil(hi) or math.floor(hi); '
+            'return services.random.int(math.min(lo, hi), math.max(lo, hi)) end)('
+            f'{endpoints[0]}, {endpoints[1]})'
+        )
+    if not isinstance(value, dict) or set(value) == {"math"}:
+        return render_eoc_numeric_expression(value, "0", alpha or target)
+    descriptor = dict(value)
+    if "default" in descriptor:
+        default = finite_number_literal(descriptor["default"])
+        if default is None:
+            return None
+        descriptor["default"] = str(default)
+    raw = render_participant_string_expression(descriptor, target, alpha, beta)
+    return None if raw is None else f"(tonumber({raw}) or 0)"
+
+
 def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
@@ -19132,16 +19166,7 @@ def render_dynamic_character_effect(
         return _dynamic_id_expression(value, kind, target_expression)
 
     def numeric(value: Any) -> str | None:
-        if not isinstance(value, dict) or set(value) == {"math"}:
-            return render_eoc_numeric_expression(value, "0", alpha or target_expression)
-        descriptor = dict(value)
-        if "default" in descriptor:
-            default = finite_number_literal(descriptor["default"])
-            if default is None:
-                return None
-            descriptor["default"] = str(default)
-        raw = render_participant_string_expression(descriptor, target_expression, alpha, beta)
-        return None if raw is None else f"(tonumber({raw}) or 0)"
+        return _effect_numeric_expression(value, target_expression, alpha, beta)
 
     effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
@@ -25556,25 +25581,10 @@ def render_effect_condition(
     literal = finite_number_literal(raw_intensity)
     if literal is not None:
         intensity = lua_number(literal)
-    elif isinstance(raw_intensity, dict) and set(raw_intensity) == {"math"}:
-        intensity = render_eoc_numeric_expression(raw_intensity, "0", alpha or target)
+    else:
+        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta)
         if intensity is None:
             return None
-    elif isinstance(raw_intensity, dict):
-        numeric = dict(raw_intensity)
-        if "default" in numeric:
-            default = finite_number_literal(numeric["default"])
-            if default is None:
-                return None
-            numeric["default"] = str(default)
-        rendered = render_participant_string_expression(numeric, target, alpha, beta)
-        if rendered is None:
-            return None
-        # A present variable descriptor without its own default evaluates to
-        # zero natively; -1 is only the omitted intensity field's default.
-        intensity = f"(tonumber({rendered}) or 0)"
-    else:
-        return None
     if not values:
         return "false"
     queries = []
