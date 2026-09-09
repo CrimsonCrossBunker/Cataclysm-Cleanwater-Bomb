@@ -24962,6 +24962,50 @@ def render_static_character_copy_var(
     return lines
 
 
+def render_participant_translation_expression(
+    value: Any, target_expression: str,
+    avatar_expression: str | None, npc_expression: str | None,
+) -> str | None:
+    """Translate authored literals; stored dialogue values are already translated."""
+    if isinstance(value, str) or (
+            isinstance(value, dict) and ("str" in value or "str_sp" in value)):
+        literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
+        translation_context = value.get("ctxt") if isinstance(value, dict) else None
+        if not bounded_utf8_string(literal, 8192, allow_empty=True):
+            return None
+        if translation_context is not None and not bounded_utf8_string(
+                translation_context, 8192, allow_empty=True):
+            return None
+        arguments = lua_quote(literal)
+        if translation_context is not None:
+            arguments += ", " + lua_quote(translation_context)
+        return f"services.translate({arguments})"
+    if isinstance(value, dict) and "default" in value:
+        # A translated fallback must run only when the variable is absent.
+        # Keep unsupported indirect fallback shapes explicit for now.
+        keys = set(value) - {"default"}
+        if len(keys) != 1:
+            return None
+        key = next(iter(keys))
+        owner = {"u_val": avatar_expression, "npc_val": npc_expression}.get(key)
+        if key not in {"u_val", "npc_val", "context_val", "global_val"} or (
+                key in {"u_val", "npc_val"} and owner is None):
+            return None
+        default = value["default"]
+        if not (isinstance(default, str) or isinstance(default, dict) and (
+                "str" in default or "str_sp" in default)):
+            return None
+        fallback = render_participant_translation_expression(
+            value["default"], target_expression, avatar_expression, npc_expression)
+        raw = render_eoc_value_expression({key: value[key]}, "nil", owner or target_expression)
+        if fallback is None or raw is None:
+            return None
+        return ('(function(value) if value ~= nil then return tostring(value) end; '
+                f'return {fallback} end)({raw})')
+    return render_participant_string_expression(
+        value, target_expression, avatar_expression, npc_expression)
+
+
 def render_static_character_string_var(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
@@ -25014,27 +25058,12 @@ def render_static_character_string_var(
             actor_expression = "actor"
 
     def render_value(value: Any) -> str | None:
-        if i18n and (isinstance(value, str) or (
-                isinstance(value, dict) and ("str" in value or "str_sp" in value))):
-            literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
-            translation_context = value.get("ctxt") if isinstance(value, dict) else None
-            if not bounded_utf8_string(literal, 8192, allow_empty=True):
-                return None
-            if translation_context is not None and not bounded_utf8_string(
-                    translation_context, 8192, allow_empty=True):
-                return None
-            arguments = lua_quote(literal)
-            if translation_context is not None:
-                arguments += ", " + lua_quote(translation_context)
-            return f"services.translate({arguments})"
-        rendered = render_participant_string_expression(
+        renderer = render_participant_translation_expression if i18n else render_participant_string_expression
+        return renderer(
             value, actor_expression,
             "actor" if avatar_actor_proven else None,
             npc_actor_expression or ("actor" if npc_actor_proven else None),
         )
-        if rendered is None:
-            return None
-        return rendered
 
     rendered_values = [render_value(value) for value in values]
     if any(value is None for value in rendered_values):
@@ -25054,19 +25083,26 @@ def render_static_character_string_var(
             "title", "description", "default_text", "identifier",
         }:
             return None
-        title = display_text(input_options.get("title"), "")
-        description = display_text(input_options.get("description"), "")
-        initial = display_text(input_options.get("default_text"), "")
-        if not all(isinstance(value, str) for value in (title, description, initial)):
+        alpha = "actor" if avatar_actor_proven else None
+        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+        translated_options = [render_participant_translation_expression(
+            input_options[key], actor_expression, alpha, beta) if key in input_options else '""'
+            for key in ("title", "default_text", "description")]
+        identifier = render_participant_string_expression(
+            input_options["identifier"], actor_expression, alpha, beta) if "identifier" in input_options else '""'
+        if any(option is None for option in translated_options) or identifier is None:
             return None
-        identifier = input_options.get("identifier", "")
-        if not bounded_utf8_string(identifier, 128, allow_empty=True):
-            return None
+        title, initial, description = translated_options
         lines.extend([
             f"    local value = {value_expression}",
+            f"    local input_label_width = #{title}",
+            f"    local input_default = {initial}",
+            f"    local input_title = {title}",
+            f"    local input_description = {description}",
+            f"    local input_identifier = {identifier}",
             "    local input = services.interaction.input_text(",
-            f"        {lua_quote(title)}, {{ default = {lua_quote(initial)}, "
-            f"description = {lua_quote(description)}, identifier = {lua_quote(identifier)} }})",
+            "        input_title, { default = input_default, description = input_description,",
+            "        identifier = input_identifier, width = 40 + input_label_width })",
             "    if input.accepted then",
             "        value = input.value",
             "    end",

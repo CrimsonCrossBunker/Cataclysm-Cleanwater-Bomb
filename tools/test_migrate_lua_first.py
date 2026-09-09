@@ -16,6 +16,68 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_input_translated_variables_preserve_native_evaluation_order(self) -> None:
+        lines = migrate_lua_first.render_static_character_string_var(
+            {"set_string_var": "original", "target_var": {"context_val": "output"},
+             "string_input": {"title": {"npc_val": "title"}, "default_text": {"u_val": "initial"},
+                              "description": {"str": "Help", "ctxt": "input"},
+                              "identifier": {"context_val": "history"}}}, True, True, "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={initial='alpha initial'}
+local partner={title='beta title'}
+local context={data={history='input_history'}}
+local order={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  order[#order+1]=key;return {ok=true,value={value=owner[key]}}
+ end},
+ translate=function(text,ctxt)
+  assert(text=='Help' and ctxt=='input');order[#order+1]='description';return 'translated help'
+ end,
+ interaction={input_text=function(title,options)
+  assert(table.concat(order,',')=='title,initial,title,description')
+  assert(title=='beta title' and options.default=='alpha initial')
+  assert(options.description=='translated help' and options.identifier=='input_history')
+  assert(options.width==50);return {accepted=true,cancelled=false,value='entered'}
+ end}
+}
+BODY
+assert(context.data.output=='entered')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_variable_default_is_lazy_and_preserves_empty_values(self) -> None:
+        expression = migrate_lua_first.render_participant_translation_expression(
+            {"npc_val": "input", "default": {"str": "Fallback", "ctxt": "default"}},
+            "actor", "actor", "partner")
+        self.assertIsNotNone(expression)
+        for present in (True, False):
+            script = r"""
+local actor={}
+local partner={}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner);return {ok=true,value={value=PRESENT and '' or nil}}
+ end},
+ translate=function(text,ctxt)
+  assert(text=='Fallback' and ctxt=='default');calls=calls+1;return 'translated default'
+ end
+}
+local result=EXPRESSION
+assert(result==(PRESENT and '' or 'translated default'))
+assert(calls==(PRESENT and 0 or 1))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_i18n_translates_literals_but_not_stored_variables(self) -> None:
         cases = [("Hello", True, "translated", "nil"),
                  ({"str": "Hello", "ctxt": "greeting"}, True, "translated", '"greeting"'),
@@ -67,6 +129,7 @@ local context={data={}}
 local phase=0
 local function service_value(r) assert(r.ok);return r.value end
 local services={
+ translate=function(text) return text end,
  characters={avatar=function() return player end},
  interaction={input_text=function(title,options)
   assert(phase==0 and title=='Title' and options.default=='' and options.initial==nil);phase=1
