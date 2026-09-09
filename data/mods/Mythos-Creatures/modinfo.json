@@ -6,7 +6,7 @@
     "authors": [ "mythosmod" ],
     "description": "Removes all the zombies (including fungus zombies), cyborgs and robots from the game and replaces them with a variety of Lovecraftian monsters - intended to be part of a total conversion mod but can be used as a standalone if wanted.",
     "category": "creatures",
-    "dependencies": [ "dda" ],
+    "dependencies": [ "ccb" ],
     "obsolete": true,
     "version": "0.1"
   },

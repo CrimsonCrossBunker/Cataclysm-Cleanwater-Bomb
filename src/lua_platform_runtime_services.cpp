@@ -96,6 +96,7 @@ extern "C" {
 #include "mapgendata.h"
 #include "math_parser.h"
 #include "messages.h"
+#include "mod_id_compat.h"
 #include "mod_tileset.h"
 #include "npc.h"
 #include "options.h"
@@ -3104,7 +3105,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         if( !world_generator || world_generator->active_world == nullptr ) {
             return false;
         }
-        const mod_id requested( id );
+        const mod_id requested = canonical_mod_id( mod_id( id ) );
         const std::vector<mod_id> &order = world_generator->active_world->active_mod_order;
         return std::find( order.begin(), order.end(), requested ) != order.end();
     } );
@@ -3117,7 +3118,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         if( !world_generator || world_generator->active_world == nullptr ) {
             return -1;
         }
-        const mod_id requested( id );
+        const mod_id requested = canonical_mod_id( mod_id( id ) );
         const std::vector<mod_id> &order =
             world_generator->active_world->active_mod_order;
         const auto found = std::find(

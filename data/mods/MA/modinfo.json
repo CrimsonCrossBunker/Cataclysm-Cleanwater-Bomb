@@ -7,7 +7,7 @@
     "maintainers": [ "ZhilkinSerg" ],
     "description": "Cataclysm in one state.",
     "category": "total_conversion",
-    "dependencies": [ "dda" ],
+    "dependencies": [ "ccb" ],
     "conflicts": [ "aftershock_exoplanet" ]
   }
 ]

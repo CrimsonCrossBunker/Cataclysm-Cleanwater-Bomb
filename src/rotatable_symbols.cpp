@@ -1,3 +1,4 @@
+#include "mod_id_compat.h"
 #include "rotatable_symbols.h"
 
 #include <algorithm>
@@ -97,7 +98,7 @@ namespace rotatable_symbols
 void load( const JsonObject &jo, const std::string &src )
 {
     const std::string tuple_key = "tuple";
-    const bool strict = src == "dda";
+    const bool strict = is_core_data_source( src );
 
     std::vector<std::string> tuple_temp;
 

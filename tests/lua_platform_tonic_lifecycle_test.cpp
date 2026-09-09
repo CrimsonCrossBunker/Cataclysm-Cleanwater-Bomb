@@ -40,7 +40,7 @@ static const itype_id itype_lua_first_cleanwater_cell( "lua_first_cleanwater_cel
 static const itype_id itype_lua_first_nano_tonic( "lua_first_nano_tonic" );
 
 static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
-static const mod_id MOD_INFORMATION_dda( "dda" );
+static const mod_id MOD_INFORMATION_ccb( "ccb" );
 
 TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
            "[lua][platform][playable_mvp][persistence][mod_manager]" )
@@ -79,7 +79,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
     REQUIRE( info.lua_platform_version == platform::platform_version );
     REQUIRE( info.lua_platform_error.empty() );
     REQUIRE( info.version == "0.1.0" );
-    REQUIRE( info.dependencies == std::vector<mod_id> { MOD_INFORMATION_dda } );
+    REQUIRE( info.dependencies == std::vector<mod_id> { MOD_INFORMATION_ccb } );
     const std::filesystem::path root = PATH_INFO::moddir().get_unrelative_path() /
                                        std::filesystem::u8path( "Lua_First_Example" );
     REQUIRE( info.mod_root_path.get_unrelative_path() == root );

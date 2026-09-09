@@ -66,6 +66,7 @@
 #include "mapbuffer.h"
 #include "memorial_logger.h"
 #include "messages.h"
+#include "mod_id_compat.h"
 #include "mod_manager.h"
 #include "mp_gamestate.h"
 #include "options.h"
@@ -100,7 +101,7 @@
 
 static const dimension_id dimension_world_default( "default" );
 
-static const mod_id MOD_INFORMATION_dda( "dda" );
+static const mod_id MOD_INFORMATION_ccb( "ccb" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -569,22 +570,13 @@ void game::load_world_modfiles()
 {
     auto &mods = world_generator->active_world->active_mod_order;
 
-    // remove any duplicates whilst preserving order (fixes #19385)
-    std::set<mod_id> found;
-    mods.erase( std::remove_if( mods.begin(), mods.end(), [&found]( const mod_id & e ) {
-        if( found.count( e ) ) {
-            return true;
-        } else {
-            found.insert( e );
-            return false;
-        }
-    } ), mods.end() );
+    canonicalize_mod_list( mods );
 
     // require at least one core mod (saves before version 6 may implicitly require dda pack)
     if( std::none_of( mods.begin(), mods.end(), []( const mod_id & e ) {
     return e->core;
 } ) ) {
-        mods.insert( mods.begin(), MOD_INFORMATION_dda );
+        mods.insert( mods.begin(), MOD_INFORMATION_ccb );
     }
 
     // this code does not care about mod dependencies,
@@ -623,7 +615,9 @@ void game::load_world_modfiles()
 
 void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs )
 {
-    for( const auto &mod : packs ) {
+    auto canonical_packs = packs;
+    canonicalize_mod_list( canonical_packs );
+    for( const auto &mod : canonical_packs ) {
         // Suppress missing mods the player chose to leave in the modlist
         if( !mod.is_valid() ) {
             continue;
@@ -638,7 +632,7 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
     }
     cata_timer::print_stats();
 
-    for( const auto &mod : packs ) {
+    for( const auto &mod : canonical_packs ) {
         if( !mod.is_valid() ) {
             continue;
         }

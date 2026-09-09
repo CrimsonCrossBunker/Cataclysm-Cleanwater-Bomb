@@ -1,22 +1,23 @@
+#include <algorithm>
+#include <memory>
 #if !defined(CATA_ENABLE_LUA_PLATFORM) || !CATA_ENABLE_LUA_PLATFORM
     #include <filesystem>
-    #include <memory>
     #include <string>
     #include "lua_platform_loader.h"
-    #include "worldfactory.h"
 #endif
 
 #include <cata_path.h>
 #include <type_id.h>
-#include <algorithm>
 #include <functional>
 #include <vector>
 
 #include "cached_options.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "mod_id_compat.h"
 #include "mod_manager.h"
 #include "path_info.h"
+#include "worldfactory.h"
 
 static const mod_id MOD_INFORMATION_Lua_First_Example( "Lua_First_Example" );
 static const mod_id MOD_INFORMATION_dda( "dda" );
@@ -117,3 +118,22 @@ TEST_CASE( "lua_mod_discovery_notifies_once_across_catalog_refreshes",
     CHECK( notices == 1 );
 }
 #endif
+
+TEST_CASE( "core_pack_is_registered_once_with_legacy_lookup", "[mod_manager][core_id]" )
+{
+    REQUIRE( world_generator != nullptr );
+    const mod_id core( "ccb" );
+    const mod_id legacy( "dda" );
+    REQUIRE( core.is_valid() );
+    REQUIRE( legacy.is_valid() );
+    CHECK( &core.obj() == &legacy.obj() );
+    CHECK( core->core );
+    CHECK( core->ident == core );
+    const auto available = world_generator->get_mod_manager().all_mods();
+    CHECK( std::count( available.begin(), available.end(), core ) == 1 );
+    CHECK( std::count( available.begin(), available.end(), legacy ) == 0 );
+    // TEST_DATA deliberately declares both names, like a transitional external Mod.
+    const mod_id fixture( "test_data" );
+    REQUIRE( fixture.is_valid() );
+    CHECK( fixture->dependencies == std::vector<mod_id> { core } );
+}

@@ -81,6 +81,7 @@
 #include "material.h"
 #include "math_parser_jmath.h"
 #include "mission.h"
+#include "mod_id_compat.h"
 #include "mod_manager.h"
 #include "mod_tileset.h"
 #include "monfaction.h"
@@ -617,7 +618,8 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
         const std::vector<cata_path> interaction_folders = get_directories( path, false );
 
         for( const cata_path &f : interaction_folders ) {
-            const mod_id associated_mod = mod_id( f.get_unrelative_path().filename().string() );
+            const mod_id associated_mod = canonical_mod_id( mod_id(
+                    f.get_unrelative_path().filename().string() ) );
             bool is_mod_loaded = std::find( loaded_mods.begin(), loaded_mods.end(),
                                             associated_mod ) != loaded_mods.end();
 

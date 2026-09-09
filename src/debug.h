@@ -146,7 +146,7 @@ std::string game_version();
 /** Return the underlying graphics version used by the game; either Tiles or Curses.
 */
 std::string graphics_version();
-/** Return a list of the loaded mods, including the mod full name and its id name in brackets, e.g. "Catharsis Covenant Basemodule [dda]".
+/** Return a list of the loaded mods, including the mod full name and its id name in brackets, e.g. "Catharsis Covenant Basemodule [ccb]".
 */
 std::string mods_loaded();
 /** Generate a game report, including the information returned by all of the other functions.

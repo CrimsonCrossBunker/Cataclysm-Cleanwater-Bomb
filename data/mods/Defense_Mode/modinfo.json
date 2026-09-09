@@ -8,6 +8,6 @@
     "maintainers": [ "MNG-cataclysm" ],
     "category": "total_conversion",
     "obsolete": true,
-    "dependencies": [ "dda" ]
+    "dependencies": [ "ccb" ]
   }
 ]

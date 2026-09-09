@@ -84,8 +84,8 @@
 #include "wcwidth.h"
 #include "worldfactory.h"
 
-static const mod_id MOD_INFORMATION_dda( "dda" );
-static const mod_id MOD_INFORMATION_dda_tutorial( "dda_tutorial" );
+static const mod_id MOD_INFORMATION_ccb( "ccb" );
+static const mod_id MOD_INFORMATION_ccb_tutorial( "dda_tutorial" );
 
 namespace
 {
@@ -1198,8 +1198,8 @@ bool main_menu::start_tutorial()
         return false;
     }
     world->active_mod_order.clear();
-    world->active_mod_order.emplace_back( MOD_INFORMATION_dda );
-    world->active_mod_order.emplace_back( MOD_INFORMATION_dda_tutorial );
+    world->active_mod_order.emplace_back( MOD_INFORMATION_ccb );
+    world->active_mod_order.emplace_back( MOD_INFORMATION_ccb_tutorial );
     world_generator->set_active_world( world );
     try {
         g->setup();

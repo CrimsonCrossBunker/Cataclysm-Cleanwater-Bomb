@@ -5899,7 +5899,7 @@ WORLD *mp_ensure_client_scratch_world()
     if( world_generator->has_world( SCRATCH_NAME ) ) {
         return world_generator->get_world( SCRATCH_NAME );
     }
-    const std::vector<mod_id> default_mods = { mod_id( "dda" ) };
+    const std::vector<mod_id> default_mods = { mod_id( "ccb" ) };
     WORLD *neww = world_generator->make_new_world( SCRATCH_NAME, default_mods );
     if( neww ) {
         mp_log( "[cdda-mp] MENU: created client scratch world '" + SCRATCH_NAME + "'" );

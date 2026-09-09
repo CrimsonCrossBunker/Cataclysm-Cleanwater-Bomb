@@ -3847,7 +3847,7 @@ class vitamins_reader : public generic_typed_reader<vitamins_reader>
 
 void islot_comestible::deserialize( const JsonObject &jo )
 {
-    std::string src = "dda";
+    std::string src = "ccb";
 
     mandatory( jo, was_loaded, "comestible_type", comesttype );
     optional( jo, was_loaded, "tool", tool, itype_id::NULL_ID() );

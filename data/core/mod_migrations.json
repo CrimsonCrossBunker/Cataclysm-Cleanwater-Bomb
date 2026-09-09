@@ -1,4 +1,5 @@
 [
+  { "type": "mod_migration", "id": "dda", "new_id": "ccb" },
   {
     "type": "mod_migration",
     "//": "Removed in 0.I",

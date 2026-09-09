@@ -113,11 +113,11 @@ static const std::map<std::string, battery_chemistry_family> chemistries = {
 
 static bool is_battery( const itype &type )
 {
-    // We're only making assertions about the "dda" mod,
+    // We're only making assertions about the "ccb" mod,
     // ignore items from elsewhere, including the test mod.
     if( type.has_flag( json_flag_DEBUG_ONLY ) ||
         type.src.size() > 1 ||
-        ( type.src.size() == 1 && type.src.back().second.str() != std::string( "dda" ) ) ) {
+        ( type.src.size() == 1 && type.src.back().second.str() != std::string( "ccb" ) ) ) {
         return false;
     }
     if( !!type.magazine && type.magazine->type.count( ammo_battery ) > 0 ) {

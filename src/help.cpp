@@ -28,6 +28,7 @@
 #include "flexbuffer_json.h"
 #include "input_context.h"
 #include "input_enums.h"
+#include "mod_id_compat.h"
 #include "output.h"
 #include "path_info.h"
 #include "point.h"
@@ -250,7 +251,7 @@ std::optional<int> help::platform_topic_order( const std::string &id ) const
 
 void help::load_object( const JsonObject &jo, const std::string &src )
 {
-    if( src == "dda" ) {
+    if( is_core_data_source( src ) ) {
         jo.throw_error( string_format( "Vanilla help must be located in %s",
                                        PATH_INFO::jsondir().generic_u8string() ) );
     }
