@@ -305,6 +305,22 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_interaction_input_uses_native_options_and_result(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "input.lua"
+            source.write_text('''local ccb = require("ccb")
+local result = ccb.services.interaction.input_text("Title", {
+    default = "original", identifier = "history", width = 40})
+---@type boolean
+local accepted = result.accepted
+---@type string
+local text = result.value
+return accepted, result.cancelled, text
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_technique_choice_has_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")

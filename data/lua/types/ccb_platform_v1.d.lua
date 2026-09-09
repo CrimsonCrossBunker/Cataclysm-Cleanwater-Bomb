@@ -6471,9 +6471,20 @@ local CcbPlatformInteractionApi = {}
 ---@return boolean confirmed
 function CcbPlatformInteractionApi.confirm(message) end
 
+---@class PlatformInteractionTextInputOptions
+---@field default? string Initial editable value, at most 4096 bytes.
+---@field description? string Help text, at most 4096 bytes.
+---@field identifier? string Input history identifier, at most 128 bytes.
+---@field width? integer Input width, 10..240; defaults to 40.
+
+---@class PlatformInteractionTextInputResult
+---@field accepted boolean
+---@field cancelled boolean
+---@field value string Entered text when accepted; default text when cancelled.
+
 ---@param title string
----@param options? PlatformTextInputOptions
----@return string|nil text
+---@param options? PlatformInteractionTextInputOptions
+---@return PlatformInteractionTextInputResult result
 function CcbPlatformInteractionApi.input_text(title, options) end
 
 ---@param description string

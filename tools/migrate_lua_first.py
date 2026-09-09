@@ -25052,13 +25052,16 @@ def render_static_character_string_var(
         initial = display_text(input_options.get("default_text"), "")
         if not all(isinstance(value, str) for value in (title, description, initial)):
             return None
+        identifier = input_options.get("identifier", "")
+        if not bounded_utf8_string(identifier, 128, allow_empty=True):
+            return None
         lines.extend([
             f"    local value = {value_expression}",
             "    local input = services.interaction.input_text(",
-            f"        {lua_quote(title)}, {{ initial = {lua_quote(initial)}, "
-            f"description = {lua_quote(description)} }})",
-            "    if input ~= nil then",
-            "        value = input",
+            f"        {lua_quote(title)}, {{ default = {lua_quote(initial)}, "
+            f"description = {lua_quote(description)}, identifier = {lua_quote(identifier)} }})",
+            "    if input.accepted then",
+            "        value = input.value",
             "    end",
         ])
         value_expression = "value"

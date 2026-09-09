@@ -35,8 +35,8 @@ local function service_value(r) assert(r.ok);return r.value end
 local services={
  characters={avatar=function() return player end},
  interaction={input_text=function(title,options)
-  assert(phase==0 and title=='Title');phase=1
-  if ACCEPTED then return 'entered <tag>' end
+  assert(phase==0 and title=='Title' and options.default=='' and options.initial==nil);phase=1
+  return {accepted=ACCEPTED,cancelled=not ACCEPTED,value=ACCEPTED and 'entered <tag>' or ''}
  end},
  text={expand_for=function(value,alpha,beta)
   assert(phase==1 and alpha==ALPHA and beta==BETA);phase=2
