@@ -1,4 +1,5 @@
 #include "mattack_common.h" // IWYU pragma: associated
+#include "mod_id_compat.h"
 #include "monstergenerator.h" // IWYU pragma: associated
 
 #include <clone_ptr.h>
@@ -1534,7 +1535,7 @@ void MonsterGenerator::load_monster_attack( const JsonObject &jo, const std::str
 void MonsterGenerator::check_monster_definitions() const
 {
     for( const mtype &mon : mon_templates->get_all() ) {
-        if( !mon.src.empty() && mon.src.back().second.str() == "dda" ) {
+        if( !mon.src.empty() && is_core_data_source( mon.src.back().second.str() ) ) {
             std::string mon_id = mon.id.str();
             std::string suffix_id = mon_id.substr( 0, mon_id.find( '_' ) );
             if( suffix_id != "mon" && suffix_id != "pseudo" ) {

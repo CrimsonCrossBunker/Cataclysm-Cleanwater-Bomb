@@ -8,7 +8,7 @@
     "conflicts": [ "hunvre" ],
     "description": "A set of standard character loadouts to facilitate objective monster testing.  Disables all but the test scenarios.",
     "category": "misc",
-    "dependencies": [ "dda" ]
+    "dependencies": [ "ccb" ]
   },
   {
     "type": "SCENARIO_BLACKLIST",

@@ -7,6 +7,6 @@
     "maintainers": [ "John-Candlebury" ],
     "description": "Fight enemies to level up and build your own fighting style.",
     "category": "misc_additions",
-    "dependencies": [ "dda" ]
+    "dependencies": [ "ccb" ]
   }
 ]

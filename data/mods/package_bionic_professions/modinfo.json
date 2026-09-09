@@ -6,6 +6,6 @@
     "authors": [ "Erk/Everyone" ],
     "description": "Numerous bionic starting professions.",
     "category": "content",
-    "dependencies": [ "dda" ]
+    "dependencies": [ "ccb" ]
   }
 ]

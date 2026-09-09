@@ -7,7 +7,7 @@
     "maintainers": [ "merrygin" ],
     "description": "Adds extinct pleistocene megafauna to the game, replacing modern day and introduced animals.",
     "category": "creatures",
-    "dependencies": [ "dda" ],
+    "dependencies": [ "ccb" ],
     "obsolete": false
   }
 ]

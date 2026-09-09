@@ -1,3 +1,4 @@
+#include "mod_id_compat.h"
 #include "mod_manager.h"
 
 #include <cata_path.h>
@@ -138,9 +139,9 @@ mod_id get_mod_base_id_from_src( mod_id src )
     mod_id base_mod_id;
     size_t split_loc = src.str().find( '#' );
     if( split_loc == std::string::npos ) {
-        return src;
+        return canonical_mod_id( src );
     } else {
-        return mod_id( src.str().substr( 0, split_loc ) );
+        return canonical_mod_id( mod_id( src.str().substr( 0, split_loc ) ) );
     }
 }
 
@@ -160,7 +161,7 @@ const MOD_INFORMATION &string_id<MOD_INFORMATION>::obj() const
 template<>
 bool string_id<MOD_INFORMATION>::is_valid() const
 {
-    return world_generator->get_mod_manager().mod_map.count( *this ) > 0;
+    return world_generator->get_mod_manager().mod_map.count( canonical_mod_id( *this ) ) > 0;
 }
 
 std::string MOD_INFORMATION::name() const
@@ -325,6 +326,13 @@ void mod_manager::refresh_mod_list()
     }
     if( file_exist( PATH_INFO::mods_user_default() ) ) {
         load_mod_info( PATH_INFO::mods_user_default() );
+    }
+
+    // Apply aliases after both JSON and Lua metadata have been discovered,
+    // before default lists and the dependency graph consume their IDs.
+    for( auto &entry : mod_map ) {
+        canonicalize_mod_list( entry.second.dependencies );
+        canonicalize_mod_list( entry.second.conflicts );
     }
 
     if( !set_default_mods( MOD_INFORMATION_user_default ) ) {
@@ -701,6 +709,8 @@ void mod_manager::load_modfile( const JsonObject &jo, const cata_path &path )
     optional( jo, false, "version", modfile.version );
     optional( jo, false, "dependencies", modfile.dependencies );
     optional( jo, false, "conflicts", modfile.conflicts );
+    canonicalize_mod_list( modfile.dependencies );
+    canonicalize_mod_list( modfile.conflicts );
     optional( jo, false, "core", modfile.core, false );
     optional( jo, false, "obsolete", modfile.obsolete, false );
     optional( jo, false, "loading_images", modfile.loading_images );
@@ -724,6 +734,7 @@ void mod_manager::load_modfile( const JsonObject &jo, const cata_path &path )
 bool mod_manager::set_default_mods( const t_mod_list &mods )
 {
     default_mods = mods;
+    canonicalize_mod_list( default_mods );
     return write_to_file( PATH_INFO::mods_user_default(), [&]( std::ostream & fout ) {
         JsonOut json( fout, true ); // pretty-print
         json.start_object();
@@ -731,7 +742,7 @@ bool mod_manager::set_default_mods( const t_mod_list &mods )
         json.member( "id", "user:default" );
         json.member( "conflicts", std::vector<std::string>() );
         json.member( "dependencies" );
-        json.write( mods );
+        json.write( default_mods );
         json.member( "//",
                      "Not really obsolete!  Marked as such to prevent it from showing in the main list" );
         json.member( "obsolete", true );
@@ -855,7 +866,9 @@ void mod_manager::save_mods_list( const WORLD *world ) const
     }
     write_to_file( path, [&]( std::ostream & fout ) {
         JsonOut json( fout, true ); // pretty-print
-        json.write( world->active_mod_order );
+        auto mods = world->active_mod_order;
+        canonicalize_mod_list( mods );
+        json.write( mods );
     }, _( "list of mods" ) );
 }
 
@@ -868,7 +881,7 @@ void mod_manager::load_mods_list( WORLD *world ) const
     amo.clear();
     read_from_file_optional_json( get_mods_list_file( world ), [&]( const JsonArray & jsin ) {
         for( const std::string line : jsin ) {
-            const mod_id mod( line );
+            const mod_id mod = canonical_mod_id( mod_id( line ) );
             if( std::find( amo.begin(), amo.end(), mod ) != amo.end() ) {
                 continue;
             }
@@ -883,7 +896,9 @@ bool mod_manager::check_mods_list( WORLD *world ) const
         return true;
     }
     std::vector<mod_id> &amo = world->active_mod_order;
-    bool changed = false;
+    const auto original_mods = amo;
+    canonicalize_mod_list( amo );
+    bool changed = amo != original_mods;
 
     const auto is_virtual_mod = []( const mod_id & mod ) {
         return mod.str().find( '#' ) != std::string::npos;

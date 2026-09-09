@@ -6,7 +6,7 @@
     "authors": [ "BalthazarArgall" ],
     "description": "A sci-fi, claustrophobic spin on DDA.",
     "category": "total_conversion",
-    "dependencies": [ "dda" ],
+    "dependencies": [ "ccb" ],
     "conflicts": [
       "aftershock_exoplanet",
       "backrooms",

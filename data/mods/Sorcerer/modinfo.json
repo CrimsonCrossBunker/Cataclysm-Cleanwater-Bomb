@@ -8,7 +8,7 @@
     "description": "A different way to play Magiclysm.  Gain spells and spell levels from killing enemies instead of reading books.",
     "category": "rebalance",
     "conflicts": [ "xedra_evolved" ],
-    "dependencies": [ "dda", "magiclysm" ]
+    "dependencies": [ "ccb", "magiclysm" ]
   },
   {
     "type": "effect_on_condition",

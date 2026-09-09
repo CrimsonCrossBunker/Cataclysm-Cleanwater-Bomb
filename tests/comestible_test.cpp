@@ -196,7 +196,7 @@ TEST_CASE( "comestible_health_bounds", "[comestible]" )
         if( ( comest_type != "FOOD" && comest_type != "DRINK" ) || has_mutagen_vit( comest ) ) {
             continue;
         }
-        if( it->src.back().second.str() != "dda" ) {
+        if( it->src.back().second.str() != "ccb" ) {
             continue;
         }
 

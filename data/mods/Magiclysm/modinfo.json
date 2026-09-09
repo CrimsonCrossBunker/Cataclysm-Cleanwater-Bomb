@@ -7,7 +7,7 @@
     "maintainers": [ "Maleclypse", "Standing-Storm" ],
     "description": "Cataclysm but with magic spells!",
     "category": "content",
-    "dependencies": [ "dda" ]
+    "dependencies": [ "ccb" ]
   },
   {
     "type": "EXTERNAL_OPTION",

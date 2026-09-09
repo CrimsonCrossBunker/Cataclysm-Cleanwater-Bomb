@@ -1,3 +1,4 @@
+#include "mod_id_compat.h"
 #include "mutation.h" // IWYU pragma: associated
 
 #include <bodypart.h>
@@ -737,7 +738,7 @@ void mutation_branch::check_consistency()
     for( const mutation_branch &mdata : get_all() ) {
         const trait_id &mid = mdata.id;
         const mod_id &trait_source = mdata.src.back().second;
-        const bool basegame_trait = trait_source.str() == "dda";
+        const bool basegame_trait = is_core_data_source( trait_source.str() );
         const std::optional<scenttype_id> &s_id = mdata.scent_typeid;
         const std::map<species_id, int> &an_id = mdata.anger_relations;
         for( const auto &style : mdata.initial_ma_styles ) {
