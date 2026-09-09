@@ -9870,7 +9870,7 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@field removed_count integer Number of removed mutations; zero when nothing matches.
 
 ---@class CcbEffectAddOptions
----@field body_part? GameId A body part present on the target Creature.
+---@field body_part? GameId Registered GameId<body_part>; native effects may refer to parts outside the current anatomy.
 ---@field permanent? boolean Defaults to false.
 ---@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
 ---@field force? boolean Bypass native immunity checks; defaults to false.
@@ -10060,7 +10060,7 @@ function CcbEffectsApi.add(character, effect, duration, options) end
 ---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
 ---@param character GameHandle
 ---@param effect GameId
----@param body_part? GameId Omit for native unqualified lookup.
+---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
 ---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
 ---@return CcbResult result `value` is boolean.
 function CcbEffectsApi.has(character, effect, body_part, intensity) end
@@ -10068,14 +10068,14 @@ function CcbEffectsApi.has(character, effect, body_part, intensity) end
 ---Read a detached effect snapshot. Absence returns not_found; other failures must not be treated as absence.
 ---@param character GameHandle Exact live Creature handle.
 ---@param effect GameId GameId<effect>.
----@param body_part? GameId Explicit body part; omit for native unqualified lookup.
+---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
 ---@return CcbEffectSnapshotResult
 function CcbEffectsApi.get(character, effect, body_part) end
 
 ---Remove an effect, optionally restricted to one body part; repeat removal is harmless.
 ---@param character GameHandle
 ---@param effect GameId
----@param body_part? GameId Omit to remove all instances of this effect.
+---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit to remove all instances.
 ---@return CcbResult result `value` is whether any instance was removed.
 function CcbEffectsApi.remove(character, effect, body_part) end
 

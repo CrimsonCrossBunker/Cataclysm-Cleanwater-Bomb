@@ -61,7 +61,6 @@ int effect_limit( const sol::optional<int> &requested,
 }
 
 std::optional<bodypart_id> effect_body_part(
-    const Creature &creature,
     const std::optional<script_game_id> &requested,
     const std::string &api_name )
 {
@@ -69,16 +68,10 @@ std::optional<bodypart_id> effect_body_part(
         return std::nullopt;
     }
     require_id_kind( *requested, "body_part", api_name );
-    const bodypart_id result =
-        bodypart_str_id( requested->value() ).id();
-    const std::vector<bodypart_id> available =
-        creature.get_all_body_parts();
-    if( std::find( available.begin(), available.end(), result ) ==
-        available.end() ) {
-        throw std::invalid_argument(
-            api_name + " body part is not present on this creature" );
-    }
-    return result;
+    // Effects are keyed by registered body-part IDs, independently of the
+    // creature's current anatomy. Match native queries and mutations, including
+    // effects retained after a body-part change.
+    return bodypart_str_id( requested->value() ).id();
 }
 
 template<typename Id>
@@ -247,7 +240,7 @@ sol::table has_effect(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, requested_body_part,
+            requested_body_part,
             "services.effects.has" );
     if( requested_intensity &&
         ( !std::isfinite( *requested_intensity ) ||
@@ -284,7 +277,7 @@ sol::table get_effect(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, requested_body_part,
+            requested_body_part,
             "services.effects.get" );
     const effect *entry = find_effect(
                               *creature,
@@ -401,7 +394,7 @@ sol::table add_effect(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, options.body_part,
+            options.body_part,
             "services.effects.add" );
     const efftype_id id( requested_id.value() );
     if( body_part ) {
@@ -447,7 +440,7 @@ sol::table remove_effect(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, requested_body_part,
+            requested_body_part,
             "services.effects.remove" );
     const efftype_id id( requested_id.value() );
     const bool removed = body_part ?
@@ -481,7 +474,7 @@ sol::table adjust_effect_intensity(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, requested_body_part,
+            requested_body_part,
             "services.effects.adjust_intensity" );
     const efftype_id id( requested_id.value() );
     effect *entry = find_effect( *creature, id, body_part );
@@ -603,7 +596,7 @@ sol::table update_effect(
     }
     const std::optional<bodypart_id> body_part =
         effect_body_part(
-            *creature, options.body_part,
+            options.body_part,
             "services.effects.update" );
     effect *entry = find_effect(
                         *creature,
