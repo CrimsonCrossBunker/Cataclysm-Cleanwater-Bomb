@@ -25012,33 +25012,11 @@ def render_static_character_string_var(
             actor_expression = "actor"
 
     def render_value(value: Any) -> str | None:
-        rendered = None
-        if isinstance(value, dict) and isinstance(value.get("mutator"), str):
-            mutator = value["mutator"]
-            if mutator == "game_option" and set(value) == {"mutator", "option"}:
-                rendered = render_participant_string_expression(
-                    value, actor_expression,
-                    "actor" if avatar_actor_proven else None,
-                    npc_actor_expression or ("actor" if npc_actor_proven else None),
-                )
-            elif mutator == "valid_technique":
-                rendered = render_participant_string_expression(
-                    value, actor_expression,
-                    "actor" if avatar_actor_proven else None,
-                    npc_actor_expression or ("actor" if npc_actor_proven else None),
-                )
-            elif mutator in {"ma_technique_name", "ma_technique_description", "mon_faction"}:
-                rendered = render_participant_string_expression(
-                    value, actor_expression,
-                    "actor" if avatar_actor_proven else None,
-                    npc_actor_expression or ("actor" if npc_actor_proven else None),
-                )
-        if (isinstance(value, dict) and value.get("mutator") in {
-            "game_option", "ma_technique_name", "ma_technique_description", "mon_faction", "valid_technique",
-        } and rendered is None):
-            return None
-        if rendered is None:
-            rendered = render_eoc_string_expression(value, actor_expression)
+        rendered = render_participant_string_expression(
+            value, actor_expression,
+            "actor" if avatar_actor_proven else None,
+            npc_actor_expression or ("actor" if npc_actor_proven else None),
+        )
         if rendered is None and i18n and isinstance(value, dict):
             literal = value.get("str", value.get("str_sp"))
             if isinstance(literal, str) and bounded_utf8_string(

@@ -16,6 +16,58 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_assignment_reads_source_independently_of_destination(self) -> None:
+        sources = [("u_val", "alpha"), ("npc_val", "beta"),
+                   ("global_val", "global"), ("context_val", "context"),
+                   ("var_val", "alpha"), ("var_val", "beta"),
+                   ("var_val", "global"), ("var_val", "context")]
+        for source, expected in sources:
+            for destination in ("u_val", "npc_val", "global_val", "context_val"):
+                with self.subTest(source=source, expected=expected, destination=destination):
+                    lines = migrate_lua_first.render_static_character_string_var(
+                        {"set_string_var": {source: "input"}, "target_var": {destination: "output"}},
+                        True, True, "partner")
+                    self.assertIsNotNone(lines)
+                    reference = {"alpha": "u_input", "beta": "n_input",
+                                 "global": "input", "context": "_input"}[expected]
+                    # The reference and the referenced value need distinct context keys.
+                    if source == "var_val":
+                        lines = migrate_lua_first.render_static_character_string_var(
+                            {"set_string_var": {source: "reference"}, "target_var": {destination: "output"}},
+                            True, True, "partner")
+                    script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local globals={input='global'}
+local context={data={input='context',reference=REFERENCE}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={
+ get_global=function(key) return {ok=true,value={value=globals[key]}} end,
+ resolve=function(data,owner,scope,key)
+  local store=scope=='global' and globals or scope=='context' and data or owner
+  assert(store);return {ok=true,value={value=store[key]}}
+ end,
+ set=function(owner,key,value) owner[key]=value end,
+ set_global=function(key,value) globals[key]=value end
+}}
+BODY
+assert(DESTINATION.output==EXPECTED)
+assert(actor.input=='alpha' and partner.input=='beta')
+""".replace("REFERENCE", migrate_lua_first.lua_quote(reference))
+                    store = {"u_val": "actor", "npc_val": "partner",
+                             "global_val": "globals", "context_val": "context.data"}[destination]
+                    script = script.replace("BODY", "\n".join(lines)).replace("DESTINATION", store)
+                    script = script.replace("EXPECTED", migrate_lua_first.lua_quote(expected))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_string_assignment_does_not_invent_source_participants(self) -> None:
+        for source in ("u_val", "npc_val", "var_val"):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var(
+                {"set_string_var": {source: "input"}, "target_var": {"context_val": "output"}},
+                False, False))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_technique_choice_keeps_alpha_beta_independent_of_string_destination(self) -> None:
         for selected in ("chosen_technique", ""):
             with self.subTest(selected=selected):
