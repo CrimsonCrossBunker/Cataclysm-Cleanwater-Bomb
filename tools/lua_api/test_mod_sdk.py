@@ -305,6 +305,26 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_weighted_body_part_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "weighted_part.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param character GameHandle
+return function(character)
+    local result = ccb.services.characters.random_body_part(character, true)
+    if result.ok then
+        ---@type GameId
+        local part = assert(result.value)
+        return ccb.services.effects.remove(
+            character, ccb.services.types.id("effect", "bleed"), part)
+    end
+    return result
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_both_templates_are_clean_in_real_language_server(self):
         with tempfile.TemporaryDirectory() as directory:
             for template in ("minimal", "complete"):

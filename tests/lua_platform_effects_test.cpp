@@ -21,9 +21,11 @@
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_effects.h"
+#include "lua_platform_creatures.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
+#include "rng.h"
 #include "type_id.h"
 
 static const efftype_id effect_bleed( "bleed" );
@@ -142,6 +144,49 @@ TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
                                              R"(has_any_effect": ["bleed", "poison"])" ).append( qualifiers ) ) );
         CHECK( native == ( present && part == "arm_l" && intensity <= 1 ) );
     }
+}
+
+TEST_CASE( "lua_platform_weighted_body_part_matches_native_anatomy",
+           "[lua][platform][effects][semantic]" )
+{
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+    effect_fixture fixture;
+    cata::lua_platform::install_creature_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    const bool npc_target = GENERATE( false, true );
+    const bool main_parts_only = GENERATE( false, true );
+    std::vector<std::string> expected;
+    rng_set_engine_seed( 58163 );
+    for( int i = 0; i < 128; ++i ) {
+        expected.push_back( fixture.target( npc_target ).random_body_part( main_parts_only ).id().str() );
+    }
+    sol::protected_function pick = fixture.services["characters"]["random_body_part"];
+    rng_set_engine_seed( 58163 );
+    for( const std::string &part : expected ) {
+        sol::protected_function_result call = pick( fixture.handle( npc_target ), main_parts_only );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        const auto id = result["value"].get<cata::lua_platform::script_game_id>();
+        CHECK( id.kind() == "body_part" );
+        CHECK( id.value() == part );
+    }
+    const auto stale = fixture.handle( npc_target );
+    ++fixture.world;
+    sol::protected_function_result call = pick( stale );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    CHECK_FALSE( result["ok"].get<bool>() );
 }
 
 TEST_CASE( "lua_platform_effect_snapshot_preserves_lazy_intensity_predicates",

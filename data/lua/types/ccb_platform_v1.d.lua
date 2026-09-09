@@ -7390,8 +7390,17 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 
 -- Shared character combat methods are installed under `ccb.services.characters`
 --- by the same generation-safe native layer used by `ccb.services.characters`.
+---@class CcbBodyPartIdResult : CcbResult
+---@field value GameId|nil Anatomy-weighted selected body part; present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+--- Select using the character anatomy weights. Unlike pick_body_part, this is not uniform over parts.
+---@param character GameHandle Exact live Character handle.
+---@param main_parts_only? boolean Map the weighted selection to its main part; defaults to false.
+---@return CcbBodyPartIdResult
+function CcbCharactersApi.random_body_part(character, main_parts_only) end
 
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer

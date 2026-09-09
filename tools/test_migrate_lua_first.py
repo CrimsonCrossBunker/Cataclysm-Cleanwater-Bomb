@@ -15,6 +15,74 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_shipped_random_bionic_effect_uses_weighted_avatar_part(self) -> None:
+        entries = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/bionic_eocs.json").read_text())
+        effect = next(effect for entry in entries for effect in entry.get("effect", [])
+                      if isinstance(effect, dict) and effect.get("target_part") == "RANDOM")
+        self.assertEqual(effect["u_add_effect"], "formication")
+        self.assertEqual(effect["duration"], "10 minutes")
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            adapted = dict(effect)
+            adapted[prefix + "add_effect"] = adapted.pop("u_add_effect")
+            lines = migrate_lua_first.render_static_false_effect(
+                adapted, True, True, {}, npc_actor_expression="partner")
+            self.assertIsNotNone(lines)
+            script = """
+local actor,partner={},{}
+local called=false
+local function service_value(r) assert(r.ok); return r.value end
+local services={
+ types={id=function(kind,id) assert(kind=='effect'); return id end},
+ time={duration=function(value,unit) assert(value==600 and unit=='turn'); return value end},
+ characters={random_body_part=function(character,main)
+  assert(character==actor and main); return {ok=true,value='arm_l'}
+ end},
+ effects={add=function(character,id,duration,options)
+  assert(character==TARGET and id=='formication' and duration==600 and options.body_part=='arm_l')
+  called=true; return {ok=true}
+ end}
+}
+BODY
+assert(called)
+""".replace("TARGET", target).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_random_effect_removal_samples_avatar_for_each_id(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            lines = migrate_lua_first.render_static_false_effect(
+                {prefix + "lose_effect": ["bleed", "poison"], "target_part": "RANDOM"},
+                True, True, {}, npc_actor_expression="partner")
+            self.assertIsNotNone(lines)
+            script = """
+local actor, partner = {}, {}
+local calls = 0
+local function service_value(r) assert(r.ok); return r.value end
+local services = {
+ types={id=function(kind,id) assert(id~='RANDOM'); return id end},
+ characters={random_body_part=function(character,main)
+  assert(character==actor and main)
+  calls=calls+1
+  return {ok=true,value=calls==1 and 'arm_l' or 'arm_r'}
+ end},
+ effects={remove=function(character,id,part)
+  assert(character==TARGET)
+  assert((id=='bleed' and part=='arm_l') or (id=='poison' and part=='arm_r'))
+  return {ok=true}
+ end}
+}
+BODY
+assert(calls==2)
+""".replace("TARGET", target).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_static_remove_effects(
+            {"npc_lose_effect": "bleed", "target_part": "RANDOM"}, "npc_lose_effect", "partner"))
+
     def test_effect_removal_unknown_variable_owner_stays_unresolved(self) -> None:
         for prefix, scope in (("u_", "npc_val"), ("npc_", "u_val")):
             self.assertIsNone(migrate_lua_first.render_static_remove_effects(

@@ -4689,6 +4689,24 @@ void install_creature_api(
                    current_runtime_generation(), current_world_generation() );
     } );
     characters.set_function(
+        "random_body_part",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<bool> main_parts_only ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const bodypart_id part = character->random_body_part( main_parts_only.value_or( false ) );
+        return make_game_value_result( state, sol::make_object( state,
+                script_game_id( "body_part", part.id().str() ) ) );
+    } );
+    characters.set_function(
         "pick_body_part",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
