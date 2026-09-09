@@ -9918,6 +9918,112 @@ function CcbBionicsApi.grant(character, bionic) end
 ---@return CcbResult result `value` contains changed and count.
 function CcbBionicsApi.remove_type(character, bionic) end
 
+---@class CcbTypesApi
+local CcbTypesApi = {}
+
+---Construct a typed ID; use is_valid() to inspect whether its definition exists.
+---@param kind string Supported native ID kind.
+---@param value string Stable ID text.
+---@return GameId
+function CcbTypesApi.id(kind, value) end
+
+---@return string[] Supported native ID kinds.
+function CcbTypesApi.id_kinds() end
+
+---@class CcbVariableReadValue
+---@field exists boolean Whether the requested variable is present.
+---@field value? any Stored value; missing variables have no value.
+
+---@class CcbVariableReadResult: CcbResult
+---@field value? CcbVariableReadValue
+
+---@class CcbVariablesApi
+local CcbVariablesApi = {}
+
+---@param character GameHandle Explicit live variable-owning actor.
+---@param key string Variable name containing 1..128 bytes, without ASCII controls or NUL.
+---@return CcbVariableReadResult
+function CcbVariablesApi.get(character, key) end
+
+---Write phases and an active callback are required for variable mutations.
+---@param character GameHandle Explicit live variable-owning actor.
+---@param key string
+---@param value boolean|number|string|TripointCoord|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
+---@return CcbResult result `value` contains existed, before and after.
+function CcbVariablesApi.set(character, key, value) end
+
+---@param character GameHandle
+---@param key string
+---@return CcbResult result `value` contains existed and before.
+function CcbVariablesApi.remove(character, key) end
+
+---@param key string
+---@return CcbVariableReadResult
+function CcbVariablesApi.get_global(key) end
+
+---@param key string
+---@param value boolean|number|string|TripointCoord|nil
+---@return CcbResult result `value` contains existed, before and after.
+function CcbVariablesApi.set_global(key, value) end
+
+---@param key string
+---@return CcbResult result `value` contains existed and before.
+function CcbVariablesApi.remove_global(key) end
+
+---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
+---Indirect var references retain that same owner. Choose the resolved participant explicitly when owners differ.
+---@param context table<string, any>|nil Callback data for context/var references.
+---@param actor GameHandle|nil Explicit owner for actor references.
+---@param scope 'u'|'npc'|'global'|'context'|'var'
+---@param key string
+---@return CcbVariableReadResult
+function CcbVariablesApi.resolve(context, actor, scope, key) end
+
+---@param context table<string, any>|nil
+---@param actor GameHandle|nil Explicit owner, including indirect actor references.
+---@param scope 'u'|'npc'|'global'|'context'|'var'
+---@param key string
+---@param value boolean|number|string|TripointCoord|nil
+---@return CcbResult result `value` contains existed, before and after.
+function CcbVariablesApi.set_resolved(context, actor, scope, key, value) end
+
+---@class CcbEffectRelatedIdPage
+---@field items GameId[] Detached related IDs.
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbEffectResistanceIds
+---@field mutations CcbEffectRelatedIdPage
+---@field effects CcbEffectRelatedIdPage
+
+---@class CcbEffectSnapshot
+---@field id GameId GameId<effect>.
+---@field name string
+---@field description string
+---@field short_description string
+---@field mod_source string
+---@field uses_body_part_description boolean
+---@field duration TimeDuration
+---@field maximum_duration TimeDuration
+---@field start_time TimePoint
+---@field intensity integer
+---@field maximum_intensity integer
+---@field maximum_effective_intensity integer
+---@field effective_intensity integer
+---@field permanent boolean
+---@field impairs_movement boolean
+---@field harmful_cough boolean
+---@field duration_add_percent integer
+---@field intensity_add integer
+---@field intensity_duration TimeDuration
+---@field body_part? GameId GameId<body_part>; absent for an unqualified effect.
+---@field resisted_by CcbEffectResistanceIds
+---@field blocks_effects CcbEffectRelatedIdPage
+
+---@class CcbEffectSnapshotResult: CcbResult
+---@field value? CcbEffectSnapshot
+
 ---@class CcbEffectsApi
 local CcbEffectsApi = {}
 
@@ -9937,6 +10043,13 @@ function CcbEffectsApi.add(character, effect, duration, options) end
 ---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
 ---@return CcbResult result `value` is boolean.
 function CcbEffectsApi.has(character, effect, body_part, intensity) end
+
+---Read a detached effect snapshot. Absence returns not_found; other failures must not be treated as absence.
+---@param character GameHandle Exact live Creature handle.
+---@param effect GameId GameId<effect>.
+---@param body_part? GameId Explicit body part; omit for native unqualified lookup.
+---@return CcbEffectSnapshotResult
+function CcbEffectsApi.get(character, effect, body_part) end
 
 ---Remove an effect, optionally restricted to one body part; repeat removal is harmless.
 ---@param character GameHandle

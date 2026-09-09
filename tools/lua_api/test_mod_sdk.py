@@ -281,6 +281,27 @@ class LuaLanguageServerIntegrationTest(unittest.TestCase):
         )
         return mod
 
+    def test_effect_snapshot_and_variable_services_have_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            (mod / "semantic_query.lua").write_text('''local ccb = require("ccb")
+---@param character GameHandle
+local function inspect(character)
+    ---@type CcbVariablesApi
+    local variables = ccb.services.variables
+    local selected = variables.resolve({}, character, "u", "selected")
+    local effect = ccb.services.effects.get(character, ccb.services.types.id("effect", "bleed"))
+    if effect.ok then
+        ---@type CcbEffectSnapshot
+        local snapshot = assert(effect.value)
+        return snapshot.intensity, selected.value
+    end
+    return 0, nil
+end
+return inspect
+''', encoding="utf-8")
+            self.assertEqual(mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_both_templates_are_clean_in_real_language_server(self):
         with tempfile.TemporaryDirectory() as directory:
             for template in ("minimal", "complete"):
