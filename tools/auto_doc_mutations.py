@@ -110,7 +110,7 @@ def write_mutations(mutations: list[Mutation], filename: Path) -> None:
             fd.write("\n\n")
 
 
-def extract_mutations(file: Path, mod: str = "dda") -> list[Mutation]:
+def extract_mutations(file: Path, mod: str = "ccb") -> list[Mutation]:
     """Extract mutations from :file:."""
 
     with open(file, "rb") as fd:
@@ -203,9 +203,9 @@ def cli(paths, outfile, include_mods) -> None:
         write_mutations(mutations, outfile)
         click.echo(f"Mutations written to {outfile}")
     else:
-        dda = Mod("dda", [], [])
+        dda = Mod("ccb", [], [])
         mod_stack: list[tuple[Mod, str]] = [(dda, "PLACEHOLDER")]
-        mods: dict[str, Mod] = {"dda": dda}
+        mods: dict[str, Mod] = {"ccb": dda}
 
         def move_stack(
             file, mod_stack: list[tuple[Mod, str]]
@@ -245,7 +245,10 @@ def cli(paths, outfile, include_mods) -> None:
                 if isinstance(mod_info, dict) and all(
                     (mod_info.get("id"), mod_info.get("dependencies"))
                 ):
-                    new_mod = Mod(mod_info["id"], [], mod_info["dependencies"])
+                    new_mod = Mod(mod_info["id"], [], [
+                        "ccb" if dep == "dda" else dep
+                        for dep in mod_info["dependencies"]
+                    ])
                     mod_stack.append((new_mod, Path(os.path.dirname(file))))
                     mods[new_mod.id_] = new_mod
                 else:
@@ -285,7 +288,7 @@ def cli(paths, outfile, include_mods) -> None:
             except AttributeError:
                 breakpoint()
 
-            if mod.id_ == "dda":
+            if mod.id_ == "ccb":
                 writepath = outfile
             else:
                 writepath = outfile.parent.joinpath(mod.id_ + ".md")
