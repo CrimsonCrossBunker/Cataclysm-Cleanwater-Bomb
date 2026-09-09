@@ -92,8 +92,8 @@ struct effect_fixture {
                 const std::string &part, const int intensity ) {
         sol::protected_function function = services["effects"]["has"];
         sol::protected_function_result call = function( handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", id ),
-                                              cata::lua_platform::script_game_id( "body_part", part ), intensity );
+            cata::lua_platform::script_game_id( "effect", id ),
+            cata::lua_platform::script_game_id( "body_part", part ), intensity );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -144,6 +144,54 @@ TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
     }
 }
 
+TEST_CASE( "lua_platform_effect_snapshot_preserves_lazy_intensity_predicates",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture fixture;
+    const bool npc_target = GENERATE( false, true );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    int evaluations = 0;
+    double threshold = 1;
+    fixture.lua["effects"] = fixture.services["effects"];
+    fixture.lua["actor"] = fixture.handle( npc_target );
+    fixture.lua["effect_id"] = cata::lua_platform::script_game_id( "effect", "bleed" );
+    fixture.lua["part_id"] = cata::lua_platform::script_game_id( "body_part", "arm_l" );
+    fixture.lua.set_function( "threshold", [&]() {
+        ++evaluations;
+        return threshold;
+    } );
+    const sol::protected_function_result installed = fixture.lua.safe_script( R"(
+query = function()
+    local result = effects.get(actor, effect_id, part_id)
+    if not result.ok then
+        return false
+    end
+    return result.value.intensity >= threshold()
+end
+)", sol::script_pass_on_error );
+    REQUIRE( installed.valid() );
+    sol::protected_function query = fixture.lua["query"];
+    sol::protected_function_result result = query();
+    REQUIRE( result.valid() );
+    CHECK_FALSE( result.get<bool>() );
+    CHECK( evaluations == 0 );
+    fixture.target( npc_target ).add_effect( effect_bleed, 10_turns,
+            body_part_arm_l.id(), false, 1, true );
+    for( const double minimum : {
+             -1000001.0, 1.0, 1.5, 1000001.0
+         } ) {
+        threshold = minimum;
+        const int before = evaluations;
+        result = query();
+        REQUIRE( result.valid() );
+        CHECK( evaluations == before + 1 );
+        const std::string source = R"({")" + prefix +
+                                   R"(has_effect":"bleed","bodypart":"arm_l","intensity":)" +
+                                   std::to_string( minimum ) + "}";
+        CHECK( result.get<bool>() == fixture.legacy_condition( source ) );
+    }
+}
+
 TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
            "[lua][platform][effects][semantic]" )
 {
@@ -174,9 +222,9 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(, "force": true})" );
         sol::protected_function add = modern.services["effects"]["add"];
         sol::protected_function_result call = add( modern.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                              cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
-                                              options );
+            cata::lua_platform::script_game_id( "effect", "bleed" ),
+            cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
+            options );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -193,8 +241,8 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(lose_effect": "bleed", "target_part": "arm_l"})" );
         sol::protected_function remove = modern.services["effects"]["remove"];
         sol::protected_function_result call = remove( modern.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                              cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+            cata::lua_platform::script_game_id( "effect", "bleed" ),
+            cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -222,8 +270,8 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result call = add( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                          cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -256,8 +304,8 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
                           R"("duration": 0, "target_part": "arm_l", "intensity": -1})" );
     sol::protected_function adjust = modern.services["effects"]["adjust_intensity"];
     sol::protected_function_result call = adjust( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
-                                          cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+        cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
+        cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );

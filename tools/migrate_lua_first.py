@@ -25398,6 +25398,86 @@ def _dynamic_id_expression(
     return f'services.types.id("{kind}", {rendered})'
 
 
+def render_effect_condition(
+    condition: dict[str, Any], alpha: str | None, beta: str | None,
+) -> str | None:
+    selectors = {prefix + name for prefix in ("u_", "npc_")
+                 for name in ("has_effect", "has_any_effect")}
+    keys = selectors.intersection(condition)
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    if set(condition) - {key, "bodypart", "intensity"}:
+        return None
+    target = beta if key.startswith("npc_") else alpha
+    if target is None:
+        return None
+
+    def identifier(value: Any, kind: str) -> str | None:
+        if isinstance(value, dict):
+            raw = render_participant_string_expression(value, target, alpha, beta)
+            return None if raw is None else f'services.types.id("{kind}", {raw})'
+        return _dynamic_id_expression(value, kind, target)
+
+    bodypart = "nil"
+    if "bodypart" in condition:
+        bodypart = identifier(condition["bodypart"], "body_part")
+        if bodypart is None:
+            return None
+    values = condition[key] if key.endswith("any_effect") else [condition[key]]
+    if not isinstance(values, list):
+        return None
+    raw_intensity = condition.get("intensity", -1)
+    literal = finite_number_literal(raw_intensity)
+    if literal is not None:
+        intensity = lua_number(literal)
+    elif isinstance(raw_intensity, dict) and set(raw_intensity) == {"math"}:
+        intensity = render_eoc_numeric_expression(raw_intensity, "0", alpha or target)
+        if intensity is None:
+            return None
+    elif isinstance(raw_intensity, dict):
+        numeric = dict(raw_intensity)
+        if "default" in numeric:
+            default = finite_number_literal(numeric["default"])
+            if default is None:
+                return None
+            numeric["default"] = str(default)
+        rendered = render_participant_string_expression(numeric, target, alpha, beta)
+        if rendered is None:
+            return None
+        # A present variable descriptor without its own default evaluates to
+        # zero natively; -1 is only the omitted intensity field's default.
+        intensity = f"(tonumber({rendered}) or 0)"
+    else:
+        return None
+    if not values:
+        return "false"
+    queries = []
+    for value in values:
+        effect = identifier(value, "effect")
+        if effect is None:
+            return None
+        if literal is not None and -1000000 <= literal <= 1000000:
+            queries.append(
+                f"service_value(services.effects.has({target}, {effect}, {bodypart}, {intensity}))")
+        else:
+            # Native EOC evaluates intensity only when this effect exists.
+            # Snapshot comparison also preserves thresholds outside has()'s
+            # bounded optional argument without clamping their meaning.
+            queries.append(
+                f"(function() local result = services.effects.get({target}, {effect}, {bodypart}); "
+                'if not result.ok then if result.error.code == "not_found" then return false end; '
+                'service_value(result) end; '
+                f'return result.value.intensity >= ({intensity}) end)()')
+    if len(queries) <= 64:
+        return " or ".join(queries)
+    # A long flat chain of `or` expressions can hit Lua parser nesting limits.
+    # Sequential branches retain lazy reads with no arbitrary list-size cap.
+    return "(function() " + " ".join(
+        f"if {query} then return true end;" for query in queries
+    ) + " return false end)()"
+
+
 def render_dynamic_character_condition(
     condition: dict[str, Any],
     avatar_actor_proven: bool,
@@ -25423,57 +25503,17 @@ def render_dynamic_character_condition(
         "npc": (npc_actor_proven, npc_actor_expression),
     }
 
-    # Effect predicates optionally carry the native body-part and minimum
-    # intensity qualifiers.  Keep the exact single-id fast path below, but
-    # lower these richer shapes through the same generation-safe query.
-    for key, scope in (
-        ("u_has_effect", "u"), ("npc_has_effect", "npc"),
-    ):
-        if key not in condition:
-            continue
-        if set(condition) - {key, "bodypart", "intensity"}:
-            return None
-        proven, actor = actor_specs[scope]
-        if not proven:
-            return None
-        identifier = _dynamic_id_expression(condition[key], "effect", actor)
-        if identifier is None:
-            return None
-        bodypart = "nil"
-        if "bodypart" in condition:
-            bodypart = _dynamic_id_expression(
-                condition["bodypart"], "body_part", actor
-            )
-            if bodypart is None:
-                return None
-        if "intensity" not in condition:
-            return (
-                f"service_value(services.effects.has({actor}, {identifier}, "
-                f"{bodypart}))"
-            )
-        literal_intensity = finite_number_literal(condition["intensity"])
-        if literal_intensity is not None:
-            if literal_intensity < -1000000 or literal_intensity > 1000000:
-                return None
-            intensity = lua_number(literal_intensity)
-        else:
-            intensity = render_eoc_numeric_expression(
-                condition["intensity"], "-1", actor
-            )
-            if intensity is None:
-                return None
-            intensity = (
-                "math.max(-1000000, math.min(1000000, (" + intensity + ")))"
-            )
-        return (
-            f"service_value(services.effects.has({actor}, {identifier}, "
-            f"{bodypart}, {intensity}))"
+    effect_selectors = {prefix + name for prefix in ("u_", "npc_")
+                        for name in ("has_effect", "has_any_effect")}
+    if effect_selectors.intersection(condition):
+        return render_effect_condition(
+            condition,
+            actor_specs["u"][1] if actor_specs["u"][0] else None,
+            actor_specs["npc"][1] if actor_specs["npc"][0] else None,
         )
 
     # Simple single-id queries share the same shape across Character domains.
     simple_id_queries: tuple[tuple[str, str, str], ...] = (
-        ("u_has_effect", "effects.has", "effect"),
-        ("npc_has_effect", "effects.has", "effect"),
         ("u_has_bionics", "bionics.has", "bionic"),
         ("npc_has_bionics", "bionics.has", "bionic"),
         ("u_know_recipe", "recipes.knows", "recipe"),
@@ -25515,55 +25555,6 @@ def render_dynamic_character_condition(
         if service.endswith(".get"):
             call += ".selected" if "using_" in key else ".known"
         return call
-
-    # Any-of effect lists can carry the same native body-part qualifier as a
-    # single effect query.  Keep the body-part argument explicit instead of
-    # silently widening the predicate to every body part.
-    for key, scope in (
-        ("u_has_any_effect", "u"),
-        ("npc_has_any_effect", "npc"),
-    ):
-        if key not in condition or set(condition) not in ({key}, {key, "bodypart"}):
-            continue
-        actor_proven, actor = actor_specs[scope]
-        values = condition[key]
-        if not actor_proven or not isinstance(values, list) or not values or len(values) > 64:
-            return None
-        rendered = [_dynamic_id_expression(value, "effect", actor) for value in values]
-        if any(value is None for value in rendered):
-            return None
-        bodypart = "nil"
-        if "bodypart" in condition:
-            bodypart = _dynamic_id_expression(
-                condition["bodypart"], "body_part", actor
-            )
-            if bodypart is None:
-                return None
-        return " or ".join(
-            f"service_value(services.effects.has({actor}, {value}, {bodypart}))"
-            for value in rendered
-        )
-
-    # Any-of lists are common in bundled EOCs and may contain variable-backed
-    # ids.  Preserve ordinary Lua short-circuit semantics.
-    for key, service, kind in (
-        ("u_has_any_effect", "effects.has", "effect"),
-        ("npc_has_any_effect", "effects.has", "effect"),
-    ):
-        if set(condition) != {key}:
-            continue
-        scope = "npc" if key.startswith("npc_") else "u"
-        proven, actor = actor_specs[scope]
-        values = condition[key]
-        if not proven or not isinstance(values, list) or not values or len(values) > 64:
-            return None
-        rendered = [_dynamic_id_expression(value, kind, actor) for value in values]
-        if any(value is None for value in rendered):
-            return None
-        return " or ".join(
-            f"service_value(services.{service}({actor}, {value}))"
-            for value in rendered
-        )
 
     # Inventory and weapon predicates are all represented by typed GameId
     # arguments.  Dynamic values therefore need no compatibility adapter.

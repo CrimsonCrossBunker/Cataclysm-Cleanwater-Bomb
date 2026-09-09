@@ -15,6 +15,78 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_lists_accept_empty_and_large_native_shapes(self) -> None:
+        for count in (0, 65, 1001):
+            with self.subTest(count=count):
+                values = ["poison"] * max(0, count - 1) + (["bleed"] if count else [])
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {"npc_has_any_effect": values, "bodypart": "arm_l", "intensity": 2},
+                    npc_actor_expression="partner")
+                self.assertIsNotNone(expression)
+                script = """
+local partner = {}
+local calls = 0
+local function service_value(r) assert(r.ok); return r.value end
+local services = {types={id=function(kind,id) return id end},effects={has=function(character,id,part,minimum)
+ assert(character==partner and part=='arm_l' and minimum==2)
+ calls=calls+1
+ return {ok=true,value=id=='bleed'}
+end}}
+assert((EXPRESSION) == EXPECTED)
+assert(calls == COUNT)
+""".replace("EXPRESSION", expression).replace("EXPECTED", "true" if count else "false").replace("COUNT", str(count))
+                result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_dynamic_intensity_is_lazy_and_uses_variable_owner(self) -> None:
+        for key in ("npc_has_effect", "npc_has_any_effect"):
+            value = {"u_val": "effect"}
+            if key.endswith("any_effect"):
+                value = [value]
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {key: value, "bodypart": {"npc_val": "part"}, "intensity": {"u_val": "minimum"}},
+                avatar_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = """
+local actor={effect='bleed',minimum=2000001}
+local partner={effect='poison',part='arm_l',minimum=0}
+local context={data={}}
+local present=false
+local intensity_reads=0
+local function service_value(r) assert(r.ok); return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+   if key=='minimum' then intensity_reads=intensity_reads+1 end
+   return {ok=true,value={value=owner[key]}}
+ end},
+ types={id=function(kind,id) return id end},
+ effects={get=function(character,id,part)
+   assert(character==partner and id=='bleed' and part=='arm_l')
+   if not present then return {ok=false,error={code='not_found'}} end
+   return {ok=true,value={intensity=2000001}}
+ end}
+}
+local function query() return EXPRESSION end
+assert(not query())
+assert(intensity_reads==0)
+present=true
+assert(query())
+assert(intensity_reads==1)
+actor.minimum=2000002
+assert(not query())
+actor.minimum=nil
+assert(query())
+services.effects.get=function() return {ok=false,error={code='stale_handle'}} end
+local ok=pcall(query)
+assert(not ok)
+""".replace("EXPRESSION", expression)
+            result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_skill_teaching_requires_two_proven_participants(self) -> None:
         for selector, expected in (
             ("u_train_skills", "services.skills.offered(actor, partner)"),
