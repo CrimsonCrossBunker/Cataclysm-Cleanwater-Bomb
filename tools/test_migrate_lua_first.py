@@ -16,6 +16,40 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_add_fields_keep_variable_owners(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for scope, owner in (("u_val", "actor"), ("npc_val", "partner"),
+                                 ("var_val", "actor"), ("var_val", "partner")):
+                with self.subTest(prefix=prefix, scope=scope, owner=owner):
+                    lines = migrate_lua_first.render_static_false_effect(
+                        {prefix + "add_effect": {scope: "selected"},
+                         "duration": {scope: "duration"}, "intensity": {scope: "intensity"},
+                         "target_part": {scope: "part"}}, True, True, {},
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(lines)
+                    script = """
+local actor={selected='bleed',part='arm_l',duration=12,intensity=2}
+local partner={selected='poison',part='arm_r',duration=23,intensity=3}
+local context={data={selected='REFselected',part='REFpart',duration='REFduration',intensity='REFintensity'}}
+local called=false
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key) return {ok=true,value={value=owner[key]}} end},
+ types={id=function(kind,id) return id end},
+ time={duration=function(value,unit) assert(unit=='turn');return value end},
+ effects={add=function(character,id,duration,options)
+  assert(character==TARGET and id==OWNER.selected and duration==OWNER.duration)
+  assert(options.intensity==OWNER.intensity and options.body_part==OWNER.part)
+  called=true;return {ok=true}
+ end}
+}
+BODY
+assert(called)
+""".replace("TARGET", target).replace("OWNER", owner).replace("BODY", "\n".join(lines)).replace("REF", "u_" if owner == "actor" else "n_")
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_shipped_random_bionic_effect_uses_weighted_avatar_part(self) -> None:
         entries = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/bionic_eocs.json").read_text())
         effect = next(effect for entry in entries for effect in entry.get("effect", [])

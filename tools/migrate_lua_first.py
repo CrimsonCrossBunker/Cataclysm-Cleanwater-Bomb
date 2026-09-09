@@ -5023,7 +5023,8 @@ def render_static_false_effect(
                     effect, key, target, avatar_expression=alpha)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
-                        effect, key, target, avatar_expression=alpha)
+                        effect, key, target, avatar_expression=alpha,
+                        npc_expression=npc_actor_expression or ("actor" if npc_actor_proven else None))
             elif "wound" in key:
                 rendered = render_static_character_wound(
                     effect, key, target, key.endswith("remove_wound")
@@ -19058,23 +19059,51 @@ def render_dynamic_character_morale(
 
 def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
-    *, avatar_expression: str | None = None,
+    *, avatar_expression: str | None = None, npc_expression: str | None = None,
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
     if target_expression is None or key not in effect or "duration" not in effect:
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
-    effect_id = _dynamic_id_expression(effect[key], "effect", target_expression)
+    alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
+    beta = npc_expression or (target_expression if key.startswith("npc_") else None)
+
+    def identifier(value: Any, kind: str) -> str | None:
+        if isinstance(value, dict):
+            raw = render_participant_string_expression(value, target_expression, alpha, beta)
+            return None if raw is None else f'services.types.id("{kind}", {raw})'
+        return _dynamic_id_expression(value, kind, target_expression)
+
+    def numeric(value: Any) -> str | None:
+        if not isinstance(value, dict) or set(value) == {"math"}:
+            return render_eoc_numeric_expression(value, "0", alpha or target_expression)
+        descriptor = dict(value)
+        if "default" in descriptor:
+            default = finite_number_literal(descriptor["default"])
+            if default is None:
+                return None
+            descriptor["default"] = str(default)
+        raw = render_participant_string_expression(descriptor, target_expression, alpha, beta)
+        return None if raw is None else f"(tonumber({raw}) or 0)"
+
+    effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    duration = _duration_expression(
-        "1 turn" if permanent else raw_duration,
-        minimum=0, actor_expression=target_expression,
-    )
+    if isinstance(raw_duration, dict) and set(raw_duration) != {"math"}:
+        turns = numeric(raw_duration)
+        duration = None if turns is None else (
+            "services.time.duration(math.max(0, math.min(" + str(MAX_EFFECT_DURATION_TURNS) +
+            ', math.floor((' + turns + ') + 0.5))), "turn")'
+        )
+    else:
+        duration = _duration_expression(
+            "1 turn" if permanent else raw_duration,
+            minimum=0, actor_expression=alpha or target_expression,
+        )
     if effect_id is None or duration is None:
         return None
-    intensity = render_eoc_numeric_expression(effect.get("intensity", 0), "0", target_expression)
+    intensity = numeric(effect.get("intensity", 0))
     if intensity is None:
         return None
     raw_intensity = effect.get("intensity", 0)
@@ -19093,7 +19122,7 @@ def render_dynamic_character_effect(
             return None
         options.append(f"body_part = service_value(services.characters.random_body_part({alpha}, true))")
     elif target_part is not None and target_part != "bp_null":
-        part = _dynamic_id_expression(target_part, "body_part", target_expression)
+        part = identifier(target_part, "body_part")
         if part is None:
             return None
         options.append(f"body_part = {part}")
@@ -28765,6 +28794,8 @@ def render_eoc(
                     rendered = render_dynamic_character_effect(
                         effect, key, target_expression,
                         avatar_expression="actor" if character_actor_proven else None,
+                        npc_expression=npc_actor_expression or (
+                            "actor" if npc_event_character_actor_proven else None),
                     )
                 if rendered is not None:
                     lines.extend(rendered)
