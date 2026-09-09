@@ -24553,6 +24553,19 @@ def render_dynamic_character_wound(
     return lines
 
 
+def render_direct_variable_snapshot(value: Any, owner: str) -> str | None:
+    """Retain presence separately from the Lua representation of a stored null."""
+    if not isinstance(value, dict) or len(value) != 1:
+        return None
+    key, name = next(iter(value.items()))
+    scopes = {"u_val": "u", "npc_val": "npc", "global_val": "global", "context_val": "context"}
+    if key not in scopes or render_eoc_value_expression(value, "nil", owner) is None:
+        return None
+    actual_owner = owner if key in {"u_val", "npc_val"} else "nil"
+    return ('service_value(services.variables.resolve(context.data, '
+            f'{actual_owner}, {lua_quote(scopes[key])}, {lua_quote(name)}))')
+
+
 def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
@@ -24651,9 +24664,19 @@ def render_participant_string_expression(
                 'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
                 npc_expression + ', name:sub(3) '
                 'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
-                'return tostring(service_value(services.variables.resolve('
-                'context.data, owner, scope, name)).value or ' + fallback + ') end)()'
+                'local result = service_value(services.variables.resolve('
+                'context.data, owner, scope, name)); '
+                'if result.exists == false then return ' + fallback + ' end; '
+                'return tostring(result.value or "") end)()'
             )
+        if "default" in value:
+            variable = {key: item for key, item in value.items() if key != "default"}
+            snapshot = render_direct_variable_snapshot(variable, owner)
+            fallback = value["default"]
+            if snapshot is None or not bounded_utf8_string(fallback, 8192, allow_empty=True):
+                return None
+            return ('(function(result) if result.exists == false then return '
+                    f'{lua_quote(fallback)} end; return tostring(result.value or "") end)({snapshot})')
     return render_eoc_string_expression(value, owner)
 
 
@@ -24981,10 +25004,10 @@ def render_participant_translation_expression(
             return None
         fallback = render_participant_translation_expression(
             value["default"], target_expression, avatar_expression, npc_expression)
-        raw = render_eoc_value_expression({key: value[key]}, "nil", owner or target_expression)
+        raw = render_direct_variable_snapshot({key: value[key]}, owner or target_expression)
         if fallback is None or raw is None:
             return None
-        return ('(function(value) if value ~= nil then return tostring(value) end; '
+        return ('(function(result) if result.exists ~= false then return tostring(result.value or \"\") end; '
                 f'return {fallback} end)({raw})')
     return render_participant_string_expression(
         value, target_expression, avatar_expression, npc_expression)

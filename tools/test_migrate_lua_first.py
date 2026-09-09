@@ -16,6 +16,47 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_defaults_distinguish_stored_null_from_missing(self) -> None:
+        for key in ("u_val", "npc_val", "global_val", "var_val"):
+            for present in (True, False):
+                expression = migrate_lua_first.render_participant_string_expression(
+                    {key: "reference" if key == "var_val" else "input", "default": "fallback"},
+                    "actor", "actor", "partner")
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor,partner={},{}
+local context={data={reference='n_input'}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,name)
+ assert(name=='input');return {ok=true,value={exists=PRESENT,value=nil}}
+end}}
+assert(EXPRESSION==(PRESENT and '' or 'fallback'))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_defaults_do_not_translate_stored_null(self) -> None:
+        for key in ("u_val", "npc_val", "global_val"):
+            for present in (True, False):
+                expression = migrate_lua_first.render_participant_translation_expression(
+                    {key: "input", "default": "fallback"}, "actor", "actor", "partner")
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor,partner={},{}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,name)
+ return {ok=true,value={exists=PRESENT,value=nil}}
+end},translate=function(value) calls=calls+1;return 'translated:'..value end}
+assert(EXPRESSION==(PRESENT and '' or 'translated:fallback'))
+assert(calls==(PRESENT and 0 or 1))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_real_gateway_copy_uses_native_copy_between_participants(self) -> None:
         source = json.loads((REPOSITORY_ROOT / "data/mods/MindOverMatter/powers/teleportation_eoc.json").read_text())
         effects = [effect for entry in source for effect in entry.get("effect", [])
@@ -189,7 +230,7 @@ local calls=0
 local function service_value(r) assert(r.ok);return r.value end
 local services={
  variables={resolve=function(data,owner,scope,key)
-  assert(owner==partner);return {ok=true,value={value=PRESENT and '' or nil}}
+  assert(owner==partner);return {ok=true,value={exists=PRESENT,value=PRESENT and '' or nil}}
  end},
  translate=function(text,ctxt)
   assert(text=='Fallback' and ctxt=='default');calls=calls+1;return 'translated default'
@@ -1569,7 +1610,8 @@ local actor, partner = {}, {}
 local context = {data={}}
 local function service_value(r) assert(r.ok); return r.value end
 local services = {variables={resolve=function(data, character, scope, key)
- return {ok=true,value={value=character and character[key] or data[key]}}
+ local value = character and character[key] or data[key]
+ return {ok=true,value={exists=value~=nil,value=value}}
 end}}
 local function read() return EXPRESSION end
 assert(read() == 'fallback')
