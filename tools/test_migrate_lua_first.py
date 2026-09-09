@@ -16,6 +16,42 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_indirect_target_routes_native_prefixes(self) -> None:
+        lines = migrate_lua_first.render_static_character_string_var(
+            {"set_string_var": {"npc_val": "input"}, "target_var": {"var_val": "destination"}},
+            True, True, "partner")
+        self.assertIsNotNone(lines)
+        for reference, scope, owner in (("u_output", "u", "actor"), ("n_output", "npc", "partner"),
+                                        ("_output", "context", "nil"), ("output", "global", "nil")):
+            script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local context={data={destination='stale'}}
+local function service_value(r) assert(r.ok);return r.value end
+local writes=0
+local services={variables={
+ resolve=function(data,owner,scope,key)
+  assert(owner==partner and scope=='npc' and key=='input')
+  data.destination=REFERENCE
+  return {ok=true,value={value=owner[key]}}
+ end,
+ set_resolved=function(data,owner,scope,key,value)
+  assert(data==context.data and owner==OWNER and scope==SCOPE and key=='output' and value=='beta')
+  writes=writes+1;return {ok=true,value={}}
+ end
+}}
+BODY
+assert(writes==1)
+""".replace("REFERENCE", migrate_lua_first.lua_quote(reference))
+            script = script.replace("OWNER", owner).replace("SCOPE", migrate_lua_first.lua_quote(scope))
+            script = script.replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for alpha, beta in ((True, False), (False, True), (False, False)):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var(
+                {"set_string_var": "value", "target_var": {"var_val": "destination"}}, alpha, beta))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_assignment_reads_source_independently_of_destination(self) -> None:
         sources = [("u_val", "alpha"), ("npc_val", "beta"),
                    ("global_val", "global"), ("context_val", "context"),

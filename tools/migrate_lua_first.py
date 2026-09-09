@@ -24979,6 +24979,8 @@ def render_static_character_string_var(
         return None
     if target[0] == "npc" and not npc_actor_proven:
         return None
+    if target[0] == "var" and not (avatar_actor_proven and npc_actor_proven):
+        return None
     parse_tags = effect.get("parse_tags", False)
     i18n = effect.get("i18n", False)
     if not isinstance(parse_tags, bool) or not isinstance(i18n, bool):
@@ -25081,10 +25083,21 @@ def render_static_character_string_var(
             f"        {actor_expression}, {lua_quote(target[1])}, {value_expression})",
         ])
     else:
+        beta = npc_actor_expression or "actor"
         lines.extend([
-            "    service_value(services.variables.set_resolved(",
-            f"        context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(target[1])}, {value_expression}))",
+            f"    local assigned_value = {value_expression}",
+            f"    local target_name = context.data[{lua_quote(target[1])}]",
+            '    if target_name == nil or target_name == "" then error("missing target variable") end',
+            '    local target_scope, target_owner = "global", nil',
+            '    if target_name:sub(1, 2) == "u_" then',
+            '        target_scope, target_owner, target_name = "u", actor, target_name:sub(3)',
+            '    elseif target_name:sub(1, 2) == "n_" then',
+            f'        target_scope, target_owner, target_name = "npc", {beta}, target_name:sub(3)',
+            '    elseif target_name:sub(1, 1) == "_" then',
+            '        target_scope, target_name = "context", target_name:sub(2)',
+            '    end',
+            '    service_value(services.variables.set_resolved(',
+            '        context.data, target_owner, target_scope, target_name, assigned_value))',
         ])
     return lines
 
