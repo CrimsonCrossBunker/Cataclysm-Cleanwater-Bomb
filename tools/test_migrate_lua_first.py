@@ -16,6 +16,36 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_random_choice_evaluates_only_selected_candidate_after_rng(self) -> None:
+        lines = migrate_lua_first.render_static_character_string_var(
+            {"set_string_var": [{"u_val": "first"}, {"npc_val": "second"}],
+             "target_var": {"context_val": "output"}}, True, True, "partner")
+        self.assertIsNotNone(lines)
+        for selected in (1, 2):
+            script = r"""
+local actor={first='alpha'}
+local partner={second='beta'}
+local context={data={}}
+local order={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ random={int=function(lo,hi)
+  assert(lo==1 and hi==2 and #order==0);order[1]='rng';return SELECTED
+ end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(#order==1 and order[1]=='rng')
+  assert((SELECTED==1 and owner==actor and key=='first') or
+         (SELECTED==2 and owner==partner and key=='second'))
+  order[2]='value';return {ok=true,value={value=owner[key]}}
+ end}
+}
+BODY
+assert(#order==2 and context.data.output==(SELECTED==1 and 'alpha' or 'beta'))
+""".replace("SELECTED", str(selected)).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_indirect_target_routes_native_prefixes(self) -> None:
         lines = migrate_lua_first.render_static_character_string_var(
             {"set_string_var": {"npc_val": "input"}, "target_var": {"var_val": "destination"}},

@@ -25043,8 +25043,9 @@ def render_static_character_string_var(
     if len(expressions) == 1:
         value_expression = expressions[0]
     else:
-        lines.append(f"    local values = {{ {', '.join(expressions)} }}")
-        value_expression = "values[services.random.int(1, #values)]"
+        choices = [f"function() return {expression} end" for expression in expressions]
+        lines.append(f"    local values = {{ {', '.join(choices)} }}")
+        value_expression = "values[services.random.int(1, #values)]()"
 
     input_options = effect.get("string_input")
     if input_options is not None:
