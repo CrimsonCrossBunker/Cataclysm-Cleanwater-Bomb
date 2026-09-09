@@ -24927,18 +24927,21 @@ def render_static_character_copy_var(
         ]
 
     lines = address(source, "copy_source")
-    lines.extend([
-        '    local copied = { exists = false }',
-        '    if copy_source_key ~= nil then',
-        '        copied = service_value(services.variables.resolve(',
-        '            context.data, copy_source_owner, copy_source_scope, copy_source_key))',
-        '    end',
-    ])
     lines.extend(address(target, "copy_target"))
     lines.extend([
         '    if copy_target_key == nil then error("missing target variable") end',
-        '    service_value(services.variables.set_resolved(',
-        '        context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+        '    if copy_source_key ~= nil and copy_source_scope ~= "context" and copy_target_scope ~= "context" then',
+        '        service_value(services.variables.copy(',
+        '            copy_source_owner, copy_source_key, copy_target_owner, copy_target_key))',
+        '    else',
+        '        local copied = { exists = false }',
+        '        if copy_source_key ~= nil then',
+        '            copied = service_value(services.variables.resolve(',
+        '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
+        '        end',
+        '        service_value(services.variables.set_resolved(',
+        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+        '    end',
     ])
     return lines
 

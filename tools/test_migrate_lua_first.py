@@ -16,6 +16,31 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_gateway_copy_uses_native_copy_between_participants(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/mods/MindOverMatter/powers/teleportation_eoc.json").read_text())
+        effects = [effect for entry in source for effect in entry.get("effect", [])
+                   if isinstance(effect, dict) and effect.get("copy_var") == {"npc_val": "gateway_destination_1"}]
+        self.assertEqual(len(effects), 1)
+        lines = migrate_lua_first.render_static_character_copy_var(effects[0], True, True, "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local partner={}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={copy=function(source,key,target,out)
+ assert(source==partner and key=='gateway_destination_1')
+ assert(target==actor and out=='dilated_gateway_location')
+ calls=calls+1;return {ok=true,value={source_exists=true,destination_existed=false}}
+end}}
+BODY
+assert(calls==1)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_copy_variable_preserves_owners_types_and_empty_write(self) -> None:
         addresses = [("u_val", "actor", None), ("npc_val", "partner", None),
                      ("context_val", "context.data", None), ("global_val", "globals", None),
@@ -38,6 +63,10 @@ SOURCE_STORE.input=VALUE
 local writes=0
 local function service_value(r) assert(r.ok);return r.value end
 local services={variables={
+ copy=function(source,key,target,out)
+  assert((source or globals)==SOURCE_STORE and (target or globals)==TARGET_STORE)
+  assert(key=='input' and out=='output');writes=writes+1;return {ok=true,value={}}
+ end,
  resolve=function(data,owner,scope,key)
   local store=scope=='global' and globals or scope=='context' and data or owner
   assert(store==SOURCE_STORE and key=='input')

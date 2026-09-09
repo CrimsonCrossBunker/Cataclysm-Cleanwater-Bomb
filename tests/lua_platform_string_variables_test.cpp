@@ -6,6 +6,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "character_id.h"
+#include "character.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
@@ -111,6 +112,30 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     CHECK( null_snapshot["exists"].get<bool>() );
     CHECK( null_snapshot["value"].get<sol::object>().get_type() == sol::type::nil );
 
+    diag_value nested;
+    nested._deserialize( json_loader::from_string( "[null,[1,null,\"tail\"],{\"tripoint\":[1,2,3]}]" ),
+                         false );
+    Character &copy_source = source_npc ? static_cast<Character &>( partner ) : player;
+    copy_source.set_value( "nested_source", nested );
+    sol::protected_function copy = services["variables"]["copy"];
+    sol::protected_function_result copied = copy(
+            source_npc ? partner_handle : player_handle, "nested_source",
+            target_npc ? partner_handle : player_handle, "nested_target" );
+    REQUIRE( copied.valid() );
+    sol::table copy_result = copied;
+    REQUIRE( copy_result["ok"].get<bool>() );
+    CHECK( target.get_value( "nested_target" ) == nested );
+    copy_source.set_value( "nested_source", "changed after copy" );
+    CHECK( target.get_value( "nested_target" ) == nested );
+    const auto stale_target = cata::lua_platform::game_handle::from_creature(
+                                  player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 2 );
+    sol::protected_function_result rejected = copy(
+            partner_handle, "string_input", stale_target, "nested_target" );
+    REQUIRE( rejected.valid() );
+    sol::table error_result = rejected;
+    CHECK_FALSE( error_result["ok"].get<bool>() );
+    CHECK( target.get_value( "nested_target" ) == nested );
+
 }
 
 TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
@@ -142,6 +167,23 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     REQUIRE( result["ok"].get<bool>() );
     REQUIRE( get_globals().maybe_get_global_value( key ) != nullptr );
     CHECK( get_globals().get_global_value( key ).is_empty() );
+    sol::protected_function copy = services["variables"]["copy"];
+    sol::protected_function_result self_copy = copy( sol::nil, key, sol::nil, key );
+    REQUIRE( self_copy.valid() );
+    sol::table self_result = self_copy;
+    REQUIRE( self_result["ok"].get<bool>() );
+    sol::table self_metadata = self_result["value"];
+    CHECK( self_metadata["source_exists"].get<bool>() );
+    CHECK( self_metadata["destination_existed"].get<bool>() );
+    CHECK( get_globals().get_global_value( key ).is_empty() );
+    sol::protected_function_result missing_copy = copy(
+            sol::nil, "lua_semantic_missing_copy_source", sol::nil, key );
+    REQUIRE( missing_copy.valid() );
+    sol::table missing_result = missing_copy;
+    REQUIRE( missing_result["ok"].get<bool>() );
+    sol::table missing_metadata = missing_result["value"];
+    CHECK_FALSE( missing_metadata["source_exists"].get<bool>() );
+    CHECK( get_globals().maybe_get_global_value( key ) != nullptr );
     sol::protected_function remove = services["variables"]["remove_global"];
     sol::protected_function_result erased = remove( key );
     REQUIRE( erased.valid() );

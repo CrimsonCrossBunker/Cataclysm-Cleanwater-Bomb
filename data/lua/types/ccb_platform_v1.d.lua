@@ -10010,6 +10010,23 @@ function CcbTypesApi.id_kinds() end
 ---@class CcbVariablesApi
 local CcbVariablesApi = {}
 
+---@class CcbVariableCopyValue
+---@field source_exists boolean
+---@field destination_existed boolean
+
+---@class CcbVariableCopyResult: CcbResult
+---@field value? CcbVariableCopyValue
+
+---Copy native values without converting arrays, nulls, or coordinates through Lua.
+---Both owners are validated before mutation; missing sources write a stored empty value.
+---An active write callback is required. Use nil owners for the global variable store.
+---@param source_owner GameHandle|nil
+---@param source_key string Variable key, 1..128 bytes without ASCII controls or NUL.
+---@param destination_owner GameHandle|nil
+---@param destination_key string
+---@return CcbVariableCopyResult
+function CcbVariablesApi.copy(source_owner, source_key, destination_owner, destination_key) end
+
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string Variable name containing 1..128 bytes, without ASCII controls or NUL.
 ---@return CcbVariableReadResult

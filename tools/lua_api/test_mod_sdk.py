@@ -305,6 +305,23 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_native_variable_copy_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "copy.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param owner GameHandle
+return function(owner)
+    local result = ccb.services.variables.copy(nil, "global", owner, "local")
+    if result.ok then
+        local metadata = assert(result.value)
+        return metadata.source_exists, metadata.destination_existed
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_interaction_input_uses_native_options_and_result(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")
