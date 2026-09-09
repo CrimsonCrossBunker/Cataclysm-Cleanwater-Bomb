@@ -305,6 +305,23 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_technique_definition_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "technique.lua"
+            source.write_text('''local ccb = require("ccb")
+local definition = ccb.services.martial_arts.technique_definition(
+    ccb.services.types.id("martial_art_technique", "tech_base_headbutt"))
+---@type string
+local short = definition.flavor_description
+for _, id in ipairs(definition.attack_vectors.items) do
+    assert(id.kind == "attack_vector")
+end
+return short, definition.description
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_gameplay_option_snapshot_has_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")

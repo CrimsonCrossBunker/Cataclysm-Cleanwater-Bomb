@@ -10307,8 +10307,62 @@ function CcbPlatformRecipesApi.forget(character, id) end
 ---@return CcbResult result `value` is a CcbPlatformRecipeCategoryForget.
 function CcbPlatformRecipesApi.forget_category(character, category, subcategory) end
 
+---@class CcbTechniqueIdPage
+---@field items GameId[]
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbTechniqueFlagPage
+---@field items string[]
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbTechniqueDefinitionSnapshot
+---@field id GameId GameId<martial_art_technique>.
+---@field name string Localized technique name.
+---@field description string Complete native rule description.
+---@field flavor_description string Localized authored short description, without generated rule text.
+---@field goal string
+---@field avatar_message string
+---@field npc_message string
+---@field defensive boolean
+---@field side_switch boolean
+---@field dummy boolean
+---@field critical_only boolean
+---@field critical_compatible boolean
+---@field reach_only boolean
+---@field reach_compatible boolean
+---@field dodge_counter boolean
+---@field block_counter boolean
+---@field miss_recovery boolean
+---@field grab_break boolean
+---@field disarms boolean
+---@field take_weapon boolean
+---@field needs_ammo boolean
+---@field wall_adjacent boolean
+---@field weight integer
+---@field repeat_min integer
+---@field repeat_max integer
+---@field down_duration integer
+---@field stun_duration integer
+---@field knockback_distance integer
+---@field knockback_spread number
+---@field knockback_follow boolean
+---@field area string
+---@field flags CcbTechniqueFlagPage
+---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
+---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
+
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
+
+---Read a detached native technique definition, including short and complete descriptions.
+---@param id GameId GameId<martial_art_technique>.
+---@return CcbTechniqueDefinitionSnapshot
+function CcbPlatformMartialArtsApi.technique_definition(id) end
+
 
 ---Learn one martial-art style without coupling the mutation to presentation.
 ---@param character GameHandle Character handle.

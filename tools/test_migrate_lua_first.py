@@ -15,6 +15,52 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_definition_mutators_do_not_invent_missing_variable_owners(self) -> None:
+        for mutator, key in (("ma_technique_name", "matec_id"),
+                             ("ma_technique_description", "matec_id"), ("mon_faction", "mtype_id")):
+            value = {"mutator": mutator, key: {"npc_val": "selected"}}
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var(
+                {"set_string_var": value, "target_var": {"context_val": "output"}}, False, False))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_definition_string_mutators_preserve_owners_and_short_description(self) -> None:
+        for mutator, expected in (("ma_technique_name", "name"),
+                                  ("ma_technique_description", "short_description"),
+                                  ("mon_faction", "faction")):
+            for scope, owner in (("u_val", "actor"), ("npc_val", "partner")):
+                with self.subTest(mutator=mutator, scope=scope):
+                    key = "mtype_id" if mutator == "mon_faction" else "matec_id"
+                    value = {"mutator": mutator, key: {scope: "selected"}}
+                    expression = migrate_lua_first.render_participant_string_expression(value, "partner", "actor", "partner")
+                    lines = migrate_lua_first.render_static_character_string_var(
+                        {"set_string_var": value, "target_var": {"context_val": "output"}}, True, True, "partner")
+                    self.assertIsNotNone(expression)
+                    self.assertIsNotNone(lines)
+                    script = r"""
+local actor={selected='alpha_id'}
+local partner={selected='beta_id'}
+local context={data={}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==OWNER and key=='selected');return {ok=true,value={value=owner[key]}}
+ end},
+ types={id=function(kind,id) assert(kind=='martial_art_technique' and id==OWNER.selected);return id end},
+ martial_arts={technique_definition=function(id)
+  assert(id==OWNER.selected);return {name='name',flavor_description='short_description',description='full rules'}
+ end},
+ registry={get=function(kind,id)
+  assert(kind=='monster' and id==OWNER.selected);return {default_faction={value='faction'}}
+ end}
+}
+assert(EXPR==EXPECTED)
+BODY
+assert(context.data.output==EXPECTED)
+""".replace("OWNER", owner).replace("EXPECTED", migrate_lua_first.lua_quote(expected))
+                    script = script.replace("EXPR", expression).replace("BODY", "\n".join(lines))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_option_mutator_uses_public_api_and_correct_variable_owner(self) -> None:
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):

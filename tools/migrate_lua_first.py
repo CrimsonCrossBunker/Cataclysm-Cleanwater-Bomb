@@ -24573,6 +24573,27 @@ def render_participant_string_expression(
             'option.type ~= "string_input" then error("string game option required") end; '
             f'return option.value end)(services.gameplay.options.get({option}))'
         )
+    if isinstance(value, dict) and value.get("mutator") in {
+        "ma_technique_name", "ma_technique_description", "mon_faction",
+    }:
+        monster = value["mutator"] == "mon_faction"
+        id_key = "mtype_id" if monster else "matec_id"
+        if set(value) != {"mutator", id_key}:
+            return None
+        identifier = render_participant_string_expression(
+            value[id_key], target_expression, avatar_expression, npc_expression)
+        if identifier is None:
+            return None
+        if monster:
+            return (
+                '(function(definition) if definition == nil then error("unknown monster definition") end; '
+                f'return definition.default_faction.value end)(services.registry.get("monster", {identifier}))'
+            )
+        field = "name" if value["mutator"].endswith("name") else "flavor_description"
+        return (
+            'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '
+            f'{identifier})).{field}'
+        )
     owner = target_expression
     if isinstance(value, dict):
         for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
@@ -25007,19 +25028,16 @@ def render_static_character_string_var(
                     f"{actor_expression}, {beta}, {options})).technique.value or "
                     f"{lua_quote('')})"
                 )
-            elif mutator in {"ma_technique_name", "ma_technique_description"} and set(value) == {
-                "mutator", "matec_id",
-            }:
-                technique = render_eoc_string_expression(
-                    value.get("matec_id"), actor_expression
+            elif mutator in {"ma_technique_name", "ma_technique_description", "mon_faction"}:
+                rendered = render_participant_string_expression(
+                    value, actor_expression,
+                    "actor" if avatar_actor_proven else None,
+                    npc_actor_expression or ("actor" if npc_actor_proven else None),
                 )
-                if technique is not None:
-                    field = "name" if mutator.endswith("name") else "description"
-                    rendered = (
-                        "services.martial_arts.technique_definition("
-                        "services.types.id(\"martial_art_technique\", "
-                        f"{technique})).{field}"
-                    )
+        if (isinstance(value, dict) and value.get("mutator") in {
+            "game_option", "ma_technique_name", "ma_technique_description", "mon_faction",
+        } and rendered is None):
+            return None
         if rendered is None:
             rendered = render_eoc_string_expression(value, actor_expression)
         if rendered is None and i18n and isinstance(value, dict):
