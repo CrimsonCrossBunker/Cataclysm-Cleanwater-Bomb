@@ -15,6 +15,54 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_technique_choice_keeps_alpha_beta_independent_of_string_destination(self) -> None:
+        for selected in ("chosen_technique", ""):
+            with self.subTest(selected=selected):
+                value = {"mutator": "valid_technique", "crit": True, "block_counter": True,
+                         "blacklist": [{"u_val": "excluded"}, {"npc_val": "excluded"}]}
+                expression = migrate_lua_first.render_participant_string_expression(value, "partner", "actor", "partner")
+                lines = migrate_lua_first.render_static_character_string_var(
+                    {"set_string_var": value, "target_var": {"npc_val": "output"}}, True, True, "partner")
+                self.assertIsNotNone(expression)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor={excluded='alpha_excluded'}
+local partner={excluded='beta_excluded'}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  assert((owner==actor or owner==partner) and key=='excluded');return {ok=true,value={value=owner[key]}}
+ end,set=function(owner,key,value)
+  assert(owner==partner and key=='output');owner[key]=value;return {ok=true}
+ end},
+ characters={choose_technique=function(attacker,target,options)
+  assert(attacker==actor and target==partner)
+  assert(options.critical and options.block_counter and not options.dodge_counter)
+  assert(options.blacklist[1]=='alpha_excluded' and options.blacklist[2]=='beta_excluded')
+  calls=calls+1;return {ok=true,value={technique={value=SELECTED}}}
+ end}
+}
+assert(EXPR==SELECTED)
+BODY
+assert(calls==2 and partner.output==SELECTED)
+""".replace("SELECTED", migrate_lua_first.lua_quote(selected)).replace("EXPR", expression)
+                script = script.replace("BODY", "\n".join(lines))
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_technique_choice_keeps_unproven_participants_and_invalid_options_partial(self) -> None:
+        value = {"mutator": "valid_technique"}
+        for alpha, beta in ((None, "partner"), ("actor", None)):
+            self.assertIsNone(migrate_lua_first.render_participant_string_expression(value, "actor", alpha, beta))
+        for options in ({"blacklist": ["x"] * 257}, {"crit": 1}, {"blacklist": {}}, {"unknown": True}):
+            self.assertIsNone(migrate_lua_first.render_participant_string_expression(
+                {**value, **options}, "actor", "actor", "partner"))
+        self.assertIsNone(migrate_lua_first.render_static_character_string_var(
+            {"set_string_var": value, "target_var": {"context_val": "output"}}, True, False))
+
     def test_definition_mutators_do_not_invent_missing_variable_owners(self) -> None:
         for mutator, key in (("ma_technique_name", "matec_id"),
                              ("ma_technique_description", "matec_id"), ("mon_faction", "mtype_id")):
@@ -19173,7 +19221,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertTrue(result.todos)
-            self.assertTrue(all(todo.category == "semantic_choice" for todo in result.todos))
+            self.assertEqual({todo.category for todo in result.todos}, {"semantic_choice", "manual_rewrite"})
             self.assertIn(
                 'services.messages.add("A translated message", "good")',
                 main,
@@ -19211,7 +19259,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 "services.martial_arts.technique_definition(", main
             )
-            self.assertIn("services.characters.choose_technique(", main)
+            self.assertNotIn("services.characters.choose_technique(", main)
             self.assertIn("services.text.expand_for(", main)
 
     def test_dialogue_item_popup_uses_native_hand_in_notice(self) -> None:

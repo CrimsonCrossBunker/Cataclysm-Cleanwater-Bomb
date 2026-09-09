@@ -24594,6 +24594,34 @@ def render_participant_string_expression(
             'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '
             f'{identifier})).{field}'
         )
+    if isinstance(value, dict) and value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                avatar_expression is None or npc_expression is None):
+            return None
+        options = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            if flag:
+                options.append(f"{name} = true")
+        blacklist = value.get("blacklist", [])
+        if not isinstance(blacklist, list) or len(blacklist) > 256:
+            return None
+        entries = [render_participant_string_expression(
+            entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        rendered_options = "{ " + ", ".join(options) + " }"
+        # Native always selects for dialogue alpha against beta, regardless
+        # of the variable destination or the surrounding effect's target.
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{avatar_expression}, {npc_expression}, {rendered_options})).technique.value'
+        )
     owner = target_expression
     if isinstance(value, dict):
         for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
@@ -24993,40 +25021,11 @@ def render_static_character_string_var(
                     "actor" if avatar_actor_proven else None,
                     npc_actor_expression or ("actor" if npc_actor_proven else None),
                 )
-            elif mutator == "valid_technique" and set(value) <= {
-                "mutator", "blacklist", "crit", "dodge_counter",
-                "block_counter",
-            }:
-                option_values: list[str] = []
-                for source_name, target_name in (
-                    ("crit", "critical"),
-                    ("dodge_counter", "dodge_counter"),
-                    ("block_counter", "block_counter"),
-                ):
-                    flag = value.get(source_name, False)
-                    if not isinstance(flag, bool):
-                        return None
-                    if flag:
-                        option_values.append(f"{target_name} = true")
-                blacklist = value.get("blacklist", [])
-                if (
-                    not isinstance(blacklist, list) or len(blacklist) > 256 or
-                    not all(safe_platform_id(entry) for entry in blacklist)
-                ):
-                    return None
-                if blacklist:
-                    option_values.append(
-                        "blacklist = { " + ", ".join(
-                            lua_quote(entry) for entry in blacklist
-                        ) + " }"
-                    )
-                options = "{ " + ", ".join(option_values) + " }"
-                beta = npc_actor_expression or "(context.actors and context.actors.beta)"
-                rendered = (
-                    f"(({beta}) ~= nil and service_value("
-                    "services.characters.choose_technique("
-                    f"{actor_expression}, {beta}, {options})).technique.value or "
-                    f"{lua_quote('')})"
+            elif mutator == "valid_technique":
+                rendered = render_participant_string_expression(
+                    value, actor_expression,
+                    "actor" if avatar_actor_proven else None,
+                    npc_actor_expression or ("actor" if npc_actor_proven else None),
                 )
             elif mutator in {"ma_technique_name", "ma_technique_description", "mon_faction"}:
                 rendered = render_participant_string_expression(
@@ -25035,7 +25034,7 @@ def render_static_character_string_var(
                     npc_actor_expression or ("actor" if npc_actor_proven else None),
                 )
         if (isinstance(value, dict) and value.get("mutator") in {
-            "game_option", "ma_technique_name", "ma_technique_description", "mon_faction",
+            "game_option", "ma_technique_name", "ma_technique_description", "mon_faction", "valid_technique",
         } and rendered is None):
             return None
         if rendered is None:
@@ -25101,7 +25100,7 @@ def render_static_character_string_var(
     elif target[0] in {"u", "npc"}:
         lines.extend([
             "    services.variables.set(",
-            f"        actor, {lua_quote(target[1])}, {value_expression})",
+            f"        {actor_expression}, {lua_quote(target[1])}, {value_expression})",
         ])
     else:
         lines.extend([

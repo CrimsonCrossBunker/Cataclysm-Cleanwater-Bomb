@@ -7408,8 +7408,34 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbBodyPartsResult : CcbResult
 ---@field value GameId[]|nil Complete body-part IDs in native anatomy order; present on success.
 
+---@class CcbTechniqueChoiceOptions
+---@field critical? boolean Defaults to false.
+---@field dodge_counter? boolean Defaults to false.
+---@field block_counter? boolean Defaults to false.
+---@field blacklist? (string|GameId)[] Up to 256 technique IDs; typed entries use martial_art_technique kind.
+
+---@class CcbTechniqueChoice
+---@field found boolean Whether native selection produced a technique.
+---@field accepted boolean Same selection outcome as found.
+---@field technique GameId GameId<martial_art_technique>; inspect found before applying it.
+---@field attack_vector GameId GameId<attack_vector>.
+---@field contact_area GameId GameId<sub_body_part>.
+---@field attacker GameHandle Exact selecting Character.
+---@field target GameHandle Exact target Creature.
+
+---@class CcbTechniqueChoiceResult: CcbResult
+---@field value CcbTechniqueChoice|nil Present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+---Select through native combat rules in an active write callback; does not execute the attack.
+---@param attacker GameHandle Exact live Character.
+---@param target GameHandle Exact live Creature.
+---@param options? CcbTechniqueChoiceOptions
+---@return CcbTechniqueChoiceResult
+function CcbCharactersApi.choose_technique(attacker, target, options) end
+
 
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.

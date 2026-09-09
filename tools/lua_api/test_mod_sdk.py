@@ -305,6 +305,26 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_technique_choice_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "choose_technique.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param attacker GameHandle
+---@param target GameHandle
+return function(attacker, target)
+    local result = ccb.services.characters.choose_technique(
+        attacker, target,
+        {critical = true, blacklist = {"tech_base_headbutt"}})
+    if result.ok then
+        local choice = assert(result.value)
+        return choice.found, choice.technique.value, choice.contact_area
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_technique_definition_has_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")
