@@ -16,6 +16,41 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_durations_preserve_signed_and_long_values(self) -> None:
+        durations = [(-1.8, -1), ("-10 turns", -10), ("366 days", 31622400),
+                     ({"npc_val": "duration"}, -1), ({"math": ["-1.8"]}, -1)]
+        for value, expected in durations:
+            with self.subTest(value=value):
+                lines = migrate_lua_first.render_static_false_effect(
+                    {"u_add_effect": "bleed", "duration": value}, True, True, {},
+                    npc_actor_expression="partner")
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,partner={},{}
+local context={data={}}
+local called=false
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ types={id=function(kind,id) return id end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner and key=='duration');return {ok=true,value={value='-1.8'}}
+ end},
+ gameplay={math={evaluate=function(expression,character)
+  assert(character==actor);return {ok=true,value=-1.8}
+ end}},
+ time={duration=function(value,unit) assert(value==EXPECTED and unit=='turn');return value end},
+ effects={add=function(character,id,duration)
+  assert(character==actor and id=='bleed' and duration==EXPECTED)
+  called=true;return {ok=true}
+ end}
+}
+BODY
+assert(called)
+""".replace("EXPECTED", str(expected)).replace("BODY", "\n".join(lines))
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_intensity_ranges_preserve_integer_endpoints_and_lazy_reads(self) -> None:
         ranges = [([2.9, -1.9], -1, 2), ([-1.9, 2.9], -1, 2),
                   ([{"u_val": "lo"}, {"npc_val": "hi"}], -1, 2)]

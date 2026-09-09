@@ -18955,6 +18955,27 @@ def render_static_mutation_effect(
     return None
 
 
+def _effect_duration_expression(
+    value: Any, target: str = "actor", alpha: str | None = None, beta: str | None = None,
+) -> str | None:
+    turns = parse_turns(value)
+    if turns is not None:
+        if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
+            return None
+        return f'services.time.duration({turns}, "turn")'
+    if isinstance(value, list):
+        value = [parse_turns(endpoint) if parse_turns(endpoint) is not None else endpoint for endpoint in value]
+    rendered = _effect_numeric_expression(value, target, alpha, beta)
+    if rendered is None:
+        return None
+    # EOC duration conversion truncates toward zero. TimeDuration rejects
+    # overflow; do not turn negative/long values into zero or one year.
+    return (
+        'services.time.duration((function(value) return value < 0 and math.ceil(value) '
+        f'or math.floor(value) end)({rendered}), "turn")'
+    )
+
+
 def render_static_character_effect(
     effect: dict[str, Any],
     key: str,
@@ -18978,12 +18999,7 @@ def render_static_character_effect(
         return None
     # Preserve zero duration: native application and later expiry are distinct.
     permanent = raw_duration == "PERMANENT"
-    duration = 1 if permanent else parse_turns(raw_duration)
-    duration_expression = (
-        f"services.time.duration({duration}, \"turn\")"
-        if duration is not None and 0 <= duration <= MAX_EFFECT_DURATION_TURNS
-        else _duration_expression(raw_duration, minimum=0, truncate=True)
-    )
+    duration_expression = _effect_duration_expression(1 if permanent else raw_duration, target_expression)
     if duration_expression is None:
         return None
     if (
@@ -19171,17 +19187,7 @@ def render_dynamic_character_effect(
     effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    if isinstance(raw_duration, dict) and set(raw_duration) != {"math"}:
-        turns = numeric(raw_duration)
-        duration = None if turns is None else (
-            "services.time.duration(math.max(0, math.min(" + str(MAX_EFFECT_DURATION_TURNS) +
-            ', math.floor((' + turns + ')))), "turn")'
-        )
-    else:
-        duration = _duration_expression(
-            "1 turn" if permanent else raw_duration,
-            minimum=0, actor_expression=alpha or target_expression, truncate=True,
-        )
+    duration = _effect_duration_expression(1 if permanent else raw_duration, target_expression, alpha, beta)
     if effect_id is None or duration is None:
         return None
     intensity = numeric(effect.get("intensity", 0))

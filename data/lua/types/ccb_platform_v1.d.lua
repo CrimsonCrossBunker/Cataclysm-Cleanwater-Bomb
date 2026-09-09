@@ -10048,11 +10048,11 @@ function CcbVariablesApi.set_resolved(context, actor, scope, key, value) end
 ---@class CcbEffectsApi
 local CcbEffectsApi = {}
 
----Apply an effect through native Creature rules. Zero duration is preserved;
+---Apply an effect through native Creature rules. Nonpositive duration is preserved;
 ---it still applies immediately and expires when native effect processing runs.
 ---@param character GameHandle
 ---@param effect GameId
----@param duration TimeDuration Between zero turns and 365 days.
+---@param duration TimeDuration Native signed turn range; the effect definition applies its own maximum duration.
 ---@param options? CcbEffectAddOptions
 ---@return CcbResult
 function CcbEffectsApi.add(character, effect, duration, options) end
