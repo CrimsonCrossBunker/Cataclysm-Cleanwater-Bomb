@@ -16,6 +16,54 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_all_removal_event_beta_uses_actual_creature_kind(self) -> None:
+        for event, kind in (("character_melee_attacks_monster", "monster"),
+                            ("character_melee_attacks_character", "npc"),
+                            ("character_takes_damage", "monster"),
+                            ("character_takes_damage", "avatar")):
+            for dynamic in (False, True):
+                with self.subTest(event=event, kind=kind, dynamic=dynamic), tempfile.TemporaryDirectory() as temporary:
+                    source = Path(temporary) / "eoc.json"
+                    source.write_text(json.dumps({
+                        "type": "effect_on_condition", "id": "remove_all", "required_event": event,
+                        "effect": [{"npc_lose_effect": "bleed",
+                                    "target_part": {"context_val": "part"} if dynamic else "ALL"}],
+                    }))
+                    result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "remove_test")
+                    main = result.files[Path("main.lua")]
+                    script = r"""
+local target,actor={},{}
+local calls,part_calls=0,0
+local handlers={}
+local kind=KIND
+local services={
+ types={id=function(kind,id) return id end},
+ creatures={snapshot=function(character)
+  assert(character==target);return {ok=true,value={kind=kind}}
+ end},
+ characters={body_parts=function(character)
+  assert(character==target and kind~='monster');part_calls=part_calls+1
+  return {ok=true,value={'arm_l','arm_r'}}
+ end},
+ effects={remove=function(character,id,part)
+  assert(character==target and id=='bleed');calls=calls+1
+  if kind=='monster' then assert(part==nil)
+  else assert(part==({'arm_l','arm_r'})[calls]) end
+  return {ok=true,value=true}
+ end}
+}
+package.preload.ccb=function() return {content={},services=services,runtime={
+ handler=function(id,fn) handlers[id]=fn end,on=function() end}} end
+BODY
+handlers['migrated.remove_all']({data={part='ALL'},actors={beta=target,attacker=actor,character=actor}})
+assert(calls==(kind=='monster' and 1 or 3))
+assert(part_calls==(kind=='monster' and 0 or 1))
+""".replace("KIND", migrate_lua_first.lua_quote(kind)).replace("BODY", main)
+                    executed = subprocess.run(["lua", "-"], input=script, text=True,
+                                              capture_output=True, timeout=10)
+                    self.assertEqual(executed.returncode, 0, executed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_dynamic_effect_parts_resolve_native_sentinels(self) -> None:
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
             for mode in ("add", "remove"):
