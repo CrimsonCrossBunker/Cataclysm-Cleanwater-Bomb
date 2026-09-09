@@ -10016,6 +10016,7 @@ local CcbVariablesApi = {}
 function CcbVariablesApi.get(character, key) end
 
 ---Write phases and an active callback are required for variable mutations.
+---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string
 ---@param value boolean|number|string|TripointCoord|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
@@ -10049,6 +10050,7 @@ function CcbVariablesApi.remove_global(key) end
 ---@return CcbVariableReadResult
 function CcbVariablesApi.resolve(context, actor, scope, key) end
 
+---For context scope, nil clears the Lua table entry; Lua tables cannot retain a stored nil.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'

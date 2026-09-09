@@ -16,6 +16,54 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_copy_variable_preserves_owners_types_and_empty_write(self) -> None:
+        addresses = [("u_val", "actor", None), ("npc_val", "partner", None),
+                     ("context_val", "context.data", None), ("global_val", "globals", None),
+                     ("var_val", "actor", "u_"), ("var_val", "partner", "n_"),
+                     ("var_val", "context.data", "_"), ("var_val", "globals", "")]
+        for source, source_store, source_prefix in addresses:
+            for target, target_store, target_prefix in addresses:
+                for value in ('"text"', '0', 'nil'):
+                    lines = migrate_lua_first.render_static_character_copy_var(
+                        {"copy_var": {source: "source_ref" if source_prefix is not None else "input"},
+                         "target_var": {target: "target_ref" if target_prefix is not None else "output"}},
+                        True, True, "partner")
+                    self.assertIsNotNone(lines)
+                    script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local globals={input='global'}
+local context={data={input='context',source_ref=SOURCE_REF,target_ref=TARGET_REF}}
+SOURCE_STORE.input=VALUE
+local writes=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={
+ resolve=function(data,owner,scope,key)
+  local store=scope=='global' and globals or scope=='context' and data or owner
+  assert(store==SOURCE_STORE and key=='input')
+  return {ok=true,value={exists=store[key]~=nil,value=store[key]}}
+ end,
+ set_resolved=function(data,owner,scope,key,value)
+  local store=scope=='global' and globals or scope=='context' and data or owner
+  assert(store==TARGET_STORE and key=='output' and value==VALUE)
+  writes=writes+1;return {ok=true,value={}}
+ end
+}}
+BODY
+assert(writes==1)
+""".replace("SOURCE_REF", migrate_lua_first.lua_quote((source_prefix or '') + 'input'))
+                    script = script.replace("TARGET_REF", migrate_lua_first.lua_quote((target_prefix or '') + 'output'))
+                    script = script.replace("SOURCE_STORE", source_store).replace("TARGET_STORE", target_store)
+                    script = script.replace("VALUE", value).replace("BODY", "\n".join(lines))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_copy_variable_keeps_missing_participants_partial(self) -> None:
+        for source in ("u_val", "npc_val", "var_val"):
+            self.assertIsNone(migrate_lua_first.render_static_character_copy_var(
+                {"copy_var": {source: "input"}, "target_var": {"global_val": "output"}}, False, False))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_false_branch_string_assignment_preserves_beta_expression(self) -> None:
         lines = migrate_lua_first.render_static_false_effect(
             {"set_string_var": {"npc_val": "input"}, "target_var": {"npc_val": "output"}},
@@ -2774,8 +2822,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('tostring(services.turn())', main)
             self.assertIn('context.data["required"] ~= nil', main)
             self.assertIn("1 == 1", main)
-            self.assertIn('services.variables.get(actor, "source")', main)
-            self.assertIn('services.variables.remove(actor, "target")', main)
+            self.assertIn('copy_source_key = "u", actor, "source"', main)
+            self.assertNotIn('services.variables.remove(actor, "target")', main)
             self.assertIn(
                 'services.variables.set(\n        actor, "label"',
                 main,

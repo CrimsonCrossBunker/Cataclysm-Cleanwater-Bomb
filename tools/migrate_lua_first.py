@@ -4992,7 +4992,7 @@ def render_static_false_effect(
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
-            effect, avatar_actor_proven, npc_actor_proven
+            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
         )
         if rendered is None:
             return None
@@ -24891,6 +24891,7 @@ def render_static_character_copy_var(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     if set(effect) != {"copy_var", "target_var"}:
         return None
@@ -24898,67 +24899,47 @@ def render_static_character_copy_var(
     target = _static_string_variable_descriptor(effect["target_var"])
     if source is None or target is None:
         return None
-    if source[0] == "npc" and not npc_actor_proven:
-        return None
-    if target[0] == "npc" and not npc_actor_proven:
-        return None
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
+    alpha = "actor" if avatar_actor_proven else None
+    beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    for scope, _ in (source, target):
+        if (scope == "u" and alpha is None or scope == "npc" and beta is None or
+                scope == "var" and (alpha is None or beta is None)):
+            return None
 
-    def resolved(scope: str, name: str) -> str:
-        if scope in {"u", "npc"}:
-            return (
-                "service_value(services.variables.get("
-                f"{actor_expression}, {lua_quote(name)}))"
-            )
-        return (
-            "service_value(services.variables.resolve(context.data, "
-            f"{actor_expression}, {lua_quote(scope)}, {lua_quote(name)}))"
-        )
+    def address(descriptor: tuple[str, str], prefix: str) -> list[str]:
+        scope, key = descriptor
+        owner = {"u": alpha, "npc": beta}.get(scope) or "nil"
+        if scope != "var":
+            return [f"    local {prefix}_scope, {prefix}_owner, {prefix}_key = "
+                    f"{lua_quote(scope)}, {owner}, {lua_quote(key)}"]
+        return [
+            f"    local {prefix}_scope, {prefix}_owner = \"global\", nil",
+            f"    local {prefix}_key = context.data[{lua_quote(key)}]",
+            f"    if {prefix}_key ~= nil then",
+            f'        if {prefix}_key:sub(1, 2) == "u_" then',
+            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "u", {alpha}, {prefix}_key:sub(3)',
+            f'        elseif {prefix}_key:sub(1, 2) == "n_" then',
+            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "npc", {beta}, {prefix}_key:sub(3)',
+            f'        elseif {prefix}_key:sub(1, 1) == "_" then',
+            f'            {prefix}_scope, {prefix}_key = "context", {prefix}_key:sub(2)',
+            '        end',
+            '    end',
+        ]
 
-    lines = [
-        f"    local copied = {resolved(source[0], source[1])}",
-        "    if copied.exists then",
-    ]
-    if target[0] == "context":
-        lines.append(
-            f"        context.data[{lua_quote(target[1])}] = copied.value"
-        )
-    elif target[0] == "global":
-        lines.append(
-            "        services.variables.set_global("
-            f"{lua_quote(target[1])}, copied.value)"
-        )
-    elif target[0] in {"u", "npc"}:
-        lines.append(
-            "        services.variables.set("
-            f"{actor_expression}, {lua_quote(target[1])}, copied.value)"
-        )
-    else:
-        lines.append(
-            "        service_value(services.variables.set_resolved("
-            f"context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(target[1])}, copied.value))"
-        )
-    lines.append("    else")
-    if target[0] == "context":
-        lines.append(f"        context.data[{lua_quote(target[1])}] = nil")
-    elif target[0] == "global":
-        lines.append(
-            f"        services.variables.remove_global({lua_quote(target[1])})"
-        )
-    elif target[0] in {"u", "npc"}:
-        lines.append(
-            f"        services.variables.remove({actor_expression}, {lua_quote(target[1])})"
-        )
-    else:
-        # The v5 contract has no remove_resolved operation; leaving an
-        # indirect destination untouched is safer than writing a fabricated
-        # nil value into the native variable store.
-        lines.append("        -- missing source leaves an indirect target unchanged")
-    lines.append("    end")
+    lines = address(source, "copy_source")
+    lines.extend([
+        '    local copied = { exists = false }',
+        '    if copy_source_key ~= nil then',
+        '        copied = service_value(services.variables.resolve(',
+        '            context.data, copy_source_owner, copy_source_scope, copy_source_key))',
+        '    end',
+    ])
+    lines.extend(address(target, "copy_target"))
+    lines.extend([
+        '    if copy_target_key == nil then error("missing target variable") end',
+        '    service_value(services.variables.set_resolved(',
+        '        context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+    ])
     return lines
 
 
@@ -31645,7 +31626,8 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:
                 rendered = render_static_character_copy_var(
-                    effect, character_actor_proven, npc_event_character_actor_proven
+                    effect, character_actor_proven, npc_event_character_actor_proven,
+                    npc_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
