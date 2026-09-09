@@ -4473,27 +4473,33 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
 
 def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
+    *, avatar_expression: str | None = None, npc_expression: str | None = None,
 ) -> list[str] | None:
     if target_expression is None or key not in effect:
         return None
     if set(effect) - {key, "target_part"}:
         return None
+    alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
+    beta = npc_expression or (target_expression if key.startswith("npc_") else None)
+
+    def identifier(value: Any, kind: str) -> str | None:
+        if isinstance(value, dict):
+            raw = render_participant_string_expression(value, target_expression, alpha, beta)
+            return None if raw is None else f'services.types.id("{kind}", {raw})'
+        return _dynamic_id_expression(value, kind, target_expression)
+
     raw_ids = effect[key]
     if isinstance(raw_ids, list):
         # Native f_remove_effect accepts an empty vector and imposes no list
         # limit. Emit separate calls to preserve order and repeated removals.
         effect_ids = [
-            _dynamic_id_expression(
-                value, "effect", target_expression
-            )
+            identifier(value, "effect")
             for value in raw_ids
         ]
         if any(value is None for value in effect_ids):
             return None
     else:
-        effect_id = _dynamic_id_expression(
-            raw_ids, "effect", target_expression
-        )
+        effect_id = identifier(raw_ids, "effect")
         if effect_id is None:
             return None
         effect_ids = [effect_id]
@@ -4501,9 +4507,7 @@ def render_static_remove_effects(
     if raw_part is None or raw_part == "ALL":
         part_expression = None
     else:
-        part_expression = _dynamic_id_expression(
-            raw_part, "body_part", target_expression
-        )
+        part_expression = identifier(raw_part, "body_part")
         if part_expression is None:
             return None
     rendered: list[str] = []
@@ -4667,7 +4671,14 @@ def render_static_false_effect(
         )
         if target is None and key == "u_lose_effect" and creature_actor_proven:
             target = actor_expression or "actor"
-        rendered = render_static_remove_effects(effect, key, target)
+        alpha = (actor_expression or "actor") if avatar_actor_proven else None
+        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+        if key == "npc_lose_effect":
+            target = beta
+        elif alpha is not None:
+            target = alpha
+        rendered = render_static_remove_effects(
+            effect, key, target, avatar_expression=alpha, npc_expression=beta)
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
@@ -28762,7 +28773,10 @@ def render_eoc(
                     else None
                 )
                 rendered = render_static_remove_effects(
-                    effect, key, target_expression
+                    effect, key, target_expression,
+                    avatar_expression="actor" if character_actor_proven else None,
+                    npc_expression=npc_actor_expression or (
+                        "actor" if npc_event_character_actor_proven else None),
                 )
                 if rendered is not None:
                     lines.extend(rendered)

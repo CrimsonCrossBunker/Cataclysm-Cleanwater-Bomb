@@ -15,6 +15,45 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_effect_removal_unknown_variable_owner_stays_unresolved(self) -> None:
+        for prefix, scope in (("u_", "npc_val"), ("npc_", "u_val")):
+            self.assertIsNone(migrate_lua_first.render_static_remove_effects(
+                {prefix + "lose_effect": [{scope: "selected"}]},
+                prefix + "lose_effect", "actor"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_removal_variables_keep_both_participants(self) -> None:
+        for prefix, target in (("u_", "actor"), ("npc_", "partner")):
+            for scope, owner in (("u_val", "actor"), ("npc_val", "partner"),
+                                 ("var_val", "actor"), ("var_val", "partner")):
+                with self.subTest(prefix=prefix, scope=scope):
+                    lines = migrate_lua_first.render_static_false_effect(
+                        {prefix + "lose_effect": [{scope: "selected"}],
+                         "target_part": {scope: "part"}}, True, True, {},
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(lines)
+                    script = """
+local actor = {selected='bleed', part='arm_l'}
+local partner = {selected='poison', part='arm_r'}
+local context = {data={selected="REFselected", part="REFpart"}}
+local called = false
+local function service_value(r) assert(r.ok); return r.value end
+local services = {
+ variables={resolve=function(data,owner,scope,key) return {ok=true,value={value=owner[key]}} end},
+ types={id=function(kind,id) return id end},
+ effects={remove=function(character,id,part)
+  assert(character==TARGET and id==OWNER.selected and part==OWNER.part)
+  called=true
+  return {ok=true}
+ end}
+}
+BODY
+assert(called)
+""".replace("TARGET", target).replace("OWNER", owner).replace("BODY", "\n".join(lines)).replace("REF", "u_" if owner == "actor" else "n_")
+                    result = subprocess.run(["lua", "-"], input=script, text=True,
+                                            capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_removal_lists_keep_native_empty_and_long_sequences(self) -> None:
         for prefix in ("u_", "npc_"):
