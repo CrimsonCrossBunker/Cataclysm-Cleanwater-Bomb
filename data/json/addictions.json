@@ -89,7 +89,7 @@
     "type_name": "cannabis",
     "description": "You could use some herb right now.",
     "sated": "8 hours",
-    "satisfying_effects": [ "high" ],
+    "satisfying_effects": [ "weed_high" ],
     "craving_morale": "morale_craving_cannabis",
     "builtin": "cannabis_effect"
   },
