@@ -732,5 +732,17 @@
     "rate": "30 m",
     "flags": [ "NO_DISPLAY" ],
     "disease_excess": [ [ 1, 2 ], [ 3, 4 ], [ 4, 5 ], [ 5, 6 ], [ 7, 8 ] ]
+  },
+  {
+    "id": "cannabis",
+    "type": "vitamin",
+    "vit_type": "drug",
+    "name": { "str": "Cannabis" },
+    "excess": "weed_high",
+    "min": 0,
+    "max": 100,
+    "rate": "6 m",
+    "//": "TODO: Should decay faster the higher it is.",
+    "disease_excess": [ [ 2, 9 ], [ 10, 24 ], [ 25, 39 ], [ 40, 100 ] ]
   }
 ]
