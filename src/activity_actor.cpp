@@ -12735,8 +12735,43 @@ void heat_activity_actor::finish( player_activity &act, Character &p )
 {
     map &here = get_map();
 
-    for( drop_location &ait : to_heat ) {
+    // Liquid handling may assign ACT_CONSUME and destroy this actor. Retire
+    // heating before that handoff and keep its remaining work on the stack.
+    const drop_locations heating_targets = to_heat;
+    heater heat_source = heater_data;
+    const heating_requirements heating_cost = requirements;
+    act.set_to_null();
+
+    for( const drop_location &target : heating_targets ) {
+        if( !target.first ) {
+            p.add_msg_if_player( _( "Some of the food you selected is gone." ) );
+            return;
+        }
+    }
+
+    if( heat_source.consume_flag ) {
+        if( heat_source.pseudo_flag ) {
+            const optional_vpart_position vp = here.veh_at( heat_source.vpt );
+            if( !vp ) {
+                p.add_msg_if_player( _( "You can't find the appliance any more." ) );
+                return;
+            }
+            vp->vehicle().discharge_battery( here, heating_cost.ammo * heat_source.heating_effect );
+        } else {
+            if( !heat_source.loc ) {
+                p.add_msg_if_player( _( "You can't find the heater any more." ) );
+                return;
+            }
+            heat_source.loc->activation_consume( heating_cost.ammo, heat_source.loc.pos_bub( here ), &p );
+        }
+    }
+
+    for( const drop_location &ait : heating_targets ) {
         item_location cold_item = ait.first;
+        if( !cold_item ) {
+            p.add_msg_if_player( _( "Some of the food you selected is gone." ) );
+            continue;
+        }
         if( cold_item->count_by_charges() ) {
             item copy( *cold_item );
             copy.charges = ait.second;
@@ -12760,19 +12795,9 @@ void heat_activity_actor::finish( player_activity &act, Character &p )
             }
         }
     }
-    if( heater_data.consume_flag ) {
-        if( heater_data.pseudo_flag ) {
-            here.veh_at( heater_data.vpt ).value().vehicle().discharge_battery( here, requirements.ammo *
-                    heater_data.heating_effect );
-        } else {
-            heater_data.loc->activation_consume( requirements.ammo, heater_data.loc.pos_bub( here ), &p );
-        }
-    }
     p.add_msg_if_player( m_good, _( "You heated your items." ) );
 
     p.invalidate_crafting_inventory();
-
-    act.set_to_null();
 }
 
 void heat_activity_actor::serialize( JsonOut &jsout ) const
