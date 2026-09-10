@@ -85,6 +85,8 @@ static const bionic_id bio_radleak( "bio_radleak" );
 static const bionic_id bio_sleep_shutdown( "bio_sleep_shutdown" );
 static const bionic_id bio_synlungs( "bio_synlungs" );
 
+static const damage_type_id damage_bash( "bash" );
+
 static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_asthma( "asthma" );
 static const efftype_id effect_blind( "blind" );
@@ -126,8 +128,6 @@ static const itype_id itype_e_handcuffs( "e_handcuffs" );
 static const itype_id itype_inhaler( "inhaler" );
 static const itype_id itype_oxygen_tank( "oxygen_tank" );
 static const itype_id itype_smoxygen_tank( "smoxygen_tank" );
-
-static const damage_type_id damage_bash( "bash" );
 
 static const json_character_flag json_flag_ALBINO( "ALBINO" );
 static const json_character_flag json_flag_DAYFEAR( "DAYFEAR" );
