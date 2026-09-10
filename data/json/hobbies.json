@@ -164,7 +164,7 @@
     "type": "profession",
     "subtype": "hobby",
     "id": "cannabis_addict",
-    "name": "Cannabis Addiction",
+    "name": "Cannabis Dependence",
     "description": "Some people say marijuana isn't addictive.  For reasons you can no longer recall, you decided to prove them wrong.",
     "points": -1,
     "addictions": [ { "intensity": 15, "type": "cannabis" } ]
