@@ -116,7 +116,6 @@ static const ammotype ammo_plutonium( "plutonium" );
 
 static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
-static const efftype_id effect_weed_high( "weed_high" );
 
 static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
@@ -156,9 +155,8 @@ static const skill_id skill_weapon( "weapon" );
 static const species_id species_ROBOT( "ROBOT" );
 
 static const trait_id trait_JITTERY( "JITTERY" );
-static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
-static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
+static const vitamin_id vitamin_cannabis( "cannabis" );
 static const vitamin_id vitamin_nicotine( "nicotine" );
 
 // vitamin flags
@@ -4650,7 +4648,7 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
             type->invoke( carrier, *this, pos, "transform" );
         }
         if( typeId() == itype_joint_lit && carrier != nullptr ) {
-            carrier->add_effect( effect_weed_high, 1_minutes ); // one last puff
+            carrier->vitamin_mod( vitamin_cannabis, 2 ); // one last puff
             here.add_field( pos + point( rng( -1, 1 ), rng( -1, 1 ) ), field_type_id( "fd_weedsmoke" ), 2 );
             weed_msg( *carrier );
         }
@@ -4684,12 +4682,6 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
     }
     // if carried by someone:
     if( carrier != nullptr ) {
-        time_duration duration = 15_seconds;
-        if( carrier->has_trait( trait_TOLERANCE ) ) {
-            duration = 7_seconds;
-        } else if( carrier->has_trait( trait_LIGHTWEIGHT ) ) {
-            duration = 30_seconds;
-        }
         int puff_chance = 24;
         if( has_flag( flag_TOBACCO ) ) {
             // Try not to go over 5mg nicotine if we started at 0.
@@ -4705,8 +4697,14 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
                 carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
             }
         } else {
-            carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
-            carrier->add_effect( effect_weed_high, duration / 2 );
+            // Tamp down message spam.
+            if( one_in( 3 ) ) {
+                carrier->add_msg_if_player( m_neutral, _( "You take a puff of your %s." ), type_name() );
+            }
+            // Deliver a total of less than 10mg per joint on average.
+            if( one_in( 3 ) ) {
+                carrier->vitamin_mod( vitamin_cannabis, 1 );
+            }
         }
         carrier->mod_moves( -to_moves<int>( 1_seconds ) * 0.15 );
 

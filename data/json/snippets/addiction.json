@@ -62,6 +62,34 @@
   },
   {
     "type": "snippet",
+    "category": "addict_cannabis_mild_awake",
+    "text": [ "If only you had some weed…", "A toke would level you out." ]
+  },
+  {
+    "type": "snippet",
+    "category": "addict_cannabis_strong_awake",
+    "text": [
+      "You're starting to think weed might actually be habit-forming.",
+      "You feel anxious.  You know some marijuana would fix this.",
+      "Your stomach is doing flip-flops.  You NEED a toke."
+    ]
+  },
+  {
+    "type": "snippet",
+    "category": "addict_cannabis_mild_asleep",
+    "text": [ "You dream of rolling the perfect joint.", "The skunky taste of herb lingers in your memory." ]
+  },
+  {
+    "type": "snippet",
+    "category": "addict_cannabis_strong_asleep",
+    "text": [
+      "Imagine all the world leaders passing a blunt around and just talking things out.  This could have all been avoided.",
+      "You drift in and out of sleep, uncertain whether your stash is all gone.",
+      "You dream of being abducted by big pink aliens.  They flew across the galaxy in search of Earth's strongest weed."
+    ]
+  },
+  {
+    "type": "snippet",
     "category": "addict_crack_awake",
     "text": [ "You're shivering, you need some crack." ]
   },
