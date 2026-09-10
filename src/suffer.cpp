@@ -493,7 +493,6 @@ void suffer::from_addictions( Character &you )
         timer = -3_hours;
     }
     for( addiction &cur_addiction : you.addictions ) {
-        // We shouldn't be able to get here if we have the effect, but bail if we have.
         for( const efftype_id &effect : cur_addiction.type->get_satisfying_effects() ) {
             if( you.has_effect( effect ) ) {
                 cur_addiction.sated = cur_addiction.type->get_default_sated();
