@@ -6974,10 +6974,10 @@ static void CheckMessages()
                             if( !is_quick_shortcut_touch ) {
                                 update_finger_repeat_delay();
                             }
-                            // Legacy joystick and shortcut overlays still redraw while
-                            // moving. New UI ImGui touches are coalesced below instead.
+                            // Repaint the joystick/shortcuts at the end of the event
+                            // batch. Redrawing the whole ImGui menu for each motion
+                            // makes touch input accumulate behind recipe previews.
                             needupdate = true;
-                            ui_manager::redraw_invalidated();
                         }
 
                         if( !android_imgui_touch_state.captures_touch &&
@@ -7045,8 +7045,8 @@ static void CheckMessages()
                             // Do not hover or press a widget until this gesture is
                             // known to be a tap or a control drag.
                         } else {
-                            ui_manager::redraw_invalidated();
-                            // Ensure virtual joystick and quick shortcuts redraw.
+                            // The overlays are drawn by refresh_display(). Menu
+                            // contents redraw once in their own input loop.
                             needupdate = true;
                         }
                     } else if( slot == 1 ) {
