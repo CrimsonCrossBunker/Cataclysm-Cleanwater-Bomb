@@ -15,6 +15,75 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_trait_indirect_ids_resolve_the_dialogue_owner(self) -> None:
+        for prefix, target, observer in (("u_", "actor", "partner"), ("npc_", "partner", "actor")):
+            for query in ("has_trait", "has_any_trait", "is_trait_purifiable", "has_visible_trait"):
+                for reference, identifier in (("u_selected", "QUICK"), ("n_selected", "FELINE_EARS")):
+                    with self.subTest(prefix=prefix, query=query, reference=reference):
+                        value = {"var_val": "selected_ref"}
+                        if query == "has_any_trait":
+                            value = [value]
+                        expression = migrate_lua_first.render_eoc_condition_expression(
+                            {prefix + query: value}, avatar_actor_proven=True,
+                            npc_actor_expression="partner")
+                        self.assertIsNotNone(expression)
+                        script = """
+local actor, partner = {selected='QUICK'}, {selected='FELINE_EARS'}
+local context = {data={selected_ref=REFERENCE}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function query(character, id)
+ assert(character == TARGET and id == IDENTIFIER)
+ called = true
+ return {ok=true,value=true}
+end
+local services = {
+ variables={resolve=function(data, owner, scope, key)
+   return {ok=true,value={value=owner[key]}}
+ end},
+ types={id=function(kind,id) assert(kind=='mutation'); return id end},
+ mutations={has=query,is_purifiable=query,is_visible_to=function(character,viewer,id)
+   assert(viewer == OBSERVER)
+   return query(character,id)
+ end}
+}
+assert(EXPRESSION)
+assert(called)
+""".replace("REFERENCE", json.dumps(reference)).replace("IDENTIFIER", json.dumps(identifier)).replace("TARGET", target).replace("OBSERVER", observer).replace("EXPRESSION", expression)
+                        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                                text=True, capture_output=True, timeout=10)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_trait_indirect_any_list_keeps_short_circuit(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_any_trait": ["QUICK", {"var_val": "missing"}]},
+            avatar_actor_proven=True, npc_actor_expression="partner")
+        self.assertIsNotNone(expression)
+        script = """
+local actor, partner = {}, {}
+local context = {data={}}
+local function service_value(r) return r.value end
+local calls = 0
+local services = {
+ types={id=function(kind,id) assert(id == 'QUICK'); return id end},
+ variables={resolve=function() error('short-circuited variable was read') end},
+ mutations={has=function(character,id)
+   assert(character == actor and id == 'QUICK')
+   calls = calls + 1
+   return {ok=true,value=true}
+ end}
+}
+assert(EXPRESSION)
+assert(calls == 1)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_trait": {"var_val": "selected"}}, avatar_actor_proven=True))
+
     def test_skill_teaching_requires_two_proven_participants(self) -> None:
         for selector, expected in (
             ("u_train_skills", "services.skills.offered(actor, partner)"),
