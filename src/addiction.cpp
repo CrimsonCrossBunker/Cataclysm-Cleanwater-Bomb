@@ -250,8 +250,7 @@ static bool cannabis_effect( Character &u, addiction &add )
         u.add_msg_if_player( m_warning,
                              SNIPPET.random_from_category( msg ).value_or( translation() ).translated() );
         if( !u.in_sleep_state() ) {
-            // The deeper the sensory dulling (tolerance), the harsher the
-            // craving hits when withdrawal starts.
+            // Deeper sensory dulling (tolerance) hits withdrawal cravings harder.
             const int sens_scale = 100 + std::max( 0, 100 - u.get_sensitive() );
             u.add_morale( morale_craving_cannabis, -5 * sens_scale / 100, -2 * in, 1_hours,
                           30_minutes, true );
