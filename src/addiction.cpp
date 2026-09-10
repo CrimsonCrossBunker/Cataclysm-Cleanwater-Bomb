@@ -436,6 +436,7 @@ void add_type::load( const JsonObject &jo, std::string_view )
     mandatory( jo, was_loaded, "name", _name );
     mandatory( jo, was_loaded, "type_name", _type_name );
     mandatory( jo, was_loaded, "description", _desc );
+    optional( jo, false, "satisfying_effects", _satisfying_effects );
     optional( jo, false, "sated", _sated, 2_hours );
     optional( jo, was_loaded, "craving_morale", _craving_morale, morale_type::NULL_ID() );
     optional( jo, was_loaded, "effect_on_condition", _effect );
