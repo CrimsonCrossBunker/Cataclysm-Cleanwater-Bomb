@@ -137,8 +137,6 @@ static const efftype_id effect_flu( "flu" );
 static const efftype_id effect_foodpoison( "foodpoison" );
 static const efftype_id effect_heavysnare( "heavysnare" );
 static const efftype_id effect_heightened_senses( "heightened_senses" );
-static const efftype_id effect_weed_high( "weed_high" );
-static const addiction_id addiction_cannabis( "cannabis" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_jetinjector( "jetinjector" );
@@ -1495,12 +1493,7 @@ void Character::update_sensitive_per_effects()
 {
     const int s = get_sensitive();
 
-    int want_dulled = s < 50 ? 2 : ( s < 75 ? 1 : 0 );
-    if( has_effect( effect_weed_high ) ) {
-        // Intoxication dulls the senses beyond the baseline sensitivity:
-        // Stoned contributes nothing, deeper stages dull progressively.
-        want_dulled = std::max( want_dulled, std::min( 2, get_effect_int( effect_weed_high ) - 1 ) );
-    }
+    const int want_dulled = s < 50 ? 2 : ( s < 75 ? 1 : 0 );
     if( want_dulled == 0 ) {
         remove_effect( effect_dulled_senses );
     } else {
