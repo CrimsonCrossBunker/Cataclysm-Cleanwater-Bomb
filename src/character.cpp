@@ -165,9 +165,9 @@ static const activity_id ACT_WAIT_FOLLOWERS( "ACT_WAIT_FOLLOWERS" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 static const activity_id ACT_WAIT_STAMINA( "ACT_WAIT_STAMINA" );
 
+static const addiction_id addiction_cannabis( "cannabis" );
 static const addiction_id addiction_opiate( "opiate" );
 static const addiction_id addiction_sleeping_pill( "sleeping pill" );
-static const addiction_id addiction_cannabis( "cannabis" );
 
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
 
