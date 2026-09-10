@@ -163,6 +163,15 @@
   {
     "type": "profession",
     "subtype": "hobby",
+    "id": "cannabis_addict",
+    "name": "Cannabis Addiction",
+    "description": "Some people say marijuana isn't addictive.  For reasons you can no longer recall, you decided to prove them wrong.",
+    "points": -1,
+    "addictions": [ { "intensity": 15, "type": "cannabis" } ]
+  },
+  {
+    "type": "profession",
+    "subtype": "hobby",
     "id": "cosplay",
     "name": "Cosplay",
     "description": "You liked to make your own costumes and wear them to various conventions.  Now that everyone is dead or dying, maybe this will be useful for something else.",
