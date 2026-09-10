@@ -156,8 +156,8 @@ static const species_id species_ROBOT( "ROBOT" );
 
 static const trait_id trait_JITTERY( "JITTERY" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
-static const vitamin_id vitamin_nicotine( "nicotine" );
 static const vitamin_id vitamin_cannabis( "cannabis" );
+static const vitamin_id vitamin_nicotine( "nicotine" );
 
 // vitamin flags
 static const std::string flag_NO_SELL( "NO_SELL" );
