@@ -27,9 +27,11 @@
 #include "text_snippets.h"
 
 static const efftype_id effect_hallu( "hallu" );
+static const efftype_id effect_nausea( "nausea" );
 static const efftype_id effect_shakes( "shakes" );
 
 static const morale_type morale_craving_alcohol( "morale_craving_alcohol" );
+static const morale_type morale_craving_cannabis( "morale_craving_cannabis" );
 static const morale_type morale_craving_cocaine( "morale_craving_cocaine" );
 static const morale_type morale_craving_crack( "morale_craving_crack" );
 static const morale_type morale_craving_diazepam( "morale_craving_diazepam" );
@@ -212,6 +214,40 @@ static bool nicotine_effect( Character &u, addiction &add )
     return false;
 }
 
+static bool cannabis_effect( Character &u, addiction &add )
+{
+    static time_point last_dream = calendar::turn_zero;
+    const int in = std::min( 20, add.intensity );
+
+    bool ret = false;
+
+    if( x_in_y( in, 80 ) && ( !u.in_sleep_state() || calendar::turn - last_dream > 3_hours ) ) {
+        if( u.in_sleep_state() ) {
+            last_dream = calendar::turn;
+        }
+        const bool strong = rng( 0, 14 ) < in;
+        const std::string msg =
+            !strong ?
+            ( u.in_sleep_state() ? "addict_cannabis_mild_asleep" : "addict_cannabis_mild_awake" ) :
+            ( u.in_sleep_state() ? "addict_cannabis_strong_asleep" : "addict_cannabis_strong_awake" );
+        u.add_msg_if_player( m_warning,
+                             SNIPPET.random_from_category( msg ).value_or( translation() ).translated() );
+        if( !u.in_sleep_state() ) {
+            u.add_morale( morale_craving_cannabis, -5, -2 * in, 1_hours, 30_minutes, true );
+        }
+
+        ret = true;
+    }
+
+    if( one_in( 90 - 3 * in ) ) {
+        u.mod_fatigue( -1 );
+    }
+    if( in > 5 && one_in( 90 - in ) ) {
+        u.add_effect( effect_nausea, ( in - 5 ) * 1_minutes );
+    }
+    return ret;
+}
+
 static bool alcohol_effect( Character &u, addiction &add )
 {
     const int in = std::min( 20, add.intensity );
@@ -349,6 +385,7 @@ static bool crack_effect( Character &u, addiction &add )
 /*********************************************/
 
 static const std::map<std::string, std::function<bool( Character &, addiction & )>> builtin_map {
+    {"cannabis_effect",    ::cannabis_effect},
     {"nicotine_effect",    ::nicotine_effect},
     {"alcohol_effect",     ::alcohol_effect},
     {"diazepam_effect",    ::diazepam_effect},
