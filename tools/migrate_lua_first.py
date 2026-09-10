@@ -24571,6 +24571,11 @@ def render_participant_string_expression(
     avatar_expression: str | None, npc_expression: str | None,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
+    if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
+        if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
+            return None
+        return render_participant_translation_expression(
+            value, target_expression, avatar_expression, npc_expression)
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -26896,36 +26901,32 @@ def render_eoc_condition_expression(
             "services.gameplay.environment.dimension() == "
             f"{lua_quote(condition['current_dimension'])}"
         )
-    if set(condition) == {"is_season"} and isinstance(
-        condition["is_season"], str
+    for selector, current in (
+        ("is_season", "services.time_snapshot().season_id"),
+        ("is_weather", "services.weather.current().weather.value"),
     ):
-        return (
-            "services.time_snapshot().season_id == "
-            f"{lua_quote(condition['is_season'])}"
-        )
-    if set(condition) == {"is_weather"}:
-        weather_value = condition["is_weather"]
-        if isinstance(weather_value, str):
-            if not safe_platform_id(weather_value):
+        if set(condition) != {selector}:
+            continue
+        value = condition[selector]
+        if isinstance(value, dict) and "str" in value:
+            # str_or_var accepts this object through its explicit translation
+            # mutator only. A plain {str: ...} object is not a string literal.
+            if (set(value) - {"str", "i18n", "//~"} or
+                    value.get("i18n") is not True or
+                    not isinstance(value["str"], str)):
                 return None
-            weather_expression = lua_quote(weather_value)
-        elif isinstance(weather_value, dict) and len(weather_value) == 1:
-            variable_key = next(iter(weather_value))
-            if variable_key not in {"context_val", "u_val", "global_val"}:
-                return None
-            if variable_key == "u_val" and not avatar_actor_proven:
-                return None
-            weather_expression = render_eoc_string_expression(
-                weather_value, "actor"
-            )
-            if weather_expression is None:
-                return None
+            requested = render_participant_translation_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
         else:
-            return None
-        return (
-            "services.weather.current().weather.value == "
-            f"{weather_expression}"
-        )
+            if isinstance(value, dict) and not set(value).intersection({
+                "u_val", "npc_val", "global_val", "context_val", "var_val", "mutator",
+            }):
+                return None
+            requested = render_participant_string_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
+        return None if requested is None else f"{current} == {requested}"
     if (
         set(condition) == {"map_furniture_with_flag", "loc"} and
         bounded_utf8_string(condition.get("map_furniture_with_flag"), 256)

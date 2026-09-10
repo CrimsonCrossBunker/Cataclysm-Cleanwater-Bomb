@@ -16,6 +16,111 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_nested_string_mutator_preserves_explicit_translation(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression({
+            "is_season": {"mutator": "mon_faction", "mtype_id": {"str": "original", "i18n": True}}})
+        self.assertIsNotNone(expression)
+        script = r"""
+local services={time_snapshot=function() return {season_id='spring'} end,
+ translate=function(text) assert(text=='original');return 'translated' end,
+ registry={get=function(kind,id)
+ assert(kind=='monster' and id=='translated');return {default_faction={value='spring'}}
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_explicit_translation_is_not_a_plain_string(self) -> None:
+        for selector in ("is_season", "is_weather"):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {selector: {"str": "spring", "i18n": True}})
+            self.assertIsNotNone(expression)
+            script = r"""
+local translations=0
+local services={time_snapshot=function() return {season_id='spring'} end,
+ weather={current=function() return {weather={value='spring'}} end},
+ translate=function(text) assert(text=='spring');translations=translations+1;return 'printemps' end}
+assert(not (EXPRESSION))
+assert(translations==1)
+""".replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for invalid in ({"str": "spring"}, {"str": "spring", "i18n": False}, {"math": ["1"]}):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({selector: invalid}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_environment_condition_literals_execute(self) -> None:
+        conditions = []
+
+        def collect(value):
+            if isinstance(value, dict):
+                for key in ("is_season", "is_weather"):
+                    if key in value:
+                        conditions.append({key: value[key]})
+                for child in value.values():
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        for relative in (
+            "data/json/effects_on_condition/mutation_eocs/mutation_effect_eocs.json",
+            "data/json/effects_on_condition/item_eocs.json",
+        ):
+            collect(json.loads((REPOSITORY_ROOT / relative).read_text()))
+        self.assertTrue(any("is_season" in value for value in conditions))
+        self.assertTrue(any("is_weather" in value for value in conditions))
+        lines = ["local services={time_snapshot=function() return {season_id='spring'} end,"
+                 "weather={current=function() return {weather={value='rain'}} end}}"]
+        for condition in conditions:
+            key, value = next(iter(condition.items()))
+            self.assertIsInstance(value, str)
+            expression = migrate_lua_first.render_eoc_condition_expression(condition)
+            self.assertIsNotNone(expression)
+            expected = value == ("spring" if key == "is_season" else "rain")
+            lines.append(f"assert(({expression})=={'true' if expected else 'false'})")
+        result = subprocess.run(["lua", "-"], input="\n".join(lines), text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_string_queries_preserve_participant_and_fallback(self) -> None:
+        for selector, current in (("is_season", "spring"), ("is_weather", "rain")):
+            for key in ("u_val", "npc_val", "global_val", "context_val", "var_val"):
+                for present in (False, True):
+                    value = {key: "reference" if key == "var_val" else "wanted", "default": current}
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {selector: value}, avatar_actor_proven=True,
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    script = r"""
+local actor,partner={},{}
+local context={data={reference='n_wanted'}}
+local reads=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={time_snapshot=function() return {season_id=CURRENT} end,
+ weather={current=function() return {weather={value=CURRENT}} end},
+ variables={resolve=function(data,owner,scope,key)
+ assert(key=='wanted')
+ if SCOPE=='u_val' then assert(scope=='u' and owner==actor)
+ elseif SCOPE=='npc_val' or SCOPE=='var_val' then assert(scope=='npc' and owner==partner)
+ elseif SCOPE=='global_val' then assert(scope=='global')
+ else assert(scope=='context') end
+ reads=reads+1
+ return {ok=true,value={exists=PRESENT,value=nil}}
+end}}
+assert((EXPRESSION)==EXPECTED)
+assert(reads==1)
+""".replace("CURRENT", migrate_lua_first.lua_quote(current))
+                    script = script.replace("SCOPE", migrate_lua_first.lua_quote(key))
+                    script = script.replace("PRESENT", "true" if present else "false")
+                    script = script.replace("EXPECTED", "false" if present else "true")
+                    script = script.replace("EXPRESSION", expression)
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_is_day_real_conditions_use_live_environment_without_actor(self) -> None:
         # Real content uses this parameterless predicate both directly and negated.
         source = json.loads((REPOSITORY_ROOT / "data/json/npcs/TALK_TEST.json").read_text())
@@ -3324,7 +3429,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 1,
             )
 
-    def test_dynamic_or_unproven_is_season_shapes_stay_partial(self) -> None:
+    def test_dynamic_is_season_converts_but_numeric_shape_stays_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -3356,12 +3461,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
-            self.assertNotIn("services.time_snapshot", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn("services.time_snapshot", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                2,
+                1,
             )
 
     def test_translates_literal_is_weather_through_current_snapshot(self) -> None:
@@ -3459,8 +3564,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring((context.data["context_weather"]) or "")',
@@ -3479,10 +3584,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertNotIn('weather.value == 5', main)
-            self.assertNotIn('weather.value == ""', main)
+            self.assertIn('weather.value == ""', main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                3,
+                2,
             )
 
     def test_translates_proven_avatar_activity_cancellation(self) -> None:
