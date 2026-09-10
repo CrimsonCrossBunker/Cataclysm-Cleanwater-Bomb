@@ -28,6 +28,7 @@ struct add_type {
         morale_type _craving_morale;
         effect_on_condition_id _effect;
         std::string _builtin;
+        time_duration _sated = 2_hours;
         bool _lua_policy = false;
     public:
         addiction_id id;
@@ -54,6 +55,9 @@ struct add_type {
         }
         const morale_type &get_craving_morale() const {
             return _craving_morale;
+        }
+        const time_duration &get_default_sated() const {
+            return _sated;
         }
         const effect_on_condition_id &get_effect() const {
             return _effect;
