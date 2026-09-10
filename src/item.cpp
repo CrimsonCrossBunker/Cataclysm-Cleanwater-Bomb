@@ -156,8 +156,6 @@ static const skill_id skill_weapon( "weapon" );
 static const species_id species_ROBOT( "ROBOT" );
 
 static const trait_id trait_JITTERY( "JITTERY" );
-static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
-static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_WOOLALLERGY( "WOOLALLERGY" );
 static const vitamin_id vitamin_nicotine( "nicotine" );
 static const vitamin_id vitamin_cannabis( "cannabis" );
@@ -4685,12 +4683,6 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
     }
     // if carried by someone:
     if( carrier != nullptr ) {
-        time_duration duration = 15_seconds;
-        if( carrier->has_trait( trait_TOLERANCE ) ) {
-            duration = 7_seconds;
-        } else if( carrier->has_trait( trait_LIGHTWEIGHT ) ) {
-            duration = 30_seconds;
-        }
         int puff_chance = 24;
         if( has_flag( flag_TOBACCO ) ) {
             // Try not to go over 5mg nicotine if we started at 0.
