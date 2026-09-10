@@ -72,6 +72,16 @@
   },
   {
     "type": "addiction_type",
+    "id": "cannabis",
+    "name": "Craving Cannabis",
+    "type_name": "cannabis",
+    "description": "You could use some herb right now.",
+    "sated": "8 hours",
+    "craving_morale": "morale_craving_cannabis",
+    "builtin": "cannabis_effect"
+  },
+  {
+    "type": "addiction_type",
     "id": "mutagen",
     "name": "Mutation Withdrawal",
     "type_name": "mutation",
