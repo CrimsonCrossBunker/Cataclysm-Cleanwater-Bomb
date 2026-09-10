@@ -150,7 +150,7 @@ static bool needupdate = false;
 // instead of replacing them with the (usually stale) hardware mouse position.
 static bool last_input_has_explicit_mouse_pos = false;
 #if defined(__ANDROID__)
-static hover_mouse_input_state android_hover_mouse_input;
+    static hover_mouse_input_state android_hover_mouse_input;
 #endif
 static bool need_invalidate_framebuffers = false;
 palette_array windowsPalette;
