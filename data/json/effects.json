@@ -3893,15 +3893,16 @@
       "pkill_max_val": [ 7 ],
       "pkill_min": [ 1 ],
       "pkill_tick": [ 45 ],
-      "fatigue_max_val": [ 8 ],
-      "fatigue_tick": [ 300 ],
+      "fatigue_max_val": [ 90 ],
+      "fatigue_chance": [ 1000 ],
       "fatigue_min": [ 1 ]
     },
     "scaling_mods": {
       "per_mod": [ -0.67 ],
       "dex_mod": [ -0.67 ],
       "int_mod": [ -1.67 ],
-      "fatigue_max_val": [ 2 ],
+      "fatigue_max_val": [ 40 ],
+      "fatigue_chance": [ -250 ],
       "pkill_max_val": [ 7 ],
       "speed_mod": [ -5 ]
     },
