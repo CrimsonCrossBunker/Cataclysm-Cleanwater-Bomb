@@ -39,9 +39,6 @@ static const morale_type morale_craving_nicotine( "morale_craving_nicotine" );
 static const morale_type morale_craving_opiate( "morale_craving_opiate" );
 static const morale_type morale_craving_speed( "morale_craving_speed" );
 
-static const trait_id trait_ADDICTIVE( "ADDICTIVE" );
-static const trait_id trait_NONADDICTIVE( "NONADDICTIVE" );
-
 namespace
 {
 
