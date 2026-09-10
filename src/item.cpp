@@ -116,7 +116,6 @@ static const ammotype ammo_plutonium( "plutonium" );
 
 static const efftype_id effect_shakes( "shakes" );
 static const efftype_id effect_sleep( "sleep" );
-static const efftype_id effect_weed_high( "weed_high" );
 
 static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
@@ -4649,7 +4648,7 @@ bool item::process_litcig( map &here, Character *carrier, const tripoint_bub_ms 
             type->invoke( carrier, *this, pos, "transform" );
         }
         if( typeId() == itype_joint_lit && carrier != nullptr ) {
-            carrier->add_effect( effect_weed_high, 1_minutes ); // one last puff
+            carrier->vitamin_mod( vitamin_cannabis, 2 ); // one last puff
             here.add_field( pos + point( rng( -1, 1 ), rng( -1, 1 ) ), field_type_id( "fd_weedsmoke" ), 2 );
             weed_msg( *carrier );
         }
