@@ -138,6 +138,7 @@ static const efftype_id effect_foodpoison( "foodpoison" );
 static const efftype_id effect_heavysnare( "heavysnare" );
 static const efftype_id effect_heightened_senses( "heightened_senses" );
 static const efftype_id effect_weed_high( "weed_high" );
+static const addiction_id addiction_cannabis( "cannabis" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_jetinjector( "jetinjector" );
@@ -1470,6 +1471,15 @@ void Character::update_sensitive()
     rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
     if( gap > 0 ) {
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_UP, rate );
+        // Sensitivity rebounds faster while going through cannabis withdrawal
+        // (receptor upregulation after quitting).
+        for( const addiction &add : addictions ) {
+            if( add.type == addiction_cannabis && add.sated < 0_turns &&
+                add.intensity >= MIN_ADDICTION_LEVEL ) {
+                rate *= 2;
+                break;
+            }
+        }
     } else {
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_DOWN, rate );
     }
