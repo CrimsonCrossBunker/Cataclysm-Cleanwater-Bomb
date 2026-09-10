@@ -1469,8 +1469,7 @@ void Character::update_sensitive()
     rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
     if( gap > 0 ) {
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_UP, rate );
-        // Sensitivity rebounds faster while going through cannabis withdrawal
-        // (receptor upregulation after quitting).
+        // Sensitivity rebounds faster during cannabis withdrawal (receptor upregulation).
         for( const addiction &add : addictions ) {
             if( add.type == addiction_cannabis && add.sated < 0_turns &&
                 add.intensity >= MIN_ADDICTION_LEVEL ) {
