@@ -13,7 +13,6 @@
 class Character;
 class JsonObject;
 class JsonOut;
-template<typename T> class generic_factory;
 
 namespace cata::lua_platform
 {
