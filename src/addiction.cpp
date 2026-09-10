@@ -27,6 +27,7 @@
 #include "text_snippets.h"
 
 static const efftype_id effect_hallu( "hallu" );
+static const efftype_id effect_high( "high" );
 static const efftype_id effect_nausea( "nausea" );
 static const efftype_id effect_shakes( "shakes" );
 
@@ -38,6 +39,9 @@ static const morale_type morale_craving_diazepam( "morale_craving_diazepam" );
 static const morale_type morale_craving_nicotine( "morale_craving_nicotine" );
 static const morale_type morale_craving_opiate( "morale_craving_opiate" );
 static const morale_type morale_craving_speed( "morale_craving_speed" );
+
+static const trait_id trait_ADDICTIVE( "ADDICTIVE" );
+static const trait_id trait_NONADDICTIVE( "NONADDICTIVE" );
 
 namespace
 {
@@ -216,6 +220,16 @@ static bool nicotine_effect( Character &u, addiction &add )
 
 static bool cannabis_effect( Character &u, addiction &add )
 {
+    if( u.has_effect( effect_high ) ) {
+        if( u.has_trait( trait_ADDICTIVE ) ) {
+            add.sated = 7_hours;
+        } else if( u.has_trait( trait_NONADDICTIVE ) ) {
+            add.sated = 9_hours;
+        } else {
+            add.sated = 8_hours;
+        }
+        return false;
+    }
     static time_point last_dream = calendar::turn_zero;
     const int in = std::min( 20, add.intensity );
 
