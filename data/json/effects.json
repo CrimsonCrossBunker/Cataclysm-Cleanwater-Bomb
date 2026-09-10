@@ -3895,7 +3895,10 @@
       "pkill_tick": [ 45 ],
       "fatigue_max_val": [ 90 ],
       "fatigue_chance": [ 1000 ],
-      "fatigue_min": [ 1 ]
+      "fatigue_min": [ 1 ],
+      "sensitive_amount": [ -1 ],
+      "sensitive_chance": [ 300 ],
+      "sensitive_min_val": [ 75 ]
     },
     "scaling_mods": {
       "per_mod": [ -0.67 ],
@@ -3904,7 +3907,9 @@
       "fatigue_max_val": [ 40 ],
       "fatigue_chance": [ -250 ],
       "pkill_max_val": [ 7 ],
-      "speed_mod": [ -5 ]
+      "speed_mod": [ -5 ],
+      "sensitive_amount": [ -1 ],
+      "sensitive_min_val": [ -10 ]
     },
     "enchantments": [ { "values": [ { "value": "VOMIT_MUL", "multiply": -0.9 } ] } ],
     "blood_analysis_description": "Tetrahydrocannabinol"
