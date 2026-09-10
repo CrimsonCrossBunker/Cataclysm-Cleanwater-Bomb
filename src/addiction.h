@@ -79,7 +79,6 @@ class addiction
         addiction_id type;
         int intensity = 0;
         time_duration sated = 1_hours;
-        std::vector<efftype_id> effects;
 
         addiction() = default;
         explicit addiction( const addiction_id &t, const int i = 1 ) : type {t}, intensity {i} { }
