@@ -16,6 +16,36 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_one_in_native_range_and_owner_are_not_clamped(self) -> None:
+        values = (2147483647.9, -2147483648.9,
+                  {"npc_val": "chance"}, [-2147483648, 2147483647])
+        for value in values:
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"one_in_chance": value}, avatar_actor_proven=True,
+                npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            expected = 2147483647 if isinstance(value, (dict, list)) else value
+            script = r"""
+local actor,partner={},{}
+local context={data={}}
+local reads=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ assert(owner==partner and scope=='npc' and key=='chance')
+ reads=reads+1;return {ok=true,value={value=2147483647}}
+end},random={int=function(lo,hi)
+ assert(lo==-2147483648 and hi==2147483647);return hi
+end,one_in=function(n) assert(n==EXPECTED);return true end}}
+assert(EXPRESSION)
+assert(reads==READS)
+""".replace("EXPECTED", str(expected)).replace("EXPRESSION", expression)
+            script = script.replace("READS", "1" if isinstance(value, dict) else "0")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for invalid in (2147483648, -2147483649, [0, 2147483648]):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({"one_in_chance": invalid}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_environment_nested_string_mutator_preserves_explicit_translation(self) -> None:
         expression = migrate_lua_first.render_eoc_condition_expression({
             "is_season": {"mutator": "mon_faction", "mtype_id": {"str": "original", "i18n": True}}})
@@ -852,7 +882,7 @@ assert(adds==1 and random_calls==2 and reads==READS)
                     self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_effect_intensity_rejects_malformed_ranges(self) -> None:
-        for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 1000000001]):
+        for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 2147483648], [-2147483649, 0]):
             self.assertIsNone(migrate_lua_first.render_effect_condition(
                 {"u_has_effect": "bleed", "intensity": value}, "actor", None))
             self.assertIsNone(migrate_lua_first.render_dynamic_character_effect(

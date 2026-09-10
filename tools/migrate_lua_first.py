@@ -19137,7 +19137,7 @@ def _effect_numeric_expression(
             return None
         for endpoint in value:
             literal = finite_number_literal(endpoint)
-            if literal is not None and abs(math.trunc(literal)) > 1000000000:
+            if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
                 return None
         endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
         if any(endpoint is None for endpoint in endpoints):
@@ -26812,19 +26812,14 @@ def render_eoc_condition_expression(
 
     if set(condition) == {"one_in_chance"}:
         value = finite_number_literal(condition["one_in_chance"])
-        if value is not None:
-            if value < -1000000000 or value > 1000000000:
-                return None
-            return f"services.random.one_in({lua_number(value)})"
-        dynamic = render_eoc_numeric_expression(
-            condition["one_in_chance"], "0", "actor"
-        )
-        if dynamic is None:
+        if value is not None and not -2147483648 <= math.trunc(value) <= 2147483647:
             return None
-        return (
-            "services.random.one_in(math.max(-1000000000, math.min("
-            f"1000000000, ({dynamic}))))"
-        )
+        denominator = _effect_numeric_expression(
+            condition["one_in_chance"], "actor",
+            "actor" if character_actor_proven else None, npc_query_actor)
+        if denominator is None:
+            return None
+        return f"services.random.one_in({denominator})"
 
     if set(condition) == {"x_in_y_chance"}:
         chance = condition["x_in_y_chance"]
