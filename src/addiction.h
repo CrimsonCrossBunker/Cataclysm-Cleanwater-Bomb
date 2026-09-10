@@ -18,7 +18,7 @@ template<typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
-}
+} // namespace cata::lua_platform
 
 struct add_type {
     private:
