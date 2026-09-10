@@ -127,8 +127,9 @@ static const itype_id itype_inhaler( "inhaler" );
 static const itype_id itype_oxygen_tank( "oxygen_tank" );
 static const itype_id itype_smoxygen_tank( "smoxygen_tank" );
 
+static const damage_type_id damage_bash( "bash" );
+
 static const json_character_flag json_flag_ALBINO( "ALBINO" );
-static const json_character_flag json_flag_REBREATHER_INTERNAL( "REBREATHER_INTERNAL" );
 static const json_character_flag json_flag_DAYFEAR( "DAYFEAR" );
 static const json_character_flag json_flag_ETHEREAL( "ETHEREAL" );
 static const json_character_flag json_flag_GILLS( "GILLS" );
@@ -139,16 +140,12 @@ static const json_character_flag json_flag_MEND_LIMB( "MEND_LIMB" );
 static const json_character_flag json_flag_NYCTOPHOBIA( "NYCTOPHOBIA" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_RAD_DETECT( "RAD_DETECT" );
+static const json_character_flag json_flag_REBREATHER_INTERNAL( "REBREATHER_INTERNAL" );
 static const json_character_flag json_flag_SUFFOCATION_IMMUNE( "SUFFOCATION_IMMUNE" );
 static const json_character_flag json_flag_SUNBURN( "SUNBURN" );
 static const json_character_flag json_flag_SUNBURN_SUPERNATURAL( "SUNBURN_SUPERNATURAL" );
 static const json_character_flag
 json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
-
-static const damage_type_id damage_bash( "bash" );
-static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
-static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
-static const sub_bodypart_str_id sub_body_part_head_throat( "head_throat" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -157,6 +154,10 @@ static const morale_type morale_pyromania_nearfire( "morale_pyromania_nearfire" 
 static const morale_type morale_pyromania_nofire( "morale_pyromania_nofire" );
 static const morale_type morale_pyromania_startfire( "morale_pyromania_startfire" );
 static const morale_type morale_wet( "morale_wet" );
+
+static const sub_bodypart_str_id sub_body_part_head_throat( "head_throat" );
+static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 static const trait_id trait_ADDICTIVE( "ADDICTIVE" );
 static const trait_id trait_ASTHMA( "ASTHMA" );
