@@ -260,7 +260,7 @@ static bool cannabis_effect( Character &u, addiction &add )
     }
 
     if( one_in( 90 - 3 * in ) ) {
-        u.mod_fatigue( -1 );
+        u.mod_sleepiness( -1 );
     }
     if( in > 5 && one_in( 90 - in ) ) {
         u.add_effect( effect_nausea, ( in - 5 ) * 1_minutes );
