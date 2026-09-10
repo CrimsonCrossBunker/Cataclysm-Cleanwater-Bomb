@@ -17,6 +17,7 @@
         "if": { "not": { "mod_is_loaded": "backrooms" } },
         "then": { "run_eocs": [ "EOC_raid_challenge_mode_pre_raid" ] }
       },
+      { "clear_dimension": { "global_val": "sky_island_target_region_settings" } },
       { "u_location_variable": { "global_val": "OM_HQ_origin" } },
       { "u_location_variable": { "global_val": "OM_HQ_origin_npc" } },
       { "copy_var": { "global_val": "OM_HQ_origin" }, "target_var": { "global_val": "OM_temp" } },
@@ -229,7 +230,6 @@
           "EOC_return_heal"
         ]
       },
-      { "clear_dimension": { "global_val": "sky_island_target_region_settings" } },
       {
         "if": { "math": [ "skyisland_merchant_stall == 1" ] },
         "then": { "run_eocs": "EOC_SKY_ISLAND_RANDOM_MERCHANTS" }
