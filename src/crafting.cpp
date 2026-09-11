@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -17,6 +18,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -33,8 +35,9 @@
 #include "color.h"
 #include "coordinates.h"
 #include "craft_command.h"
-#include "crafting_enums.h"
 #include "craft_reservation.h"
+#include "craft_reservation_search.h"
+#include "crafting_enums.h"
 #include "crafting_gui.h"
 #include "creature.h"
 #include "debug.h"
@@ -50,6 +53,7 @@
 #include "game_inventory.h"
 #include "handle_liquid.h"
 #include "input_popup.h"
+#include "iexamine.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_components.h"
@@ -114,7 +118,10 @@ static const efftype_id effect_transition_contacts( "transition_contacts" );
 static const furn_str_id furn_f_fake_bench_hands( "f_fake_bench_hands" );
 static const furn_str_id furn_f_ground_crafting_spot( "f_ground_crafting_spot" );
 
+static const itype_id itype_brick_oven_pseudo( "brick_oven_pseudo" );
+static const itype_id itype_butchery_tree_pseudo( "butchery_tree_pseudo" );
 static const itype_id itype_disassembly( "disassembly" );
+static const itype_id itype_fire( "fire" );
 static const itype_id itype_plut_cell( "plut_cell" );
 static const itype_id itype_water_faucet( "water_faucet" );
 
@@ -130,6 +137,7 @@ static const quality_id qual_BOIL( "BOIL" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_tailor( "tailor" );
 
+static const ter_str_id ter_t_brick_oven( "t_brick_oven" );
 
 static const trait_id trait_DEBUG_CNF( "DEBUG_CNF" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
@@ -236,7 +244,7 @@ float Character::morale_crafting_speed_multiplier( const recipe &rec ) const
     // Harder jobs are more frustrating, even when skilled
     // For each skill where skill=difficulty, multiply effective morale by 200%
     float morale_mult = std::max( 1.0f, 2.0f * rec.difficulty / std::max( 1.0f,
-                                  get_skill_level( rec.skill_used ) ) );
+        get_skill_level( rec.skill_used ) ) );
     for( const auto &pr : rec.required_skills ) {
         morale_mult *= std::max( 1.0f, 2.0f * pr.second / std::max( 1.0f, get_skill_level( pr.first ) ) );
     }
@@ -297,7 +305,7 @@ float Character::workbench_crafting_speed_multiplier( const item &craft,
         allowed_mass = f.workbench->allowed_mass;
         allowed_volume = f.workbench->allowed_volume;
     } else if( const std::optional<vpart_reference> vp = here.veh_at(
-                   *loc ).part_with_feature( "WORKBENCH", true ) ) {
+            *loc ).part_with_feature( "WORKBENCH", true ) ) {
         // Vehicle workbench
         const vpart_info &vp_info = vp->part().info();
         if( const std::optional<vpslot_workbench> &wb_info = vp_info.workbench_info ) {
@@ -347,7 +355,7 @@ float Character::crafting_speed_multiplier( const recipe &rec ) const
                                  limb_score_multi * pain_multi;
 
     const float result = enchantment_cache->modify_value( enchant_vals::mod::CRAFTING_SPEED_MULTIPLIER,
-                         crafting_speed );
+        crafting_speed );
 
     add_msg_debug( debugmode::DF_CHARACTER, "Limb score multiplier %.1f, crafting speed multiplier %1f",
                    get_limb_score( limb_score_manip ), result );
@@ -431,7 +439,7 @@ void Character::craft( const std::optional<tripoint_bub_ms> &loc, const recipe_i
 {
     int batch_size = 0;
     const auto [crafter, rec] = select_crafter_and_crafting_recipe( batch_size, goto_recipe, this,
-                                filterstring );
+        filterstring );
     if( rec ) {
         std::string reason;
         if( is_npc() && !rec->npc_can_craft( reason ) ) {
@@ -924,7 +932,8 @@ static item_location place_craft_or_disassembly(
     float best_bench_multi = 0.0f;
     map &here = get_map();
     for( const tripoint_bub_ms &adj : here.points_in_radius( ch.pos_bub(), 1 ) ) {
-        if( here.dangerous_field_at( adj ) ) {
+        if( here.dangerous_field_at( adj ) ||
+            get_craft_reservations().craft_site_reserved( here.get_abs( adj ) ) ) {
             continue;
         }
         if( const cata::value_ptr<furn_workbench_info> &wb = here.furn( adj ).obj().workbench ) {
@@ -933,7 +942,7 @@ static item_location place_craft_or_disassembly(
                 target = adj;
             }
         } else if( const std::optional<vpart_reference> vp = here.veh_at(
-                       adj ).part_with_feature( "WORKBENCH", true ) ) {
+                adj ).part_with_feature( "WORKBENCH", true ) ) {
             if( const std::optional<vpslot_workbench> &wb_info = vp->part().info().workbench_info ) {
                 if( wb_info->multiplier > best_bench_multi ) {
                     best_bench_multi = wb_info->multiplier;
@@ -1058,8 +1067,8 @@ inflight_alarm_choices compute_inflight_alarm_choices(
 }
 
 std::optional<std::vector<attention_plan>> show_craft_planning_modal(
-        const recipe &rec, const Character &crafter, int batch, int from_step,
-        const std::vector<attention_plan> &existing, const item *current_craft )
+    const recipe &rec, const Character &crafter, int batch, int from_step,
+    const std::vector<attention_plan> &existing, const item *current_craft )
 {
     // Headless contexts (tests) cannot open the planning uilist; behave like an
     // NPC with implicit-wait plans instead of blocking on UI.
@@ -1214,6 +1223,14 @@ static bool step_has_charged_alloc( const item &craft, int idx )
     return false;
 }
 
+// A claim of any kind needs the poll too: the lease is slid by a tick that completes,
+// so a step holding only its craft site would otherwise let that site expire under it.
+static bool step_wants_env_poll( const item &craft, const recipe_step &step, int idx )
+{
+    return step_has_env_requirements( step ) || step_has_charged_alloc( craft, idx ) ||
+           !craft.get_reservations().empty() || craft.get_reserved_tile().has_value();
+}
+
 static Character *resolve_crafter( const character_id &cid )
 {
     if( !cid.is_valid() ) {
@@ -1236,6 +1253,44 @@ struct step_source_context {
     int radius;
     Character *present_char = nullptr;
 };
+
+enum class acquire_outcome : uint8_t {
+    ok,             // every group covered; bindings committed or revalidated
+    provider_lost,  // an established binding's provider left the admitted set
+    infeasible,     // selection searched exhaustively; nothing present can satisfy it
+    undetermined,   // the search budget ran out; nothing is known either way
+    deferred,       // at the escalation cap with an unchanged pool; no search was run
+    last
+};
+
+// One charged allocation's outstanding draw, with the pool it will be taken from.
+struct pending_tool_debit {
+    comp_selection<tool_comp> sel;
+    usage_from eff_use = usage_from::none;
+    int units = 0;
+    int step_idx = 0;
+    int alloc_idx = 0;
+    int new_count = 0;
+};
+
+// An allocation the target sweeps past without owing anything.  The debit still records
+// it as paid; a preflight has nothing to record and discards these.
+struct settled_tool_bucket {
+    int step_idx = 0;
+    int alloc_idx = 0;
+    int new_count = 0;
+};
+
+// Result of an env-check pass.
+enum class env_check_result {
+    // Pause was entered or continues.
+    paused,
+    // Pause restored; deadlines slid.  Ready-advance must recheck
+    // ready_at before continuing.
+    restored,
+    // No pause.
+    ok,
+};
 } // namespace
 
 static step_source_context resolve_step_source( const item &craft, const item_location &loc )
@@ -1244,7 +1299,7 @@ static step_source_context resolve_step_source( const item &craft, const item_lo
     step_source_context src;
     src.origin = m.get_bub( loc.pos_abs() );
     src.radius = pickup_range;
-    if( loc.where() == item_location::type::character ) {
+    if( loc.where_recursive() == item_location::type::character ) {
         src.present_char = loc.carrier();
     } else {
         Character *crafter = resolve_crafter( craft.get_crafter_id() );
@@ -1259,7 +1314,7 @@ static step_source_context resolve_step_source( const item &craft, const item_lo
 // otherwise the recorded crafter.
 static Character *resolve_consume_crafter( const item &craft, const item_location &loc )
 {
-    if( loc.where() == item_location::type::character ) {
+    if( loc.where_recursive() == item_location::type::character ) {
         return loc.carrier();
     }
     return resolve_crafter( craft.get_crafter_id() );
@@ -1284,9 +1339,21 @@ static bool env_qualities_satisfied_for_step( const recipe_step &step, const ite
     } else {
         inv.form_from_map( &m, src.origin, src.radius, /*pl=*/nullptr );
     }
-    for( const std::vector<quality_requirement> &group : quals ) {
+    // A reserved provider is invisible to every inventory query including its owner's,
+    // so bound groups are validated through their bindings instead.
+    std::set<int> bound_groups;
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        if( b.established() && b.req == craft_reservation::requirement_kind::quality ) {
+            bound_groups.insert( b.group_index );
+        }
+    }
+
+    for( size_t g = 0; g < quals.size(); ++g ) {
+        if( bound_groups.count( static_cast<int>( g ) ) > 0 ) {
+            continue;
+        }
         bool group_ok = false;
-        for( const quality_requirement &q : group ) {
+        for( const quality_requirement &q : quals[g] ) {
             if( q.has( src.present_char, inv, return_true<item> ) ) {
                 group_ok = true;
                 break;
@@ -1299,6 +1366,1035 @@ static bool env_qualities_satisfied_for_step( const recipe_step &step, const ite
     return true;
 }
 
+// Ordered so `> ok` means the caller must pause.
+// Charges (count units) consumed through `count` 5% buckets.  Front-loads the
+// remainder at bucket 0 and caps at the step total.
+static int step_bucket_cumulative( int total, int count )
+{
+    if( count <= 0 ) {
+        return 0;
+    }
+    return std::min( total, total % 20 + count * ( total / 20 ) );
+}
+
+// Charges still owed to reach `targets`.  Allocations whose share rounds to nothing are
+// advanced in place.  Shared with the reservation preflight so the predicted draw and
+// the real one cannot drift.
+static std::vector<pending_tool_debit> collect_step_tool_debits(
+    const std::vector<std::vector<step_tool_alloc>> &allocs, const std::vector<int> &targets,
+    bool pin_to_map, std::vector<settled_tool_bucket> *settled )
+{
+    std::vector<pending_tool_debit> debits;
+    const auto settle = [settled]( int s, int a, int tgt ) {
+        if( settled != nullptr ) {
+            settled->push_back( { s, a, tgt } );
+        }
+    };
+    for( int s = 0; s < static_cast<int>( allocs.size() ) &&
+         s < static_cast<int>( targets.size() ); ++s ) {
+        const int tgt = targets[s];
+        for( int a = 0; a < static_cast<int>( allocs[s].size() ); ++a ) {
+            const step_tool_alloc &alloc = allocs[s][a];
+            if( alloc.sel.comp.count <= 0 || tgt <= alloc.consumed_buckets ) {
+                continue;
+            }
+            if( alloc.step_count_units <= 0 ) {
+                settle( s, a, tgt );
+                continue;
+            }
+            const int units = step_bucket_cumulative( alloc.step_count_units, tgt ) -
+                              step_bucket_cumulative( alloc.step_count_units, alloc.consumed_buckets );
+            if( units <= 0 ) {
+                settle( s, a, tgt );
+                continue;
+            }
+            // Pin player- and both-sourced charges to the map when the crafter
+            // cannot reach the craft, so the preflight and the debit both hit the
+            // charges sitting at the craft rather than an absent crafter's pack.
+            usage_from eff = alloc.sel.use_from;
+            if( pin_to_map && ( eff == usage_from::both || eff == usage_from::player ) ) {
+                eff = usage_from::map;
+            }
+            debits.push_back( { alloc.sel, eff, units, s, a, tgt } );
+        }
+    }
+    return debits;
+}
+
+// Charges each pool owes, aggregated per type so a shared pool cannot pass per
+// allocation and fail in total.
+static void aggregate_tool_debits( const std::vector<pending_tool_debit> &debits,
+                                   std::map<itype_id, int> &need_player,
+                                   std::map<itype_id, int> &need_map,
+                                   std::map<itype_id, int> &need_both )
+{
+    for( const pending_tool_debit &d : debits ) {
+        const int qty = d.units * item::find_type( d.sel.comp.type )->charge_factor();
+        switch( d.eff_use ) {
+            case usage_from::player:
+                need_player[d.sel.comp.type] += qty;
+                break;
+            case usage_from::map:
+                need_map[d.sel.comp.type] += qty;
+                break;
+            case usage_from::both:
+                need_both[d.sel.comp.type] += qty;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
+
+// Deliberately unfiltered: validation searches this layer for providers this craft
+// already holds.
+static std::vector<provider_candidate> enumerate_admitted_providers(
+    const step_source_context &src )
+{
+    map &m = get_map();
+    std::vector<provider_candidate> out;
+    // The same flood fill the crafting inventory and the charge debit use, so a provider
+    // behind a wall cannot bind and then fail every gate that would draw on it.
+    const std::vector<tripoint_bub_ms> reachable =
+        m.reachable_flood_steps( src.origin, src.radius, 1, 100 );
+
+    const auto admit_tree = [&out]( const item & root, bool carried ) {
+        const int64_t root_uid = root.uid().get_value();
+        root.visit_items( [&out, root_uid, carried]( const item * node, const item * parent ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::item;
+            cand.it = node;
+            cand.provider_uid = node->uid().get_value();
+            cand.nested = parent != nullptr;
+            cand.root_uid = root_uid;
+            cand.carried = carried;
+            out.push_back( cand );
+            return VisitResponse::NEXT;
+        } );
+    };
+
+    // Mirrors form_from_map: accessibility is judged per provider tile, and ownership
+    // gates the top-level item only.
+    for( const tripoint_bub_ms &p : reachable ) {
+        if( !m.accessible_items( p ) ) {
+            continue;
+        }
+        for( const item &stack_item : m.i_at( p ) ) {
+            if( src.present_char != nullptr &&
+                !stack_item.is_owned_by( *src.present_char, true ) ) {
+                continue;
+            }
+            if( stack_item.made_of( phase_id::LIQUID ) ) {
+                continue;
+            }
+            admit_tree( stack_item, false );
+        }
+    }
+
+    if( src.present_char != nullptr ) {
+        for( const item_location &carried : src.present_char->all_items_loc() ) {
+            if( carried && carried.parent_item() == item_location::nowhere ) {
+                admit_tree( *carried, true );
+            }
+        }
+    }
+
+    // Vehicle cargo enters outside the accessibility block, mirroring form_inventory.
+    for( const tripoint_bub_ms &p : reachable ) {
+        if( const std::optional<vpart_reference> vp = m.veh_at( p ).cargo() ) {
+            for( const item &it : vp->items() ) {
+                if( !it.made_of( phase_id::LIQUID ) ) {
+                    admit_tree( it, false );
+                }
+            }
+        }
+    }
+
+    // Terrain has no pseudo item field, so trees and brick ovens reach the pool through
+    // the same hardcoded pair form_from_map uses.
+    for( const tripoint_bub_ms &p : reachable ) {
+        const ter_id &t = m.ter( p );
+        const itype_id terrain_pseudo =
+            t->has_flag( ter_furn_flag::TFLAG_TREE ) ? itype_butchery_tree_pseudo
+            : t == ter_t_brick_oven ? itype_brick_oven_pseudo
+            : itype_id::NULL_ID();
+        if( !terrain_pseudo.is_null() ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::terrain;
+            cand.tile = m.get_abs( p );
+            cand.ter = t;
+            cand.pseudo_type = terrain_pseudo;
+            cand.synthesized = item( terrain_pseudo, calendar::turn );
+            out.push_back( cand );
+        }
+    }
+
+    // Unlike ground items, these face no accessibility or ownership check.
+    for( const tripoint_bub_ms &p : reachable ) {
+        const furn_id &f = m.furn( p );
+        if( f != furn_str_id::NULL_ID() && !f->crafting_pseudo_item.is_empty() &&
+            furniture_pseudo_available( m, p, f ) ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::furniture;
+            cand.tile = m.get_abs( p );
+            cand.furn = f;
+            cand.pseudo_type = f->crafting_pseudo_item;
+            cand.synthesized = furniture_pseudo_item( m, p, f );
+            out.push_back( cand );
+        }
+    }
+
+    // Keyed by the part's base item, which survives renumbering and movement.
+    for( const tripoint_bub_ms &p : reachable ) {
+        const optional_vpart_position vp = m.veh_at( p );
+        if( !vp ) {
+            continue;
+        }
+        for( const vpart_tool_source &src_tool : vp->get_tools_with_sources( m ) ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::vehicle_part;
+            cand.provider_uid = src_tool.part_base_uid;
+            cand.pseudo_type = src_tool.tool.typeId();
+            cand.synthesized = src_tool.tool;
+            out.push_back( cand );
+        }
+    }
+
+    // Generated sources, abstract and shared: a fire is taken from nobody by being bound.
+    // Only fire is deduplicated, matching provide_pseudo_item against the liquid rows'
+    // ordinary stacking.
+    bool fire_admitted = false;
+    for( const tripoint_bub_ms &p : reachable ) {
+        if( !fire_admitted && m.has_nearby_fire( p, 0 ) ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::environment;
+            cand.pseudo_type = itype_fire;
+            cand.synthesized = item( itype_fire, calendar::turn );
+            cand.synthesized->charges = 1;
+            out.push_back( cand );
+            fire_admitted = true;
+        }
+        const item water = m.liquid_from( p );
+        if( !water.is_null() ) {
+            provider_candidate cand;
+            cand.kind = craft_reservation::provider_kind::environment;
+            cand.pseudo_type = water.typeId();
+            cand.synthesized = water;
+            out.push_back( cand );
+        }
+        if( m.furn( p )->has_examine( iexamine::keg ) ) {
+            for( const item &held : m.i_at( p ) ) {
+                if( held.made_of( phase_id::LIQUID ) ) {
+                    provider_candidate cand;
+                    cand.kind = craft_reservation::provider_kind::environment;
+                    cand.pseudo_type = held.typeId();
+                    cand.synthesized = held;
+                    out.push_back( cand );
+                }
+            }
+        }
+        const optional_vpart_position vp = m.veh_at( p );
+        if( vp && vp->part_with_tool( m, itype_water_faucet ) ) {
+            for( const item *tank_content : vp->vehicle().fuel_items_left() ) {
+                if( tank_content->made_of( phase_id::LIQUID ) ) {
+                    provider_candidate cand;
+                    cand.kind = craft_reservation::provider_kind::environment;
+                    cand.pseudo_type = tank_content->typeId();
+                    cand.synthesized = *tank_content;
+                    out.push_back( cand );
+                }
+            }
+        }
+    }
+
+    // Read from the admitted character, not resolve_crafter, which resolves anywhere in
+    // the bubble and would outlive the range that drops their carried items.
+    if( src.present_char != nullptr ) {
+        provider_candidate cand;
+        cand.kind = craft_reservation::provider_kind::intrinsic;
+        cand.intrinsic_owner = src.present_char->getID();
+        out.push_back( cand );
+        // A presence requirement names an item type, so innate items enter typed while
+        // the capability candidate above covers qualities.
+        for( const item &pseudo : src.present_char->crafting_pseudo_items() ) {
+            provider_candidate typed;
+            typed.kind = craft_reservation::provider_kind::intrinsic;
+            typed.intrinsic_owner = src.present_char->getID();
+            typed.pseudo_type = pseudo.typeId();
+            typed.synthesized = pseudo;
+            out.push_back( typed );
+        }
+    }
+
+    return out;
+}
+
+static std::vector<provider_candidate> filter_available_for_binding(
+    std::vector<provider_candidate> admitted, const item &craft )
+{
+    const craft_reservation_index &idx = get_craft_reservations();
+    const int64_t owner = craft.peek_reservation_owner_token();
+    // Every crafting inventory hides a whole top-level item for one claimed descendant,
+    // so a root holding another craft's provider is unavailable in full.
+    std::set<int64_t> claimed_roots;
+    for( const provider_candidate &c : admitted ) {
+        if( c.kind == craft_reservation::provider_kind::item &&
+            idx.item_claimed_by_other( c.provider_uid, owner ) ) {
+            claimed_roots.insert( c.root_uid );
+        }
+    }
+    admitted.erase( std::remove_if( admitted.begin(), admitted.end(),
+    [&idx, &claimed_roots, owner]( const provider_candidate & c ) {
+        switch( c.kind ) {
+            case craft_reservation::provider_kind::item:
+                return claimed_roots.count( c.root_uid ) > 0 ||
+                       idx.item_claimed_by_other( c.provider_uid, owner );
+            case craft_reservation::provider_kind::vehicle_part:
+                return idx.part_claimed_by_other( c.provider_uid, owner );
+            case craft_reservation::provider_kind::furniture:
+            case craft_reservation::provider_kind::terrain:
+                return c.tile && idx.provider_tile_claimed_by_other( *c.tile, owner );
+            default:
+                return false;
+        }
+    } ), admitted.end() );
+    return admitted;
+}
+
+
+// Runs on the selection, before anything is written, so a shortfall is a rejection
+// rather than a mid-craft pause.  Models the real debit: batch-scaled units through the
+// remaining buckets, times charge_factor, against the pool each allocation draws from.
+static bool charged_pool_feasible_without(
+    const item &craft, const step_source_context &src,
+    const std::vector<provider_candidate> &debitable,
+    const std::vector<craft_reservation::binding> &selected )
+{
+    craft_reservation::note_search_expansion();
+    const std::vector<std::vector<step_tool_alloc>> &allocs = craft.get_step_tool_allocs();
+    const int idx = craft.get_current_step();
+    if( idx < 0 || idx >= static_cast<int>( allocs.size() ) ) {
+        return true;
+    }
+    // What the step owes by the time it completes: earlier steps are settled, this one
+    // runs to its last bucket, later ones have not started.
+    std::vector<int> targets( allocs.size(), 0 );
+    for( int s = 0; s <= idx; ++s ) {
+        targets[s] = 20;
+    }
+    const bool pin_to_map = src.present_char == nullptr;
+    std::map<itype_id, int> need_player;
+    std::map<itype_id, int> need_map;
+    std::map<itype_id, int> need_both;
+    aggregate_tool_debits( collect_step_tool_debits( allocs, targets, pin_to_map, nullptr ),
+                           need_player, need_map, need_both );
+    if( need_player.empty() && need_map.empty() && need_both.empty() ) {
+        return true;
+    }
+
+    const hidden_units hidden = units_hidden_by( selected, debitable );
+    // Sources with no per-instance charge count of their own are treated as sufficient
+    // unless the selection hid them, so the check never refuses a step over a furniture
+    // or vehicle tool it cannot meter.  They sit on the map, so a player-only draw
+    // cannot reach them.
+    const auto unmetered_map_source = [&]( const itype_id & type ) {
+        return std::any_of( debitable.begin(), debitable.end(),
+        [&]( const provider_candidate & cand ) {
+            return cand.kind != craft_reservation::provider_kind::item &&
+                   cand.pseudo_type == type && !hidden.covers( cand );
+        } );
+    };
+    // Carried uids the selection puts out of reach, taken from the same enumeration the
+    // binding searched.  `covers` tests the exclusion unit, so a sibling sharing a hidden
+    // root comes with it; reading the character's own roots instead would miss a wielded
+    // tool it cannot drop, which discovery admits and inv_dump omits.
+    std::set<int64_t> hidden_carried_uids;
+    for( const provider_candidate &cand : debitable ) {
+        if( cand.carried && cand.kind == craft_reservation::provider_kind::item &&
+            cand.it != nullptr && hidden.covers( cand ) ) {
+            hidden_carried_uids.insert( cand.provider_uid );
+        }
+    }
+    // charges_of folds in UPS and bionic power, which belong to no item and vanish along
+    // with the last visible tool that can draw on them.  Hiding the selection inside the
+    // query is what makes this and the debit reach the same number.
+    const auto carried_charges = [&]( const itype_id & type ) {
+        if( src.present_char == nullptr ) {
+            return 0;
+        }
+        return src.present_char->charges_of( type, INT_MAX,
+        [&hidden_carried_uids]( const item & it ) {
+            return unreserved_filter( it ) &&
+                   hidden_carried_uids.count( it.uid().get_value() ) == 0;
+        } );
+    };
+    const auto map_charges = [&]( const itype_id & type ) {
+        if( unmetered_map_source( type ) ) {
+            return INT_MAX;
+        }
+        int charges = 0;
+        map &here = get_map();
+        std::set<const vehicle *> counted_pools;
+        for( const provider_candidate &cand : debitable ) {
+            if( cand.kind == craft_reservation::provider_kind::item && cand.it != nullptr &&
+                !cand.carried && cand.it->typeId() == type && !hidden.covers( cand ) ) {
+                charges += cand.it->ammo_remaining();
+                // A cabled tool draws on the vehicle it is plugged into, and the debit
+                // discharges that battery, but the battery is shared: it counts once
+                // however many tools reach it.
+                const vehicle *pool = linked_power_source( here, *cand.it );
+                if( pool != nullptr && counted_pools.insert( pool ).second ) {
+                    charges += cand.it->ammo_remaining_linked( here ) - cand.it->ammo_remaining();
+                }
+            }
+        }
+        return charges;
+    };
+
+    // The three pools overlap: a both-sourced draw competes with the player-only and
+    // map-only ones for the same charges, so each pool must clear its own supply and
+    // all three must clear the combined one.
+    std::set<itype_id> types;
+    for( const std::map<itype_id, int> *need : {
+             &need_player, &need_map, &need_both
+         } ) {
+        for( const std::pair<const itype_id, int> &n : *need ) {
+            types.insert( n.first );
+        }
+    }
+    for( const itype_id &type : types ) {
+        const auto owed = []( const std::map<itype_id, int> &need, const itype_id & t ) {
+            const auto found = need.find( t );
+            return found == need.end() ? 0 : found->second;
+        };
+        const int from_player = carried_charges( type );
+        const int from_map = map_charges( type );
+        if( owed( need_player, type ) > from_player || owed( need_map, type ) > from_map ) {
+            return false;
+        }
+        if( from_map != INT_MAX &&
+            owed( need_player, type ) + owed( need_map, type ) + owed( need_both, type ) >
+            from_player + from_map ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+// Root qualities are excluded: the unattended gate reads step requirements only, so
+// binding root ones would create claims it never validated.
+static std::vector<craft_reservation::binding> step_binding_requests(
+    const item &craft, const recipe &rec, int idx )
+{
+    const recipe_step &step = rec.steps()[idx];
+    std::vector<craft_reservation::binding> reqs;
+    const requirement_data::alter_quali_req_vector &quals = step.requirements.get_qualities();
+    for( size_t g = 0; g < quals.size(); ++g ) {
+        if( quals[g].empty() ) {
+            continue;
+        }
+        // Alternatives are an OR; alternative_index is what a later load validates.
+        for( size_t a = 0; a < quals[g].size(); ++a ) {
+            craft_reservation::binding req;
+            req.group_index = static_cast<int>( g );
+            req.alternative_index = static_cast<int>( a );
+            req.req = craft_reservation::requirement_kind::quality;
+            req.qual = quals[g][a].type;
+            req.level = quals[g][a].level;
+            // requirement_data::operator* scales tools and components, not qualities.
+            req.group_count = quals[g][a].count;
+            reqs.push_back( req );
+        }
+    }
+
+    // The allocation names which alternative of an OR group is in play, and a
+    // recipe-root tool reaches a step only as an allocation.
+    const std::vector<std::vector<step_tool_alloc>> &allocs = craft.get_step_tool_allocs();
+    if( idx >= static_cast<int>( allocs.size() ) ) {
+        return reqs;
+    }
+    const std::vector<std::vector<tool_comp>> &tools = step.requirements.get_tools();
+    const std::vector<std::vector<tool_comp>> &root_tools = rec.root_requirements().get_tools();
+    for( size_t a = 0; a < allocs[idx].size(); ++a ) {
+        const step_tool_alloc &alloc = allocs[idx][a];
+        // Charged allocations drain a pool by type, so pinning one instance would make
+        // the preflight and the debit disagree.
+        if( alloc.sel.comp.count > 0 || alloc.sel.use_from == usage_from::none ||
+            alloc.sel.use_from == usage_from::cancel ) {
+            continue;
+        }
+        if( alloc.root_derived != ( a >= tools.size() ) ) {
+            continue;
+        }
+        const std::vector<std::vector<tool_comp>> &groups = alloc.root_derived ? root_tools : tools;
+        const size_t group = alloc.root_derived ? a - tools.size() : a;
+        if( group >= groups.size() ) {
+            continue;
+        }
+        // The recipe decides charged versus presence; the allocation only decides which
+        // alternative of the group was taken.
+        int alternative = -1;
+        for( size_t k = 0; k < groups[group].size(); ++k ) {
+            if( groups[group][k].type == alloc.sel.comp.type && groups[group][k].count <= 0 ) {
+                alternative = static_cast<int>( k );
+                break;
+            }
+        }
+        if( alternative < 0 ) {
+            continue;
+        }
+        craft_reservation::binding req;
+        req.group_index = static_cast<int>( quals.size() + a );
+        req.alternative_index = alternative;
+        req.req = craft_reservation::requirement_kind::presence_tool;
+        req.tool_type = alloc.sel.comp.type;
+        // A negative count is the presence idiom, and its magnitude is how many the
+        // requirement check demands.
+        req.group_count = std::max( 1, std::abs( groups[group][alternative].count ) );
+        reqs.push_back( req );
+    }
+    return reqs;
+}
+
+static void release_step_resources( item &craft )
+{
+    if( !craft.is_craft() ) {
+        return;
+    }
+    const int64_t token = craft.peek_reservation_owner_token();
+    if( token != 0 ) {
+        get_craft_reservations().erase( token );
+    }
+    craft.set_reservations( {} );
+    craft.set_reserved_tile( std::nullopt );
+    craft.set_reservation_expiry( calendar::before_time_starts );
+    craft.set_reservation_search_attempts( 0 );
+    craft.set_reservation_pool_fingerprint( 0 );
+    craft.set_reservation_pause_reason( 0 );
+}
+
+// where_recursive, so a craft inside a carried container is not read as grounded.
+static std::optional<tripoint_abs_ms> craft_site_tile( const item_location &loc )
+{
+    if( loc.where_recursive() == item_location::type::character ) {
+        return std::nullopt;
+    }
+    return loc.pos_abs();
+}
+
+
+// Per-binding checks ask only whether one source exists, so two slots would both pass
+// against a single remaining one.  Only an aggregate over the multiset compares counts.
+static bool provider_type_is_liquid( const itype_id &type )
+{
+    return !type.is_null() && type.is_valid() &&
+           item::find_type( type )->phase == phase_id::LIQUID;
+}
+
+// Merge classes are re-derived rather than frozen: two providers distinct when they were
+// bound can converge later, at which point the gate offers one entry where the craft
+// holds two bindings.
+static bool liquid_classes_hold( const item &craft,
+                                 const std::vector<provider_candidate> &admitted )
+{
+    // One provider may back several bindings, so occupancy is counted per uid.
+    std::set<int64_t> bound_uids;
+    // Bindings sharing a slot are one demand; distinct slots need distinct classes.
+    std::set<std::pair<itype_id, int>> slots;
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        if( b.kind == craft_reservation::provider_kind::item ) {
+            bound_uids.insert( b.provider_uid );
+        } else if( b.kind == craft_reservation::provider_kind::environment &&
+                   provider_type_is_liquid( b.pseudo_type ) ) {
+            slots.emplace( b.pseudo_type, b.occurrence_slot );
+        }
+    }
+    // Classing a shoreline costs a stacks_with call per pair of water tiles, which no
+    // craft should pay for holding no liquid at all.
+    if( bound_uids.empty() && slots.empty() ) {
+        return true;
+    }
+
+    std::vector<std::vector<const provider_candidate *>> classes;
+    for( const provider_candidate &cand : admitted ) {
+        const item *as_item = candidate_item( cand );
+        if( as_item == nullptr || !as_item->made_of( phase_id::LIQUID ) ) {
+            continue;
+        }
+        const auto same = std::find_if( classes.begin(), classes.end(),
+        [&cand]( const std::vector<const provider_candidate *> &cls ) {
+            return candidate_merges_with( cand, *cls.front() );
+        } );
+        if( same == classes.end() ) {
+            classes.push_back( { &cand } );
+        } else {
+            same->push_back( &cand );
+        }
+    }
+    std::vector<bool> occupied( classes.size(), false );
+
+    for( const int64_t uid : bound_uids ) {
+        for( size_t c = 0; c < classes.size(); ++c ) {
+            const bool mine = std::any_of( classes[c].begin(), classes[c].end(),
+            [uid]( const provider_candidate * member ) {
+                return member->provider_uid == uid;
+            } );
+            if( !mine ) {
+                continue;
+            }
+            if( occupied[c] ) {
+                return false;
+            }
+            occupied[c] = true;
+            break;
+        }
+    }
+
+    for( const std::pair<itype_id, int> &slot : slots ) {
+        bool placed = false;
+        for( size_t c = 0; c < classes.size() && !placed; ++c ) {
+            if( occupied[c] ) {
+                continue;
+            }
+            placed = std::any_of( classes[c].begin(), classes[c].end(),
+            [&slot]( const provider_candidate * member ) {
+                return member->pseudo_type == slot.first;
+            } );
+            occupied[c] = occupied[c] || placed;
+        }
+        if( !placed ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool abstract_capacity_holds( const item &craft, const step_source_context &src,
+                                     const std::vector<provider_candidate> &admitted )
+{
+    // Slots are distinct per multiset, so counting them counts the demand.
+    std::map<std::tuple<quality_id, int>, std::set<int>> intrinsic_quality_slots;
+    std::map<itype_id, std::set<int>> intrinsic_tool_slots;
+    std::map<itype_id, std::set<int>> environment_slots;
+
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        if( b.kind == craft_reservation::provider_kind::intrinsic ) {
+            if( b.req == craft_reservation::requirement_kind::quality ) {
+                intrinsic_quality_slots[ { b.qual, b.level } ].insert( b.occurrence_slot );
+            } else {
+                intrinsic_tool_slots[b.tool_type].insert( b.occurrence_slot );
+            }
+        } else if( b.kind == craft_reservation::provider_kind::environment &&
+                   !provider_type_is_liquid( b.pseudo_type ) ) {
+            // Liquid rows stack in the inventory, so their capacity is counted by class.
+            environment_slots[b.pseudo_type].insert( b.occurrence_slot );
+        }
+    }
+
+    for( const auto &[key, slots] : intrinsic_quality_slots ) {
+        const auto &[qual, level] = key;
+        if( src.present_char == nullptr ||
+            !src.present_char->has_intrinsic_quality( qual, level,
+                    static_cast<int>( slots.size() ) ) ) {
+            return false;
+        }
+    }
+
+    for( const auto &[type, slots] : intrinsic_tool_slots ) {
+        if( src.present_char == nullptr ) {
+            return false;
+        }
+        if( intrinsic_exposure( *src.present_char, type ) < static_cast<int>( slots.size() ) ) {
+            return false;
+        }
+    }
+
+    for( const auto &[type, slots] : environment_slots ) {
+        int available = 0;
+        for( const provider_candidate &cand : admitted ) {
+            if( cand.kind == craft_reservation::provider_kind::environment &&
+                cand.pseudo_type == type ) {
+                ++available;
+            }
+        }
+        if( available < static_cast<int>( slots.size() ) ) {
+            return false;
+        }
+    }
+
+    return liquid_classes_hold( craft, admitted );
+}
+
+// Validate every established binding, then bind any group not yet covered.  Idempotent.
+static acquire_outcome reserve_step_resources( item &craft, const item_location &loc,
+        time_point now )
+{
+    if( !craft.is_craft() ) {
+        return acquire_outcome::ok;
+    }
+    const recipe &rec = craft.get_making();
+    const int idx = craft.get_current_step();
+    if( !rec.has_steps() || idx < 0 || idx >= static_cast<int>( rec.steps().size() ) ) {
+        return acquire_outcome::ok;
+    }
+    const std::vector<craft_reservation::binding> requests =
+        step_binding_requests( craft, rec, idx );
+    if( requests.empty() ) {
+        // No providers to bind, but a grounded step still claims the tile it sits on.
+        // Only the initial lease is written here.  A lapsed one is left lapsed and
+        // refreshed by a tick that reaches its end, or a step paused for charges would
+        // mint itself another hour on every check and never expire.
+        const bool no_lease = craft.get_reservation_expiry() == calendar::before_time_starts;
+        craft.set_reserved_tile( craft_site_tile( loc ) );
+        if( craft.get_reserved_tile() ) {
+            craft.reservation_owner_token();
+            if( no_lease ) {
+                craft.set_reservation_expiry( now + 1_hours );
+            }
+            get_craft_reservations().rebuild_for_craft( loc );
+        }
+        return acquire_outcome::ok;
+    }
+
+    const step_source_context src = resolve_step_source( craft, loc );
+    const std::vector<provider_candidate> admitted = enumerate_admitted_providers( src );
+
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        if( !b.established() ) {
+            continue;
+        }
+        switch( b.kind ) {
+            case craft_reservation::provider_kind::item: {
+                const auto found = std::find_if( admitted.begin(), admitted.end(),
+                [&b]( const provider_candidate & c ) {
+                    return c.kind == craft_reservation::provider_kind::item &&
+                           c.provider_uid == b.provider_uid;
+                } );
+                if( found == admitted.end() ) {
+                    return acquire_outcome::provider_lost;
+                }
+                const bool still_qualifies =
+                    !found->it->has_flag( flag_ITEM_BROKEN ) &&
+                    ( b.req == craft_reservation::requirement_kind::quality
+                      ? provider_quality_level( *found->it, b.qual,
+                                                src.present_char, true ) >= b.level
+                      : found->it->typeId() == b.tool_type );
+                if( !still_qualifies ||
+                    get_craft_reservations().item_claimed_by_other( b.provider_uid,
+                            craft.peek_reservation_owner_token() ) ) {
+                    return acquire_outcome::provider_lost;
+                }
+                break;
+            }
+            case craft_reservation::provider_kind::furniture:
+            case craft_reservation::provider_kind::terrain: {
+                const auto found = std::find_if( admitted.begin(), admitted.end(),
+                [&b]( const provider_candidate & c ) {
+                    // Type as well as tile: a furniture definition can keep its id and
+                    // change the pseudo tool it supplies.
+                    return c.kind == b.kind && c.tile == b.tile && c.furn == b.furn &&
+                           c.ter == b.ter && c.pseudo_type == b.pseudo_type;
+                } );
+                if( found == admitted.end() || !b.tile ||
+                    get_craft_reservations().provider_tile_claimed_by_other( *b.tile,
+                            craft.peek_reservation_owner_token() ) ) {
+                    return acquire_outcome::provider_lost;
+                }
+                if( b.req == craft_reservation::requirement_kind::quality &&
+                    provider_pseudo_quality( *found, b.qual, src.present_char ) < b.level ) {
+                    return acquire_outcome::provider_lost;
+                }
+                break;
+            }
+            case craft_reservation::provider_kind::vehicle_part: {
+                const auto found = std::find_if( admitted.begin(), admitted.end(),
+                [&b]( const provider_candidate & c ) {
+                    return c.kind == craft_reservation::provider_kind::vehicle_part &&
+                           c.provider_uid == b.provider_uid &&
+                           c.pseudo_type == b.pseudo_type;
+                } );
+                if( found == admitted.end() ||
+                    get_craft_reservations().part_claimed_by_other( b.provider_uid,
+                            craft.peek_reservation_owner_token() ) ) {
+                    return acquire_outcome::provider_lost;
+                }
+                if( b.req == craft_reservation::requirement_kind::quality &&
+                    provider_pseudo_quality( *found, b.qual, src.present_char ) < b.level ) {
+                    return acquire_outcome::provider_lost;
+                }
+                break;
+            }
+            case craft_reservation::provider_kind::environment: {
+                // Any source supplying the type will do; the count belongs to the
+                // capacity aggregate.
+                const auto found = std::find_if( admitted.begin(), admitted.end(),
+                [&b]( const provider_candidate & c ) {
+                    return c.kind == craft_reservation::provider_kind::environment &&
+                           c.pseudo_type == b.pseudo_type;
+                } );
+                if( found == admitted.end() ) {
+                    return acquire_outcome::provider_lost;
+                }
+                break;
+            }
+            case craft_reservation::provider_kind::intrinsic: {
+                if( src.present_char == nullptr ||
+                    src.present_char->getID() != b.intrinsic_owner ) {
+                    return acquire_outcome::provider_lost;
+                }
+                const bool still_supplies =
+                    b.req == craft_reservation::requirement_kind::quality
+                    ? src.present_char->has_intrinsic_quality( b.qual, b.level, 1 )
+                    : intrinsic_exposure( *src.present_char, b.pseudo_type ) >= 1;
+                if( !still_supplies ) {
+                    return acquire_outcome::provider_lost;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    if( !abstract_capacity_holds( craft, src, admitted ) ) {
+        return acquire_outcome::provider_lost;
+    }
+
+    // Distinct within a group, reusable across groups.
+    std::map<int, int> covered;
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        ++covered[b.group_index];
+    }
+    // A group is an OR whose alternatives may demand different counts: the target is the
+    // bound alternative's where one exists and the cheapest otherwise, and take_one
+    // raises it once the search commits to one.
+    std::map<int, int> needed;
+    for( const craft_reservation::binding &r : requests ) {
+        const int target = std::max( 1, r.group_count );
+        const auto seen = needed.find( r.group_index );
+        needed[r.group_index] = seen == needed.end() ? target : std::min( seen->second, target );
+    }
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        needed[b.group_index] = std::max( 1, b.group_count );
+    }
+
+    bool all_covered = true;
+    for( const auto &[group, count] : needed ) {
+        const auto have = covered.find( group );
+        if( have == covered.end() || have->second < count ) {
+            all_covered = false;
+            break;
+        }
+    }
+    if( all_covered ) {
+        // A craft may hold a site lock without holding any binding.
+        craft.set_reserved_tile( craft_site_tile( loc ) );
+        if( craft.peek_reservation_owner_token() != 0 ) {
+            get_craft_reservations().rebuild_for_craft( loc );
+        }
+        return acquire_outcome::ok;
+    }
+
+    const std::vector<provider_candidate> available =
+        filter_available_for_binding( admitted, craft );
+    const std::vector<provider_candidate> bindable =
+        collapse_merge_classes( available, craft.get_reservations(), requests, src.present_char );
+
+    const std::vector<candidate_class> classes =
+        build_candidate_classes( bindable, available, requests, craft.get_reservations(),
+                                 src.present_char );
+
+    selection_context ctx;
+    ctx.craft = &craft;
+    ctx.src = &src;
+    ctx.available = &available;
+    ctx.bindable = &bindable;
+    ctx.classes = &classes;
+    ctx.requests = &requests;
+    ctx.pool_feasible = [&craft, &src, &available]( const std::vector<craft_reservation::binding>
+    &selected ) {
+        return charged_pool_feasible_without( craft, src, available, selected );
+    };
+    for( const auto &[group, count] : needed ) {
+        const int have = covered.count( group ) > 0 ? covered.at( group ) : 0;
+        if( have < count ) {
+            ctx.groups.emplace_back( group, count - have );
+        }
+    }
+    // Most constrained first, so a group with one option decides before a wide one.
+    std::stable_sort( ctx.groups.begin(), ctx.groups.end(),
+    [&]( const std::pair<int, int> &a, const std::pair<int, int> &b ) {
+        const auto width = [&]( int group ) {
+            size_t n = 0;
+            for( size_t r = 0; r < requests.size(); ++r ) {
+                if( requests[r].group_index == group ) {
+                    n += classes_for_request( classes, r ).size();
+                }
+            }
+            return n;
+        };
+        return width( a.first ) < width( b.first );
+    } );
+
+    search_state state;
+    state.usage.assign( classes.size(), 0 );
+    // Seeded from what the craft holds, so a surviving binding reads as a member already
+    // taken rather than as one more the search has to open and pay for.
+    for( size_t c = 0; c < classes.size(); ++c ) {
+        state.usage[c] = classes[c].held;
+    }
+    state.selected = craft.get_reservations();
+    for( const craft_reservation::binding &b : state.selected ) {
+        state.next_abstract_slot = std::max( state.next_abstract_slot, b.occurrence_slot + 1 );
+    }
+    const uint64_t fingerprint = pool_fingerprint( classes, available, src.present_char );
+    if( craft.get_reservation_search_attempts() >= craft_reservation::search_escalation_cap ) {
+        if( craft.get_reservation_pool_fingerprint() == fingerprint ) {
+            // Capped against a world that has not moved: repeating the same traversal
+            // every minute would be a permanent stall rather than a permanent pause.
+            return acquire_outcome::deferred;
+        }
+        // The world moved, so the escalation starts over rather than pinning every
+        // later search at the largest budget.
+        craft.set_reservation_search_attempts( 0 );
+    }
+
+    ctx.expansions_left = craft_reservation::search_budget_for_attempt(
+                              craft.get_reservation_search_attempts() );
+    const selection_result found = assign_from( ctx, 0, ctx.groups[0].second, state );
+    if( found == selection_result::undetermined ) {
+        craft.set_reservation_search_attempts(
+            std::min<uint8_t>( craft_reservation::search_escalation_cap,
+                               craft.get_reservation_search_attempts() + 1 ) );
+        craft.set_reservation_pool_fingerprint( fingerprint );
+        return acquire_outcome::undetermined;
+    }
+    craft.set_reservation_search_attempts( 0 );
+    craft.set_reservation_pool_fingerprint( 0 );
+    if( found != selection_result::feasible ) {
+        return acquire_outcome::infeasible;
+    }
+    std::vector<craft_reservation::binding> selected = std::move( state.selected );
+
+    craft.set_reservations( std::move( selected ) );
+    craft.set_reserved_tile( craft_site_tile( loc ) );
+    craft.set_reservation_expiry( now + 1_hours );
+    craft.reservation_owner_token();
+    get_craft_reservations().rebuild_for_craft( loc );
+    return acquire_outcome::ok;
+}
+
+// What the player is told.  `deferred` describes this tick's work rather than the world,
+// so it reports whatever the last search actually concluded and stays silent.
+static uint8_t pause_reason_for( acquire_outcome outcome )
+{
+    return static_cast<uint8_t>( outcome == acquire_outcome::deferred
+                                 ? acquire_outcome::undetermined
+                                 : outcome );
+}
+
+// Announces on transition only.  A step retries every minute, so reporting each failure
+// would repeat the same line sixty times an hour, and the stored reason is what makes a
+// later recurrence a transition again.  Only the player's own crafts announce; an NPC's
+// pause is still stored, so it explains itself when the craft is examined.
+static void craft_note_reservation_pause( item &craft, acquire_outcome outcome )
+{
+    const uint8_t reason = pause_reason_for( outcome );
+    const uint8_t previous = craft.get_reservation_pause_reason();
+    craft.set_reservation_pause_reason( reason );
+    if( reason == previous || craft.get_crafter_id() != get_player_character().getID() ) {
+        return;
+    }
+    switch( static_cast<acquire_outcome>( reason ) ) {
+        case acquire_outcome::provider_lost:
+            add_msg( m_warning, _( "Something %s was set up to use is out of reach now." ),
+                     craft.tname() );
+            break;
+        case acquire_outcome::infeasible:
+            add_msg( m_warning, _( "The tools in reach cannot cover every part of %s at once." ),
+                     craft.tname() );
+            break;
+        case acquire_outcome::undetermined:
+            add_msg( m_warning, _( "You can't work out which tools to set aside for %s." ),
+                     craft.tname() );
+            break;
+        default:
+            break;
+    }
+}
+
+// A reserved provider is hidden from every inventory query, so an allocation a binding
+// already covers must not be re-checked against one.
+static bool tool_covered_by_binding( const item &craft, const itype_id &type )
+{
+    for( const craft_reservation::binding &b : craft.get_reservations() ) {
+        if( b.established() &&
+            b.req == craft_reservation::requirement_kind::presence_tool &&
+            b.tool_type == type ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void craft_relocated( const item_location &landed )
+{
+    if( !landed ) {
+        return;
+    }
+    // Ascend first: a copy re-uids the whole tree, and one caller hands back a location
+    // beneath the copied root rather than the root itself.
+    item_location root = landed;
+    while( root.parent_item() != item_location::nowhere ) {
+        root = root.parent_item();
+    }
+
+    std::vector<item *> crafts;
+    root->visit_items( [&crafts]( item * node, item * ) {
+        if( node->is_craft() &&
+            node->get_passive_started_at() != calendar::before_time_starts ) {
+            crafts.push_back( node );
+        }
+        return VisitResponse::NEXT;
+    } );
+    if( crafts.empty() ) {
+        return;
+    }
+
+    for( item *craft : crafts ) {
+        const item_location craft_loc = craft == root.get_item()
+                                        ? root
+                                        : item_location( root, craft );
+        craft->set_reserved_tile( craft_site_tile( craft_loc ) );
+        // A craft that had nothing to poll for gains a site lock when dropped, and the
+        // lease needs a poll to refresh it.
+        if( craft->get_reserved_tile() &&
+            craft->get_env_check_at() == calendar::before_time_starts ) {
+            craft->set_env_check_at( calendar::turn + 1_minutes );
+        }
+        get_item_wakeups().rebuild_for_item( craft_loc );
+        if( craft->peek_reservation_owner_token() != 0 ) {
+            get_craft_reservations().rebuild_for_craft( craft_loc );
+        }
+    }
+}
+
+// Call only past every gate, or a craft paused for charges renews its lease forever.
+static void craft_refresh_reservation_lease( item &craft, time_point now,
+        const item_location &loc )
+{
+    if( !craft.is_craft() || craft.peek_reservation_owner_token() == 0 ) {
+        return;
+    }
+    // Derived, not owned: a craft in vehicle cargo changes tile with no copy and no hook.
+    craft.set_reserved_tile( craft_site_tile( loc ) );
+    craft.set_reservation_expiry( now + 1_hours );
+    get_craft_reservations().rebuild_for_craft( loc );
+}
+
 static std::string compose_unattend_message( const item &craft, const recipe_step &step )
 {
     if( !step.unattend_message.empty() ) {
@@ -1309,6 +2405,8 @@ static std::string compose_unattend_message( const item &craft, const recipe_ste
 
 static void advance_passive_step( item &craft )
 {
+    // Before the step index moves, so the next entry re-binds against a freed pool.
+    release_step_resources( craft );
     if( craft.get_passive_end_counter() > craft.item_counter ) {
         craft.item_counter = std::min( 10000000, craft.get_passive_end_counter() );
     }
@@ -1382,7 +2480,7 @@ static void end_live_wait_for( const item_location &loc )
 
 static std::optional<tripoint_bub_ms> craft_loc_for_complete( const item_location &loc )
 {
-    if( loc.where() == item_location::type::character ) {
+    if( loc.where_recursive() == item_location::type::character ) {
         return std::nullopt;
     }
     return get_map().get_bub( loc.pos_abs() );
@@ -1404,109 +2502,6 @@ static bool recipe_result_is_liquid( const recipe &rec )
 
 // Clear passive timing and wakeups so nothing re-arms the step; the craft holds
 // at full progress until the player collects it via an explicit continue/activate.
-static void release_step_resources( item &craft )
-{
-    if( !craft.is_craft() ) {
-        return;
-    }
-    const int64_t token = craft.peek_reservation_owner_token();
-    if( token != 0 ) {
-        get_craft_reservations().erase( token );
-    }
-    craft.set_reservations( {} );
-    craft.set_reserved_tile( std::nullopt );
-    craft.set_reservation_expiry( calendar::before_time_starts );
-    craft.set_reservation_search_attempts( 0 );
-    craft.set_reservation_pool_fingerprint( 0 );
-    craft.set_reservation_pause_reason( 0 );
-}
-
-static std::optional<tripoint_abs_ms> craft_site_tile( const item_location &loc )
-{
-    if( loc.where_recursive() == item_location::type::character ) {
-        return std::nullopt;
-    }
-    return loc.pos_abs();
-}
-
-static void reserve_step_resources( item &craft, const item_location &loc, time_point now )
-{
-    if( !craft.is_craft() ) {
-        return;
-    }
-    const recipe &rec = craft.get_making();
-    const int idx = craft.get_current_step();
-    if( !rec.has_steps() || idx < 0 || idx >= static_cast<int>( rec.steps().size() ) ) {
-        return;
-    }
-    // A grounded step claims the tile it sits on.  Only the initial lease is written
-    // here.  A lapsed one is left lapsed and refreshed by a tick that reaches its end,
-    // or a paused step would mint itself another hour on every check and never expire.
-    const bool no_lease = craft.get_reservation_expiry() == calendar::before_time_starts;
-    craft.set_reserved_tile( craft_site_tile( loc ) );
-    if( craft.get_reserved_tile() ) {
-        craft.reservation_owner_token();
-        if( no_lease ) {
-            craft.set_reservation_expiry( now + 1_hours );
-        }
-        get_craft_reservations().rebuild_for_craft( loc );
-    }
-}
-
-static void craft_refresh_reservation_lease( item &craft, time_point now,
-        const item_location &loc )
-{
-    if( !craft.is_craft() || craft.peek_reservation_owner_token() == 0 ) {
-        return;
-    }
-    // Derived, not owned: a craft in vehicle cargo changes tile with no copy and no hook.
-    craft.set_reserved_tile( craft_site_tile( loc ) );
-    craft.set_reservation_expiry( now + 1_hours );
-    get_craft_reservations().rebuild_for_craft( loc );
-}
-
-void craft_relocated( const item_location &landed )
-{
-    if( !landed ) {
-        return;
-    }
-    // Ascend first: a copy re-uids the whole tree, and one caller hands back a location
-    // beneath the copied root rather than the root itself.
-    item_location root = landed;
-    while( root.parent_item() != item_location::nowhere ) {
-        root = root.parent_item();
-    }
-
-    std::vector<item *> crafts;
-    root->visit_items( [&crafts]( item * node, item * ) {
-        if( node->is_craft() &&
-            node->get_passive_started_at() != calendar::before_time_starts ) {
-            crafts.push_back( node );
-        }
-        return VisitResponse::NEXT;
-    } );
-    if( crafts.empty() ) {
-        return;
-    }
-
-    for( item *craft : crafts ) {
-        const item_location craft_loc = craft == root.get_item()
-                                        ? root
-                                        : item_location( root, craft );
-        craft->set_reserved_tile( craft_site_tile( craft_loc ) );
-        // A craft that had nothing to poll for gains a site lock when dropped, and the
-        // lease needs a poll to refresh it.
-        if( craft->get_reserved_tile() &&
-            craft->get_env_check_at() == calendar::before_time_starts ) {
-            craft->set_env_check_at( calendar::turn + 1_minutes );
-        }
-        get_item_wakeups().rebuild_for_item( craft_loc );
-        if( craft->peek_reservation_owner_token() != 0 ) {
-            get_craft_reservations().rebuild_for_craft( craft_loc );
-        }
-    }
-}
-
 static void park_craft_for_collection( item &craft )
 {
     release_step_resources( craft );
@@ -1563,20 +2558,6 @@ static void finalize_passive_craft( item &craft, const item_location &loc )
     mut_loc.remove_item();
     crafter->complete_craft( craft_copy, finalize_loc );
 }
-
-namespace
-{
-// Result of an env-check pass.
-enum class env_check_result {
-    // Pause was entered or continues.
-    paused,
-    // Pause restored; deadlines slid.  Ready-advance must recheck
-    // ready_at before continuing.
-    restored,
-    // No pause.
-    ok,
-};
-} // namespace
 
 // Park the in-flight deadlines and turn ready_at into a 1-minute polling cursor
 // so a paused step keeps re-checking until its requirements return.
@@ -1640,9 +2621,7 @@ static env_check_result craft_check_env_step( item &craft, time_point now,
         }
         // Re-arm env_check cursor, clamped to ready_at so a near-end-of-step
         // restore does not arm a poll past completion.
-        craft_refresh_reservation_lease( craft, now, loc );
-        if( step_has_env_requirements( step ) || step_has_charged_alloc( craft, step_idx ) ||
-            craft.get_reserved_tile() ) {
+        if( step_wants_env_poll( craft, step, step_idx ) ) {
             const time_point next = now + 1_minutes;
             craft.set_env_check_at( std::min( next, craft.get_ready_at() ) );
         } else {
@@ -1655,9 +2634,7 @@ static env_check_result craft_check_env_step( item &craft, time_point now,
     // Normal mid-step env check (no pause entered or exited).  Re-arm the
     // cursor for the next minute; clamp to ready_at so a poll never fires
     // after step completion.
-    craft_refresh_reservation_lease( craft, now, loc );
-    if( step_has_env_requirements( step ) || step_has_charged_alloc( craft, step_idx ) ||
-        craft.get_reserved_tile() ) {
+    if( step_wants_env_poll( craft, step, step_idx ) ) {
         const time_point next = now + 1_minutes;
         craft.set_env_check_at( std::min( next, craft.get_ready_at() ) );
     } else {
@@ -1687,6 +2664,13 @@ static void craft_actualize_env( item &craft, time_point now, const item_locatio
     // The environment check can clear a tool pause before tools are rechecked.
     // Warn only when the shortage first pauses this craft.
     const bool was_paused = craft.get_pause_started_at() != calendar::before_time_starts;
+    // Also on the restore branch, so a craft paused for a lost provider recovers itself.
+    const acquire_outcome reservation_result = reserve_step_resources( craft, loc, now );
+    if( reservation_result != acquire_outcome::ok ) {
+        craft_note_reservation_pause( craft, reservation_result );
+        craft_enter_env_pause( craft, now, loc );
+        return;
+    }
     if( craft_check_env_step( craft, now, loc ) == env_check_result::paused ) {
         return;
     }
@@ -1695,8 +2679,11 @@ static void craft_actualize_env( item &craft, time_point now, const item_locatio
     if( Character *consumer = resolve_consume_crafter( craft, loc ) ) {
         if( !consumer->craft_consume_passive_step_tools( craft, now, loc, !was_paused ) ) {
             craft_enter_env_pause( craft, now, loc );
+            return;
         }
     }
+    craft.set_reservation_pause_reason( 0 );
+    craft_refresh_reservation_lease( craft, now, loc );
 }
 
 static void craft_actualize_ready( item &craft, time_point now, const item_location &loc )
@@ -1716,6 +2703,9 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
     // Recipe-edit migration: stale passive state on what is now an active step
     // would otherwise advance/finalize the wrong step.  Clear and bail.
     if( step.attention != step_attention::unattended ) {
+        // No live unattended step is left to hold anything, so the claims go with it
+        // rather than waiting out the lease.
+        release_step_resources( craft );
         craft.set_passive_started_at( calendar::before_time_starts );
         craft.set_ready_at( calendar::before_time_starts );
         craft.set_alarm_at( calendar::before_time_starts );
@@ -1741,6 +2731,15 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
 
     // The environment check can clear a tool pause before tools are rechecked.
     const bool was_paused = craft.get_pause_started_at() != calendar::before_time_starts;
+    // The gate treats a bound group as covered, which is only sound once that binding
+    // has been checked this tick; otherwise a lost provider completes the step.
+    const acquire_outcome ready_reservation = reserve_step_resources( craft, loc, now );
+    if( ready_reservation != acquire_outcome::ok ) {
+        craft_note_reservation_pause( craft, ready_reservation );
+        craft_enter_env_pause( craft, now, loc );
+        return;
+    }
+
     const env_check_result env_result = craft_check_env_step( craft, now, loc );
     if( env_result == env_check_result::paused ) {
         return;
@@ -1769,6 +2768,10 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
     }
 
     if( env_result == env_check_result::restored && now < craft.get_ready_at() ) {
+        // Past every gate, so this tick counts as completed even though the slid
+        // deadline puts completion off.
+        craft.set_reservation_pause_reason( 0 );
+        craft_refresh_reservation_lease( craft, now, loc );
         return;
     }
 
@@ -1893,8 +2896,8 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
     const crafting_cost_context passive_ctx{ crafter.book_bonuses_nearby(),
             compute_tool_speeds( rec, crafter ) };
     const int64_t step_moves = static_cast<int64_t>( rec.step_budget_moves(
-                                   crafter, idx, craft.get_making_batch_size(),
-                                   passive_ctx, recipe_time_flag::ignore_proficiencies ) );
+            crafter, idx, craft.get_making_batch_size(),
+            passive_ctx, recipe_time_flag::ignore_proficiencies ) );
     // Carry step_progress as a fraction of the active (prof-aware) budget
     // and back-date entry by that fraction of the passive budget; preserves
     // prior work when an active step becomes unattended via recipe edit.
@@ -1919,9 +2922,9 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
         // Scale max_time+grace by batch like ready_at, ignoring tool/prof
         // speed.  One apply() call: linear setup offset is not distributive.
         const int64_t fail_moves = static_cast<int64_t>( cur_step.batch_info.apply(
-                                       static_cast<double>( to_moves<int64_t>( raw_fail ) ), batch ) );
+                static_cast<double>( to_moves<int64_t>( raw_fail ) ), batch ) );
         const int64_t max_moves = static_cast<int64_t>( cur_step.batch_info.apply(
-                                      static_cast<double>( to_moves<int64_t>( raw_max ) ), batch ) );
+                static_cast<double>( to_moves<int64_t>( raw_max ) ), batch ) );
         time_point fail_pt = entry_time + time_duration::from_moves( fail_moves );
         // Keep ruin strictly after completion; grace window is the marginal
         // scaled difference, or a floor when there is no grace_period.
@@ -1935,15 +2938,15 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
     if( plan.choice == step_choice::set_timer && plan.alarm_offset.has_value() ) {
         craft.set_alarm_at( entry_time + *plan.alarm_offset );
     }
-    // Before the poll decision, which reads the claim: a step holding only its craft
-    // site still polls, so the lease taken here is refreshed rather than lapsing under
-    // a running craft.
-    reserve_step_resources( craft, loc, now );
-    // Periodic env-check cursor: arm when the step has env requirements, any charged
-    // allocation to drain, or a claim whose lease needs refreshing.  Clamp to ready_at
-    // so a short step never schedules a poll past completion.
-    if( step_has_env_requirements( cur_step ) || step_has_charged_alloc( craft, idx ) ||
-        craft.get_reserved_tile() ) {
+    // Periodic env-check cursor: arm when the step has env requirements or any
+    // charged allocation to drain.  Clamp to ready_at so a short step never
+    // schedules a poll past completion.
+    // Before the entry debit, which is irreversible: a step whose provider was already
+    // taken would otherwise spend charges and pause immediately.
+    const acquire_outcome reservation_result = reserve_step_resources( craft, loc, now );
+
+    // After acquiring, since the condition reads the bindings.
+    if( step_wants_env_poll( craft, cur_step, idx ) ) {
         const time_point next = now + 1_minutes;
         craft.set_env_check_at( std::min( next, craft.get_ready_at() ) );
     } else {
@@ -1970,12 +2973,18 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
     const double base_total = std::max( 1.0,
                                         static_cast<double>( static_cast<int64_t>( base_default ) ) );
     const int start_counter = static_cast<int>( std::round(
-                                  prior_moves / base_total * 10000000.0 ) );
+            prior_moves / base_total * 10000000.0 ) );
     const int end_counter = std::min( 10000000,
                                       static_cast<int>( std::round(
                                               ( prior_moves + step_default ) / base_total * 10000000.0 ) ) );
     craft.set_passive_start_counter( start_counter );
     craft.set_passive_end_counter( end_counter );
+    if( reservation_result != acquire_outcome::ok ) {
+        craft_note_reservation_pause( craft, reservation_result );
+        craft_enter_env_pause( craft, now, loc );
+        get_item_wakeups().rebuild_for_item( loc );
+        return;
+    }
     // Drain the entry (bucket 0) charges now so a passive step pays its entry
     // debit like an active one.  A shortfall pauses the step.
     if( Character *consumer = resolve_consume_crafter( craft, loc ) ) {
@@ -2003,6 +3012,9 @@ void craft_apply_resume_replan( item_location &loc )
     if( rec.steps()[idx].attention != step_attention::unattended ) {
         return;
     }
+    // A provider copied to a new uid can never match its old identity, so an explicit
+    // resume must re-resolve rather than revalidate.
+    release_step_resources( *craft );
     const std::vector<attention_plan> &plans = craft->get_step_plans();
     const attention_plan plan = idx < static_cast<int>( plans.size() ) ? plans[idx] :
                                 attention_plan{};
@@ -2078,7 +3090,7 @@ void Character::start_craft( craft_command &command, const std::optional<tripoin
     }
 
     item_location craft_in_world = place_craft_or_disassembly( *this, craft, loc,
-                                   command.always_start_on_ground() );
+        command.always_start_on_ground() );
 
     if( !craft_in_world ) {
         return;
@@ -2330,7 +3342,7 @@ Character::craft_roll_data Character::recipe_success_roll_data( const recipe &ma
         }
         if( has_all_skills ) {
             const float helper_skill_average = std::max( guy->get_recipe_weighted_skill_average( making ),
-                                               0.0f );
+                0.0f );
             helpers_weighted_average += std::pow( helper_skill_average, 2 );
             add_msg_if_player( m_info, _( "%s helps with crafting…" ), guy->get_name() );
         }
@@ -2855,7 +3867,7 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
 
         auto std_filter = [&rec]( const item & it ) {
             return rec.get_component_filter()( it ) && ( it.is_container_empty() ||
-                    !it.is_watertight_container() );
+                !it.is_watertight_container() );
         };
         const std::function<bool( const item & )> no_rotten_filter =
             rec.get_component_filter( recipe_filter_flags::no_rotten );
@@ -2916,7 +3928,7 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
         for( const auto &it : continue_reqs.get_components() ) {
             // NPC always picks the first candidate
             comp_selection<item_comp> is = select_item_component( it, batch_size, map_inv, true, filter, true,
-                                           false, &rec );
+                false, &rec );
             if( is.use_from == usage_from::cancel ) {
                 cancel_activity();
                 if( this->is_avatar() ) {
@@ -2997,8 +4009,8 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
             const bool prior_full = prior.size() == rec.steps().size();
             bool cancelled = false;
             std::vector<std::vector<step_tool_alloc>> fresh =
-                    select_step_tool_allocs( *this, rec, batch_size, map_inv, cancelled,
-                                             prior_full ? cur : -1 );
+                select_step_tool_allocs( *this, rec, batch_size, map_inv, cancelled,
+                                         prior_full ? cur : -1 );
             if( cancelled ) {
                 return false;
             }
@@ -3250,7 +4262,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
             BOTH
         };
         auto get_ingredient_description = [&player_character, &map_inv, &filter,
-                                                              &is_food, &remove_raw]( const inventory_source & inv_source,
+                                           &is_food, &remove_raw]( const inventory_source & inv_source,
         const itype_id & ingredient_type, const int &count ) {
             std::string text;
             int available = 0;
@@ -3276,7 +4288,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
                     text = _( "%s (%d/%d nearby & on person)" );
                     kcal_values = map_inv.kcal_range( ingredient_type, filter, player_character );
                     const std::pair<int, int> kcal_values_tmp = player_character.kcal_range( ingredient_type, filter,
-                            player_character );
+                        player_character );
                     kcal_values.first = std::min( kcal_values.first, kcal_values_tmp.first );
                     kcal_values.second = std::max( kcal_values.second, kcal_values_tmp.second );
                     available = item::count_by_charges( ingredient_type ) ?
@@ -3308,7 +4320,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
         for( auto &map_ha : map_has ) {
             // Index 0-(map_has.size()-1)
             cmenu.addentry( get_ingredient_description( inventory_source::MAP, map_ha.first.type,
-                            map_ha.first.count * batch ) );
+                    map_ha.first.count * batch ) );
             if( map_ha.second.has_value() ) {
                 cmenu.entries.back().text_color = map_ha.second.value();
             }
@@ -3316,7 +4328,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
         for( auto &player_ha : player_has ) {
             // Index map_has.size()-(map_has.size()+player_has.size()-1)
             cmenu.addentry( get_ingredient_description( inventory_source::SELF, player_ha.first.type,
-                            player_ha.first.count * batch ) );
+                    player_ha.first.count * batch ) );
             if( player_ha.second.has_value() ) {
                 cmenu.entries.back().text_color = player_ha.second.value();
             }
@@ -3324,7 +4336,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
         for( auto &component : mixed ) {
             // Index player_has.size()-(map_has.size()+player_has.size()+mixed.size()-1)
             cmenu.addentry( get_ingredient_description( inventory_source::BOTH, component.first.type,
-                            component.first.count * batch ) );
+                    component.first.count * batch ) );
             if( component.second.has_value() ) {
                 cmenu.entries.back().text_color = component.second.value();
             }
@@ -3434,7 +4446,7 @@ std::vector<item_location> preview_source_locations( Character &crafter,
     map &here = get_map();
     if( selection.use_from & usage_from::map ) {
         const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                    crafter.pos_bub(), pickup_range, 1, 100 );
+                crafter.pos_bub(), pickup_range, 1, 100 );
         for( const tripoint_bub_ms &point : reachable ) {
             if( !here.accessible_items( point ) ) {
                 continue;
@@ -3459,7 +4471,7 @@ std::optional<item> preview_infinite_map_charge_source( Character &crafter, cons
 {
     map &here = get_map();
     const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                crafter.pos_bub(), pickup_range, 1, 100 );
+            crafter.pos_bub(), pickup_range, 1, 100 );
     for( const tripoint_bub_ms &point : reachable ) {
         item source = here.liquid_from( point );
         if( source.typeId() == type && source.charges == item::INFINITE_CHARGES ) {
@@ -3480,7 +4492,7 @@ void add_vehicle_preview_source( const tripoint_bub_ms &point, const itype_id &t
         return;
     }
     const std::optional<vpart_reference> tool_part = vehicle_position->part_with_tool( here,
-            vehicle_tool_type );
+        vehicle_tool_type );
     if( !tool_part ) {
         return;
     }
@@ -3520,7 +4532,7 @@ std::optional<item_components> Character::preview_crafting_components(
                         std::abs( selection.comp.count );
         if( by_charges && ( selection.use_from & usage_from::map ) ) {
             std::optional<item> infinite_source = preview_infinite_map_charge_source( *this,
-                                                  selection.comp.type );
+                selection.comp.type );
             if( infinite_source ) {
                 infinite_source->charges = remaining;
                 sources.push_back( { item_location::nowhere, *infinite_source, remaining, true,
@@ -3562,10 +4574,10 @@ std::optional<item_components> Character::preview_crafting_components(
                 comp_selection<item_comp> map_selection = selection;
                 map_selection.use_from = usage_from::map;
                 std::vector<item_location> map_candidates = preview_source_locations(
-                            *this, map_selection, filter, preferred );
+                        *this, map_selection, filter, preferred );
                 map &here = get_map();
                 const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                            pos_bub(), pickup_range, 1, 100 );
+                        pos_bub(), pickup_range, 1, 100 );
                 const bool vehicle_first = !by_charges;
                 for( const tripoint_bub_ms &point : reachable ) {
                     for( item_location &location : map_candidates ) {
@@ -3594,7 +4606,7 @@ std::optional<item_components> Character::preview_crafting_components(
                 comp_selection<item_comp> player_selection = selection;
                 player_selection.use_from = usage_from::player;
                 std::vector<item_location> player_candidates = preview_source_locations(
-                            *this, player_selection, filter, preferred );
+                        *this, player_selection, filter, preferred );
                 for( item_location &location : player_candidates ) {
                     add_candidate( location );
                 }
@@ -3623,7 +4635,7 @@ std::list<item> Character::consume_items( const comp_selection<item_comp> &is, i
     }
     // populate a grid of spots that can be reached
     const std::vector<tripoint_bub_ms> &reachable_pts = m.reachable_item_points( pos_bub(),
-            pickup_range, 1, 100 );
+        pickup_range, 1, 100 );
     return consume_items( m, is, batch, filter, reachable_pts, select_ind, disable_preference );
 }
 
@@ -3636,7 +4648,7 @@ std::list<item> Character::consume_items( map &m, const comp_selection<item_comp
         return filter( it ) && is_preferred_component( it );
     };
     std::function<bool( const item & )> preferred_filter = disable_preference ? filter :
-            active_preferred_filter;
+        active_preferred_filter;
     const std::function<bool( const item & )> map_filter =
     [this, &filter]( const item & candidate ) {
         return candidate.is_owned_by( *this, true ) && filter( candidate );
@@ -3750,7 +4762,7 @@ std::list<item> Character::consume_items( const std::vector<item_comp> &componen
     inventory map_inv;
     map_inv.form_from_map( pos_bub(), pickup_range, this );
     comp_selection<item_comp> sel = select_item_component( components, batch, map_inv, can_cancel,
-                                    filter );
+        filter );
     return consume_items( sel, batch, filter, select_ind( sel.comp.type ), disable_preference );
 }
 
@@ -4005,16 +5017,6 @@ bool Character::craft_consume_tools( item &craft, int multiplier, bool start_cra
     return true;
 }
 
-// Charges (count units) consumed through `count` 5% buckets.  Front-loads the
-// remainder at bucket 0 and caps at the step total.
-static int step_bucket_cumulative( int total, int count )
-{
-    if( count <= 0 ) {
-        return 0;
-    }
-    return std::min( total, total % 20 + count * ( total / 20 ) );
-}
-
 // 5% bucket count (0..20) a step should reach at progress fraction `f`.  Bucket
 // 0 (entry) fires at fraction 0; the final 5% is never charged.
 static int step_buckets_for_fraction( double f )
@@ -4046,44 +5048,25 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
         int alloc_idx = 0;
         int new_count = 0;
     };
-    std::vector<pending_debit> debits;
     std::vector<pending_presence> presence;
     for( int s = 0; s < static_cast<int>( allocs.size() ) &&
          s < static_cast<int>( targets.size() ); ++s ) {
-        const int tgt = targets[s];
         for( int a = 0; a < static_cast<int>( allocs[s].size() ); ++a ) {
-            step_tool_alloc &alloc = allocs[s][a];
-            if( alloc.sel.comp.count <= 0 ) {
-                // Re-check non-charged tool presence on bucket transitions only;
-                // verify_step_tools sweeps the step at completion to catch a
-                // tool removed within the final bucket.
-                if( tgt > alloc.consumed_buckets ) {
-                    presence.push_back( { alloc.sel.comp.type, s, a, tgt } );
-                }
-                continue;
+            const step_tool_alloc &alloc = allocs[s][a];
+            // Re-check non-charged tool presence on bucket transitions only;
+            // verify_step_tools sweeps the step at completion to catch a
+            // tool removed within the final bucket.
+            if( alloc.sel.comp.count <= 0 && targets[s] > alloc.consumed_buckets &&
+                !tool_covered_by_binding( craft, alloc.sel.comp.type ) ) {
+                presence.push_back( { alloc.sel.comp.type, s, a, targets[s] } );
             }
-            if( tgt <= alloc.consumed_buckets ) {
-                continue;
-            }
-            if( alloc.step_count_units <= 0 ) {
-                alloc.consumed_buckets = tgt;
-                continue;
-            }
-            const int units = step_bucket_cumulative( alloc.step_count_units, tgt ) -
-                              step_bucket_cumulative( alloc.step_count_units, alloc.consumed_buckets );
-            if( units <= 0 ) {
-                alloc.consumed_buckets = tgt;
-                continue;
-            }
-            // Pin player- and both-sourced charges to the map when the crafter
-            // cannot reach the craft, so the preflight and the debit both hit the
-            // charges sitting at the craft rather than an absent crafter's pack.
-            usage_from eff = alloc.sel.use_from;
-            if( pin_to_map && ( eff == usage_from::both || eff == usage_from::player ) ) {
-                eff = usage_from::map;
-            }
-            debits.push_back( { alloc.sel, eff, units, s, a, tgt } );
         }
+    }
+    std::vector<settled_tool_bucket> settled;
+    const std::vector<pending_tool_debit> debits =
+        collect_step_tool_debits( allocs, targets, pin_to_map, &settled );
+    for( const settled_tool_bucket &s : settled ) {
+        allocs[s.step_idx][s.alloc_idx].consumed_buckets = s.new_count;
     }
 
     if( debits.empty() && presence.empty() ) {
@@ -4091,27 +5074,10 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
         return true;
     }
 
-    // Aggregate the required charges per tool type, then preflight, so shared
-    // pools cannot pass per-alloc yet fail in total.
     std::map<itype_id, int> need_player;
     std::map<itype_id, int> need_map;
     std::map<itype_id, int> need_both;
-    for( const pending_debit &d : debits ) {
-        const int qty = d.units * item::find_type( d.sel.comp.type )->charge_factor();
-        switch( d.eff_use ) {
-            case usage_from::player:
-                need_player[d.sel.comp.type] += qty;
-                break;
-            case usage_from::map:
-                need_map[d.sel.comp.type] += qty;
-                break;
-            case usage_from::both:
-                need_both[d.sel.comp.type] += qty;
-                break;
-            default:
-                break;
-        }
-    }
+    aggregate_tool_debits( debits, need_player, need_map, need_both );
     // form_from_map is expensive in dense areas; defer it until a map-sourced
     // check actually needs it.  Active crafts with player-held tools never hit
     // need_map and pin_to_map=false, so the inventory is never built.
@@ -4125,9 +5091,11 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
         return *map_inv;
     };
     const auto shortfall = [&]( const std::map<itype_id, int> &need, int which ) -> bool {
-        for( const std::pair<const itype_id, int> &n : need )
-        {
-            bool ok = which == 0 ? has_charges( n.first, n.second )
+for( const std::pair<const itype_id, int> &n : need )
+    {
+        // The same filter the debit applies, or a reserved tool passes the check
+        // and then supplies nothing while the bucket is recorded as paid.
+        bool ok = which == 0 ? has_charges( n.first, n.second, unreserved_filter )
             : which == 1 ? get_map_inv().has_charges( n.first, n.second )
             : crafting_inventory().has_charges( n.first, n.second );
             if( !ok ) {
@@ -4166,7 +5134,7 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
     }
 
     map &m = get_map();
-    for( const pending_debit &d : debits ) {
+    for( const pending_tool_debit &d : debits ) {
         comp_selection<tool_comp> to_consume = d.sel;
         to_consume.use_from = d.eff_use;
         to_consume.comp.count = d.units;
@@ -4202,6 +5170,9 @@ bool Character::verify_step_tools( item &craft, int step_idx,
     };
     for( const step_tool_alloc &alloc : allocs[step_idx] ) {
         if( alloc.sel.comp.count > 0 ) {
+            continue;
+        }
+        if( tool_covered_by_binding( craft, alloc.sel.comp.type ) ) {
             continue;
         }
         const bool present = pin_to_map ? get_map_inv().has_tools( alloc.sel.comp.type, 1 )
@@ -4276,7 +5247,7 @@ bool Character::craft_consume_character_resources( item &craft, int target_progr
         }
 
         const int debit = craft_resource_debit_for_progress( craft, var, base_cost, batch,
-                          target_progress );
+            target_progress );
         if( !apply ) {
             if( debit <= available ) {
                 return true;
@@ -4492,7 +5463,7 @@ ret_val<void> Character::can_disassemble( const item &obj, const read_only_visit
     }
 
     const recipe &r = recipe_dictionary::get_uncraft( ( obj.typeId() == itype_disassembly ) ?
-                      obj.components.only_item().typeId() : obj.typeId() );
+        obj.components.only_item().typeId() : obj.typeId() );
 
     // check sufficient light
     if( lighting_craft_speed_multiplier( r ) == 0.0f ) {
@@ -4552,7 +5523,7 @@ ret_val<void> Character::can_disassemble( const item &obj, const read_only_visit
             } else {
                 //~ %1$s: tool name, %2$d: needed charges
                 return ret_val<void>::make_failure( n_gettext( "You need a %1$s with %2$d charge.",
-                                                    "You need a %1$s with %2$d charges.", tool_required.count ),
+                        "You need a %1$s with %2$d charges.", tool_required.count ),
                                                     item::nname( tool_required.type ),
                                                     tool_required.count );
             }
@@ -4590,7 +5561,7 @@ item_location Character::create_in_progress_disassembly( item_location target )
     }
 
     item_location disassembly_in_world = place_craft_or_disassembly( *this, new_disassembly,
-                                         std::nullopt );
+        std::nullopt );
 
     if( !disassembly_in_world ) {
         return item_location::nowhere;
@@ -4609,7 +5580,7 @@ static int query_disassemble_quantity( int num_dis, const item &obj )
 {
     number_input_popup<int> popup_input( 0, num_dis );
     const std::string title = string_format( _( "Disassemble how many %s [MAX: %d]: " ),
-                              obj.type_name( 1 ), obj.charges );
+        obj.type_name( 1 ), obj.charges );
     popup_input.set_label( title );
     int result = popup_input.query();
     return popup_input.cancelled() ? 0 : result;
@@ -4690,7 +5661,7 @@ bool Character::disassemble( item_location target, bool interactive, bool disass
             }
         }
         const int64_t craft_moves = r.time_to_craft_moves( *this, {},
-                                    recipe_time_flag::ignore_proficiencies );
+            recipe_time_flag::ignore_proficiencies );
         const int num = obj.typeId() != itype_disassembly ? num_dis : obj.get_making_batch_size();
         player_activity new_act( disassemble_activity_actor( num * craft_moves ) );
         new_act.targets.emplace_back( std::move( target ) );
@@ -4780,7 +5751,7 @@ void Character::complete_disassemble( item_location target )
     }
     // Set get and set duration of next uncraft
     const recipe &next_recipe = recipe_dictionary::get_uncraft( ( next_item->typeId() ==
-                                itype_disassembly ) ? next_item->components.only_item().typeId() : next_item->typeId() );
+        itype_disassembly ) ? next_item->components.only_item().typeId() : next_item->typeId() );
 
     if( !next_recipe ) {
         debugmsg( "bad disassembly recipe" );
@@ -4804,7 +5775,7 @@ void Character::complete_disassemble( item_location target )
         }
     }
     int64_t moves = next_recipe.time_to_craft_moves( *this, {},
-                    recipe_time_flag::ignore_proficiencies );
+        recipe_time_flag::ignore_proficiencies );
     player_activity new_act( disassemble_activity_actor( moves * num_dis ) );
     new_act.targets = activity.targets;
     new_act.index = activity.index;
@@ -5035,7 +6006,7 @@ void remove_ammo( item &dis_item, Character &p )
 {
     dis_item.remove_items_with( [&p]( const item & it ) {
         if( it.is_irremovable() || !( it.is_gunmod() || it.is_toolmod() || ( it.is_magazine() &&
-                                      !it.is_tool() ) ) ) {
+                !it.is_tool() ) ) ) {
             return false;
         }
         drop_or_handle( it, p );
