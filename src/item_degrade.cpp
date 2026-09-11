@@ -545,10 +545,11 @@ void item::set_random_fault_of_type( const std::string &fault_type, bool force,
     weighted_int_list<fault_id> faults_by_type;
     // Fresh items (damage_level 0, e.g. crafting defect rolls) draw from the full
     // pool; higher severities unlock as the item takes further damage.
+    const int lvl = damage_level();
     fault_severity max_allowed = fault_severity::critical;
-    if( damage_level() == 1 ) {
+    if( lvl == 1 ) {
         max_allowed = fault_severity::minor;
-    } else if( damage_level() == 2 ) {
+    } else if( lvl == 2 ) {
         max_allowed = fault_severity::major;
     }
     for( const std::pair<fault_id, int> &f : type->faults ) {
