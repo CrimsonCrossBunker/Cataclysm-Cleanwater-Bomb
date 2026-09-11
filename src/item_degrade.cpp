@@ -478,9 +478,42 @@ bool item::can_have_fault( const fault_id &f_id )
     return true;
 }
 
-bool item::set_fault( const fault_id &f_id, bool force, const Character *holder )
+namespace {
+constexpr float FAULT_RATE_UNBREAKABLE = 0.25f;
+constexpr float FAULT_RATE_UNBREAKABLE_MELEE = 0.33f;
+constexpr float FAULT_RATE_STURDY = 0.5f;
+constexpr float FAULT_RATE_DURABLE_MELEE = 0.5f;
+constexpr float FAULT_RATE_DURABLE = 0.5f;
+constexpr float FAULT_RATE_FRAGILE_MELEE = 1.25f;
+
+float fault_rate_multiplier( const item &it )
+{
+    float protective = 1.0f;
+    float adverse = 1.0f;
+    if( it.has_flag( flag_UNBREAKABLE ) ) {
+        protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
+    }
+    if( it.has_flag( flag_UNBREAKABLE_MELEE ) ) {
+        protective = std::min( protective, FAULT_RATE_UNBREAKABLE_MELEE );
+    }
+    if( it.has_flag( flag_STURDY ) || it.has_flag( flag_DURABLE_MELEE ) ||
+        it.has_flag( flag_DURABLE ) ) {
+        protective = std::min( protective, FAULT_RATE_STURDY );
+    }
+    if( it.has_flag( flag_FRAGILE_MELEE ) ) {
+        adverse = std::max( adverse, FAULT_RATE_FRAGILE_MELEE );
+    }
+    return protective * adverse;
+}
+} // namespace
+
+bool item::set_fault( const fault_id &f_id, bool force, const Character *holder,
+                      bool skip_rate_mult )
 {
     if( !force && !can_have_fault( f_id ) ) {
+        return false;
+    }
+    if( !skip_rate_mult && !x_in_y( fault_rate_multiplier( *this ), 1.0 ) ) {
         return false;
     }
 
@@ -503,10 +536,11 @@ bool item::set_fault( const fault_id &f_id, bool force, const Character *holder 
 }
 
 void item::set_random_fault_of_type( const std::string &fault_type, bool force,
-                                     const Character *holder )
+                                     const Character *holder, bool skip_rate_mult )
 {
     if( force ) {
-        set_fault( random_entry( faults::all_of_type( fault_type ) ), true, holder );
+        set_fault( random_entry( faults::all_of_type( fault_type ) ), true, holder,
+                   skip_rate_mult );
         return;
     }
 
@@ -528,7 +562,7 @@ void item::set_random_fault_of_type( const std::string &fault_type, bool force,
     }
 
     if( !faults_by_type.empty() ) {
-        set_fault( *faults_by_type.pick(), force, holder );
+        set_fault( *faults_by_type.pick(), force, holder, skip_rate_mult );
     }
 
 }
