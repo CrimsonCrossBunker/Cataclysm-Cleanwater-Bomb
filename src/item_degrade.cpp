@@ -490,10 +490,7 @@ float fault_rate_multiplier( const item &it )
 {
     float protective = 1.0f;
     float adverse = 1.0f;
-    if( it.has_flag( flag_UNBREAKABLE ) ) {
-        protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
-    }
-    if( it.has_flag( flag_UNBREAKABLE_MELEE ) ) {
+    if( it.has_flag( flag_UNBREAKABLE ) || it.has_flag( flag_UNBREAKABLE_MELEE ) ) {
         protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
     }
     if( it.has_flag( flag_STURDY ) || it.has_flag( flag_DURABLE_MELEE ) ||
