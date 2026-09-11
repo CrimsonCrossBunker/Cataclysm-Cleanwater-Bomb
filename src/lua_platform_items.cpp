@@ -2669,7 +2669,7 @@ sol::table set_item_fault(
     const bool before = entry.has_fault( native );
     const bool accepted = entry.set_fault(
                               native, options.force,
-                              options.message ? holder : nullptr );
+                              options.message ? holder : nullptr, true );
     const bool after = entry.has_fault( native );
     sol::table value = state.create_table();
     value["fault"] = fault;
@@ -2716,7 +2716,7 @@ sol::table set_random_item_fault(
     const std::vector<std::string> before = item_fault_names( entry );
     entry.set_random_fault_of_type(
         fault_type, options.force,
-        options.message ? holder : nullptr );
+        options.message ? holder : nullptr, true );
     const std::vector<std::string> after = item_fault_names( entry );
     sol::table value = state.create_table();
     value["fault_type"] = fault_type;
