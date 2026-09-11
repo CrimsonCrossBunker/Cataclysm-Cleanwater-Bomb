@@ -6,6 +6,7 @@
 #include "coordinates.h"
 #include "item.h"
 #include "item_location.h"
+#include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "player_helpers.h"
@@ -17,9 +18,21 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+static const itype_id itype_fat( "fat" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_tallow( "tallow" );
 static const vpart_id vpart_frame( "frame" );
 static const vproto_id vehicle_prototype_none( "none" );
+
+TEST_CASE( "rendered_tallow_does_not_inherit_raw_fat_parasites", "[upstream_tallow]" )
+{
+    const item raw( itype_fat );
+    const item rendered( itype_tallow );
+    REQUIRE( raw.get_comestible() );
+    REQUIRE( rendered.get_comestible() );
+    CHECK( raw.get_comestible()->parasites > 0 );
+    CHECK( rendered.get_comestible()->parasites == 0 );
+}
 
 TEST_CASE( "upstream_nullable_weight_query_preserves_dropped_weight", "[upstream_compat]" )
 {
