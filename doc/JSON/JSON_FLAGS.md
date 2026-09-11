@@ -86,6 +86,7 @@
 - Some flags (items, effects, vehicle parts, construction pre_flags) have to be defined in `flags.json` or `vp_flags.json` (with type: `json_flag`) to work correctly.
 - Many of the flags intended for one category or item type can be used in other categories or item types.  Experiment to see where else flags can be used.
 - Offensive and defensive flags can be used on any item type that can be wielded.
+- Fault chance modifiers from `UNBREAKABLE`, `UNBREAKABLE_MELEE`, `STURDY`, `DURABLE`, and `DURABLE_MELEE` do not stack; when several apply, the strongest reduction wins.
 
 
 ## Inheritance
@@ -263,7 +264,7 @@ Some armor flags, such as `WATCH` and `ALARMCLOCK` are compatible with other ite
 - ```STAR_PLATE``` Item can be worn with ryūsei battle kit armor; specifically can be put in pocket for armor with this flag restriction.
 - ```STAR_SHOULDER``` Item can be worn with ryūsei battle kit armor ; specifically can be put in pocket for armor with this flag restriction.
 - ```STAR_SKIRT``` Item can be worn with ryūsei battle kit armor; specifically can be put in pocket for armor with this flag restriction.
-- ```STURDY``` This clothing is a lot more resistant to damage than normal.
+- ```STURDY``` This clothing is a lot more resistant to damage than normal.  Fault chance is halved.
 - ```SUN_GLASSES``` Prevents glaring when in sunlight.
 - ```SWIM_GOGGLES``` Allows you to see much further underwater.
 - ```THERMOMETER``` This gear is equipped with an accurate thermometer (which is used to measure temperature).
@@ -857,7 +858,8 @@ These flags can be applied via JSON item definition to most items.  Not to be co
 - ```DISCOUNT_VALUE_2``` This item gives an average discount for fuel, bought in automated gas console.
 - ```DISCOUNT_VALUE_3``` This item gives a big discount for fuel, bought in automated gas console.
 - ```DROP_ACTION_ONLY_IF_LIQUID``` Cause `drop_action` only if item in liquid phase.
-- ```DURABLE_MELEE``` Item is made to hit stuff and it does it well, so it's considered to be a lot tougher than other weapons made of the same materials.
+- ```DURABLE``` Item takes only a quarter of the damage it would otherwise receive, from any source.  Fault chance is halved.
+- ```DURABLE_MELEE``` Item is made to hit stuff and it does it well, so it's considered to be a lot tougher than other weapons made of the same materials.  Fault chance is halved.
 - ```E_COPIABLE``` This item can be scanned onto an electronic device and can be electronically copied.
 - ```E_FILE_COLLECTION``` This item represents a combinable collection of files. Does not imply E_COPIABLE.
 - ```E_STORABLE``` This item can be stored on an in-game electronic device.
@@ -973,8 +975,8 @@ These flags can be applied via JSON item definition to most items.  Not to be co
 - ```TRADER_KEEP_EQUIPPED``` NPCs will only trade this item if they aren't currently wearing or wielding it.
 - ```TRADER_KEEP``` NPCs will not trade this item away under any circumstances.
 - ```TWO_WAY_RADIO``` this items is two-way radio, and work accordingly.
-- ```UNBREAKABLE_MELEE``` Never gets damaged when used as melee weapon.
-- ```UNBREAKABLE``` This item can not be damaged, be that directly, while worn as armor, or when used as a melee weapon.
+- ```UNBREAKABLE_MELEE``` Never gets damaged when used as melee weapon.  Fault chance is reduced to a quarter of normal.
+- ```UNBREAKABLE``` This item can not be damaged, be that directly, while worn as armor, or when used as a melee weapon.  Fault chance is reduced to a quarter of normal.
 - ```UNRECOVERABLE``` Cannot be recovered from a disassembly.
 - ```USE_POWER_WHEN_HIT``` This armor consume energy when you got hit, equal to damage that was dealt (energy consuming happen before the armor mitigation).
 - ```VIEW_PHOTOS``` This item can display held photos.
