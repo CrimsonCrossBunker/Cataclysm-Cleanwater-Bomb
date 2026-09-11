@@ -510,8 +510,11 @@ bool item::set_fault( const fault_id &f_id, bool force, const Character *holder,
     if( !force && !can_have_fault( f_id ) ) {
         return false;
     }
-    if( !skip_rate_mult && !x_in_y( fault_rate_multiplier( *this ), 1.0 ) ) {
-        return false;
+    if( !skip_rate_mult ) {
+        const float mult = fault_rate_multiplier( *this );
+        if( mult < 1.0f && !x_in_y( mult, 1.0 ) ) {
+            return false;
+        }
     }
 
     // if f_id fault blocks fault A, we should remove fault A before applying fault f_id
