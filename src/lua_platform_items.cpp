@@ -5,8 +5,6 @@
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
-#include <flat_set.h>
-#include <game.h>
 #include <inventory_ui.h>
 #include <item_uid.h>
 
@@ -80,6 +78,8 @@ extern "C" {
 
 struct bionic;
 
+static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
+
 namespace cata::lua_platform
 {
 
@@ -111,7 +111,6 @@ constexpr int default_item_page_depth = 8;
 constexpr int maximum_item_page_depth = 64;
 constexpr std::size_t maximum_item_page_nodes = 1024;
 constexpr std::size_t maximum_item_page_cursors = 1024;
-static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
 
 enum class item_holder_kind : std::uint8_t {
     character,
@@ -975,7 +974,7 @@ bool next_query_path(
             diagnostic = "invalid_pocket";
             return false;
         }
-        std::size_t sibling_index = static_cast<std::size_t>( child_index + 1 );
+        std::size_t sibling_index = static_cast<std::size_t>( child_index ) + 1;
         for( item *sibling : pockets[pocket_index]->all_items_top() ) {
             if( sibling_index == 0 ) {
                 if( sibling == nullptr || sibling->is_null() ) {
@@ -993,7 +992,7 @@ bool next_query_path(
             }
             --sibling_index;
         }
-        for( std::size_t next_pocket = static_cast<std::size_t>( pocket_index + 1 );
+        for( std::size_t next_pocket = static_cast<std::size_t>( pocket_index ) + 1;
              next_pocket < pockets.size(); ++next_pocket ) {
             if( pockets[next_pocket] == nullptr ) {
                 diagnostic = "invalid_pocket";
@@ -2166,7 +2165,7 @@ sol::table transform_item(
 }
 
 void validate_item_var_key(
-    const std::string &key, const std::string &api_name )
+    std::string_view key, const std::string &api_name )
 {
     if( key.empty() ||
         key.size() > maximum_item_var_key_bytes ) {
@@ -2176,7 +2175,7 @@ void validate_item_var_key(
     if( std::any_of(
             key.begin(), key.end(),
     []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
             api_name + " key cannot contain control characters" );
@@ -2997,8 +2996,7 @@ void configure_spawned_inventory_item(
     for( const flag_id &flag : options.flags ) {
         entry.set_flag( flag );
     }
-    if( entry.has_flag(
-            flag_id( "PRESERVE_SPAWN_LOC" ) ) ) {
+    if( entry.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
         entry.preserve_location( position );
     }
 }
@@ -3084,7 +3082,7 @@ std::vector<inventory_selection_candidate> inventory_selection_candidates(
             throw std::invalid_argument(
                 api_name + " candidates must be a dense array of GameHandle values" );
         }
-        const game_handle handle =
+        const game_handle &handle =
             requested_handle.as<game_handle>();
         const native_handle_result<item> resolved =
             handle.resolve_item(
@@ -3130,7 +3128,7 @@ std::vector<inventory_selection_candidate> map_inventory_selection_candidates(
             throw std::invalid_argument(
                 api_name + " candidates must be a dense array of GameHandle values" );
         }
-        const game_handle handle =
+        const game_handle &handle =
             requested_handle.as<game_handle>();
         const game_handle_locator &locator = handle.locator();
         if( locator.scope != "map" || !locator.path.empty() ) {
@@ -3221,8 +3219,11 @@ map_inventory_selection_options read_map_inventory_selection_options(
             }
             result.accessible = entry.second.as<bool>();
         } else {
-            throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+            std::string message = api_name;
+            message += " received unknown option '";
+            message += key;
+            message += '\'';
+            throw std::invalid_argument( message );
         }
     }
     return result;
@@ -3560,7 +3561,7 @@ sol::table inventory_has_items_sum(
                 std::string( api_name ) +
                 " entries require item and numeric amount fields" );
         }
-        const script_game_id id = id_object.as<script_game_id>();
+        const script_game_id &id = id_object.as<script_game_id>();
         require_id_kind( id, "item", std::string( api_name ) );
         const double desired = amount_object.as<double>();
         if( !std::isfinite( desired ) || desired <= 0.0 ||
@@ -3924,8 +3925,7 @@ sol::table inventory_weapon_state(
         if( !can_stow ) {
             can_stow = character->can_pickVolume( *wielded );
         }
-        can_drop = !wielded->has_flag(
-                       flag_id( "NO_UNWIELD" ) );
+        can_drop = !wielded->has_flag( flag_NO_UNWIELD );
     }
     sol::table value = state.create_table();
     value["armed"] = armed;
@@ -4250,7 +4250,7 @@ sol::table consume_inventory_sum(
             throw std::invalid_argument(
                 "services.inventory.consume_sum entries require item and numeric amount fields" );
         }
-        const script_game_id id =
+        const script_game_id &id =
             id_object.as<script_game_id>();
         require_id_kind(
             id, "item", "services.inventory.consume_sum" );
@@ -4599,7 +4599,7 @@ std::optional<game_handle_error> insert_item_into_holder(
                 "The Character rejected the explicit worn destination"
             };
         }
-        item copy = source_copy;
+        const item &copy = source_copy;
         const std::optional<std::list<item>::iterator> worn =
             character.wear_item( copy, false, true, true, true );
         if( !worn ) {
@@ -6762,10 +6762,10 @@ sol::table recipe_escrow_item_snapshot(
 
 void install_item_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write_fn )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write_fn )
 {
     sol::state_view lua( services.lua_state() );
     const auto require_item_write = [require_write_fn]() {
