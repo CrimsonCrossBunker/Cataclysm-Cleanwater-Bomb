@@ -480,7 +480,6 @@ bool item::can_have_fault( const fault_id &f_id )
 
 namespace {
 constexpr float FAULT_RATE_UNBREAKABLE = 0.25f;
-constexpr float FAULT_RATE_UNBREAKABLE_MELEE = 0.33f;
 constexpr float FAULT_RATE_STURDY = 0.5f;
 constexpr float FAULT_RATE_DURABLE_MELEE = 0.5f;
 constexpr float FAULT_RATE_DURABLE = 0.5f;
@@ -495,7 +494,7 @@ float fault_rate_multiplier( const item &it )
         protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
     }
     if( it.has_flag( flag_UNBREAKABLE_MELEE ) ) {
-        protective = std::min( protective, FAULT_RATE_UNBREAKABLE_MELEE );
+        protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
     }
     if( it.has_flag( flag_STURDY ) || it.has_flag( flag_DURABLE_MELEE ) ||
         it.has_flag( flag_DURABLE ) ) {
