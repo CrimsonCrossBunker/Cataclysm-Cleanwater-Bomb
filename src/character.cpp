@@ -4437,7 +4437,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
             if( opts[menu.ret].second ) {
                 obj->remove_fault( opts[menu.ret].first );
             } else {
-                obj->set_fault( opts[menu.ret].first, true, nullptr );
+                obj->set_fault( opts[menu.ret].first, true, nullptr, true );
             }
         }
         return;
