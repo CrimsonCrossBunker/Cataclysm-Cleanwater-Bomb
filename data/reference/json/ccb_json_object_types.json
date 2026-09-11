@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:ac64490ef82dfeb84676692b4f0ce3e7aa39311d5d75cb6456f99256c472014a",
+    "source_fingerprint": "sha256:39f2bffbeb0ea3e2763fe404adb5ad96d4561b81890961a348ccb9bbb6819850",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6769,
-    "top_level_objects": 94746,
+    "top_level_objects": 94754,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -1130,7 +1130,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 18,
+        "occurrences": 19,
         "examples": [
           {
             "path": "data/json/addictions.json",
@@ -2432,7 +2432,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_FLAGS.md",
-            "line": 683
+            "line": 684
           }
         ],
         "confidence": "lexical_only"
@@ -4504,7 +4504,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 193,
+        "occurrences": 192,
         "examples": [
           {
             "path": "data/json/item_actions.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 917,
+        "occurrences": 918,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -5632,7 +5632,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 119,
+        "occurrences": 120,
         "examples": [
           {
             "path": "data/json/effects_on_condition/misc_effect_on_condition.json",
@@ -7023,7 +7023,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 749,
+        "occurrences": 750,
         "examples": [
           {
             "path": "data/json/hobbies.json",
@@ -9009,7 +9009,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 916,
+        "occurrences": 920,
         "examples": [
           {
             "path": "data/core/tips.json",
@@ -10744,7 +10744,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 131,
+        "occurrences": 132,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.I/migration_mutation.json",
