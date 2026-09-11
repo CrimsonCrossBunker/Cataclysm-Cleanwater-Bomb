@@ -6635,7 +6635,7 @@ talk_effect_fun_t::func f_set_fault( const JsonObject &jo, std::string_view memb
     return [fault_var, force, msg, is_npc]( dialogue const & d ) {
         item_location &it = *d.actor( is_npc )->get_item();
         const Character *holder = msg ? d.actor( is_npc )->get_character() : nullptr;
-        it.get_item()->set_fault( fault_id( fault_var.evaluate( d ) ), force, holder );
+        it.get_item()->set_fault( fault_id( fault_var.evaluate( d ) ), force, holder, true );
     };
 }
 
@@ -6648,7 +6648,7 @@ talk_effect_fun_t::func f_set_random_fault_of_type( const JsonObject &jo, std::s
     return [fault_type_var, force, msg, is_npc]( dialogue const & d ) {
         item_location &it = *d.actor( is_npc )->get_item();
         const Character *holder = msg ? d.actor( is_npc )->get_character() : nullptr;
-        it.get_item()->set_random_fault_of_type( fault_type_var.evaluate( d ), force, holder );
+        it.get_item()->set_random_fault_of_type( fault_type_var.evaluate( d ), force, holder, true );
     };
 }
 
