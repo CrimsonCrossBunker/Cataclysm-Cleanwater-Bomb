@@ -485,6 +485,7 @@ constexpr float FAULT_RATE_STURDY = 0.5f;
 constexpr float FAULT_RATE_DURABLE_MELEE = 0.5f;
 constexpr float FAULT_RATE_DURABLE = 0.5f;
 constexpr float FAULT_RATE_FRAGILE_MELEE = 1.25f;
+constexpr float DURABLE_DAMAGE_MULT = 0.25f;
 
 float fault_rate_multiplier( const item &it )
 {
@@ -1033,6 +1034,9 @@ bool item::mod_damage( int qty, const Character *holder )
 {
     if( has_flag( flag_UNBREAKABLE ) ) {
         return false;
+    }
+    if( has_flag( flag_DURABLE ) && qty > 0 ) {
+        qty = std::max( static_cast<int>( qty * DURABLE_DAMAGE_MULT ), 1 );
     }
     if( max_damage() == 0 ) {
         // Items with no damage range (ammo, liquid/gas comestibles) lose units
