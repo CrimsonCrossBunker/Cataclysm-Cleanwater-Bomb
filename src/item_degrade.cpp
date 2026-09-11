@@ -1013,7 +1013,7 @@ bool item::mod_damage( int qty, const Character *holder )
 
         // TODO: think about better way to telling the game what faults should be applied when
         if( qty > 0 ) {
-            for( int i = 0; i <= qty; i += itype::damage_scale ) {
+            for( int i = 0; i < qty; i += itype::damage_scale ) {
                 set_random_fault_of_type( "mechanical_damage", false, holder );
             }
         }
