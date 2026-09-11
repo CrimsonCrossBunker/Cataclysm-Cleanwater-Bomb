@@ -6583,7 +6583,7 @@ void Character::place_corpse( map *here )
             cbm.set_flag( flag_FILTHY );
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
-            cbm.set_fault( fault_bionic_salvaged );
+            cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
             body.put_in( cbm, pocket_type::CORPSE );
         }
     }
