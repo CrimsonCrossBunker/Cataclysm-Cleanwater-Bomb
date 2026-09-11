@@ -304,29 +304,16 @@ bool pixel_minimap::flush_cache_updates()
             SetRenderDrawColor( renderer, 0x00, 0x00, 0x00, 0x00 );
             RenderClear( renderer );
 
-            for( int y = 0; y < SEEY; ++y ) {
-                for( int x = 0; x < SEEX; ++x ) {
-                    const point tile_pos = projector->get_tile_pos( { x, y }, { SEEX, SEEY } );
-                    const point tile_size = projector->get_tile_size();
-
-                    const SDL_Rect rect = SDL_Rect{ tile_pos.x, tile_pos.y, tile_size.x, tile_size.y };
-
-                    geometry->rect( renderer, rect, SDL_Color() );
-                }
-            }
         }
 
+        geometry_batch_.clear();
+        geometry_batch_.reserve_quads( static_cast<int>( mcp.second.update_list.size() ) );
         for( const point &p : mcp.second.update_list ) {
             const point tile_pos = projector->get_tile_pos( p, { SEEX, SEEY } );
-            const SDL_Color tile_color = mcp.second.color_at( p );
-
-            if( pixel_size.x == 1 && pixel_size.y == 1 ) {
-                SetRenderDrawColor( renderer, tile_color.r, tile_color.g, tile_color.b, tile_color.a );
-                RenderDrawPoint( renderer, tile_pos );
-            } else {
-                geometry->rect( renderer, tile_pos, pixel_size.x, pixel_size.y, tile_color );
-            }
+            geometry_batch_.append_quad( tile_pos.x, tile_pos.y, pixel_size.x, pixel_size.y,
+                                         to_fcolor( mcp.second.color_at( p ) ) );
         }
+        render_batch( renderer, geometry_batch_ );
 
         mcp.second.update_list.clear();
     }
@@ -542,9 +529,11 @@ void pixel_minimap::render( const tripoint_bub_ms &center, const bool chunks_rep
     RenderClear( renderer );
 
     render_cache( center );
+    geometry_batch_.clear();
     for( const beacon &b : beacons ) {
-        draw_beacon( b.rect, b.color );
+        append_beacon( geometry_batch_, b.rect, b.color, 3 );
     }
+    render_batch( renderer, geometry_batch_ );
 
     // Restore so the compositing RenderCopy below lands on the caller's prior
     // target, not main_tex.
@@ -586,7 +575,7 @@ void pixel_minimap::render_cache( const tripoint_bub_ms &center )
     std::tie( quotient, remainder ) = coords::project_remain<coords::sm>( center );
 
     point_sm_ms ms_base_offset = point_sm_ms( ( total_tiles_count.x / 2 ) % SEEX,
-                                 ( total_tiles_count.y / 2 ) % SEEY );
+        ( total_tiles_count.y / 2 ) % SEEY );
     ms_offset = ms_base_offset - remainder;
 
     for( const auto &elem : cache ) {
