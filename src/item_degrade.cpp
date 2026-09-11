@@ -478,7 +478,8 @@ bool item::can_have_fault( const fault_id &f_id )
     return true;
 }
 
-namespace {
+namespace
+{
 constexpr float FAULT_RATE_UNBREAKABLE = 0.25f;
 constexpr float FAULT_RATE_STURDY = 0.5f;
 constexpr float FAULT_RATE_FRAGILE_MELEE = 1.25f;
