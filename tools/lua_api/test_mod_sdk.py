@@ -305,6 +305,52 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_day_predicate_has_boolean_editor_type(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            (mod / "day.lua").write_text('''local ccb = require("ccb")
+---@return boolean
+return function()
+    local services = ccb.services
+    return not services.gameplay.environment.is_night()
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_native_variable_copy_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "copy.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param owner GameHandle
+return function(owner)
+    local result = ccb.services.variables.copy(nil, "global", owner, "local")
+    if result.ok then
+        local metadata = assert(result.value)
+        return metadata.source_exists, metadata.destination_existed
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_interaction_input_uses_native_options_and_result(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "input.lua"
+            source.write_text('''local ccb = require("ccb")
+local result = ccb.services.interaction.input_text("Title", {
+    default = "original", identifier = "history", width = 40})
+---@type boolean
+local accepted = result.accepted
+---@type string
+local text = result.value
+return accepted, result.cancelled, text
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_technique_choice_has_editor_types(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.scaffold(Path(directory), "minimal")
