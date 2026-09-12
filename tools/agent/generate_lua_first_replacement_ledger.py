@@ -85,12 +85,30 @@ CONTROL_FLOW = {
     "weighted_list_eocs",
 }
 
-# No disposition is verified during the source-only implementation sprint.
-# These sets are intentionally empty. A future final semantic-gate batch may
-# add exact selectors after recording native behavior and real inventory
-# evidence; source presence or a previous local run is not enough.
+# JSON object types remain unverified. Promote exact selectors only after
+# recording native behavior and real inventory evidence; source presence or
+# a previous local run is not enough. EOC acceptance is recorded separately.
 IMPLEMENTED_VERIFIED = frozenset()
 BOUNDED_IMPLEMENTED_VERIFIED = frozenset()
+
+# Exact, complete EOC selector scopes accepted against native behavior and real
+# content. is_day is parameterless: f_is_day and the public environment query
+# both use is_night(calendar::turn), including twilight. The native gate
+# compares the installed Lua service at calendar boundaries; migration uses
+# direct and negated conditions from TALK_TEST.json. This is not a promotion of
+# other environment predicates or of the surrounding content's migration.
+VERIFIED_EOC = {
+    ("eoc-conditions", "is_day"): {
+        "target": "services.gameplay.environment",
+        "evidence": [
+            "src/lua_platform_runtime_services.cpp",
+            "tests/lua_platform_day_semantic_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/types/ccb_platform_v1.d.lua",
+        ],
+    },
+}
 
 IMPLEMENTED_JSON = {
     "monster_adjustment": {
@@ -4581,6 +4599,17 @@ def disposition(inventory: str, selector: str, entry: dict) -> dict:
             "evidence": legacy_evidence(inventory, entry),
         }
 
+    verified = VERIFIED_EOC.get((inventory, selector))
+    if verified:
+        return {
+            "inventory": inventory,
+            "selector": selector,
+            "target_kind": "shared_service",
+            "target": verified["target"],
+            "status": "implemented_verified",
+            "legacy_dependency": "none",
+            "evidence": verified["evidence"],
+        }
     bounded_target = BOUNDED_IMPLEMENTED_EOC.get((inventory, selector))
     if (
         bounded_target and

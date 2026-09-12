@@ -4471,9 +4471,21 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
     ]
 
 
+def _effect_part_expression(raw_expression: str) -> str:
+    """Resolve native Character part sentinels after evaluating a string."""
+    return (
+        '(function(part) if part == "bp_null" then return nil '
+        'elseif part == "RANDOM" then return service_value('
+        'services.characters.random_body_part(services.characters.avatar(), true)) '
+        'else return services.types.id("body_part", part) end end)(' +
+        raw_expression + ')'
+    )
+
+
 def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
+    character_target_proven: bool | None = True,
 ) -> list[str] | None:
     if target_expression is None or key not in effect:
         return None
@@ -4489,6 +4501,11 @@ def render_static_remove_effects(
         return _dynamic_id_expression(value, kind, target_expression)
 
     raw_ids = effect[key]
+    # Native f_remove_effect only populates its vector for a string or array.
+    # A standalone variable object is ignored natively; translating it would
+    # activate a removal that never happened. Leave it for explicit review.
+    if not isinstance(raw_ids, (str, list)):
+        return None
     if isinstance(raw_ids, list):
         # Native f_remove_effect accepts an empty vector and imposes no list
         # limit. Emit separate calls to preserve order and repeated removals.
@@ -4503,9 +4520,43 @@ def render_static_remove_effects(
         if effect_id is None:
             return None
         effect_ids = [effect_id]
+    if effect.get("target_part") == "ALL" and character_target_proven is not False:
+        if not effect_ids:
+            return []
+        rendered = ["    do"]
+        if character_target_proven is None:
+            # An event beta or caller-supplied Creature need not be a Character.
+            # Native monster talkers expose no body parts to ALL removal.
+            rendered.extend([
+                "        local parts = {}",
+                f"        local target_kind = service_value(services.creatures.snapshot({target_expression})).kind",
+                '        if target_kind == "avatar" or target_kind == "npc" then',
+                f"            parts = service_value(services.characters.body_parts({target_expression}))",
+                "        end",
+            ])
+        else:
+            rendered.append(
+                f"        local parts = service_value(services.characters.body_parts({target_expression}))")
+        for effect_id in effect_ids:
+            rendered.extend([
+                "        for _, part in ipairs(parts) do",
+                f"            service_value(services.effects.remove({target_expression}, {effect_id}, part))",
+                "        end",
+                f"        service_value(services.effects.remove({target_expression}, {effect_id}))",
+            ])
+        return rendered + ["    end"]
     raw_part = effect.get("target_part")
-    if raw_part is None or raw_part == "ALL":
+    if raw_part is None or raw_part in ("ALL", "bp_null"):
         part_expression = None
+    elif raw_part == "RANDOM":
+        # Native talker_character uses the actual game player, independently
+        # of both dialogue participants.
+        part_expression = "service_value(services.characters.random_body_part(services.characters.avatar(), true))"
+    elif isinstance(raw_part, dict):
+        raw_expression = render_participant_string_expression(raw_part, target_expression, alpha, beta)
+        if raw_expression is None:
+            return None
+        part_expression = _effect_part_expression(raw_expression)
     else:
         part_expression = identifier(raw_part, "body_part")
         if part_expression is None:
@@ -4518,6 +4569,20 @@ def render_static_remove_effects(
         rendered.append(
             f"    service_value(services.effects.remove("
             f"{target_expression}, {effect_id}{suffix}))"
+        )
+    if isinstance(raw_part, dict):
+        # Native first evaluates the string to select ALL, then reevaluates it
+        # for each non-ALL removal. Keep those reads and per-part ID evaluation.
+        all_lines = render_static_remove_effects(
+            {key: raw_ids, "target_part": "ALL"}, key, target_expression,
+            avatar_expression=alpha, npc_expression=beta,
+            character_target_proven=character_target_proven,
+        )
+        assert all_lines is not None
+        return (
+            [f'    if {raw_expression} == "ALL" then'] +
+            ["    " + line for line in all_lines] + ["    else"] +
+            ["    " + line for line in rendered] + ["    end"]
         )
     return rendered
 
@@ -4678,7 +4743,9 @@ def render_static_false_effect(
         elif alpha is not None:
             target = alpha
         rendered = render_static_remove_effects(
-            effect, key, target, avatar_expression=alpha, npc_expression=beta)
+            effect, key, target, avatar_expression=alpha, npc_expression=beta,
+            character_target_proven=avatar_actor_proven if key.startswith("u_") else (
+                True if npc_actor_proven else None))
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
@@ -4925,14 +4992,14 @@ def render_static_false_effect(
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
-            effect, avatar_actor_proven, npc_actor_proven
+            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
         )
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "set_string_var" in effect:
         rendered = render_static_character_string_var(
-            effect, avatar_actor_proven, npc_actor_proven
+            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
         )
         if rendered is None:
             return None
@@ -5008,9 +5075,16 @@ def render_static_false_effect(
         if key is not None:
             target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
             if "effect" in key:
+                alpha = (actor_expression or "actor") if avatar_actor_proven else None
+                if key.startswith("npc_"):
+                    target = npc_actor_expression or target
+                elif alpha is not None:
+                    target = alpha
                 rendered = render_static_character_effect(effect, key, target)
                 if rendered is None:
-                    rendered = render_dynamic_character_effect(effect, key, target)
+                    rendered = render_dynamic_character_effect(
+                        effect, key, target, avatar_expression=alpha,
+                        npc_expression=npc_actor_expression or ("actor" if npc_actor_proven else None))
             elif "wound" in key:
                 rendered = render_static_character_wound(
                     effect, key, target, key.endswith("remove_wound")
@@ -18881,6 +18955,27 @@ def render_static_mutation_effect(
     return None
 
 
+def _effect_duration_expression(
+    value: Any, target: str = "actor", alpha: str | None = None, beta: str | None = None,
+) -> str | None:
+    turns = parse_turns(value)
+    if turns is not None:
+        if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
+            return None
+        return f'services.time.duration({turns}, "turn")'
+    if isinstance(value, list):
+        value = [parse_turns(endpoint) if parse_turns(endpoint) is not None else endpoint for endpoint in value]
+    rendered = _effect_numeric_expression(value, target, alpha, beta)
+    if rendered is None:
+        return None
+    # EOC duration conversion truncates toward zero. TimeDuration rejects
+    # overflow; do not turn negative/long values into zero or one year.
+    return (
+        'services.time.duration((function(value) return value < 0 and math.ceil(value) '
+        f'or math.floor(value) end)({rendered}), "turn")'
+    )
+
+
 def render_static_character_effect(
     effect: dict[str, Any],
     key: str,
@@ -18904,12 +18999,7 @@ def render_static_character_effect(
         return None
     # Preserve zero duration: native application and later expiry are distinct.
     permanent = raw_duration == "PERMANENT"
-    duration = 1 if permanent else parse_turns(raw_duration)
-    duration_expression = (
-        f"services.time.duration({duration}, \"turn\")"
-        if duration is not None and 0 <= duration <= MAX_EFFECT_DURATION_TURNS
-        else _duration_expression(raw_duration, minimum=0)
-    )
+    duration_expression = _effect_duration_expression(1 if permanent else raw_duration, target_expression)
     if duration_expression is None:
         return None
     if (
@@ -18918,7 +19008,9 @@ def render_static_character_effect(
     ):
         return None
     options: list[str] = []
-    if target_part is not None:
+    if target_part == "RANDOM":
+        options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
+    elif target_part is not None and target_part != "bp_null":
         options.append(
             "body_part = services.types.id(\"body_part\", "
             f"{lua_quote(target_part)})"
@@ -19037,24 +19129,68 @@ def render_dynamic_character_morale(
     ]
 
 
+def _effect_numeric_expression(
+    value: Any, target: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(endpoint, list) for endpoint in value):
+            return None
+        for endpoint in value:
+            literal = finite_number_literal(endpoint)
+            if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
+                return None
+        endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
+        if any(endpoint is None for endpoint in endpoints):
+            return None
+        # Native dbl_or_var calls integer rng: truncate toward zero before
+        # ordering the endpoints. Keep runtime errors outside the random API's
+        # supported bounds instead of silently clamping the distribution.
+        return (
+            '(function(lo, hi) lo = lo < 0 and math.ceil(lo) or math.floor(lo); '
+            'hi = hi < 0 and math.ceil(hi) or math.floor(hi); '
+            'return services.random.int(math.min(lo, hi), math.max(lo, hi)) end)('
+            f'{endpoints[0]}, {endpoints[1]})'
+        )
+    if not isinstance(value, dict) or set(value) == {"math"}:
+        return render_eoc_numeric_expression(value, "0", alpha or target)
+    descriptor = dict(value)
+    if "default" in descriptor:
+        default = finite_number_literal(descriptor["default"])
+        if default is None:
+            return None
+        descriptor["default"] = str(default)
+    raw = render_participant_string_expression(descriptor, target, alpha, beta)
+    return None if raw is None else f"(tonumber({raw}) or 0)"
+
+
 def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
+    *, avatar_expression: str | None = None, npc_expression: str | None = None,
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
     if target_expression is None or key not in effect or "duration" not in effect:
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
-    effect_id = _dynamic_id_expression(effect[key], "effect", target_expression)
+    alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
+    beta = npc_expression or (target_expression if key.startswith("npc_") else None)
+
+    def identifier(value: Any, kind: str) -> str | None:
+        if isinstance(value, dict):
+            raw = render_participant_string_expression(value, target_expression, alpha, beta)
+            return None if raw is None else f'services.types.id("{kind}", {raw})'
+        return _dynamic_id_expression(value, kind, target_expression)
+
+    def numeric(value: Any) -> str | None:
+        return _effect_numeric_expression(value, target_expression, alpha, beta)
+
+    effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    duration = _duration_expression(
-        "1 turn" if permanent else raw_duration,
-        minimum=0, actor_expression=target_expression,
-    )
+    duration = _effect_duration_expression(1 if permanent else raw_duration, target_expression, alpha, beta)
     if effect_id is None or duration is None:
         return None
-    intensity = render_eoc_numeric_expression(effect.get("intensity", 0), "0", target_expression)
+    intensity = numeric(effect.get("intensity", 0))
     if intensity is None:
         return None
     raw_intensity = effect.get("intensity", 0)
@@ -19067,8 +19203,15 @@ def render_dynamic_character_effect(
         return None
     target_part = effect.get("target_part")
     options: list[str] = []
-    if target_part is not None:
-        part = _dynamic_id_expression(target_part, "body_part", target_expression)
+    if target_part == "RANDOM":
+        options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
+    elif isinstance(target_part, dict):
+        raw_part = render_participant_string_expression(target_part, target_expression, alpha, beta)
+        if raw_part is None:
+            return None
+        options.append(f"body_part = {_effect_part_expression(raw_part)}")
+    elif target_part is not None and target_part != "bp_null":
+        part = identifier(target_part, "body_part")
         if part is None:
             return None
         options.append(f"body_part = {part}")
@@ -23001,8 +23144,10 @@ def _literal_nonnegative_integer(
 
 
 def _duration_expression(
-    value: Any, *, minimum: int = 0, actor_expression: str = "actor"
+    value: Any, *, minimum: int = 0, actor_expression: str = "actor",
+    truncate: bool = False
 ) -> str | None:
+    rounding = "" if truncate else " + 0.5"
     if isinstance(value, list):
         if len(value) != 2:
             return None
@@ -23038,7 +23183,7 @@ def _duration_expression(
                 expression = (
                     "math.max(" + str(minimum) + ", math.min(" +
                     str(MAX_EFFECT_DURATION_TURNS) + ", math.floor((" +
-                    expression + ") + 0.5)))"
+                    expression + ")" + rounding + ")))"
                 )
             rendered_bounds.append(expression)
         lower, upper = rendered_bounds
@@ -23061,7 +23206,7 @@ def _duration_expression(
     return (
         "services.time.duration(math.max(" + str(minimum) + ", math.min(" +
         str(MAX_EFFECT_DURATION_TURNS) + ", math.floor((" + rendered +
-        ") + 0.5))), \"turn\")"
+        ")" + rounding + "))), \"turn\")"
     )
 
 
@@ -24408,11 +24553,93 @@ def render_dynamic_character_wound(
     return lines
 
 
+def render_direct_variable_snapshot(value: Any, owner: str) -> str | None:
+    """Retain presence separately from the Lua representation of a stored null."""
+    if not isinstance(value, dict) or len(value) != 1:
+        return None
+    key, name = next(iter(value.items()))
+    scopes = {"u_val": "u", "npc_val": "npc", "global_val": "global", "context_val": "context"}
+    if key not in scopes or render_eoc_value_expression(value, "nil", owner) is None:
+        return None
+    actual_owner = owner if key in {"u_val", "npc_val"} else "nil"
+    return ('service_value(services.variables.resolve(context.data, '
+            f'{actual_owner}, {lua_quote(scopes[key])}, {lua_quote(name)}))')
+
+
 def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
+    if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
+        if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
+            return None
+        return render_participant_translation_expression(
+            value, target_expression, avatar_expression, npc_expression)
+    if isinstance(value, dict) and value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_participant_string_expression(
+            value["option"], target_expression, avatar_expression, npc_expression)
+        if option is None:
+            return None
+        # Native get_option<string> reads the stored string, not the formatted
+        # value of a numeric/bool option. Keep invalid types explicit.
+        return (
+            '(function(option) if option == nil then error("unknown game option") end; '
+            'if option.type ~= "string_select" and '
+            'option.type ~= "string_input" then error("string game option required") end; '
+            f'return option.value end)(services.gameplay.options.get({option}))'
+        )
+    if isinstance(value, dict) and value.get("mutator") in {
+        "ma_technique_name", "ma_technique_description", "mon_faction",
+    }:
+        monster = value["mutator"] == "mon_faction"
+        id_key = "mtype_id" if monster else "matec_id"
+        if set(value) != {"mutator", id_key}:
+            return None
+        identifier = render_participant_string_expression(
+            value[id_key], target_expression, avatar_expression, npc_expression)
+        if identifier is None:
+            return None
+        if monster:
+            return (
+                '(function(definition) if definition == nil then error("unknown monster definition") end; '
+                f'return definition.default_faction.value end)(services.registry.get("monster", {identifier}))'
+            )
+        field = "name" if value["mutator"].endswith("name") else "flavor_description"
+        return (
+            'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '
+            f'{identifier})).{field}'
+        )
+    if isinstance(value, dict) and value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                avatar_expression is None or npc_expression is None):
+            return None
+        options = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            if flag:
+                options.append(f"{name} = true")
+        blacklist = value.get("blacklist", [])
+        if not isinstance(blacklist, list) or len(blacklist) > 256:
+            return None
+        entries = [render_participant_string_expression(
+            entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        rendered_options = "{ " + ", ".join(options) + " }"
+        # Native always selects for dialogue alpha against beta, regardless
+        # of the variable destination or the surrounding effect's target.
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{avatar_expression}, {npc_expression}, {rendered_options})).technique.value'
+        )
     owner = target_expression
     if isinstance(value, dict):
         for key, expression in (("u_val", avatar_expression), ("npc_val", npc_expression)):
@@ -24442,9 +24669,19 @@ def render_participant_string_expression(
                 'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
                 npc_expression + ', name:sub(3) '
                 'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
-                'return tostring(service_value(services.variables.resolve('
-                'context.data, owner, scope, name)).value or ' + fallback + ') end)()'
+                'local result = service_value(services.variables.resolve('
+                'context.data, owner, scope, name)); '
+                'if result.exists == false then return ' + fallback + ' end; '
+                'return tostring(result.value or "") end)()'
             )
+        if "default" in value:
+            variable = {key: item for key, item in value.items() if key != "default"}
+            snapshot = render_direct_variable_snapshot(variable, owner)
+            fallback = value["default"]
+            if snapshot is None or not bounded_utf8_string(fallback, 8192, allow_empty=True):
+                return None
+            return ('(function(result) if result.exists == false then return '
+                    f'{lua_quote(fallback)} end; return tostring(result.value or "") end)({snapshot})')
     return render_eoc_string_expression(value, owner)
 
 
@@ -24682,6 +24919,7 @@ def render_static_character_copy_var(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     if set(effect) != {"copy_var", "target_var"}:
         return None
@@ -24689,68 +24927,95 @@ def render_static_character_copy_var(
     target = _static_string_variable_descriptor(effect["target_var"])
     if source is None or target is None:
         return None
-    if source[0] == "npc" and not npc_actor_proven:
-        return None
-    if target[0] == "npc" and not npc_actor_proven:
-        return None
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
+    alpha = "actor" if avatar_actor_proven else None
+    beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    for scope, _ in (source, target):
+        if (scope == "u" and alpha is None or scope == "npc" and beta is None or
+                scope == "var" and (alpha is None or beta is None)):
+            return None
 
-    def resolved(scope: str, name: str) -> str:
-        if scope in {"u", "npc"}:
-            return (
-                "service_value(services.variables.get("
-                f"{actor_expression}, {lua_quote(name)}))"
-            )
-        return (
-            "service_value(services.variables.resolve(context.data, "
-            f"{actor_expression}, {lua_quote(scope)}, {lua_quote(name)}))"
-        )
+    def address(descriptor: tuple[str, str], prefix: str) -> list[str]:
+        scope, key = descriptor
+        owner = {"u": alpha, "npc": beta}.get(scope) or "nil"
+        if scope != "var":
+            return [f"    local {prefix}_scope, {prefix}_owner, {prefix}_key = "
+                    f"{lua_quote(scope)}, {owner}, {lua_quote(key)}"]
+        return [
+            f"    local {prefix}_scope, {prefix}_owner = \"global\", nil",
+            f"    local {prefix}_key = context.data[{lua_quote(key)}]",
+            f"    if {prefix}_key ~= nil then",
+            f'        if {prefix}_key:sub(1, 2) == "u_" then',
+            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "u", {alpha}, {prefix}_key:sub(3)',
+            f'        elseif {prefix}_key:sub(1, 2) == "n_" then',
+            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "npc", {beta}, {prefix}_key:sub(3)',
+            f'        elseif {prefix}_key:sub(1, 1) == "_" then',
+            f'            {prefix}_scope, {prefix}_key = "context", {prefix}_key:sub(2)',
+            '        end',
+            '    end',
+        ]
 
-    lines = [
-        f"    local copied = {resolved(source[0], source[1])}",
-        "    if copied.exists then",
-    ]
-    if target[0] == "context":
-        lines.append(
-            f"        context.data[{lua_quote(target[1])}] = copied.value"
-        )
-    elif target[0] == "global":
-        lines.append(
-            "        services.variables.set_global("
-            f"{lua_quote(target[1])}, copied.value)"
-        )
-    elif target[0] in {"u", "npc"}:
-        lines.append(
-            "        services.variables.set("
-            f"{actor_expression}, {lua_quote(target[1])}, copied.value)"
-        )
-    else:
-        lines.append(
-            "        service_value(services.variables.set_resolved("
-            f"context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(target[1])}, copied.value))"
-        )
-    lines.append("    else")
-    if target[0] == "context":
-        lines.append(f"        context.data[{lua_quote(target[1])}] = nil")
-    elif target[0] == "global":
-        lines.append(
-            f"        services.variables.remove_global({lua_quote(target[1])})"
-        )
-    elif target[0] in {"u", "npc"}:
-        lines.append(
-            f"        services.variables.remove({actor_expression}, {lua_quote(target[1])})"
-        )
-    else:
-        # The v5 contract has no remove_resolved operation; leaving an
-        # indirect destination untouched is safer than writing a fabricated
-        # nil value into the native variable store.
-        lines.append("        -- missing source leaves an indirect target unchanged")
-    lines.append("    end")
+    lines = address(source, "copy_source")
+    lines.extend(address(target, "copy_target"))
+    lines.extend([
+        '    if copy_target_key == nil then error("missing target variable") end',
+        '    if copy_source_key ~= nil and copy_source_scope ~= "context" and copy_target_scope ~= "context" then',
+        '        service_value(services.variables.copy(',
+        '            copy_source_owner, copy_source_key, copy_target_owner, copy_target_key))',
+        '    else',
+        '        local copied = { exists = false }',
+        '        if copy_source_key ~= nil then',
+        '            copied = service_value(services.variables.resolve(',
+        '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
+        '        end',
+        '        service_value(services.variables.set_resolved(',
+        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+        '    end',
+    ])
     return lines
+
+
+def render_participant_translation_expression(
+    value: Any, target_expression: str,
+    avatar_expression: str | None, npc_expression: str | None,
+) -> str | None:
+    """Translate authored literals; stored dialogue values are already translated."""
+    if isinstance(value, str) or (
+            isinstance(value, dict) and ("str" in value or "str_sp" in value)):
+        literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
+        translation_context = value.get("ctxt") if isinstance(value, dict) else None
+        if not bounded_utf8_string(literal, 8192, allow_empty=True):
+            return None
+        if translation_context is not None and not bounded_utf8_string(
+                translation_context, 8192, allow_empty=True):
+            return None
+        arguments = lua_quote(literal)
+        if translation_context is not None:
+            arguments += ", " + lua_quote(translation_context)
+        return f"services.translate({arguments})"
+    if isinstance(value, dict) and "default" in value:
+        # A translated fallback must run only when the variable is absent.
+        # Keep unsupported indirect fallback shapes explicit for now.
+        keys = set(value) - {"default"}
+        if len(keys) != 1:
+            return None
+        key = next(iter(keys))
+        owner = {"u_val": avatar_expression, "npc_val": npc_expression}.get(key)
+        if key not in {"u_val", "npc_val", "context_val", "global_val"} or (
+                key in {"u_val", "npc_val"} and owner is None):
+            return None
+        default = value["default"]
+        if not (isinstance(default, str) or isinstance(default, dict) and (
+                "str" in default or "str_sp" in default)):
+            return None
+        fallback = render_participant_translation_expression(
+            value["default"], target_expression, avatar_expression, npc_expression)
+        raw = render_direct_variable_snapshot({key: value[key]}, owner or target_expression)
+        if fallback is None or raw is None:
+            return None
+        return ('(function(result) if result.exists ~= false then return tostring(result.value or \"\") end; '
+                f'return {fallback} end)({raw})')
+    return render_participant_string_expression(
+        value, target_expression, avatar_expression, npc_expression)
 
 
 def render_static_character_string_var(
@@ -24769,6 +25034,8 @@ def render_static_character_string_var(
     if target is None:
         return None
     if target[0] == "npc" and not npc_actor_proven:
+        return None
+    if target[0] == "var" and not (avatar_actor_proven and npc_actor_proven):
         return None
     parse_tags = effect.get("parse_tags", False)
     i18n = effect.get("i18n", False)
@@ -24803,80 +25070,12 @@ def render_static_character_string_var(
             actor_expression = "actor"
 
     def render_value(value: Any) -> str | None:
-        rendered = None
-        if isinstance(value, dict) and isinstance(value.get("mutator"), str):
-            mutator = value["mutator"]
-            if mutator == "game_option" and set(value) == {"mutator", "option"}:
-                option = render_eoc_string_expression(
-                    value.get("option"), actor_expression
-                )
-                if option is not None:
-                    rendered = f"services.options.get({option})"
-            elif mutator == "valid_technique" and set(value) <= {
-                "mutator", "blacklist", "crit", "dodge_counter",
-                "block_counter",
-            }:
-                option_values: list[str] = []
-                for source_name, target_name in (
-                    ("crit", "critical"),
-                    ("dodge_counter", "dodge_counter"),
-                    ("block_counter", "block_counter"),
-                ):
-                    flag = value.get(source_name, False)
-                    if not isinstance(flag, bool):
-                        return None
-                    if flag:
-                        option_values.append(f"{target_name} = true")
-                blacklist = value.get("blacklist", [])
-                if (
-                    not isinstance(blacklist, list) or len(blacklist) > 256 or
-                    not all(safe_platform_id(entry) for entry in blacklist)
-                ):
-                    return None
-                if blacklist:
-                    option_values.append(
-                        "blacklist = { " + ", ".join(
-                            lua_quote(entry) for entry in blacklist
-                        ) + " }"
-                    )
-                options = "{ " + ", ".join(option_values) + " }"
-                beta = npc_actor_expression or "(context.actors and context.actors.beta)"
-                rendered = (
-                    f"(({beta}) ~= nil and service_value("
-                    "services.characters.choose_technique("
-                    f"{actor_expression}, {beta}, {options})).technique.value or "
-                    f"{lua_quote('')})"
-                )
-            elif mutator in {"ma_technique_name", "ma_technique_description"} and set(value) == {
-                "mutator", "matec_id",
-            }:
-                technique = render_eoc_string_expression(
-                    value.get("matec_id"), actor_expression
-                )
-                if technique is not None:
-                    field = "name" if mutator.endswith("name") else "description"
-                    rendered = (
-                        "services.martial_arts.technique_definition("
-                        "services.types.id(\"martial_art_technique\", "
-                        f"{technique})).{field}"
-                    )
-        if rendered is None:
-            rendered = render_eoc_string_expression(value, actor_expression)
-        if rendered is None and i18n and isinstance(value, dict):
-            literal = value.get("str", value.get("str_sp"))
-            if isinstance(literal, str) and bounded_utf8_string(
-                literal, 8192, allow_empty=True
-            ):
-                rendered = lua_quote(literal)
-        if rendered is None:
-            return None
-        if parse_tags:
-            beta = npc_actor_expression or "(context.actors and context.actors.beta)"
-            rendered = (
-                "service_value(services.text.expand_for("
-                f"{rendered}, {actor_expression}, {beta}))"
-            )
-        return rendered
+        renderer = render_participant_translation_expression if i18n else render_participant_string_expression
+        return renderer(
+            value, actor_expression,
+            "actor" if avatar_actor_proven else None,
+            npc_actor_expression or ("actor" if npc_actor_proven else None),
+        )
 
     rendered_values = [render_value(value) for value in values]
     if any(value is None for value in rendered_values):
@@ -24886,8 +25085,9 @@ def render_static_character_string_var(
     if len(expressions) == 1:
         value_expression = expressions[0]
     else:
-        lines.append(f"    local values = {{ {', '.join(expressions)} }}")
-        value_expression = "values[services.random.int(1, #values)]"
+        choices = [f"function() return {expression} end" for expression in expressions]
+        lines.append(f"    local values = {{ {', '.join(choices)} }}")
+        value_expression = "values[services.random.int(1, #values)]()"
 
     input_options = effect.get("string_input")
     if input_options is not None:
@@ -24895,21 +25095,39 @@ def render_static_character_string_var(
             "title", "description", "default_text", "identifier",
         }:
             return None
-        title = display_text(input_options.get("title"), "")
-        description = display_text(input_options.get("description"), "")
-        initial = display_text(input_options.get("default_text"), "")
-        if not all(isinstance(value, str) for value in (title, description, initial)):
+        alpha = "actor" if avatar_actor_proven else None
+        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+        translated_options = [render_participant_translation_expression(
+            input_options[key], actor_expression, alpha, beta) if key in input_options else '""'
+            for key in ("title", "default_text", "description")]
+        identifier = render_participant_string_expression(
+            input_options["identifier"], actor_expression, alpha, beta) if "identifier" in input_options else '""'
+        if any(option is None for option in translated_options) or identifier is None:
             return None
+        title, initial, description = translated_options
         lines.extend([
             f"    local value = {value_expression}",
+            f"    local input_label_width = #{title}",
+            f"    local input_default = {initial}",
+            f"    local input_title = {title}",
+            f"    local input_description = {description}",
+            f"    local input_identifier = {identifier}",
             "    local input = services.interaction.input_text(",
-            f"        {lua_quote(title)}, {{ initial = {lua_quote(initial)}, "
-            f"description = {lua_quote(description)} }})",
-            "    if input ~= nil then",
-            "        value = input",
+            "        input_title, { default = input_default, description = input_description,",
+            "        identifier = input_identifier, width = 40 + input_label_width })",
+            "    if input.accepted then",
+            "        value = input.value",
             "    end",
         ])
         value_expression = "value"
+
+    if parse_tags:
+        alpha = "actor" if avatar_actor_proven else "services.characters.avatar()"
+        beta = npc_actor_expression or (
+            "actor" if npc_actor_proven else "services.characters.avatar()")
+        value_expression = (
+            "service_value(services.text.expand_for("
+            f"{value_expression}, {alpha}, {beta}))")
 
     if target[0] == "context":
         lines.append(
@@ -24923,13 +25141,24 @@ def render_static_character_string_var(
     elif target[0] in {"u", "npc"}:
         lines.extend([
             "    services.variables.set(",
-            f"        actor, {lua_quote(target[1])}, {value_expression})",
+            f"        {actor_expression}, {lua_quote(target[1])}, {value_expression})",
         ])
     else:
+        beta = npc_actor_expression or "actor"
         lines.extend([
-            "    service_value(services.variables.set_resolved(",
-            f"        context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(target[1])}, {value_expression}))",
+            f"    local assigned_value = {value_expression}",
+            f"    local target_name = context.data[{lua_quote(target[1])}]",
+            '    if target_name == nil or target_name == "" then error("missing target variable") end',
+            '    local target_scope, target_owner = "global", nil',
+            '    if target_name:sub(1, 2) == "u_" then',
+            '        target_scope, target_owner, target_name = "u", actor, target_name:sub(3)',
+            '    elseif target_name:sub(1, 2) == "n_" then',
+            f'        target_scope, target_owner, target_name = "npc", {beta}, target_name:sub(3)',
+            '    elseif target_name:sub(1, 1) == "_" then',
+            '        target_scope, target_name = "context", target_name:sub(2)',
+            '    end',
+            '    service_value(services.variables.set_resolved(',
+            '        context.data, target_owner, target_scope, target_name, assigned_value))',
         ])
     return lines
 
@@ -25442,25 +25671,10 @@ def render_effect_condition(
     literal = finite_number_literal(raw_intensity)
     if literal is not None:
         intensity = lua_number(literal)
-    elif isinstance(raw_intensity, dict) and set(raw_intensity) == {"math"}:
-        intensity = render_eoc_numeric_expression(raw_intensity, "0", alpha or target)
+    else:
+        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta)
         if intensity is None:
             return None
-    elif isinstance(raw_intensity, dict):
-        numeric = dict(raw_intensity)
-        if "default" in numeric:
-            default = finite_number_literal(numeric["default"])
-            if default is None:
-                return None
-            numeric["default"] = str(default)
-        rendered = render_participant_string_expression(numeric, target, alpha, beta)
-        if rendered is None:
-            return None
-        # A present variable descriptor without its own default evaluates to
-        # zero natively; -1 is only the omitted intensity field's default.
-        intensity = f"(tonumber({rendered}) or 0)"
-    else:
-        return None
     if not values:
         return "false"
     queries = []
@@ -25846,8 +26060,6 @@ def render_eoc_condition_expression(
             )
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
-        if condition == "is_night":
-            return "services.gameplay.environment.is_night()"
         if npc_query_actor is not None:
             if condition == "npc_is_alive":
                 return (
@@ -26578,41 +26790,37 @@ def render_eoc_condition_expression(
                 f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])})))"
             )
 
-    for key, function_name, minimum in (
-        ("compare_string", "any_equal", 2),
-        ("compare_string_match_all", "all_equal", 1),
-    ):
+    for key, all_equal in (("compare_string", False), ("compare_string_match_all", True)):
         if set(condition) == {key}:
             values = condition[key]
-            if not isinstance(values, list) or len(values) < minimum:
+            if not isinstance(values, list) or all_equal and not values:
                 return None
-            rendered = [
-                render_eoc_string_expression(value)
-                for value in values
-            ]
+            rendered = [render_participant_string_expression(
+                value, "actor", "actor" if character_actor_proven else None, npc_query_actor)
+                for value in values]
             if any(value is None for value in rendered):
                 return None
-            rendered_values = ", ".join(rendered)
-            return (
-                f"services.gameplay.strings.{function_name}"
-                f"({{{rendered_values}}})"
-            )
+            if all_equal:
+                statements = [f"local first = {rendered[0]};"]
+                statements.extend(f"if {value} ~= first then return false end;" for value in rendered[1:])
+                statements.append("return true")
+            else:
+                statements = ["local seen = {}; local value;"]
+                statements.extend(f"value = {value}; if seen[value] then return true end; seen[value] = true;"
+                                  for value in rendered)
+                statements.append("return false")
+            return "(function() " + " ".join(statements) + " end)()"
 
     if set(condition) == {"one_in_chance"}:
         value = finite_number_literal(condition["one_in_chance"])
-        if value is not None:
-            if value < -1000000000 or value > 1000000000:
-                return None
-            return f"services.random.one_in({lua_number(value)})"
-        dynamic = render_eoc_numeric_expression(
-            condition["one_in_chance"], "0", "actor"
-        )
-        if dynamic is None:
+        if value is not None and not -2147483648 <= math.trunc(value) <= 2147483647:
             return None
-        return (
-            "services.random.one_in(math.max(-1000000000, math.min("
-            f"1000000000, ({dynamic}))))"
-        )
+        denominator = _effect_numeric_expression(
+            condition["one_in_chance"], "actor",
+            "actor" if character_actor_proven else None, npc_query_actor)
+        if denominator is None:
+            return None
+        return f"services.random.one_in({denominator})"
 
     if set(condition) == {"x_in_y_chance"}:
         chance = condition["x_in_y_chance"]
@@ -26620,55 +26828,22 @@ def render_eoc_condition_expression(
             return None
         numerator = finite_number_literal(chance["x"])
         denominator = finite_number_literal(chance["y"])
-        if numerator is None:
-            numerator_expression = render_eoc_numeric_expression(
-                chance["x"], "0", "actor"
-            )
-            if numerator_expression is None:
-                return None
-            numerator_expression = (
-                "math.max(0, math.min(1000000000, (" +
-                numerator_expression + ")))"
-            )
-        else:
-            if numerator < 0 or numerator > 1000000000:
-                return None
-            numerator_expression = lua_number(numerator)
-        if denominator is None:
-            denominator_expression = render_eoc_numeric_expression(
-                chance["y"], "1", "actor"
-            )
-            if denominator_expression is None:
-                return None
-            denominator_expression = (
-                "math.max(1, math.min(1000000000, (" +
-                denominator_expression + ")))"
-            )
-        else:
-            if denominator <= 0 or denominator > 1000000000:
-                return None
-            denominator_expression = lua_number(denominator)
+        if numerator is not None and numerator < 0:
+            return None
+        if denominator is not None and denominator <= 0:
+            return None
         if numerator is not None and denominator is not None and numerator > denominator:
             return None
-        if numerator is not None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is not None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        return (
-            "services.random.probability("
-            f"{numerator_expression}, {denominator_expression})"
-        )
+        expressions = [_effect_numeric_expression(
+            chance[key], "actor", "actor" if character_actor_proven else None, npc_query_actor)
+            for key in ("x", "y")]
+        if any(expression is None for expression in expressions):
+            return None
+        # Each operand is evaluated once. The public service accepts finite
+        # fractional values without the integer random service's range bound.
+        # Invalid ratios remain explicit errors instead of being clamped to a
+        # different probability.
+        return f"services.random.probability({expressions[0]}, {expressions[1]})"
 
     if set(condition) <= {"roll_contested", "difficulty", "die_size"} and {
         "roll_contested", "difficulty"
@@ -26722,36 +26897,32 @@ def render_eoc_condition_expression(
             "services.gameplay.environment.dimension() == "
             f"{lua_quote(condition['current_dimension'])}"
         )
-    if set(condition) == {"is_season"} and isinstance(
-        condition["is_season"], str
+    for selector, current in (
+        ("is_season", "services.time_snapshot().season_id"),
+        ("is_weather", "services.weather.current().weather.value"),
     ):
-        return (
-            "services.time_snapshot().season_id == "
-            f"{lua_quote(condition['is_season'])}"
-        )
-    if set(condition) == {"is_weather"}:
-        weather_value = condition["is_weather"]
-        if isinstance(weather_value, str):
-            if not safe_platform_id(weather_value):
+        if set(condition) != {selector}:
+            continue
+        value = condition[selector]
+        if isinstance(value, dict) and "str" in value:
+            # str_or_var accepts this object through its explicit translation
+            # mutator only. A plain {str: ...} object is not a string literal.
+            if (set(value) - {"str", "i18n", "//~"} or
+                    value.get("i18n") is not True or
+                    not isinstance(value["str"], str)):
                 return None
-            weather_expression = lua_quote(weather_value)
-        elif isinstance(weather_value, dict) and len(weather_value) == 1:
-            variable_key = next(iter(weather_value))
-            if variable_key not in {"context_val", "u_val", "global_val"}:
-                return None
-            if variable_key == "u_val" and not avatar_actor_proven:
-                return None
-            weather_expression = render_eoc_string_expression(
-                weather_value, "actor"
-            )
-            if weather_expression is None:
-                return None
+            requested = render_participant_translation_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
         else:
-            return None
-        return (
-            "services.weather.current().weather.value == "
-            f"{weather_expression}"
-        )
+            if isinstance(value, dict) and not set(value).intersection({
+                "u_val", "npc_val", "global_val", "context_val", "var_val", "mutator",
+            }):
+                return None
+            requested = render_participant_string_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
+        return None if requested is None else f"{current} == {requested}"
     if (
         set(condition) == {"map_furniture_with_flag", "loc"} and
         bounded_utf8_string(condition.get("map_furniture_with_flag"), 256)
@@ -28732,12 +28903,13 @@ def render_eoc(
                     )
                     else None
                 )
-                rendered = render_static_character_effect(
-                    effect, key, target_expression
-                )
+                rendered = render_static_character_effect(effect, key, target_expression)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
-                        effect, key, target_expression
+                        effect, key, target_expression,
+                        avatar_expression="actor" if character_actor_proven else None,
+                        npc_expression=npc_actor_expression or (
+                            "actor" if npc_event_character_actor_proven else None),
                     )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28777,6 +28949,9 @@ def render_eoc(
                     avatar_expression="actor" if character_actor_proven else None,
                     npc_expression=npc_actor_expression or (
                         "actor" if npc_event_character_actor_proven else None),
+                    character_target_proven=character_actor_proven if key.startswith("u_") else (
+                        True if npc_event_character_actor_proven or required_event in VICTIM_CHARACTER_EVENTS
+                        else None),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -31439,7 +31614,8 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:
                 rendered = render_static_character_copy_var(
-                    effect, character_actor_proven, npc_event_character_actor_proven
+                    effect, character_actor_proven, npc_event_character_actor_proven,
+                    npc_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)

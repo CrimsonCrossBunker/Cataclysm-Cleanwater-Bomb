@@ -305,6 +305,150 @@ return inspect
             self.assertEqual(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
 
+    def test_day_predicate_has_boolean_editor_type(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            (mod / "day.lua").write_text('''local ccb = require("ccb")
+---@return boolean
+return function()
+    local services = ccb.services
+    return not services.gameplay.environment.is_night()
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_native_variable_copy_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "copy.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param owner GameHandle
+return function(owner)
+    local result = ccb.services.variables.copy(nil, "global", owner, "local")
+    if result.ok then
+        local metadata = assert(result.value)
+        return metadata.source_exists, metadata.destination_existed
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_interaction_input_uses_native_options_and_result(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "input.lua"
+            source.write_text('''local ccb = require("ccb")
+local result = ccb.services.interaction.input_text("Title", {
+    default = "original", identifier = "history", width = 40})
+---@type boolean
+local accepted = result.accepted
+---@type string
+local text = result.value
+return accepted, result.cancelled, text
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_technique_choice_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "choose_technique.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param attacker GameHandle
+---@param target GameHandle
+return function(attacker, target)
+    local result = ccb.services.characters.choose_technique(
+        attacker, target,
+        {critical = true, blacklist = {"tech_base_headbutt"}})
+    if result.ok then
+        local choice = assert(result.value)
+        return choice.found, choice.technique.value, choice.contact_area
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_technique_definition_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "technique.lua"
+            source.write_text('''local ccb = require("ccb")
+local definition = ccb.services.martial_arts.technique_definition(
+    ccb.services.types.id("martial_art_technique", "tech_base_headbutt"))
+---@type string
+local short = definition.flavor_description
+for _, id in ipairs(definition.attack_vectors.items) do
+    assert(id.kind == "attack_vector")
+end
+return short, definition.description
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_gameplay_option_snapshot_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "options.lua"
+            source.write_text('''local ccb = require("ccb")
+local option = ccb.services.gameplay.options.get("USE_LANG")
+if option ~= nil then
+    ---@type CcbGameplayOptionSnapshot
+    local snapshot = option
+    ---@type string
+    local value = snapshot.value
+    return value, snapshot.prerequisite_satisfied
+end
+return ccb.services.gameplay.options.value("USE_LANG")
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_complete_body_parts_have_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "body_parts.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param character GameHandle
+return function(character)
+    local result = ccb.services.characters.body_parts(character)
+    if result.ok then
+        for _, part in ipairs(assert(result.value)) do
+            ---@type GameId
+            local id = part
+            ccb.services.effects.remove(
+                character, ccb.services.types.id("effect", "bleed"), id)
+        end
+    end
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
+    def test_weighted_body_part_has_editor_types(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.scaffold(Path(directory), "minimal")
+            source = mod / "weighted_part.lua"
+            source.write_text('''local ccb = require("ccb")
+---@param character GameHandle
+return function(character)
+    ---@type GameHandle
+    local player = ccb.services.characters.avatar()
+    local result = ccb.services.characters.random_body_part(player, true)
+    if result.ok then
+        ---@type GameId
+        local part = assert(result.value)
+        return ccb.services.effects.remove(
+            character, ccb.services.types.id("effect", "bleed"), part)
+    end
+    return result
+end
+''', encoding="utf-8")
+            self.assertEqual(
+                mod_sdk.check_mod(mod, os.environ["CCB_LUALS"]), [])
+
     def test_both_templates_are_clean_in_real_language_server(self):
         with tempfile.TemporaryDirectory() as directory:
             for template in ("minimal", "complete"):
