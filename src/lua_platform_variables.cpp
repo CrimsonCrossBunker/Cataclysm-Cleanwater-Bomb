@@ -61,6 +61,9 @@ void validate_context_key( const std::string &key )
 diag_value context_value_from_lua(
     const sol::object &value, const std::string &key )
 {
+    if( value.get_type() == sol::type::nil ) {
+        return diag_value();
+    }
     if( value.get_type() == sol::type::boolean ) {
         return diag_value( value.as<bool>() ? 1.0 : 0.0 );
     }
@@ -95,7 +98,7 @@ diag_value context_value_from_lua(
     }
     throw std::invalid_argument(
         "services.variables context value '" + key +
-        "' must be boolean, number, string, or TripointCoord" );
+        "' must be nil, boolean, number, string, or TripointCoord" );
 }
 
 sol::object context_value_to_lua(
@@ -459,7 +462,7 @@ sol::table resolve_variable(
                        state, sol::make_object( state, std::move( result ) ) );
         }
         const resolved_variable_talker resolved = resolve_variable_talker(
-                    *actor, runtime_generation, world_generation );
+                *actor, runtime_generation, world_generation );
         if( resolved.error ) {
             return make_game_error_result( state, *resolved.error );
         }
@@ -566,6 +569,46 @@ sol::table set_resolved_variable(
                runtime_generation, world_generation );
 }
 
+sol::table copy_variable(
+    sol::this_state lua, const sol::optional<game_handle> &source_owner,
+    const std::string &source_key, const sol::optional<game_handle> &target_owner,
+    const std::string &target_key, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_context_key( source_key );
+    validate_context_key( target_key );
+    sol::state_view state( lua );
+    resolved_variable_talker source;
+    resolved_variable_talker target;
+    if( source_owner ) {
+        source = resolve_variable_talker( *source_owner, runtime_generation, world_generation );
+        if( source.error ) {
+            return make_game_error_result( state, *source.error );
+        }
+    }
+    if( target_owner ) {
+        target = resolve_variable_talker( *target_owner, runtime_generation, world_generation );
+        if( target.error ) {
+            return make_game_error_result( state, *target.error );
+        }
+    }
+    const diag_value *stored = source_owner ? resolved_variable_get( source, source_key ) :
+                               get_globals().maybe_get_global_value( source_key );
+    // Snapshot before writing: source and destination may name the same value.
+    const diag_value copied = stored == nullptr ? diag_value() : *stored;
+    const bool existed = ( target_owner ? resolved_variable_get( target, target_key ) :
+                           get_globals().maybe_get_global_value( target_key ) ) != nullptr;
+    sol::table result = state.create_table();
+    result["source_exists"] = stored != nullptr;
+    result["destination_existed"] = existed;
+    if( target_owner ) {
+        resolved_variable_set( target, target_key, copied );
+    } else {
+        get_globals().set_global_value( target_key, copied );
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 } // namespace
 
 void install_variable_api(
@@ -580,9 +623,22 @@ void install_variable_api(
 
     sol::table variables = lua.create_table();
     variables.set_function(
+        "copy",
+        [current_runtime_generation, current_world_generation,
+         require_read, require_write, has_active_callback](
+            sol::this_state lua_state, const sol::optional<game_handle> &source_owner,
+            const std::string & source_key, const sol::optional<game_handle> &target_owner,
+    const std::string & target_key ) {
+        require_read();
+        require_write();
+        require_active_callback( has_active_callback, "services.variables.copy" );
+        return copy_variable( lua_state, source_owner, source_key, target_owner, target_key,
+                              current_runtime_generation(), current_world_generation() );
+    } );
+    variables.set_function(
         "get",
         [current_runtime_generation, current_world_generation,
-                                     require_read](
+         require_read](
             sol::this_state lua_state, const game_handle & handle,
     const std::string & key ) {
         require_read();
@@ -594,7 +650,7 @@ void install_variable_api(
     variables.set_function(
         "set",
         [current_runtime_generation, current_world_generation,
-                                     require_write, has_active_callback](
+         require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
     const std::string & key, const sol::object & value ) {
         require_write();
@@ -608,7 +664,7 @@ void install_variable_api(
     variables.set_function(
         "remove",
         [current_runtime_generation, current_world_generation,
-                                     require_write, has_active_callback](
+         require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
     const std::string & key ) {
         require_write();
@@ -655,7 +711,7 @@ void install_variable_api(
     variables.set_function(
         "set_resolved",
         [current_runtime_generation, current_world_generation,
-                                     require_write, has_active_callback](
+         require_write, has_active_callback](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
     const std::string & key, const sol::object & value ) {

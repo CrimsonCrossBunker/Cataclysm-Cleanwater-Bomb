@@ -156,6 +156,7 @@ sol::table snapshot_technique_definition(
                        "martial_art_technique", definition.id.str() );
     result["name"] = definition.name.translated();
     result["description"] = definition.get_description();
+    result["flavor_description"] = definition.description.translated();
     result["goal"] = definition.goal;
     result["avatar_message"] = definition.avatar_message.translated();
     result["npc_message"] = definition.npc_message.translated();
