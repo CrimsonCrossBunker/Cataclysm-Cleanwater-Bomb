@@ -6889,7 +6889,7 @@ void install_item_api(
         "get_var",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & key ) {
+    std::string_view key ) {
         require_read();
         return get_item_var(
                    lua_state, handle, key,
