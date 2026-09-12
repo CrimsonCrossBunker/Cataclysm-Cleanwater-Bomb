@@ -95,9 +95,24 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         ):
             classify_migration_todo("selector_todo")
 
-    def test_verified_promotions_are_disabled_until_the_final_gate(self):
+    def test_json_promotions_remain_disabled_until_their_final_gate(self):
         self.assertEqual(IMPLEMENTED_VERIFIED, frozenset())
         self.assertEqual(BOUNDED_IMPLEMENTED_VERIFIED, frozenset())
+
+    def test_only_accepted_day_predicate_is_promoted(self):
+        verified = [entry for entry in build_ledger()["entries"]
+                    if entry["status"] == "implemented_verified"]
+        self.assertEqual(
+            [(entry["inventory"], entry["selector"]) for entry in verified],
+            [("eoc-conditions", "is_day")],
+        )
+        self.assertEqual(verified[0]["verification"], "final_semantic_gate")
+        self.assertIn(
+            "tests/lua_platform_day_semantic_test.cpp", verified[0]["evidence"]
+        )
+        self.assertIn(
+            "tools/test_migrate_lua_first.py", verified[0]["evidence"]
+        )
 
     def test_generator_uses_the_three_real_inventories(self):
         generated = build_ledger()
