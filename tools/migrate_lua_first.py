@@ -25699,19 +25699,11 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
-        variable_actor = target
         if isinstance(identifier, dict):
-            if "u_val" in identifier:
-                variable_actor = alpha
-            elif "npc_val" in identifier:
-                variable_actor = beta
-            elif "var_val" in identifier:
-                # An indirect reference can switch owners at runtime. The
-                # single-owner resolver cannot prove that participant yet.
-                return None
-        if variable_actor is None:
-            return None
-        value = _dynamic_id_expression(identifier, "mutation", variable_actor)
+            raw_id = render_participant_string_expression(identifier, target, alpha, beta)
+            value = None if raw_id is None else f'services.types.id("mutation", {raw_id})'
+        else:
+            value = _dynamic_id_expression(identifier, "mutation", target)
         if value is None:
             return None
         participants = f"{target}, {observer}" if method == "is_visible_to" else target
