@@ -4437,7 +4437,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
             if( opts[menu.ret].second ) {
                 obj->remove_fault( opts[menu.ret].first );
             } else {
-                obj->set_fault( opts[menu.ret].first, true, nullptr );
+                obj->set_fault( opts[menu.ret].first, true, nullptr, true );
             }
         }
         return;
@@ -6583,7 +6583,7 @@ void Character::place_corpse( map *here )
             cbm.set_flag( flag_FILTHY );
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
-            cbm.set_fault( fault_bionic_salvaged );
+            cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
             body.put_in( cbm, pocket_type::CORPSE );
         }
     }

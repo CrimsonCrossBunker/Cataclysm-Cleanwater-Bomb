@@ -2186,7 +2186,7 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
     if( !( unarmed || force_unarmed || worn_shield || armed_body_block ) && allow_weapon_blocking ) {
         thing_blocked_with = shield->tname();
         // TODO: Change this depending on damage blocked
-        float wear_modifier = 1.0f;
+        float wear_modifier = 0.5f;
         if( source != nullptr && source->is_hallucination() ) {
             wear_modifier = 0.0f;
         }
