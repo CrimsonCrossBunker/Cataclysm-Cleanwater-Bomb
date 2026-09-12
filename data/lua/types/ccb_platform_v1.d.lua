@@ -6471,9 +6471,20 @@ local CcbPlatformInteractionApi = {}
 ---@return boolean confirmed
 function CcbPlatformInteractionApi.confirm(message) end
 
+---@class PlatformInteractionTextInputOptions
+---@field default? string Initial editable value, at most 4096 bytes.
+---@field description? string Help text, at most 4096 bytes.
+---@field identifier? string Input history identifier, at most 128 bytes.
+---@field width? integer Input width, 10..240; defaults to 40.
+
+---@class PlatformInteractionTextInputResult
+---@field accepted boolean
+---@field cancelled boolean
+---@field value string Entered text when accepted; default text when cancelled.
+
 ---@param title string
----@param options? PlatformTextInputOptions
----@return string|nil text
+---@param options? PlatformInteractionTextInputOptions
+---@return PlatformInteractionTextInputResult result
 function CcbPlatformInteractionApi.input_text(title, options) end
 
 ---@param description string
@@ -7408,8 +7419,34 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbBodyPartsResult : CcbResult
 ---@field value GameId[]|nil Complete body-part IDs in native anatomy order; present on success.
 
+---@class CcbTechniqueChoiceOptions
+---@field critical? boolean Defaults to false.
+---@field dodge_counter? boolean Defaults to false.
+---@field block_counter? boolean Defaults to false.
+---@field blacklist? (string|GameId)[] Up to 256 technique IDs; typed entries use martial_art_technique kind.
+
+---@class CcbTechniqueChoice
+---@field found boolean Whether native selection produced a technique.
+---@field accepted boolean Same selection outcome as found.
+---@field technique GameId GameId<martial_art_technique>; inspect found before applying it.
+---@field attack_vector GameId GameId<attack_vector>.
+---@field contact_area GameId GameId<sub_body_part>.
+---@field attacker GameHandle Exact selecting Character.
+---@field target GameHandle Exact target Creature.
+
+---@class CcbTechniqueChoiceResult: CcbResult
+---@field value CcbTechniqueChoice|nil Present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+---Select through native combat rules in an active write callback; does not execute the attack.
+---@param attacker GameHandle Exact live Character.
+---@param target GameHandle Exact live Creature.
+---@param options? CcbTechniqueChoiceOptions
+---@return CcbTechniqueChoiceResult
+function CcbCharactersApi.choose_technique(attacker, target, options) end
+
 
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
@@ -9973,12 +10010,30 @@ function CcbTypesApi.id_kinds() end
 ---@class CcbVariablesApi
 local CcbVariablesApi = {}
 
+---@class CcbVariableCopyValue
+---@field source_exists boolean
+---@field destination_existed boolean
+
+---@class CcbVariableCopyResult: CcbResult
+---@field value? CcbVariableCopyValue
+
+---Copy native values without converting arrays, nulls, or coordinates through Lua.
+---Both owners are validated before mutation; missing sources write a stored empty value.
+---An active write callback is required. Use nil owners for the global variable store.
+---@param source_owner GameHandle|nil
+---@param source_key string Variable key, 1..128 bytes without ASCII controls or NUL.
+---@param destination_owner GameHandle|nil
+---@param destination_key string
+---@return CcbVariableCopyResult
+function CcbVariablesApi.copy(source_owner, source_key, destination_owner, destination_key) end
+
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string Variable name containing 1..128 bytes, without ASCII controls or NUL.
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get(character, key) end
 
 ---Write phases and an active callback are required for variable mutations.
+---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string
 ---@param value boolean|number|string|TripointCoord|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
@@ -10012,6 +10067,7 @@ function CcbVariablesApi.remove_global(key) end
 ---@return CcbVariableReadResult
 function CcbVariablesApi.resolve(context, actor, scope, key) end
 
+---For context scope, nil clears the Lua table entry; Lua tables cannot retain a stored nil.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
@@ -10307,8 +10363,62 @@ function CcbPlatformRecipesApi.forget(character, id) end
 ---@return CcbResult result `value` is a CcbPlatformRecipeCategoryForget.
 function CcbPlatformRecipesApi.forget_category(character, category, subcategory) end
 
+---@class CcbTechniqueIdPage
+---@field items GameId[]
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbTechniqueFlagPage
+---@field items string[]
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbTechniqueDefinitionSnapshot
+---@field id GameId GameId<martial_art_technique>.
+---@field name string Localized technique name.
+---@field description string Complete native rule description.
+---@field flavor_description string Localized authored short description, without generated rule text.
+---@field goal string
+---@field avatar_message string
+---@field npc_message string
+---@field defensive boolean
+---@field side_switch boolean
+---@field dummy boolean
+---@field critical_only boolean
+---@field critical_compatible boolean
+---@field reach_only boolean
+---@field reach_compatible boolean
+---@field dodge_counter boolean
+---@field block_counter boolean
+---@field miss_recovery boolean
+---@field grab_break boolean
+---@field disarms boolean
+---@field take_weapon boolean
+---@field needs_ammo boolean
+---@field wall_adjacent boolean
+---@field weight integer
+---@field repeat_min integer
+---@field repeat_max integer
+---@field down_duration integer
+---@field stun_duration integer
+---@field knockback_distance integer
+---@field knockback_spread number
+---@field knockback_follow boolean
+---@field area string
+---@field flags CcbTechniqueFlagPage
+---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
+---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
+
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
+
+---Read a detached native technique definition, including short and complete descriptions.
+---@param id GameId GameId<martial_art_technique>.
+---@return CcbTechniqueDefinitionSnapshot
+function CcbPlatformMartialArtsApi.technique_definition(id) end
+
 
 ---Learn one martial-art style without coupling the mutation to presentation.
 ---@param character GameHandle Character handle.
@@ -10348,8 +10458,8 @@ function CcbPlatformMoraleApi.remove(character, id) end
 ---@class CcbPlatformRandomApi: CcbRandomApi
 local CcbPlatformRandomApi = {}
 
----@param minimum integer Inclusive lower bound in -1000000000..1000000000.
----@param maximum integer Inclusive upper bound in -1000000000..1000000000.
+---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
+---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
@@ -10358,7 +10468,7 @@ function CcbPlatformRandomApi.int(minimum, maximum) end
 ---@return boolean
 function CcbPlatformRandomApi.chance(numerator, denominator) end
 
----@param denominator number Converted to a native integer; values at or below one always succeed.
+---@param denominator number Truncated toward zero into -2147483648..2147483647; values at or below one always succeed.
 ---@return boolean
 function CcbPlatformRandomApi.one_in(denominator) end
 
