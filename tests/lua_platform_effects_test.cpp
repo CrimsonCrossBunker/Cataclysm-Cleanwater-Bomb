@@ -17,16 +17,21 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "effect.h"
+#include "event.h"
+#include "event_bus.h"
+#include "event_subscriber.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
-#include "lua_platform_effects.h"
 #include "lua_platform_creatures.h"
+#include "lua_platform_effects.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
 #include "rng.h"
 #include "type_id.h"
+
+static const bodypart_str_id body_part_test_tail( "test_tail" );
 
 static const efftype_id effect_bleed( "bleed" );
 
@@ -85,6 +90,7 @@ struct effect_fixture {
         dialogue context( get_talker_for( player ), get_talker_for( other ) );
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "effect_acceptance" );
+        finalize_conditions();
         for( const talk_effect_fun_t &operation : effect.effects ) {
             operation( context );
         }
@@ -301,6 +307,170 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
     }
 }
 
+TEST_CASE( "lua_platform_effects_accept_registered_parts_outside_current_anatomy",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture legacy( 4400 );
+    effect_fixture modern( 4500 );
+    const bool npc_target = GENERATE( false, true );
+    REQUIRE( body_part_test_tail.is_valid() );
+    REQUIRE_FALSE( modern.target( npc_target ).has_part( body_part_test_tail ) );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    CHECK_FALSE( legacy.legacy_condition( R"({")" + prefix +
+                                          R"(has_effect":"bleed","bodypart":"test_tail"})" ) );
+    CHECK_FALSE( modern.query( npc_target, "bleed", "test_tail", 1 ) );
+    sol::protected_function get = modern.services["effects"]["get"];
+    const cata::lua_platform::script_game_id id( "effect", "bleed" );
+    const cata::lua_platform::script_game_id part( "body_part", "test_tail" );
+    sol::protected_function_result missing_call = get( modern.handle( npc_target ), id, part );
+    REQUIRE( missing_call.valid() );
+    sol::table missing = missing_call;
+    CHECK_FALSE( missing["ok"].get<bool>() );
+    CHECK( missing["error"]["code"].get<std::string>() == "not_found" );
+
+    legacy.legacy_effect( R"({")" + prefix +
+                          R"(add_effect":"bleed","duration":10,"target_part":"test_tail","intensity":1})" );
+    sol::table options = modern.lua.create_table();
+    options["body_part"] = part;
+    options["intensity"] = 1;
+    sol::protected_function add = modern.services["effects"]["add"];
+    sol::protected_function_result add_call = add( modern.handle( npc_target ), id,
+        cata::lua_platform::script_time_duration::from_native( 10_turns ), options );
+    REQUIRE( add_call.valid() );
+    sol::table added = add_call;
+    REQUIRE( added["ok"].get<bool>() );
+    const effect &before = legacy.target( npc_target ).get_effect( effect_bleed, body_part_test_tail );
+    const effect &after = modern.target( npc_target ).get_effect( effect_bleed, body_part_test_tail );
+    REQUIRE_FALSE( before.is_null() );
+    REQUIRE_FALSE( after.is_null() );
+    CHECK( before.get_duration() == after.get_duration() );
+    CHECK( before.get_intensity() == after.get_intensity() );
+    CHECK( modern.query( npc_target, "bleed", "test_tail", 1 ) );
+    sol::protected_function remove = modern.services["effects"]["remove"];
+    sol::protected_function_result remove_call = remove( modern.handle( npc_target ), id, part );
+    REQUIRE( remove_call.valid() );
+    sol::table removed = remove_call;
+    CHECK( removed["ok"].get<bool>() );
+    CHECK( removed["value"].get<bool>() );
+    legacy.legacy_effect( R"({")" + prefix + R"(lose_effect":"bleed","target_part":"test_tail"})" );
+    CHECK_FALSE( modern.target( npc_target ).has_effect( effect_bleed, body_part_test_tail ) );
+    CHECK_FALSE( legacy.target( npc_target ).has_effect( effect_bleed, body_part_test_tail ) );
+}
+
+TEST_CASE( "lua_platform_effects_all_removal_preserves_part_events",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture legacy( 4100 );
+    effect_fixture modern( 4200 );
+    effect_fixture bulk( 4300 );
+    const bool npc_target = GENERATE( false, true );
+    for( effect_fixture *fixture : {
+             &legacy, &modern, &bulk
+         } ) {
+        Character &target = fixture->target( npc_target );
+        target.add_effect( effect_bleed, 10_turns, bodypart_str_id::NULL_ID().id(), false, 1, true );
+        target.add_effect( effect_bleed, 10_turns, body_part_arm_l.id(), false, 1, true );
+        target.add_effect( effect_bleed, 10_turns, body_part_arm_r.id(), false, 1, true );
+    }
+    struct removal_observer : event_subscriber {
+        using event_subscriber::notify;
+        character_id watched;
+        std::vector<std::string> parts;
+        void notify( const cata::event &event ) override {
+            if( event.type() == event_type::character_loses_effect &&
+                event.get<character_id>( "character" ) == watched ) {
+                parts.push_back( event.get<bodypart_id>( "bodypart" ).id().str() );
+            }
+        }
+    } observer;
+    get_event_bus().subscribe( &observer );
+    observer.watched = legacy.target( npc_target ).getID();
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    legacy.legacy_effect( R"({")" + prefix + R"(lose_effect":"bleed","target_part":"ALL"})" );
+    const std::vector<std::string> expected = observer.parts;
+    REQUIRE( expected.size() == 3 );
+    CHECK( expected.back() == "bp_null" );
+
+    observer.watched = bulk.target( npc_target ).getID();
+    observer.parts.clear();
+    bulk.target( npc_target ).remove_effect( effect_bleed );
+    CHECK( observer.parts.size() == 1 );
+    CHECK( observer.parts != expected );
+
+    cata::lua_platform::install_creature_api(
+    modern.services, [&]() {
+        return modern.runtime;
+    },
+    [&]() {
+        return modern.world;
+    }, []() {}, []() {} );
+    observer.watched = modern.target( npc_target ).getID();
+    observer.parts.clear();
+    sol::protected_function get_parts = modern.services["characters"]["body_parts"];
+    sol::protected_function_result parts_call = get_parts( modern.handle( npc_target ) );
+    REQUIRE( parts_call.valid() );
+    sol::table parts_result = parts_call;
+    REQUIRE( parts_result["ok"].get<bool>() );
+    sol::table parts = parts_result["value"];
+    const auto native_parts = modern.target( npc_target ).get_all_body_parts(
+                                  get_body_part_flags::none );
+    REQUIRE( parts.size() == native_parts.size() );
+    sol::protected_function remove = modern.services["effects"]["remove"];
+    const cata::lua_platform::script_game_id id( "effect", "bleed" );
+    for( std::size_t i = 0; i < native_parts.size(); ++i ) {
+        const auto part = parts[i + 1].get<cata::lua_platform::script_game_id>();
+        CHECK( part.value() == native_parts[i].id().str() );
+        sol::protected_function_result call = remove( modern.handle( npc_target ), id, part );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+    }
+    sol::protected_function_result call = remove( modern.handle( npc_target ), id );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( observer.parts == expected );
+    CHECK_FALSE( modern.target( npc_target ).has_effect( effect_bleed ) );
+    const auto stale = modern.handle( npc_target );
+    ++modern.world;
+    sol::protected_function_result stale_call = get_parts( stale );
+    REQUIRE( stale_call.valid() );
+    sol::table stale_result = stale_call;
+    CHECK_FALSE( stale_result["ok"].get<bool>() );
+}
+
+TEST_CASE( "lua_platform_effects_fractional_duration_matches_legacy_truncation",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture legacy( 3900 );
+    effect_fixture modern( 4000 );
+    const bool npc_target = GENERATE( false, true );
+    const double turns = GENERATE( 0.8, 1.8, 2.9 );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    legacy.legacy_effect( R"({")" + prefix + R"(add_effect": "bleed", )"
+                          R"("duration": {"math": [")" + std::to_string( turns ) +
+                          R"("]}, "target_part": "arm_l", "intensity": 1})" );
+    sol::table options = modern.lua.create_table();
+    options["body_part"] = cata::lua_platform::script_game_id( "body_part", "arm_l" );
+    options["intensity"] = 1;
+    sol::protected_function add = modern.services["effects"]["add"];
+    sol::protected_function_result call = add( modern.handle( npc_target ),
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native(
+            time_duration::from_turns( static_cast<int>( turns ) ) ), options );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    const effect &before = legacy.target( npc_target ).get_effect(
+                               effect_bleed, body_part_arm_l.id() );
+    const effect &after = modern.target( npc_target ).get_effect(
+                              effect_bleed, body_part_arm_l.id() );
+    REQUIRE_FALSE( before.is_null() );
+    REQUIRE_FALSE( after.is_null() );
+    CHECK( before.get_duration() == time_duration::from_turns( static_cast<int>( turns ) ) );
+    CHECK( before.get_duration() == after.get_duration() );
+}
+
 TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
            "[lua][platform][effects][semantic]" )
 {
@@ -328,6 +498,38 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     REQUIRE_FALSE( after.is_null() );
     CHECK( before.get_duration() == 0_turns );
     CHECK( after.get_duration() == 0_turns );
+}
+
+TEST_CASE( "lua_platform_effects_signed_and_long_durations_match_legacy",
+           "[lua][platform][effects][semantic]" )
+{
+    effect_fixture legacy( 4600 );
+    effect_fixture modern( 4700 );
+    const bool npc_target = GENERATE( false, true );
+    const int turns = GENERATE( -10, -1, 366 * 24 * 60 * 60 );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    legacy.legacy_effect( R"({")" + prefix + R"(add_effect":"bleed","duration":)" +
+                          std::to_string( turns ) + R"(,"target_part":"arm_l","intensity":1})" );
+    sol::table options = modern.lua.create_table();
+    options["body_part"] = cata::lua_platform::script_game_id( "body_part", "arm_l" );
+    options["intensity"] = 1;
+    sol::protected_function add = modern.services["effects"]["add"];
+    sol::protected_function_result call = add( modern.handle( npc_target ),
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native( time_duration::from_turns( turns ) ),
+        options );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    const effect &before = legacy.target( npc_target ).get_effect( effect_bleed, body_part_arm_l.id() );
+    const effect &after = modern.target( npc_target ).get_effect( effect_bleed, body_part_arm_l.id() );
+    REQUIRE_FALSE( before.is_null() );
+    REQUIRE_FALSE( after.is_null() );
+    CHECK( before.get_duration() == after.get_duration() );
+    CHECK( before.get_intensity() == after.get_intensity() );
+    if( turns < 0 ) {
+        CHECK( after.get_duration() == time_duration::from_turns( turns ) );
+    }
 }
 
 TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
