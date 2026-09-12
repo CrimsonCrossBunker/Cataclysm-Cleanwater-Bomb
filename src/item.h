@@ -2182,16 +2182,21 @@ class item : public visitable
          * surfaces the fault's "message" JSON (with %s substituted by tname()) to the
          * player log. Pass nullptr (default) for silent application. Some callers that
          * already emit bespoke per-damage text should pass nullptr to avoid duplicates.
+         * `skip_rate_mult`, if true, skips the durability flag fault rate multiplier;
+         * intended for content and state driven applications.
          */
         bool set_fault( const fault_id &f_id, bool force = false,
-                        const Character *holder = nullptr );
+                        const Character *holder = nullptr,
+                        bool skip_rate_mult = false );
 
         /** Check if item can have any fault of type, and if yes, applies it.
         * `force`, if true, bypasses the check and applies the fault item do not define.
         * `holder`, see set_fault. Pass nullptr (default) for silent application.
+        * `skip_rate_mult`, see set_fault.
         */
         void set_random_fault_of_type( const std::string &fault_type, bool force = false,
-                                       const Character *holder = nullptr );
+                                       const Character *holder = nullptr,
+                                       bool skip_rate_mult = false );
 
         /** Removes the fault from the item, if such is presented. Returns true if a fault was removed */
         bool remove_fault( const fault_id &fault_id );

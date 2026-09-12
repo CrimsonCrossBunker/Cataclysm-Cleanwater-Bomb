@@ -100,6 +100,8 @@ static const activity_id ACT_READ( "ACT_READ" );
 static const activity_id ACT_TREE_COMMUNION( "ACT_TREE_COMMUNION" );
 static const activity_id ACT_TRY_SLEEP( "ACT_TRY_SLEEP" );
 
+static const addiction_id addiction_cannabis( "cannabis" );
+
 static const bionic_id bio_gills( "bio_gills" );
 static const bionic_id bio_sleep_shutdown( "bio_sleep_shutdown" );
 static const bionic_id bio_synlungs( "bio_synlungs" );
@@ -1469,6 +1471,14 @@ void Character::update_sensitive()
     rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
     if( gap > 0 ) {
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_UP, rate );
+        // Sensitivity rebounds faster during cannabis withdrawal (receptor upregulation).
+        for( const addiction &add : addictions ) {
+            if( add.type == addiction_cannabis && add.sated < 0_turns &&
+                add.intensity >= MIN_ADDICTION_LEVEL ) {
+                rate *= 2;
+                break;
+            }
+        }
     } else {
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_DOWN, rate );
     }

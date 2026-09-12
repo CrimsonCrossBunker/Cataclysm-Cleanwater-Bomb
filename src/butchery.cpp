@@ -640,7 +640,7 @@ static std::vector<item> create_charge_items( const itype *drop, int count,
             obj.set_flag( flg );
         }
         for( const fault_id &flt : entry.faults ) {
-            obj.set_fault( flt );
+            obj.set_fault( flt, false, nullptr, true );
         }
         if( !you.backlog.empty() && you.backlog.front().id() == ACT_MULTIPLE_BUTCHER ) {
             obj.set_var( "activity_var", you.name );

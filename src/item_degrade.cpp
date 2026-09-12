@@ -478,10 +478,42 @@ bool item::can_have_fault( const fault_id &f_id )
     return true;
 }
 
-bool item::set_fault( const fault_id &f_id, bool force, const Character *holder )
+namespace
+{
+constexpr float FAULT_RATE_UNBREAKABLE = 0.25f;
+constexpr float FAULT_RATE_STURDY = 0.5f;
+constexpr float FAULT_RATE_FRAGILE_MELEE = 1.25f;
+constexpr float DURABLE_DAMAGE_MULT = 0.25f;
+
+float fault_rate_multiplier( const item &it )
+{
+    float protective = 1.0f;
+    float adverse = 1.0f;
+    if( it.has_flag( flag_UNBREAKABLE ) || it.has_flag( flag_UNBREAKABLE_MELEE ) ) {
+        protective = std::min( protective, FAULT_RATE_UNBREAKABLE );
+    }
+    if( it.has_flag( flag_STURDY ) || it.has_flag( flag_DURABLE_MELEE ) ||
+        it.has_flag( flag_DURABLE ) ) {
+        protective = std::min( protective, FAULT_RATE_STURDY );
+    }
+    if( it.has_flag( flag_FRAGILE_MELEE ) ) {
+        adverse = std::max( adverse, FAULT_RATE_FRAGILE_MELEE );
+    }
+    return protective * adverse;
+}
+} // namespace
+
+bool item::set_fault( const fault_id &f_id, bool force, const Character *holder,
+                      bool skip_rate_mult )
 {
     if( !force && !can_have_fault( f_id ) ) {
         return false;
+    }
+    if( !skip_rate_mult ) {
+        const float mult = fault_rate_multiplier( *this );
+        if( mult < 1.0f && !x_in_y( mult, 1.0 ) ) {
+            return false;
+        }
     }
 
     // if f_id fault blocks fault A, we should remove fault A before applying fault f_id
@@ -503,23 +535,34 @@ bool item::set_fault( const fault_id &f_id, bool force, const Character *holder 
 }
 
 void item::set_random_fault_of_type( const std::string &fault_type, bool force,
-                                     const Character *holder )
+                                     const Character *holder, bool skip_rate_mult )
 {
     if( force ) {
-        set_fault( random_entry( faults::all_of_type( fault_type ) ), true, holder );
+        set_fault( random_entry( faults::all_of_type( fault_type ) ), true, holder,
+                   skip_rate_mult );
         return;
     }
 
     weighted_int_list<fault_id> faults_by_type;
+    // Fresh items (damage_level 0, e.g. crafting defect rolls) draw from the full
+    // pool; higher severities unlock as the item takes further damage.
+    const int lvl = damage_level();
+    fault_severity max_allowed = fault_severity::critical;
+    if( lvl == 1 ) {
+        max_allowed = fault_severity::minor;
+    } else if( lvl == 2 ) {
+        max_allowed = fault_severity::major;
+    }
     for( const std::pair<fault_id, int> &f : type->faults ) {
-        if( f.first.obj().type() == fault_type && can_have_fault( f.first ) ) {
+        if( f.first.obj().type() == fault_type && can_have_fault( f.first ) &&
+            f.first->severity() <= max_allowed ) {
             faults_by_type.add( f.first, f.second );
         }
 
     }
 
     if( !faults_by_type.empty() ) {
-        set_fault( *faults_by_type.pick(), force, holder );
+        set_fault( *faults_by_type.pick(), force, holder, skip_rate_mult );
     }
 
 }
@@ -991,6 +1034,9 @@ bool item::mod_damage( int qty, const Character *holder )
     if( has_flag( flag_UNBREAKABLE ) ) {
         return false;
     }
+    if( has_flag( flag_DURABLE ) && qty > 0 ) {
+        qty = std::max( static_cast<int>( qty * DURABLE_DAMAGE_MULT ), 1 );
+    }
     if( max_damage() == 0 ) {
         // Items with no damage range (ammo, liquid/gas comestibles) lose units
         // when damaged instead of accumulating damage. Stackable resources have
@@ -1013,7 +1059,7 @@ bool item::mod_damage( int qty, const Character *holder )
 
         // TODO: think about better way to telling the game what faults should be applied when
         if( qty > 0 ) {
-            for( int i = 0; i <= qty; i += itype::damage_scale ) {
+            for( int i = 0; i < qty; i += itype::damage_scale ) {
                 set_random_fault_of_type( "mechanical_damage", false, holder );
             }
         }

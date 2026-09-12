@@ -283,8 +283,8 @@ struct islot_comestible {
 
         /**effect on conditions to apply on consumption*/
         std::vector<effect_on_condition_id> consumption_eocs;
-        std::string lua_platform_mod;
-        std::string lua_platform_consume_handler;
+        std::string lua_platform_mod; // NOLINT(cata-serialize)
+        std::string lua_platform_consume_handler; // NOLINT(cata-serialize)
 
         /**List of diseases carried by this comestible and their associated probability*/
         std::map<diseasetype_id, float> contamination;
