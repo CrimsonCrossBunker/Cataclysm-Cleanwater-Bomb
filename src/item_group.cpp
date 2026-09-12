@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <value_ptr.h>
 
 #include "calendar.h"
 #include "cata_assert.h"
