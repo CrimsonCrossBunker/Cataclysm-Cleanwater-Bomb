@@ -2145,6 +2145,25 @@ TEST_CASE( "ammunition", "[iteminfo][ammo]" )
     }
 }
 
+TEST_CASE( "ammo_recovery_info_requires_recoverable_ammo", "[iteminfo][ammo]" )
+{
+    clear_avatar();
+    const std::vector<iteminfo_parts> parts = {
+        iteminfo_parts::AMMO_REMAINING_OR_TYPES, iteminfo_parts::AMMO_FX_RECOVER
+    };
+
+    const item battery( itype_test_battery_disposable );
+    REQUIRE( battery.ammo_data() );
+    REQUIRE( battery.ammo_data()->ammo->recovery_chance == 0 );
+    CHECK( item_info_str( battery, parts ).empty() );
+
+    const item rock( itype_test_rock );
+    REQUIRE( rock.ammo_data() );
+    REQUIRE( rock.ammo_data()->ammo->recovery_chance > 0 );
+    CHECK( item_info_str( rock, parts ).find( "chance of remaining intact once fired" ) !=
+           std::string::npos );
+}
+
 // Functions:
 // item::food_info
 TEST_CASE( "nutrients_in_food", "[iteminfo][food]" )
