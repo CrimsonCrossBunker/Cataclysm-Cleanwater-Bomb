@@ -26764,25 +26764,26 @@ def render_eoc_condition_expression(
                 f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])})))"
             )
 
-    for key, function_name, minimum in (
-        ("compare_string", "any_equal", 2),
-        ("compare_string_match_all", "all_equal", 1),
-    ):
+    for key, all_equal in (("compare_string", False), ("compare_string_match_all", True)):
         if set(condition) == {key}:
             values = condition[key]
-            if not isinstance(values, list) or len(values) < minimum:
+            if not isinstance(values, list) or all_equal and not values:
                 return None
-            rendered = [
-                render_eoc_string_expression(value)
-                for value in values
-            ]
+            rendered = [render_participant_string_expression(
+                value, "actor", "actor" if character_actor_proven else None, npc_query_actor)
+                for value in values]
             if any(value is None for value in rendered):
                 return None
-            rendered_values = ", ".join(rendered)
-            return (
-                f"services.gameplay.strings.{function_name}"
-                f"({{{rendered_values}}})"
-            )
+            if all_equal:
+                statements = [f"local first = {rendered[0]};"]
+                statements.extend(f"if {value} ~= first then return false end;" for value in rendered[1:])
+                statements.append("return true")
+            else:
+                statements = ["local seen = {}; local value;"]
+                statements.extend(f"value = {value}; if seen[value] then return true end; seen[value] = true;"
+                                  for value in rendered)
+                statements.append("return false")
+            return "(function() " + " ".join(statements) + " end)()"
 
     if set(condition) == {"one_in_chance"}:
         value = finite_number_literal(condition["one_in_chance"])

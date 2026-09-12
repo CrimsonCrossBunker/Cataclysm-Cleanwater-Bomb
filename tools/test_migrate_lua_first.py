@@ -41,6 +41,57 @@ assert(calls==1)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_mp3_dimension_comparison_executes_as_lua(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/anomalous_mp3_eocs.json").read_text())
+        eoc = next(entry for entry in source if entry.get("id") == "EOC_MP3_REVERBERATION_REVERBERATION_LISTENER")
+        expression = migrate_lua_first.render_eoc_condition_expression(eoc["effect"][1]["if"])
+        self.assertIsNotNone(expression)
+        for dimension, expected in (("radiosphere", True), ("cabins", False), ("", False)):
+            script = "local context={data={dim_name=" + migrate_lua_first.lua_quote(dimension) + "}}\n"
+            script += f"assert({expression} == {str(expected).lower()})"
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_comparisons_preserve_owners_and_short_circuit(self) -> None:
+        for key, beta, expected in (("compare_string", "alpha", True),
+                                    ("compare_string_match_all", "different", False)):
+            condition = {key: [{"u_val": "input"}, {"npc_val": "input"},
+                               {"mutator": "game_option", "option": "unreached"}]}
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                condition, avatar_actor_proven=True, npc_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = r"""
+local actor={input='alpha'}
+local partner={input=BETA}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ calls=calls+1;assert((calls==1 and owner==actor) or (calls==2 and owner==partner))
+ return {ok=true,value={value=owner[key]}}
+end},gameplay={options={get=function() error('must short circuit') end}}}
+assert(EXPRESSION==EXPECTED and calls==2)
+""".replace("BETA", migrate_lua_first.lua_quote(beta)).replace("EXPRESSION", expression)
+            script = script.replace("EXPECTED", "true" if expected else "false")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_comparisons_accept_native_empty_singleton_and_long_lists(self) -> None:
+        cases = [("compare_string", [], False), ("compare_string", ["a"], False),
+                 ("compare_string_match_all", ["a"], True),
+                 ("compare_string", [str(i) for i in range(300)], False),
+                 ("compare_string_match_all", ["same"] * 300, True)]
+        for key, values, expected in cases:
+            expression = migrate_lua_first.render_eoc_condition_expression({key: values})
+            self.assertIsNotNone(expression)
+            result = subprocess.run(["lua", "-"], input=f"assert({expression} == {str(expected).lower()})",
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({"compare_string_match_all": []}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_copy_variable_preserves_owners_types_and_empty_write(self) -> None:
         addresses = [("u_val", "actor", None), ("npc_val", "partner", None),
                      ("context_val", "context.data", None), ("global_val", "globals", None),
@@ -2029,8 +2080,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), len(predicates))
             self.assertEqual(result.partial, [])
-            self.assertIn("services.gameplay.strings.any_equal", main)
-            self.assertIn("services.gameplay.strings.all_equal", main)
+            self.assertIn("if seen[value] then return true end", main)
+            self.assertIn("~= first then return false end", main)
             self.assertIn("services.random.one_in(3)", main)
             self.assertIn("services.random.probability(1.5, 4)", main)
             self.assertIn("services.random.contested(2, 5, 8)", main)
@@ -18661,8 +18712,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn("services.gameplay.strings.any_equal", main)
-            self.assertIn("services.gameplay.strings.all_equal", main)
+            self.assertIn("if seen[value] then return true end", main)
+            self.assertIn("~= first then return false end", main)
             self.assertIn("services.gameplay.math.apply", main)
 
     def test_phase_move_and_global_overmap_point_keep_avatar_context(self) -> None:
