@@ -27,9 +27,11 @@
 #include "text_snippets.h"
 
 static const efftype_id effect_hallu( "hallu" );
+static const efftype_id effect_nausea( "nausea" );
 static const efftype_id effect_shakes( "shakes" );
 
 static const morale_type morale_craving_alcohol( "morale_craving_alcohol" );
+static const morale_type morale_craving_cannabis( "morale_craving_cannabis" );
 static const morale_type morale_craving_cocaine( "morale_craving_cocaine" );
 static const morale_type morale_craving_crack( "morale_craving_crack" );
 static const morale_type morale_craving_diazepam( "morale_craving_diazepam" );
@@ -184,6 +186,13 @@ static bool crack_coke_add( Character &u, int in, int stim, bool is_crack )
 
 static bool nicotine_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            return false;
+        }
+    }
     static time_point last_dream = calendar::turn_zero;
     const int in = std::min( 20, add.intensity );
     const int current_stim = u.get_stim();
@@ -212,20 +221,88 @@ static bool nicotine_effect( Character &u, addiction &add )
     return false;
 }
 
+static bool cannabis_effect( Character &u, addiction &add )
+{
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            return false;
+        }
+    }
+    static time_point last_dream = calendar::turn_zero;
+    const int in = std::min( 20, add.intensity );
+
+    bool ret = false;
+
+    if( x_in_y( in, 80 ) && ( !u.in_sleep_state() || calendar::turn - last_dream > 3_hours ) ) {
+        if( u.in_sleep_state() ) {
+            last_dream = calendar::turn;
+        }
+        const bool strong = rng( 0, 14 ) < in;
+        const std::string msg =
+            !strong ?
+            ( u.in_sleep_state() ? "addict_cannabis_mild_asleep" : "addict_cannabis_mild_awake" ) :
+            ( u.in_sleep_state() ? "addict_cannabis_strong_asleep" : "addict_cannabis_strong_awake" );
+        u.add_msg_if_player( m_warning,
+                             SNIPPET.random_from_category( msg ).value_or( translation() ).translated() );
+        if( !u.in_sleep_state() ) {
+            // Deeper sensory dulling (tolerance) hits withdrawal cravings harder.
+            const int sens_scale = 100 + std::max( 0, 100 - u.get_sensitive() );
+            u.add_morale( morale_craving_cannabis, -5 * sens_scale / 100, -2 * in, 1_hours,
+                          30_minutes, true );
+        }
+
+        ret = true;
+    }
+
+    if( one_in( 90 - 3 * in ) ) {
+        u.mod_sleepiness( -1 );
+    }
+    if( in > 5 && one_in( 90 - in ) ) {
+        u.add_effect( effect_nausea, ( in - 5 ) * 1_minutes );
+    }
+    return ret;
+}
+
 static bool alcohol_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            u.remove_effect( effect_shakes );
+            return false;
+        }
+    }
     const int in = std::min( 20, add.intensity );
     return alcohol_diazepam_add( u, in, true );
 }
 
 static bool diazepam_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            u.remove_effect( effect_shakes );
+            return false;
+        }
+    }
     const int in = std::min( 20, add.intensity );
     return alcohol_diazepam_add( u, in, false );
 }
 
 static bool opiate_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            u.remove_effect( effect_shakes );
+            return false;
+        }
+    }
     static time_point last_dream = calendar::turn_zero;
     const int in = std::min( 20, add.intensity );
     if( calendar::once_every( time_duration::from_turns( 100 - in * 4 ) ) &&
@@ -277,6 +354,13 @@ static bool opiate_effect( Character &u, addiction &add )
 
 static bool amphetamine_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            return false;
+        }
+    }
     static time_point last_dream = calendar::turn_zero;
     const int in = std::min( 20, add.intensity );
     const int current_stim = u.get_stim();
@@ -334,6 +418,13 @@ static bool amphetamine_effect( Character &u, addiction &add )
 
 static bool cocaine_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            return false;
+        }
+    }
     const int in = std::min( 20, add.intensity );
     const int current_stim = u.get_stim();
     return crack_coke_add( u, in, current_stim, false );
@@ -341,6 +432,13 @@ static bool cocaine_effect( Character &u, addiction &add )
 
 static bool crack_effect( Character &u, addiction &add )
 {
+    // We shouldn't be able to get here if we have the effect, but bail if we have.
+    for( const efftype_id &effect : add.type->get_satisfying_effects() ) {
+        if( u.has_effect( effect ) ) {
+            add.sated = add.type->get_default_sated();
+            return false;
+        }
+    }
     const int in = std::min( 20, add.intensity );
     const int current_stim = u.get_stim();
     return crack_coke_add( u, in, current_stim, true );
@@ -349,6 +447,7 @@ static bool crack_effect( Character &u, addiction &add )
 /*********************************************/
 
 static const std::map<std::string, std::function<bool( Character &, addiction & )>> builtin_map {
+    {"cannabis_effect",    ::cannabis_effect},
     {"nicotine_effect",    ::nicotine_effect},
     {"alcohol_effect",     ::alcohol_effect},
     {"diazepam_effect",    ::diazepam_effect},
@@ -385,6 +484,8 @@ void add_type::load( const JsonObject &jo, std::string_view )
     mandatory( jo, was_loaded, "name", _name );
     mandatory( jo, was_loaded, "type_name", _type_name );
     mandatory( jo, was_loaded, "description", _desc );
+    optional( jo, false, "satisfying_effects", _satisfying_effects );
+    optional( jo, false, "sated", _sated, 2_hours );
     optional( jo, was_loaded, "craving_morale", _craving_morale, morale_type::NULL_ID() );
     optional( jo, was_loaded, "effect_on_condition", _effect );
     optional( jo, was_loaded, "builtin", _builtin );

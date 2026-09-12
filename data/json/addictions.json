@@ -2,6 +2,8 @@
   {
     "type": "addiction_type",
     "id": "caffeine",
+    "sated": "6 hours",
+    "satisfying_effects": [ "caffeine_eff" ],
     "name": "Caffeine Withdrawal",
     "type_name": "caffeine",
     "description": "Strength - 1;   Slight sluggishness;   Occasional cravings.",
@@ -11,6 +13,8 @@
   {
     "type": "addiction_type",
     "id": "nicotine",
+    "sated": "4 hours",
+    "satisfying_effects": [ "cig" ],
     "name": "Nicotine Withdrawal",
     "type_name": "nicotine",
     "description": "Intelligence - 1;   Occasional cravings.",
@@ -20,6 +24,8 @@
   {
     "type": "addiction_type",
     "id": "alcohol",
+    "sated": "6 hours",
+    "satisfying_effects": [ "drunk" ],
     "name": "Alcohol Withdrawal",
     "type_name": "alcohol",
     "description": "Perception - 1;   Intelligence - 1;   Occasional Cravings;\nRisk of delirium tremens.",
@@ -29,6 +35,8 @@
   {
     "type": "addiction_type",
     "id": "sleeping pill",
+    "sated": "6 hours",
+    "satisfying_effects": [ "took_antihistamine", "took_xanax", "valium" ],
     "name": "Sleeping Pill Dependence",
     "type_name": "sleeping pills",
     "description": "You may find it difficult to sleep without medication.",
@@ -37,6 +45,7 @@
   {
     "type": "addiction_type",
     "id": "opiate",
+    "sated": "6 hours",
     "name": "Opiate Withdrawal",
     "type_name": "opiates",
     "description": "Strength - 1;   Perception - 1;   Dexterity - 1;\nDepression and physical pain to some degree.  Frequent cravings.  Vomiting.",
@@ -46,6 +55,7 @@
   {
     "type": "addiction_type",
     "id": "amphetamine",
+    "sated": "6 hours",
     "name": "Amphetamine Withdrawal",
     "type_name": "amphetamine",
     "description": "Strength - 1;   Intelligence - 1;\nMovement rate reduction.  Depression.  Weak immune system.  Frequent cravings.",
@@ -55,6 +65,7 @@
   {
     "type": "addiction_type",
     "id": "cocaine",
+    "sated": "4 hours",
     "name": "Cocaine Withdrawal",
     "type_name": "cocaine",
     "description": "Perception - 1;   Intelligence - 1;   Frequent cravings.",
@@ -64,11 +75,23 @@
   {
     "type": "addiction_type",
     "id": "crack",
+    "sated": "45 minutes",
     "name": "Crack Cocaine Withdrawal",
     "type_name": "crack cocaine",
     "description": "Perception - 2;   Intelligence - 2;   Frequent cravings.",
     "craving_morale": "morale_craving_crack",
     "builtin": "crack_effect"
+  },
+  {
+    "type": "addiction_type",
+    "id": "cannabis",
+    "name": "Craving Cannabis",
+    "type_name": "cannabis",
+    "description": "You could use some herb right now.",
+    "sated": "8 hours",
+    "satisfying_effects": [ "weed_high" ],
+    "craving_morale": "morale_craving_cannabis",
+    "builtin": "cannabis_effect"
   },
   {
     "type": "addiction_type",
@@ -82,6 +105,8 @@
   {
     "type": "addiction_type",
     "id": "diazepam",
+    "sated": "6 hours",
+    "satisfying_effects": [ "valium", "took_xanax" ],
     "name": "Diazepam Withdrawal",
     "type_name": "diazepam",
     "description": "Perception - 1;   Intelligence - 1;\nAnxiety, nausea, hallucinations, and general malaise.",
@@ -91,6 +116,7 @@
   {
     "type": "addiction_type",
     "id": "marloss_r",
+    "sated": "8 hours",
     "name": "Marloss Longing",
     "type_name": "Marloss berries",
     "description": "You should try some of those pink berries.",
@@ -100,6 +126,7 @@
   {
     "type": "addiction_type",
     "id": "marloss_b",
+    "sated": "8 hours",
     "name": "Marloss Desire",
     "type_name": "Marloss seeds",
     "description": "You should try some of those cyan seeds.",
@@ -109,6 +136,7 @@
   {
     "type": "addiction_type",
     "id": "marloss_y",
+    "sated": "8 hours",
     "name": "Marloss Cravings",
     "type_name": "Marloss gel",
     "description": "You should try some of that golden gel.",

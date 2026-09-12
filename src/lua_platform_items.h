@@ -115,7 +115,7 @@ std::optional<game_handle_error> stage_platform_recipe_items(
 /** Restore one escrow item to an explicit holder.  The caller retains the
  * rollback transaction until the surrounding task commit succeeds. */
 std::optional<game_handle_error> restore_platform_recipe_item(
-    const basecamp_platform_recipe_escrow_item &item,
+    const basecamp_platform_recipe_escrow_item &escrow,
     const sol::table &destination_holder,
     const game_handle_runtime &current_runtime,
     std::size_t current_world_generation,
@@ -143,16 +143,16 @@ std::optional<game_handle_error> insert_platform_recipe_outputs(
  * snapshot.  The result never contains an Item GameHandle or native pointer. */
 sol::table recipe_escrow_item_snapshot(
     sol::state_view lua,
-    const basecamp_platform_recipe_escrow_item &item );
+    const basecamp_platform_recipe_escrow_item &escrow );
 
 // Install bounded inventory traversal and item operations.  Native items
 // cross the Lua boundary only through generation-checked GameHandle values.
 void install_item_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write_fn );
 
 } // namespace cata::lua_platform
 

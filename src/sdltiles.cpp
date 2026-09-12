@@ -150,7 +150,7 @@ static bool needupdate = false;
 // instead of replacing them with the (usually stale) hardware mouse position.
 static bool last_input_has_explicit_mouse_pos = false;
 #if defined(__ANDROID__)
-static hover_mouse_input_state android_hover_mouse_input;
+    static hover_mouse_input_state android_hover_mouse_input;
 #endif
 static bool need_invalidate_framebuffers = false;
 palette_array windowsPalette;
@@ -6219,6 +6219,8 @@ static void CheckMessages()
     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
                                  touch_input_context.get_category() )];
 
+    const bool allow_touch_repeat = !needupdate;
+
     // Don't do this logic if we already need an update, otherwise we're likely to overload the game with too much input on hold repeat events
     if( !needupdate ) {
 
@@ -6423,42 +6425,6 @@ static void CheckMessages()
                     env->DeleteLocalRef( activity );
                     env->DeleteLocalRef( clazz );
                 }
-            }
-        }
-
-        // Handle repeating inputs from touch + holds
-        if( !android_imgui_touch_state.captures_touch && !is_quick_shortcut_touch &&
-            !is_two_finger_touch && !is_three_finger_touch &&
-            finger_down_time > 0 &&
-            ticks - finger_down_time > static_cast<uint32_t>
-            ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-            const float held_distance = std::hypot( finger_curr_x - finger_down_x,
-                                                    finger_curr_y - finger_down_y );
-            const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
-                                        std::max( WindowWidth, WindowHeight );
-            const bool precision_hold = android_ui_mode::is_new_ui_build() && is_default_mode &&
-                                        get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
-                                        held_distance < hold_deadzone;
-            if( !precision_hold && ticks - finger_repeat_time > finger_repeat_delay ) {
-                handle_finger_input( ticks );
-                finger_repeat_time = ticks;
-                // Prevent repeating inputs on the next call to this function if there is a fingerup event
-                while( SDL_PollEvent( &ev ) ) {
-                    if( ev.type == CATA_FINGERUP ) {
-                        third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                                                  finger_down_x = finger_curr_x = -1.0f;
-                        third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                                                  finger_down_y = finger_curr_y = -1.0f;
-                        is_two_finger_touch = false;
-                        is_three_finger_touch = false;
-                        finger_down_time = 0;
-                        finger_repeat_time = 0;
-                        finger_slot_clear( GetFingerID( ev ) );
-                        // let the next call decide if needupdate should be true
-                        break;
-                    }
-                }
-                return;
             }
         }
 
@@ -6974,10 +6940,10 @@ static void CheckMessages()
                             if( !is_quick_shortcut_touch ) {
                                 update_finger_repeat_delay();
                             }
-                            // Legacy joystick and shortcut overlays still redraw while
-                            // moving. New UI ImGui touches are coalesced below instead.
+                            // Repaint the joystick/shortcuts at the end of the event
+                            // batch. Redrawing the whole ImGui menu for each motion
+                            // makes touch input accumulate behind recipe previews.
                             needupdate = true;
-                            ui_manager::redraw_invalidated();
                         }
 
                         if( !android_imgui_touch_state.captures_touch &&
@@ -7045,8 +7011,8 @@ static void CheckMessages()
                             // Do not hover or press a widget until this gesture is
                             // known to be a tap or a control drag.
                         } else {
-                            ui_manager::redraw_invalidated();
-                            // Ensure virtual joystick and quick shortcuts redraw.
+                            // The overlays are drawn by refresh_display(). Menu
+                            // contents redraw once in their own input loop.
                             needupdate = true;
                         }
                     } else if( slot == 1 ) {
@@ -7376,6 +7342,28 @@ static void CheckMessages()
     }
 #if defined(__ANDROID__)
     android_service_imgui_touch( GetTicks() );
+    // Dispatch queued motion and release events before using the held direction.
+    // Never drain SDL events here: the normal dispatcher must see every event.
+    // Handle repeating inputs from touch + holds
+    if( allow_touch_repeat && !quit && last_input.type == input_event_t::error &&
+        !android_imgui_touch_state.captures_touch && !is_quick_shortcut_touch &&
+        !is_two_finger_touch && !is_three_finger_touch &&
+        finger_down_time > 0 &&
+        ticks - finger_down_time > static_cast<uint32_t>
+        ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+        const float held_distance = std::hypot( finger_curr_x - finger_down_x,
+                                                finger_curr_y - finger_down_y );
+        const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
+                                    std::max( WindowWidth, WindowHeight );
+        const bool precision_hold = android_ui_mode::is_new_ui_build() && is_default_mode &&
+                                    get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
+                                    held_distance < hold_deadzone;
+        if( !precision_hold && ticks - finger_repeat_time > finger_repeat_delay ) {
+            handle_finger_input( ticks );
+            finger_repeat_time = ticks;
+        }
+    }
+
 #endif
     if( needupdate ) {
         try_sdl_update();
