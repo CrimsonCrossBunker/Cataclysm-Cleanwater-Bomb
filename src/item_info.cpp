@@ -1013,7 +1013,7 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
             _( "This ammo has been loaded with <bad>blackpowder</bad>, and will quickly "
                "clog up most guns, and cause rust if the gun is not cleaned." ) );
     }
-    if( parts->test( iteminfo_parts::AMMO_FX_RECOVER ) ) {
+    if( ammo.recovery_chance > 0 && parts->test( iteminfo_parts::AMMO_FX_RECOVER ) ) {
         if( ammo.recovery_chance <= 75 ) {
             fx.emplace_back( _( "Stands a <bad>very low</bad> chance of remaining intact once fired." ) );
         } else if( ammo.recovery_chance <= 80 ) {
