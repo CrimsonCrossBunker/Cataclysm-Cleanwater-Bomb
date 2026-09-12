@@ -5,6 +5,8 @@
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
+#include <flat_set.h>
+#include <game.h>
 #include <inventory_ui.h>
 #include <item_uid.h>
 
@@ -2212,7 +2214,7 @@ sol::table item_var_to_lua(
 
 sol::table get_item_var(
     sol::this_state lua, const game_handle &handle,
-    const std::string &key,
+    std::string_view key,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
