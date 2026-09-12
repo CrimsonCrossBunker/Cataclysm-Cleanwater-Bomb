@@ -14,6 +14,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
+#include "creature.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "effect.h"

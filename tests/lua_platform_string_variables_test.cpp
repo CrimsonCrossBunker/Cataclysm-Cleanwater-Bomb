@@ -1,19 +1,22 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <functional>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
-#include "character_id.h"
 #include "character.h"
-#include "condition.h"
+#include "character_id.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"

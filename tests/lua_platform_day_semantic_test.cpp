@@ -1,7 +1,11 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <array>
+#include <functional>
+#include <initializer_list>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
@@ -10,6 +14,11 @@
 #include "dialogue.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+} // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_is_day_matches_legacy_calendar_boundaries",
            "[lua][platform][day][semantic]" )

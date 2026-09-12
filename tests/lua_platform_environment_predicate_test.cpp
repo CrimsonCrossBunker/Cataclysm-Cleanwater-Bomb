@@ -1,7 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
@@ -12,7 +15,13 @@
 #include "json_loader.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "type_id.h"
 #include "weather.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+} // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
            "[lua][platform][environment_predicate][semantic]" )

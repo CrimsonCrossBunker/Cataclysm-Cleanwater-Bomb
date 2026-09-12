@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <functional>
 #include <string>
 
 #include "cata_catch.h"
@@ -9,10 +10,12 @@
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
-#include "lua_platform_handle.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_handle.h"
 #include "lua_platform_martial_arts.h"
+#include "lua_platform_sol.h"
 #include "martialarts.h"
+#include "translation.h"
 #include "type_id.h"
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",

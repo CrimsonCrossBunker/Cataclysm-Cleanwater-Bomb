@@ -1,12 +1,20 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "rng.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+} // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_random_accepts_native_integer_boundaries",
            "[lua][platform][random_range][semantic]" )
