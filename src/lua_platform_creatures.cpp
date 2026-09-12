@@ -4724,7 +4724,7 @@ void install_creature_api(
         }
         const bodypart_id part = character->random_body_part( main_parts_only.value_or( false ) );
         return make_game_value_result( state, sol::make_object( state,
-                script_game_id( "body_part", part.id().str() ) ) );
+                                       script_game_id( "body_part", part.id().str() ) ) );
     } );
     characters.set_function(
         "pick_body_part",

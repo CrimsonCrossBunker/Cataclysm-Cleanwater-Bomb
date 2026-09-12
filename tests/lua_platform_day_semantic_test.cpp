@@ -63,7 +63,7 @@ TEST_CASE( "lua_platform_is_day_matches_legacy_calendar_boundaries",
                 for( const time_point boundary : boundaries ) {
                     for( const int offset : {
                              -1, 0, 1
-                         } ) {
+                             } ) {
                         calendar::turn = boundary + time_duration::from_seconds( offset );
                         CAPTURE( eternal_day, eternal_night, season, offset );
                         const sol::protected_function_result actual = predicate();

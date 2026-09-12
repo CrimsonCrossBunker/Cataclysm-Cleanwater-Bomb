@@ -98,16 +98,16 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     const Character &target = target_npc ? static_cast<const Character &>( partner ) : player;
     CHECK( target.get_value( "platform_output" ).str() == target.get_value( "legacy_output" ).str() );
     sol::protected_function_result null_write = set(
-            data, target_npc ? partner_handle : player_handle,
-            target_npc ? "npc" : "u", "platform_output", sol::nil );
+                data, target_npc ? partner_handle : player_handle,
+                target_npc ? "npc" : "u", "platform_output", sol::nil );
     REQUIRE( null_write.valid() );
     sol::table null_result = null_write;
     REQUIRE( null_result["ok"].get<bool>() );
     REQUIRE( target.maybe_get_value( "platform_output" ) != nullptr );
     CHECK( target.get_value( "platform_output" ).is_empty() );
     sol::protected_function_result null_read = resolve(
-            data, target_npc ? partner_handle : player_handle,
-            target_npc ? "npc" : "u", "platform_output" );
+                data, target_npc ? partner_handle : player_handle,
+                target_npc ? "npc" : "u", "platform_output" );
     REQUIRE( null_read.valid() );
     sol::table null_read_result = null_read;
     REQUIRE( null_read_result["ok"].get<bool>() );
@@ -133,7 +133,7 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     const auto stale_target = cata::lua_platform::game_handle::from_creature(
                                   player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 2 );
     sol::protected_function_result rejected = copy(
-            partner_handle, "string_input", stale_target, "nested_target" );
+                partner_handle, "string_input", stale_target, "nested_target" );
     REQUIRE( rejected.valid() );
     sol::table error_result = rejected;
     CHECK_FALSE( error_result["ok"].get<bool>() );
@@ -180,7 +180,7 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     CHECK( self_metadata["destination_existed"].get<bool>() );
     CHECK( get_globals().get_global_value( key ).is_empty() );
     sol::protected_function_result missing_copy = copy(
-            sol::nil, "lua_semantic_missing_copy_source", sol::nil, key );
+                sol::nil, "lua_semantic_missing_copy_source", sol::nil, key );
     REQUIRE( missing_copy.valid() );
     sol::table missing_result = missing_copy;
     REQUIRE( missing_result["ok"].get<bool>() );
