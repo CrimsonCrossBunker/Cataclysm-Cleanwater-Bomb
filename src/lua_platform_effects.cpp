@@ -381,7 +381,8 @@ sol::table add_effect(
 {
     require_id_kind(
         requested_id, "effect", "services.effects.add" );
-    validate_effect_duration( duration, "services.effects.add", true );
+    // TimeDuration already checks the native signed turn range. Preserve
+    // negative and long durations; Creature/effect owns expiry and clamping.
     const effect_add_options options =
         read_add_options( requested_options );
     sol::state_view state( lua );
