@@ -57,7 +57,7 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
                 CAPTURE( eternal, season, wanted );
                 lua["wanted"] = wanted;
                 conditional_t legacy( json_loader::from_string(
-                                          "{\"is_season\":\"" + wanted + "\"}" ).get_object() );
+                                          R"({"is_season":")" + wanted + R"("})" ).get_object() );
                 const sol::protected_function_result actual = season_query();
                 REQUIRE( actual.valid() );
                 CHECK( actual.get<bool>() == legacy( context ) );
@@ -76,7 +76,7 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
             CAPTURE( current, wanted );
             lua["wanted"] = wanted;
             conditional_t legacy( json_loader::from_string(
-                                      "{\"is_weather\":\"" + wanted + "\"}" ).get_object() );
+                                      R"({"is_weather":")" + wanted + R"("})" ).get_object() );
             const sol::protected_function_result actual = weather_query();
             REQUIRE( actual.valid() );
             CHECK( actual.get<bool>() == legacy( context ) );

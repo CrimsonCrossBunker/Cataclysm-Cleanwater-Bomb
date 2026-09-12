@@ -107,8 +107,8 @@ constexpr double maximum_enchantment_value_base = 1.0e15;
 
 // Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
 // u_has_flag checks threshold-crossing state rather than literal flag presence.
-const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
-const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
+static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
+static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
 
 struct creature_query_options {
     int radius = default_creature_query_radius;
@@ -580,6 +580,8 @@ sol::table nearby_creatures(
         if( lhs_distance != rhs_distance ) {
             return lhs_distance < rhs_distance;
         }
+        // Stable internal kind ordering, independent of display language.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return creature_kind( *lhs ) < creature_kind( *rhs );
     } );
 
@@ -860,7 +862,7 @@ nearby_monster_count_options read_nearby_monster_count_options(
             }
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -919,14 +921,14 @@ std::vector<std::string> read_nearby_monster_ids(
         const sol::object value = requested->raw_get<sol::object>( index );
         if( !value.is<script_game_id>() ) {
             throw std::invalid_argument(
-                api_name + " ids must contain GameId<" +
-                expected_kind + "> values" );
+                std::string( api_name ).append( " ids must contain GameId<" ).append(
+                    expected_kind ).append( "> values" ) );
         }
-        const script_game_id id = value.as<script_game_id>();
+        const script_game_id &id = value.as<script_game_id>();
         if( id.kind() != expected_kind || !id.is_valid() ) {
             throw std::invalid_argument(
-                api_name + " ids must contain valid GameId<" +
-                expected_kind + "> values" );
+                std::string( api_name ).append( " ids must contain valid GameId<" ).append(
+                    expected_kind ).append( "> values" ) );
         }
         result.push_back( id.value() );
     }
@@ -2286,7 +2288,7 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
         if( entry.get_type() == sol::type::string ) {
             id = entry.as<std::string>();
         } else if( entry.is<script_game_id>() ) {
-            const script_game_id typed_id = entry.as<script_game_id>();
+            const script_game_id &typed_id = entry.as<script_game_id>();
             if( typed_id.kind() != "martial_art_technique" ) {
                 throw std::invalid_argument(
                     "services.characters.choose_technique blacklist GameIds must have "
@@ -3209,18 +3211,18 @@ character_attribute_updates read_character_attribute_updates(
             key != "strength_bonus" && key != "dexterity_bonus" &&
             key != "perception_bonus" && key != "intelligence_bonus" ) {
             throw std::invalid_argument(
-                api_name + " received unknown field '" + key + "'" );
+                std::string( api_name ).append( " received unknown field '" ).append( key ).append( "'" ) );
         }
         if( !entry.second.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                api_name + " field '" + key + "' must be an integer" );
+                std::string( api_name ).append( " field '" ).append( key ).append( "' must be an integer" ) );
         }
         const lua_Integer value = entry.second.as<lua_Integer>();
         if( value < -maximum_character_attribute ||
             value > maximum_character_attribute ) {
             throw std::invalid_argument(
-                api_name + " field '" + key +
-                "' must be within -1000000..1000000" );
+                std::string( api_name ).append( " field '" ).append(
+                    key ).append( "' must be within -1000000..1000000" ) );
         }
         const int native_value = static_cast<int>( value );
         if( key == "strength_base" ) {
@@ -3834,18 +3836,18 @@ monster_disposition_updates read_monster_disposition_updates(
         if( key != "anger" && key != "morale" &&
             key != "friendly" ) {
             throw std::invalid_argument(
-                api_name + " received unknown field '" + key + "'" );
+                std::string( api_name ).append( " received unknown field '" ).append( key ).append( "'" ) );
         }
         if( !entry.second.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                api_name + " field '" + key + "' must be an integer" );
+                std::string( api_name ).append( " field '" ).append( key ).append( "' must be an integer" ) );
         }
         const lua_Integer value = entry.second.as<lua_Integer>();
         if( value < std::numeric_limits<int>::min() ||
             value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
-                api_name + " field '" + key +
-                "' is outside native integer bounds" );
+                std::string( api_name ).append( " field '" ).append(
+                    key ).append( "' is outside native integer bounds" ) );
         }
         if( key == "anger" ) {
             result.anger = static_cast<int>( value );
@@ -4125,10 +4127,10 @@ sol::table nearby_characters(
 
 void install_creature_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table creatures = lua.create_table();

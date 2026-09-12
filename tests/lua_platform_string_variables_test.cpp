@@ -47,15 +47,16 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     dialogue context( get_talker_for( player ), get_talker_for( partner ) );
     context.set_value( "destination", target_npc ? "n_legacy_output" : "u_legacy_output" );
     talk_effect_t legacy;
-    const std::string input = "{\"set_string_var\":{\"" + source_key +
-                              "\":\"string_input\"},\"target_var\":{\"" +
-                              ( indirect ? "var_val" : target_key ) + "\":\"" +
-                              ( indirect ? "destination" : "legacy_output" ) + "\"}}";
+    const std::string input = R"({"set_string_var":{")" + source_key +
+                              R"(":"string_input"},"target_var":{")" +
+                              ( indirect ? "var_val" : target_key ) + R"(":")" +
+                              ( indirect ? "destination" : "legacy_output" ) + R"("}})";
     legacy.parse_sub_effect( json_loader::from_string( input ).get_object(), "string_acceptance" );
     for( const talk_effect_fun_t &effect : legacy.effects ) {
         effect( context );
     }
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime{ owner, 1 };
     sol::state lua;
     sol::table services = lua.create_table();
@@ -72,10 +73,12 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     }, []() {}, []() {}, []() {
         return true;
     } );
-    const auto player_handle = cata::lua_platform::game_handle::from_creature(
-                                   player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 1 );
-    const auto partner_handle = cata::lua_platform::game_handle::from_creature(
-                                    partner, { "npc", 4802, 0, 0, 0, {} }, runtime, 1 );
+    const cata::lua_platform::game_handle player_handle =
+        cata::lua_platform::game_handle::from_creature(
+            player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 1 );
+    const cata::lua_platform::game_handle partner_handle =
+        cata::lua_platform::game_handle::from_creature(
+            partner, { "npc", 4802, 0, 0, 0, {} }, runtime, 1 );
     sol::table data = lua.create_table();
     sol::protected_function resolve = services["variables"]["resolve"];
     sol::protected_function_result read = resolve(
@@ -116,7 +119,7 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     CHECK( null_snapshot["value"].get<sol::object>().get_type() == sol::type::nil );
 
     diag_value nested;
-    nested._deserialize( json_loader::from_string( "[null,[1,null,\"tail\"],{\"tripoint\":[1,2,3]}]" ),
+    nested._deserialize( json_loader::from_string( R"([null,[1,null,"tail"],{"tripoint":[1,2,3]}])" ),
                          false );
     Character &copy_source = source_npc ? static_cast<Character &>( partner ) : player;
     copy_source.set_value( "nested_source", nested );
@@ -130,8 +133,8 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     CHECK( target.get_value( "nested_target" ) == nested );
     copy_source.set_value( "nested_source", "changed after copy" );
     CHECK( target.get_value( "nested_target" ) == nested );
-    const auto stale_target = cata::lua_platform::game_handle::from_creature(
-                                  player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 2 );
+    const cata::lua_platform::game_handle stale_target = cata::lua_platform::game_handle::from_creature(
+                player, { "avatar", 4801, 0, 0, 0, {} }, runtime, 2 );
     sol::protected_function_result rejected = copy(
                 partner_handle, "string_input", stale_target, "nested_target" );
     REQUIRE( rejected.valid() );
@@ -152,7 +155,8 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
         }
     } cleanup{ key };
     REQUIRE( get_globals().maybe_get_global_value( key ) == nullptr );
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime{ owner, 1 };
     sol::state lua;
     sol::table services = lua.create_table();

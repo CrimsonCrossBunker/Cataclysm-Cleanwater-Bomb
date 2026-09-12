@@ -23,6 +23,9 @@
 #include "lua_platform_handle.h"
 #include "martialarts.h"
 
+static const matype_id style_kicks( "style_kicks" );
+static const matype_id style_none( "style_none" );
+
 namespace cata::lua_platform
 {
 
@@ -257,11 +260,7 @@ std::vector<matype_id> matching_definitions(
             result.push_back( id );
         }
     }
-    std::sort(
-        result.begin(), result.end(),
-    []( const matype_id & lhs, const matype_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( result.begin(), result.end(), matype_id::LexCmp{} );
     return result;
 }
 
@@ -280,11 +279,7 @@ std::vector<matec_id> matching_technique_definitions(
             result.push_back( definition.id );
         }
     }
-    std::sort(
-        result.begin(), result.end(),
-    []( const matec_id & lhs, const matec_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( result.begin(), result.end(), matec_id::LexCmp{} );
     return result;
 }
 
@@ -447,11 +442,7 @@ sol::table list_states(
 
     std::vector<matype_id> styles =
         character->known_styles( options.teachable_only );
-    std::sort(
-        styles.begin(), styles.end(),
-    []( const matype_id & lhs, const matype_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( styles.begin(), styles.end(), matype_id::LexCmp{} );
     const std::size_t first = std::min<std::size_t>(
                                   options.offset, styles.size() );
     const std::size_t last = std::min<std::size_t>(
@@ -564,8 +555,8 @@ sol::table remove_state(
     require_style_id(
         requested_id, "services.martial_arts.remove" );
     const matype_id id( requested_id.value() );
-    if( id == matype_id( "style_none" ) ||
-        id == matype_id( "style_kicks" ) ) {
+    if( id == style_none ||
+        id == style_kicks ) {
         throw std::invalid_argument(
             "services.martial_arts.remove cannot remove "
             "a built-in fallback style" );
@@ -740,10 +731,10 @@ sol::table trigger_state(
 
 void install_martial_art_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table martial_arts = lua.create_table();

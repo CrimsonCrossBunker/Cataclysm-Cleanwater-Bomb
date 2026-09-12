@@ -173,6 +173,7 @@ TEST_CASE( "lua_platform_weighted_body_part_matches_native_anatomy",
     const bool npc_target = GENERATE( false, true );
     const bool main_parts_only = GENERATE( false, true );
     std::vector<std::string> expected;
+    expected.reserve( 128 );
     rng_set_engine_seed( 58163 );
     for( int i = 0; i < 128; ++i ) {
         expected.push_back( fixture.target( npc_target ).random_body_part( main_parts_only ).id().str() );
@@ -184,11 +185,12 @@ TEST_CASE( "lua_platform_weighted_body_part_matches_native_anatomy",
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
-        const auto id = result["value"].get<cata::lua_platform::script_game_id>();
+        const cata::lua_platform::script_game_id id =
+            result["value"].get<cata::lua_platform::script_game_id>();
         CHECK( id.kind() == "body_part" );
         CHECK( id.value() == part );
     }
-    const auto stale = fixture.handle( npc_target );
+    const cata::lua_platform::game_handle stale = fixture.handle( npc_target );
     ++fixture.world;
     sol::protected_function_result call = pick( stale );
     REQUIRE( call.valid() );
@@ -419,7 +421,8 @@ TEST_CASE( "lua_platform_effects_all_removal_preserves_part_events",
     sol::protected_function remove = modern.services["effects"]["remove"];
     const cata::lua_platform::script_game_id id( "effect", "bleed" );
     for( std::size_t i = 0; i < native_parts.size(); ++i ) {
-        const auto part = parts[i + 1].get<cata::lua_platform::script_game_id>();
+        const cata::lua_platform::script_game_id part = parts[i +
+                  1].get<cata::lua_platform::script_game_id>();
         CHECK( part.value() == native_parts[i].id().str() );
         sol::protected_function_result call = remove( modern.handle( npc_target ), id, part );
         REQUIRE( call.valid() );
@@ -432,7 +435,7 @@ TEST_CASE( "lua_platform_effects_all_removal_preserves_part_events",
     REQUIRE( result["ok"].get<bool>() );
     CHECK( observer.parts == expected );
     CHECK_FALSE( modern.target( npc_target ).has_effect( effect_bleed ) );
-    const auto stale = modern.handle( npc_target );
+    const cata::lua_platform::game_handle stale = modern.handle( npc_target );
     ++modern.world;
     sol::protected_function_result stale_call = get_parts( stale );
     REQUIRE( stale_call.valid() );

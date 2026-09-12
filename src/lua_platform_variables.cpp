@@ -47,11 +47,11 @@ void require_active_callback(
     }
 }
 
-void validate_context_key( const std::string &key )
+void validate_context_key( const std::string_view key )
 {
     if( key.empty() || key.size() > maximum_context_key_bytes ||
     std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
             "services.variables context keys must contain 1..128 printable bytes" );
@@ -613,11 +613,11 @@ sol::table copy_variable(
 
 void install_variable_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<bool()> has_active_callback )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<bool()> &has_active_callback )
 {
     sol::state_view lua( services.lua_state() );
 
