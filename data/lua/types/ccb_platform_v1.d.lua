@@ -10458,8 +10458,8 @@ function CcbPlatformMoraleApi.remove(character, id) end
 ---@class CcbPlatformRandomApi: CcbRandomApi
 local CcbPlatformRandomApi = {}
 
----@param minimum integer Inclusive lower bound in -1000000000..1000000000.
----@param maximum integer Inclusive upper bound in -1000000000..1000000000.
+---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
+---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
@@ -10468,7 +10468,7 @@ function CcbPlatformRandomApi.int(minimum, maximum) end
 ---@return boolean
 function CcbPlatformRandomApi.chance(numerator, denominator) end
 
----@param denominator number Converted to a native integer; values at or below one always succeed.
+---@param denominator number Truncated toward zero into -2147483648..2147483647; values at or below one always succeed.
 ---@return boolean
 function CcbPlatformRandomApi.one_in(denominator) end
 
