@@ -19137,7 +19137,7 @@ def _effect_numeric_expression(
             return None
         for endpoint in value:
             literal = finite_number_literal(endpoint)
-            if literal is not None and abs(math.trunc(literal)) > 1000000000:
+            if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
                 return None
         endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
         if any(endpoint is None for endpoint in endpoints):
@@ -24553,11 +24553,29 @@ def render_dynamic_character_wound(
     return lines
 
 
+def render_direct_variable_snapshot(value: Any, owner: str) -> str | None:
+    """Retain presence separately from the Lua representation of a stored null."""
+    if not isinstance(value, dict) or len(value) != 1:
+        return None
+    key, name = next(iter(value.items()))
+    scopes = {"u_val": "u", "npc_val": "npc", "global_val": "global", "context_val": "context"}
+    if key not in scopes or render_eoc_value_expression(value, "nil", owner) is None:
+        return None
+    actual_owner = owner if key in {"u_val", "npc_val"} else "nil"
+    return ('service_value(services.variables.resolve(context.data, '
+            f'{actual_owner}, {lua_quote(scopes[key])}, {lua_quote(name)}))')
+
+
 def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
+    if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
+        if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
+            return None
+        return render_participant_translation_expression(
+            value, target_expression, avatar_expression, npc_expression)
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -24651,9 +24669,19 @@ def render_participant_string_expression(
                 'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
                 npc_expression + ', name:sub(3) '
                 'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
-                'return tostring(service_value(services.variables.resolve('
-                'context.data, owner, scope, name)).value or ' + fallback + ') end)()'
+                'local result = service_value(services.variables.resolve('
+                'context.data, owner, scope, name)); '
+                'if result.exists == false then return ' + fallback + ' end; '
+                'return tostring(result.value or "") end)()'
             )
+        if "default" in value:
+            variable = {key: item for key, item in value.items() if key != "default"}
+            snapshot = render_direct_variable_snapshot(variable, owner)
+            fallback = value["default"]
+            if snapshot is None or not bounded_utf8_string(fallback, 8192, allow_empty=True):
+                return None
+            return ('(function(result) if result.exists == false then return '
+                    f'{lua_quote(fallback)} end; return tostring(result.value or "") end)({snapshot})')
     return render_eoc_string_expression(value, owner)
 
 
@@ -24981,10 +25009,10 @@ def render_participant_translation_expression(
             return None
         fallback = render_participant_translation_expression(
             value["default"], target_expression, avatar_expression, npc_expression)
-        raw = render_eoc_value_expression({key: value[key]}, "nil", owner or target_expression)
+        raw = render_direct_variable_snapshot({key: value[key]}, owner or target_expression)
         if fallback is None or raw is None:
             return None
-        return ('(function(value) if value ~= nil then return tostring(value) end; '
+        return ('(function(result) if result.exists ~= false then return tostring(result.value or \"\") end; '
                 f'return {fallback} end)({raw})')
     return render_participant_string_expression(
         value, target_expression, avatar_expression, npc_expression)
@@ -26032,8 +26060,6 @@ def render_eoc_condition_expression(
             )
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
-        if condition == "is_night":
-            return "services.gameplay.environment.is_night()"
         if npc_query_actor is not None:
             if condition == "npc_is_alive":
                 return (
@@ -26787,19 +26813,14 @@ def render_eoc_condition_expression(
 
     if set(condition) == {"one_in_chance"}:
         value = finite_number_literal(condition["one_in_chance"])
-        if value is not None:
-            if value < -1000000000 or value > 1000000000:
-                return None
-            return f"services.random.one_in({lua_number(value)})"
-        dynamic = render_eoc_numeric_expression(
-            condition["one_in_chance"], "0", "actor"
-        )
-        if dynamic is None:
+        if value is not None and not -2147483648 <= math.trunc(value) <= 2147483647:
             return None
-        return (
-            "services.random.one_in(math.max(-1000000000, math.min("
-            f"1000000000, ({dynamic}))))"
-        )
+        denominator = _effect_numeric_expression(
+            condition["one_in_chance"], "actor",
+            "actor" if character_actor_proven else None, npc_query_actor)
+        if denominator is None:
+            return None
+        return f"services.random.one_in({denominator})"
 
     if set(condition) == {"x_in_y_chance"}:
         chance = condition["x_in_y_chance"]
@@ -26807,55 +26828,22 @@ def render_eoc_condition_expression(
             return None
         numerator = finite_number_literal(chance["x"])
         denominator = finite_number_literal(chance["y"])
-        if numerator is None:
-            numerator_expression = render_eoc_numeric_expression(
-                chance["x"], "0", "actor"
-            )
-            if numerator_expression is None:
-                return None
-            numerator_expression = (
-                "math.max(0, math.min(1000000000, (" +
-                numerator_expression + ")))"
-            )
-        else:
-            if numerator < 0 or numerator > 1000000000:
-                return None
-            numerator_expression = lua_number(numerator)
-        if denominator is None:
-            denominator_expression = render_eoc_numeric_expression(
-                chance["y"], "1", "actor"
-            )
-            if denominator_expression is None:
-                return None
-            denominator_expression = (
-                "math.max(1, math.min(1000000000, (" +
-                denominator_expression + ")))"
-            )
-        else:
-            if denominator <= 0 or denominator > 1000000000:
-                return None
-            denominator_expression = lua_number(denominator)
+        if numerator is not None and numerator < 0:
+            return None
+        if denominator is not None and denominator <= 0:
+            return None
         if numerator is not None and denominator is not None and numerator > denominator:
             return None
-        if numerator is not None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is not None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        elif numerator is None and denominator is None:
-            numerator_expression = (
-                "math.min(" + denominator_expression + ", " +
-                numerator_expression + ")"
-            )
-        return (
-            "services.random.probability("
-            f"{numerator_expression}, {denominator_expression})"
-        )
+        expressions = [_effect_numeric_expression(
+            chance[key], "actor", "actor" if character_actor_proven else None, npc_query_actor)
+            for key in ("x", "y")]
+        if any(expression is None for expression in expressions):
+            return None
+        # Each operand is evaluated once. The public service accepts finite
+        # fractional values without the integer random service's range bound.
+        # Invalid ratios remain explicit errors instead of being clamped to a
+        # different probability.
+        return f"services.random.probability({expressions[0]}, {expressions[1]})"
 
     if set(condition) <= {"roll_contested", "difficulty", "die_size"} and {
         "roll_contested", "difficulty"
@@ -26909,36 +26897,32 @@ def render_eoc_condition_expression(
             "services.gameplay.environment.dimension() == "
             f"{lua_quote(condition['current_dimension'])}"
         )
-    if set(condition) == {"is_season"} and isinstance(
-        condition["is_season"], str
+    for selector, current in (
+        ("is_season", "services.time_snapshot().season_id"),
+        ("is_weather", "services.weather.current().weather.value"),
     ):
-        return (
-            "services.time_snapshot().season_id == "
-            f"{lua_quote(condition['is_season'])}"
-        )
-    if set(condition) == {"is_weather"}:
-        weather_value = condition["is_weather"]
-        if isinstance(weather_value, str):
-            if not safe_platform_id(weather_value):
+        if set(condition) != {selector}:
+            continue
+        value = condition[selector]
+        if isinstance(value, dict) and "str" in value:
+            # str_or_var accepts this object through its explicit translation
+            # mutator only. A plain {str: ...} object is not a string literal.
+            if (set(value) - {"str", "i18n", "//~"} or
+                    value.get("i18n") is not True or
+                    not isinstance(value["str"], str)):
                 return None
-            weather_expression = lua_quote(weather_value)
-        elif isinstance(weather_value, dict) and len(weather_value) == 1:
-            variable_key = next(iter(weather_value))
-            if variable_key not in {"context_val", "u_val", "global_val"}:
-                return None
-            if variable_key == "u_val" and not avatar_actor_proven:
-                return None
-            weather_expression = render_eoc_string_expression(
-                weather_value, "actor"
-            )
-            if weather_expression is None:
-                return None
+            requested = render_participant_translation_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
         else:
-            return None
-        return (
-            "services.weather.current().weather.value == "
-            f"{weather_expression}"
-        )
+            if isinstance(value, dict) and not set(value).intersection({
+                "u_val", "npc_val", "global_val", "context_val", "var_val", "mutator",
+            }):
+                return None
+            requested = render_participant_string_expression(
+                value, "actor", "actor" if avatar_actor_proven else None,
+                npc_query_actor)
+        return None if requested is None else f"{current} == {requested}"
     if (
         set(condition) == {"map_furniture_with_flag", "loc"} and
         bounded_utf8_string(condition.get("map_furniture_with_flag"), 256)
