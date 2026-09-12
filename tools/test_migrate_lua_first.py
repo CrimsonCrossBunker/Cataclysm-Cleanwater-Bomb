@@ -16,6 +16,528 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_one_in_native_range_and_owner_are_not_clamped(self) -> None:
+        values = (2147483647.9, -2147483648.9,
+                  {"npc_val": "chance"}, [-2147483648, 2147483647])
+        for value in values:
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"one_in_chance": value}, avatar_actor_proven=True,
+                npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            expected = 2147483647 if isinstance(value, (dict, list)) else value
+            script = r"""
+local actor,partner={},{}
+local context={data={}}
+local reads=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ assert(owner==partner and scope=='npc' and key=='chance')
+ reads=reads+1;return {ok=true,value={value=2147483647}}
+end},random={int=function(lo,hi)
+ assert(lo==-2147483648 and hi==2147483647);return hi
+end,one_in=function(n) assert(n==EXPECTED);return true end}}
+assert(EXPRESSION)
+assert(reads==READS)
+""".replace("EXPECTED", str(expected)).replace("EXPRESSION", expression)
+            script = script.replace("READS", "1" if isinstance(value, dict) else "0")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for invalid in (2147483648, -2147483649, [0, 2147483648]):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({"one_in_chance": invalid}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_nested_string_mutator_preserves_explicit_translation(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression({
+            "is_season": {"mutator": "mon_faction", "mtype_id": {"str": "original", "i18n": True}}})
+        self.assertIsNotNone(expression)
+        script = r"""
+local services={time_snapshot=function() return {season_id='spring'} end,
+ translate=function(text) assert(text=='original');return 'translated' end,
+ registry={get=function(kind,id)
+ assert(kind=='monster' and id=='translated');return {default_faction={value='spring'}}
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_explicit_translation_is_not_a_plain_string(self) -> None:
+        for selector in ("is_season", "is_weather"):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {selector: {"str": "spring", "i18n": True}})
+            self.assertIsNotNone(expression)
+            script = r"""
+local translations=0
+local services={time_snapshot=function() return {season_id='spring'} end,
+ weather={current=function() return {weather={value='spring'}} end},
+ translate=function(text) assert(text=='spring');translations=translations+1;return 'printemps' end}
+assert(not (EXPRESSION))
+assert(translations==1)
+""".replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for invalid in ({"str": "spring"}, {"str": "spring", "i18n": False}, {"math": ["1"]}):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({selector: invalid}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_environment_condition_literals_execute(self) -> None:
+        conditions = []
+
+        def collect(value):
+            if isinstance(value, dict):
+                for key in ("is_season", "is_weather"):
+                    if key in value:
+                        conditions.append({key: value[key]})
+                for child in value.values():
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        for relative in (
+            "data/json/effects_on_condition/mutation_eocs/mutation_effect_eocs.json",
+            "data/json/effects_on_condition/item_eocs.json",
+        ):
+            collect(json.loads((REPOSITORY_ROOT / relative).read_text()))
+        self.assertTrue(any("is_season" in value for value in conditions))
+        self.assertTrue(any("is_weather" in value for value in conditions))
+        lines = ["local services={time_snapshot=function() return {season_id='spring'} end,"
+                 "weather={current=function() return {weather={value='rain'}} end}}"]
+        for condition in conditions:
+            key, value = next(iter(condition.items()))
+            self.assertIsInstance(value, str)
+            expression = migrate_lua_first.render_eoc_condition_expression(condition)
+            self.assertIsNotNone(expression)
+            expected = value == ("spring" if key == "is_season" else "rain")
+            lines.append(f"assert(({expression})=={'true' if expected else 'false'})")
+        result = subprocess.run(["lua", "-"], input="\n".join(lines), text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_string_queries_preserve_participant_and_fallback(self) -> None:
+        for selector, current in (("is_season", "spring"), ("is_weather", "rain")):
+            for key in ("u_val", "npc_val", "global_val", "context_val", "var_val"):
+                for present in (False, True):
+                    value = {key: "reference" if key == "var_val" else "wanted", "default": current}
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {selector: value}, avatar_actor_proven=True,
+                        npc_actor_expression="partner")
+                    self.assertIsNotNone(expression)
+                    script = r"""
+local actor,partner={},{}
+local context={data={reference='n_wanted'}}
+local reads=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={time_snapshot=function() return {season_id=CURRENT} end,
+ weather={current=function() return {weather={value=CURRENT}} end},
+ variables={resolve=function(data,owner,scope,key)
+ assert(key=='wanted')
+ if SCOPE=='u_val' then assert(scope=='u' and owner==actor)
+ elseif SCOPE=='npc_val' or SCOPE=='var_val' then assert(scope=='npc' and owner==partner)
+ elseif SCOPE=='global_val' then assert(scope=='global')
+ else assert(scope=='context') end
+ reads=reads+1
+ return {ok=true,value={exists=PRESENT,value=nil}}
+end}}
+assert((EXPRESSION)==EXPECTED)
+assert(reads==1)
+""".replace("CURRENT", migrate_lua_first.lua_quote(current))
+                    script = script.replace("SCOPE", migrate_lua_first.lua_quote(key))
+                    script = script.replace("PRESENT", "true" if present else "false")
+                    script = script.replace("EXPECTED", "false" if present else "true")
+                    script = script.replace("EXPRESSION", expression)
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_is_day_real_conditions_use_live_environment_without_actor(self) -> None:
+        # Real content uses this parameterless predicate both directly and negated.
+        source = json.loads((REPOSITORY_ROOT / "data/json/npcs/TALK_TEST.json").read_text())
+        predicates = []
+        for topic in source:
+            for response in topic.get("responses", []):
+                condition = response.get("condition")
+                if condition == "is_day" or condition == {"not": "is_day"}:
+                    predicates.append(condition)
+        self.assertEqual(len(predicates), 2)
+        for condition in predicates:
+            expression = migrate_lua_first.render_eoc_condition_expression(condition)
+            self.assertIsNotNone(expression)
+            expected = "night" if isinstance(condition, dict) else "not night"
+            script = """
+local night=false
+local reads=0
+local services={gameplay={environment={is_night=function()
+ reads=reads+1;return night
+end}}}
+local function predicate() return EXPRESSION end
+for _,value in ipairs({false,true,false}) do
+ night=value
+ assert(predicate()==(EXPECTED))
+end
+assert(reads==3)
+""".replace("EXPRESSION", expression).replace("EXPECTED", expected)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_probability_operands_preserve_large_values_and_single_owner_reads(self) -> None:
+        for chance in ({"x": 1000000000000, "y": 2000000000000},
+                       {"x": {"u_val": "x"}, "y": {"npc_val": "y"}}):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"x_in_y_chance": chance}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = r"""
+local actor={x=1000000000000}
+local partner={y=2000000000000}
+local context={data={}}
+local reads={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ assert((key=='x' and owner==actor) or (key=='y' and owner==partner))
+ reads[key]=(reads[key] or 0)+1;assert(reads[key]==1)
+ return {ok=true,value={exists=true,value=owner[key]}}
+end},random={probability=function(x,y)
+ assert(x==1000000000000 and y==2000000000000 and x/y==0.5);return true
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_probability_ranges_preserve_integer_sampling(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"x_in_y_chance": {"x": [2.5, 2.5], "y": [4.9, 4.9]}})
+        self.assertIsNotNone(expression)
+        script = r"""
+local samples=0
+local services={random={int=function(lo,hi)
+ assert(lo==hi);samples=samples+1;return lo
+end,probability=function(x,y)
+ assert(samples==2 and x==2 and y==4);return true
+end}}
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_defaults_distinguish_stored_null_from_missing(self) -> None:
+        for key in ("u_val", "npc_val", "global_val", "var_val"):
+            for present in (True, False):
+                expression = migrate_lua_first.render_participant_string_expression(
+                    {key: "reference" if key == "var_val" else "input", "default": "fallback"},
+                    "actor", "actor", "partner")
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor,partner={},{}
+local context={data={reference='n_input'}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,name)
+ assert(name=='input');return {ok=true,value={exists=PRESENT,value=nil}}
+end}}
+assert(EXPRESSION==(PRESENT and '' or 'fallback'))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_defaults_do_not_translate_stored_null(self) -> None:
+        for key in ("u_val", "npc_val", "global_val"):
+            for present in (True, False):
+                expression = migrate_lua_first.render_participant_translation_expression(
+                    {key: "input", "default": "fallback"}, "actor", "actor", "partner")
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor,partner={},{}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,name)
+ return {ok=true,value={exists=PRESENT,value=nil}}
+end},translate=function(value) calls=calls+1;return 'translated:'..value end}
+assert(EXPRESSION==(PRESENT and '' or 'translated:fallback'))
+assert(calls==(PRESENT and 0 or 1))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+                result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_gateway_copy_uses_native_copy_between_participants(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/mods/MindOverMatter/powers/teleportation_eoc.json").read_text())
+        effects = [effect for entry in source for effect in entry.get("effect", [])
+                   if isinstance(effect, dict) and effect.get("copy_var") == {"npc_val": "gateway_destination_1"}]
+        self.assertEqual(len(effects), 1)
+        lines = migrate_lua_first.render_static_character_copy_var(effects[0], True, True, "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local partner={}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={copy=function(source,key,target,out)
+ assert(source==partner and key=='gateway_destination_1')
+ assert(target==actor and out=='dilated_gateway_location')
+ calls=calls+1;return {ok=true,value={source_exists=true,destination_existed=false}}
+end}}
+BODY
+assert(calls==1)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_mp3_dimension_comparison_executes_as_lua(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/anomalous_mp3_eocs.json").read_text())
+        eoc = next(entry for entry in source if entry.get("id") == "EOC_MP3_REVERBERATION_REVERBERATION_LISTENER")
+        expression = migrate_lua_first.render_eoc_condition_expression(eoc["effect"][1]["if"])
+        self.assertIsNotNone(expression)
+        for dimension, expected in (("radiosphere", True), ("cabins", False), ("", False)):
+            script = "local context={data={dim_name=" + migrate_lua_first.lua_quote(dimension) + "}}\n"
+            script += f"assert({expression} == {str(expected).lower()})"
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_comparisons_preserve_owners_and_short_circuit(self) -> None:
+        for key, beta, expected in (("compare_string", "alpha", True),
+                                    ("compare_string_match_all", "different", False)):
+            condition = {key: [{"u_val": "input"}, {"npc_val": "input"},
+                               {"mutator": "game_option", "option": "unreached"}]}
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                condition, avatar_actor_proven=True, npc_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            script = r"""
+local actor={input='alpha'}
+local partner={input=BETA}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={resolve=function(data,owner,scope,key)
+ calls=calls+1;assert((calls==1 and owner==actor) or (calls==2 and owner==partner))
+ return {ok=true,value={value=owner[key]}}
+end},gameplay={options={get=function() error('must short circuit') end}}}
+assert(EXPRESSION==EXPECTED and calls==2)
+""".replace("BETA", migrate_lua_first.lua_quote(beta)).replace("EXPRESSION", expression)
+            script = script.replace("EXPECTED", "true" if expected else "false")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_comparisons_accept_native_empty_singleton_and_long_lists(self) -> None:
+        cases = [("compare_string", [], False), ("compare_string", ["a"], False),
+                 ("compare_string_match_all", ["a"], True),
+                 ("compare_string", [str(i) for i in range(300)], False),
+                 ("compare_string_match_all", ["same"] * 300, True)]
+        for key, values, expected in cases:
+            expression = migrate_lua_first.render_eoc_condition_expression({key: values})
+            self.assertIsNotNone(expression)
+            result = subprocess.run(["lua", "-"], input=f"assert({expression} == {str(expected).lower()})",
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({"compare_string_match_all": []}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_copy_variable_preserves_owners_types_and_empty_write(self) -> None:
+        addresses = [("u_val", "actor", None), ("npc_val", "partner", None),
+                     ("context_val", "context.data", None), ("global_val", "globals", None),
+                     ("var_val", "actor", "u_"), ("var_val", "partner", "n_"),
+                     ("var_val", "context.data", "_"), ("var_val", "globals", "")]
+        for source, source_store, source_prefix in addresses:
+            for target, target_store, target_prefix in addresses:
+                for value in ('"text"', '0', 'nil'):
+                    lines = migrate_lua_first.render_static_character_copy_var(
+                        {"copy_var": {source: "source_ref" if source_prefix is not None else "input"},
+                         "target_var": {target: "target_ref" if target_prefix is not None else "output"}},
+                        True, True, "partner")
+                    self.assertIsNotNone(lines)
+                    script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local globals={input='global'}
+local context={data={input='context',source_ref=SOURCE_REF,target_ref=TARGET_REF}}
+SOURCE_STORE.input=VALUE
+local writes=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={
+ copy=function(source,key,target,out)
+  assert((source or globals)==SOURCE_STORE and (target or globals)==TARGET_STORE)
+  assert(key=='input' and out=='output');writes=writes+1;return {ok=true,value={}}
+ end,
+ resolve=function(data,owner,scope,key)
+  local store=scope=='global' and globals or scope=='context' and data or owner
+  assert(store==SOURCE_STORE and key=='input')
+  return {ok=true,value={exists=store[key]~=nil,value=store[key]}}
+ end,
+ set_resolved=function(data,owner,scope,key,value)
+  local store=scope=='global' and globals or scope=='context' and data or owner
+  assert(store==TARGET_STORE and key=='output' and value==VALUE)
+  writes=writes+1;return {ok=true,value={}}
+ end
+}}
+BODY
+assert(writes==1)
+""".replace("SOURCE_REF", migrate_lua_first.lua_quote((source_prefix or '') + 'input'))
+                    script = script.replace("TARGET_REF", migrate_lua_first.lua_quote((target_prefix or '') + 'output'))
+                    script = script.replace("SOURCE_STORE", source_store).replace("TARGET_STORE", target_store)
+                    script = script.replace("VALUE", value).replace("BODY", "\n".join(lines))
+                    result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_copy_variable_keeps_missing_participants_partial(self) -> None:
+        for source in ("u_val", "npc_val", "var_val"):
+            self.assertIsNone(migrate_lua_first.render_static_character_copy_var(
+                {"copy_var": {source: "input"}, "target_var": {"global_val": "output"}}, False, False))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_false_branch_string_assignment_preserves_beta_expression(self) -> None:
+        lines = migrate_lua_first.render_static_false_effect(
+            {"set_string_var": {"npc_val": "input"}, "target_var": {"npc_val": "output"}},
+            True, True, {}, npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={input='alpha'}
+local partner={input='beta'}
+local context={data={}}
+local function service_value(r) assert(r.ok);return r.value end
+local services={variables={
+ resolve=function(data,owner,scope,key)
+  assert(owner==partner and scope=='npc');return {ok=true,value={value=owner[key]}}
+ end,
+ set=function(owner,key,value) assert(owner==partner);owner[key]=value end
+}}
+if false then error('wrong branch') else
+BODY
+end
+assert(partner.output=='beta' and actor.output==nil)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_selector_example_string_setup_preserves_translation(self) -> None:
+        source = json.loads((REPOSITORY_ROOT / "data/json/effects_on_condition/example_eocs.json").read_text())
+        eoc = next(entry for entry in source if entry.get("id") == "EOC_selector_test")
+        effects = eoc["effect"][:3]
+        self.assertTrue(all("set_string_var" in effect for effect in effects))
+        bodies = [migrate_lua_first.render_static_character_string_var(effect, False, False) for effect in effects]
+        self.assertTrue(all(body is not None for body in bodies))
+        script = r"""
+local context={data={}}
+local translated={}
+local services={translate=function(text)
+ translated[#translated+1]=text;return 'localized:'..text
+end}
+BODY
+assert(context.data.title=='localized:EOC Selector Test')
+assert(context.data.name=='name_3')
+assert(context.data.description=='localized:option 3')
+assert(#translated==2)
+""".replace("BODY", "\n".join(line for body in bodies for line in body))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_input_translated_variables_preserve_native_evaluation_order(self) -> None:
+        lines = migrate_lua_first.render_static_character_string_var(
+            {"set_string_var": "original", "target_var": {"context_val": "output"},
+             "string_input": {"title": {"npc_val": "title"}, "default_text": {"u_val": "initial"},
+                              "description": {"str": "Help", "ctxt": "input"},
+                              "identifier": {"context_val": "history"}}}, True, True, "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={initial='alpha initial'}
+local partner={title='beta title'}
+local context={data={history='input_history'}}
+local order={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  order[#order+1]=key;return {ok=true,value={value=owner[key]}}
+ end},
+ translate=function(text,ctxt)
+  assert(text=='Help' and ctxt=='input');order[#order+1]='description';return 'translated help'
+ end,
+ interaction={input_text=function(title,options)
+  assert(table.concat(order,',')=='title,initial,title,description')
+  assert(title=='beta title' and options.default=='alpha initial')
+  assert(options.description=='translated help' and options.identifier=='input_history')
+  assert(options.width==50);return {accepted=true,cancelled=false,value='entered'}
+ end}
+}
+BODY
+assert(context.data.output=='entered')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_variable_default_is_lazy_and_preserves_empty_values(self) -> None:
+        expression = migrate_lua_first.render_participant_translation_expression(
+            {"npc_val": "input", "default": {"str": "Fallback", "ctxt": "default"}},
+            "actor", "actor", "partner")
+        self.assertIsNotNone(expression)
+        for present in (True, False):
+            script = r"""
+local actor={}
+local partner={}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner);return {ok=true,value={exists=PRESENT,value=PRESENT and '' or nil}}
+ end},
+ translate=function(text,ctxt)
+  assert(text=='Fallback' and ctxt=='default');calls=calls+1;return 'translated default'
+ end
+}
+local result=EXPRESSION
+assert(result==(PRESENT and '' or 'translated default'))
+assert(calls==(PRESENT and 0 or 1))
+""".replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_string_i18n_translates_literals_but_not_stored_variables(self) -> None:
+        cases = [("Hello", True, "translated", "nil"),
+                 ({"str": "Hello", "ctxt": "greeting"}, True, "translated", '"greeting"'),
+                 ({"str_sp": "Hello"}, True, "translated", "nil"),
+                 ({"npc_val": "input"}, True, "stored translation", "nil"),
+                 ("Hello", False, "Hello", "nil")]
+        for value, i18n, expected, translation_context in cases:
+            lines = migrate_lua_first.render_static_character_string_var(
+                {"set_string_var": value, "i18n": i18n, "target_var": {"context_val": "output"}},
+                True, True, "partner")
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor={}
+local partner={input='stored translation'}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={
+ translate=function(text,ctxt)
+  assert(text=='Hello' and ctxt==CTXT);calls=calls+1;return 'translated'
+ end,
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==partner and scope=='npc');return {ok=true,value={value=owner[key]}}
+ end}
+}
+BODY
+assert(context.data.output==EXPECTED and calls==CALLS)
+""".replace("CTXT", translation_context).replace("BODY", "\n".join(lines))
+            script = script.replace("EXPECTED", migrate_lua_first.lua_quote(expected))
+            script = script.replace("CALLS", "1" if expected == "translated" else "0")
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_tags_expand_after_input_with_dialogue_participants(self) -> None:
         for accepted in (True, False):
             for proven in (True, False):
@@ -33,10 +555,11 @@ local context={data={}}
 local phase=0
 local function service_value(r) assert(r.ok);return r.value end
 local services={
+ translate=function(text) return text end,
  characters={avatar=function() return player end},
  interaction={input_text=function(title,options)
-  assert(phase==0 and title=='Title');phase=1
-  if ACCEPTED then return 'entered <tag>' end
+  assert(phase==0 and title=='Title' and options.default=='' and options.initial==nil);phase=1
+  return {accepted=ACCEPTED,cancelled=not ACCEPTED,value=ACCEPTED and 'entered <tag>' or ''}
  end},
  text={expand_for=function(value,alpha,beta)
   assert(phase==1 and alpha==ALPHA and beta==BETA);phase=2
@@ -410,7 +933,7 @@ assert(adds==1 and random_calls==2 and reads==READS)
                     self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_effect_intensity_rejects_malformed_ranges(self) -> None:
-        for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 1000000001]):
+        for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 2147483648], [-2147483649, 0]):
             self.assertIsNone(migrate_lua_first.render_effect_condition(
                 {"u_has_effect": "bleed", "intensity": value}, "actor", None))
             self.assertIsNone(migrate_lua_first.render_dynamic_character_effect(
@@ -1347,7 +1870,8 @@ local actor, partner = {}, {}
 local context = {data={}}
 local function service_value(r) assert(r.ok); return r.value end
 local services = {variables={resolve=function(data, character, scope, key)
- return {ok=true,value={value=character and character[key] or data[key]}}
+ local value = character and character[key] or data[key]
+ return {ok=true,value={exists=value~=nil,value=value}}
 end}}
 local function read() return EXPRESSION end
 assert(read() == 'fallback')
@@ -1758,7 +2282,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {"is_season": "spring"},
                 {"is_weather": "rain"},
                 "is_day",
-                "is_night",
                 {"u_has_trait": "SAMPLE_TRAIT"},
                 {"u_has_any_trait": ["SAMPLE_TRAIT", "TOUGH"]},
                 {"u_has_martial_art": "style_karate"},
@@ -1807,8 +2330,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), len(predicates))
             self.assertEqual(result.partial, [])
-            self.assertIn("services.gameplay.strings.any_equal", main)
-            self.assertIn("services.gameplay.strings.all_equal", main)
+            self.assertIn("if seen[value] then return true end", main)
+            self.assertIn("~= first then return false end", main)
             self.assertIn("services.random.one_in(3)", main)
             self.assertIn("services.random.probability(1.5, 4)", main)
             self.assertIn("services.random.contested(2, 5, 8)", main)
@@ -2629,8 +3152,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('tostring(services.turn())', main)
             self.assertIn('context.data["required"] ~= nil', main)
             self.assertIn("1 == 1", main)
-            self.assertIn('services.variables.get(actor, "source")', main)
-            self.assertIn('services.variables.remove(actor, "target")', main)
+            self.assertIn('copy_source_key = "u", actor, "source"', main)
+            self.assertNotIn('services.variables.remove(actor, "target")', main)
             self.assertIn(
                 'services.variables.set(\n        actor, "label"',
                 main,
@@ -2950,6 +3473,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 1,
             )
 
+    def test_unregistered_night_condition_is_not_invented_during_migration(self) -> None:
+        path = REPOSITORY_ROOT / "data/reference/json/ccb_eoc_conditions.json"
+        inventory = json.loads(path.read_text())
+        self.assertNotIn("is_night", {entry["key"] for entry in inventory["entries"]})
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression("is_night"))
+
     def test_dynamic_or_unproven_is_day_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -2981,7 +3510,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 1,
             )
 
-    def test_dynamic_or_unproven_is_season_shapes_stay_partial(self) -> None:
+    def test_dynamic_is_season_converts_but_numeric_shape_stays_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -3013,12 +3542,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
-            self.assertNotIn("services.time_snapshot", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn("services.time_snapshot", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                2,
+                1,
             )
 
     def test_translates_literal_is_weather_through_current_snapshot(self) -> None:
@@ -3116,8 +3645,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring((context.data["context_weather"]) or "")',
@@ -3136,10 +3665,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertNotIn('weather.value == 5', main)
-            self.assertNotIn('weather.value == ""', main)
+            self.assertIn('weather.value == ""', main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                3,
+                2,
             )
 
     def test_translates_proven_avatar_activity_cancellation(self) -> None:
@@ -18439,8 +18968,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn("services.gameplay.strings.any_equal", main)
-            self.assertIn("services.gameplay.strings.all_equal", main)
+            self.assertIn("if seen[value] then return true end", main)
+            self.assertIn("~= first then return false end", main)
             self.assertIn("services.gameplay.math.apply", main)
 
     def test_phase_move_and_global_overmap_point_keep_avatar_context(self) -> None:
