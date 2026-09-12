@@ -10010,12 +10010,30 @@ function CcbTypesApi.id_kinds() end
 ---@class CcbVariablesApi
 local CcbVariablesApi = {}
 
+---@class CcbVariableCopyValue
+---@field source_exists boolean
+---@field destination_existed boolean
+
+---@class CcbVariableCopyResult: CcbResult
+---@field value? CcbVariableCopyValue
+
+---Copy native values without converting arrays, nulls, or coordinates through Lua.
+---Both owners are validated before mutation; missing sources write a stored empty value.
+---An active write callback is required. Use nil owners for the global variable store.
+---@param source_owner GameHandle|nil
+---@param source_key string Variable key, 1..128 bytes without ASCII controls or NUL.
+---@param destination_owner GameHandle|nil
+---@param destination_key string
+---@return CcbVariableCopyResult
+function CcbVariablesApi.copy(source_owner, source_key, destination_owner, destination_key) end
+
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string Variable name containing 1..128 bytes, without ASCII controls or NUL.
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get(character, key) end
 
 ---Write phases and an active callback are required for variable mutations.
+---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string
 ---@param value boolean|number|string|TripointCoord|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
@@ -10049,6 +10067,7 @@ function CcbVariablesApi.remove_global(key) end
 ---@return CcbVariableReadResult
 function CcbVariablesApi.resolve(context, actor, scope, key) end
 
+---For context scope, nil clears the Lua table entry; Lua tables cannot retain a stored nil.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
@@ -10439,8 +10458,8 @@ function CcbPlatformMoraleApi.remove(character, id) end
 ---@class CcbPlatformRandomApi: CcbRandomApi
 local CcbPlatformRandomApi = {}
 
----@param minimum integer Inclusive lower bound in -1000000000..1000000000.
----@param maximum integer Inclusive upper bound in -1000000000..1000000000.
+---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
+---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
@@ -10449,7 +10468,7 @@ function CcbPlatformRandomApi.int(minimum, maximum) end
 ---@return boolean
 function CcbPlatformRandomApi.chance(numerator, denominator) end
 
----@param denominator number Converted to a native integer; values at or below one always succeed.
+---@param denominator number Truncated toward zero into -2147483648..2147483647; values at or below one always succeed.
 ---@return boolean
 function CcbPlatformRandomApi.one_in(denominator) end
 
