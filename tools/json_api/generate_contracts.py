@@ -754,7 +754,9 @@ def source_fingerprint(root: Path, paths: Iterable[str]) -> str:
     for path in sorted(set(paths)):
         digest.update(path.encode("utf-8"))
         digest.update(b"\0")
-        digest.update((root / path).read_bytes())
+        # Line endings are hashed uniformly so autocrlf working copies
+        # produce the same fingerprint as the LF repository blobs.
+        digest.update((root / path).read_bytes().replace(b"\r\n", b"\n"))
         digest.update(b"\0")
     return f"sha256:{digest.hexdigest()}"
 
