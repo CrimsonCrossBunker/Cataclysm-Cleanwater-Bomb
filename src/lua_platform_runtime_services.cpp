@@ -2843,9 +2843,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     const auto random_integer = [require_random_runtime]( const std::int64_t minimum,
     const std::int64_t maximum ) {
-        if( minimum < -1000000000LL || maximum > 1000000000LL || minimum > maximum ) {
+        if( minimum < std::numeric_limits<int>::min() ||
+            maximum > std::numeric_limits<int>::max() || minimum > maximum ) {
             throw std::invalid_argument(
-                "services.random.int requires an ordered range within -1000000000..1000000000" );
+                "services.random.int requires an ordered range within native integer bounds" );
         }
         const std::shared_ptr<runtime> owner = require_random_runtime();
         std::uniform_int_distribution<std::int64_t> distribution( minimum, maximum );
@@ -2871,12 +2872,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     random.set_function( "one_in", [require_random_runtime]( const double raw_denominator ) {
         const std::shared_ptr<runtime> owner = require_random_runtime();
-        if( !std::isfinite( raw_denominator ) || raw_denominator < -1000000000.0 ||
-            raw_denominator > 1000000000.0 ) {
+        const double truncated = std::trunc( raw_denominator );
+        if( !std::isfinite( truncated ) || truncated < std::numeric_limits<int>::min() ||
+            truncated > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
                 "services.random.one_in requires a finite denominator within native bounds" );
         }
-        const std::int64_t denominator = static_cast<std::int64_t>( raw_denominator );
+        const std::int64_t denominator = static_cast<std::int64_t>( truncated );
         if( denominator <= 1 ) {
             return true;
         }
