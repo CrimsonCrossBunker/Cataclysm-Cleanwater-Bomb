@@ -74,6 +74,11 @@ extern "C" {
 #include "weather.h"
 #include "widget.h"
 
+// Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
+// u_has_flag checks threshold-crossing state rather than literal flag presence.
+static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
+static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
+
 namespace cata::lua_platform
 {
 
@@ -104,11 +109,6 @@ constexpr int maximum_combat_string_bytes = 4096;
 constexpr std::size_t maximum_training_offers = 256;
 constexpr std::size_t maximum_enchantment_value_key_bytes = 256;
 constexpr double maximum_enchantment_value_base = 1.0e15;
-
-// Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
-// u_has_flag checks threshold-crossing state rather than literal flag presence.
-static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
-static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
 
 struct creature_query_options {
     int radius = default_creature_query_radius;

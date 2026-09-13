@@ -18,19 +18,19 @@
 #include "translation.h"
 #include "type_id.h"
 
-static const matec_id matec_tech_base_headbutt( "tech_base_headbutt" );
+static const matec_id tech_base_headbutt( "tech_base_headbutt" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
 {
-    REQUIRE( matec_tech_base_headbutt.is_valid() );
+    REQUIRE( tech_base_headbutt.is_valid() );
     dialogue context;
     const JsonObject input = json_loader::from_string(
                                  R"({"value":{"mutator":"ma_technique_description","matec_id":"tech_base_headbutt"}})" ).get_object();
     const str_or_var legacy = get_str_or_var( input.get_member( "value" ), "value" );
     const std::string expected = legacy.evaluate( context );
     REQUIRE_FALSE( expected.empty() );
-    REQUIRE( expected != matec_tech_base_headbutt->get_description() );
+    REQUIRE( expected != tech_base_headbutt->get_description() );
 
     sol::state lua;
     sol::table services = lua.create_table();
@@ -46,12 +46,12 @@ TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutat
     }, []() {}, []() {} );
     sol::protected_function get = services["martial_arts"]["technique_definition"];
     sol::protected_function_result call = get(
-            cata::lua_platform::script_game_id( "martial_art_technique", technique.str() ) );
+            cata::lua_platform::script_game_id( "martial_art_technique", tech_base_headbutt.str() ) );
     REQUIRE( call.valid() );
     sol::table snapshot = call;
     CHECK( snapshot["flavor_description"].get<std::string>() == expected );
-    CHECK( snapshot["description"].get<std::string>() == matec_tech_base_headbutt->get_description() );
-    CHECK( snapshot["name"].get<std::string>() == matec_tech_base_headbutt->name.translated() );
+    CHECK( snapshot["description"].get<std::string>() == tech_base_headbutt->get_description() );
+    CHECK( snapshot["name"].get<std::string>() == tech_base_headbutt->name.translated() );
 }
 
 #endif
