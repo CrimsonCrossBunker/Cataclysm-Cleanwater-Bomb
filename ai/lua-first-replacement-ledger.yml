@@ -31,24 +31,24 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:3488f4b840fae47266371647beca7360d748a5ecbab2bb28f071427766ef8204
+  source_fingerprint: sha256:86e5b80c0f84a12786a710acd9013681444efb55c4ea2ee4640c2caffb16431d
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:3488f4b840fae47266371647beca7360d748a5ecbab2bb28f071427766ef8204
+  source_fingerprint: sha256:86e5b80c0f84a12786a710acd9013681444efb55c4ea2ee4640c2caffb16431d
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:3488f4b840fae47266371647beca7360d748a5ecbab2bb28f071427766ef8204
+  source_fingerprint: sha256:86e5b80c0f84a12786a710acd9013681444efb55c4ea2ee4640c2caffb16431d
   entry_count: 311
 summary:
   total: 776
-  implemented_verified: 0
+  implemented_verified: 1
   implemented_unverified: 89
   bounded_implemented_verified: 0
-  bounded_implemented_unverified: 662
+  bounded_implemented_unverified: 661
   primitive_available_unverified: 8
   planned: 0
   private_adapter: 0
@@ -331,16 +331,16 @@ entries:
   selector: is_day
   target_kind: shared_service
   target: services.gameplay.environment
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
-  - src/lua_platform_runtime.cpp
-  - tests/lua_platform_test.cpp
+  - src/lua_platform_runtime_services.cpp
+  - tests/lua_platform_day_semantic_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
-  verification: source_only
+  verification: final_semantic_gate
 - inventory: eoc-conditions
   selector: is_outside
   target_kind: shared_service

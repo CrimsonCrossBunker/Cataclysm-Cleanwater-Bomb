@@ -29,26 +29,32 @@ class JoystickRepeatTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         source = SOURCE.read_text()
-        function = braced_block(source, source.index("static void CheckMessages()"))
+        function = braced_block(
+            source, source.index("static void CheckMessages()"))
         start = function.index("// Handle repeating inputs from touch + holds")
         block = braced_block(function, function.index("if(", start))
-        # Preserve the production ordering relative to the normal SDL dispatcher.
-        dispatcher = function.index("while( SDL_PollEvent( &ev ) )", function.index("using cata::options::mouse"))
-        body = ("dispatch();\n" + block if start > dispatcher else "if(!needupdate) {" + block + "}\ndispatch();")
+        # Preserve production ordering relative to the normal SDL dispatcher.
+        dispatcher = function.index(
+            "while( SDL_PollEvent( &ev ) )",
+            function.index("using cata::options::mouse"))
+        body = ("dispatch();\n" + block if start > dispatcher
+                else "if(!needupdate) {" + block + "}\ndispatch();")
         cls.temp = tempfile.TemporaryDirectory()
         root = Path(cls.temp.name)
         cpp = root / "probe.cpp"
         cpp.write_text(FIXTURE.replace("// PRODUCTION_REPEAT", body))
         cls.binary = root / "probe"
-        subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-Wall", "-Wextra",
-                        str(cpp), "-o", str(cls.binary)], check=True, capture_output=True)
+        subprocess.run(
+            [os.environ.get("CXX", "c++"), "-std=c++17", "-Wall", "-Wextra",
+             str(cpp), "-o", str(cls.binary)], check=True, capture_output=True)
 
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
     def check_case(self, case):
-        result = subprocess.run([str(self.binary), case], capture_output=True, text=True)
+        result = subprocess.run(
+            [str(self.binary), case], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_turn_left(self):
@@ -98,16 +104,23 @@ bool SDL_PollEvent(Event *out) {
 int GetFingerID(Event) { return 0; }
 void finger_slot_clear(int) {}
 enum class input_event_t { error, keyboard_char };
-struct { input_event_t type = input_event_t::error; int direction = 0; } last_input;
+struct {
+    input_event_t type = input_event_t::error;
+    int direction = 0;
+} last_input;
 struct { bool captures_touch = false; } android_imgui_touch_state;
 namespace android_ui_mode { bool is_new_ui_build() { return true; } }
 bool is_quick_shortcut_touch = false, is_two_finger_touch = false;
 bool is_three_finger_touch = false, is_default_mode = true;
 bool needupdate = false, quit = false;
-float finger_down_x = 0, finger_down_y = 0, finger_curr_x = 0, finger_curr_y = 100;
-float second_finger_down_x, second_finger_curr_x, third_finger_down_x, third_finger_curr_x;
-float second_finger_down_y, second_finger_curr_y, third_finger_down_y, third_finger_curr_y;
-uint32_t ticks = 1000, finger_down_time = 1, finger_repeat_time = 800, finger_repeat_delay = 100;
+float finger_down_x = 0, finger_down_y = 0;
+float finger_curr_x = 0, finger_curr_y = 100;
+float second_finger_down_x, second_finger_curr_x;
+float third_finger_down_x, third_finger_curr_x;
+float second_finger_down_y, second_finger_curr_y;
+float third_finger_down_y, third_finger_curr_y;
+uint32_t ticks = 1000, finger_down_time = 1;
+uint32_t finger_repeat_time = 800, finger_repeat_delay = 100;
 int WindowWidth = 1000, WindowHeight = 500, repeats = 0;
 template<class T> T get_option(const char *name) {
     const std::string s(name);
@@ -122,9 +135,16 @@ void handle_finger_input(uint32_t) {
 }
 void dispatch() {
     while(SDL_PollEvent(&ev)) {
-        if(ev.type == motion) { finger_curr_x = ev.x; finger_curr_y = ev.y; needupdate = true; }
-        if(ev.type == CATA_FINGERUP) { finger_down_time = 0; finger_repeat_time = 0; }
-        if(ev.type == key) { last_input.type = input_event_t::keyboard_char; last_input.direction = 9; }
+        if(ev.type == motion) {
+            finger_curr_x = ev.x; finger_curr_y = ev.y; needupdate = true;
+        }
+        if(ev.type == CATA_FINGERUP) {
+            finger_down_time = 0; finger_repeat_time = 0;
+        }
+        if(ev.type == key) {
+            last_input.type = input_event_t::keyboard_char;
+            last_input.direction = 9;
+        }
         if(ev.type == close_window) quit = true;
         if(ev.type == second_down) is_two_finger_touch = true;
     }
@@ -138,7 +158,10 @@ int main(int argc, char **argv) {
     const std::string scenario(argv[1]);
     if(scenario == "left") events.push_back({motion, -100, 0});
     if(scenario == "right") events.push_back({motion, 100, 0});
-    if(scenario == "burst") { events.push_back({motion, -100, 0}); events.push_back({motion, 100, 0}); }
+    if(scenario == "burst") {
+        events.push_back({motion, -100, 0});
+        events.push_back({motion, 100, 0});
+    }
     if(scenario == "release") events.push_back({CATA_FINGERUP});
     if(scenario == "keyboard") events.push_back({key});
     if(scenario == "quit") events.push_back({close_window});
@@ -160,9 +183,13 @@ int main(int argc, char **argv) {
     }
     pump();
     if(scenario == "left") assert(last_input.direction == -1 && repeats == 1);
-    if(scenario == "right" || scenario == "burst") assert(last_input.direction == 1 && repeats == 1);
+    if(scenario == "right" || scenario == "burst") {
+        assert(last_input.direction == 1 && repeats == 1);
+    }
     if(scenario == "release") assert(finger_down_time == 0 && repeats == 0);
-    if(scenario == "keyboard") assert(last_input.direction == 9 && repeats == 0);
+    if(scenario == "keyboard") {
+        assert(last_input.direction == 9 && repeats == 0);
+    }
     if(scenario == "quit") assert(quit && repeats == 0);
     if(scenario == "second") assert(is_two_finger_touch && repeats == 0);
     if(scenario == "early" || scenario == "redraw") assert(repeats == 0);

@@ -9,6 +9,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "cata_catch.h"
+#include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
@@ -25,6 +26,9 @@
 #include "npc.h"
 #include "type_id.h"
 #include "units.h"
+
+static const bionic_id bio_nl_collar( "bio_nl_collar" );
+static const bionic_id bio_nl_collar_deactivated( "bio_nl_collar_deactivated" );
 
 namespace cata::lua_platform
 {
@@ -138,6 +142,51 @@ TEST_CASE( "lua_platform_bionic_semantics_match_legacy_character_operations",
             CHECK( old_target.get_power_level() == new_target.get_power_level() );
             CHECK( untouched.num_bionics() == 0 );
             query();
+        }
+        if( !npc_target && id == "bio_batteries" ) {
+            // Execute the actual shipped collar transition, not a rewritten
+            // approximation of its legacy effect payload.
+            old_target.add_bionic( bio_nl_collar );
+            new_target.add_bionic( bio_nl_collar );
+            int checked = 0;
+            const JsonArray entries = json_loader::from_path( cata_path(
+                                          cata_path::root_path::data,
+                                          "json/effects_on_condition/scenario_specific_eocs.json" ) ).get_array();
+            for( const JsonObject entry : entries ) {
+                entry.allow_omitted_members();
+                if( entry.get_string( "id", "" ) != "scenario_trapped_in_labyrinth_recurring" ) {
+                    continue;
+                }
+                for( const JsonObject operation : entry.get_array( "effect" ) ) {
+                    operation.allow_omitted_members();
+                    const bool remove = operation.has_string( "u_lose_bionic" );
+                    if( !remove && !operation.has_string( "u_add_bionic" ) ) {
+                        continue;
+                    }
+                    const std::string selected = operation.get_string( remove ? "u_lose_bionic" :
+                                                 "u_add_bionic" );
+                    talk_effect_t effect;
+                    effect.parse_sub_effect( operation, "bionic_real_corpus" );
+                    for( const talk_effect_fun_t &function : effect.effects ) {
+                        function( old_dialogue );
+                    }
+                    sol::protected_function function = services["bionics"][remove ? "remove_type" : "grant"];
+                    sol::protected_function_result call = function( handle,
+                                                          cata::lua_platform::script_game_id( "bionic", selected ) );
+                    REQUIRE( call.valid() );
+                    const sol::table result = call;
+                    REQUIRE( result["ok"].get<bool>() );
+                    CHECK( old_target.has_bionic( bio_nl_collar ) == new_target.has_bionic( bio_nl_collar ) );
+                    CHECK( old_target.has_bionic( bio_nl_collar_deactivated ) == new_target.has_bionic(
+                               bio_nl_collar_deactivated ) );
+                    CHECK( old_target.num_bionics() == new_target.num_bionics() );
+                    CHECK( old_target.get_max_power_level() == new_target.get_max_power_level() );
+                    ++checked;
+                }
+            }
+            REQUIRE( checked == 2 );
+            CHECK_FALSE( new_target.has_bionic( bio_nl_collar ) );
+            CHECK( new_target.has_bionic( bio_nl_collar_deactivated ) );
         }
         completed = true;
     } );
