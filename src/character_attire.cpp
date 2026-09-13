@@ -25,6 +25,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "coordinates.h"
+#include "craft_reservation.h"
 #include "creature.h"
 #include "damage.h"
 #include "debug.h"
@@ -1755,7 +1756,8 @@ std::list<item> outfit::use_amount( const itype_id &it, int quantity,
                                     Character &wearer )
 {
     for( auto a = worn.begin(); a != worn.end() && quantity > 0; ) {
-        if( a->use_amount( it, quantity, used, filter ) ) {
+        if( !craft_reservation::contains_reserved( *a ) &&
+            a->use_amount( it, quantity, used, filter ) ) {
             a->on_takeoff( wearer );
             a = worn.erase( a );
         } else {

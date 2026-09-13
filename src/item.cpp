@@ -4096,7 +4096,11 @@ bool item::use_charges( const itype_id &what, int &qty, std::list<item> &used,
         }
 
         if( !filter( *e ) ) {
-            return VisitResponse::NEXT;
+            // A reserved item hides its whole subtree, matching how the inventory guards
+            // prune roots.  Other filters keep descending.
+            return craft_reservation::contains_reserved( *e )
+                   ? VisitResponse::SKIP
+                   : VisitResponse::NEXT;
         }
 
         // Items that are both tools (or guns) and count_by_charges (e.g. stackable
