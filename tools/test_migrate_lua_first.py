@@ -11666,7 +11666,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         jobs = {"do_butcher": "butcher", "do_chop_plank": "chop_planks",
                 "do_chop_trees": "chop_trees", "do_construction": "construction",
                 "do_farming": "farming", "do_fishing": "fishing",
-                "do_mining": "mining", "do_mopping": "mopping"}
+                "do_mining": "mining", "do_mopping": "mopping",
+                "do_read_repeatedly": "read_repeatedly",
+                "do_study": "study",
+                "sort_loot": "sort_loot",
+                "do_disassembly": "disassembly",
+                "do_vehicle_deconstruct": "vehicle_deconstruct",
+                "do_vehicle_repair": "vehicle_repair",
+                }
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps({
@@ -20964,6 +20971,10 @@ assert(calls==14)
 calls=0;fail=true
 local ok,err=pcall(migrated_eoc_functions.jobs,{actors={npc=npc}},override)
 assert(not ok and tostring(err):find('assignment failed',1,true) and calls==1)
+calls=0;fail=false
+local non_npc={subtype="avatar"}
+migrated_eoc_functions.jobs({actors={npc=non_npc}},non_npc)
+assert(calls==0)
 """.replace("EXPECTED", ",".join(migrate_lua_first.lua_quote(job) for job in jobs.values()))
         script = script.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,

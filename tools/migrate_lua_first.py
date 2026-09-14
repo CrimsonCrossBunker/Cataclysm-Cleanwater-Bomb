@@ -31051,12 +31051,19 @@ def render_eoc(
             elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
                 "do_farming", "do_fishing", "do_mining", "do_mopping",
+                "do_read_repeatedly", "do_study", "sort_loot", "do_disassembly", "do_vehicle_deconstruct", "do_vehicle_repair",
             }:
                 job = {
                     "do_butcher": "butcher", "do_chop_plank": "chop_planks",
                     "do_chop_trees": "chop_trees", "do_construction": "construction",
                     "do_farming": "farming", "do_fishing": "fishing",
                     "do_mining": "mining", "do_mopping": "mopping",
+                    "do_read_repeatedly": "read_repeatedly",
+                    "do_study": "study",
+                    "sort_loot": "sort_loot",
+                    "do_disassembly": "disassembly",
+                    "do_vehicle_deconstruct": "vehicle_deconstruct",
+                    "do_vehicle_repair": "vehicle_repair",
                 }[effect]
                 worker = npc_actor_expression or "actor"
                 lines.extend([
@@ -31069,32 +31076,8 @@ def render_eoc(
                 lines.extend(render_optional_npc_job(
                     npc_actor_expression or "actor", "read_ebook" if effect == "do_eread" else "read"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "do_read_repeatedly":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "read_repeatedly"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_study":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "study"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "sort_loot":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "sort_loot"))')
-                converted_effect = True
             elif npc_actor_proven and effect == "do_craft":
                 lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "craft"))
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_disassembly":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "disassembly"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_vehicle_deconstruct":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_deconstruct"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_vehicle_repair":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_repair"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "drop_items_in_place":
                 lines.append(
