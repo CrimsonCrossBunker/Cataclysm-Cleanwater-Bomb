@@ -4347,6 +4347,21 @@ void install_creature_api(
                    current_world_generation() );
     } );
     characters.set_function(
+        "intimidation",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        return make_game_value_result( state, sol::make_object( state, character->intimidation() ) );
+    } );
+    characters.set_function(
         "snapshot",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,

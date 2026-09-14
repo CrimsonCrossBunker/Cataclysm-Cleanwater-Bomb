@@ -47,7 +47,7 @@ TEST_CASE( "lua_platform_mission_api_requires_explicit_owner_and_generation",
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
         lua, services,
-        [&]() {
+    [&]() {
         return active_runtime;
     },
     [&]() {
@@ -58,7 +58,7 @@ TEST_CASE( "lua_platform_mission_api_requires_explicit_owner_and_generation",
     } );
     cata::lua_platform::install_mission_api(
         services,
-        [&]() {
+    [&]() {
         return active_runtime;
     },
     [&]() {
@@ -112,7 +112,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollbac
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
         lua, services,
-        [&]() {
+    [&]() {
         return active_runtime;
     },
     [&]() {
@@ -121,7 +121,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollbac
     []() {} );
     cata::lua_platform::install_npc_api(
         services,
-        [&]() {
+    [&]() {
         return active_runtime;
     },
     [&]() {
@@ -197,7 +197,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
         lua, services,
-        [runtime]() {
+    [runtime]() {
         return runtime;
     },
     []() {
@@ -205,7 +205,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     }, []() {} );
     cata::lua_platform::install_npc_api(
         services,
-        [runtime]() {
+    [runtime]() {
         return runtime;
     },
     []() {
@@ -277,24 +277,24 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         return active_world;
     };
     cata::lua_platform::install_value_type_api(
-        lua, services, []() {} );
+    lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_mission_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
     cata::lua_platform::install_npc_api(
-        services, current_runtime, current_world, []() {}, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {}, []() {} );
 
     const cata::lua_platform::game_handle provider_handle =
         cata::lua_platform::game_handle::from_creature(
             *provider,
-            { "npc", provider_id.get_value(), 0, 0, 0, {} },
-            runtime, active_world );
+    { "npc", provider_id.get_value(), 0, 0, 0, {} },
+    runtime, active_world );
     const cata::lua_platform::game_handle owner_handle =
         cata::lua_platform::game_handle::from_creature(
             owner,
-            { "avatar", owner.getID().get_value(), 0, 0, 0, {} },
-            runtime, active_world );
+    { "avatar", owner.getID().get_value(), 0, 0, 0, {} },
+    runtime, active_world );
     avatar wrong_owner;
     wrong_owner.normalize();
     wrong_owner.setID( character_id( 7304 ), true );
@@ -350,6 +350,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
                ["code"].get<std::string>();
     };
 
+    const sol::protected_function npc_snapshot = services["npcs"]["get"];
+    CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 0 );
     sol::table initial_state = value_from( state( provider_handle ) );
     CHECK( initial_state["provider_id"].get<int>() == provider_id.get_value() );
     CHECK( initial_state["available"].get<sol::table>()
@@ -388,6 +390,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( provider->chatbin.missions.empty() );
     CHECK( provider->chatbin.missions_assigned.size() == 1 );
     CHECK( owner.get_active_missions().size() == 1 );
+    CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 125 );
     const int opinion_before_rejection = provider->op_of_u.value;
     CHECK( error_code( succeed_selected(
                            provider_handle, wrong_owner_handle, true ) ) ==
@@ -413,14 +416,15 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
                                        provider_handle, owner_handle, true ) );
     CHECK( success_value["action"].get<std::string>() == "success" );
     CHECK_FALSE( provider->chatbin.mission_selected->in_progress() );
+    CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 125 );
     CHECK( error_code( succeed_selected(
                            provider_handle, owner_handle, true ) ) ==
            "not_active" );
 
     const int owed_before_reward = provider->op_of_u.owed;
     sol::table reward_value = value_from(
-                                   claim_selected_reward(
-                                       provider_handle, owner_handle ) );
+                                  claim_selected_reward(
+                                      provider_handle, owner_handle ) );
     CHECK( reward_value["action"].get<std::string>() == "reward" );
     CHECK( reward_value["owed_delta"].get<int>() == 125 );
     CHECK( provider->op_of_u.owed == owed_before_reward + 125 );
@@ -458,6 +462,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            "already_claimed" );
     CHECK( provider->op_of_u.owed == owed_after_reward );
     value_from( clear_selected( provider_handle, owner_handle ) );
+    CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 0 );
     CHECK( provider->chatbin.missions_assigned.empty() );
     CHECK( provider->chatbin.mission_selected == nullptr );
 

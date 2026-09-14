@@ -1388,6 +1388,42 @@ TEST_CASE( "lua_platform_request_talk_repeated_request_has_no_notification",
     Messages::clear_messages();
 }
 
+TEST_CASE( "lua_platform_intimidation_reads_exact_live_actor_and_stimulant_change",
+           "[lua][platform][character][semantic]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_creature_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {
+        FAIL( "Reading intimidation must not enter the write gate" );
+    } );
+    const bool npc_target = GENERATE( false, true );
+    Character &target = npc_target ? static_cast<Character &>( fixture.other ) : fixture.player;
+    target.set_stim( 0 );
+    const int baseline = target.intimidation();
+    const auto handle = fixture.handle( npc_target );
+    sol::protected_function query = fixture.services["characters"]["intimidation"];
+    const auto read = [&]() {
+        const auto call = query( handle );
+        REQUIRE( call.valid() );
+        const sol::table result = call.get<sol::table>();
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<int>();
+    };
+    CHECK( read() == baseline );
+    target.set_stim( 21 );
+    CHECK( read() == baseline + 2 );
+    target.set_stim( 20 );
+    CHECK( read() == baseline );
+    ++fixture.world;
+    const auto stale = query( handle );
+    REQUIRE( stale.valid() );
+    CHECK_FALSE( stale.get<sol::table>()["ok"].get<bool>() );
+}
+
 TEST_CASE( "lua_platform_selling_offers_match_native_items_and_prices",
            "[lua][platform][trade][semantic]" )
 {

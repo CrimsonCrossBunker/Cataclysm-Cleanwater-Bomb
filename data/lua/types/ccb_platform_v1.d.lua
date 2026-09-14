@@ -7463,6 +7463,11 @@ function CcbCharactersApi.body_parts(character) end
 ---@return CcbBodyPartIdResult
 function CcbCharactersApi.random_body_part(character, main_parts_only) end
 
+---Read native intimidation, including weapons, stimulants, drunkenness and enchantment modifiers.
+---@param character GameHandle Exact live Character; no implicit dialogue participant.
+---@return CcbResult result `value` is the current integer score; unavailable/stale handles return an error.
+function CcbCharactersApi.intimidation(character) end
+
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
 ---@return CcbResult result `value` is a detached Character snapshot.
@@ -9243,6 +9248,7 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field handle GameHandle Exact live NPC handle.
 ---@field id integer Native character identity; display-only.
 ---@field unique_id string Stable unique NPC identity when present.
+---@field assigned_missions_value integer Native sum over every assigned mission, including finished entries until removed from the assigned list; not a paginated subtotal.
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord

@@ -511,6 +511,7 @@ sol::table snapshot_npc(
                            world_generation );
     result["id"] = entry.getID().get_value();
     result["unique_id"] = entry.get_unique_id();
+    result["assigned_missions_value"] = entry.assigned_missions_value();
     result["name"] = entry.get_name();
     result["display_name"] =
         entry.display_name();
