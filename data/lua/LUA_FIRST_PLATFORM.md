@@ -669,3 +669,12 @@ batch acceptance; it does not promote EOC selectors to verified by itself.
 显式空值可跨上下文、标量任务载荷和存档保留“键存在”的信息。`nil` 仍用于删除，
 默认值只在键不存在时生效；不能用 Lua 的真假判断代替存在性判断。本项新增原生
 回归须在批次末实际运行，通过前不提升相关 EOC 完成标记。
+
+### Variable reads with two participants
+
+`services.variables.resolve(context, actor, scope, key, participants)` accepts an
+optional `{ alpha = handle, beta = handle }` table. When supplied, actor-scoped
+reads select that participant, including the final target of indirect references.
+An absent participant reports a missing value and does not fall back to `actor`.
+Calls without the table retain their explicit-owner behavior. This extension has
+source and regression coverage; native execution remains part of batch acceptance.

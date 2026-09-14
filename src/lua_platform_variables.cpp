@@ -381,7 +381,8 @@ sol::table resolve_variable(
     sol::this_state lua, const sol::optional<sol::table> &context,
     const sol::optional<game_handle> &actor, const std::string &scope,
     const std::string &key, const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const sol::optional<sol::table> &participants )
 {
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
@@ -456,7 +457,12 @@ sol::table resolve_variable(
             return make_game_value_result(
                        state, sol::make_object( state, std::move( result ) ) );
         }
-        if( !actor ) {
+        sol::optional<game_handle> selected_actor = actor;
+        if( participants ) {
+            selected_actor = participants->raw_get<sol::optional<game_handle>>(
+                                 current_scope == "npc" ? "beta" : "alpha" );
+        }
+        if( !selected_actor ) {
             sol::table result = state.create_table();
             result["exists"] = false;
             result["value"] = sol::nil;
@@ -464,7 +470,7 @@ sol::table resolve_variable(
                        state, sol::make_object( state, std::move( result ) ) );
         }
         const resolved_variable_talker resolved = resolve_variable_talker(
-                    *actor, runtime_generation, world_generation );
+                    *selected_actor, runtime_generation, world_generation );
         if( resolved.error ) {
             return make_game_error_result( state, *resolved.error );
         }
@@ -704,11 +710,11 @@ void install_variable_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
-    const std::string & key ) {
+    const std::string & key, const sol::optional<sol::table> &participants ) {
         require_read();
         return resolve_variable( lua_state, context, actor, scope, key,
                                  current_runtime_generation(),
-                                 current_world_generation() );
+                                 current_world_generation(), participants );
     } );
     variables.set_function(
         "set_resolved",

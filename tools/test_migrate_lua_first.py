@@ -18651,6 +18651,27 @@ end
                                         capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_run_eocs_indirect_variable_uses_parent_participants(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {"value": {"var_val": "reference"}}},
+            {"child": "child"}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor, partner = {}, {}
+local context = {data={reference="n_input"}}
+local services = {types={null={}}, variables={resolve=function(data, owner, scope, key, participants)
+    assert(scope == "var" and key == "reference")
+    assert(participants.alpha == actor and participants.beta == partner)
+    return {ok=true, value={exists=true, value="beta value"}}
+end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(ctx) called=true; assert(ctx.data.value == "beta value") end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(
             {"run_eocs": "child", "variables": {

@@ -95,6 +95,25 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     sol::table snapshot = read_result["value"];
     const std::string value = snapshot["value"];
     CHECK( value == ( source_npc ? "beta value" : "alpha value" ) );
+    sol::table participants = lua.create_table();
+    participants["alpha"] = player_handle;
+    participants["beta"] = partner_handle;
+    data["participant_reference"] = source_npc ? "n_string_input" : "u_string_input";
+    const sol::protected_function_result participant_read = resolve(
+                data, player_handle, "var", "participant_reference", participants );
+    REQUIRE( participant_read.valid() );
+    const sol::table participant_result = participant_read;
+    REQUIRE( participant_result["ok"].get<bool>() );
+    const sol::table participant_snapshot = participant_result["value"];
+    CHECK( participant_snapshot["value"].get<std::string>() == value );
+    participants[source_npc ? "beta" : "alpha"] = sol::nil;
+    const sol::protected_function_result missing_participant = resolve(
+                data, player_handle, "var", "participant_reference", participants );
+    REQUIRE( missing_participant.valid() );
+    const sol::table missing_result = missing_participant;
+    REQUIRE( missing_result["ok"].get<bool>() );
+    const sol::table missing_snapshot = missing_result["value"];
+    CHECK_FALSE( missing_snapshot["exists"].get<bool>() );
     // Compose the same typed variable read with native environment predicates.
     // A stored null is present and must not select the missing-value fallback.
     const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };

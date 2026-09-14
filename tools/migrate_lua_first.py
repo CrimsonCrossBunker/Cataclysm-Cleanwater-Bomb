@@ -3876,23 +3876,23 @@ def render_static_run_eocs(
                 variable_actor = parent_beta
             elif "u_val" in value:
                 variable_actor = parent_alpha
-        if isinstance(value, dict) and "default" in value:
+        if isinstance(value, dict) and ("default" in value or "var_val" in value):
             descriptor = {key: entry for key, entry in value.items() if key != "default"}
             if len(descriptor) != 1:
                 return None
             scope, name = next(iter(descriptor.items()))
-            if scope not in {"u_val", "npc_val", "global_val", "context_val"}:
+            if scope not in {"u_val", "npc_val", "global_val", "context_val", "var_val"}:
                 return None
             if render_eoc_value_expression(descriptor, "nil", variable_actor) is None:
                 return None
             # Native diag_value leaves JSON booleans as the empty variant.
-            default = ("services.types.null" if value["default"] is None or
-                       isinstance(value["default"], bool) else
-                       render_eoc_value_expression(value["default"], "nil", variable_actor))
-            if isinstance(value["default"], dict) and value["default"].get("i18n"):
+            default = ("services.types.null" if value.get("default") is None or
+                       isinstance(value.get("default"), bool) else
+                       render_eoc_value_expression(value.get("default"), "nil", variable_actor))
+            if isinstance(value.get("default"), dict) and value.get("default").get("i18n"):
                 return None
             # Defaults are native diag_value literals, not another variable read.
-            if isinstance(value["default"], dict) and not set(value["default"]) <= {
+            if isinstance(value.get("default"), dict) and not set(value.get("default")) <= {
                 "str", "i18n", "//~", "tripoint",
             }:
                 return None
@@ -3905,7 +3905,8 @@ def render_static_run_eocs(
             snapshot = (
                 f'services.variables.get_global({quoted})' if scope == "global_val" else
                 'services.variables.resolve(context.data, '
-                f'{variable_actor}, {lua_quote(scope.removesuffix("_val"))}, {quoted})'
+                f'{variable_actor}, {lua_quote(scope.removesuffix("_val"))}, {quoted}, '
+                f'{{alpha={parent_alpha}, beta={parent_beta}}})'
             )
             return (f'(function(snapshot) if not snapshot.exists then return {default} end; '
                     'if snapshot.value == nil then return services.types.null end; '

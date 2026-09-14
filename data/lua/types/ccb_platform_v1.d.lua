@@ -10064,13 +10064,15 @@ function CcbVariablesApi.set_global(key, value) end
 function CcbVariablesApi.remove_global(key) end
 
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
----Indirect var references retain that same owner. Choose the resolved participant explicitly when owners differ.
+---Optional participants select alpha for u and beta for npc, including indirect references.
+---When supplied, an absent participant means missing; otherwise actor remains the explicit owner.
 ---@param context table<string, any>|nil Callback data for context/var references.
 ---@param actor GameHandle|nil Explicit owner for actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
 ---@param key string
 ---@return CcbVariableReadResult
-function CcbVariablesApi.resolve(context, actor, scope, key) end
+---@param participants {alpha: GameHandle?, beta: GameHandle?}?
+function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 
 ---For context scope, nil clears the entry; services.types.null retains an empty value.
 ---resolve returns exists=true,value=nil for that explicit empty value.
