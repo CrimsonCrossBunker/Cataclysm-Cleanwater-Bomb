@@ -4125,11 +4125,11 @@ def render_static_run_eocs(
             f"        local selected_beta = {beta_expression}",
             "        if selected_alpha == nil and selected_beta == nil then",
         ]
-        wrapped.extend(
-            f"            {eoc_function_names[reference]}(context, "
-            f"{actor_expression or 'nil'})"
-            for reference in false_references
+        failure_lines = render_copied_eoc_callbacks(
+            false_references, eoc_function_names, actor_expression or "nil"
         )
+        assert failure_lines is not None  # References were validated above.
+        wrapped.extend("    " + line for line in failure_lines)
         wrapped.extend([
             "        else",
         ])
@@ -23109,8 +23109,8 @@ def render_static_query_omt(
     return lines
 
 
-def render_adjacent_failure_callbacks(
-    value: Any, function_names: dict[str, str],
+def render_copied_eoc_callbacks(
+    value: Any, function_names: dict[str, str], actor_expression: str = "actor",
 ) -> list[str] | None:
     references = _validated_eoc_references(value, function_names, allow_empty=True)
     if references is None:
@@ -23132,7 +23132,7 @@ def render_adjacent_failure_callbacks(
         "        failure_context.actors = {}",
         "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
     ]
-    lines.extend(f"        {function_names[reference]}(failure_context, actor)"
+    lines.extend(f"        {function_names[reference]}(failure_context, {actor_expression})"
                  for reference in references)
     return lines
 
@@ -23157,7 +23157,7 @@ def render_static_choose_adjacent_highlight(
     output = effect[key]
     if _coordinate_variable_descriptor(output) is None and _context_coordinate_expression(output) is None:
         return None
-    failure_callbacks = render_adjacent_failure_callbacks(
+    failure_callbacks = render_copied_eoc_callbacks(
         effect.get("false_eocs", []), eoc_function_names or {}
     )
     if failure_callbacks is None:
@@ -23267,7 +23267,7 @@ def render_static_npc_choose_adjacent_highlight(
         _context_coordinate_expression(output_value) is None
     ):
         return None
-    failure_callbacks = render_adjacent_failure_callbacks(
+    failure_callbacks = render_copied_eoc_callbacks(
         effect.get("false_eocs", []), eoc_function_names or {}
     )
     if failure_callbacks is None:

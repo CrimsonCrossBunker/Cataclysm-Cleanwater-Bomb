@@ -18408,7 +18408,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertIn("if selected_alpha == nil and selected_beta == nil", main)
             self.assertIn("child_context.actors.alpha = selected_alpha", main)
             self.assertIn("context.actors.beta = selected_beta", main)
-            self.assertIn("migrated_eoc_talker_failure(context, actor)", main)
+            self.assertIn("migrated_eoc_talker_failure(failure_context, actor)", main)
             self.assertNotIn("typed callback/task conversion", report)
 
     def test_run_eocs_dispatch_dynamic_ids_only_within_migrated_callbacks(
@@ -20198,6 +20198,36 @@ assert(context.actors==original_actors and context.actors.alpha==actor and conte
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_missing_talkers_copy_failure_context_once(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs({
+            "run_eocs": "never", "alpha_talker": "", "beta_talker": "",
+            "false_eocs": ["first", "second"],
+        }, {"never": "never", "first": "first", "second": "second"},
+            actor_expression="actor", avatar_actor_proven=True)
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={nested={1}},actors={alpha=actor},conditions={}}
+local calls=0
+local function never() error('success branch ran') end
+local function first(child,owner)
+ assert(owner==actor and child~=context and child.actors.alpha==actor)
+ child.data.nested[1]=9;child.conditions.added=function() return true end
+ calls=calls+1
+end
+local function second(child,owner)
+ assert(calls==1 and child.data.nested[1]==9 and child.conditions.added())
+ calls=calls+1
+end
+BODY
+assert(calls==2 and context.data.nested[1]==1 and context.conditions.added==nil)
+assert(context.actors.alpha==actor)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -20850,7 +20880,7 @@ assert(reads==1 and writes==1)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_adjacent_failure_callbacks_share_copy_without_parent_writes(self) -> None:
-        lines = migrate_lua_first.render_adjacent_failure_callbacks(
+        lines = migrate_lua_first.render_copied_eoc_callbacks(
             ["first", "second"], {"first": "first", "second": "second"})
         self.assertIsNotNone(lines)
         script = r"""
@@ -20878,7 +20908,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIsNone(migrate_lua_first.render_adjacent_failure_callbacks("missing", {}))
+        self.assertIsNone(migrate_lua_first.render_copied_eoc_callbacks("missing", {}))
         for key in ("u_choose_adjacent_highlight", "npc_choose_adjacent_highlight"):
             effect = {key: {"context_val": "picked"}, "false_eocs": "first"}
             renderer = (migrate_lua_first.render_static_choose_adjacent_highlight
