@@ -11608,7 +11608,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 lines = migrate_lua_first.render_static_follower_service_effect(effect, True)
                 self.assertIsNotNone(lines)
                 script = r"""
-local actor,other={},{}
+local actor,other={subtype='npc'},{}
 local candidates={{id=9,name='Other',handle=other,position={x=9}},
  {id=2,name='Provider',handle=actor,position={x=2}}}
 local selected,calls,menus='9',0,0
@@ -11643,6 +11643,23 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 result = subprocess.run(["lua", "-"], input=script, text=True,
                                         capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition", "id": "follower_pair",
+                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                "effect": ["bionic_install_allies", "bionic_remove_allies", "copy_npc_rules"],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "follower_pair_mod")
+            main = result.files[Path("main.lua")]
+            self.assertEqual(main.count('if (context.actors.beta) ~= nil and (context.actors.beta).subtype == "npc" then'), 3)
+            self.assertIn('(context.actors.beta), "install", selected_handle)', main)
+            self.assertIn('(context.actors.beta), "remove", selected_handle)', main)
+            self.assertIn('(context.actors.beta), selected_handle)', main)
+            self.assertNotIn('actor, "install", selected_handle)', main)
 
     def test_translates_bounded_follower_and_item_selection_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -21000,19 +21000,22 @@ def render_static_give_equipment_effect(
 
 
 def render_static_follower_service_effect(
-    effect: str, npc_actor_proven: bool,
+    effect: str, npc_actor_proven: bool, *, npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Select from visible scene allies in native order, not the follower roster."""
-    if not npc_actor_proven or effect not in {
+    target = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    if target is None or effect not in {
         "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
     }:
         return None
+    if target != "actor":
+        target = f"({target})"
     operation = {
         "bionic_install_allies": "install",
         "bionic_remove_allies": "remove",
     }.get(effect)
     lines = [
-        "    do",
+        f'    if {target} ~= nil and {target}.subtype == "npc" then',
         "        local followers = service_value(services.npcs.visible_allies())",
         "        local follower_choices = {}",
         "        local follower_handles = {}",
@@ -21030,12 +21033,12 @@ def render_static_follower_service_effect(
     if operation is not None:
         lines.extend([
             "            service_value(services.npcs.medical.open_bionic_service(",
-            f'                    actor, "{operation}", selected_handle))',
+            f'                    {target}, "{operation}", selected_handle))',
         ])
     else:
         lines.extend([
             "            service_value(services.npcs.copy_ai_rules(",
-            "                    actor, selected_handle))",
+            f"                    {target}, selected_handle))",
         ])
     lines.extend([
         "        end",
@@ -32631,11 +32634,11 @@ def render_eoc(
                 }[effect]
                 lines.append(f"    service_value({native_call})")
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
             }:
                 rendered = render_static_follower_service_effect(
-                    effect, npc_actor_proven
+                    effect, npc_actor_proven, npc_actor_expression=npc_actor_expression
                 )
                 if rendered is not None:
                     lines.extend(rendered)
