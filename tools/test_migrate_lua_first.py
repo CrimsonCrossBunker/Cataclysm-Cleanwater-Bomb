@@ -11662,6 +11662,21 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
             self.assertNotIn('actor, "install"', main)
 
+    def test_start_trade_retains_explicit_beta_and_delegate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition", "id": "trade_pair",
+                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                "effect": ["start_trade"],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "trade_pair_mod")
+            main = result.files[Path("main.lua")]
+            self.assertIn("local provider = context.actors.beta", main)
+            self.assertIn('if provider ~= nil and provider.subtype == "npc" then', main)
+            self.assertIn('services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true)', main)
+
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -21241,7 +21256,7 @@ assert(#calls==1)
             "required_event": "npc_becomes_hostile", "effect": ["start_trade", "revert_activity"]})
         rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc={},{}
+local avatar,npc={subtype="avatar"},{subtype="npc"}
 local mode='cancel'
 local continued=0
 local function service_value(result)

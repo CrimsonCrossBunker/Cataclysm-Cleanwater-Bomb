@@ -31028,10 +31028,15 @@ def render_eoc(
                     "    end",
                 ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "start_trade":
-                lines.append(
-                    f"    service_value(services.trade.open({npc_actor_expression or 'actor'}, "
-                    'services.characters.avatar(), 0, services.translate("Trade"), true))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "start_trade":
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression or 'actor'}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '            service_value(services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true))',
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif npc_actor_proven and effect == "revert_activity":
                 lines.append(
