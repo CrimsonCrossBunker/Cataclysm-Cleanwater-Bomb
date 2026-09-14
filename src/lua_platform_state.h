@@ -58,6 +58,8 @@ class bounded_state_output_buffer final : public std::streambuf
         std::string limit_error_;
         std::string output_;
 };
+// Write the type and value members inside an already-open JSON object.
+void write_persistent_value( JsonOut &json, const script_persistent_value &value );
 } // namespace detail
 
 // Assign one validated value without partially changing the state on failure.

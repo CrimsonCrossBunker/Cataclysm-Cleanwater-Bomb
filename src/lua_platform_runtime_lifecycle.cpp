@@ -255,21 +255,7 @@ void write_typed_values( JsonOut &json, const persistent_state &values )
     for( const std::string &key : keys ) {
         json.member( key );
         json.start_object();
-        std::visit( [&json]( const auto & value ) {
-            using value_type = std::decay_t<decltype( value )>;
-            if constexpr( std::is_same_v<value_type, bool> ) {
-                json.member( "type", "boolean" );
-            } else if constexpr( std::is_same_v<value_type, std::int64_t> ) {
-                json.member( "type", "integer" );
-            } else if constexpr( std::is_same_v<value_type, double> ) {
-                json.member( "type", "float" );
-            } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
-                json.member( "type", "null" );
-            } else {
-                json.member( "type", "string" );
-            }
-            json.member( "value", value );
-        }, values.at( key ) );
+        detail::write_persistent_value( json, values.at( key ) );
         json.end_object();
     }
     json.end_object();

@@ -117,6 +117,25 @@ std::streambuf::int_type detail::bounded_state_output_buffer::overflow( const in
     return ch;
 }
 
+void detail::write_persistent_value( JsonOut &json, const script_persistent_value &value )
+{
+    std::visit( [&json]( const auto & entry ) {
+        using value_type = std::decay_t<decltype( entry )>;
+        if constexpr( std::is_same_v<value_type, bool> ) {
+            json.member( "type", "boolean" );
+        } else if constexpr( std::is_same_v<value_type, std::int64_t> ) {
+            json.member( "type", "integer" );
+        } else if constexpr( std::is_same_v<value_type, double> ) {
+            json.member( "type", "float" );
+        } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
+            json.member( "type", "null" );
+        } else {
+            json.member( "type", "string" );
+        }
+        json.member( "value", entry );
+    }, value );
+}
+
 void assign_persistent_value( script_persistent_state &state, const std::string &key,
                               const script_persistent_value &value )
 {
@@ -165,21 +184,7 @@ void write_persistent_state( std::ostream &output, const script_persistent_state
         const script_persistent_value &value = state.at( key );
         json.member( key );
         json.start_object();
-        std::visit( [&json]( const auto & entry ) {
-            using value_type = std::decay_t<decltype( entry )>;
-            if constexpr( std::is_same_v<value_type, bool> ) {
-                json.member( "type", "boolean" );
-            } else if constexpr( std::is_same_v<value_type, std::int64_t> ) {
-                json.member( "type", "integer" );
-            } else if constexpr( std::is_same_v<value_type, double> ) {
-                json.member( "type", "float" );
-            } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
-                json.member( "type", "null" );
-            } else {
-                json.member( "type", "string" );
-            }
-            json.member( "value", entry );
-        }, value );
+        detail::write_persistent_value( json, value );
         json.end_object();
     }
     json.end_object();
