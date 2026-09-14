@@ -20626,7 +20626,8 @@ local context={data={picked='unchanged'}}
 local actor={}
 local center={add=function(self,p) return p end}
 local function service_value(r) return r.value end
-local services={characters={snapshot=function() return {value={creature={position=center}}} end},
+local services={world={bounds=function() return {minimum={x=-1,y=-1},maximum={x=1,y=1}} end},
+ characters={snapshot=function() return {value={creature={position=center}}} end},
  coords={tripoint_rel_ms=function(x,y,z) return {x=x,y=y,z=z} end},
  targeting={choose_adjacent_where_at=function(c,m,f,points,vertical,auto)
  assert(c==center and vertical and not auto and #points==9)
@@ -20636,6 +20637,7 @@ local services={characters={snapshot=function() return {value={creature={positio
   if p.x==0 and p.y==0 then found=true end
  end
  assert(found)
+ assert(points[2].x==0 and points[2].y==-1)
  return nil
 end}}
 BODY
@@ -20643,6 +20645,13 @@ assert(context.data.picked=='unchanged')
 assert(context.data.loc.x==1 and context.data.loc.y==1)
 """.replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        edge_script = script.replace("minimum={x=-1,y=-1}", "minimum={x=0,y=0}")
+        edge_script = edge_script.replace("#points==9", "#points==4")
+        edge_script = edge_script.replace("points[2].x==0 and points[2].y==-1",
+                                          "points[2].x==1 and points[2].y==0")
+        result = subprocess.run(["lua", "-"], input=edge_script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 

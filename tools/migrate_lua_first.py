@@ -23141,9 +23141,9 @@ def render_static_choose_adjacent_highlight(
         if not predicate:
             return None
     offsets = [
-        (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-        (0, -1, 0), (0, 0, 0), (0, 1, 0),
-        (1, -1, 0), (1, 0, 0), (1, 1, 0),
+        (-1, -1, 0), (0, -1, 0), (1, -1, 0),
+        (-1, 0, 0), (0, 0, 0), (1, 0, 0),
+        (-1, 1, 0), (0, 1, 0), (1, 1, 0),
     ]
     offset_values = ",\n".join(
         "        services.coords.tripoint_rel_ms("
@@ -23154,13 +23154,17 @@ def render_static_choose_adjacent_highlight(
         "    local candidate_offsets = {",
         offset_values,
         "    }",
+        "    local bounds = services.world.bounds()",
         "    local candidates = {}",
         "    for _, offset in ipairs(candidate_offsets) do",
         "        local candidate = center:add(offset)",
+        "        if candidate.x >= bounds.minimum.x and candidate.x <= bounds.maximum.x and",
+        "           candidate.y >= bounds.minimum.y and candidate.y <= bounds.maximum.y then",
         "        context.data[\"loc\"] = candidate",
         f"        if {predicate} then",
         "            candidates[#candidates + 1] = candidate",
         "        end",
+        "    end",
         "    end",
         "    local selected = services.targeting.choose_adjacent_where_at(",
         f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
@@ -23214,9 +23218,9 @@ def render_static_npc_choose_adjacent_highlight(
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
         return None
     offsets = [
-        (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-        (0, -1, 0), (0, 0, 0), (0, 1, 0),
-        (1, -1, 0), (1, 0, 0), (1, 1, 0),
+        (-1, -1, 0), (0, -1, 0), (1, -1, 0),
+        (-1, 0, 0), (0, 0, 0), (1, 0, 0),
+        (-1, 1, 0), (0, 1, 0), (1, 1, 0),
     ]
     candidates = ",\n".join(
         "            center:add(services.coords.tripoint_rel_ms("
@@ -23234,9 +23238,18 @@ def render_static_npc_choose_adjacent_highlight(
         return None
     lines = [
         f"    local center = {center_expression}",
-        "    local candidates = {",
+        "    local candidate_points = {",
         candidates,
         "    }",
+        "    local bounds = services.world.bounds()",
+        "    local candidates = {}",
+        "    for _, candidate in ipairs(candidate_points) do",
+        "        if candidate.x >= bounds.minimum.x and candidate.x <= bounds.maximum.x and",
+        "           candidate.y >= bounds.minimum.y and candidate.y <= bounds.maximum.y then",
+        "            context.data[\"loc\"] = candidate",
+        "            candidates[#candidates + 1] = candidate",
+        "        end",
+        "    end",
         "    local selected = services.targeting.choose_adjacent_where_at(",
         f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
         f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
