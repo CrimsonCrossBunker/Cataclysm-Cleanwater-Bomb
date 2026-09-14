@@ -20134,6 +20134,42 @@ assert(context.data.nested[2][1]==2)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_loop_reads_parent_guard_and_retains_child_changes(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs({
+            "run_eocs": ["step"], "iterations": 3,
+            "condition": {"compare_string": [{"context_val": "guard"}, "continue"]},
+        }, {"step": "step"}, actor_expression="actor", avatar_actor_proven=True)
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={guard='continue',count=0},actors={alpha=actor}}
+local services={}
+local calls=0
+local previous_child=nil
+local function step(child,owner)
+ assert(owner==actor and child~=context and child.actors.alpha==actor)
+ assert(previous_child==nil or previous_child==child)
+ previous_child=child
+ child.data.count=child.data.count+1
+ child.data.guard='stop'
+ calls=calls+1
+ assert(child.data.count==calls)
+end
+BODY
+assert(calls==3 and context.data.guard=='continue' and context.data.count==0)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # Parent changes remain visible to the next guard evaluation.
+        script = script.replace("calls=calls+1", "calls=calls+1;context.data.guard='stop'")
+        script = script.replace("calls==3 and context.data.guard=='continue'",
+                                "calls==1 and context.data.guard=='stop'")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
