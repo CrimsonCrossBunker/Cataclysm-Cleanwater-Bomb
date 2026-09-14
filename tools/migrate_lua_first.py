@@ -29950,10 +29950,10 @@ def render_eoc(
                 lines.append("    services.npcs.make_thankful(actor)")
                 converted_effect = True
             elif npc_actor_proven and effect == "hostile":
-                lines.append('    services.npcs.set_attitude(actor, "kill")')
+                lines.append(f"    service_value(services.npcs.become_hostile({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "flee":
-                lines.append('    services.npcs.set_attitude(actor, "flee")')
+                lines.append(f"    service_value(services.npcs.start_fleeing({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif (
                 npc_actor_proven and isinstance(effect, dict) and
@@ -30799,13 +30799,13 @@ def render_eoc(
                 )
                 converted_effect = True
             elif npc_actor_proven and effect == "player_leaving":
-                lines.append('    services.npcs.set_attitude(actor, "wait_for_leave")')
+                lines.append(f"    service_value(services.npcs.warn_player_departure({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "start_mugging":
-                lines.append('    services.npcs.set_attitude(actor, "mug")')
+                lines.append(f"    service_value(services.npcs.start_mugging({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "remove_stolen_status":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.clear_stolen_item_claim({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "assign_guard":
                 lines.append('    services.npcs.set_attitude(actor, "null")')

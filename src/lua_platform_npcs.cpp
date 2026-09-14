@@ -1739,6 +1739,10 @@ sol::table set_npc_relationship_state(
             talk_function::stop_following( *entry );
         } else if( reset_stranger_topic ) {
             talk_function::stranger_neutral( *entry );
+        } else if( attitude == NPCATT_FLEE ) {
+            talk_function::flee( *entry );
+        } else if( attitude == NPCATT_MUG ) {
+            talk_function::start_mugging( *entry );
         } else {
             entry->set_attitude( attitude );
         }
@@ -1933,11 +1937,7 @@ sol::table make_npc_hostile(
     }
     const npc_attitude before = entry->get_attitude();
     const bool changed = before != NPCATT_KILL;
-    if( changed ) {
-        get_event_bus().send<event_type::npc_becomes_hostile>(
-            entry->getID(), entry->name );
-        entry->set_attitude( NPCATT_KILL );
-    }
+    talk_function::hostile( *entry );
     sol::table value = state.create_table();
     value["before"] = npc_attitude_id( before );
     value["after"] = npc_attitude_id( entry->get_attitude() );

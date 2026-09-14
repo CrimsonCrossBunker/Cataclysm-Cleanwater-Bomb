@@ -903,3 +903,11 @@ and direct mission reset are preserved, including the previous-mission value.
 without transferring cash or joining the player faction. Generated Lua routing
 tests pass; temporary-follow native comparison source is unexecuted and full
 leave/faction runtime acceptance remains pending.
+
+Confrontation migration routes `hostile`, `flee`, `player_leaving`,
+`start_mugging` and `remove_stolen_status` through their existing NPC services.
+This preserves hostile-event dispatch and its already-hostile guard, visibility-based
+hostility notification, flee/mugging messages, departure patience and stolen-item
+claim clearing. Generated Lua exercises participant overrides and error propagation;
+native message/patience comparison source is present but unexecuted. Hostile event,
+visibility and stolen-item lifecycle runtime acceptance remain pending.

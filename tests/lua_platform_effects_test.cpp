@@ -989,6 +989,45 @@ TEST_CASE( "lua_platform_stop_following_and_neutral_match_native_state",
 }
 
 
+TEST_CASE( "lua_platform_confrontation_preserves_native_messages_and_patience",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.name = fixture.other.name = "Test confrontation";
+    native.personality.aggression = fixture.other.personality.aggression = 7;
+    native.patience = fixture.other.patience = 99;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    const std::vector<std::pair<std::string, void ( * )( npc & )>> operations = {
+        { "start_fleeing", talk_function::flee },
+        { "start_mugging", talk_function::start_mugging },
+        { "warn_player_departure", talk_function::player_leaving }
+    };
+    for( const auto &operation : operations ) {
+        Messages::clear_messages();
+        operation.second( native );
+        const auto expected_messages = Messages::recent_messages( 10 );
+        Messages::clear_messages();
+        sol::protected_function run = fixture.services["npcs"][operation.first];
+        sol::protected_function_result call = run( fixture.handle( true ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( fixture.other.get_attitude() == native.get_attitude() );
+        CHECK( fixture.other.patience == native.patience );
+        CHECK( Messages::recent_messages( 10 ) == expected_messages );
+        Messages::clear_messages();
+    }
+    CHECK( fixture.other.patience == 8 );
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {

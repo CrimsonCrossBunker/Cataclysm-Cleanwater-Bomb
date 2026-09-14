@@ -9987,8 +9987,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
             self.assertIn('services.npcs.set_attitude(actor, "talk")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "flee")', main)
+            self.assertIn('services.npcs.become_hostile(actor)', main)
+            self.assertIn('services.npcs.start_fleeing(actor)', main)
             self.assertNotIn("needs review", report)
 
     def test_translates_spawn_and_world_interaction_effects(self) -> None:
@@ -10347,8 +10347,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.npcs.set_attitude(actor, "wait_for_leave")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "mug")', main)
+            self.assertIn('services.npcs.warn_player_departure(actor)', main)
+            self.assertIn('services.npcs.start_mugging(actor)', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
             self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
             self.assertIn(
@@ -21342,6 +21342,43 @@ local runtime={handler=function() end,on=function() end}
 BODY
 migrated_eoc_functions.leave_follow({actors={npc=npc}},nil)
 assert(table.concat(calls,',')=='leave,temporary')
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_confrontation_routes_preserve_native_operations(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "confrontation",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["hostile", "flee", "player_leaving",
+                                              "start_mugging", "remove_stolen_status"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected,calls,fail
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={}}
+local operations={'become_hostile','start_fleeing','warn_player_departure',
+                  'start_mugging','clear_stolen_item_claim'}
+for _,operation in ipairs(operations) do
+ services.npcs[operation]=function(target)
+  assert(target==expected);calls[#calls+1]=operation
+  return {ok=not fail,value={changed=false}}
+ end
+end
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target;calls={};fail=false
+ migrated_eoc_functions.confrontation({actors={npc=npc}},target)
+ assert(table.concat(calls,',')==table.concat(operations,','))
+ calls={};fail=true
+ assert(not pcall(migrated_eoc_functions.confrontation,{actors={npc=npc}},target))
+ assert(#calls==1)
+end
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
