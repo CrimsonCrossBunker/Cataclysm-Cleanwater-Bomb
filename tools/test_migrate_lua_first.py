@@ -17773,6 +17773,48 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
 
+    def test_delayed_generated_module_uses_scalar_payload_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {"type": "effect_on_condition", "id": "target", "required_event": "game_start",
+                 "effect": {"message": {"context_val": "text"}}},
+                {"type": "effect_on_condition", "id": "owner", "required_event": "game_start",
+                 "effect": {"run_eocs": "target", "time_in_future": 2}},
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "task_snapshot")
+        main = result.files[Path("main.lua")]
+        script = r"""
+local handlers, scheduled = {}, nil
+local messages = {}
+local ccb = {content={}, runtime={
+    handler=function(id, fn) assert(handlers[id]==nil); handlers[id]=fn end,
+    on=function() end}, services={message=function(text) messages[#messages+1]=text end},
+    tasks={after=function(turns, handler, payload, version, scope)
+        assert(turns==2 and version==1 and scope=="world")
+        local saved={}
+        for key,value in pairs(payload) do
+            assert(type(value)=="string" or type(value)=="number" or type(value)=="boolean")
+            saved[key]=value
+        end
+        scheduled={handler=handler, payload=saved}
+    end}}
+package.preload.ccb=function() return ccb end
+""" + main + r"""
+local data={text="before", data="user field", __ccb_task=true}
+handlers["migrated.owner"]({data=data})
+assert(scheduled and scheduled.payload.data=="user field")
+assert(scheduled.payload.__ccb_task==true)
+data.text="after"
+handlers[scheduled.handler]({payload=scheduled.payload, participants={}})
+assert(#messages==1 and messages[1]=="before")
+handlers["migrated.target"]({data=data})
+assert(#messages==2 and messages[2]=="after")
+"""
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_delayed_run_eocs_use_persistent_platform_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -17806,12 +17848,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(2, "migrated.delayed_target", '
-                '{ __ccb_task = true, data = context.data }, 1, "world")',
+                'ccb.tasks.after(2, "migrated-task.delayed_target", '
+                'context.data, 1, "world")',
                 main,
             )
             self.assertIn(
-                "if task_payload ~= nil and task_payload.__ccb_task == true",
+                'runtime.handler("migrated-task.delayed_target"',
                 main,
             )
 
@@ -17850,8 +17892,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(2, "migrated.npc_delayed_target", '
-                '{ __ccb_task = true, data = context.data }, 1, '
+                'ccb.tasks.after(2, "migrated-task.npc_delayed_target", '
+                'context.data, 1, '
                 '"character", delayed_task_actor)',
                 main,
             )
@@ -17901,13 +17943,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(10, "migrated.delayed_talker_target", '
-                '{ __ccb_task = true, data = context.data }, 1, "world", '
+                'ccb.tasks.after(10, "migrated-task.delayed_talker_target", '
+                'context.data, 1, "world", '
                 'nil, { alpha = selected_alpha, beta = selected_beta })',
                 main,
             )
             self.assertIn(
-                "local task_context = { data = task_payload.data or {} }",
+                "local task_context = { data = context.payload or {} }",
                 main,
             )
             self.assertIn(
@@ -17961,7 +18003,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn(
-                'ccb.tasks.after(10, "migrated.unproven_delayed_talker_target"',
+                'ccb.tasks.after(10, "migrated-task.unproven_delayed_talker_target"',
                 main,
             )
             self.assertIn("explicit avatar participant handle", report)
@@ -18016,7 +18058,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 report = result.files[Path("MIGRATION_REPORT.md")]
 
                 self.assertNotIn(
-                    'ccb.tasks.after(2, "migrated.delayed_target"', main
+                    'ccb.tasks.after(2, "migrated-task.delayed_target"', main
                 )
                 self.assertNotIn("delayed or context-bound run_eocs", main)
                 self.assertNotIn("typed callback/task conversion", report)
@@ -18055,7 +18097,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn(
-                'ccb.tasks.after(2, "migrated.character_delayed_target"',
+                'ccb.tasks.after(2, "migrated-task.character_delayed_target"',
                 main,
             )
             self.assertIn("typed callback/task conversion", report)
@@ -18102,7 +18144,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.todos)
             self.assertNotIn("services.characters.avatar()", main)
             self.assertNotIn(
-                'ccb.tasks.after(2, "migrated.global_delayed_target"', main
+                'ccb.tasks.after(2, "migrated-task.global_delayed_target"', main
             )
             self.assertIn("typed callback/task conversion", report)
 

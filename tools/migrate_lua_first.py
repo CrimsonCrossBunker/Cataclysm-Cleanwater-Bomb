@@ -4183,9 +4183,7 @@ def render_static_run_eocs(
         return wrap_talker_context(
             prefix + callback_lines(context_expression, "    ")
         )
-    task_payload = (
-        "{ __ccb_task = true, data = " + context_expression + ".data }"
-    )
+    task_payload = context_expression + ".data"
     task_scope = "\"character\"" if delayed_character else "\"world\""
     task_delay_expression = delay_turns_expression
     if not randomize_delay and len(task_references) > 1:
@@ -4203,7 +4201,7 @@ def render_static_run_eocs(
         task_actor_arguments = ""
     task_lines = [
         f"    ccb.tasks.after({task_delay_expression}, "
-        f"{lua_quote('migrated.' + reference)}, {task_payload}, 1, {task_scope}"
+        f"{lua_quote('migrated-task.' + reference)}, {task_payload}, 1, {task_scope}"
         f"{task_actor_arguments})"
         for reference in task_references
     ]
@@ -32358,14 +32356,13 @@ def render_eoc(
         lines.extend((
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
-            "    local task_payload = context and context.payload",
-            "    if task_payload ~= nil and task_payload.__ccb_task == true then",
-            "        local task_context = { data = task_payload.data or {} }",
-            "        task_context.actors = context.participants or {}",
-            "        local task_actor = context.actor or task_context.actors.alpha",
-            f"        return {function_name}(task_context, task_actor)",
-            "    end",
             f"    return {function_name}(context, nil)",
+            "end)",
+            f"runtime.handler({lua_quote('migrated-task.' + eoc_id)}, function(context)",
+            "    local task_context = { data = context.payload or {} }",
+            "    task_context.actors = context.participants or {}",
+            "    local task_actor = context.actor or task_context.actors.alpha",
+            f"    return {function_name}(task_context, task_actor)",
             "end)",
             "",
         ))
@@ -32379,7 +32376,7 @@ def render_eoc(
         lines.extend([
             f"runtime.handler({lua_quote(recurring_handler_id)}, function(task)",
             "    local actor = services.characters.avatar()",
-            "    local context = { data = task and task.payload and task.payload.data or {} }",
+            "    local context = { data = task and task.payload or {} }",
         ])
         if deactivate_expression is not None:
             lines.extend([
@@ -32392,7 +32389,7 @@ def render_eoc(
         lines.extend([
             f"    local next_recurrence = {recurrence_expression}",
             f"    ccb.tasks.after(next_recurrence, {lua_quote(recurring_handler_id)}, "
-            "{ data = context.data }, 1, \"character\")",
+            "context.data, 1, \"character\")",
             "    return true",
             "end)",
             f"runtime.handler({lua_quote(schedule_handler_id)}, function(event)",
@@ -32404,7 +32401,7 @@ def render_eoc(
             f"    ccb.state.character.set({lua_quote(scheduled_state_key)}, true)",
             f"    local first_recurrence = {recurrence_expression}",
             f"    ccb.tasks.after(first_recurrence, {lua_quote(recurring_handler_id)}, "
-            "{ data = context.data }, 1, \"character\")",
+            "context.data, 1, \"character\")",
             "    return true",
             "end)",
             f"runtime.on(\"world_ready\", {lua_quote(schedule_handler_id)})",
