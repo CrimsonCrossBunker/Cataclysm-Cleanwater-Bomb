@@ -32614,7 +32614,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                npc_actor_proven and isinstance(effect, str) and
+                (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and
                 effect in {
                     "npc_rules_menu", "set_npc_pickup",
                 }
@@ -32622,13 +32622,18 @@ def render_eoc(
                 # These legacy effects open native NPC service surfaces.  The
                 # Platform contract exposes the same bounded services without
                 # retaining an EOC runner or raw dialogue object.
+                provider = npc_actor_expression or "actor"
                 native_call = {
-                    "npc_rules_menu": "services.npcs.open_rules(actor)",
+                    "npc_rules_menu": f"services.npcs.open_rules({provider})",
                     "set_npc_pickup": (
-                        "services.npcs.orders.open_pickup_rules(actor)"
+                        f"services.npcs.orders.open_pickup_rules({provider})"
                     ),
                 }[effect]
-                lines.append(f"    service_value({native_call})")
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f"        service_value({native_call})",
+                    "    end",
+                ])
                 converted_effect = True
             elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
