@@ -197,6 +197,7 @@ class game_handle
         std::shared_ptr<npc_handle_identity_state> npc_identity_;
         std::size_t npc_identity_generation_ = 0;
         std::optional<std::int64_t> npc_stable_id_;
+        std::optional<std::int64_t> avatar_stable_id_;
         safe_reference<basecamp> camp_;
         std::shared_ptr<camp_handle_identity_state> camp_identity_;
         std::size_t camp_identity_generation_ = 0;

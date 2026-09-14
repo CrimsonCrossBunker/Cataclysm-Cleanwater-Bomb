@@ -942,3 +942,10 @@ participants, including identity/faction/attitude retention and no handle invali
 This source has not run and does not establish successful transfer, menu cancellation,
 or post-transfer callback continuity. The menu implementation already invalidates
 handles only when the native avatar identity changes.
+
+Avatar handles now capture the native character ID and reject an in-place identity
+change with `stale_avatar_identity`, even before the enclosing control service
+invalidates the runtime handles. Fresh handles use the new character ID. This closes
+the stale-avatar window during native control-transfer hooks without changing their
+ordering. A focused in-place identity regression is present as unexecuted test source;
+full control-transfer and hook runtime acceptance remain pending.
