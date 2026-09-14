@@ -20228,6 +20228,32 @@ assert(context.actors.alpha==actor)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_explicit_array_argument_is_detached(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs({
+            "run_eocs": "step", "variables": {"argument": {"context_val": "source"}},
+        }, {"step": "step"}, actor_expression="actor", avatar_actor_proven=True)
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local null={}
+local context={data={source={null,{2}}},actors={alpha=actor}}
+local services={types={null=null}}
+local called=false
+local function step(child)
+ assert(child.data.argument~=context.data.source)
+ assert(child.data.argument[1]==null and child.data.argument[2][1]==2)
+ child.data.argument[2][1]=9
+ assert(child.data.source[2][1]==2)
+ called=true
+end
+BODY
+assert(called and context.data.source[1]==null and context.data.source[2][1]==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

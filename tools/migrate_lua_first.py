@@ -4074,9 +4074,10 @@ def render_static_run_eocs(
         rendered = variable_expression(value)
         if rendered is None:
             return None
-        prefix.append(
-            f"    child_data[{lua_quote(name)}] = {rendered}"
-        )
+        prefix.extend([
+            f"    child_data[{lua_quote(name)}] = {rendered}",
+            f"    child_data[{lua_quote(name)}] = copy_child_value(child_data[{lua_quote(name)}])",
+        ])
         if not name.startswith("_"):
             prefix.append(
                 f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
