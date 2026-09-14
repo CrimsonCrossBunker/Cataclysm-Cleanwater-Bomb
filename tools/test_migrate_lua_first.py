@@ -793,7 +793,7 @@ assert(calls==2 and partner.output==SELECTED)
         value = {"mutator": "valid_technique"}
         for alpha, beta in ((None, "partner"), ("actor", None)):
             self.assertIsNone(migrate_lua_first.render_participant_string_expression(value, "actor", alpha, beta))
-        for options in ({"blacklist": ["x"] * 257}, {"crit": 1}, {"blacklist": {}}, {"unknown": True}):
+        for options in ({"crit": 1}, {"blacklist": {}}, {"unknown": True}):
             self.assertIsNone(migrate_lua_first.render_participant_string_expression(
                 {**value, **options}, "actor", "actor", "partner"))
         self.assertIsNone(migrate_lua_first.render_static_character_string_var(
@@ -20555,7 +20555,6 @@ assert(calls==2)
         for value, beta in (
             ({"mutator": "valid_technique"}, None),
             ({"mutator": "valid_technique", "crit": "true"}, "partner"),
-            ({"mutator": "valid_technique", "blacklist": ["tec"] * 257}, "partner"),
             ({"mutator": "valid_technique", "blacklist": [12]}, "partner"),
         ):
             with self.subTest(value=value, beta=beta):
@@ -20564,6 +20563,31 @@ assert(calls==2)
                     "var": {"context_val": "entry"}, "effect": [],
                 }, True, beta is not None, {}, actor_expression="actor",
                     npc_actor_expression=beta))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_technique_large_blacklist_preserves_every_entry(self) -> None:
+        value = {"mutator": "valid_technique",
+                 "blacklist": ["tec_" + str(index) for index in range(300)]}
+        for render in (migrate_lua_first.render_participant_string,
+                       migrate_lua_first.render_participant_string_expression):
+            expression = render(value, "actor", "actor", "partner")
+            self.assertIsNotNone(expression)
+            script = r"""
+local actor,partner={},{}
+local function service_value(value) return value end
+local called=false
+local services={characters={choose_technique=function(alpha,beta,options)
+ assert(alpha==actor and beta==partner)
+ assert(#options.blacklist==300)
+ for index=1,300 do assert(options.blacklist[index]=='tec_'..(index-1)) end
+ called=true
+ return {technique={value='tec_none'}}
+end}}
+assert(EXPR=='tec_none' and called)
+""".replace("EXPR", expression)
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):

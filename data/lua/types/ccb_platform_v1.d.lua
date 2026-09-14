@@ -7423,7 +7423,7 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field critical? boolean Defaults to false.
 ---@field dodge_counter? boolean Defaults to false.
 ---@field block_counter? boolean Defaults to false.
----@field blacklist? (string|GameId)[] Up to 256 technique IDs; typed entries use martial_art_technique kind.
+---@field blacklist? (string|GameId)[] Technique IDs; typed entries use martial_art_technique kind.
 
 ---@class CcbTechniqueChoice
 ---@field found boolean Whether native selection produced a technique.

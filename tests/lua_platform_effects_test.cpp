@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "avatar.h"
@@ -562,6 +563,47 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
     REQUIRE( result["ok"].get<bool>() );
     CHECK( legacy.target( npc_target ).has_effect( bleeding, part ) );
     CHECK_FALSE( modern.target( npc_target ).has_effect( bleeding, part ) );
+}
+
+
+TEST_CASE( "lua_platform_technique_large_blacklist_matches_native",
+           "[lua][platform][semantic]" )
+{
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+    effect_fixture fixture;
+    cata::lua_platform::install_creature_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    std::vector<matec_id> blacklist( 300, matec_id( "tec_none" ) );
+    sol::table entries = fixture.lua.create_table();
+    for( std::size_t index = 0; index < blacklist.size(); ++index ) {
+        entries[index + 1] = blacklist[index].str();
+    }
+    sol::table options = fixture.lua.create_table();
+    options["blacklist"] = entries;
+    rng_set_engine_seed( 58163 );
+    const auto expected = fixture.target( false ).pick_technique(
+                              fixture.target( true ), fixture.target( false ).used_weapon(),
+                              false, false, false, blacklist );
+    rng_set_engine_seed( 58163 );
+    sol::protected_function pick = fixture.services["characters"]["choose_technique"];
+    sol::protected_function_result call = pick(
+            fixture.handle( false ), fixture.handle( true ), options );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    CHECK( value["technique"].get<cata::lua_platform::script_game_id>().value() ==
+           std::get<0>( expected ).str() );
 }
 
 #endif

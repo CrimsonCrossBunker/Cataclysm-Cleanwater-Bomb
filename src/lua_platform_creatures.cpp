@@ -2276,10 +2276,6 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
             "services.characters.choose_technique option 'blacklist' must be an array" );
     }
     const sol::table entries = value.as<sol::table>();
-    if( entries.size() > 256 ) {
-        throw std::invalid_argument(
-            "services.characters.choose_technique option 'blacklist' exceeds 256 entries" );
-    }
     std::vector<matec_id> result;
     result.reserve( entries.size() );
     for( std::size_t index = 1; index <= entries.size(); ++index ) {

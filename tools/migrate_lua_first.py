@@ -4556,7 +4556,7 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
             if flag:
                 options.append(f"{name} = true")
         blacklist = value.get("blacklist", [])
-        if not isinstance(blacklist, list) or len(blacklist) > 256:
+        if not isinstance(blacklist, list):
             return None
         entries = [render_participant_string(
             entry, target, alpha, beta) for entry in blacklist]
@@ -24945,7 +24945,7 @@ def render_participant_string_expression(
             if flag:
                 options.append(f"{name} = true")
         blacklist = value.get("blacklist", [])
-        if not isinstance(blacklist, list) or len(blacklist) > 256:
+        if not isinstance(blacklist, list):
             return None
         entries = [render_participant_string_expression(
             entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
