@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <iosfwd>
 #include <map>
+#include <memory>
+#include <vector>
 #include <streambuf>
 #include <string>
 #include <unordered_map>
@@ -29,8 +31,26 @@ struct script_null_value {
     }
 };
 
+struct script_persistent_array;
+// Immutable, owned array storage; copies never retain a Lua table or game pointer.
+class script_array_value
+{
+    public:
+        explicit script_array_value( script_persistent_array value );
+        const script_persistent_array &get() const;
+        void serialize( JsonOut &json ) const;
+        bool operator==( const script_array_value &other ) const;
+        bool operator!=( const script_array_value &other ) const;
+    private:
+        std::shared_ptr<const script_persistent_array> value_;
+};
+
 using script_persistent_value = std::variant<bool, std::int64_t, double, std::string,
-      script_null_value>;
+      script_null_value, script_array_value>;
+struct script_persistent_array {
+    std::vector<script_persistent_value> values;
+};
+
 using script_persistent_state = std::unordered_map<std::string, script_persistent_value>;
 using script_value_map = std::map<std::string, script_persistent_value>;
 

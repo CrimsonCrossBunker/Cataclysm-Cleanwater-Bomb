@@ -22,6 +22,35 @@ void script_null_value::serialize( JsonOut &json ) const
     json.write_null();
 }
 
+script_array_value::script_array_value( script_persistent_array value ) :
+    value_( std::make_shared<const script_persistent_array>( std::move( value ) ) ) {}
+
+const script_persistent_array &script_array_value::get() const
+{
+    return *value_;
+}
+
+bool script_array_value::operator==( const script_array_value &other ) const
+{
+    return get().values == other.get().values;
+}
+
+bool script_array_value::operator!=( const script_array_value &other ) const
+{
+    return !( *this == other );
+}
+
+void script_array_value::serialize( JsonOut &json ) const
+{
+    json.start_array();
+    for( const script_persistent_value &value : get().values ) {
+        json.start_object();
+        detail::write_persistent_value( json, value );
+        json.end_object();
+    }
+    json.end_array();
+}
+
 namespace
 {
 
@@ -34,6 +63,13 @@ std::size_t value_storage_size( const script_persistent_value &value )
         if constexpr( std::is_same_v<value_type, std::string> )
         {
             return entry.size();
+        } else if constexpr( std::is_same_v<value_type, script_array_value> )
+        {
+            std::size_t bytes = sizeof( entry );
+            for( const auto &child : entry.get().values ) {
+                bytes += value_storage_size( child );
+            }
+            return bytes;
         } else
         {
             return sizeof( entry );
@@ -50,13 +86,10 @@ std::size_t state_storage_size( const script_persistent_state &state )
     return result;
 }
 
-void validate_key_and_value( std::string_view key, const script_persistent_value &value )
+void validate_value( const script_persistent_value &value, const int depth, std::size_t &nodes )
 {
-    if( key.empty() ) {
-        throw std::invalid_argument( "Lua persistent state keys cannot be empty" );
-    }
-    if( key.size() > persistent_state_max_key_bytes ) {
-        throw std::invalid_argument( "Lua persistent state key exceeds 256 bytes" );
+    if( ++nodes > 512 || depth > 8 ) {
+        throw std::invalid_argument( "Lua persistent array exceeds structural limits" );
     }
     if( const std::string *string_value = std::get_if<std::string>( &value ) ) {
         if( string_value->size() > persistent_state_max_string_bytes ) {
@@ -68,6 +101,23 @@ void validate_key_and_value( std::string_view key, const script_persistent_value
             throw std::invalid_argument( "Lua persistent state numbers must be finite" );
         }
     }
+    if( const auto *array = std::get_if<script_array_value>( &value ) ) {
+        for( const auto &child : array->get().values ) {
+            validate_value( child, depth + 1, nodes );
+        }
+    }
+}
+
+void validate_key_and_value( std::string_view key, const script_persistent_value &value )
+{
+    if( key.empty() ) {
+        throw std::invalid_argument( "Lua persistent state keys cannot be empty" );
+    }
+    if( key.size() > persistent_state_max_key_bytes ) {
+        throw std::invalid_argument( "Lua persistent state key exceeds 256 bytes" );
+    }
+    std::size_t nodes = 0;
+    validate_value( value, 0, nodes );
 }
 
 void validate_state( const script_persistent_state &state )
@@ -129,6 +179,8 @@ void detail::write_persistent_value( JsonOut &json, const script_persistent_valu
             json.member( "type", "float" );
         } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
             json.member( "type", "null" );
+        } else if constexpr( std::is_same_v<value_type, script_array_value> ) {
+            json.member( "type", "array" );
         } else {
             json.member( "type", "string" );
         }
@@ -136,8 +188,12 @@ void detail::write_persistent_value( JsonOut &json, const script_persistent_valu
     }, value );
 }
 
-script_persistent_value detail::read_persistent_value( const JsonObject &entry )
+static script_persistent_value read_persistent_value_impl( const JsonObject &entry, const int depth,
+        std::size_t &nodes )
 {
+    if( depth > 8 || ++nodes > 512 ) {
+        throw std::invalid_argument( "Lua persistent array nesting exceeds 8 levels" );
+    }
     const std::string type = entry.get_string( "type" );
     script_persistent_value result;
     if( type == "null" ) {
@@ -145,6 +201,15 @@ script_persistent_value detail::read_persistent_value( const JsonObject &entry )
             throw std::invalid_argument( "Lua null state value must be null" );
         }
         result = script_null_value{};
+    } else if( type == "array" ) {
+        script_persistent_array array;
+        for( const JsonObject child : entry.get_array( "value" ) ) {
+            if( array.values.size() >= 512 ) {
+                throw std::invalid_argument( "Lua persistent array exceeds 512 elements" );
+            }
+            array.values.push_back( read_persistent_value_impl( child, depth + 1, nodes ) );
+        }
+        result = script_array_value( std::move( array ) );
     } else if( type == "boolean" ) {
         result = entry.get_bool( "value" );
     } else if( type == "integer" ) {
@@ -158,6 +223,12 @@ script_persistent_value detail::read_persistent_value( const JsonObject &entry )
     }
     entry.allow_omitted_members();
     return result;
+}
+
+script_persistent_value detail::read_persistent_value( const JsonObject &entry )
+{
+    std::size_t nodes = 0;
+    return read_persistent_value_impl( entry, 0, nodes );
 }
 
 void assign_persistent_value( script_persistent_state &state, const std::string &key,

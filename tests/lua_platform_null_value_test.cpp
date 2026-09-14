@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <sstream>
 #include <string>
@@ -61,6 +62,7 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
         assert(missing.ok and not missing.value.exists)
         assert(with_default(missing.value) == "fallback")
         data.wanted = null
+        data.array = {null, 42, {"nested", null}}
         return data
     )", sol::script_pass_on_error );
     REQUIRE( result.valid() );
@@ -85,6 +87,14 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
     const sol::table restored_table = script_value_map_to_lua( lua, restored_values );
     CHECK( restored_table.get<sol::object>( "wanted" ).is<script_null_value>() );
     CHECK( restored_table.get<sol::object>( "missing" ).get_type() == sol::type::nil );
+    const sol::table array = restored_table["array"];
+    CHECK( array.size() == 3 );
+    CHECK( array.get<sol::object>( 1 ).is<script_null_value>() );
+    CHECK( array.get<std::int64_t>( 2 ) == 42 );
+    const sol::table nested = array[3];
+    CHECK( nested.size() == 2 );
+    CHECK( nested.get<std::string>( 1 ) == "nested" );
+    CHECK( nested.get<sol::object>( 2 ).is<script_null_value>() );
 }
 
 TEST_CASE( "lua_platform_native_variable_default_presence_contract",
@@ -184,6 +194,40 @@ TEST_CASE( "lua_platform_null_storage_rejects_mismatched_types",
     const auto valid = cata::lua_platform::detail::read_persistent_value(
                            json_loader::from_string( R"({"type":"null","value":null})" ).get_object() );
     CHECK( std::holds_alternative<script_null_value>( valid ) );
+}
+
+TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
+           "[lua][platform][semantic][state]" )
+{
+    using namespace cata::lua_platform;
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    script_persistent_state state;
+    assign_persistent_value( state, "kept", std::string( "original" ) );
+    lua.set_function( "store", [&state]( const sol::object & value ) {
+        assign_persistent_value( state, "kept",
+                                 script_persistent_value_from_lua( value, "array acceptance" ) );
+    } );
+    const sol::protected_function_result result = lua.safe_script( R"(
+        local cycle = {}; cycle[1] = cycle
+        local deep = {}; local cursor = deep
+        for i=1,10 do cursor[1]={}; cursor=cursor[1] end
+        local wide = {}; for i=1,512 do wide[i]=i end
+        for _, value in ipairs({{[2]=1}, {named=1}, cycle, deep, wide,
+                                {function() end}, {0/0}, {1/0}}) do
+            assert(not pcall(store, value))
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( result.valid() );
+    CHECK( std::get<std::string>( state.at( "kept" ) ) == "original" );
+    const sol::protected_function_result valid = lua.safe_script(
+                "store({1, {2, 3}})", sol::script_pass_on_error );
+    REQUIRE( valid.valid() );
+    REQUIRE( std::holds_alternative<script_array_value>( state.at( "kept" ) ) );
+    sol::table first = script_persistent_value_to_lua( lua, state.at( "kept" ) );
+    first[1] = 99;
+    const sol::table second = script_persistent_value_to_lua( lua, state.at( "kept" ) );
+    CHECK( second.get<std::int64_t>( 1 ) == 1 );
 }
 
 #endif

@@ -188,6 +188,10 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
             const sol::table payload = context["payload"];
             CHECK( payload.get<sol::object>( "empty" ).is<platform::script_null_value>() );
             CHECK( payload.get<sol::object>( "missing" ).get_type() == sol::type::nil );
+            const sol::table array = payload["array"];
+            CHECK( array.size() == 2 );
+            CHECK( array.get<sol::object>( 1 ).is<platform::script_null_value>() );
+            CHECK( array.get<std::int64_t>( 2 ) == 42 );
             ++calls;
         } );
         const sol::protected_function_result registered = ccb["runtime"]["handler"](
@@ -201,7 +205,11 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
     platform::assign_persistent_value( before->world_state, "empty", platform::script_null_value{} );
     sol::table payload = old_lua.create_table();
     payload["empty"] = platform::script_null_value{};
-    // Generated task envelopes must respect the native scalar payload codec.
+    sol::table array = old_lua.create_table();
+    array[1] = platform::script_null_value{};
+    array[2] = std::int64_t( 42 );
+    payload["array"] = array;
+    // Named nested maps are not dense arrays and must not create a task.
     sol::table nested_payload = old_lua.create_table();
     nested_payload["__ccb_task"] = true;
     nested_payload["data"] = payload;
@@ -212,6 +220,7 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
     const sol::protected_function_result scheduled = old_lua["ccb"]["tasks"]["after"](
                 1, "tick", payload, 1, "world" );
     REQUIRE( scheduled.valid() );
+    array[2] = std::int64_t( 99 );
     std::string error;
     REQUIRE( platform::runtime_save( error ) );
     platform::clear_active_runtimes();

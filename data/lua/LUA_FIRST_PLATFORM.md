@@ -691,5 +691,17 @@ A top-level empty variable still uses `exists = true, value = nil`.
 Variable writes accept dense arrays recursively, including `services.types.null`
 slots. Array conversion uses the same depth and node bounds as snapshot reads;
 sparse arrays, named keys, cycles, and unsupported elements fail before native
-mutation. This enables native variable-array round trips, without extending the
-separate scalar-only task payload or persistent-state contracts.
+mutation. This enables native variable-array round trips. Task payloads and persistent
+state also support owned dense arrays as described below.
+
+### Persistent dense arrays
+
+Task payload fields and state values accept dense arrays of scalars, explicit
+`services.types.null`, and nested arrays. Conversion copies every element into
+immutable owned storage; reads produce fresh Lua tables. Type-tagged array
+entries preserve integers, floats, strings, booleans, and empty elements across
+save/load. Existing scalar encodings are unchanged. Each value allows at most
+512 nodes and 8 nesting levels, within the existing string and total storage
+limits. Sparse tables, named keys inside arrays, cycles, nonfinite numbers,
+functions, and live handles fail before the state or task is changed.
+Source and regression tests are present; native acceptance remains pending.

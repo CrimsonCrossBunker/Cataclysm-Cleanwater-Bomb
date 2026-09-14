@@ -12,6 +12,7 @@ extern "C" {
 #include <stdexcept>
 #include <utility>
 #include <variant>
+#include <type_traits>
 
 namespace cata::lua_platform
 {
@@ -24,10 +25,96 @@ std::size_t value_storage_size( const script_persistent_value &value )
     if( const std::string *text = std::get_if<std::string>( &value ) ) {
         return text->size();
     }
+    if( const auto *array = std::get_if<script_array_value>( &value ) ) {
+        std::size_t size = sizeof( value );
+        for( const auto &child : array->get().values ) {
+            size += value_storage_size( child );
+        }
+        return size;
+    }
     return sizeof( value );
 }
 
 } // namespace
+
+static script_persistent_value read_value( const sol::object &value, const std::string &api_name,
+        const std::size_t string_bytes, const int depth, std::size_t &nodes )
+{
+    if( ++nodes > 512 || depth > 8 ) {
+        throw std::invalid_argument( api_name + " exceeds array structural limits" );
+    }
+    if( value.is<script_null_value>() ) {
+        return script_null_value{};
+    }
+    switch( value.get_type() ) {
+        case sol::type::boolean:
+            return value.as<bool>();
+        case sol::type::number:
+            if( value.is<lua_Integer>() ) {
+                return static_cast<std::int64_t>( value.as<lua_Integer>() );
+            }
+            if( const double number = value.as<double>(); std::isfinite( number ) ) {
+                return number;
+            }
+            throw std::invalid_argument( api_name + " numbers must be finite" );
+        case sol::type::string: {
+            const std::string text = value.as<std::string>();
+            if( text.size() > string_bytes ) {
+                throw std::invalid_argument( api_name + " string size exceeds its limit" );
+            }
+            return text;
+        }
+        case sol::type::table: {
+            const sol::table table = value.as<sol::table>();
+            std::size_t count = 0;
+            for( const auto &entry : table ) {
+                if( ++count > 512 || entry.first.get_type() != sol::type::number ) {
+                    throw std::invalid_argument( api_name + " requires dense array keys" );
+                }
+                const double index = entry.first.as<double>();
+                if( index < 1 || index > 512 || std::floor( index ) != index ) {
+                    throw std::invalid_argument( api_name + " requires dense array keys" );
+                }
+            }
+            script_persistent_array array;
+            array.values.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::object child = table.raw_get<sol::object>( index );
+                array.values.push_back( read_value( child, api_name, string_bytes, depth + 1, nodes ) );
+            }
+            return script_array_value( std::move( array ) );
+        }
+        default:
+            throw std::invalid_argument( api_name + " only accepts scalar values, NullValue, or dense arrays" );
+    }
+}
+
+script_persistent_value script_persistent_value_from_lua( const sol::object &value,
+        const std::string &api_name, const std::size_t string_bytes )
+{
+    std::size_t nodes = 0;
+    return read_value( value, api_name, string_bytes, 0, nodes );
+}
+
+sol::object script_persistent_value_to_lua( sol::state_view lua,
+        const script_persistent_value &value )
+{
+    return std::visit( [lua]( const auto & entry ) -> sol::object {
+        using value_type = std::decay_t<decltype( entry )>;
+        if constexpr( std::is_same_v<value_type, script_array_value> )
+        {
+            sol::table result = lua.create_table();
+            std::size_t index = 1;
+            for( const auto &child : entry.get().values ) {
+                result[index++] = script_persistent_value_to_lua( lua, child );
+            }
+            return sol::make_object( lua, result );
+        } else
+        {
+            return sol::make_object( lua, entry );
+        }
+    }, value );
+}
 
 script_value_map read_script_value_map(
     const sol::optional<sol::table> &input, const script_value_map_limits &limits,
@@ -53,40 +140,8 @@ script_value_map read_script_value_map(
             throw std::invalid_argument( api_name + " has too many entries" );
         }
 
-        script_persistent_value value;
-        switch( value_object.get_type() ) {
-            case sol::type::boolean:
-                value = value_object.as<bool>();
-                break;
-            case sol::type::number:
-                if( value_object.is<lua_Integer>() ) {
-                    value = static_cast<std::int64_t>( value_object.as<lua_Integer>() );
-                } else {
-                    const double number = value_object.as<double>();
-                    if( !std::isfinite( number ) ) {
-                        throw std::invalid_argument( api_name + " numbers must be finite" );
-                    }
-                    value = number;
-                }
-                break;
-            case sol::type::string: {
-                const std::string text = value_object.as<std::string>();
-                if( text.size() > limits.string_bytes ) {
-                    throw std::invalid_argument( api_name + " string size exceeds its limit" );
-                }
-                value = text;
-                break;
-            }
-            case sol::type::userdata:
-                if( value_object.is<script_null_value>() ) {
-                    value = script_null_value{};
-                    break;
-                }
-                [[fallthrough]];
-            default:
-                throw std::invalid_argument(
-                    api_name + " only accepts boolean, number, string, and NullValue values" );
-        }
+        script_persistent_value value = script_persistent_value_from_lua(
+                                            value_object, api_name, limits.string_bytes );
 
         storage_size += key.size() + value_storage_size( value );
         if( storage_size > limits.storage_bytes ) {
@@ -106,9 +161,7 @@ sol::table script_value_map_to_lua( sol::state_view lua,
     for( const auto &value_entry : values ) {
         const std::string &key = value_entry.first;
         const auto &value = value_entry.second;
-        std::visit( [&result, &key]( const auto & entry ) {
-            result[key] = entry;
-        }, value );
+        result[key] = script_persistent_value_to_lua( lua, value );
     }
     return result;
 }

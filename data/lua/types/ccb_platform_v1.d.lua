@@ -6232,7 +6232,7 @@ function CcbPlatformDialogueApi.limits() end
 ---@param handler_id string
 ---@param from_version integer
 ---@param to_version integer
----@param callback fun(payload: table<string, boolean|integer|number|string|NullValue>, migration: PlatformTaskMigration): table<string, boolean|integer|number|string|NullValue>
+---@param callback fun(payload: table<string, boolean|integer|number|string|NullValue|any[]>, migration: PlatformTaskMigration): table<string, boolean|integer|number|string|NullValue|any[]>
 function CcbPlatformRuntime.migrate_task_payload(handler_id, from_version, to_version, callback) end
 
 ---@class CcbPlatformStateKeyPage
@@ -6248,12 +6248,12 @@ function CcbPlatformRuntime.migrate_task_payload(handler_id, from_version, to_ve
 local CcbPlatformStateScope = {}
 
 ---@param key string
----@param fallback? boolean|integer|number|string|NullValue
----@return boolean|integer|number|string|NullValue|nil
+---@param fallback? boolean|integer|number|string|NullValue|any[]
+---@return boolean|integer|number|string|NullValue|any[]|nil
 function CcbPlatformStateScope.get(key, fallback) end
 
 ---@param key string
----@param value boolean|integer|number|string|NullValue|nil
+---@param value boolean|integer|number|string|NullValue|any[]|nil
 function CcbPlatformStateScope.set(key, value) end
 
 ---Read-only discovery for this Mod's selected scope after world_ready.
@@ -6284,7 +6284,7 @@ function CcbPlatformStateScope.keys(after_key, requested_limit) end
 ---@field actor_vehicle_uid? integer Transient callback-only stable Vehicle uid; nil for a Character, Item, Monster, or absent actor.
 ---@field participants table<string, GameHandle> Transient callback-only exact live required participant handles keyed by role; never persisted in the payload.
 ---@field payload_version integer
----@field payload table<string, boolean|integer|number|string|NullValue> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@field payload table<string, boolean|integer|number|string|NullValue|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 
 ---@class CcbPlatformTaskParticipantDescriptor
 ---@field kind 'character'|'item'|'monster'|'vehicle' Persisted participant identity kind.
@@ -6317,7 +6317,7 @@ function CcbPlatformStateScope.keys(after_key, requested_limit) end
 ---@field payload_version integer
 ---@field handler_available boolean
 ---@field payload_current boolean
----@field payload table<string, boolean|integer|number|string|NullValue>
+---@field payload table<string, boolean|integer|number|string|NullValue|any[]>
 
 ---@class CcbPlatformTaskPage
 ---@field items CcbPlatformTaskSnapshot[]
@@ -6331,7 +6331,7 @@ local CcbPlatformTasks = {}
 
 ---@param turns integer Non-negative delay in game turns.
 ---@param handler_id string
----@param payload? table<string, boolean|integer|number|string|NullValue> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@param payload? table<string, boolean|integer|number|string|NullValue|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
 ---@param scope? 'character'|'world'
 ---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.
@@ -8387,7 +8387,7 @@ function CcbMapgenApi.register_palette(descriptor) end
 function CcbPlatformModQueries.load_order(id) end
 ---@param interval_turns integer
 ---@param handler_id string
----@param payload? table<string, boolean|integer|number|string|NullValue> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@param payload? table<string, boolean|integer|number|string|NullValue|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
 ---@param scope? 'character'|'world'
 ---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.

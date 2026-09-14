@@ -2,6 +2,8 @@
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "lua_platform_values.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -157,26 +159,7 @@ std::int64_t nonnegative_turn_difference( const std::int64_t later,
 persistent_value persistent_from_lua( const sol::object &value,
                                       const std::string &api_name )
 {
-    if( value.is<script_null_value>() ) {
-        return script_null_value{};
-    }
-    switch( value.get_type() ) {
-        case sol::type::boolean:
-            return value.as<bool>();
-        case sol::type::number:
-            if( value.is<lua_Integer>() ) {
-                return static_cast<std::int64_t>( value.as<lua_Integer>() );
-            }
-            if( const double number = value.as<double>(); std::isfinite( number ) ) {
-                return number;
-            }
-            throw std::runtime_error( api_name + " only accepts finite numbers" );
-        case sol::type::string:
-            return value.as<std::string>();
-        default:
-            throw std::runtime_error( api_name +
-                                      " only accepts boolean, number, or string values" );
-    }
+    return script_persistent_value_from_lua( value, api_name );
 }
 
 void set_persistent_value( persistent_state &store, const std::string &key,
@@ -202,9 +185,7 @@ sol::object get_persistent_value( const persistent_state &store,
         }
         return fallback.value_or( sol::make_object( lua, sol::lua_nil ) );
     }
-    return std::visit( [lua]( const auto & entry ) {
-        return sol::make_object( lua, entry );
-    }, found->second );
+    return script_persistent_value_to_lua( lua, found->second );
 }
 
 sol::table persistent_table( sol::state &lua, const persistent_state &values )
@@ -212,9 +193,7 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
         const std::string persistent_key = key;
-        std::visit( [&result, &persistent_key]( const auto & entry ) {
-            result[persistent_key] = entry;
-        }, value );
+        result[persistent_key] = script_persistent_value_to_lua( lua, value );
     }
     return result;
 }
