@@ -44,6 +44,7 @@
 #include "messages.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "options_helpers.h"
 #include "rng.h"
 #include "type_id.h"
 
@@ -1246,6 +1247,48 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     CHECK( actual->friendly == expected_friendly );
     CHECK( actual->get_effect_dur( pet_effect ) == expected_duration );
     CHECK( actual->get_effect( pet_effect ).is_permanent() == expected_permanent );
+    g->clear_zombies();
+}
+
+TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_disable",
+           "[lua][platform][spawn][semantic]" )
+{
+    const int mode = GENERATE( 0, 1, 2 ); // omitted, explicit true, explicit false
+    clear_map();
+    override_option evolution( "EVOLUTION_INVERSE_MULTIPLIER", "4.0" );
+    effect_fixture fixture;
+    cata::lua_platform::install_game_world_service_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {}, []() {
+        return true;
+    } );
+    const auto position = cata::lua_platform::script_tripoint_coord::from_native(
+                              coords::origin::abs, coords::scale::map_square,
+                              get_map().get_abs( tripoint_bub_ms( 60, 60, 0 ) ).raw() );
+    sol::protected_function spawn = fixture.services["spawns"]["monster"];
+    const cata::lua_platform::script_game_id type( "monster", "mon_test_zombie" );
+    rng_set_engine_seed( 58163 );
+    sol::protected_function_result call = mode == 0 ? spawn( type, position, 0 ) :
+                                          spawn( type, position, 0, mode == 1 );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    const auto handle = value["handle"].get<cata::lua_platform::game_handle>();
+    std::optional<cata::lua_platform::game_handle_error> error;
+    monster *actual = cata::lua_platform::resolve_exact_monster(
+                          handle, fixture.runtime, fixture.world, error );
+    REQUIRE( actual != nullptr );
+    if( mode == 2 ) {
+        REQUIRE( actual->can_upgrade() );
+        CHECK( actual->type->id == mtype_id( "mon_test_zombie" ) );
+        CHECK( actual->get_upgrade_time() == -1 );
+    } else {
+        CHECK( actual->get_upgrade_time() >= 0 );
+    }
     g->clear_zombies();
 }
 
