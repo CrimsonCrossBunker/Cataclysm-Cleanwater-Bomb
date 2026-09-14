@@ -678,3 +678,8 @@ reads select that participant, including the final target of indirect references
 An absent participant reports a missing value and does not fall back to `actor`.
 Calls without the table retain their explicit-owner behavior. This extension has
 source and regression coverage; native execution remains part of batch acceptance.
+
+`services.variables.set_resolved(context, actor, scope, key, value, participants)`
+uses the same optional participant selection for writes. Missing participants return
+`missing_actor` without writing through the fallback actor. Context nil deletion
+and explicit `services.types.null` storage keep their existing behavior.

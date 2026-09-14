@@ -10082,7 +10082,8 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 ---@param key string
 ---@param value boolean|number|string|TripointCoord|NullValue|nil
 ---@return CcbResult result `value` contains existed, before and after.
-function CcbVariablesApi.set_resolved(context, actor, scope, key, value) end
+---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
+function CcbVariablesApi.set_resolved(context, actor, scope, key, value, participants) end
 
 ---@class CcbEffectRelatedIdPage
 ---@field items GameId[] Detached related IDs.

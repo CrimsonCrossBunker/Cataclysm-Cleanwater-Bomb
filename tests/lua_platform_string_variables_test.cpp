@@ -157,7 +157,6 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             CHECK( actual.get<bool>() == predicate( context ) );
         }
     }
-    // Generated Lua resolves indirect prefixes before this single-owner API.
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
             data, target_npc ? partner_handle : player_handle,
@@ -165,6 +164,23 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     REQUIRE( write.valid() );
     sol::table write_result = write;
     REQUIRE( write_result["ok"].get<bool>() );
+    participants["alpha"] = player_handle;
+    participants["beta"] = partner_handle;
+    data["write_reference"] = target_npc ? "n_indirect_output" : "u_indirect_output";
+    const sol::protected_function_result indirect_write = set(
+                data, player_handle, "var", "write_reference", value, participants );
+    REQUIRE( indirect_write.valid() );
+    const sol::table indirect_result = indirect_write;
+    REQUIRE( indirect_result["ok"].get<bool>() );
+    const Character &indirect_target = target_npc ? static_cast<Character &>( partner ) : player;
+    CHECK( indirect_target.get_value( "indirect_output" ).str() == value );
+    participants[target_npc ? "beta" : "alpha"] = sol::nil;
+    const sol::protected_function_result absent_write = set(
+                data, player_handle, "var", "write_reference", "wrong", participants );
+    REQUIRE( absent_write.valid() );
+    const sol::table absent_result = absent_write;
+    CHECK_FALSE( absent_result["ok"].get<bool>() );
+    CHECK( indirect_target.get_value( "indirect_output" ).str() == value );
     const Character &target = target_npc ? static_cast<const Character &>( partner ) : player;
     CHECK( target.get_value( "platform_output" ).str() == target.get_value( "legacy_output" ).str() );
     sol::protected_function_result null_write = set(

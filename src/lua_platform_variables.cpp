@@ -494,7 +494,8 @@ sol::table set_resolved_variable(
     const sol::optional<game_handle> &actor, const std::string &scope,
     const std::string &key, const sol::object &requested,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const sol::optional<sol::table> &participants )
 {
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
@@ -505,7 +506,12 @@ sol::table set_resolved_variable(
         return set_global_variable( lua, key, requested );
     }
     if( scope == "u" || scope == "npc" ) {
-        if( !actor ) {
+        sol::optional<game_handle> selected_actor = actor;
+        if( participants ) {
+            selected_actor = participants->raw_get<sol::optional<game_handle>>(
+                                 scope == "npc" ? "beta" : "alpha" );
+        }
+        if( !selected_actor ) {
             sol::state_view state( lua );
             return make_game_error_result( state, {
                 "missing_actor",
@@ -513,7 +519,7 @@ sol::table set_resolved_variable(
             } );
         }
         return set_variable(
-                   lua, *actor, key, requested,
+                   lua, *selected_actor, key, requested,
                    runtime_generation, world_generation );
     }
     if( !context ) {
@@ -574,7 +580,7 @@ sol::table set_resolved_variable(
     }
     return set_resolved_variable(
                lua, context, actor, nested_scope, nested.name, requested,
-               runtime_generation, world_generation );
+               runtime_generation, world_generation, participants );
 }
 
 sol::table copy_variable(
@@ -722,12 +728,13 @@ void install_variable_api(
                                      require_write, has_active_callback](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
-    const std::string & key, const sol::object & value ) {
+            const std::string & key, const sol::object & value,
+    const sol::optional<sol::table> &participants ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_resolved" );
         return set_resolved_variable(
                    lua_state, context, actor, scope, key, value,
-                   current_runtime_generation(), current_world_generation() );
+                   current_runtime_generation(), current_world_generation(), participants );
     } );
     services["variables"] = std::move( variables );
 }
