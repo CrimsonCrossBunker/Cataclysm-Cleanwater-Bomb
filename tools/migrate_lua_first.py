@@ -4004,7 +4004,7 @@ def render_static_run_eocs(
             )
             if not name.startswith("_"):
                 prefix.append(
-                    f"    child_data[{lua_quote('_' + name)}] = {rendered}"
+                    f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
                 )
         prefix.append(
             "    local child_context = { data = child_data, conditions = context.conditions }"
@@ -4247,7 +4247,7 @@ def render_static_eoc_selector(
                 # so the typed callback preserves that established contract.
                 if not name.startswith("_"):
                     lines.append(
-                        f"        context.data[{lua_quote('_' + name)}] = {rendered_value}"
+                        f"        context.data[{lua_quote('_' + name)}] = context.data[{lua_quote(name)}]"
                     )
         lines.append(
             f"        {eoc_function_names[reference]}(context, {actor_expression or 'nil'})"

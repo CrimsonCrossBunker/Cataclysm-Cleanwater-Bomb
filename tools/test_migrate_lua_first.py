@@ -18584,11 +18584,17 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "explicit": None, "absent": {"context_val": "missing"},
                 "inherited": {"context_val": "missing"},
                 "false_value": {"context_val": "false_source"},
+                "once": {"math": ["rand(1, 100)"]},
             }}, {"child": "child"}, actor_expression="actor")
         self.assertIsNotNone(lines)
         script = r"""
 local null = setmetatable({}, {__tostring=function() return "" end})
-local services = {types={null=null}}
+local reads = 0
+local services = {types={null=null}, gameplay={math={evaluate=function()
+    reads = reads + 1
+    return {ok=true, value=reads}
+end}}}
+local function service_value(result) assert(result.ok); return result.value end
 local actor = {}
 local context = {data={inherited="old", false_source=false}}
 local calls = 0
@@ -18600,6 +18606,8 @@ local function child(next_context, next_actor)
         assert(next_context.data["_" .. key] == null, key)
     end
     assert(next_context.data.false_value == false)
+    assert(reads == 1)
+    assert(next_context.data.once == next_context.data._once)
     assert(context.data.inherited == "old")
     assert(context.data.explicit == nil)
 end
