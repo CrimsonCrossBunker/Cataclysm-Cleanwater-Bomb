@@ -23100,6 +23100,33 @@ def render_static_query_omt(
     return lines
 
 
+def render_adjacent_failure_callbacks(
+    value: Any, function_names: dict[str, str],
+) -> list[str] | None:
+    references = _validated_eoc_references(value, function_names, allow_empty=True)
+    if references is None:
+        return None
+    if not references:
+        return []
+    # run_eoc_vector copies the dialogue once, then shares it across callbacks.
+    lines = [
+        "        local function copy_data(value)",
+        "            if type(value) ~= \"table\" then return value end",
+        "            local result = {}",
+        "            for key, entry in pairs(value) do result[key] = copy_data(entry) end",
+        "            return result",
+        "        end",
+        "        local failure_context = {}",
+        "        for key, value in pairs(context) do failure_context[key] = value end",
+        "        failure_context.data = copy_data(context.data or {})",
+        "        failure_context.actors = {}",
+        "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
+    ]
+    lines.extend(f"        {function_names[reference]}(failure_context, actor)"
+                 for reference in references)
+    return lines
+
+
 def render_static_choose_adjacent_highlight(
     effect: dict[str, Any],
     key: str,
@@ -23107,6 +23134,7 @@ def render_static_choose_adjacent_highlight(
     npc_actor_proven: bool = False,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
     """Lower the avatar adjacent selector and its native candidate filter."""
     if key != "u_choose_adjacent_highlight" or not avatar_actor_proven or key not in effect:
@@ -23119,7 +23147,10 @@ def render_static_choose_adjacent_highlight(
     output = effect[key]
     if _coordinate_variable_descriptor(output) is None and _context_coordinate_expression(output) is None:
         return None
-    if effect.get("false_eocs", []) not in ([], None):
+    failure_callbacks = render_adjacent_failure_callbacks(
+        effect.get("false_eocs", []), eoc_function_names or {}
+    )
+    if failure_callbacks is None:
         return None
     message = effect.get("message", "")
     failure_message = effect.get("failure_message", "")
@@ -23193,6 +23224,9 @@ def render_static_choose_adjacent_highlight(
     if output_lines is None:
         return None
     lines.extend(output_lines)
+    if failure_callbacks:
+        lines.append("    else")
+        lines.extend(failure_callbacks)
     lines.append("    end")
     return lines
 
@@ -23204,6 +23238,7 @@ def render_static_npc_choose_adjacent_highlight(
     npc_actor_expression: str | None = None,
     avatar_actor_proven: bool = False,
     eoc_conditions: dict[str, Any] | None = None,
+    eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
     """Lower an NPC-centered adjacent selector with native condition filtering."""
     if (
@@ -23222,7 +23257,10 @@ def render_static_npc_choose_adjacent_highlight(
         _context_coordinate_expression(output_value) is None
     ):
         return None
-    if effect.get("false_eocs", []) not in ([], None):
+    failure_callbacks = render_adjacent_failure_callbacks(
+        effect.get("false_eocs", []), eoc_function_names or {}
+    )
+    if failure_callbacks is None:
         return None
     predicate = "true"
     if "condition" in effect:
@@ -23295,6 +23333,9 @@ def render_static_npc_choose_adjacent_highlight(
     if output_lines is None:
         return None
     lines.extend(output_lines)
+    if failure_callbacks:
+        lines.append("    else")
+        lines.extend(failure_callbacks)
     lines.append("    end")
     return lines
 
@@ -30392,12 +30433,12 @@ def render_eoc(
                     render_static_choose_adjacent_highlight(
                         effect, key, avatar_actor_proven,
                         npc_event_character_actor_proven,
-                        eoc_conditions, npc_actor_expression,
+                        eoc_conditions, npc_actor_expression, eoc_function_names,
                     )
                     if key == "u_choose_adjacent_highlight" else
                     render_static_npc_choose_adjacent_highlight(
                         effect, key, npc_event_character_actor_proven,
-                        npc_actor_expression, avatar_actor_proven, eoc_conditions,
+                        npc_actor_expression, avatar_actor_proven, eoc_conditions, eoc_function_names,
                     )
                 )
                 if rendered is not None:

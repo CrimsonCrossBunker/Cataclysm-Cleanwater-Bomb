@@ -20742,6 +20742,41 @@ assert(reads==1 and writes==1)
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_adjacent_failure_callbacks_share_copy_without_parent_writes(self) -> None:
+        lines = migrate_lua_first.render_adjacent_failure_callbacks(
+            ["first", "second"], {"first": "first", "second": "second"})
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={nested={1,2}},actors={alpha=actor}}
+local calls=0
+local function first(child,owner)
+ assert(owner==actor and child.actors.alpha==actor)
+ child.data.nested[1]=9;child.data.added=true;child.actors.alpha=nil;calls=calls+1
+end
+local function second(child,owner)
+ assert(calls==1 and child.data.nested[1]==9 and child.data.added and child.actors.alpha==nil)
+ calls=calls+1
+end
+BODY
+assert(calls==2 and context.data.nested[1]==1 and context.data.added==nil)
+assert(context.actors.alpha==actor)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_adjacent_failure_callbacks("missing", {}))
+        for key in ("u_choose_adjacent_highlight", "npc_choose_adjacent_highlight"):
+            effect = {key: {"context_val": "picked"}, "false_eocs": "first"}
+            renderer = (migrate_lua_first.render_static_choose_adjacent_highlight
+                        if key.startswith("u_") else
+                        migrate_lua_first.render_static_npc_choose_adjacent_highlight)
+            rendered = renderer(effect, key, True, eoc_function_names={"first": "first"})
+            self.assertIsNotNone(rendered)
+            self.assertIn("    else", rendered)
+            self.assertIn("        first(failure_context, actor)", rendered)
+
     def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
