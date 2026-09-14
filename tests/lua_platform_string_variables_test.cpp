@@ -234,6 +234,8 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
         return current == tostring(value.value or "")
     )" );
     dialogue context;
+    const bool indirect = GENERATE( false, true );
+    context.set_value( "environment_global_ref", key );
     const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };
     for( const std::string selector : {
              "is_season", "is_weather"
@@ -243,7 +245,7 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
         lua["current"] = current;
         lua["fallback"] = current;
         for( int state = 0; state < 4; ++state ) {
-            CAPTURE( selector, state );
+            CAPTURE( selector, state, indirect );
             get_globals().remove_global_value( key );
             if( state == 1 ) {
                 get_globals().set_global_value( key, current );
@@ -252,8 +254,10 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
             } else if( state == 3 ) {
                 get_globals().set_global_value( key, diag_value{} );
             }
-            const std::string condition_json = R"({")" + selector +
-                                               R"(":{"global_val":")" + key + R"(","default":")" + current + R"("}})";
+            const std::string condition_json = R"({")" + selector + R"(":{")" +
+                                               ( indirect ? "var_val" : "global_val" ) + R"(":")" +
+                                               ( indirect ? "environment_global_ref" : key ) +
+                                               R"(","default":")" + current + R"("}})";
             conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
             const sol::protected_function_result actual = query();
             REQUIRE( actual.valid() );
