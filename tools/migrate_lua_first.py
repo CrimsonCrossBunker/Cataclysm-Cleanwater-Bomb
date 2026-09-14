@@ -4022,12 +4022,6 @@ def render_static_run_eocs(
     has_delay = (
         delay_turns != 0 or delay_turns_expression not in (None, "0")
     )
-    if has_delay and variables and any(
-            isinstance(value, list) or isinstance(value, dict) and
-            isinstance(value.get("default"), list) for value in variables.values()):
-        # Native task payload persistence is scalar-only; do not emit arrays
-        # that load successfully but fail when scheduled.
-        return None
     delayed_talker_pair = has_delay and has_talker_override
     task_references = list(references)
     force_global_avatar_task = False

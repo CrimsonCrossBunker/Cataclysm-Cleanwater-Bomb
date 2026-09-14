@@ -18740,7 +18740,7 @@ end
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+        self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
             dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
 
     def test_run_eocs_array_default_only_applies_when_missing(self) -> None:
@@ -18766,8 +18766,43 @@ end
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+        self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
             dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
+
+    def test_delayed_run_eocs_copies_array_variables_and_defaults(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "time_in_future": 1, "variables": {
+                "literal": [None, 0, ["nested", None]],
+                "fallback": {"context_val": "missing", "default": [None, 7]},
+                "source": {"context_val": "original"},
+            }}, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null={}
+local services={types={null=null}}
+local actor={}
+local context={data={original={1,{2,null}}}}
+local queued=nil
+local function copy(value)
+    if value==null or type(value)~="table" then return value end
+    local result={}
+    for key,child in pairs(value) do result[key]=copy(child) end
+    return result
+end
+local ccb={tasks={after=function(turns, handler, payload, version, scope)
+    assert(turns==1 and handler=="migrated-task.child" and version==1 and scope=="world")
+    queued=copy(payload)
+end}}
+""" + "\n".join(lines) + r"""
+context.data.original[2][1]=99
+assert(queued.source[2][1]==2 and queued.source[2][2]==null)
+assert(#queued.literal==3 and queued.literal[1]==null and queued.literal[3][2]==null)
+assert(queued.fallback[1]==null and queued.fallback[2]==7)
+assert(queued._literal[3][1]=="nested")
+"""
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(
