@@ -1120,6 +1120,52 @@ TEST_CASE( "lua_platform_gratitude_matches_native_attitude_topic_and_bounds",
     CHECK( fixture.other.personality.aggression >= NPC_PERSONALITY_MIN );
 }
 
+TEST_CASE( "lua_platform_control_rejection_preserves_identity_and_handles",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    REQUIRE_FALSE( fixture.other.is_player_ally() );
+    const character_id avatar_id = fixture.player.getID();
+    const character_id npc_id = fixture.other.getID();
+    const npc_attitude attitude = fixture.other.get_attitude();
+    const faction_id faction = fixture.other.get_fac_id();
+    int invalidations = 0;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, [&]() {
+        ++invalidations;
+    } );
+    sol::protected_function take = fixture.services["npcs"]["take_control"];
+    for( const bool wrong_owner : {
+             false, true
+         } ) {
+        sol::protected_function_result call = take(
+                fixture.handle( true ), fixture.handle( wrong_owner ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE_FALSE( result["ok"].get<bool>() );
+        sol::table error = result["error"];
+        CHECK( error["code"].get<std::string>() ==
+               ( wrong_owner ? "wrong_subtype" : "not_an_ally" ) );
+    }
+    sol::protected_function menu = fixture.services["npcs"]["open_control_menu"];
+    sol::protected_function_result call = menu( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE_FALSE( result["ok"].get<bool>() );
+    sol::table error = result["error"];
+    CHECK( error["code"].get<std::string>() == "wrong_subtype" );
+    CHECK( invalidations == 0 );
+    CHECK( fixture.player.getID() == avatar_id );
+    CHECK( fixture.other.getID() == npc_id );
+    CHECK( fixture.other.get_attitude() == attitude );
+    CHECK( fixture.other.get_fac_id() == faction );
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {

@@ -936,3 +936,9 @@ no-ops. Their migration still needs participant continuity across handle invalid
 and, for direct transfer, original dialogue branching. Bare-string `clear_dimension`
 and `place_override` are also explicit gaps: their native registrations require
 object parameters. This does not affect the existing object-form world renderers.
+
+Control-service rejection test source checks non-allied targets and wrong avatar
+participants, including identity/faction/attitude retention and no handle invalidation.
+This source has not run and does not establish successful transfer, menu cancellation,
+or post-transfer callback continuity. The menu implementation already invalidates
+handles only when the native avatar identity changes.
