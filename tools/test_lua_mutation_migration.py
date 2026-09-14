@@ -250,12 +250,12 @@ end
             (
                 "data/mods/Magiclysm/Spells/druid.json",
                 "EOC_GAIN_WHISPER_LEAVES",
-                2,
+                1,
             ),
             (
                 "data/mods/Xedra_Evolved/mutations/xe_lilin_trait_eocs.json",
                 "EOC_LILIN_TEMPORARY_GLORIOUS_deactivate_future",
-                0,
+                1,
             ),
         ):
             with self.subTest(source=relative):
@@ -274,12 +274,15 @@ end
                     for todo in result.todos
                     if todo.category == "semantic_choice"
                 ]
-                self.assertGreaterEqual(len(choices), expected_choices)
+                self.assertEqual(len(choices), expected_choices)
                 if expected_choices:
                     self.assertEqual(result.converted, [])
                 report = result.files[Path("MIGRATION_REPORT.md")]
                 self.assertIn(relative, report)
                 self.assertIn(identifier, report)
+                self.assertIn("needs an explicit Platform trigger", report)
+                self.assertIn("resolve an exact Character target", report)
+                self.assertNotIn("choose mutation conflict replacement", report)
                 for method in ("grant", "remove", "set_active"):
                     self.assertNotIn(
                         "services.mutations." + method + "(",
