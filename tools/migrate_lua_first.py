@@ -4075,9 +4075,13 @@ def render_static_run_eocs(
                 prefix.append(
                     f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
                 )
-        prefix.append(
-            "    local child_context = { data = child_data, conditions = context.conditions }"
-        )
+        prefix.extend([
+            "    local child_conditions = {}",
+            "    for name, predicate in pairs(context.conditions or {}) do",
+            "        child_conditions[name] = predicate",
+            "    end",
+            "    local child_context = { data = child_data, conditions = child_conditions }",
+        ])
         context_expression = "child_context"
     iterations = effect.get("iterations")
     loop_count_expression = None

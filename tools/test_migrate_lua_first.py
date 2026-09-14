@@ -18532,7 +18532,7 @@ assert(#messages==2 and messages[2]=="after")
                 main,
             )
             self.assertIn(
-                "conditions = context.conditions", main
+                "conditions = child_conditions", main
             )
             self.assertIn(
                 "context.conditions[stored_condition_name]", main
@@ -20091,6 +20091,36 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                 self.assertIsNone(render({"condition": invalid}))
         self.assertIsNone(render({"condition": {"test_eoc": "target"}}))
         self.assertIsNone(render({"condition": {"test_eoc": "missing"}}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_variable_context_copies_named_predicates(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": ["first", "second"], "variables": {"argument": "value"}},
+            {"first": "first", "second": "second"}, actor_expression="actor",
+            avatar_actor_proven=True)
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local original=function() return true end
+local context={data={},conditions={check=original},actors={alpha=actor}}
+local services={characters={avatar=function() return actor end}}
+local calls=0
+local function first(child)
+ assert(child.conditions.check==original)
+ child.conditions.check=function() return false end
+ child.conditions.added=original
+ calls=calls+1
+end
+local function second(child)
+ assert(calls==1 and not child.conditions.check() and child.conditions.added())
+ calls=calls+1
+end
+BODY
+assert(calls==2 and context.conditions.check==original and context.conditions.added==nil)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
