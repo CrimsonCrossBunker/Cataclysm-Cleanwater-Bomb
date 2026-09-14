@@ -867,4 +867,41 @@ TEST_CASE( "lua_platform_wake_and_rule_reset_match_native_orders",
     }
 }
 
+
+TEST_CASE( "lua_platform_finish_dialogue_matches_native_topic_change",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.chatbin.first_topic = "TALK_TEST";
+    fixture.other.chatbin.first_topic = "TALK_TEST";
+    native.set_attitude( NPCATT_FOLLOW );
+    fixture.other.set_attitude( NPCATT_FOLLOW );
+    talk_function::end_conversation( native );
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+    npcs, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function finish = npcs["dialogue"]["finish"];
+    for( const bool first : {
+             true, false
+         } ) {
+        sol::protected_function_result call = finish( fixture.handle( true ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        sol::table value = result["value"];
+        CHECK( value["changed"].get<bool>() == first );
+        CHECK( value["topic_after"].get<std::string>() == "TALK_DONE" );
+        CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
+        CHECK( fixture.other.get_attitude() == native.get_attitude() );
+        CHECK( fixture.other.get_attitude() == NPCATT_FOLLOW );
+    }
+}
+
 #endif

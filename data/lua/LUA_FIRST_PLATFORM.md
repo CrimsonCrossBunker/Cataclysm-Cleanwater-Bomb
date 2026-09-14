@@ -875,3 +875,10 @@ and destination behavior instead of skipping the command or only changing
 attitude. Generated Lua routing tests pass; wake/rule-reset native comparison
 test source is present but unexecuted. Mounted and pathfinding outcomes still
 require native acceptance.
+
+Migrated NPC conversation ending calls `npcs.dialogue.finish`, preserving
+the native first-topic change to `TALK_DONE` without exiting the Lua callback.
+Stat reveal and combat-style selection open their native NPC interfaces.
+Generated Lua tests cover the three operations in sequence; native topic-state
+comparison source is present but unexecuted, and the two menus await interactive
+acceptance. Missing NPC provenance remains a migration gap.

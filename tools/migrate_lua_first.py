@@ -30707,8 +30707,8 @@ def render_eoc(
             elif npc_actor_proven and effect == "stranger_neutral":
                 lines.append('    services.npcs.set_attitude(actor, "null")')
                 converted_effect = True
-            elif effect == "end_conversation":
-                # Deliberate no-op.
+            elif npc_actor_proven and effect == "end_conversation":
+                lines.append(f"    service_value(services.npcs.dialogue.finish({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -30758,7 +30758,10 @@ def render_eoc(
                     f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "reveal_stats":
-                # Native presentation conversion remains pending.
+                lines.append(f"    service_value(services.npcs.orders.open_character_sheet({npc_actor_expression or 'actor'}))")
+                converted_effect = True
+            elif npc_actor_proven and effect == "pick_style":
+                lines.append(f"    service_value(services.npcs.orders.choose_combat_style({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
                 lines.append('    services.npcs.set_attitude(actor, "kill")')
@@ -31081,7 +31084,7 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
                 "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
-                "pick_style", "take_control",
+                "take_control",
                 "clear_dimension",
                 "place_override",
             }:

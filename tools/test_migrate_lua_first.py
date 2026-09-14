@@ -21210,6 +21210,47 @@ end
         self.assertNotIn("services.npcs.orders.run", main)
         self.assertTrue(missing.todos)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_dialogue_finish_and_presentation_are_executed(self) -> None:
+        effects = ["end_conversation", "reveal_stats", "pick_style"]
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "presentation",
+                                   "required_event": "npc_becomes_hostile", "effect": effects}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc={topic='TALK_TEST'}
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={
+ dialogue={finish=function(target)
+  assert(target==npc);target.topic='TALK_DONE';calls[#calls+1]='finish'
+  return {ok=true,value={}}
+ end},
+ orders={
+  open_character_sheet=function(target)
+   assert(target==npc and target.topic=='TALK_DONE');calls[#calls+1]='sheet'
+   return {ok=true,value={}}
+  end,
+  choose_combat_style=function(target)
+   assert(target==npc);calls[#calls+1]='style';return {ok=true,value={}}
+  end
+ }
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.presentation({actors={npc=npc}},nil)
+assert(table.concat(calls,',')=='finish,sheet,style')
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        missing = migrate_lua_first.MigrationResult()
+        migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing",
+                                   "required_event": "game_start", "effect": effects}), missing)
+        self.assertTrue(missing.todos)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
