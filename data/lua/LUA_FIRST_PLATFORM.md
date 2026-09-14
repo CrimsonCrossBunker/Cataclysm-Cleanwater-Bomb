@@ -977,3 +977,9 @@ The earlier class/faction branch that rejected dynamic values has been consolida
 Generated Lua tests mutate a context variable between operations to verify live lookup,
 participant overrides and failure propagation. Full native parameter/participant
 coverage remains unverified; unsupported expressions retain explicit migration gaps.
+
+NPC radio-representative migration now calls `set_radio_representative` with the
+resolved NPC and current avatar owner, matching the native global-owner choice.
+Generated Lua checks participant overrides, owner identity and failure propagation.
+Unexecuted native test source checks representative marking, repeated registration
+and retention of other representatives. Full native dialogue/owner acceptance is pending.

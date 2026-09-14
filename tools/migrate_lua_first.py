@@ -29907,18 +29907,12 @@ def render_eoc(
                 # Avatar target has no NPC talker (d.actor(false)->get_npc() is null),
                 # so this effect is a deliberate no-op under npc_becomes_hostile.
                 converted_effect = True
-            elif effect == "npc_make_radio_representative":
+            elif npc_actor_proven and effect == "npc_make_radio_representative":
                 lines.append(
-                    "    -- TODO: translate NPC radio representation only with "
-                    "an explicit avatar participant handle."
+                    f"    service_value(services.npcs.set_radio_representative({npc_actor_expression or 'actor'}, "
+                    "services.characters.avatar(), true))"
                 )
-                result.add_todo(
-                    "semantic_choice",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "requires an explicit avatar participant handle for NPC "
-                    "radio representation"
-                )
-                all_effects_converted = False
+                converted_effect = True
             elif npc_actor_proven and effect == "npc_thankful":
                 lines.append(f"    service_value(services.npcs.make_thankful({npc_actor_expression or 'actor'}))")
                 converted_effect = True
@@ -29952,18 +29946,6 @@ def render_eoc(
                         f"{key} needs a supported string expression and explicit participants"
                     )
                     all_effects_converted = False
-            elif effect == "npc_make_radio_representative":
-                lines.append(
-                    "    -- TODO: translate NPC radio representation only with "
-                    "an explicit avatar participant handle."
-                )
-                result.add_todo(
-                    "semantic_choice",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "requires an explicit avatar participant handle for NPC "
-                    "radio representation"
-                )
-                all_effects_converted = False
             elif (
                 npc_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and

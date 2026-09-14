@@ -11422,7 +11422,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("exact NPC/avatar handles and topic", report)
             self.assertNotIn("needs domain-service conversion", report)
 
-    def test_npc_radio_representation_requires_an_explicit_avatar_handle(self) -> None:
+    def test_npc_radio_representation_supplies_native_avatar_owner(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11442,14 +11442,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertTrue(result.partial)
-            self.assertNotIn("services.npcs.set_radio_representative(", main)
-            self.assertNotIn("services.characters.avatar()", main)
-            self.assertIn("explicit avatar participant handle", main)
+            self.assertFalse(result.partial)
             self.assertIn(
-                "requires an explicit avatar participant handle for NPC radio representation",
-                report,
-            )
+                "services.npcs.set_radio_representative(actor, services.characters.avatar(), true)", main)
+
 
     def test_character_event_does_not_prove_an_avatar_participant(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13789,7 +13785,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("services.effects.remove(", main)
             self.assertIn("services.npcs.set_class(", main)
             self.assertIn("services.npcs.set_faction(", main)
-            self.assertNotIn("services.npcs.set_radio_representative(", main)
+            self.assertIn("services.npcs.set_radio_representative(", main)
             self.assertIn(
                 "needs domain-service conversion",
                 result.files[Path("MIGRATION_REPORT.md")],
@@ -21593,6 +21589,39 @@ for _,target in ipairs({npc,override}) do
   fail=reject;calls=0;context={actors={npc=npc},data={value='NC_TEST'}}
   local ok=pcall(migrated_eoc_functions.strings,context,target)
   assert(ok==not fail);assert(calls==(fail and 1 or 3))
+ end
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_radio_representative_routes_owner_and_propagates_failure(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "radio",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["npc_make_radio_representative"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override,avatar={},{},{}
+local expected,fail,calls
+local function service_value(result) assert(result.ok);return result.value end
+local services={characters={avatar=function() return avatar end},npcs={
+ set_radio_representative=function(target,owner,enabled)
+  assert(target==expected and owner==avatar and enabled==true)
+  calls=calls+1;return {ok=not fail,value={changed=false}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target
+ for _,reject in ipairs({false,true}) do
+  fail=reject;calls=0
+  assert(pcall(migrated_eoc_functions.radio,{actors={npc=npc}},target)==not fail)
+  assert(calls==1)
  end
 end
 """.replace("BODY", rendered)

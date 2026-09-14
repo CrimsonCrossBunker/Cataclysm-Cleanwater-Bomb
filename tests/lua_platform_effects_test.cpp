@@ -1331,6 +1331,35 @@ TEST_CASE( "lua_platform_refusal_cooldowns_match_native_repeated_requests",
     }
 }
 
+TEST_CASE( "lua_platform_radio_registration_retains_other_representatives",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.other.faction_representative = false;
+    const character_id existing( 9991 );
+    fixture.player.faction_representatives.insert( existing );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function register_rep = fixture.services["npcs"]["set_radio_representative"];
+    for( int repetition = 0; repetition < 2; ++repetition ) {
+        sol::protected_function_result call = register_rep(
+                fixture.handle( true ), fixture.handle( false ), true );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        sol::table value = result["value"];
+        CHECK( value["changed"].get<bool>() == ( repetition == 0 ) );
+        CHECK( fixture.other.faction_representative );
+        CHECK( fixture.player.faction_representatives.count( existing ) == 1 );
+        CHECK( fixture.player.faction_representatives.count( fixture.other.getID() ) == 1 );
+        CHECK( fixture.player.faction_representatives.size() == 2 );
+    }
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {
