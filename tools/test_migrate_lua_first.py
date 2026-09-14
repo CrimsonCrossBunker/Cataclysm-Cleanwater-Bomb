@@ -9986,7 +9986,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.npcs.set_attitude(actor, "talk")', main)
+            self.assertIn("services.npcs.request_talk(actor)", main)
             self.assertIn('services.npcs.become_hostile(actor)', main)
             self.assertIn('services.npcs.start_fleeing(actor)', main)
             self.assertNotIn("needs review", report)
@@ -21347,7 +21347,7 @@ assert(table.concat(calls,',')=='leave,temporary')
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "confrontation",
                                    "required_event": "npc_becomes_hostile",
                                    "effect": ["hostile", "flee", "player_leaving",
-                                              "start_mugging", "remove_stolen_status", "npc_thankful"]}),
+                                              "start_mugging", "remove_stolen_status", "npc_thankful", "npc_wants_to_talk"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
@@ -21355,7 +21355,7 @@ local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={}}
 local operations={'become_hostile','start_fleeing','warn_player_departure',
-                  'start_mugging','clear_stolen_item_claim','make_thankful'}
+                  'start_mugging','clear_stolen_item_claim','make_thankful','request_talk'}
 for _,operation in ipairs(operations) do
  services.npcs[operation]=function(target)
   assert(target==expected);calls[#calls+1]=operation

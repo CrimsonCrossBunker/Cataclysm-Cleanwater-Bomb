@@ -983,3 +983,9 @@ resolved NPC and current avatar owner, matching the native global-owner choice.
 Generated Lua checks participant overrides, owner identity and failure propagation.
 Unexecuted native test source checks representative marking, repeated registration
 and retention of other representatives. Full native dialogue/owner acceptance is pending.
+
+`npcs.request_talk` retains the native wants-to-talk notification: only on an actual
+attitude transition and only when the NPC sees the avatar. NPC wants-to-talk migration
+uses this service and checks its result. Generated routing/error tests pass; repeated
+request silence has unexecuted C++ coverage, and visible/hidden native comparison
+remains pending. Generic attitude writes keep their existing behavior.

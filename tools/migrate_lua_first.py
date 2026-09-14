@@ -29901,7 +29901,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif npc_actor_proven and effect == "npc_wants_to_talk":
-                lines.append('    services.npcs.set_attitude(actor, "talk")')
+                lines.append(f"    service_value(services.npcs.request_talk({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "u_wants_to_talk":
                 # Avatar target has no NPC talker (d.actor(false)->get_npc() is null),

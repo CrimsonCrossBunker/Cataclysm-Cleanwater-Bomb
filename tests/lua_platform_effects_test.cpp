@@ -1360,6 +1360,32 @@ TEST_CASE( "lua_platform_radio_registration_retains_other_representatives",
     }
 }
 
+TEST_CASE( "lua_platform_request_talk_repeated_request_has_no_notification",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.other.set_attitude( NPCATT_TALK );
+    fixture.other.chatbin.first_topic = "TALK_TEST";
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    Messages::clear_messages();
+    sol::protected_function request = fixture.services["npcs"]["request_talk"];
+    sol::protected_function_result call = request( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    CHECK_FALSE( value["changed"].get<bool>() );
+    CHECK( fixture.other.get_attitude() == NPCATT_TALK );
+    CHECK( fixture.other.chatbin.first_topic == "TALK_TEST" );
+    CHECK( Messages::recent_messages( 10 ).empty() );
+    Messages::clear_messages();
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {

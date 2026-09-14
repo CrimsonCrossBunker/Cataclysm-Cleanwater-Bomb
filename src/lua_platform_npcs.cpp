@@ -1896,6 +1896,29 @@ sol::table set_npc_guarding(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table request_npc_talk(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc( handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool changed = entry->get_attitude() != NPCATT_TALK;
+    if( changed ) {
+        if( entry->sees( get_map(), get_player_character() ) ) {
+            add_msg( _( "%s wants to talk to you." ), entry->get_name() );
+        }
+        entry->set_attitude( NPCATT_TALK );
+    }
+    sol::table value = state.create_table();
+    value["changed"] = changed;
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table make_npc_hostile(
     sol::this_state lua, const game_handle &handle,
     const game_handle_runtime &runtime_generation,
@@ -2993,6 +3016,14 @@ void install_npc_api(
         return set_npc_guarding(
                    lua_state, handle, enabled,
                    current_runtime_generation(), current_world_generation() );
+    } );
+    npcs.set_function(
+        "request_talk",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_write();
+        return request_npc_talk( lua_state, handle,
+                                 current_runtime_generation(), current_world_generation() );
     } );
     npcs.set_function(
         "become_hostile",

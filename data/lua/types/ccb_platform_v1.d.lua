@@ -9548,6 +9548,11 @@ function CcbNpcsApi.leave_player(handle, avatar) end
 ---@param enabled boolean
 function CcbNpcsApi.set_guarding(handle, enabled) end
 function CcbNpcsApi.become_hostile(handle) end
+
+---@param handle GameHandle Exact NPC.
+---@return CcbResult result Value.changed is false when already talking. Otherwise sets talk attitude and emits the native notification only when the NPC sees the avatar.
+function CcbNpcsApi.request_talk(handle) end
+
 function CcbNpcsApi.warn_player_departure(handle) end
 function CcbNpcsApi.clear_stolen_item_claim(handle) end
 ---@param handle GameHandle Exact NPC handle.

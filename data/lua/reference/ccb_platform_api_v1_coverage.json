@@ -1086,7 +1086,7 @@
   "platform_sync": {
     "contract_export_roots_missing_from_inventory": [],
     "luals_class_count": 712,
-    "luals_function_count": 1288,
+    "luals_function_count": 1289,
     "native_export_root_count": 180,
     "native_export_roots_declared": 180,
     "native_export_roots_in_public_contract": 180,
