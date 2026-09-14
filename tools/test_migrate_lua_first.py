@@ -5668,8 +5668,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 5)
-            self.assertEqual(len(result.partial), 7)
+            self.assertEqual(len(result.converted), 10)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 'services.variables.remove(actor, "quest_var")', main
             )
@@ -5698,8 +5698,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "EOC dynamic_trait_effect effect #0 needs domain-service conversion",
                 report,
             )
-            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 5)
-            self.assertIn("choose mutation activation semantics", report)
+            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 0)
+            self.assertNotIn("choose mutation activation semantics", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_literal_u_has_profession_with_proven_avatar(self) -> None:
@@ -18803,6 +18803,34 @@ assert(queued._literal[3][1]=="nested")
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_mutation_activation_routes_participant_and_action(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for operation in ("activate_trait", "deactivate_trait"):
+                effect = {prefix + operation: {"npc_val": "mutation"}}
+                lines = migrate_lua_first.render_mutation_activation(effect, "actor", "partner")
+                self.assertIsNotNone(lines)
+                self.assertIsNotNone(migrate_lua_first.render_static_false_effect(
+                    effect, True, True, {}, npc_actor_expression="partner"))
+                script = r"""
+local actor,partner={},{}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok); return r.value end
+local services={types={id=function(kind,value) assert(kind=="mutation"); return value end},
+variables={resolve=function(data,owner,scope,key)
+    assert(owner==partner and scope=="npc" and key=="mutation")
+    return {ok=true,value={exists=true,value="QUICK"}}
+end}, mutations={invoke_activation=function(owner,id,active)
+    assert(owner==TARGET and id=="QUICK" and active==ACTIVE)
+    calls=calls+1; return {ok=true,value={}}
+end}}
+""".replace("TARGET", "actor" if prefix == "u_" else "partner").replace(
+                    "ACTIVE", "true" if operation == "activate_trait" else "false")
+                script += "\n" + "\n".join(lines) + "\nassert(calls==1)"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(

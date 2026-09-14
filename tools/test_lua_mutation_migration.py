@@ -190,8 +190,6 @@ end
             for operation in (
                 "add_trait",
                 "lose_trait",
-                "activate_trait",
-                "deactivate_trait",
             ):
                 for trait in ("VULNERABLECHILL", {"context_val": "mutation"}):
                     with self.subTest(
@@ -226,8 +224,6 @@ end
             for operation in (
                 "add_trait",
                 "lose_trait",
-                "activate_trait",
-                "deactivate_trait",
             ):
                 with self.subTest(prefix=prefix, operation=operation):
                     result = self.migrate_effect(
@@ -264,7 +260,7 @@ end
             (
                 "data/mods/Xedra_Evolved/mutations/xe_lilin_trait_eocs.json",
                 "EOC_LILIN_TEMPORARY_GLORIOUS_deactivate_future",
-                2,
+                1,
             ),
         ):
             with self.subTest(source=relative):

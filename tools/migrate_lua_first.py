@@ -4502,6 +4502,31 @@ def render_static_spawn_item_effect(
     ]
 
 
+def render_mutation_activation(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
+    if not isinstance(effect, dict) or len(effect) != 1:
+        return None
+    key, value = next(iter(effect.items()))
+    if key not in {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait"}:
+        return None
+    target = beta if key.startswith("npc_") else alpha
+    if target is None:
+        return None
+    source = target
+    if isinstance(value, dict):
+        if "u_val" in value:
+            source = alpha
+        elif "npc_val" in value:
+            source = beta
+    if source is None:
+        return None
+    mutation = render_eoc_string_expression(value, source)
+    if mutation is None:
+        return None
+    active = key.endswith("_activate_trait")
+    return ["    service_value(services.mutations.invoke_activation(",
+            f'        {target}, services.types.id("mutation", {mutation}), {lua_boolean(active)}))']
+
+
 def mutation_semantic_choice(effect: Any) -> str | None:
     """Do not mistake a domain operation for identical legacy side effects."""
     if not isinstance(effect, dict):
@@ -4517,12 +4542,6 @@ def mutation_semantic_choice(effect: Any) -> str | None:
             return (
                 "choose mutation removal and event policy: legacy unset_mutation and "
                 "mutations.remove differ in base-trait bookkeeping, absent traits and events"
-            )
-        if any(prefix + name in effect for name in ("activate_trait", "deactivate_trait")):
-            return (
-                "choose mutation activation semantics: repeated legacy activation or "
-                "deactivation can consume resources, transform or run callbacks, while "
-                "mutations.set_active skips an already-satisfied state"
             )
     return None
 
@@ -4681,6 +4700,11 @@ def render_static_false_effect(
     """
     if mutation_semantic_choice(effect) is not None:
         return None
+    activation = render_mutation_activation(
+        effect, "actor" if avatar_actor_proven else None,
+        npc_actor_expression or ("actor" if npc_actor_proven else None))
+    if activation is not None:
+        return activation
     if effect == "nothing":
         return []
     if effect == "u_cancel_activity" and avatar_actor_proven:
@@ -28236,7 +28260,12 @@ def render_eoc(
     if isinstance(effects, list):
         for effect_index, effect in enumerate(effects):
             semantic_choice = mutation_semantic_choice(effect)
-            if semantic_choice is not None:
+            activation = render_mutation_activation(
+                effect, "actor" if avatar_actor_proven else None, npc_actor_expression)
+            if activation is not None:
+                lines.extend(activation)
+                converted_effect = True
+            elif semantic_choice is not None:
                 lines.append(f"    -- TODO: {semantic_choice}.")
                 result.add_todo(
                     "semantic_choice",
