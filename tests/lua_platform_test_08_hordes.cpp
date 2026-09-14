@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "mongroup.h"
 
 TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
            "[lua][platform][hordes][contract]" )
@@ -8,7 +9,7 @@ TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
     sol::table services = lua.create_table();
     cata::lua_platform::install_horde_api(
         services,
-        []() {
+    []() {
         return cata::lua_platform::game_handle_runtime();
     },
     []() {
@@ -50,7 +51,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
         runtime_owner, 1 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -59,7 +60,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_ms &position ) {
+    const auto make_position = []( const tripoint_abs_ms & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
                    position.raw() );
@@ -101,12 +102,12 @@ TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
     const sol::table after = alert_value["after"].get<sol::table>();
     REQUIRE( before.valid() );
     REQUIRE( after.valid() );
-    CHECK( before["destination"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( before["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            original_destination );
     CHECK( before["tracking_intensity"].get<int>() == original_intensity );
-    CHECK( after["destination"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( after["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            new_destination );
     CHECK( after["tracking_intensity"].get<int>() == new_intensity );
     CHECK( after["token"].get<sol::userdata>()
@@ -128,7 +129,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_invalid_intensity_is_unchanged",
         runtime_owner, 1 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -137,7 +138,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_invalid_intensity_is_unchanged",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_ms &position ) {
+    const auto make_position = []( const tripoint_abs_ms & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
                    position.raw() );
@@ -184,8 +185,8 @@ TEST_CASE( "lua_platform_hordes_alert_entity_invalid_intensity_is_unchanged",
     CHECK( committed_value["status"].get<std::string>() == "committed" );
     const sol::table before = committed_value["before"].get<sol::table>();
     REQUIRE( before.valid() );
-    CHECK( before["destination"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( before["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            original_destination );
     CHECK( before["tracking_intensity"].get<int>() == original_intensity );
 }
@@ -201,7 +202,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
         runtime_owner, 1 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -210,7 +211,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_sm &position ) {
+    const auto make_position = []( const tripoint_abs_sm & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::submap,
                    position.raw() );
@@ -231,7 +232,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
 
     sol::table spawn_options = lua.create_table();
     spawn_options["group"] = cata::lua_platform::script_game_id(
-                                  "monster_group", "GROUP_ZOMBIE" );
+                                 "monster_group", "GROUP_ZOMBIE" );
     spawn_options["position"] = make_position( group_position );
     spawn_options["population"] = 111;
     spawn_options["interest"] = 27;
@@ -284,11 +285,11 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
     CHECK_FALSE( before["dying"].get<bool>() );
     CHECK( before["horde"].get<bool>() );
     CHECK( before["behavior"].get<std::string>() == "roam" );
-    CHECK( before["target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( before["target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( original_target_position ) );
-    CHECK( before["nemesis_target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( before["nemesis_target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( original_nemesis_target_position ) );
 
     CHECK( after["population"].get<unsigned int>() == 456U );
@@ -296,11 +297,11 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
     CHECK( after["dying"].get<bool>() );
     CHECK_FALSE( after["horde"].get<bool>() );
     CHECK( after["behavior"].get<std::string>() == "nemesis" );
-    CHECK( after["target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( after["target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( updated_target_position ) );
-    CHECK( after["nemesis_target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( after["nemesis_target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( updated_nemesis_target_position ) );
 }
 
@@ -315,7 +316,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_invalid_target_is_unchanged"
         runtime_owner, 1 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -324,7 +325,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_invalid_target_is_unchanged"
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_sm &position ) {
+    const auto make_position = []( const tripoint_abs_sm & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::submap,
                    position.raw() );
@@ -342,7 +343,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_invalid_target_is_unchanged"
 
     sol::table spawn_options = lua.create_table();
     spawn_options["group"] = cata::lua_platform::script_game_id(
-                                  "monster_group", "GROUP_ZOMBIE" );
+                                 "monster_group", "GROUP_ZOMBIE" );
     spawn_options["position"] = make_position( group_position );
     spawn_options["population"] = 222;
     spawn_options["interest"] = 36;
@@ -395,11 +396,11 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_invalid_target_is_unchanged"
     CHECK_FALSE( after["dying"].get<bool>() );
     CHECK( after["horde"].get<bool>() );
     CHECK( after["behavior"].get<std::string>() == "roam" );
-    CHECK( after["target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( after["target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( original_target_position ) );
-    CHECK( after["nemesis_target"].get<
-               cata::lua_platform::script_tripoint_coord>() ==
+    CHECK( after["nemesis_target"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
            make_position( original_nemesis_target_position ) );
 }
 
@@ -416,7 +417,7 @@ TEST_CASE( "lua_platform_hordes_tokens_bind_identity_and_context",
     std::size_t current_world_generation = 9;
     cata::lua_platform::install_horde_api(
         services,
-        [&current_runtime]() {
+    [&current_runtime]() {
         return current_runtime;
     },
     [&current_world_generation]() {
@@ -425,7 +426,7 @@ TEST_CASE( "lua_platform_hordes_tokens_bind_identity_and_context",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_ms &position ) {
+    const auto make_position = []( const tripoint_abs_ms & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
                    position.raw() );
@@ -536,7 +537,7 @@ TEST_CASE( "lua_platform_hordes_entity_pages_are_stable_and_bounded",
         runtime_owner, 42 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -545,12 +546,12 @@ TEST_CASE( "lua_platform_hordes_entity_pages_are_stable_and_bounded",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_map_position = []( const tripoint_abs_ms &position ) {
+    const auto make_map_position = []( const tripoint_abs_ms & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
                    position.raw() );
     };
-    const auto make_omt_position = []( const tripoint_abs_omt &position ) {
+    const auto make_omt_position = []( const tripoint_abs_omt & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::overmap_terrain,
                    position.raw() );
@@ -620,7 +621,7 @@ TEST_CASE( "lua_platform_hordes_remove_legacy_group_is_single_commit",
         runtime_owner, 43 );
     cata::lua_platform::install_horde_api(
         services,
-        [active_runtime]() {
+    [active_runtime]() {
         return active_runtime;
     },
     []() {
@@ -629,7 +630,7 @@ TEST_CASE( "lua_platform_hordes_remove_legacy_group_is_single_commit",
     []() {}, []() {} );
 
     const sol::table hordes = services["hordes"];
-    const auto make_position = []( const tripoint_abs_sm &position ) {
+    const auto make_position = []( const tripoint_abs_sm & position ) {
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::submap,
                    position.raw() );
@@ -637,7 +638,7 @@ TEST_CASE( "lua_platform_hordes_remove_legacy_group_is_single_commit",
     const tripoint_abs_sm position = get_map().get_abs_sub();
     sol::table options = lua.create_table();
     options["group"] = cata::lua_platform::script_game_id(
-                             "monster_group", "GROUP_ZOMBIE" );
+                           "monster_group", "GROUP_ZOMBIE" );
     options["position"] = make_position( position );
     options["population"] = 73;
     options["horde"] = true;
@@ -693,6 +694,77 @@ TEST_CASE( "lua_platform_hordes_remove_legacy_group_is_single_commit",
         hordes["remove_legacy_group"]( replacement_token );
     REQUIRE( replacement_remove.valid() );
     REQUIRE( replacement_remove.get<sol::table>()["ok"].get<bool>() );
+}
+
+TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    cata::lua_platform::install_horde_api( services, []() {
+        return cata::lua_platform::game_handle_runtime();
+    }, []() {
+        return std::size_t{ 1 };
+    }, []() {}, []() {} );
+    const mongroup_id group( "GROUP_ZOMBIE" );
+    REQUIRE( group.is_valid() );
+    const auto native = MonsterGroupManager::GetMonstersFromGroup( group, true );
+    REQUIRE_FALSE( native.empty() );
+    sol::protected_function monsters = services["hordes"]["monsters"];
+    for( std::size_t offset = 0; offset < native.size(); offset += 7 ) {
+        sol::table options = lua.create_table();
+        options["order"] = "native";
+        options["offset"] = offset;
+        options["limit"] = 7;
+        sol::protected_function_result call = monsters(
+                cata::lua_platform::script_game_id( "monster_group", group.str() ), true, options );
+        REQUIRE( call.valid() );
+        sol::table page = call;
+        CHECK( page["total"].get<std::size_t>() == native.size() );
+        sol::table items = page["items"];
+        REQUIRE( items.size() == std::min<std::size_t>( 7, native.size() - offset ) );
+        for( std::size_t index = 1; index <= items.size(); ++index ) {
+            CHECK( items[index].get<cata::lua_platform::script_game_id>().value() == native[offset + index -
+                    1].str() );
+        }
+    }
+    std::vector<std::string> sorted;
+    for( const mtype_id &entry : native ) {
+        sorted.push_back( entry.str() );
+    }
+    std::sort( sorted.begin(), sorted.end() );
+    sorted.erase( std::unique( sorted.begin(), sorted.end() ), sorted.end() );
+    for( const bool explicit_order : {
+             false, true
+         } ) {
+        for( std::size_t offset = 0; offset < sorted.size(); offset += 7 ) {
+            sol::table options = lua.create_table();
+            if( explicit_order ) {
+                options["order"] = "id";
+            }
+            options["offset"] = offset;
+            options["limit"] = 7;
+            sol::protected_function_result call = monsters(
+                    cata::lua_platform::script_game_id( "monster_group", group.str() ), true, options );
+            REQUIRE( call.valid() );
+            sol::table page = call;
+            CHECK( page["total"].get<std::size_t>() == sorted.size() );
+            sol::table items = page["items"];
+            REQUIRE( items.size() == std::min<std::size_t>( 7, sorted.size() - offset ) );
+            for( std::size_t index = 1; index <= items.size(); ++index ) {
+                CHECK( items[index].get<cata::lua_platform::script_game_id>().value() == sorted[offset + index -
+                        1] );
+            }
+        }
+    }
+    sol::table invalid = lua.create_table();
+    invalid["order"] = "invalid";
+    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", group.str() ), true,
+                           invalid ).valid() );
+    invalid["order"] = true;
+    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", group.str() ), true,
+                           invalid ).valid() );
+
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

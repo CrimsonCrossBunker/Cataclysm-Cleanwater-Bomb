@@ -754,3 +754,9 @@ separate catalog cache, invalidated together on language changes. Native order
 means the registry's enumeration order, not a stable order across different data
 loads. Filtering retains that order and pagination is applied afterward. Migrated
 body-part and JSON-flag traversal requests it. Native test execution is still due.
+
+`services.hordes.monsters(group, recursive, {order = "native"})` preserves the
+native group traversal sequence, including repeated monster occurrences. Default
+`order = "id"` keeps the sorted, unique list. Pagination in native mode counts
+occurrences, and migrated monster-group iteration requests this mode. Native
+comparison test source is present; execution remains due at batch acceptance.

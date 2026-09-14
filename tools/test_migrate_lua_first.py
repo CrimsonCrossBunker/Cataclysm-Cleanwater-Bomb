@@ -10174,7 +10174,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 'services.hordes.monsters(services.types.id("monster_group", '
                 '"GROUP_ANIMALPOUND_DOGS"), true, '
-                '{ offset = foreach_offset, limit = 256 })',
+                '{ offset = foreach_offset, limit = 256, order = "native" })',
                 main,
             )
 
@@ -20497,6 +20497,31 @@ end},message=function()
 end}
 BODY
 assert(pages==2 and calls==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_monster_group_keeps_duplicate_occurrences(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "monstergroup", "target": "GROUP_ZOMBIE",
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local context={data={}}
+local pages,calls=0,0
+local services={types={id=function(kind,value) return value end},hordes={monsters=function(group,recursive,options)
+ assert(group=='GROUP_ZOMBIE' and recursive and options.order=='native' and calls==0)
+ assert(options.offset==pages)
+ pages=pages+1
+ return {items={{value=({'zombie','ant','zombie'})[pages]}},returned=1,has_more=pages<3}
+end},message=function()
+ calls=calls+1;assert(pages==3 and context.data.entry==({'zombie','ant','zombie'})[calls])
+end}
+BODY
+assert(calls==3 and context.data.entry=='zombie')
 """.replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

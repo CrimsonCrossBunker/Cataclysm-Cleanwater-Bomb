@@ -5768,7 +5768,7 @@ def render_static_foreach(
         page_expression = (
             "services.hordes.monsters("
             f"services.types.id(\"monster_group\", {lua_quote(target)}), "
-            "true, { offset = foreach_offset, limit = 256 })"
+            'true, { offset = foreach_offset, limit = 256, order = "native" })'
         )
         return (
             lines if append_paged_loop(page_expression, "items", "entry.value")

@@ -8182,9 +8182,12 @@ function CcbHordesApi.definitions(options) end
 ---@return CcbHordeDefinition
 function CcbHordesApi.definition(id, options) end
 
+---@class CcbHordeMonsterQuery: CcbHordePageOptions
+---@field order? "id"|"native" Default id sorts and deduplicates; native retains original order and duplicate occurrences.
+
 ---@param id GameId GameId<monster_group> Horde definition identity.
 ---@param recursive? boolean Include recursively referenced groups.
----@param options? CcbHordePageOptions
+---@param options? CcbHordeMonsterQuery
 ---@return CcbHordeMonsterPage
 function CcbHordesApi.monsters(id, recursive, options) end
 
