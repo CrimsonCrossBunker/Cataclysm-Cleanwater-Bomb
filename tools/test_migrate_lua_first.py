@@ -11644,6 +11644,23 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                         capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_direct_bionic_services_preserve_beta_and_native_avatar_patient(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition", "id": "bionic_pair",
+                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                "effect": ["bionic_install", "bionic_remove"],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bionic_pair_mod")
+            main = result.files[Path("main.lua")]
+            self.assertEqual(main.count("local provider = context.actors.beta"), 2)
+            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 2)
+            self.assertIn('provider, "install", services.characters.avatar())', main)
+            self.assertIn('provider, "remove", services.characters.avatar())', main)
+            self.assertNotIn('actor, "install"', main)
+
     def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -11805,9 +11822,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'services.npcs.open_companion_missions(actor, "SCAVENGER")',
                 main,
             )
-            self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
+            self.assertIn('provider, "install", services.characters.avatar())', main)
+            self.assertIn('provider, "remove", services.characters.avatar())', main)
             self.assertNotIn("services.npcs.medical.repair_bionic_limbs(", main)
-            self.assertEqual(main.count("services.characters.avatar()"), 2)
+            self.assertEqual(main.count("services.characters.avatar()"), 4)
             self.assertIn("domain-service conversion", report)
 
     def test_roll_remainder_runs_true_and_false_callbacks(self) -> None:

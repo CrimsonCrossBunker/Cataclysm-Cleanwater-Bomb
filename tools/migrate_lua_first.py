@@ -31573,22 +31573,23 @@ def render_eoc(
                     "needs proven camp, manager, and worker handles"
                 )
                 all_effects_converted = False
-            elif (
-                isinstance(effect, str) and effect in {
-                    "bionic_install", "bionic_remove", "repair_bionic_limbs",
-                } and npc_event_character_actor_proven and avatar_actor_proven
-            ):
-                if effect == "repair_bionic_limbs":
-                    lines.append(
-                        "    service_value(services.npcs.medical.repair_bionic_limbs("
-                        "actor, services.characters.avatar()))"
-                    )
-                else:
-                    operation = "install" if effect == "bionic_install" else "remove"
-                    lines.append(
-                        "    service_value(services.npcs.medical.open_bionic_service("
-                        f"actor, {lua_quote(operation)}, services.characters.avatar()))"
-                    )
+            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and npc_actor_expression is not None:
+                operation = "install" if effect == "bionic_install" else "remove"
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    "            service_value(services.npcs.medical.open_bionic_service("
+                    f"provider, {lua_quote(operation)}, services.characters.avatar()))",
+                    "        end",
+                    "    end",
+                ])
+                converted_effect = True
+            elif effect == "repair_bionic_limbs" and npc_event_character_actor_proven and avatar_actor_proven:
+                lines.append(
+                    "    service_value(services.npcs.medical.repair_bionic_limbs("
+                    "actor, services.characters.avatar()))"
+                )
                 converted_effect = True
             elif isinstance(effect, dict) and "companion_mission" in effect:
                 rendered = render_static_companion_mission_effect(
