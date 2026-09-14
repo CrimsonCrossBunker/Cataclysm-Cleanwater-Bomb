@@ -18006,10 +18006,10 @@ assert(#messages==2 and messages[2]=="after")
                 main,
             )
             self.assertIn(
-                "context.actors.alpha = previous_alpha",
+                "child_context.actors.alpha = selected_alpha",
                 main,
             )
-            self.assertIn("context.actors.beta = previous_beta", main)
+            self.assertIn("child_context.actors.beta = selected_beta", main)
             self.assertNotIn("delayed_task_actor", main)
             self.assertNotIn("typed callback/task conversion", report)
 
@@ -18406,7 +18406,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertIn("services.creatures.at(run_eocs_beta_location)", main)
             self.assertIn("services.creatures.at(run_eocs_alpha_location)", main)
             self.assertIn("if selected_alpha == nil and selected_beta == nil", main)
-            self.assertIn("context.actors.alpha = selected_alpha", main)
+            self.assertIn("child_context.actors.alpha = selected_alpha", main)
             self.assertIn("context.actors.beta = selected_beta", main)
             self.assertIn("migrated_eoc_talker_failure(context, actor)", main)
             self.assertNotIn("typed callback/task conversion", report)
@@ -20166,6 +20166,34 @@ assert(calls==3 and context.data.guard=='continue' and context.data.count==0)
         script = script.replace("calls=calls+1", "calls=calls+1;context.data.guard='stop'")
         script = script.replace("calls==3 and context.data.guard=='continue'",
                                 "calls==1 and context.data.guard=='stop'")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_actor_override_never_mutates_parent_on_error(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs({
+            "run_eocs": "step", "alpha_talker": "npc", "beta_talker": "u",
+        }, {"step": "step"}, actor_expression="actor", avatar_actor_proven=True,
+            npc_actor_proven=True, npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={},actors={alpha=actor,beta=partner}}
+local original_actors=context.actors
+local services={characters={avatar=function() return actor end}}
+local sentinel={}
+local function step(child,owner)
+ assert(owner==partner and child.actors.alpha==partner and child.actors.beta==actor)
+ assert(context.actors==original_actors and context.actors.alpha==actor and context.actors.beta==partner)
+ error(sentinel)
+end
+local ok,err=pcall(function()
+BODY
+end)
+assert(not ok and err==sentinel)
+assert(context.actors==original_actors and context.actors.alpha==actor and context.actors.beta==partner)
+""".replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)

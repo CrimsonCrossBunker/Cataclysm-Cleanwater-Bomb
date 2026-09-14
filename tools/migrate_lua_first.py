@@ -4089,6 +4089,11 @@ def render_static_run_eocs(
         "    local child_context = { data = child_data, conditions = child_conditions, actors = {} }",
         "    for name, handle in pairs(context.actors or {}) do child_context.actors[name] = handle end",
     ])
+    if has_talker_override:
+        prefix.extend([
+            "    child_context.actors.alpha = selected_alpha",
+            "    child_context.actors.beta = selected_beta",
+        ])
     context_expression = "child_context"
     iterations = effect.get("iterations")
     loop_count_expression = None
@@ -4127,18 +4132,11 @@ def render_static_run_eocs(
         )
         wrapped.extend([
             "        else",
-            "            context.actors = context.actors or {}",
-            "            local previous_alpha = context.actors.alpha",
-            "            local previous_beta = context.actors.beta",
-            "            context.actors.alpha = selected_alpha",
-            "            context.actors.beta = selected_beta",
         ])
         wrapped.extend(
             line.replace("    ", "            ", 1) for line in lines
         )
         wrapped.extend([
-            "            context.actors.alpha = previous_alpha",
-            "            context.actors.beta = previous_beta",
             "        end",
             "    end",
         ])
