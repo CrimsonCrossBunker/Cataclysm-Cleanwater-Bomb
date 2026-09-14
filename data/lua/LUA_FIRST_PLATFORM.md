@@ -930,3 +930,9 @@ waiting activity and provider busy duration. Unproven NPC providers remain expli
 migration gaps. Generated Lua tests cover all four level/allies combinations, avatar
 patient identity, provider overrides and failure propagation. Random healing, ally
 range filtering and activity/effect duration runtime acceptance remain pending.
+
+Control transfer and its menu are no longer classified as successfully migrated
+no-ops. Their migration still needs participant continuity across handle invalidation
+and, for direct transfer, original dialogue branching. Bare-string `clear_dimension`
+and `place_override` are also explicit gaps: their native registrations require
+object parameters. This does not affect the existing object-form world renderers.

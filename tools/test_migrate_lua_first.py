@@ -14377,7 +14377,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 12)
+            self.assertEqual(len(result.todos), 13)
             self.assertNotIn("services.activities.assign(actor)", main)
             self.assertIn("plain typed activity service", main)
             self.assertNotIn("services.state.", main)
@@ -21456,6 +21456,25 @@ end
             Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
         self.assertNotIn("services.npcs.medical.provide_aid(", unproven)
         self.assertEqual(unproven.count("medical aid requires an explicit NPC provider"), 4)
+
+    def test_control_and_parameterless_world_effects_are_not_silent_success(self) -> None:
+        for effect, reason in (
+            ("take_control", "original dialogue participants"),
+            ("take_control_menu", "refreshed participant handles"),
+            ("clear_dimension", "native object parameters"),
+            ("place_override", "native object parameters"),
+        ):
+            with self.subTest(effect=effect), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / "source.json").write_text(json.dumps([{
+                    "type": "effect_on_condition", "id": "control_gap",
+                    "required_event": "npc_becomes_hostile", "effect": [effect],
+                }]), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([root / "source.json"]), "control_gap")
+                self.assertEqual(len(result.converted), 0)
+                self.assertEqual(len(result.partial), 1)
+                self.assertIn(reason, result.files[Path("main.lua")])
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):

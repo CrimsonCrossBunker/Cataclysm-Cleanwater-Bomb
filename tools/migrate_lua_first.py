@@ -31081,12 +31081,23 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
-                "take_control",
-                "clear_dimension",
-                "place_override",
+                "take_control", "clear_dimension", "place_override",
             }:
-                # Deliberate presentation/interaction no-op in headless/scripted context.
-                converted_effect = True
+                if effect == "take_control":
+                    reason = (
+                        "control transfer requires original dialogue participants, "
+                        "callback branches and refreshed handles after avatar replacement"
+                    )
+                    category = "manual_rewrite"
+                else:
+                    reason = f"{effect} requires its native object parameters, not a bare string"
+                    category = "semantic_choice"
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, str) and
                 effect in {
@@ -32538,8 +32549,15 @@ def render_eoc(
                 else:
                     all_effects_converted = False
             elif effect == "take_control_menu":
-                # Presentation menu no-op
-                converted_effect = True
+                reason = (
+                    "control menu requires refreshed participant handles after avatar replacement"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 any(key in effect for key in (
