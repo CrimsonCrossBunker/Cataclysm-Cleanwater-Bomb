@@ -22363,6 +22363,7 @@ def _coordinate_source_expression(
     value: Any,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> str | None:
     """Resolve a context or same-scope Character coordinate value."""
     context = _context_coordinate_expression(value)
@@ -22389,8 +22390,11 @@ def _coordinate_source_expression(
             f"{actor_expression}, \"var\", {lua_quote(descriptor[1])})).value or "
             "services.coords.tripoint_abs_ms(0, 0, 0))"
         )
-    handle = _coordinate_variable_handle(
-        descriptor[0], avatar_actor_proven, npc_actor_proven
+    handle = (
+        npc_actor_expression if descriptor[0] == "npc" and npc_actor_expression is not None
+        else _coordinate_variable_handle(
+            descriptor[0], avatar_actor_proven, npc_actor_proven
+        )
     )
     if handle is None:
         return None
@@ -22405,6 +22409,7 @@ def _coordinate_output_lines(
     selected_expression: str,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Render the nil-guarded output assignment for query effects."""
     context = _context_coordinate_expression(value)
@@ -22432,8 +22437,11 @@ def _coordinate_output_lines(
             f"            context.data, {actor_expression}, \"var\", "
             f"{lua_quote(descriptor[1])}, {selected_expression}))",
         ]
-    handle = _coordinate_variable_handle(
-        descriptor[0], avatar_actor_proven, npc_actor_proven
+    handle = (
+        npc_actor_expression if descriptor[0] == "npc" and npc_actor_expression is not None
+        else _coordinate_variable_handle(
+            descriptor[0], avatar_actor_proven, npc_actor_proven
+        )
     )
     if handle is None:
         return None
@@ -23124,7 +23132,7 @@ def render_static_choose_adjacent_highlight(
     center = (
         _coordinate_source_expression(
             effect["target_var"], avatar_actor_proven,
-            npc_actor_proven,
+            npc_actor_proven, npc_actor_expression,
         )
         if "target_var" in effect else
         "service_value(services.characters.snapshot(actor)).creature.position"
@@ -23171,7 +23179,9 @@ def render_static_choose_adjacent_highlight(
         f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
         "    if selected ~= nil then",
     ]
-    output_lines = _coordinate_output_lines(output, "selected", avatar_actor_proven, False)
+    output_lines = _coordinate_output_lines(
+        output, "selected", avatar_actor_proven, npc_actor_proven, npc_actor_expression
+    )
     if output_lines is None:
         return None
     lines.extend(output_lines)
@@ -23243,7 +23253,7 @@ def render_static_npc_choose_adjacent_highlight(
     )
     center_expression = (
         _coordinate_source_expression(
-            effect["target_var"], False, npc_actor_proven
+            effect["target_var"], avatar_actor_proven, npc_actor_proven, npc_actor_expression
         ) if "target_var" in effect else
         "service_value(services.characters.snapshot(" +
         (npc_actor_expression or "actor") + ")).creature.position"
@@ -23271,7 +23281,9 @@ def render_static_npc_choose_adjacent_highlight(
         f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
         "    if selected ~= nil then",
     ]
-    output_lines = _coordinate_output_lines(output_value, "selected", False, True)
+    output_lines = _coordinate_output_lines(
+        output_value, "selected", avatar_actor_proven, npc_actor_proven, npc_actor_expression
+    )
     if output_lines is None:
         return None
     lines.extend(output_lines)

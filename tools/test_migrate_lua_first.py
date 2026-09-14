@@ -20687,6 +20687,24 @@ assert(context.data.loc.x==1 and context.data.loc.y==1)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+        owned_lines = migrate_lua_first.render_static_npc_choose_adjacent_highlight({
+            "npc_choose_adjacent_highlight": {"npc_val": "picked"},
+            "target_var": {"npc_val": "center"},
+            "condition": {"one_in_chance": 2},
+        }, "npc_choose_adjacent_highlight", False, "partner", True)
+        self.assertIsNotNone(owned_lines)
+        owned_script = script.replace("\n".join(lines), "\n".join(owned_lines))
+        owned_script = owned_script.replace("local calls=0", "local calls=0\npartner.center=center")
+        owned_script = owned_script.replace("local services={world=", r"""local services={variables={
+ get=function(owner,key) assert(owner==partner and key=='center');return {value={value=owner.center}} end,
+ set=function(owner,key,value) assert(owner==partner and key=='picked');owner.picked=value end
+},world=""")
+        owned_script = owned_script.replace("context.data.picked.x", "partner.picked.x")
+        owned_script = owned_script.replace("context.data.picked.y", "partner.picked.y")
+        owned_script += "\nassert(actor.picked==nil)"
+        result = subprocess.run(["lua", "-"], input=owned_script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
