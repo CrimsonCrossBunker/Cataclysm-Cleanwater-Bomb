@@ -1303,6 +1303,11 @@ def _node_has_actor_prefix(node: Any, prefix: str) -> bool:
         if isinstance(value, str):
             if value.startswith(prefix):
                 return True
+        elif isinstance(value, list):
+            if any((key in {"effect", "false_effect", "then", "else"} and
+                    isinstance(entry, str) and entry.startswith(prefix)) or
+                   _node_has_actor_prefix(entry, prefix) for entry in value):
+                return True
         elif _node_has_actor_prefix(value, prefix):
             return True
     return False
@@ -28750,12 +28755,12 @@ def render_eoc(
                         "needs bounded foreach traversal conversion"
                     )
                     all_effects_converted = False
-            elif avatar_actor_proven and effect == "u_cancel_activity":
-                lines.append("    services.activities.cancel(actor)")
+            elif character_actor_proven and effect == "u_cancel_activity":
+                lines.append(f"    services.activities.cancel({actor_expression or 'actor'})")
                 converted_effect = True
             elif npc_event_character_actor_proven and \
                     effect == "npc_cancel_activity":
-                lines.append("    services.activities.cancel(actor)")
+                lines.append(f"    services.activities.cancel({npc_actor_expression or actor_expression or 'actor'})")
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and

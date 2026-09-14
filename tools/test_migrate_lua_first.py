@@ -20691,6 +20691,65 @@ assert(calls==2)
         self.assertIsNone(migrate_lua_first.render_static_false_effect(
             "npc_cancel_activity", True, False, {}, actor_expression="selected"))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_named_character_callback_cancels_selected_activity(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "cancel_selected",
+            "effect": ["u_cancel_activity", "npc_cancel_activity"],
+        })
+        rendered = migrate_lua_first.render_eoc(
+            source, migrate_lua_first.MigrationResult(),
+            eoc_actor_requirements={"cancel_selected": "character"},
+            eoc_referenced_ids=frozenset({"cancel_selected"}))
+        self.assertNotIn("TODO", rendered.replace("review every TODO before enabling", ""))
+        script = r"""
+local selected={}
+local calls=0
+local services={activities={cancel=function(target)
+ assert(target==selected);calls=calls+1
+end}}
+local migrated_eoc_functions={}
+BODY
+migrated_eoc_functions.cancel_selected({data={},actors={}},selected)
+assert(calls==2)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_main_activity_cancel_pair_keeps_distinct_targets(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "cancel_pair",
+            "effect": ["u_cancel_activity", "npc_cancel_activity"],
+        })
+        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        script = r"""
+local alpha,beta={},{}
+local targets={}
+local services={activities={cancel=function(target) targets[#targets+1]=target end}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end}
+BODY
+migrated_eoc_functions.cancel_pair({data={},actors={beta=beta}},alpha)
+assert(#targets==2 and targets[1]==alpha and targets[2]==beta)
+targets={}
+migrated_eoc_functions.cancel_pair({data={},actors={}},alpha)
+assert(#targets==0)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_effect_array_actor_detection_does_not_use_callback_ids(self) -> None:
+        for prefix in ("u_", "npc_"):
+            self.assertTrue(migrate_lua_first._node_has_actor_prefix(
+                {"effect": [prefix + "cancel_activity"]}, prefix))
+            self.assertFalse(migrate_lua_first._node_has_actor_prefix(
+                {"effect": [{"run_eocs": [prefix + "callback"]}]}, prefix))
+            self.assertFalse(migrate_lua_first._node_has_actor_prefix(
+                {"effect": [{"set_string_var": [prefix + "text"]}]}, prefix))
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
