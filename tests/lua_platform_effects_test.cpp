@@ -1436,6 +1436,51 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
     CHECK_FALSE( query().valid() );
 }
 
+TEST_CASE( "lua_platform_bionic_service_preserves_native_patient_domain",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.other.set_fac( faction_id( "no_faction" ) );
+    REQUIRE_FALSE( fixture.other.is_player_ally() );
+    REQUIRE( fixture.other.num_bionics() == 0 );
+    REQUIRE( fixture.player.num_bionics() == 0 );
+    bool writable = true;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, [&]() {
+        if( !writable ) {
+            throw std::runtime_error( "write denied" );
+        }
+    }, []() {} );
+    sol::protected_function service = fixture.services["npcs"]["medical"]["open_bionic_service"];
+    // No installed bionics: native removal shows a notice and returns without
+    // a selection menu. Popup is noninteractive in test_mode.
+    for( const bool npc_patient : {
+             false, true
+         } ) {
+        const int moves = fixture.target( npc_patient ).get_moves();
+        sol::protected_function_result call = service(
+                fixture.handle( true ), "remove", fixture.handle( npc_patient ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK_FALSE( result["value"]["changed"].get<bool>() );
+        CHECK( fixture.target( npc_patient ).num_bionics() == 0 );
+        CHECK( fixture.target( npc_patient ).get_moves() == moves );
+    }
+    const auto stale = fixture.handle( true );
+    ++fixture.world;
+    sol::protected_function_result stale_call = service( stale, "remove", fixture.handle( false ) );
+    REQUIRE( stale_call.valid() );
+    sol::table stale_result = stale_call;
+    CHECK_FALSE( stale_result["ok"].get<bool>() );
+    writable = false;
+    CHECK_FALSE( service( fixture.handle( true ), "remove", fixture.handle( true ) ).valid() );
+}
+
 TEST_CASE( "lua_platform_copy_rules_does_not_re_equip_or_spend_moves",
            "[lua][platform][npc][semantic]" )
 {

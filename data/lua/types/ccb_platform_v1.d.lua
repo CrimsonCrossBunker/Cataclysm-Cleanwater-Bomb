@@ -9387,7 +9387,7 @@ local CcbNpcMedicalApi = {}
 function CcbNpcMedicalApi.provide_aid(provider, patient, level, include_allies) end
 ---@param provider GameHandle Exact NPC provider handle.
 ---@param operation 'install'|'remove'
----@param patient GameHandle Exact Character handle; required, with no implicit avatar fallback.
+---@param patient GameHandle Exact Character handle, including the provider; no ally restriction or implicit avatar fallback.
 ---@return CcbResult
 function CcbNpcMedicalApi.open_bionic_service(provider, operation, patient) end
 ---@param provider GameHandle Exact NPC provider handle.

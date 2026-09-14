@@ -220,20 +220,6 @@ sol::table open_bionic_service(
     if( patient == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    npc *patient_npc = patient->as_npc();
-    if( !patient->is_avatar() &&
-        ( patient_npc == nullptr || !patient_npc->is_player_ally() ) ) {
-        return make_game_error_result( state, {
-            "invalid_patient",
-            "Bionic service patients must be the avatar or an allied NPC"
-        } );
-    }
-    if( patient == provider ) {
-        return make_game_error_result( state, {
-            "invalid_patient",
-            "A bionic service provider cannot operate on themselves"
-        } );
-    }
     sol::table patient_before = character_service_state(
                                     state, *patient );
     sol::table provider_before = provider_service_state(
