@@ -988,4 +988,48 @@ TEST_CASE( "lua_platform_stop_following_and_neutral_match_native_state",
     }
 }
 
+
+TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = []( npc & worker ) {
+        worker.normalize();
+        worker.set_mission( NPC_MISSION_GUARD );
+        worker.goal = tripoint_abs_omt( 12, 13, 0 );
+        worker.set_guard_pos( tripoint_abs_ms( 14, 15, 0 ) );
+        worker.set_committed_goal( "guard_test" );
+        worker.cash = 123;
+        worker.custom_profession = "Retained profession";
+    };
+    prepare( native );
+    prepare( fixture.other );
+    const faction_id original_faction = fixture.other.get_fac_id();
+    talk_function::follow_only( native );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function follow = fixture.services["npcs"]["follow_temporarily"];
+    sol::protected_function_result call = follow( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( fixture.other.get_attitude() == native.get_attitude() );
+    CHECK( fixture.other.mission == native.mission );
+    CHECK( fixture.other.get_previous_mission() == native.get_previous_mission() );
+    CHECK( fixture.other.goal == native.goal );
+    CHECK( fixture.other.get_guard_post() == native.get_guard_post() );
+    CHECK( fixture.other.get_ai_guard_pos() == native.get_ai_guard_pos() );
+    CHECK( fixture.other.get_committed_goal() == native.get_committed_goal() );
+    CHECK( fixture.other.get_committed_goal().empty() );
+    CHECK( fixture.other.get_fac_id() == original_faction );
+    CHECK( fixture.other.cash == 123 );
+    CHECK( fixture.other.custom_profession == "Retained profession" );
+}
+
 #endif

@@ -10280,8 +10280,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.partial), 1)
             self.assertIn('services.npcs.dialogue.provoke_combat(actor)', main)
             self.assertIn('services.npcs.orders.run(actor, "lead_to_safety")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
+            self.assertIn('services.npcs.leave_player(actor, services.characters.avatar())', main)
+            self.assertIn('services.npcs.follow_temporarily(actor)', main)
             self.assertIn(
                 'services.effects.add(actor, services.types.id("effect", "asked_to_follow"), '
                 'services.time.duration(21600, "turn"))',
@@ -21311,6 +21311,37 @@ for _,target in ipairs({npc,override}) do
  migrated_eoc_functions.relations({actors={npc=npc}},target)
  assert(table.concat(calls,',')=='join,stop,neutral')
 end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_leave_and_temporary_follow_use_relationship_services(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "leave_follow",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["leave", "follow_only"]}), migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc={},{}
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ characters={avatar=function() return avatar end},
+ npcs={
+  leave_player=function(target,owner)
+   assert(target==npc and owner==avatar);calls[#calls+1]='leave';return {ok=true,value={}}
+  end,
+  follow_temporarily=function(target)
+   assert(target==npc);calls[#calls+1]='temporary';return {ok=true,value={}}
+  end
+ }
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.leave_follow({actors={npc=npc}},nil)
+assert(table.concat(calls,',')=='leave,temporary')
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

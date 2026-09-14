@@ -57,6 +57,8 @@
 #include "npc.h"
 #include "npc_class.h"
 #include "npctalk.h"
+#include "messages.h"
+#include "translations.h"
 #include "npctalk_rules.h"
 #include "overmapbuffer.h"
 #include "talker_npc.h"
@@ -1829,6 +1831,7 @@ sol::table leave_npc_player(
     sol::table before = snapshot_npc(
                             state, *entry, runtime_generation,
                             world_generation );
+    add_msg( _( "%s leaves." ), entry->get_name() );
     owner->follower_ids.erase( entry->getID() );
     const faction_id solo_faction(
         "solo_" + entry->name +
@@ -1845,7 +1848,7 @@ sol::table leave_npc_player(
     entry->chatbin.first_topic =
         entry->chatbin.talk_stranger_neutral;
     entry->set_attitude( NPCATT_NULL );
-    entry->set_mission( NPC_MISSION_NULL );
+    entry->mission = NPC_MISSION_NULL;
     entry->long_term_goal_action();
     sol::table value = state.create_table();
     value["before"] = std::move( before );

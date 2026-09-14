@@ -895,3 +895,11 @@ Generated Lua routing tests pass; allied/non-allied state comparison source
 is present but unexecuted. Join-state runtime evidence remains outstanding. Stop/neutral operations
 now call native talk functions so their notification rules are retained; message
 comparison test source is present but has not executed.
+
+Migrated `leave` uses `leave_player` to remove follower membership, create
+the independent faction and reset work priorities/topic. Native leave notification
+and direct mission reset are preserved, including the previous-mission value.
+`follow_only` uses `follow_temporarily` to clear guard and long-term goals
+without transferring cash or joining the player faction. Generated Lua routing
+tests pass; temporary-follow native comparison source is unexecuted and full
+leave/faction runtime acceptance remains pending.

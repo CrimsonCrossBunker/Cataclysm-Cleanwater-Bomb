@@ -30768,10 +30768,10 @@ def render_eoc(
                 lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "leave":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.leave_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
                 converted_effect = True
             elif npc_actor_proven and effect == "follow_only":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "deny_follow":
                 lines.append(
