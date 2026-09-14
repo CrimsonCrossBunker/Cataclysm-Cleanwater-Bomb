@@ -9441,7 +9441,24 @@ function CcbNpcDialogueActionsApi.provoke_combat(handle) end
 ---@field started boolean True only when the native dialogue UI started.
 ---@field completed boolean True only after a started dialogue synchronously ended.
 
+---@class CcbNpcOrdersApi
+local CcbNpcOrdersApi = {}
+---@param handle GameHandle Exact NPC handle.
+---@param order 'dismount'|'drop_carried_items'|'drop_weapon'|'wake'|'clear_temporary_rules'|'lead_to_safety'
+---@return CcbResult
+function CcbNpcOrdersApi.run(handle, order) end
+---@param handle GameHandle Exact NPC handle; ally membership is not required.
+---@return CcbResult
+function CcbNpcOrdersApi.open_pickup_rules(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcOrdersApi.choose_combat_style(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcOrdersApi.open_character_sheet(handle) end
+
 ---@class CcbNpcsApi
+---@field orders CcbNpcOrdersApi
 local CcbNpcsApi = {}
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded NPC-class page.
@@ -9588,6 +9605,8 @@ function CcbNpcsApi.offer_item(recipient, giver, item, use_item) end
 ---@param topic string Required registered topic id; never inferred from either participant.
 ---@return CcbResult result `value` is a detached CcbNpcDialogueResult after synchronous UI teardown; it never carries a persistent or live dialogue session token.
 function CcbNpcsApi.open_dialogue(npc, speaker, topic) end
+---@param handle GameHandle Exact NPC handle; ally membership is not required.
+---@return CcbResult
 function CcbNpcsApi.open_rules(handle) end
 ---@param avatar GameHandle Exact avatar handle; required.
 function CcbNpcsApi.open_control_menu(avatar) end

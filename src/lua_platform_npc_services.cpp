@@ -1193,12 +1193,6 @@ sol::table open_npc_pickup_rules(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    if( !entry->is_player_ally() ) {
-        return make_game_error_result( state, {
-            "not_an_ally",
-            "services.npcs.orders.open_pickup_rules requires an allied NPC"
-        } );
-    }
     const bool before = !entry->rules.pickup_whitelist->empty();
     talk_function::set_npc_pickup( *entry );
     sol::table value = state.create_table();

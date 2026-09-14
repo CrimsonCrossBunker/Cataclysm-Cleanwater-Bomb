@@ -2588,12 +2588,6 @@ sol::table open_npc_rules(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    if( !entry->is_player_ally() ) {
-        return make_game_error_result( state, {
-            "not_an_ally",
-            "services.npcs.open_rules requires an allied NPC"
-        } );
-    }
     sol::table before = snapshot_ai_rules( state, *entry );
     follower_rules_ui rules_ui;
     rules_ui.draw_follower_rules_ui( entry );

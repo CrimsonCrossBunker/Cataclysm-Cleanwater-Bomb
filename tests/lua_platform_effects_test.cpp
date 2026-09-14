@@ -1436,6 +1436,39 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
     CHECK_FALSE( query().valid() );
 }
 
+TEST_CASE( "lua_platform_rule_menus_reject_wrong_or_stale_targets_before_ui",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function rules = fixture.services["npcs"]["open_rules"];
+    sol::protected_function pickup = fixture.services["npcs"]["orders"]["open_pickup_rules"];
+    for( const sol::protected_function &menu : {
+             rules, pickup
+         } ) {
+        sol::protected_function_result call = menu( fixture.handle( false ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+        CHECK( result["error"]["code"].get<std::string>() == "wrong_subtype" );
+    }
+    const auto stale = fixture.handle( true );
+    ++fixture.world;
+    for( const sol::protected_function &menu : {
+             rules, pickup
+         } ) {
+        sol::protected_function_result call = menu( stale );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+    }
+}
+
 TEST_CASE( "lua_platform_player_services_reject_a_different_avatar",
            "[lua][platform][npc][semantic]" )
 {
