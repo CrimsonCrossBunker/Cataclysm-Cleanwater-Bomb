@@ -222,6 +222,44 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     REQUIRE( result["ok"].get<bool>() );
     REQUIRE( get_globals().maybe_get_global_value( key ) != nullptr );
     CHECK( get_globals().get_global_value( key ).is_empty() );
+    // Global values must retain the same missing/present-null distinction
+    // when consumed as dynamic strings by environment conditions.
+    lua["services"] = services;
+    lua["key"] = key;
+    sol::protected_function query = lua.load( R"(
+        local result = services.variables.resolve(nil, nil, "global", key)
+        assert(result.ok)
+        local value = result.value
+        if value.exists == false then return current == fallback end
+        return current == tostring(value.value or "")
+    )" );
+    dialogue context;
+    const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };
+    for( const std::string selector : {
+             "is_season", "is_weather"
+         } ) {
+        const std::string current = selector == "is_season" ?
+                                    seasons[season_of_year( calendar::turn )] : get_weather().weather_id.str();
+        lua["current"] = current;
+        lua["fallback"] = current;
+        for( int state = 0; state < 4; ++state ) {
+            CAPTURE( selector, state );
+            get_globals().remove_global_value( key );
+            if( state == 1 ) {
+                get_globals().set_global_value( key, current );
+            } else if( state == 2 ) {
+                get_globals().set_global_value( key, "unknown" );
+            } else if( state == 3 ) {
+                get_globals().set_global_value( key, diag_value{} );
+            }
+            const std::string condition_json = R"({")" + selector +
+                                               R"(":{"global_val":")" + key + R"(","default":")" + current + R"("}})";
+            conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
+            const sol::protected_function_result actual = query();
+            REQUIRE( actual.valid() );
+            CHECK( actual.get<bool>() == predicate( context ) );
+        }
+    }
     sol::protected_function copy = services["variables"]["copy"];
     sol::protected_function_result self_copy = copy( sol::nil, key, sol::nil, key );
     REQUIRE( self_copy.valid() );
