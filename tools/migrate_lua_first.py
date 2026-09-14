@@ -23184,8 +23184,10 @@ def render_static_npc_choose_adjacent_highlight(
     key: str,
     npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
+    avatar_actor_proven: bool = False,
+    eoc_conditions: dict[str, Any] | None = None,
 ) -> list[str] | None:
-    """Lower an unconditional NPC-centered adjacent selector."""
+    """Lower an NPC-centered adjacent selector with native condition filtering."""
     if (
         key != "npc_choose_adjacent_highlight" or key not in effect or
         (not npc_actor_proven and npc_actor_expression is None)
@@ -23202,8 +23204,20 @@ def render_static_npc_choose_adjacent_highlight(
         _context_coordinate_expression(output_value) is None
     ):
         return None
-    if "condition" in effect or effect.get("false_eocs", []) not in ([], None):
+    if effect.get("false_eocs", []) not in ([], None):
         return None
+    predicate = "true"
+    if "condition" in effect:
+        if not isinstance(effect["condition"], (str, dict)):
+            return None
+        predicate = render_eoc_condition_expression(
+            effect["condition"], avatar_actor_proven,
+            avatar_actor_proven or npc_actor_proven, npc_actor_proven,
+            eoc_conditions=eoc_conditions,
+            npc_actor_expression=npc_actor_expression,
+        )
+        if predicate is None:
+            return None
     message = effect.get("message", "")
     failure_message = effect.get("failure_message", "")
     if (
@@ -23247,7 +23261,9 @@ def render_static_npc_choose_adjacent_highlight(
         "        if candidate.x >= bounds.minimum.x and candidate.x <= bounds.maximum.x and",
         "           candidate.y >= bounds.minimum.y and candidate.y <= bounds.maximum.y then",
         "            context.data[\"loc\"] = candidate",
-        "            candidates[#candidates + 1] = candidate",
+        f"            if {predicate} then",
+        "                candidates[#candidates + 1] = candidate",
+        "            end",
         "        end",
         "    end",
         "    local selected = services.targeting.choose_adjacent_where_at(",
@@ -30361,7 +30377,7 @@ def render_eoc(
                     if key == "u_choose_adjacent_highlight" else
                     render_static_npc_choose_adjacent_highlight(
                         effect, key, npc_event_character_actor_proven,
-                        npc_actor_expression,
+                        npc_actor_expression, avatar_actor_proven, eoc_conditions,
                     )
                 )
                 if rendered is not None:

@@ -20655,6 +20655,39 @@ assert(context.data.loc.x==1 and context.data.loc.y==1)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_adjacent_condition_filters_in_order_and_keeps_context(self) -> None:
+        lines = migrate_lua_first.render_static_npc_choose_adjacent_highlight({
+            "npc_choose_adjacent_highlight": {"context_val": "picked"},
+            "condition": {"one_in_chance": 2},
+        }, "npc_choose_adjacent_highlight", True, "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={}}
+local center={add=function(self,p) return p end}
+local function service_value(r) return r.value end
+local calls=0
+local services={world={bounds=function() return {minimum={x=0,y=0},maximum={x=1,y=1}} end},
+ characters={snapshot=function(owner) assert(owner==partner);return {value={creature={position=center}}} end},
+ coords={tripoint_rel_ms=function(x,y,z) return {x=x,y=y,z=z} end},
+ random={one_in=function(n)
+  calls=calls+1;assert(n==2)
+  assert(context.data.loc.x==(calls-1)%2 and context.data.loc.y==math.floor((calls-1)/2))
+  return calls==2
+ end},
+ targeting={choose_adjacent_where_at=function(c,m,f,points)
+  assert(c==center and #points==1 and points[1].x==1 and points[1].y==0)
+  return points[1]
+ end}}
+BODY
+assert(calls==4 and context.data.picked.x==1 and context.data.picked.y==0)
+assert(context.data.loc.x==1 and context.data.loc.y==1)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
