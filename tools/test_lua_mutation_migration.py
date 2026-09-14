@@ -182,7 +182,7 @@ end
                     )
                     self.assertIn('context.data["mutation_id"]', expression)
 
-    def test_non_equivalent_mutation_writes_require_an_explicit_choice(self):
+    def test_mutation_replacement_uses_native_action(self):
         for prefix, event in (
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
@@ -196,9 +196,9 @@ end
                     ):
                         effect = {prefix + operation: trait}
                         result = self.migrate_effect(event, effect)
-                        self.assertEqual(result.converted, [])
-                        self.assertEqual(len(result.partial), 1)
-                        self.assertTrue(
+                        self.assertEqual(len(result.converted), 1)
+                        self.assertEqual(result.partial, [])
+                        self.assertFalse(
                             any(
                                 todo.category == "semantic_choice"
                                 for todo in result.todos
@@ -209,13 +209,13 @@ end
                             self.assertNotIn(
                                 "services.mutations." + method + "(", main
                             )
-                        self.assertIsNone(
+                        self.assertIsNotNone(
                             migration.render_static_false_effect(
                                 effect, prefix == "u_", prefix == "npc_", {}
                             )
                         )
 
-    def test_false_branch_preserves_mutation_semantic_choice(self):
+    def test_false_branch_uses_native_mutation_replacement(self):
         for prefix, event in (
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
@@ -230,17 +230,14 @@ end
                         condition={prefix + "has_trait": "QUICK"},
                         false_effect={prefix + operation: "VULNERABLECHILL"},
                     )
-                    self.assertEqual(result.converted, [])
-                    self.assertTrue(
+                    self.assertEqual(len(result.converted), 1)
+                    self.assertFalse(
                         any(
                             todo.category == "semantic_choice"
                             for todo in result.todos
                         )
                     )
-                    self.assertIn(
-                        "false_effect #0",
-                        result.files[Path("MIGRATION_REPORT.md")],
-                    )
+                    self.assertIn("services.mutations.replace(", result.files[Path("main.lua")])
                     for method in ("grant", "remove", "set_active"):
                         self.assertNotIn(
                             "services.mutations." + method + "(",

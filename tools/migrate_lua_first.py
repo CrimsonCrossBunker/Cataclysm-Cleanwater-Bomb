@@ -4502,16 +4502,7 @@ def render_static_spawn_item_effect(
     ]
 
 
-def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
-    if not isinstance(effect, dict) or len(effect) != 1:
-        return None
-    key, value = next(iter(effect.items()))
-    if key not in {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait",
-                   "u_lose_trait", "npc_lose_trait"}:
-        return None
-    target = beta if key.startswith("npc_") else alpha
-    if target is None:
-        return None
+def render_mutation_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -4539,8 +4530,33 @@ def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> 
                 '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
                 ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
             )
+    return mutation
+
+
+def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
+    if not isinstance(effect, dict):
+        return None
+    keys = set(effect) & {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait",
+                          "u_lose_trait", "npc_lose_trait", "u_add_trait", "npc_add_trait"}
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    allowed = {key, "variant"} if key.endswith("_add_trait") else {key}
+    if set(effect) - allowed:
+        return None
+    value = effect[key]
+    target = beta if key.startswith("npc_") else alpha
+    if target is None:
+        return None
+    mutation = render_mutation_string(value, target, alpha, beta)
     if mutation is None:
         return None
+    if key.endswith("_add_trait"):
+        variant = render_mutation_string(effect.get("variant", ""), target, alpha, beta)
+        if variant is None:
+            return None
+        return ["    service_value(services.mutations.replace(",
+                f'        {target}, services.types.id("mutation", {mutation}), {variant}))']
     if key.endswith("_lose_trait"):
         return ["    service_value(services.mutations.erase(",
                 f'        {target}, services.types.id("mutation", {mutation})))']
@@ -4715,13 +4731,13 @@ def render_static_false_effect(
     Keep the accepted set deliberately narrow; unsupported branches remain a
     visible migration TODO instead of being silently discarded.
     """
-    if mutation_semantic_choice(effect) is not None:
-        return None
     activation = render_mutation_action(
         effect, "actor" if avatar_actor_proven else None,
         npc_actor_expression or ("actor" if npc_actor_proven else None))
     if activation is not None:
         return activation
+    if mutation_semantic_choice(effect) is not None:
+        return None
     if effect == "nothing":
         return []
     if effect == "u_cancel_activity" and avatar_actor_proven:

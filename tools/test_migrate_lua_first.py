@@ -4482,8 +4482,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 5)
-            self.assertEqual(len(result.partial), 4)
+            self.assertEqual(len(result.converted), 8)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn(
                 'services.types.id("effect", "downed")',
                 main,
@@ -4529,8 +4529,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "EOC bad_intensity effect #0 needs domain-service conversion",
                 report,
             )
-            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 3)
-            self.assertIn("choose mutation conflict replacement and event policy", report)
+            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 0)
+            self.assertNotIn("choose mutation conflict replacement and event policy", report)
             self.assertNotIn("choose mutation removal and event policy", report)
             self.assertNotIn("run_eoc", main)
 
@@ -18835,6 +18835,30 @@ assert(count==4)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_mutation_replacement_resolves_variant_participant(self) -> None:
+        lines = migrate_lua_first.render_mutation_action(
+            {"npc_add_trait": {"u_val": "mutation"}, "variant": {"npc_val": "variant"}},
+            "actor", "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={}}
+local calls=0
+local function service_value(r) assert(r.ok); return r.value end
+local services={types={id=function(kind,value) assert(kind=="mutation"); return value end},
+variables={resolve=function(data,owner,scope,key,participants)
+    assert(participants.alpha==actor and participants.beta==partner)
+    if key=="mutation" then assert(scope=="u"); return {ok=true,value={exists=true,value="SKIN_DARK"}} end
+    assert(scope=="npc" and key=="variant"); return {ok=true,value={exists=true,value="black"}}
+end},mutations={replace=function(owner,id,variant)
+    assert(owner==partner and id=="SKIN_DARK" and variant=="black")
+    calls=calls+1; return {ok=true,value={}}
+end}}
+""" + "\n".join(lines) + "\nassert(calls==1)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_mutation_erasure_routes_main_and_false_branch(self) -> None:
         for prefix in ("u_", "npc_"):
             effect = {prefix + "lose_trait": "QUICK"}
@@ -20359,7 +20383,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertTrue(result.todos)
-            self.assertEqual({todo.category for todo in result.todos}, {"semantic_choice", "manual_rewrite"})
+            self.assertEqual({todo.category for todo in result.todos}, {"manual_rewrite"})
             self.assertIn(
                 'services.messages.add("A translated message", "good")',
                 main,
