@@ -18,8 +18,9 @@ struct script_value_map_limits {
     std::size_t storage_bytes = 16U * 1024U;
 };
 
-// Copy a Lua table across an API boundary.  Only scalar values are accepted,
-// so no live table, userdata, function, or game pointer can cross sources.
+// Copy a Lua table across an API boundary.  Only scalar values and the
+// immutable NullValue are accepted; live tables, arbitrary userdata, functions,
+// and game pointers cannot cross sources.
 script_value_map read_script_value_map(
     const sol::optional<sol::table> &input, const script_value_map_limits &limits,
     const std::string &api_name );

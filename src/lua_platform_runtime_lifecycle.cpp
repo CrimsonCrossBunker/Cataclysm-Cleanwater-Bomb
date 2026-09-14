@@ -157,6 +157,9 @@ std::int64_t nonnegative_turn_difference( const std::int64_t later,
 persistent_value persistent_from_lua( const sol::object &value,
                                       const std::string &api_name )
 {
+    if( value.is<script_null_value>() ) {
+        return script_null_value{};
+    }
     switch( value.get_type() ) {
         case sol::type::boolean:
             return value.as<bool>();
@@ -260,6 +263,8 @@ void write_typed_values( JsonOut &json, const persistent_state &values )
                 json.member( "type", "integer" );
             } else if constexpr( std::is_same_v<value_type, double> ) {
                 json.member( "type", "float" );
+            } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
+                json.member( "type", "null" );
             } else {
                 json.member( "type", "string" );
             }
@@ -277,7 +282,12 @@ persistent_state read_typed_values( const JsonObject &values )
         const std::string key = member.name();
         const JsonObject entry = member.get_object();
         const std::string type = entry.get_string( "type" );
-        if( type == "boolean" ) {
+        if( type == "null" ) {
+            if( !entry.get_member( "value" ).test_null() ) {
+                throw std::runtime_error( "Platform null state value must be null" );
+            }
+            assign_persistent_value( result, key, script_null_value{} );
+        } else if( type == "boolean" ) {
             cata::lua_platform::assign_persistent_value( result, key,
                     entry.get_bool( "value" ) );
         } else if( type == "integer" ) {

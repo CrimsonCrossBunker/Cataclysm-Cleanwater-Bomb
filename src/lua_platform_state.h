@@ -12,11 +12,24 @@
 #include <variant>
 
 class JsonValue;
+class JsonOut;
 
 namespace cata::lua_platform
 {
 
-using script_persistent_value = std::variant<bool, std::int64_t, double, std::string>;
+// A present empty value, distinct from Lua nil (which removes a table key).
+struct script_null_value {
+    void serialize( JsonOut &json ) const;
+    bool operator==( const script_null_value & ) const {
+        return true;
+    }
+    bool operator!=( const script_null_value & ) const {
+        return false;
+    }
+};
+
+using script_persistent_value = std::variant<bool, std::int64_t, double, std::string,
+      script_null_value>;
 using script_persistent_state = std::unordered_map<std::string, script_persistent_value>;
 using script_value_map = std::map<std::string, script_persistent_value>;
 

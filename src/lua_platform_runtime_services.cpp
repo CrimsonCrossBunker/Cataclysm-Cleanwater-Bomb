@@ -1,4 +1,5 @@
 #include "lua_platform_runtime.h"
+#include "lua_platform_state.h"
 #include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
@@ -2976,7 +2977,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                         "services.gameplay.math context keys must be printable and bounded" );
                 }
                 const sol::object value = entry.second;
-                if( value.is<bool>() ) {
+                if( value.is<cata::lua_platform::script_null_value>() ) {
+                    result->set_value( key, diag_value{} );
+                } else if( value.is<bool>() ) {
                     result->set_value( key, value.as<bool>() ? 1.0 : 0.0 );
                 } else if( value.get_type() == sol::type::number ) {
                     const double number = value.as<double>();

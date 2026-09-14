@@ -77,9 +77,15 @@ script_value_map read_script_value_map(
                 value = text;
                 break;
             }
+            case sol::type::userdata:
+                if( value_object.is<script_null_value>() ) {
+                    value = script_null_value{};
+                    break;
+                }
+                [[fallthrough]];
             default:
                 throw std::invalid_argument(
-                    api_name + " only accepts boolean, number, and string values" );
+                    api_name + " only accepts boolean, number, string, and NullValue values" );
         }
 
         storage_size += key.size() + value_storage_size( value );

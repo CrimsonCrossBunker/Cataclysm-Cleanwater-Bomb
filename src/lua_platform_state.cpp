@@ -17,6 +17,11 @@
 namespace cata::lua_platform
 {
 
+void script_null_value::serialize( JsonOut &json ) const
+{
+    json.write_null();
+}
+
 namespace
 {
 
@@ -168,6 +173,8 @@ void write_persistent_state( std::ostream &output, const script_persistent_state
                 json.member( "type", "integer" );
             } else if constexpr( std::is_same_v<value_type, double> ) {
                 json.member( "type", "float" );
+            } else if constexpr( std::is_same_v<value_type, script_null_value> ) {
+                json.member( "type", "null" );
             } else {
                 json.member( "type", "string" );
             }
@@ -204,7 +211,12 @@ script_persistent_state read_persistent_state( const JsonValue &input )
         const std::string key = member.name();
         const JsonObject entry = member.get_object();
         const std::string type = entry.get_string( "type" );
-        if( type == "boolean" ) {
+        if( type == "null" ) {
+            if( !entry.get_member( "value" ).test_null() ) {
+                throw std::invalid_argument( "Lua null state value must be null" );
+            }
+            assign_persistent_value( result, key, script_null_value{} );
+        } else if( type == "boolean" ) {
             assign_persistent_value( result, key, entry.get_bool( "value" ) );
         } else if( type == "integer" ) {
             assign_persistent_value( result, key, entry.get_int64( "value" ) );

@@ -651,3 +651,21 @@ promotes a planned capability into a shipped one.
 模板只能建议目录结构，不能把建议变成加载器要求。发现、生命周期、原生注册、声明、
 schema、迁移行为或 roadmap 状态变化时同步更新本文和对应 CCB-Docs id；源码与测试始终
 优先于说明文案。
+
+### Explicit empty scalar values / 显式空值
+
+`ccb.services.types.null` is an immutable `NullValue`: it retains a key in a
+Lua context, scalar callback/task payload, or persistent state. `nil` retains
+its ordinary Lua deletion semantics. `tostring(null)` is the empty string;
+compare against the explicit value rather than using Lua truthiness. Variable
+snapshots expose a present empty value as `exists=true, value=nil`, so a
+missing-value fallback applies only when `exists=false`. Native dialogue `get`
+returns `NullValue` for a stored empty value and `nil` for an absent key.
+Typed save entries encode it as `type="null", value=null`; existing scalar
+entries keep their encoding. Context-to-native math conversion retains it as
+an empty native value. Native regression execution for this addition is pending
+batch acceptance; it does not promote EOC selectors to verified by itself.
+
+显式空值可跨上下文、标量任务载荷和存档保留“键存在”的信息。`nil` 仍用于删除，
+默认值只在键不存在时生效；不能用 Lua 的真假判断代替存在性判断。本项新增原生
+回归须在批次末实际运行，通过前不提升相关 EOC 完成标记。

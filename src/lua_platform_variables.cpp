@@ -2,6 +2,7 @@
 
 #include "lua_platform_variables.h"
 
+#include "lua_platform_state.h"
 #include <coordinates.h>
 #include <point.h>
 #include <talker.h>
@@ -61,7 +62,7 @@ void validate_context_key( const std::string_view key )
 diag_value context_value_from_lua(
     const sol::object &value, const std::string &key )
 {
-    if( value.get_type() == sol::type::nil ) {
+    if( value.get_type() == sol::type::nil || value.is<script_null_value>() ) {
         return diag_value();
     }
     if( value.get_type() == sol::type::boolean ) {
@@ -410,7 +411,8 @@ sol::table resolve_variable(
             if( current_scope == "context" ) {
                 sol::table result = state.create_table();
                 result["exists"] = true;
-                result["value"] = stored;
+                result["value"] = stored.is<script_null_value>() ?
+                                  sol::make_object( state, sol::nil ) : stored;
                 return make_game_value_result(
                            state, sol::make_object( state, std::move( result ) ) );
             }
