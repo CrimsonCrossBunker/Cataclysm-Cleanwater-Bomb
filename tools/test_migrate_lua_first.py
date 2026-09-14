@@ -20316,6 +20316,23 @@ assert(calls==2 and context.data.entry=='second' and context.data._entry=='indep
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_empty_foreach_keeps_iterator_and_does_not_execute_body(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": [], "var": {"context_val": "entry"},
+            "effect": {"u_message": "unreachable"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local context={data={entry='previous'}}
+local services={message=function() error('empty loop executed body') end}
+BODY
+assert(context.data.entry=='previous')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

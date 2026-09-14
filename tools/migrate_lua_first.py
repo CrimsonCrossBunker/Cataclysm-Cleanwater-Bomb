@@ -5676,7 +5676,7 @@ def render_static_foreach(
 
     if mode == "array":
         if (
-            not isinstance(target, list) or not target or len(target) > 256 or
+            not isinstance(target, list) or len(target) > 256 or
             not all(lua_scalar_literal(value) is not None for value in target)
         ):
             return None
