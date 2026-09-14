@@ -29947,7 +29947,7 @@ def render_eoc(
                 )
                 all_effects_converted = False
             elif npc_actor_proven and effect == "npc_thankful":
-                lines.append("    services.npcs.make_thankful(actor)")
+                lines.append(f"    service_value(services.npcs.make_thankful({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "hostile":
                 lines.append(f"    service_value(services.npcs.become_hostile({npc_actor_expression or 'actor'}))")
@@ -30001,9 +30001,6 @@ def render_eoc(
                     "radio representation"
                 )
                 all_effects_converted = False
-            elif npc_actor_proven and effect == "npc_thankful":
-                lines.append("    services.npcs.make_thankful(actor)")
-                converted_effect = True
             elif (
                 npc_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and

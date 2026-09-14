@@ -917,3 +917,8 @@ rather than attitude-only changes. This retains the allied/non-allied branches,
 activity restoration, guard destinations and topics, and the allied stop notification.
 Generated Lua participant/error tests pass; allied/non-allied stop-state comparison
 source remains unexecuted, and assignment/camp/activity runtime coverage is pending.
+
+Gratitude migration checks the `make_thankful` result and retains the resolved NPC
+participant. Generated Lua covers routing and failure propagation; native comparison
+source covers hostile/non-hostile attitudes, friend-topic retention and personality
+bounds, but has not been compiled or executed.

@@ -1081,6 +1081,45 @@ TEST_CASE( "lua_platform_stop_guard_matches_allied_and_independent_state",
     Messages::clear_messages();
 }
 
+TEST_CASE( "lua_platform_gratitude_matches_native_attitude_topic_and_bounds",
+           "[lua][platform][npc][semantic]" )
+{
+    const npc_attitude attitude = GENERATE( NPCATT_NULL, NPCATT_FOLLOW, NPCATT_MUG,
+                                            NPCATT_WAIT_FOR_LEAVE, NPCATT_FLEE, NPCATT_KILL,
+                                            NPCATT_FLEE_TEMP );
+    const int aggression = GENERATE( NPC_PERSONALITY_MIN, 0, NPC_PERSONALITY_MAX );
+    const bool friend_topic = GENERATE( false, true );
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = [&]( npc & worker ) {
+        worker.normalize();
+        worker.set_attitude( attitude );
+        worker.personality.aggression = aggression;
+        worker.chatbin.talk_friend = "TALK_FRIEND";
+        worker.chatbin.talk_stranger_friendly = "TALK_STRANGER_FRIENDLY";
+        worker.chatbin.first_topic = friend_topic ? "TALK_FRIEND" : "TALK_TEST";
+    };
+    prepare( native );
+    prepare( fixture.other );
+    talk_function::npc_thankful( native );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function run = fixture.services["npcs"]["make_thankful"];
+    sol::protected_function_result call = run( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( fixture.other.get_attitude() == native.get_attitude() );
+    CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
+    CHECK( fixture.other.personality.aggression == native.personality.aggression );
+    CHECK( fixture.other.personality.aggression >= NPC_PERSONALITY_MIN );
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {
