@@ -107,4 +107,68 @@ TEST_CASE( "lua_platform_native_variable_default_presence_contract",
     CHECK( boolean_default.evaluate( context ).str().empty() );
 }
 
+TEST_CASE( "lua_platform_context_copy_empty_value_matches_native",
+           "[lua][platform][semantic][variables]" )
+{
+    using namespace cata::lua_platform;
+    const int source_state = GENERATE( 0, 1, 2 );
+    const bool indirect = GENERATE( false, true );
+    dialogue native_context;
+    if( source_state == 1 ) {
+        native_context.set_value( "input", diag_value{} );
+    } else if( source_state == 2 ) {
+        native_context.set_value( "input", diag_value( 0.0 ) );
+    }
+    native_context.set_value( "source_ref", "_input" );
+    native_context.set_value( "target_ref", "_output" );
+    native_context.set_value( "output", "old" );
+    talk_effect_t legacy;
+    const std::string effect_json = indirect ?
+                                    R"({"copy_var":{"var_val":"source_ref"},"target_var":{"var_val":"target_ref"}})" :
+                                    R"({"copy_var":{"context_val":"input"},"target_var":{"context_val":"output"}})";
+    legacy.parse_sub_effect( json_loader::from_string( effect_json ).get_object(), "copy_acceptance" );
+    for( const talk_effect_fun_t &effect : legacy.effects ) {
+        effect( native_context );
+    }
+    REQUIRE( native_context.maybe_get_value( "output" ) != nullptr );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table services = lua.create_table();
+    install_value_type_api( lua, services, []() {} );
+    const game_handle_runtime_owner_ptr owner = make_game_handle_runtime_owner();
+    const game_handle_runtime generation{ owner, 1 };
+    install_variable_api( services, [generation]() {
+        return generation;
+    }, []() {
+        return std::size_t( 1 );
+    }, []() {}, []() {}, []() {
+        return true;
+    } );
+    lua["services"] = services;
+    lua["source_state"] = source_state;
+    lua["indirect"] = indirect;
+    const sol::protected_function_result result = lua.safe_script( R"(
+        local data = {output="old", source_ref="_input", target_ref="_output"}
+        if source_state == 1 then data.input = services.types.null end
+        if source_state == 2 then data.input = 0 end
+        local source = services.variables.resolve(data, nil,
+            indirect and "var" or "context", indirect and "source_ref" or "input")
+        assert(source.ok)
+        local value = source.value.value
+        if value == nil then value = services.types.null end
+        local written = services.variables.set_resolved(data, nil,
+            indirect and "var" or "context", indirect and "target_ref" or "output", value)
+        assert(written.ok and data.output ~= nil)
+        return data.output
+    )", sol::script_pass_on_error );
+    REQUIRE( result.valid() );
+    if( source_state == 2 ) {
+        CHECK( result.get<double>() == native_context.get_value( "output" ).dbl() );
+    } else {
+        CHECK( result.get<sol::object>().is<script_null_value>() );
+        CHECK( native_context.get_value( "output" ).is_empty() );
+    }
+}
+
 #endif
