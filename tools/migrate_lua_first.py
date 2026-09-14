@@ -31585,11 +31585,16 @@ def render_eoc(
                     "    end",
                 ])
                 converted_effect = True
-            elif effect == "repair_bionic_limbs" and npc_event_character_actor_proven and avatar_actor_proven:
-                lines.append(
-                    "    service_value(services.npcs.medical.repair_bionic_limbs("
-                    "actor, services.characters.avatar()))"
-                )
+            elif effect == "repair_bionic_limbs" and npc_actor_expression is not None:
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    "            service_value(services.npcs.medical.repair_bionic_limbs("
+                    "provider, services.characters.avatar()))",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif isinstance(effect, dict) and "companion_mission" in effect:
                 rendered = render_static_companion_mission_effect(
