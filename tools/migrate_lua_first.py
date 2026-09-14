@@ -30764,7 +30764,7 @@ def render_eoc(
                 lines.append(f"    service_value(services.npcs.orders.choose_combat_style({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
-                lines.append('    services.npcs.set_attitude(actor, "kill")')
+                lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "leave":
                 lines.append('    services.npcs.set_attitude(actor, "null")')

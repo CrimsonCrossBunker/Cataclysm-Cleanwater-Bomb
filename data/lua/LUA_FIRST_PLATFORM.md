@@ -882,3 +882,8 @@ Stat reveal and combat-style selection open their native NPC interfaces.
 Generated Lua tests cover the three operations in sequence; native topic-state
 comparison source is present but unexecuted, and the two menus await interactive
 acceptance. Missing NPC provenance remains a migration gap.
+
+Combat-insult migration invokes `npcs.dialogue.provoke_combat`, preserving
+the native topic change and hostility together. Generated Lua tests verify
+event/override NPC routing; native topic/attitude comparison source is present
+but unexecuted. This does not establish combat gameplay acceptance.

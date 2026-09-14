@@ -10278,7 +10278,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
+            self.assertIn('services.npcs.dialogue.provoke_combat(actor)', main)
             self.assertIn('services.npcs.orders.run(actor, "lead_to_safety")', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
             self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
@@ -21250,6 +21250,32 @@ assert(table.concat(calls,',')=='finish,sheet,style')
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing",
                                    "required_event": "game_start", "effect": effects}), missing)
         self.assertTrue(missing.todos)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_combat_insult_calls_complete_native_dialogue_action(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "insult",
+                                   "required_event": "npc_becomes_hostile", "effect": "insult_combat"}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected=npc
+local calls=0
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={dialogue={provoke_combat=function(target)
+ assert(target==expected);calls=calls+1;return {ok=true,value={}}
+end}}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.insult({actors={npc=npc}},nil)
+expected=override
+migrated_eoc_functions.insult({actors={npc=npc}},override)
+assert(calls==2)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):

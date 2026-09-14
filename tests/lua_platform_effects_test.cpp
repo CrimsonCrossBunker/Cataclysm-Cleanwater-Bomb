@@ -904,4 +904,33 @@ TEST_CASE( "lua_platform_finish_dialogue_matches_native_topic_change",
     }
 }
 
+
+TEST_CASE( "lua_platform_combat_insult_matches_native_topic_and_attitude",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.chatbin.first_topic = "TALK_TEST";
+    fixture.other.chatbin.first_topic = "TALK_TEST";
+    talk_function::insult_combat( native );
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+    npcs, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function provoke = npcs["dialogue"]["provoke_combat"];
+    sol::protected_function_result call = provoke( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
+    CHECK( fixture.other.chatbin.first_topic == "TALK_DONE" );
+    CHECK( fixture.other.get_attitude() == native.get_attitude() );
+    CHECK( fixture.other.get_attitude() == NPCATT_KILL );
+}
+
 #endif
