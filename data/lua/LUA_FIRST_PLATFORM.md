@@ -892,5 +892,6 @@ Follower migration uses `join_player`, `stop_temporary_following` and
 `make_neutral` instead of attitude-only writes. This retains follower/faction
 setup and cash transfer, the allied-NPC stop guard and stranger-topic reset.
 Generated Lua routing tests pass; allied/non-allied state comparison source
-is present but unexecuted. Join-state runtime evidence and native notification
-parity remain outstanding.
+is present but unexecuted. Join-state runtime evidence remains outstanding. Stop/neutral operations
+now call native talk functions so their notification rules are retained; message
+comparison test source is present but has not executed.

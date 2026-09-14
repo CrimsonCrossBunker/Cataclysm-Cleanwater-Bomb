@@ -36,6 +36,7 @@
 #include "lua_platform_trade.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
+#include "messages.h"
 #include "npc.h"
 #include "npctalk.h"
 #include "rng.h"
@@ -963,16 +964,25 @@ TEST_CASE( "lua_platform_stop_following_and_neutral_match_native_state",
     for( const std::string operation : {
              "stop_temporary_following", "make_neutral"
          } ) {
+        native.name = "Test follower";
+        fixture.other.name = "Test follower";
+        Messages::clear_messages();
         if( operation == "stop_temporary_following" ) {
             talk_function::stop_following( native );
         } else {
             talk_function::stranger_neutral( native );
         }
+        const auto expected_messages = Messages::recent_messages( 10 );
+        Messages::clear_messages();
         sol::protected_function run = fixture.services["npcs"][operation];
         sol::protected_function_result call = run( fixture.handle( true ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
+        CHECK( Messages::recent_messages( 10 ) == expected_messages );
+        CHECK( expected_messages.size() ==
+               ( operation == "stop_temporary_following" && allied ? 0 : 1 ) );
+        Messages::clear_messages();
         CHECK( fixture.other.get_attitude() == native.get_attitude() );
         CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
     }

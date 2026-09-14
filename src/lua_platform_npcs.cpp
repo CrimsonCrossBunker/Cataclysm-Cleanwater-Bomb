@@ -1733,16 +1733,18 @@ sol::table set_npc_relationship_state(
     const bool blocked_by_ally = non_ally_only && entry->is_player_ally();
     bool follow_state_changed = false;
     if( !blocked_by_ally ) {
-        entry->set_attitude( attitude );
+        if( non_ally_only ) {
+            talk_function::stop_following( *entry );
+        } else if( reset_stranger_topic ) {
+            talk_function::stranger_neutral( *entry );
+        } else {
+            entry->set_attitude( attitude );
+        }
         if( attitude == NPCATT_FOLLOW ) {
             follow_state_changed = entry->mission != NPC_MISSION_NULL ||
                                    entry->goal != npc::no_goal_point || entry->guard_pos.has_value() ||
                                    entry->get_ai_guard_pos().has_value() || !entry->get_committed_goal().empty();
             reset_npc_follow_destination( *entry );
-        }
-        if( reset_stranger_topic ) {
-            entry->chatbin.first_topic =
-                entry->chatbin.talk_stranger_neutral;
         }
     }
     sol::table value = state.create_table();
