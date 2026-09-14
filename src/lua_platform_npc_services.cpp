@@ -265,6 +265,11 @@ sol::table repair_bionic_limbs_with_provider(
         return make_game_error_result( state, *error );
     }
     avatar &patient = *patient_target->as_avatar();
+    if( &patient != &get_avatar() ) {
+        return make_game_error_result( state, {
+            "invalid_patient", "Bionic limb repair requires the active avatar"
+        } );
+    }
     sol::table patient_before = character_service_state(
                                     state, patient );
     sol::table provider_before = provider_service_state(

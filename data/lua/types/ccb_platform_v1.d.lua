@@ -9391,7 +9391,7 @@ function CcbNpcMedicalApi.provide_aid(provider, patient, level, include_allies) 
 ---@return CcbResult
 function CcbNpcMedicalApi.open_bionic_service(provider, operation, patient) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param patient GameHandle Exact avatar handle; required, no fallback.
+---@param patient GameHandle Exact active avatar handle; required, no fallback.
 ---@return CcbResult
 function CcbNpcMedicalApi.repair_bionic_limbs(provider, patient) end
 

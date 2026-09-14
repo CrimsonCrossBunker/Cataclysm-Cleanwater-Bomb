@@ -1436,6 +1436,29 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
     CHECK_FALSE( query().valid() );
 }
 
+TEST_CASE( "lua_platform_bionic_repair_rejects_a_different_avatar",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    REQUIRE( &fixture.player != &get_avatar() );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function repair = fixture.services["npcs"]["medical"]["repair_bionic_limbs"];
+    const int moves_before = get_avatar().get_moves();
+    const int debt_before = fixture.other.op_of_u.owed;
+    sol::protected_function_result call = repair( fixture.handle( true ), fixture.handle( false ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    CHECK_FALSE( result["ok"].get<bool>() );
+    CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
+    CHECK( get_avatar().get_moves() == moves_before );
+    CHECK( fixture.other.op_of_u.owed == debt_before );
+}
+
 TEST_CASE( "lua_platform_bionic_service_preserves_native_patient_domain",
            "[lua][platform][npc][semantic]" )
 {
