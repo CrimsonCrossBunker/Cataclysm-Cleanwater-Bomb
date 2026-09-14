@@ -793,3 +793,9 @@ have no additional entry-count cap; required character provenance and ID
 validation remain explicit migration limits. Generated Lua tests cover flags,
 300-entry lists and selection timing. A same-seed native comparison test is
 provided but has not run; this is not evidence of full native selector parity.
+
+Explicit `{str = ..., i18n = true}` string expressions in migrated
+`foreach` arrays use `services.translate`, including nested supported mutator
+arguments. Plain string literals remain untranslated. Translation runs while
+building the input snapshot, before body effects. Generated Lua execution covers
+this order; native localization comparison is still pending.

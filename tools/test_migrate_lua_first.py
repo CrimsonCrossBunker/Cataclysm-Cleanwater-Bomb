@@ -20589,6 +20589,42 @@ assert(EXPR=='tec_none' and called)
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_translated_strings_evaluate_before_body(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": ["literal", {"str": "message", "i18n": True},
+                       {"mutator": "game_option", "option": {"str": "setting", "i18n": True}}],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={}}
+local translated,calls={},0
+local services={
+ translate=function(text)
+  assert(calls==0)
+  translated[#translated+1]=text
+  return 'localized:'..text
+ end,
+ gameplay={options={get=function(name)
+  assert(name=='localized:setting' and calls==0)
+  return {type='string_input',value='option value'}
+ end}},
+ message=function()
+  calls=calls+1
+  assert(context.data.entry==({'literal','localized:message','option value'})[calls])
+  assert(table.concat(translated,',')=='message,setting')
+ end
+}
+BODY
+assert(calls==3)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

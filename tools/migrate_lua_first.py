@@ -4513,6 +4513,10 @@ def render_static_spawn_item_effect(
 
 
 def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+    if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
+        if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
+            return None
+        return render_participant_translation_expression(value, target, alpha, beta)
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -5767,6 +5771,7 @@ def render_static_foreach(
             elif isinstance(value, dict) and (
                     set(value) - {"default"} in (
                         {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}) or
+                    (value.get("i18n") is True and "str" in value) or
                     value.get("mutator") in {
                         "game_option", "mon_faction", "ma_technique_name", "ma_technique_description",
                         "valid_technique"}):
