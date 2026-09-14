@@ -949,3 +949,11 @@ invalidates the runtime handles. Fresh handles use the new character ID. This cl
 the stale-avatar window during native control-transfer hooks without changing their
 ordering. A focused in-place identity regression is present as unexecuted test source;
 full control-transfer and hook runtime acceptance remain pending.
+
+Animal-purchase migration keeps center-first nearby placement and passes
+`upgrade=false` to `spawns.monster` (omitted upgrade retains the existing true default).
+Successful chicken/horse/cow placement sets friendliness to -1 and the permanent pet
+effect. Blocked placement continues; other errors propagate. These native effects do
+not charge payment themselves. Generated Lua tests cover species, participant overrides,
+pet setup and blocked/error continuation. Native placement/upgrade/pet runtime acceptance
+and the original blocked-placement debug notification remain outstanding.

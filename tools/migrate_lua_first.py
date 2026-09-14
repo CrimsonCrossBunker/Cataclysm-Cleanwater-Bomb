@@ -30810,23 +30810,25 @@ def render_eoc(
             elif npc_actor_proven and effect == "stop_guard":
                 lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, false))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "buy_chicken":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_chicken"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "buy_horse":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_horse"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "buy_cow":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_cow"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "buy_chicken", "buy_horse", "buy_cow",
+            }:
+                animal = "mon_" + effect.removeprefix("buy_")
+                target = npc_actor_expression or "actor"
+                lines.extend([
+                    "    do",
+                    f"        local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
+                    f"service_value(services.characters.snapshot({target})).creature.position, 1, false)",
+                    "        if purchase.ok then",
+                    "            local pet = purchase.value.handle",
+                    "            service_value(services.monsters.set_friendly(pet, true))",
+                    "            service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
+                    "services.time.duration(1, \"turn\"), { permanent = true }))",
+                    "        elseif purchase.error.code ~= \"blocked\" then",
+                    "            service_value(purchase)",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and any(key in effect for key in (

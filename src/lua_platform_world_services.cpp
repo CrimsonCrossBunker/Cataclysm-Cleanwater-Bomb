@@ -188,7 +188,7 @@ script_tripoint_coord absolute_position( const Creature &creature )
 sol::table spawn_monster(
     sol::this_state lua, const script_game_id &requested_type,
     const script_tripoint_coord &requested_position,
-    const sol::optional<int> &requested_radius,
+    const sol::optional<int> &requested_radius, const bool upgrade,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -214,7 +214,9 @@ sol::table spawn_monster(
             "No valid monster spawn position was available"
         } );
     }
-    placed->try_upgrade( true );
+    if( upgrade ) {
+        placed->try_upgrade( true );
+    }
 
     sol::table value = state.create_table();
     value["handle"] = make_creature_handle(
@@ -2439,12 +2441,12 @@ void install_game_world_service_api(
             sol::this_state lua,
             const script_game_id & monster_type,
             const script_tripoint_coord & position,
-    const sol::optional<int> &radius ) {
+    const sol::optional<int> &radius, const sol::optional<bool> &upgrade ) {
         require_write();
         require_active_callback(
             has_active_callback, "services.spawns.monster" );
         return spawn_monster(
-                   lua, monster_type, position, radius,
+                   lua, monster_type, position, radius, upgrade.value_or( true ),
                    current_runtime_generation(),
                    current_world_generation() );
     } );

@@ -8291,6 +8291,7 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field serde CcbSerdeApi
 ---@field skills CcbSkillsApi
 ---@field sound CcbPlatformSoundApi
+---@field monsters CcbMonstersApi
 ---@field spawns CcbSpawnsApi
 ---@field spells CcbSpellsApi
 ---@field statistics CcbStatisticsApi
@@ -10856,3 +10857,19 @@ local CcbRegistryApi = {}
 ---@param options? CcbRegistryQuery
 ---@return table page
 function CcbRegistryApi.list(kind, options) end
+
+---@class CcbSpawnsApi
+local CcbSpawnsApi = {}
+---@param monster_type GameId Monster definition ID.
+---@param position TripointCoord Loaded absolute map-square coordinate.
+---@param radius? integer Search radius 0..60, default 0; center first, then nearest available ring.
+---@param upgrade? boolean Apply native monster upgrade after placement; defaults to true.
+---@return CcbResult result Value contains handle, monster, position and hallucination; blocked when no position exists.
+function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
+
+---@class CcbMonstersApi
+local CcbMonstersApi = {}
+---@param monster GameHandle Exact live monster.
+---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
+---@return CcbResult result
+function CcbMonstersApi.set_friendly(monster, friendly) end

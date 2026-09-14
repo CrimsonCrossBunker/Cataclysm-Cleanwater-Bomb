@@ -10353,17 +10353,17 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('services.npcs.set_guarding(actor, false)', main)
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_chicken"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1)',
+                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
                 main,
             )
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_horse"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1)',
+                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
                 main,
             )
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_cow"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1)',
+                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
                 main,
             )
             self.assertNotIn("needs review", report)
@@ -21475,6 +21475,61 @@ end
                 self.assertEqual(len(result.converted), 0)
                 self.assertEqual(len(result.partial), 1)
                 self.assertIn(reason, result.files[Path("main.lua")])
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_purchased_animals_keep_pet_state_and_blocked_continuation(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "pets",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["buy_chicken", "buy_horse", "buy_cow"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override,position={},{},{}
+local expected,mode,calls
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ types={id=function(kind,id) return id end},
+ time={duration=function(n,unit) assert(n==1 and unit=='turn');return n end},
+ characters={snapshot=function(target)
+  assert(target==expected);return {ok=true,value={creature={position=position}}}
+ end},
+ spawns={monster=function(id,p,radius,upgrade)
+  assert(p==position and radius==1 and upgrade==false)
+  calls[#calls+1]='spawn:'..id
+  if mode~='ok' then return {ok=false,error={code=mode}} end
+  return {ok=true,value={handle=id}}
+ end},
+ monsters={set_friendly=function(pet,friendly)
+  assert(friendly==true);calls[#calls+1]='friendly:'..pet;return {ok=true,value={}}
+ end},
+ effects={add=function(pet,id,duration,options)
+  assert(id=='pet' and duration==1 and options.permanent==true)
+  calls[#calls+1]='pet:'..pet;return {ok=true,value={}}
+ end}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target
+ for _,state in ipairs({'ok','blocked','stale_world'}) do
+  mode=state;calls={}
+  local ok=pcall(migrated_eoc_functions.pets,{actors={npc=npc}},target)
+  assert(ok==(mode~='stale_world'))
+  assert(#calls==(mode=='ok' and 9 or mode=='blocked' and 3 or 1))
+  if mode=='ok' then
+   for i,species in ipairs({'mon_chicken','mon_horse','mon_cow'}) do
+    assert(calls[i*3-2]=='spawn:'..species)
+    assert(calls[i*3-1]=='friendly:'..species)
+    assert(calls[i*3]=='pet:'..species)
+   end
+  end
+ end
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
