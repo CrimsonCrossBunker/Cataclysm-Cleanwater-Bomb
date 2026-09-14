@@ -17644,7 +17644,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "type": "effect_on_condition",
                     "id": "global_u_sound_false",
                     "required_event": "game_start",
-                    "condition": False,
+                    "condition": {"or": []},
                     "false_effect": {
                         "u_make_sound": "a loud tearing sound.",
                         "target_var": {"context_val": "sound_location"},
@@ -17675,7 +17675,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "type": "effect_on_condition",
                     "id": "global_u_field_false",
                     "required_event": "game_start",
-                    "condition": False,
+                    "condition": {"or": []},
                     "false_effect": {
                         "u_set_field": "fd_hot_air3",
                         "outdoor_only": True,
@@ -19698,7 +19698,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "type": "effect_on_condition",
                         "id": "false_domain_services",
                         "required_event": "game_start",
-                        "condition": False,
+                        "condition": {"or": []},
                         "false_effect": [
                             {
                                 "u_spawn_item": "reward",
@@ -20038,7 +20038,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "type": "effect_on_condition",
                         "id": "false_switch",
                         "required_event": "game_start",
-                        "condition": False,
+                        "condition": {"or": []},
                         "false_effect": {
                             "switch": {"math": ["u_health()"]},
                             "cases": [
@@ -20062,6 +20062,23 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn("local switch_case = 0", main)
             self.assertIn('services.message("zero")', main)
             self.assertNotIn("switch-control-flow conversion", report)
+
+    def test_explicit_invalid_eoc_conditions_are_not_reported_converted(self) -> None:
+        for key in ("condition", "deactivate_condition"):
+            for invalid in (None, True, False, 0, [], 1.5):
+                with self.subTest(key=key, invalid=invalid), tempfile.TemporaryDirectory() as temporary:
+                    source = Path(temporary) / "source.json"
+                    source.write_text(json.dumps({
+                        "type": "effect_on_condition", "id": "invalid_predicate",
+                        "required_event": "game_start", "effect": "nothing",
+                        key: invalid,
+                    }))
+                    result = migrate_lua_first.migrate(
+                        migrate_lua_first.load_objects([source]), "invalid_predicate_mod")
+                    self.assertTrue(result.partial)
+                    report = result.files[Path("MIGRATION_REPORT.md")]
+                    self.assertIn("invalid condition syntax" if key == "condition"
+                                  else "deactivate_condition needs a native Lua predicate", report)
 
     def test_test_eoc_distinguishes_missing_and_invalid_conditions(self) -> None:
         def render(definition):

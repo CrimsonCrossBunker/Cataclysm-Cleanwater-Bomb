@@ -28157,7 +28157,7 @@ def render_eoc(
         lines.append("    local prevent_death = false")
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
-    if deactivate_condition is not None:
+    if isinstance(deactivate_condition, (str, dict)):
         deactivate_expression = render_eoc_condition_expression(
             deactivate_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
@@ -28177,7 +28177,17 @@ def render_eoc(
         set(raw_condition) == {"math"} and
         raw_condition.get("math") == []
     )
-    if empty_math_condition:
+    invalid_condition_shape = (
+        "condition" in value and not isinstance(raw_condition, (str, dict))
+    )
+    if invalid_condition_shape:
+        condition_expression = "false"
+        condition_converted = False
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: EOC {eoc_id} has invalid condition syntax; expected a string or object"
+        )
+    elif empty_math_condition:
         # Native eoc_math concatenates the array and asks the math parser to
         # parse the resulting empty expression.  That is invalid source data,
         # not a missing Platform predicate.  Emit an executable fail-closed
@@ -32553,7 +32563,7 @@ def render_eoc(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} recurrence needs a bounded task interval"
         )
-    if deactivate_condition is not None and deactivate_expression is None:
+    if "deactivate_condition" in value and deactivate_expression is None:
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} deactivate_condition needs a native Lua predicate"
@@ -32592,6 +32602,7 @@ def render_eoc(
         all_effects_converted and
         has_trigger and
         condition_converted and
+        ("deactivate_condition" not in value or deactivate_expression is not None) and
         not unresolved
     ):
         result.converted.append(f"{source.location}: EOC {eoc_id}")
