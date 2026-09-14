@@ -1,12 +1,15 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <string>
 #include <vector>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
+#include "condition.h"
 #include "character.h"
 #include "character_id.h"
 #include "dialogue.h"
@@ -20,6 +23,8 @@
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
+#include "type_id.h"
+#include "weather.h"
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
            "[lua][platform][strings][semantic]" )
@@ -90,6 +95,49 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     sol::table snapshot = read_result["value"];
     const std::string value = snapshot["value"];
     CHECK( value == ( source_npc ? "beta value" : "alpha value" ) );
+    // Compose the same typed variable read with native environment predicates.
+    // A stored null is present and must not select the missing-value fallback.
+    const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };
+    Character &environment_source = source_npc ? static_cast<Character &>( partner ) : player;
+    context.set_value( "environment_ref", source_npc ? "n_environment_input" : "u_environment_input" );
+    lua["services"] = services;
+    lua["data"] = data;
+    lua["source"] = source_npc ? partner_handle : player_handle;
+    lua["scope"] = source_npc ? "npc" : "u";
+    sol::protected_function environment_query = lua.load( R"(
+        local result = services.variables.resolve(data, source, scope, "environment_input")
+        assert(result.ok)
+        local value = result.value
+        if value.exists == false then return current == fallback end
+        return current == tostring(value.value or "")
+    )" );
+    for( const std::string selector : {
+             "is_season", "is_weather"
+         } ) {
+        const std::string current = selector == "is_season" ?
+                                    seasons[season_of_year( calendar::turn )] : get_weather().weather_id.str();
+        lua["current"] = current;
+        lua["fallback"] = current;
+        for( int state = 0; state < 4; ++state ) {
+            CAPTURE( selector, source_npc, state );
+            environment_source.remove_value( "environment_input" );
+            if( state == 1 ) {
+                environment_source.set_value( "environment_input", current );
+            } else if( state == 2 ) {
+                environment_source.set_value( "environment_input", "unknown" );
+            } else if( state == 3 ) {
+                environment_source.set_value( "environment_input", diag_value{} );
+            }
+            const std::string condition_json = R"({")" + selector + R"(":{")" +
+                                               ( indirect ? "var_val" : source_key ) + R"(":")" +
+                                               ( indirect ? "environment_ref" : "environment_input" ) +
+                                               R"(","default":")" + current + R"("}})";
+            conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
+            const sol::protected_function_result actual = environment_query();
+            REQUIRE( actual.valid() );
+            CHECK( actual.get<bool>() == predicate( context ) );
+        }
+    }
     // Generated Lua resolves indirect prefixes before this single-owner API.
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
