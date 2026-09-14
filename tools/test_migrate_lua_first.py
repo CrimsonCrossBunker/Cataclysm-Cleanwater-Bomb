@@ -18804,6 +18804,37 @@ assert(queued._literal[3][1]=="nested")
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_mutation_activation_indirection_preserves_missing_and_empty(self) -> None:
+        lines = migrate_lua_first.render_mutation_activation(
+            {"u_activate_trait": {"var_val": "reference", "default": "QUICK"}}, "actor", "partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={reference="n_mutation"}}
+local exists,value=false,nil
+local expected="QUICK"
+local count=0
+local function service_value(r) assert(r.ok); return r.value end
+local services={types={id=function(kind,id) assert(id==expected); return id end},
+variables={resolve=function(data,owner,scope,key,participants)
+    assert(scope=="var" and key=="reference" and participants.alpha==actor and participants.beta==partner)
+    return {ok=true,value={exists=exists,value=value}}
+end},mutations={invoke_activation=function(owner,id,active)
+    assert(owner==actor and active); count=count+1; return {ok=true,value={}}
+end}}
+local function run()
+""" + "\n".join(lines) + r"""
+end
+run()
+exists=true; expected=""; run()
+value=42; run()
+value="SNAIL_TRAIL"; expected=value; run()
+assert(count==4)
+"""
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_mutation_activation_routes_participant_and_action(self) -> None:
         for prefix in ("u_", "npc_"):
             for operation in ("activate_trait", "deactivate_trait"):
@@ -18818,8 +18849,8 @@ local context={data={}}
 local calls=0
 local function service_value(r) assert(r.ok); return r.value end
 local services={types={id=function(kind,value) assert(kind=="mutation"); return value end},
-variables={resolve=function(data,owner,scope,key)
-    assert(owner==partner and scope=="npc" and key=="mutation")
+variables={resolve=function(data,owner,scope,key,participants)
+    assert(owner==nil and participants.beta==partner and scope=="npc" and key=="mutation")
     return {ok=true,value={exists=true,value="QUICK"}}
 end}, mutations={invoke_activation=function(owner,id,active)
     assert(owner==TARGET and id=="QUICK" and active==ACTIVE)

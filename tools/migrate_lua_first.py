@@ -4520,6 +4520,24 @@ def render_mutation_activation(effect: Any, alpha: str | None, beta: str | None)
     if source is None:
         return None
     mutation = render_eoc_string_expression(value, source)
+    if isinstance(value, dict):
+        descriptors = set(value) - {"default"}
+        if len(descriptors) == 1 and next(iter(descriptors)) in {
+                "u_val", "npc_val", "context_val", "global_val", "var_val"}:
+            descriptor = next(iter(descriptors))
+            name = value[descriptor]
+            if not bounded_utf8_string(name, 128) or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+                return None
+            fallback = value.get("default", "")
+            if not isinstance(fallback, str):
+                return None
+            scope = descriptor.removesuffix("_val")
+            mutation = (
+                '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
+                ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
+                '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
+                ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
+            )
     if mutation is None:
         return None
     active = key.endswith("_activate_trait")
