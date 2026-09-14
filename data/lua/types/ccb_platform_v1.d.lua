@@ -9630,9 +9630,11 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@alias CcbTradeSettlement CcbTradeNpcDebtSettlement|CcbTradeAllowanceSettlement
 
 ---@class CcbTradeQuoteHolder
----@field kind 'character' Exact Character holder kind; no map/container/vehicle or implicit selection.
+---@field kind 'character' Exact Character owner; contained sources additionally name the exact container and pocket. No map/vehicle or implicit selection.
 ---@field character GameHandle Exact Character/NPC holder handle.
----@field slot 'inventory'|'worn'|'wielded' Explicit Character slot.
+---@field slot 'inventory'|'worn'|'wielded'|'contained' Explicit source slot; destinations must use inventory.
+---@field container? GameHandle Required only for contained sources: exact Item container held by character.
+---@field pocket_index? integer Required only for contained sources: zero-based index across all native pockets; the Item must be a direct member.
 
 ---@class CcbTradeQuoteHolderSnapshot: CcbTradeQuoteHolder
 ---@field locator table<string, any> Detached canonical holder locator captured at quote time.
@@ -9811,7 +9813,7 @@ function CcbTradeApi.pay(seller, buyer, cost) end
 function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 
 ---@class CcbSellingOffer
----@field source_holder? CcbTradeQuoteHolder Present for top-level inventory, worn and wielded items. Nested offers remain in native order but require container-aware transfer support.
+---@field source_holder CcbTradeQuoteHolder Exact source including container and pocket for nested Items; usable as quote line source_holder.
 ---@field item GameHandle Exact live offered Item.
 ---@field price number Native NPC selling-offer valuation; not a locked settlement quote.
 ---@field count integer Native offer count.

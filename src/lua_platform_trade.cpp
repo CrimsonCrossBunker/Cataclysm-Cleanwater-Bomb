@@ -8,6 +8,7 @@ extern "C" {
 #include <lua.h>
 }
 #include <npc_opinion.h>
+#include <algorithm>
 #include <cstddef>
 #include <cmath>
 #include <cstdint>
@@ -28,6 +29,8 @@ extern "C" {
 #include "character.h"
 #include "faction.h"
 #include "item.h"
+#include "item_contents.h"
+#include "item_pocket.h"
 #include "item_location.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -49,6 +52,8 @@ struct trade_quote_token::state {
         std::int64_t charges = 0;
         game_handle source_holder;
         std::string source_slot;
+        std::optional<game_handle> source_container;
+        int source_pocket_index = -1;
         game_handle_locator source_holder_locator;
         game_handle destination_holder;
         std::string destination_slot;
@@ -108,10 +113,7 @@ constexpr std::size_t maximum_trade_quote_lines = 256;
 constexpr std::int64_t default_trade_quote_expiry_turns = 10;
 constexpr std::int64_t maximum_trade_quote_expiry_turns = 10000;
 
-struct trade_holder_input {
-    game_handle character;
-    std::string slot;
-};
+using trade_holder_input = platform_trade_item_holder;
 
 struct trade_line_input {
     std::string direction;
@@ -352,7 +354,8 @@ std::optional<game_handle_error> read_trade_holder(
                 std::string( api_name ) + " holder keys must be strings" );
         }
         const std::string name = field.first.as<std::string>();
-        if( name != "kind" && name != "character" && name != "slot" ) {
+        if( name != "kind" && name != "character" && name != "slot" &&
+            name != "container" && name != "pocket_index" ) {
             throw std::invalid_argument(
                 std::string( api_name ) + " holder received unknown field '" +
                 name + "'" );
@@ -369,10 +372,22 @@ std::optional<game_handle_error> read_trade_holder(
     result.character = raw_character.as<game_handle>();
     result.slot = raw_slot.as<std::string>();
     if( result.slot != "inventory" && result.slot != "worn" &&
-        result.slot != "wielded" ) {
+        result.slot != "wielded" && result.slot != "contained" ) {
         throw std::invalid_argument(
             std::string( api_name ) +
-            " Character holder.slot must be inventory, worn, or wielded" );
+            " Character holder.slot must be inventory, worn, wielded, or contained" );
+    }
+    const sol::object container = requested.raw_get<sol::object>( "container" );
+    const sol::object pocket = requested.raw_get<sol::object>( "pocket_index" );
+    if( result.slot == "contained" ) {
+        if( !container.is<game_handle>() || !pocket.is<lua_Integer>() ||
+            pocket.as<lua_Integer>() < 0 || pocket.as<lua_Integer>() > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "Contained trade holders require an exact container and nonnegative pocket_index" );
+        }
+        result.container = container.as<game_handle>();
+        result.pocket_index = static_cast<int>( pocket.as<lua_Integer>() );
+    } else if( present( container ) || present( pocket ) ) {
+        throw std::invalid_argument( "Only contained trade holders accept container and pocket_index" );
     }
     return std::nullopt;
 }
@@ -436,6 +451,9 @@ bool trade_holder_contains_item( const Character &character, const item &entry,
     }
     if( slot == "worn" ) {
         return character.is_worn( entry );
+    }
+    if( slot == "contained" ) {
+        return !character.parents( entry ).empty();
     }
     return !character.is_wielding( entry ) && !character.is_worn( entry ) &&
            character.parents( entry ).empty();
@@ -502,6 +520,29 @@ std::optional<game_handle_error> validate_trade_item_line(
         return game_handle_error{
             "stale_holder", "trade quote source holder no longer owns the Item"
         };
+    }
+    if( line.source.slot == "contained" ) {
+        if( !line.source.container || line.source.pocket_index < 0 ) {
+            return game_handle_error{ "unsupported_holder", "The exact source container and pocket are required" };
+        }
+        const auto container = line.source.container->resolve_item( runtime, world_generation );
+        if( !container ) {
+            return container.error;
+        }
+        if( !source->has_item( *container.value ) ) {
+            return game_handle_error{ "wrong_holder", "The source Character no longer holds the container" };
+        }
+        const auto pockets = container.value->get_contents().get_pockets( []( const item_pocket & ) {
+            return true;
+        } );
+        if( static_cast<std::size_t>( line.source.pocket_index ) >= pockets.size() ||
+            pockets[line.source.pocket_index] == nullptr ) {
+            return game_handle_error{ "wrong_holder", "The exact source pocket no longer exists" };
+        }
+        const auto direct = pockets[line.source.pocket_index]->all_items_top();
+        if( std::find( direct.begin(), direct.end(), resolved_item ) == direct.end() ) {
+            return game_handle_error{ "wrong_holder", "The exact source pocket no longer contains the Item" };
+        }
     }
     const std::int64_t available = resolved_item->count_by_charges() ?
                                    resolved_item->charges : 1;
@@ -1040,12 +1081,18 @@ sol::table trade_holder_to_lua( sol::state_view lua,
                                 const game_handle &character,
                                 const std::string &slot,
                                 const game_handle_locator &locator,
-                                const std::uint64_t generation )
+                                const std::uint64_t generation,
+                                const std::optional<game_handle> &container = std::nullopt,
+                                const int pocket_index = -1 )
 {
     sol::table result = lua.create_table();
     result["kind"] = "character";
     result["character"] = character;
     result["slot"] = slot;
+    if( container ) {
+        result["container"] = *container;
+        result["pocket_index"] = pocket_index;
+    }
     result["locator"] = trade_locator_to_lua( lua, locator );
     result["mutation_generation"] = static_cast<lua_Integer>( generation );
     return result;
@@ -1129,7 +1176,7 @@ sol::table trade_quote_snapshot( sol::state_view lua,
         entry["source_holder"] = trade_holder_to_lua(
                                      lua, line.source_holder, line.source_slot,
                                      line.source_holder_locator,
-                                     line.source_holder_generation );
+                                     line.source_holder_generation, line.source_container, line.source_pocket_index );
         entry["destination_holder"] = trade_holder_to_lua(
                                           lua, line.destination_holder,
                                           line.destination_slot,
@@ -1209,6 +1256,7 @@ std::optional<game_handle_error> validate_trade_quote(
     std::vector<item *> items;
     items.reserve( snapshot.lines.size() );
     std::set<std::int64_t> seen_uids;
+    std::set<std::int64_t> ancestor_uids;
     std::int64_t seller_to_buyer_total = 0;
     std::int64_t buyer_to_seller_total = 0;
     std::uint64_t pricing_generation = 1469598103934665603ULL;
@@ -1231,7 +1279,8 @@ std::optional<game_handle_error> validate_trade_quote(
             expected_destination.identity_generation() ||
             ( line.source_slot != "inventory" &&
               line.source_slot != "worn" &&
-              line.source_slot != "wielded" ) ||
+              line.source_slot != "wielded" &&
+              line.source_slot != "contained" ) ||
             line.destination_slot != "inventory" ) {
             return game_handle_error{
                 "stale_holder", "A quoted trade holder is not the canonical participant holder"
@@ -1264,6 +1313,8 @@ std::optional<game_handle_error> validate_trade_quote(
         input.item = line.item;
         input.source.character = line.source_holder;
         input.source.slot = line.source_slot;
+        input.source.container = line.source_container;
+        input.source.pocket_index = line.source_pocket_index;
         input.destination.character = line.destination_holder;
         input.destination.slot = line.destination_slot;
         input.quantity = line.quantity;
@@ -1276,6 +1327,10 @@ std::optional<game_handle_error> validate_trade_quote(
         if( const std::optional<game_handle_error> error = validate_trade_item_line(
                     input, *seller, *buyer, runtime, world_generation, resolved_item ) ) {
             return error;
+        }
+        Character &source = line.direction == "seller_to_buyer" ? *seller : *buyer;
+        for( const item *parent : source.parents( *resolved_item ) ) {
+            ancestor_uids.insert( parent->uid().get_value() );
         }
         Character *pricing_buyer = line.direction == "seller_to_buyer" ? buyer : seller;
         Character *pricing_seller = line.direction == "seller_to_buyer" ? seller : buyer;
@@ -1305,6 +1360,11 @@ std::optional<game_handle_error> validate_trade_quote(
             seller_to_buyer_total += total_price;
         } else {
             buyer_to_seller_total += total_price;
+        }
+    }
+    for( const std::int64_t uid : seen_uids ) {
+        if( ancestor_uids.count( uid ) != 0 ) {
+            return game_handle_error{ "overlapping_holder", "A quote cannot transfer a container and its contents" };
         }
     }
     const std::int64_t net = seller_to_buyer_total - buyer_to_seller_total;
@@ -1473,10 +1533,11 @@ sol::table commit_trade(
         if( line.destination_slot != "inventory" ||
             ( line.source_slot != "inventory" &&
               line.source_slot != "worn" &&
-              line.source_slot != "wielded" ) ) {
+              line.source_slot != "wielded" &&
+              line.source_slot != "contained" ) ) {
             return make_game_error_result( state, {
                 "unsupported_holder",
-                "trade commit supports Character inventory, worn, or wielded sources and inventory destinations only"
+                "trade commit supports explicit Character inventory, worn, wielded or contained sources and inventory destinations only"
             } );
         }
         platform_trade_item_request request;
@@ -1484,6 +1545,8 @@ sol::table commit_trade(
         request.transfer_ownership = snapshot->settlement_strategy == "npc_allowance";
         request.source_holder.character = line.source_holder;
         request.source_holder.slot = line.source_slot;
+        request.source_holder.container = line.source_container;
+        request.source_holder.pocket_index = line.source_pocket_index;
         request.destination_holder.character = line.destination_holder;
         request.destination_holder.slot = line.destination_slot;
         request.quantity = line.quantity;
@@ -1730,6 +1793,7 @@ sol::table quote_trade(
     }
 
     std::set<std::int64_t> seen_uids;
+    std::set<std::int64_t> ancestor_uids;
     std::uint64_t pricing_generation = 1469598103934665603ULL;
     hash_trade_npc_inputs( pricing_generation, *seller );
     hash_trade_npc_inputs( pricing_generation, *buyer );
@@ -1748,6 +1812,9 @@ sol::table quote_trade(
         Character *pricing_buyer = input.direction == "seller_to_buyer" ? buyer : seller;
         Character *pricing_seller = input.direction == "seller_to_buyer" ? seller : buyer;
         Character &source = input.direction == "seller_to_buyer" ? *seller : *buyer;
+        for( const item *parent : source.parents( *entry ) ) {
+            ancestor_uids.insert( parent->uid().get_value() );
+        }
         // Gifts use the bound native selling offer, not a second barter permission/price.
         const bool allowance = options.settlement_strategy == "npc_allowance";
         const int unit_price = allowance ? 0 : authoritative_trade_price(
@@ -1770,6 +1837,8 @@ sol::table quote_trade(
         line.charges = entry->count_by_charges() ? entry->charges : 1;
         line.source_holder = input.source.character;
         line.source_slot = input.source.slot;
+        line.source_container = input.source.container;
+        line.source_pocket_index = input.source.pocket_index;
         line.source_holder_locator = input.source.character.locator();
         line.destination_holder = input.destination.character;
         line.destination_slot = input.destination.slot;
@@ -1789,6 +1858,13 @@ sol::table quote_trade(
             snapshot->seller_to_buyer_total += total_price;
         } else {
             snapshot->buyer_to_seller_total += total_price;
+        }
+    }
+    for( const std::int64_t uid : seen_uids ) {
+        if( ancestor_uids.count( uid ) != 0 ) {
+            return make_game_error_result( state, {
+                "overlapping_holder", "A quote cannot transfer a container and its contents"
+            } );
         }
     }
     snapshot->net = snapshot->seller_to_buyer_total - snapshot->buyer_to_seller_total;
@@ -1902,14 +1978,40 @@ sol::table selling_offers( sol::this_state lua, const game_handle &seller_handle
         row["item"] = game_handle::from_item( *entry,
         { "character_inventory", entry->uid().get_value(), 0, 0, 0, {} },
         runtime, world_generation );
-        if( seller->parents( *entry ).empty() ) {
-            sol::table holder = state.create_table();
-            holder["kind"] = "character";
-            holder["character"] = seller_handle;
+        sol::table holder = state.create_table();
+        holder["kind"] = "character";
+        holder["character"] = seller_handle;
+        const auto parents = seller->parents( *entry );
+        if( parents.empty() ) {
             holder["slot"] = seller->is_wielding( *entry ) ? "wielded" :
                              seller->is_worn( *entry ) ? "worn" : "inventory";
-            row["source_holder"] = std::move( holder );
+        } else {
+            item &parent = *parents.front();
+            const auto pockets = parent.get_contents().get_pockets( []( const item_pocket & ) {
+                return true;
+            } );
+            int pocket_index = -1;
+            for( std::size_t i = 0; i < pockets.size(); ++i ) {
+                if( pockets[i] == nullptr ) {
+                    continue;
+                }
+                const auto direct = pockets[i]->all_items_top();
+                if( std::find( direct.begin(), direct.end(), entry ) != direct.end() ) {
+                    pocket_index = static_cast<int>( i );
+                    break;
+                }
+            }
+            if( pocket_index < 0 ) {
+                return make_game_error_result( state, {
+                    "wrong_holder", "A native offer has no exact containing pocket"
+                } );
+            }
+            holder["slot"] = "contained";
+            holder["container"] = game_handle::from_item( parent,
+            { "character_container", parent.uid().get_value(), 0, 0, 0, {} }, runtime, world_generation );
+            holder["pocket_index"] = pocket_index;
         }
+        row["source_holder"] = std::move( holder );
         row["price"] = offer.price;
         row["count"] = offer.count;
         row["charges"] = offer.charges;

@@ -52,6 +52,9 @@ struct platform_recipe_item_request {
 struct platform_trade_item_holder {
     game_handle character;
     std::string slot;
+    // Required only for contained sources; index addresses all native pockets.
+    std::optional<game_handle> container;
+    int pocket_index = -1;
 };
 
 /** One exact Item and its explicit source/destination Character holders. */

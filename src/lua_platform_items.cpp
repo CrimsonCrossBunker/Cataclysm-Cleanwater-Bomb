@@ -5759,7 +5759,48 @@ struct prepared_trade_item {
     item escrow;
     item *destination_item = nullptr;
     std::vector<std::pair<std::int64_t, faction_id>> original_owners;
+    platform_trade_item_holder source_descriptor;
+    game_handle_runtime runtime;
+    std::size_t world_generation = 0;
+    item_pocket *source_pocket = nullptr;
+    std::optional<item_pocket::item_position> source_position;
+    game_handle source_item_handle;
 };
+
+std::optional<game_handle_error> resolve_trade_source_holder(
+    const platform_trade_item_holder &holder, const game_handle_runtime &runtime,
+    const std::size_t world_generation, item *target, resolved_item_holder &result )
+{
+    item_holder_descriptor owner_descriptor;
+    owner_descriptor.kind = item_holder_kind::character;
+    owner_descriptor.character = holder.character;
+    owner_descriptor.slot = holder.slot == "contained" ? "inventory" : holder.slot;
+    if( holder.slot != "contained" ) {
+        return resolve_item_holder( owner_descriptor, runtime, world_generation, target, result );
+    }
+    if( !holder.container || holder.pocket_index < 0 ) {
+        return game_handle_error{ "unsupported_holder", "Contained trade sources require an exact container and pocket" };
+    }
+    resolved_item_holder owner;
+    if( const auto error = resolve_item_holder( owner_descriptor, runtime, world_generation,
+                           nullptr, owner ) ) {
+        return error;
+    }
+    item_holder_descriptor pocket_descriptor;
+    pocket_descriptor.kind = item_holder_kind::container_pocket;
+    pocket_descriptor.container = holder.container;
+    pocket_descriptor.pocket_index = holder.pocket_index;
+    if( const auto error = resolve_item_holder( pocket_descriptor, runtime, world_generation,
+                           target, result ) ) {
+        return error;
+    }
+    if( owner.character == nullptr || result.container == nullptr ||
+        !owner.character->has_item( *result.container ) ) {
+        return game_handle_error{ "wrong_holder", "The trade container is not held by the source Character" };
+    }
+    result.character = owner.character;
+    return std::nullopt;
+}
 
 void capture_trade_owners( item &value,
                            std::vector<std::pair<std::int64_t, faction_id>> &owners )
@@ -5871,6 +5912,21 @@ bool restore_trade_source_item( prepared_trade_item &entry, item &value )
     if( !restore_trade_owners( value, entry.original_owners ) ) {
         return false;
     }
+    if( entry.source_slot == "contained" ) {
+        resolved_item_holder holder;
+        if( !entry.source_position || resolve_trade_source_holder( entry.source_descriptor,
+                entry.runtime, entry.world_generation, nullptr, holder ) ||
+            holder.character != entry.source || holder.pocket != entry.source_pocket ) {
+            return false;
+        }
+        std::list<item> escrow;
+        escrow.push_back( std::move( value ) );
+        if( !holder.pocket->restore_item_from( escrow, *entry.source_position ) ) {
+            value = std::move( escrow.front() );
+            return false;
+        }
+        return true;
+    }
     if( entry.source_slot == "inventory" ) {
         resolved_item_holder source_holder;
         source_holder.descriptor.kind = item_holder_kind::character;
@@ -5897,6 +5953,17 @@ bool restore_prepared_trade_item( prepared_trade_item &entry )
 {
     if( !entry.extracted ) {
         return true;
+    }
+
+    if( !entry.full_item ) {
+        const auto live = entry.source_item_handle.resolve_item( entry.runtime, entry.world_generation );
+        resolved_item_holder holder;
+        if( !live || live.value != entry.source_item ||
+            resolve_trade_source_holder( entry.source_descriptor, entry.runtime,
+                                         entry.world_generation, live.value, holder ) ||
+            holder.character != entry.source || holder.pocket != entry.source_pocket ) {
+            return false;
+        }
     }
 
     if( entry.destination_item != nullptr ) {
@@ -6060,7 +6127,8 @@ std::optional<game_handle_error> stage_platform_trade_items(
         if( request.destination_holder.slot != "inventory" ||
             ( request.source_holder.slot != "inventory" &&
               request.source_holder.slot != "worn" &&
-              request.source_holder.slot != "wielded" ) ) {
+              request.source_holder.slot != "wielded" &&
+              request.source_holder.slot != "contained" ) ) {
             return game_handle_error{
                 "unsupported_holder",
                 "trade commit currently supports Character inventory holders only"
@@ -6084,10 +6152,6 @@ std::optional<game_handle_error> stage_platform_trade_items(
             };
         }
 
-        item_holder_descriptor source_descriptor;
-        source_descriptor.kind = item_holder_kind::character;
-        source_descriptor.character = request.source_holder.character;
-        source_descriptor.slot = request.source_holder.slot;
         item_holder_descriptor destination_descriptor;
         destination_descriptor.kind = item_holder_kind::character;
         destination_descriptor.character = request.destination_holder.character;
@@ -6107,8 +6171,8 @@ std::optional<game_handle_error> stage_platform_trade_items(
         }
 
         resolved_item_holder source;
-        if( const std::optional<game_handle_error> error = resolve_item_holder(
-                    source_descriptor, current_runtime, current_world_generation,
+        if( const std::optional<game_handle_error> error = resolve_trade_source_holder(
+                    request.source_holder, current_runtime, current_world_generation,
                     resolved.value, source ) ) {
             return error;
         }
@@ -6161,6 +6225,11 @@ std::optional<game_handle_error> stage_platform_trade_items(
         entry.destination = destination.character;
         entry.source_item = resolved.value;
         entry.source_slot = request.source_holder.slot;
+        entry.source_descriptor = request.source_holder;
+        entry.source_item_handle = request.item_handle;
+        entry.runtime = current_runtime;
+        entry.world_generation = current_world_generation;
+        entry.source_pocket = source.pocket;
         entry.quantity = static_cast<int>( request.quantity );
         entry.available = available;
         entry.full_item = request.quantity == available;
@@ -6172,6 +6241,15 @@ std::optional<game_handle_error> stage_platform_trade_items(
             capture_trade_owners( *resolved.value, entry.original_owners );
         }
         prepared.push_back( std::move( entry ) );
+    }
+
+    for( const prepared_trade_item &entry : prepared ) {
+        for( item *parent : entry.source->parents( *entry.source_item ) ) {
+            if( target_pointers.count( parent ) != 0 ) {
+                return game_handle_error{ "overlapping_holder",
+                                          "A trade cannot transfer both a container and its contents" };
+            }
+        }
     }
 
     std::vector<trade_item_insertion> reservations;
@@ -6228,17 +6306,13 @@ std::optional<game_handle_error> stage_platform_trade_items(
                 "stale_item", "The exact trade Item changed during destination preflight"
             };
         }
-        item_holder_descriptor source_descriptor;
-        source_descriptor.kind = item_holder_kind::character;
-        source_descriptor.character = request.source_holder.character;
-        source_descriptor.slot = request.source_holder.slot;
         resolved_item_holder source;
-        if( const std::optional<game_handle_error> error = resolve_item_holder(
-                    source_descriptor, current_runtime, current_world_generation,
+        if( const std::optional<game_handle_error> error = resolve_trade_source_holder(
+                    request.source_holder, current_runtime, current_world_generation,
                     resolved.value, source ) ) {
             return error;
         }
-        if( source.character != entry.source ) {
+        if( source.character != entry.source || source.pocket != entry.source_pocket ) {
             return game_handle_error{
                 "stale_holder", "The exact trade source holder changed during preflight"
             };
@@ -6289,8 +6363,30 @@ std::optional<game_handle_error> stage_platform_trade_items(
                        "stale_holder",
                        "An Item holder mutation invalidated trade extraction" );
         }
+        const platform_trade_item_request &request = requests[&entry - staged.data()];
+        const auto live = request.item_handle.resolve_item( current_runtime, current_world_generation );
+        if( !live || live.value != entry.source_item ||
+            ( live.value->count_by_charges() ? live.value->charges : 1 ) != entry.available ) {
+            return rollback_failure( "source_changed", "The exact trade source changed before extraction" );
+        }
+        resolved_item_holder current_source;
+        if( resolve_trade_source_holder( request.source_holder, current_runtime,
+                                         current_world_generation, live.value, current_source ) ||
+            current_source.character != entry.source || current_source.pocket != entry.source_pocket ) {
+            return rollback_failure( "source_changed",
+                                     "The exact trade source holder changed before extraction" );
+        }
         if( entry.full_item ) {
-            entry.escrow = entry.source->i_rem( entry.source_item );
+            if( entry.source_pocket != nullptr ) {
+                std::list<item> escrow;
+                entry.source_position = entry.source_pocket->extract_item_to( *entry.source_item, escrow );
+                if( !entry.source_position ) {
+                    return rollback_failure( "source_changed", "The exact trade pocket could not release its Item" );
+                }
+                entry.escrow = std::move( escrow.front() );
+            } else {
+                entry.escrow = entry.source->i_rem( entry.source_item );
+            }
             if( entry.escrow.is_null() ) {
                 return rollback_failure(
                            "source_changed", "The exact trade Item could not be extracted" );

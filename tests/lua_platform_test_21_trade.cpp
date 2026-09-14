@@ -232,6 +232,162 @@ TEST_CASE( "lua_platform_allowance_item_rollback_restores_mixed_content_owners",
     CHECK( count_platform_trade_items( fixture.seller, bag_uid ) == 0 );
 }
 
+TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_order",
+           "[lua][platform][trade][semantic]" )
+{
+    // Native stage modes, followed by public commit and stale-container quote modes.
+    const int mode = GENERATE( 0, 1, 2, 3, 4, 5 );
+    platform_trade_quote_fixture fixture( 981, 982, 983001, 983002 );
+    REQUIRE( fixture.ready() );
+    item bag( itype_id( "backpack" ), calendar::turn );
+    for( int i = 0; i < 3; ++i ) {
+        bag.force_insert_item( item( itype_id( "rock" ), calendar::turn ), pocket_type::CONTAINER );
+    }
+    bag.set_owner( *fixture.buyer );
+    item &container = fixture.buyer->inv->add_item( std::move( bag ), false, false, false );
+    const auto children = container.get_contents().all_items_top();
+    REQUIRE( children.size() == 3 );
+    std::vector<std::int64_t> original_uids;
+    for( const item *child : children ) {
+        original_uids.push_back( child->uid().get_value() );
+    }
+    item *selected = *std::next( children.begin() );
+    const std::int64_t selected_uid = selected->uid().get_value();
+    selected->set_owner( faction_id::NULL_ID() );
+    const auto pockets = container.get_contents().get_pockets( []( const item_pocket & ) {
+        return true;
+    } );
+    int pocket_index = -1;
+    for( std::size_t i = 0; i < pockets.size(); ++i ) {
+        const auto direct = pockets[i]->all_items_top();
+        if( std::find( direct.begin(), direct.end(), selected ) != direct.end() ) {
+            pocket_index = static_cast<int>( i );
+        }
+    }
+    REQUIRE( pocket_index >= 0 );
+    const auto container_handle = cata::lua_platform::game_handle::from_item(
+                                      container, { "npc_inventory", container.uid().get_value(), 0, 0, 0, {} },
+                                      fixture.runtime, fixture.active_world_generation );
+    cata::lua_platform::platform_trade_item_request request;
+    request.item_handle = cata::lua_platform::game_handle::from_item(
+                              *selected, { "container_pocket", selected_uid, 0, 0, 0, {} },
+                              fixture.runtime, fixture.active_world_generation );
+    request.source_holder = { fixture.buyer_handle, "contained", container_handle, pocket_index };
+    request.destination_holder = { fixture.seller_handle, "inventory" };
+    request.quantity = 1;
+    request.transfer_ownership = true;
+    std::vector<cata::lua_platform::platform_trade_item_request> requests = { request };
+    if( mode == 2 ) {
+        request.item_handle = container_handle;
+        request.source_holder = { fixture.buyer_handle, "inventory" };
+        requests.push_back( request );
+    } else if( mode == 3 ) {
+        requests.front().source_holder.pocket_index = static_cast<int>( pockets.size() );
+    }
+    if( mode >= 4 ) {
+        sol::protected_function selling_offers = fixture.services["trade"]["selling_offers"];
+        const auto listed = selling_offers( fixture.buyer_handle );
+        REQUIRE( listed.valid() );
+        const sol::table listed_result = listed.get<sol::table>();
+        REQUIRE( listed_result["ok"].get<bool>() );
+        const sol::table offers = listed_result["value"];
+        sol::table source_holder;
+        for( std::size_t i = 1; i <= offers.size(); ++i ) {
+            const sol::table offer = offers[i];
+            const auto handle = offer["item"].get<cata::lua_platform::game_handle>();
+            if( handle.locator().stable_id == selected_uid ) {
+                source_holder = offer["source_holder"].get<sol::table>();
+            }
+        }
+        REQUIRE( source_holder.valid() );
+        CHECK( source_holder["slot"].get<std::string>() == "contained" );
+        CHECK( source_holder["pocket_index"].get<int>() == pocket_index );
+        sol::table line = fixture.line( "seller_to_buyer", 1, request.item_handle,
+                                        fixture.buyer_handle, fixture.seller_handle );
+        line["source_holder"] = source_holder;
+        sol::table lines = fixture.lua.create_table();
+        lines[1] = line;
+        sol::table options = fixture.options();
+        options["settlement"].get<sol::table>()["strategy"] = "npc_debt";
+        const auto quoted = fixture.quote_participants( fixture.buyer_handle, fixture.seller_handle,
+                            lines, options );
+        REQUIRE( quoted.valid() );
+        const sol::table quote_result = quoted.get<sol::table>();
+        REQUIRE( quote_result["ok"].get<bool>() );
+        const sol::table value = quote_result["value"];
+        const auto token = value["token"].get<cata::lua_platform::trade_quote_token>();
+        const sol::table quoted_line = value["lines"].get<sol::table>()[1];
+        const sol::table quoted_holder = quoted_line["source_holder"];
+        CHECK( quoted_holder["pocket_index"].get<int>() == pocket_index );
+        const auto quoted_container = quoted_holder["container"].get<cata::lua_platform::game_handle>();
+        CHECK( quoted_container.locator().stable_id == container.uid().get_value() );
+        if( mode == 5 ) {
+            item other_bag( itype_id( "backpack" ), calendar::turn );
+            item &other = fixture.buyer->inv->add_item( std::move( other_bag ), false, false, false );
+            const auto other_pockets = other.get_container_pockets();
+            REQUIRE_FALSE( other_pockets.empty() );
+            // Preserve the Item UID/address and Character owner, changing only its container.
+            pockets[pocket_index]->move_contents_to( *other_pockets.front() );
+            const auto checked = fixture.get( token );
+            REQUIRE( checked.valid() );
+            const sol::table result = checked.get<sol::table>();
+            REQUIRE_FALSE( result["ok"].get<bool>() );
+            CHECK( result["error"].get<sol::table>()["code"].get<std::string>() == "wrong_holder" );
+            CHECK( count_platform_trade_items( fixture.seller, selected_uid ) == 0 );
+            CHECK( count_platform_trade_items( *fixture.buyer, selected_uid ) == 1 );
+        } else {
+            sol::table settlement = fixture.lua.create_table();
+            settlement["strategy"] = "npc_debt";
+            settlement["currency"] = "cash";
+            sol::protected_function commit = fixture.services["trade"]["commit"];
+            const auto committed = commit( token, settlement );
+            REQUIRE( committed.valid() );
+            REQUIRE( committed.get<sol::table>()["ok"].get<bool>() );
+            CHECK( count_platform_trade_items( fixture.seller, selected_uid ) == 1 );
+            CHECK( count_platform_trade_items( *fixture.buyer, selected_uid ) == 0 );
+        }
+        return;
+    }
+    std::vector<cata::lua_platform::platform_trade_item_result> transferred;
+    cata::lua_platform::platform_item_transaction transaction;
+    const auto error = cata::lua_platform::stage_platform_trade_items(
+                           requests, fixture.runtime, fixture.active_world_generation,
+                           cata::lua_platform::item_holder_mutation_generation(), transferred, transaction );
+    if( mode >= 2 ) {
+        REQUIRE( error );
+        CHECK( error->code == ( mode == 2 ? "overlapping_holder" : "wrong_holder" ) );
+        CHECK( transferred.empty() );
+        CHECK( count_platform_trade_items( fixture.seller, selected_uid ) == 0 );
+    } else {
+        REQUIRE_FALSE( error );
+        REQUIRE( transferred.size() == 1 );
+        CHECK( transferred.front().source_uid == selected_uid );
+        CHECK( transferred.front().destination_uid == selected_uid );
+        CHECK( count_platform_trade_items( fixture.seller, selected_uid ) == 1 );
+        CHECK( count_platform_trade_items( *fixture.buyer, selected_uid ) == 0 );
+        const auto received = fixture.seller.items_with( [selected_uid]( const item & entry ) {
+            return entry.uid().get_value() == selected_uid;
+        } );
+        REQUIRE( received.size() == 1 );
+        CHECK( received.front()->is_owned_by( fixture.seller ) );
+        if( mode == 0 ) {
+            transaction.commit();
+            original_uids.erase( original_uids.begin() + 1 );
+        } else {
+            REQUIRE( transaction.rollback_now() );
+            CHECK( count_platform_trade_items( fixture.seller, selected_uid ) == 0 );
+        }
+    }
+    std::vector<std::int64_t> remaining_uids;
+    for( const item *child : container.get_contents().all_items_top() ) {
+        remaining_uids.push_back( child->uid().get_value() );
+        if( child->uid().get_value() == selected_uid ) {
+            CHECK( child->get_owner().is_null() );
+        }
+    }
+    CHECK( remaining_uids == original_uids );
+}
+
 TEST_CASE( "lua_platform_native_order_price_uses_explicit_parties_and_native_pricing",
            "[lua][platform][trade][order]" )
 {
