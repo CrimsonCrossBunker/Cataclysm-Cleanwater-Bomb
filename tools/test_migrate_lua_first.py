@@ -21658,6 +21658,32 @@ assert(#calls==0)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_radio_registration_in_explicit_callback_uses_alpha_and_global_owner(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "alpha_radio",
+                                   "effect": ["u_make_radio_representative", "npc_make_radio_representative"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local alpha,beta,avatar={subtype='npc'},{subtype='npc'},{subtype='avatar'}
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={characters={avatar=function() return avatar end},npcs={
+ set_radio_representative=function(target,owner,enabled)
+  assert(owner==avatar and enabled==true);calls[#calls+1]=target
+  return {ok=true,value={}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.alpha_radio({actors={alpha=alpha,beta=beta}},alpha)
+assert(#calls==2 and calls[1]==alpha and calls[2]==beta)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

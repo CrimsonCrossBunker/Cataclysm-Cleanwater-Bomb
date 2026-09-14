@@ -31264,6 +31264,15 @@ def render_eoc(
                         "medical aid requires an explicit NPC provider"
                     )
                     all_effects_converted = False
+            elif effect == "u_make_radio_representative" and (
+                callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
+            ):
+                lines.extend([
+                    '    if actor.subtype == "npc" then',
+                    '        service_value(services.npcs.set_radio_representative(actor, services.characters.avatar(), true))',
+                    '    end',
+                ])
+                converted_effect = True
             elif effect == "u_make_radio_representative" and avatar_actor_proven:
                 lines.append(
                     "    -- The legacy u_ talker is the avatar here; "

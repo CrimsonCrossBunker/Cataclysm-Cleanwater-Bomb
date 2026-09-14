@@ -994,3 +994,9 @@ Explicit callback wants-to-talk migration distinguishes alpha (`u_`) and beta (`
 Either participant may be an NPC; non-NPC participants are skipped as in native
 `get_npc()` handling. Generated Lua covers two NPCs, avatar alpha, and two non-NPC
 participants. This routing evidence does not replace native visibility acceptance.
+
+Explicit callback `u_make_radio_representative` now registers an NPC alpha with the
+current avatar owner; it does not substitute beta or use alpha as the owner.
+Generated Lua verifies independent alpha/beta registrations. Non-NPC misuse is
+skipped; parity with the original null-NPC debug diagnostic remains outstanding.
+This diagnostic boundary and native runtime evidence prevent full semantic acceptance.
