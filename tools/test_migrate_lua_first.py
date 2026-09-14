@@ -18616,6 +18616,34 @@ end
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_run_eocs_variables_read_parent_participants(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {
+                "alpha_value": {"u_val": "name"},
+                "beta_value": {"npc_val": "name"},
+            }}, {"child": "child"}, actor_expression="actor",
+            npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor, alpha, partner = {}, {}, {}
+local context = {data={}, actors={alpha=alpha, beta=partner}}
+local services = {types={null={}}, variables={resolve=function(data, owner, scope, key)
+    assert(data == context.data and key == "name")
+    assert(owner == (scope == "u" and alpha or partner))
+    return {ok=true, value={exists=true, value=scope .. "-parent"}}
+end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(next_context)
+    called = true
+    assert(next_context.data.alpha_value == "u-parent")
+    assert(next_context.data.beta_value == "npc-parent")
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_run_eocs_variables_accept_bounded_translation_scalars(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

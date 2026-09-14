@@ -3868,9 +3868,17 @@ def render_static_run_eocs(
         literal = lua_scalar_literal(value)
         if literal is not None:
             return literal
-        rendered = render_eoc_value_expression(value, "nil", fallback_actor)
+        # Native evaluates assignments against the parent dialogue, before
+        # applying the child alpha/beta overrides.
+        variable_actor = fallback_actor
+        if isinstance(value, dict):
+            if "npc_val" in value:
+                variable_actor = parent_beta
+            elif "u_val" in value:
+                variable_actor = parent_alpha
+        rendered = render_eoc_value_expression(value, "nil", variable_actor)
         if rendered is None:
-            rendered = render_eoc_numeric_expression(value, "0", fallback_actor)
+            rendered = render_eoc_numeric_expression(value, "0", variable_actor)
         if rendered is None:
             return None
         if not isinstance(value, dict) or not set(value).intersection({
