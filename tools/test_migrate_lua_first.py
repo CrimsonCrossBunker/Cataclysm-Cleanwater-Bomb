@@ -4482,8 +4482,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 6)
+            self.assertEqual(len(result.converted), 5)
+            self.assertEqual(len(result.partial), 4)
             self.assertIn(
                 'services.types.id("effect", "downed")',
                 main,
@@ -4529,9 +4529,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "EOC bad_intensity effect #0 needs domain-service conversion",
                 report,
             )
-            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 5)
+            self.assertEqual(sum(todo.category == "semantic_choice" for todo in result.todos), 3)
             self.assertIn("choose mutation conflict replacement and event policy", report)
-            self.assertIn("choose mutation removal and event policy", report)
+            self.assertNotIn("choose mutation removal and event policy", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_bounded_mutation_effects_for_avatar_and_npc(self) -> None:
@@ -18805,7 +18805,7 @@ assert(queued._literal[3][1]=="nested")
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_mutation_activation_indirection_preserves_missing_and_empty(self) -> None:
-        lines = migrate_lua_first.render_mutation_activation(
+        lines = migrate_lua_first.render_mutation_action(
             {"u_activate_trait": {"var_val": "reference", "default": "QUICK"}}, "actor", "partner")
         self.assertIsNotNone(lines)
         script = r"""
@@ -18835,11 +18835,34 @@ assert(count==4)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_mutation_erasure_routes_main_and_false_branch(self) -> None:
+        for prefix in ("u_", "npc_"):
+            effect = {prefix + "lose_trait": "QUICK"}
+            for lines in (
+                migrate_lua_first.render_mutation_action(effect, "actor", "partner"),
+                migrate_lua_first.render_static_false_effect(
+                    effect, True, True, {}, npc_actor_expression="partner"),
+            ):
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,partner={},{}
+local count=0
+local function service_value(r) assert(r.ok); return r.value end
+local services={types={id=function(kind,id) assert(kind=="mutation"); return id end},
+mutations={erase=function(owner,id)
+    assert(owner==TARGET and id=="QUICK"); count=count+1; return {ok=true,value={}}
+end}}
+""".replace("TARGET", "actor" if prefix == "u_" else "partner")
+                script += "\n" + "\n".join(lines) + "\nassert(count==1)"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_mutation_activation_routes_participant_and_action(self) -> None:
         for prefix in ("u_", "npc_"):
             for operation in ("activate_trait", "deactivate_trait"):
                 effect = {prefix + operation: {"npc_val": "mutation"}}
-                lines = migrate_lua_first.render_mutation_activation(effect, "actor", "partner")
+                lines = migrate_lua_first.render_mutation_action(effect, "actor", "partner")
                 self.assertIsNotNone(lines)
                 self.assertIsNotNone(migrate_lua_first.render_static_false_effect(
                     effect, True, True, {}, npc_actor_expression="partner"))

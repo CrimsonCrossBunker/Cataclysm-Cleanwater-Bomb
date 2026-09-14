@@ -4502,11 +4502,12 @@ def render_static_spawn_item_effect(
     ]
 
 
-def render_mutation_activation(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
+def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
     if not isinstance(effect, dict) or len(effect) != 1:
         return None
     key, value = next(iter(effect.items()))
-    if key not in {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait"}:
+    if key not in {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait",
+                   "u_lose_trait", "npc_lose_trait"}:
         return None
     target = beta if key.startswith("npc_") else alpha
     if target is None:
@@ -4540,6 +4541,9 @@ def render_mutation_activation(effect: Any, alpha: str | None, beta: str | None)
             )
     if mutation is None:
         return None
+    if key.endswith("_lose_trait"):
+        return ["    service_value(services.mutations.erase(",
+                f'        {target}, services.types.id("mutation", {mutation})))']
     active = key.endswith("_activate_trait")
     return ["    service_value(services.mutations.invoke_activation(",
             f'        {target}, services.types.id("mutation", {mutation}), {lua_boolean(active)}))']
@@ -4555,11 +4559,6 @@ def mutation_semantic_choice(effect: Any) -> str | None:
                 "choose mutation conflict replacement and event policy: legacy add_trait "
                 "clears other mutations sharing types, while mutations.grant preserves them "
                 "and emits gains_mutation"
-            )
-        if prefix + "lose_trait" in effect:
-            return (
-                "choose mutation removal and event policy: legacy unset_mutation and "
-                "mutations.remove differ in base-trait bookkeeping, absent traits and events"
             )
     return None
 
@@ -4718,7 +4717,7 @@ def render_static_false_effect(
     """
     if mutation_semantic_choice(effect) is not None:
         return None
-    activation = render_mutation_activation(
+    activation = render_mutation_action(
         effect, "actor" if avatar_actor_proven else None,
         npc_actor_expression or ("actor" if npc_actor_proven else None))
     if activation is not None:
@@ -28278,7 +28277,7 @@ def render_eoc(
     if isinstance(effects, list):
         for effect_index, effect in enumerate(effects):
             semantic_choice = mutation_semantic_choice(effect)
-            activation = render_mutation_activation(
+            activation = render_mutation_action(
                 effect, "actor" if avatar_actor_proven else None, npc_actor_expression)
             if activation is not None:
                 lines.extend(activation)
