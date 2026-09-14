@@ -4512,7 +4512,7 @@ def render_static_spawn_item_effect(
     ]
 
 
-def render_mutation_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -4558,11 +4558,11 @@ def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> 
     target = beta if key.startswith("npc_") else alpha
     if target is None:
         return None
-    mutation = render_mutation_string(value, target, alpha, beta)
+    mutation = render_participant_string(value, target, alpha, beta)
     if mutation is None:
         return None
     if key.endswith("_add_trait"):
-        variant = render_mutation_string(effect.get("variant", ""), target, alpha, beta)
+        variant = render_participant_string(effect.get("variant", ""), target, alpha, beta)
         if variant is None:
             return None
         return ["    service_value(services.mutations.replace(",
@@ -5675,14 +5675,29 @@ def render_static_foreach(
         return True
 
     if mode == "array":
-        if (
-            not isinstance(target, list) or len(target) > 256 or
-            not all(isinstance(value, str) and lua_scalar_literal(value) is not None
-                    for value in target)
-        ):
+        if not isinstance(target, list) or len(target) > 256:
             return None
-        values = ", ".join(lua_quote(value) for value in target)
-        lines.append(f"    for _, entry in ipairs({{ {values} }}) do")
+        values: list[str] = []
+        for value in target:
+            if isinstance(value, str):
+                rendered_value = lua_scalar_literal(value)
+            elif isinstance(value, dict) and set(value) - {"default"} in (
+                    {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}):
+                rendered_value = render_participant_string(
+                    value, actor_expression or "nil",
+                    actor_expression if avatar_actor_proven else None,
+                    actor_expression if npc_actor_proven else None,
+                )
+            else:
+                return None
+            if rendered_value is None:
+                return None
+            values.append(rendered_value)
+        # Native foreach evaluates the entire input before running any effects.
+        lines.append("    local foreach_values = {}")
+        lines.extend(f"    foreach_values[{index}] = {value}"
+                     for index, value in enumerate(values, 1))
+        lines.append("    for _, entry in ipairs(foreach_values) do")
         if not append_body("entry"):
             return None
         lines.append("    end")

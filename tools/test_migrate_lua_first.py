@@ -10152,7 +10152,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn('for _, entry in ipairs({ "a", "b" }) do', main)
+            self.assertIn('foreach_values[1] = "a"', main)
+            self.assertIn('foreach_values[2] = "b"', main)
             self.assertIn(
                 'services.registry.list("body_part", '
                 '{ offset = foreach_offset, limit = 256 })',
@@ -20344,6 +20345,34 @@ assert(context.data.entry=='previous')
             "foreach": "array", "target": ["", "0", "true"],
             "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
         }, True, False, {}, actor_expression="actor"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_snapshots_dynamic_strings_before_body(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": [{"context_val": "value"},
+                {"context_val": "value"}, {"context_val": "missing", "default": "fallback"}],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={value='initial'}}
+local reads,calls=0,0
+local function service_value(r) return r.value end
+local services={variables={resolve=function(data,owner,scope,key,participants)
+ assert(calls==0 and data==context.data and scope=='context' and participants.alpha==actor)
+ reads=reads+1;return {value={exists=data[key]~=nil,value=data[key]}}
+end},message=function()
+ calls=calls+1;assert(reads==3)
+ assert(context.data.entry==({'initial','initial','fallback'})[calls])
+ context.data.value='changed'
+end}
+BODY
+assert(reads==3 and calls==3)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
