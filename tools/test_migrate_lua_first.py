@@ -20706,6 +20706,42 @@ assert(context.data.loc.x==1 and context.data.loc.y==1)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_coordinate_indirection_receives_distinct_participants(self) -> None:
+        for alpha_proven in (True, False):
+            expression = migrate_lua_first._coordinate_source_expression(
+                {"var_val": "source"}, alpha_proven, False, "partner")
+            lines = migrate_lua_first._coordinate_output_lines(
+                {"var_val": "destination"}, "selected", alpha_proven, False, "partner")
+            self.assertIsNotNone(expression)
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor,partner={},{}
+local context={data={source='n_center',destination='n_selected'}}
+local selected={}
+local reads,writes=0,0
+local function service_value(r) return r.value end
+local function owners(p)
+ assert(p.beta==partner and p.alpha==ALPHA)
+end
+local services={characters={avatar=function() return actor end},variables={
+ resolve=function(data,owner,scope,key,p)
+  owners(p);assert(data==context.data and scope=='var' and key=='source')
+  reads=reads+1;return {value={value=selected}}
+ end,
+ set_resolved=function(data,owner,scope,key,value,p)
+  owners(p);assert(data==context.data and scope=='var' and key=='destination' and value==selected)
+  writes=writes+1;return {value={}}
+ end}}
+assert(EXPRESSION==selected)
+BODY
+assert(reads==1 and writes==1)
+""".replace("ALPHA", "actor" if alpha_proven else "nil")
+            script = script.replace("EXPRESSION", expression).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

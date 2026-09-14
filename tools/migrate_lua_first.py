@@ -22385,9 +22385,13 @@ def _coordinate_source_expression(
             "actor" if (avatar_actor_proven or npc_actor_proven)
             else "services.characters.avatar()"
         )
+        participants = ""
+        if npc_actor_expression is not None:
+            alpha = "actor" if avatar_actor_proven else "nil"
+            participants = f", {{ alpha = {alpha}, beta = {npc_actor_expression} }}"
         return (
             "(service_value(services.variables.resolve(context.data, "
-            f"{actor_expression}, \"var\", {lua_quote(descriptor[1])})).value or "
+            f"{actor_expression}, \"var\", {lua_quote(descriptor[1])}{participants})).value or "
             "services.coords.tripoint_abs_ms(0, 0, 0))"
         )
     handle = (
@@ -22432,10 +22436,14 @@ def _coordinate_output_lines(
             "actor" if (avatar_actor_proven or npc_actor_proven)
             else "services.characters.avatar()"
         )
+        participants = ""
+        if npc_actor_expression is not None:
+            alpha = "actor" if avatar_actor_proven else "nil"
+            participants = f", {{ alpha = {alpha}, beta = {npc_actor_expression} }}"
         return [
             "        service_value(services.variables.set_resolved(",
             f"            context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(descriptor[1])}, {selected_expression}))",
+            f"{lua_quote(descriptor[1])}, {selected_expression}{participants}))",
         ]
     handle = (
         npc_actor_expression if descriptor[0] == "npc" and npc_actor_expression is not None
