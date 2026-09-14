@@ -855,3 +855,9 @@ explicit and validated even though its role changes to teacher. Migrated
 `start_training_npc` uses this mode when its NPC is proven. Generated Lua
 role/routing tests pass; native skill transfer, fees and activity completion
 remain pending acceptance.
+
+Grooming effect migration invokes native style selection for hair/beard and
+native haircut/shave services with the exact NPC and avatar client. These
+effects are no longer silently discarded. Without a proven NPC they remain
+explicit migration gaps. Generated Lua tests cover all four calls and missing
+provider handling; native appearance and morale outcomes await acceptance.

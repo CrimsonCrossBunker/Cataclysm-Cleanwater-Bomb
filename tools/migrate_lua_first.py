@@ -30906,8 +30906,21 @@ def render_eoc(
                         "needs vehicle service conversion"
                     )
                     all_effects_converted = False
-            elif isinstance(effect, str) and effect in {"start_trade", "barber_hair", "barber_beard", "buy_haircut", "buy_shave"}:
-                # Deliberate presentation/interaction no-op in headless/scripted context.
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
+            }:
+                method, choice = {
+                    "barber_hair": ("open_style", "hair"),
+                    "barber_beard": ("open_style", "beard"),
+                    "buy_haircut": ("provide", "haircut"),
+                    "buy_shave": ("provide", "shave"),
+                }[effect]
+                lines.append(
+                    f"    service_value(services.npcs.grooming.{method}("
+                    f"{npc_actor_expression or 'actor'}, services.characters.avatar(), {lua_quote(choice)}))")
+                converted_effect = True
+            elif effect == "start_trade":
+                # Trade participant migration is handled separately.
                 converted_effect = True
             elif npc_actor_proven and effect == "revert_activity":
                 lines.append(

@@ -21090,6 +21090,46 @@ assert(calls==3 and continued==2)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_grooming_effects_are_native_calls_not_noops(self) -> None:
+        effects = ["barber_hair", "barber_beard", "buy_haircut", "buy_shave"]
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "groom",
+            "required_event": "npc_becomes_hostile", "effect": effects})
+        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc={},{}
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ characters={avatar=function() return avatar end},
+ npcs={grooming={
+  open_style=function(provider,client,area)
+   assert(provider==npc and client==avatar);calls[#calls+1]='style:'..area
+   return {ok=true,value={}}
+  end,
+  provide=function(provider,client,service)
+   assert(provider==npc and client==avatar);calls[#calls+1]='provide:'..service
+   return {ok=true,value={}}
+  end
+ }}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.groom({actors={npc=npc}},nil)
+assert(table.concat(calls,',')=='style:hair,style:beard,provide:haircut,provide:shave')
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        unbound = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "unbound_groom",
+                                   "required_event": "game_start", "effect": effects}), unbound)
+        self.assertNotIn("services.npcs.grooming", main)
+        self.assertTrue(unbound.todos)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
