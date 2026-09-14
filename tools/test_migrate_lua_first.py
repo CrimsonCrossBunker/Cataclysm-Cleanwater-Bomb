@@ -21802,6 +21802,119 @@ log={};beta.subtype='avatar';give();assert(#log==0)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_equipment_modifier_migration_preserves_original_talker_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition",
+                "id": "equipment_modifier_pair",
+                "condition": {"and": [
+                    {"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"},
+                ]},
+                "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "equipment_pair_mod")
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertIn("local provider = context.actors.beta", main)
+            self.assertIn("end)(actor, provider)", main)
+            self.assertIn('strategy = "npc_allowance"', main)
+            self.assertIn("needs an explicit Platform trigger", report)
+            self.assertNotIn("give_equipment", report)
+
+    def test_equipment_modifier_arrays_require_original_talker_proof(self) -> None:
+        render = migrate_lua_first.render_equipment_modifier_allowance
+        self.assertIsNone(render([["TRUST", 1]], None, "beta"))
+        self.assertEqual(render([["TOTAL", -2], ["unknown", 8]], None, "beta"), "0")
+        for entry in (["TRUST"], ["TRUST", True], ["TRUST", 1.5], ["TRUST", 2**31],
+                      ["npc_has_trait", 1], ["npc_has_trait: " + "x" * 257, 1]):
+            with self.subTest(entry=entry):
+                self.assertIsNone(render([entry], "alpha", "beta"))
+        effect = {"give_equipment": {"allowance": [["TRUST", 2]]}}
+        lines = migrate_lua_first.render_static_give_equipment_effect(
+            effect, False, False, npc_actor_expression="context.actors.beta",
+            alpha_actor_expression="actor")
+        self.assertIsNotNone(lines)
+        self.assertIn("end)(actor, provider)", "\n".join(lines))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_equipment_modifiers_sum_both_talkers_in_native_order(self) -> None:
+        render = migrate_lua_first.render_equipment_modifier_allowance
+        npc_expression = render([
+            ["TRUST", 2], ["TOTAL", 3], ["FEAR", 1], ["POS_FEAR", -1],
+            ["MISSIONS", 7], ["NPC_INTIMIDATE", 1], ["U_INTIMIDATE", 1],
+            ["npc_has_trait: STRONG", 5], ["unknown", 100],
+        ], "alpha", "beta")
+        mixed_expression = render([
+            ["TRUST", 2], ["U_INTIMIDATE", 1], ["NPC_INTIMIDATE", 1],
+            ["LOWFUNC_PSYCHOPATH", 10], ["HIGHFUNC_PSYCHOPATH", 20],
+            ["u_has_trait: STRONG", 7], ["npc_has_trait: STRONG", 3],
+            ["npc_has_trait: UNKNOWN", 100], ["xxnpc_has_trait: STRONG", 100],
+        ], "alpha", "beta")
+        overflow_expression = render([["TRUST", 1], ["TOTAL", 2**31-1], ["TOTAL", 0]], "alpha", "beta")
+        product_expression = render([["TRUST", 2**31-1]], "alpha", "beta")
+        sum_expression = render([["TRUST", 1]], "alpha", "beta")
+        personality_expression = render([[name, 1] for name in (
+            "ANGER", "VALUE", "AGGRESSION", "ALTRUISM", "BRAVERY", "COLLECTOR",
+        )], "alpha", "beta")
+        script = r"""
+local alpha={name='alpha',subtype='npc',opinion={trust=3,fear=-2},
+ assigned_missions_value=-1500,intimidation=11,trait=true}
+local beta={name='beta',subtype='npc',opinion={trust=5,fear=4},
+ assigned_missions_value=2500,intimidation=13,trait=false}
+local reads={}
+local function record(t) reads[#reads+1]=t.name end
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ npcs={get=function(t) assert(t.subtype=='npc');record(t);return {ok=true,value=t} end},
+ characters={
+  intimidation=function(t) record(t);return {ok=true,value=t.intimidation} end,
+  has_flag=function(t,id) assert(id.kind=='json_flag' and id.value=='PSYCHOPATH');return {ok=true,value=t.psy} end,
+  snapshot=function(t) return {ok=true,value={stats={intelligence=t.intelligence}}} end
+ },
+ types={id=function(kind,value)
+  return {kind=kind,value=value,is_valid=function(self) return self.value=='STRONG' end}
+ end},
+ mutations={has=function(t,id)
+  assert(id:is_valid());return {ok=true,value=t.trait}
+ end}
+}
+local function npcs() return NPC end
+local function mixed() return MIXED end
+local function overflow() return OVERFLOW end
+local function product() return PRODUCT end
+local function sum() return SUM end
+local function personality() return PERSONALITY end
+alpha.opinion.anger=2;alpha.opinion.value=3
+beta.opinion.anger=-2;beta.opinion.value=7
+alpha.personality={aggression=-1,altruism=2,bravery=3,collector=4}
+beta.personality={aggression=2,altruism=3,bravery=4,collector=5}
+assert(personality()==32)
+reads={}
+assert(npcs()==82)
+assert(reads[1]=='beta' and reads[2]=='alpha')
+reads={};assert(not pcall(product));assert(#reads==1 and reads[1]=='beta')
+assert(not pcall(overflow)) -- An eventual TOTAL zero must not hide earlier overflow.
+alpha={name='alpha',subtype='avatar',intimidation=17,intelligence=8,psy=true,trait=true}
+assert(mixed()==57)
+alpha.intelligence=16;assert(mixed()==67)
+alpha.psy=false;assert(mixed()==47)
+alpha={name='alpha',subtype='npc',opinion={trust=2147483647}}
+beta.opinion.trust=1;assert(not pcall(sum)) -- Each product fits; their sum does not.
+alpha.opinion.trust=0;beta.opinion.trust=-2147483648;assert(sum()==-2147483648)
+alpha={name='alpha',subtype='monster'};beta={name='beta',subtype='item'}
+assert(npcs()==0)
+"""
+        for token, expression in (("NPC", npc_expression), ("MIXED", mixed_expression),
+                                  ("OVERFLOW", overflow_expression), ("PRODUCT", product_expression),
+                                  ("SUM", sum_expression), ("PERSONALITY", personality_expression)):
+            self.assertIsNotNone(expression)
+            script = script.replace("return " + token + " end", "return " + expression + " end")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

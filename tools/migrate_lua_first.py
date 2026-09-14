@@ -20846,14 +20846,110 @@ def render_equipment_offer_selection(seller: str, allowance: str) -> str:
     )
 
 
+def render_trial_modifier_reader(attribute: str) -> str | None:
+    """Lower the native NPC/avatar parse_mod dispatch without inventing a talker."""
+    npc_fields = {
+        "ANGER": "opinion.anger", "FEAR": "opinion.fear",
+        "TRUST": "opinion.trust", "VALUE": "opinion.value",
+        "AGGRESSION": "personality.aggression", "ALTRUISM": "personality.altruism",
+        "BRAVERY": "personality.bravery", "COLLECTOR": "personality.collector",
+    }
+    npc_value = avatar_value = "0"
+    if attribute in npc_fields:
+        npc_value = f"service_value(services.npcs.get(talker)).{npc_fields[attribute]}"
+    elif attribute == "POS_FEAR":
+        npc_value = "math.max(0, service_value(services.npcs.get(talker)).opinion.fear)"
+    elif attribute == "MISSIONS":
+        npc_value = "(math.modf(service_value(services.npcs.get(talker)).assigned_missions_value / 1000))"
+    elif attribute == "NPC_INTIMIDATE":
+        npc_value = "service_value(services.characters.intimidation(talker))"
+    if attribute == "U_INTIMIDATE":
+        avatar_value = "service_value(services.characters.intimidation(talker))"
+    elif attribute in {"LOWFUNC_PSYCHOPATH", "HIGHFUNC_PSYCHOPATH"}:
+        comparison = "<= 8" if attribute == "LOWFUNC_PSYCHOPATH" else ">= 16"
+        avatar_value = (
+            '(service_value(services.characters.has_flag(talker, services.types.id("json_flag", "PSYCHOPATH"))) '
+            f"and service_value(services.characters.snapshot(talker)).stats.intelligence {comparison} and 1 or 0)"
+        )
+    for marker, prefix in (("npc_has_trait", "npc_has_trait: "), ("u_has_trait", "u_has_trait: ")):
+        if marker not in attribute:
+            continue
+        # Native find() matches anywhere but substr() still uses this fixed byte offset.
+        try:
+            encoded = attribute.encode("utf-8")
+            if len(encoded) < len(prefix):
+                return None
+            trait = encoded[len(prefix):].decode("utf-8")
+        except UnicodeError:
+            return None
+        if (not bounded_utf8_string(trait, 256, allow_empty=True)
+                or any(ord(char) < 32 or ord(char) == 127 for char in trait)):
+            return None
+        query = (
+            '(function() local id = services.types.id("mutation", '
+            f'{lua_quote(trait)}); return id:is_valid() and '
+            'service_value(services.mutations.has(talker, id)) and 1 or 0 end)()'
+        )
+        if marker == "npc_has_trait":
+            npc_value = query
+        else:
+            avatar_value = query
+    if npc_value == avatar_value == "0":
+        return "function(talker) return 0 end"
+    return (
+        'function(talker) if talker == nil then return 0 end; '
+        f'if talker.subtype == "npc" then return {npc_value} '
+        f'elseif talker.subtype == "avatar" then return {avatar_value} end; return 0 end'
+    )
+
+
+def render_equipment_modifier_allowance(
+    modifiers: list[Any], alpha: str | None, beta: str,
+) -> str | None:
+    """Preserve modifier order, beta-then-alpha reads, and native signed-int bounds."""
+    parsed: list[tuple[str, int, str | None]] = []
+    needs_talkers = False
+    for entry in modifiers:
+        if (not isinstance(entry, list) or len(entry) != 2 or not isinstance(entry[0], str)
+                or type(entry[1]) is not int or not -(2**31) <= entry[1] < 2**31):
+            return None
+        name, factor = entry
+        reader = None if name == "TOTAL" else render_trial_modifier_reader(name)
+        if name != "TOTAL" and reader is None:
+            return None
+        needs_talkers |= reader is not None and reader != "function(talker) return 0 end"
+        parsed.append((name, factor, reader))
+    if not needs_talkers:
+        return "0"
+    if alpha is None:
+        return None
+    lines = [
+        "(function(alpha, beta)",
+        'local function checked(value) if value < -2147483648 or value > 2147483647 then error("equipment allowance exceeds native integer range") end; return value end',
+        "local allowance = 0",
+    ]
+    for name, factor, reader in parsed:
+        if name == "TOTAL":
+            lines.append(f"allowance = checked(allowance * {factor})")
+        else:
+            lines.extend([
+                f"do local value = {reader}",
+                f"local beta_value = checked(value(beta) * {factor})",
+                f"local alpha_value = checked(value(alpha) * {factor})",
+                "allowance = checked(allowance + checked(beta_value + alpha_value)); end",
+            ])
+    return "; ".join(lines + ["return allowance", f"end)({alpha}, {beta})"])
+
+
 def render_static_give_equipment_effect(
     effect: dict[str, Any] | str, npc_actor_proven: bool,
     avatar_actor_proven: bool, *, npc_actor_expression: str | None = None,
+    alpha_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Compose fixed/default allowance gifts from exact native offers and settlement.
+    """Compose allowance gifts from exact native offers and settlement.
 
-    Trial modifier arrays still need both original talkers and are handled
-    separately; a current avatar is only the gift recipient, not proof of alpha.
+    State-dependent trial modifiers require both original talkers; the current
+    avatar is only the gift recipient, not proof of the original alpha.
     """
     target = npc_actor_expression or ("actor" if npc_actor_proven else None)
     if target is None:
@@ -20867,16 +20963,21 @@ def render_static_give_equipment_effect(
     if not isinstance(payload, dict) or set(payload) - {"allowance"}:
         return None
     allowance = payload.get("allowance", 0)
-    if allowance == []:
-        allowance = 0
-    if type(allowance) is not int or not -(2**31) <= allowance < 2**31:
+    if isinstance(allowance, list):
+        allowance_expression = render_equipment_modifier_allowance(
+            allowance, alpha_actor_expression, "provider")
+        if allowance_expression is None:
+            return None
+    elif type(allowance) is int and -(2**31) <= allowance < 2**31:
+        allowance_expression = str(allowance)
+    else:
         return None
     selection = render_equipment_offer_selection("provider", "allowance")
     return [
         "    do",
         f"        local provider = {target}",
         '        if provider ~= nil and provider.subtype == "npc" then',
-        f"            local allowance = {allowance}",
+        f"            local allowance = {allowance_expression}",
         f"            local offer = {selection}",
         "            local provider_name = service_value(services.npcs.get(provider)).name",
         "            if offer == nil then",
@@ -31553,6 +31654,9 @@ def render_eoc(
                 rendered = render_static_give_equipment_effect(
                     effect, npc_actor_proven, avatar_actor_proven,
                     npc_actor_expression=npc_actor_expression,
+                    alpha_actor_expression="actor" if (
+                        talker_pair_override or unbound_mixed_talker_contract
+                    ) else None,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
