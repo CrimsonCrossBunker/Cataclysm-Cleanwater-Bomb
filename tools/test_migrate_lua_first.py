@@ -21629,6 +21629,35 @@ end
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_u_talk_request_in_explicit_callback_uses_alpha_npc(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "alpha_talk",
+                                   "effect": ["u_wants_to_talk", "npc_wants_to_talk"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local alpha,beta={subtype='npc'},{subtype='npc'}
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={request_talk=function(target)
+ calls[#calls+1]=target;return {ok=true,value={}}
+end}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.alpha_talk({actors={alpha=alpha,beta=beta}},alpha)
+assert(#calls==2 and calls[1]==alpha and calls[2]==beta)
+alpha.subtype='avatar';calls={}
+migrated_eoc_functions.alpha_talk({actors={alpha=alpha,beta=beta}},alpha)
+assert(#calls==1 and calls[1]==beta)
+beta.subtype='avatar';calls={}
+migrated_eoc_functions.alpha_talk({actors={alpha=alpha,beta=beta}},alpha)
+assert(#calls==0)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

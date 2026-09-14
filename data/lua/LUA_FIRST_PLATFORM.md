@@ -989,3 +989,8 @@ attitude transition and only when the NPC sees the avatar. NPC wants-to-talk mig
 uses this service and checks its result. Generated routing/error tests pass; repeated
 request silence has unexecuted C++ coverage, and visible/hidden native comparison
 remains pending. Generic attitude writes keep their existing behavior.
+
+Explicit callback wants-to-talk migration distinguishes alpha (`u_`) and beta (`npc_`).
+Either participant may be an NPC; non-NPC participants are skipped as in native
+`get_npc()` handling. Generated Lua covers two NPCs, avatar alpha, and two non-NPC
+participants. This routing evidence does not replace native visibility acceptance.

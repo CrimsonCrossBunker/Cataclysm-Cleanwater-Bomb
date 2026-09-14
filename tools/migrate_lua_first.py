@@ -29901,11 +29901,29 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif npc_actor_proven and effect == "npc_wants_to_talk":
-                lines.append(f"    service_value(services.npcs.request_talk({npc_actor_expression or 'actor'}))")
+                target = npc_actor_expression or "actor"
+                if callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract:
+                    lines.extend([
+                        f'    if ({target}).subtype == "npc" then',
+                        f"        service_value(services.npcs.request_talk({target}))",
+                        "    end",
+                    ])
+                else:
+                    lines.append(f"    service_value(services.npcs.request_talk({target}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "u_wants_to_talk":
-                # Avatar target has no NPC talker (d.actor(false)->get_npc() is null),
-                # so this effect is a deliberate no-op under npc_becomes_hostile.
+            elif effect == "u_wants_to_talk" and (
+                callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
+            ):
+                # In explicit callbacks alpha may itself be an NPC. Native get_npc()
+                # is a no-op for other talker kinds, not for every u_ prefix.
+                lines.extend([
+                    '    if actor.subtype == "npc" then',
+                    '        service_value(services.npcs.request_talk(actor))',
+                    '    end',
+                ])
+                converted_effect = True
+            elif (npc_actor_proven or avatar_actor_proven) and effect == "u_wants_to_talk":
+                # The implicit native alpha in this event is the avatar.
                 converted_effect = True
             elif npc_actor_proven and effect == "npc_make_radio_representative":
                 lines.append(
