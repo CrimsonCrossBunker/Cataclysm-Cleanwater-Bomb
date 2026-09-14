@@ -15234,7 +15234,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "effect": {
                                 "u_choose_adjacent_highlight": {"u_val": "adjacent"},
                                 "message": "Pick an adjacent tile",
-                                "condition": True,
                                 "allow_vertical": True,
                             },
                         },
@@ -15246,7 +15245,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "npc_choose_adjacent_highlight": {"npc_val": "adjacent"},
                                 "message": "Pick near NPC",
                                 "failure_message": "No adjacent tile",
-                                "condition": True,
                             },
                         },
                     ]
@@ -15285,7 +15283,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn(
-                'services.targeting.choose_adjacent("Pick an adjacent tile", true)',
+                'center, "Pick an adjacent tile", "",',
                 main,
             )
             self.assertIn(
@@ -20615,6 +20613,38 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                 "(context.actors and context.actors.beta) or actor", main
             )
             self.assertIn('context.data["target_position"]', main)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_adjacent_selector_keeps_center_and_autoselect_setting(self) -> None:
+        lines = migrate_lua_first.render_static_choose_adjacent_highlight({
+            "u_choose_adjacent_highlight": {"context_val": "picked"},
+            "allow_vertical": True, "allow_autoselect": False,
+        }, "u_choose_adjacent_highlight", True)
+        self.assertIsNotNone(lines)
+        script = r"""
+local context={data={picked='unchanged'}}
+local actor={}
+local center={add=function(self,p) return p end}
+local function service_value(r) return r.value end
+local services={characters={snapshot=function() return {value={creature={position=center}}} end},
+ coords={tripoint_rel_ms=function(x,y,z) return {x=x,y=y,z=z} end},
+ targeting={choose_adjacent_where_at=function(c,m,f,points,vertical,auto)
+ assert(c==center and vertical and not auto and #points==9)
+ local found=false
+ for _,p in ipairs(points) do
+  assert(p.z==0)
+  if p.x==0 and p.y==0 then found=true end
+ end
+ assert(found)
+ return nil
+end}}
+BODY
+assert(context.data.picked=='unchanged')
+assert(context.data.loc.x==1 and context.data.loc.y==1)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -23092,7 +23092,7 @@ def render_static_choose_adjacent_highlight(
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Lower the unconditional avatar adjacent selector."""
+    """Lower the avatar adjacent selector and its native candidate filter."""
     if key != "u_choose_adjacent_highlight" or not avatar_actor_proven or key not in effect:
         return None
     if set(effect) - {
@@ -23119,60 +23119,54 @@ def render_static_choose_adjacent_highlight(
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
         return None
     condition = effect.get("condition", True)
-    if condition is True and "target_var" not in effect and not failure_message:
-        lines = [
-            f"    local selected = services.targeting.choose_adjacent({lua_quote(message)}, {lua_boolean(allow_vertical)})",
-            "    if selected ~= nil then",
-        ]
-    else:
-        center = (
-            _coordinate_source_expression(
-                effect["target_var"], avatar_actor_proven,
-                npc_actor_proven,
-            )
-            if "target_var" in effect else
-            "service_value(services.characters.snapshot(actor)).creature.position"
+    if "condition" in effect and not isinstance(condition, (str, dict)):
+        return None
+    center = (
+        _coordinate_source_expression(
+            effect["target_var"], avatar_actor_proven,
+            npc_actor_proven,
         )
-        if center is None:
+        if "target_var" in effect else
+        "service_value(services.characters.snapshot(actor)).creature.position"
+    )
+    if center is None:
+        return None
+    predicate = "true"
+    if condition is not True:
+        predicate = render_eoc_condition_expression(
+            condition, avatar_actor_proven, avatar_actor_proven,
+            npc_actor_proven, False, eoc_conditions,
+            npc_actor_expression=npc_actor_expression,
+        ) or ""
+        if not predicate:
             return None
-        predicate = "true"
-        if condition is not True:
-            predicate = render_eoc_condition_expression(
-                condition, avatar_actor_proven, avatar_actor_proven,
-                npc_actor_proven, False, eoc_conditions,
-                npc_actor_expression=npc_actor_expression,
-            ) or ""
-            if not predicate:
-                return None
-        offsets = [
-            (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-            (0, -1, 0), (0, 1, 0),
-            (1, -1, 0), (1, 0, 0), (1, 1, 0),
-        ]
-        if allow_vertical:
-            offsets.extend(((0, 0, -1), (0, 0, 1)))
-        offset_values = ",\n".join(
-            "        services.coords.tripoint_rel_ms("
-            f"{x}, {y}, {z})" for x, y, z in offsets
-        )
-        lines = [
-            f"    local center = {center}",
-            "    local candidate_offsets = {",
-            offset_values,
-            "    }",
-            "    local candidates = {}",
-            "    for _, offset in ipairs(candidate_offsets) do",
-            "        local candidate = center:add(offset)",
-            "        context.data[\"loc\"] = candidate",
-            f"        if {predicate} then",
-            "            candidates[#candidates + 1] = candidate",
-            "        end",
-            "    end",
-            "    local selected = services.targeting.choose_adjacent_where_at(",
-            f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
-            f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
-            "    if selected ~= nil then",
-        ]
+    offsets = [
+        (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
+        (0, -1, 0), (0, 0, 0), (0, 1, 0),
+        (1, -1, 0), (1, 0, 0), (1, 1, 0),
+    ]
+    offset_values = ",\n".join(
+        "        services.coords.tripoint_rel_ms("
+        f"{x}, {y}, {z})" for x, y, z in offsets
+    )
+    lines = [
+        f"    local center = {center}",
+        "    local candidate_offsets = {",
+        offset_values,
+        "    }",
+        "    local candidates = {}",
+        "    for _, offset in ipairs(candidate_offsets) do",
+        "        local candidate = center:add(offset)",
+        "        context.data[\"loc\"] = candidate",
+        f"        if {predicate} then",
+        "            candidates[#candidates + 1] = candidate",
+        "        end",
+        "    end",
+        "    local selected = services.targeting.choose_adjacent_where_at(",
+        f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
+        f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
+        "    if selected ~= nil then",
+    ]
     output_lines = _coordinate_output_lines(output, "selected", avatar_actor_proven, False)
     if output_lines is None:
         return None
@@ -23204,7 +23198,7 @@ def render_static_npc_choose_adjacent_highlight(
         _context_coordinate_expression(output_value) is None
     ):
         return None
-    if effect.get("condition", True) is not True or effect.get("false_eocs", []) not in ([], None):
+    if "condition" in effect or effect.get("false_eocs", []) not in ([], None):
         return None
     message = effect.get("message", "")
     failure_message = effect.get("failure_message", "")
@@ -23221,11 +23215,9 @@ def render_static_npc_choose_adjacent_highlight(
         return None
     offsets = [
         (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-        (0, -1, 0), (0, 1, 0),
+        (0, -1, 0), (0, 0, 0), (0, 1, 0),
         (1, -1, 0), (1, 0, 0), (1, 1, 0),
     ]
-    if allow_vertical:
-        offsets.extend(((0, 0, -1), (0, 0, 1)))
     candidates = ",\n".join(
         "            center:add(services.coords.tripoint_rel_ms("
         f"{x}, {y}, {z}))"
