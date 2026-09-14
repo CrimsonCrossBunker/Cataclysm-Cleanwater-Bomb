@@ -18743,6 +18743,32 @@ end
         self.assertIsNone(migrate_lua_first.render_static_run_eocs(
             dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
 
+    def test_run_eocs_array_default_only_applies_when_missing(self) -> None:
+        effect = {"run_eocs": "child", "variables": {
+            "missing": {"context_val": "missing", "default": [None, 0]},
+            "present": {"context_val": "empty", "default": [None, 0]},
+        }}
+        lines = migrate_lua_first.render_static_run_eocs(
+            effect, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null={}
+local services={types={null=null}}
+local actor={}
+local context={data={empty=null}}
+local called=false
+local function child(ctx)
+    called=true
+    assert(#ctx.data.missing==2 and ctx.data.missing[1]==null and ctx.data.missing[2]==0)
+    assert(ctx.data.present==null)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
+
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(
             {"run_eocs": "child", "variables": {

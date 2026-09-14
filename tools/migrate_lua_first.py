@@ -3913,6 +3913,8 @@ def render_static_run_eocs(
             default = ("services.types.null" if value.get("default") is None or
                        isinstance(value.get("default"), bool) else
                        render_eoc_value_expression(value.get("default"), "nil", variable_actor))
+            if isinstance(value.get("default"), list):
+                default = array_literal(value["default"])
             if isinstance(value.get("default"), dict) and value.get("default").get("i18n"):
                 return None
             # Defaults are native diag_value literals, not another variable read.
@@ -4020,7 +4022,9 @@ def render_static_run_eocs(
     has_delay = (
         delay_turns != 0 or delay_turns_expression not in (None, "0")
     )
-    if has_delay and variables and any(isinstance(value, list) for value in variables.values()):
+    if has_delay and variables and any(
+            isinstance(value, list) or isinstance(value, dict) and
+            isinstance(value.get("default"), list) for value in variables.values()):
         # Native task payload persistence is scalar-only; do not emit arrays
         # that load successfully but fail when scheduled.
         return None
