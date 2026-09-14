@@ -772,3 +772,9 @@ the dialogue variable store. An inner loop does not restore the outer iterator
 value on return; the next outer iteration overwrites it normally. Unsupported
 nested effects still leave a migration gap. Generated Lua execution covers this
 ordering; native comparison execution remains due.
+
+Migrated `foreach` arrays also accept the string `game_option` mutator.
+Its option name resolves dialogue participants independently, and all option
+values are read before the first iterator write or body effect. Missing or
+non-string options fail explicitly. Generated Lua tests cover both participants,
+snapshot timing and failure before body execution; native execution is pending.

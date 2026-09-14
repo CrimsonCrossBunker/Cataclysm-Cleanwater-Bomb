@@ -20382,6 +20382,70 @@ assert(context.data.entry=='inner')
                        "effect": {"unknown_effect": True}},
         }, True, False, {}, actor_expression="actor"))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_option_mutators_snapshot_before_body_with_both_actors(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": [{"mutator": "game_option", "option": {scope: "setting"}}
+                       for scope in ("u_val", "npc_val")],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, True, {}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={}}
+local settings={left='first',right='second'}
+local reads,calls=0,0
+local function service_value(value) return value end
+local services={
+ variables={resolve=function(data,owner,scope,name,participants)
+  assert(name=='setting' and participants.alpha==actor and participants.beta==partner)
+  return {exists=true,value=scope=='u' and 'left' or 'right'}
+ end},
+ gameplay={options={get=function(name)
+  reads=reads+1
+  assert(calls==0)
+  return {type='string_input',value=settings[name]}
+ end}},
+ message=function()
+  calls=calls+1
+  assert(reads==2 and context.data.entry==({'first','second'})[calls])
+  settings.right='changed'
+ end
+}
+BODY
+assert(calls==2 and context.data.entry=='second')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_option_lookup_failure_precedes_iterator_write(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": ["first", {"mutator": "game_option", "option": "TEST_OPTION"}],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "unreachable"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        for option in ("nil", "{type='int',value='42'}", "{type='bool',value='true'}"):
+            script = r"""
+local actor={}
+local context={data={entry='previous'}}
+local services={
+ gameplay={options={get=function() return OPTION end}},
+ message=function() error('body must not run') end
+}
+local ok,err=pcall(function()
+BODY
+end)
+assert(not ok and context.data.entry=='previous')
+assert(tostring(err):find('game option',1,true))
+""".replace("OPTION", option).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

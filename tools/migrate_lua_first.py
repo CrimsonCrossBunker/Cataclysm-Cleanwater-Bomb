@@ -4513,6 +4513,18 @@ def render_static_spawn_item_effect(
 
 
 def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+    if isinstance(value, dict) and value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_participant_string(value["option"], target, alpha, beta)
+        if option is None:
+            return None
+        return (
+            '(function(option) if option == nil then error("unknown game option") end; '
+            'if option.type ~= "string_select" and option.type ~= "string_input" then '
+            'error("string game option required") end; return option.value end)'
+            f'(services.gameplay.options.get({option}))'
+        )
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -5706,8 +5718,10 @@ def render_static_foreach(
         for value in target:
             if isinstance(value, str):
                 rendered_value = lua_scalar_literal(value)
-            elif isinstance(value, dict) and set(value) - {"default"} in (
-                    {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}):
+            elif isinstance(value, dict) and (
+                    set(value) - {"default"} in (
+                        {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}) or
+                    value.get("mutator") == "game_option"):
                 rendered_value = render_participant_string(
                     value, actor_expression or "nil",
                     actor_expression if avatar_actor_proven else None,
