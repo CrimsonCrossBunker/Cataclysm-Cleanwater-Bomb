@@ -21823,6 +21823,22 @@ log={};beta.subtype='avatar';give();assert(#log==0)
             self.assertIn("needs an explicit Platform trigger", report)
             self.assertNotIn("give_equipment", report)
 
+    def test_equipment_modifier_event_does_not_invent_second_talker(self) -> None:
+        # eoc_events::notify resolves alpha from the NPC event field; beta can
+        # remain null. An event NPC alone is not an original dialogue pair.
+        for event in ("npc_becomes_hostile", "game_start"):
+            with self.subTest(event=event):
+                result = migrate_lua_first.MigrationResult()
+                main = migrate_lua_first.render_eoc(
+                    migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                        "type": "effect_on_condition", "id": "equipment_event",
+                        "required_event": event,
+                        "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
+                    }), result)
+                self.assertIn("both original talkers' modifiers", main)
+                self.assertNotIn('strategy = "npc_allowance"', main)
+                self.assertNotIn("end)(actor, provider)", main)
+
     def test_equipment_modifier_arrays_require_original_talker_proof(self) -> None:
         render = migrate_lua_first.render_equipment_modifier_allowance
         self.assertIsNone(render([["TRUST", 1]], None, "beta"))
