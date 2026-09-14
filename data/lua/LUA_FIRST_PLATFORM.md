@@ -683,3 +683,7 @@ source and regression coverage; native execution remains part of batch acceptanc
 uses the same optional participant selection for writes. Missing participants return
 `missing_actor` without writing through the fallback actor. Context nil deletion
 and explicit `services.types.null` storage keep their existing behavior.
+
+Variable snapshots represent empty elements inside native arrays with
+`services.types.null`, preserving leading, trailing, and nested array slots.
+A top-level empty variable still uses `exists = true, value = nil`.

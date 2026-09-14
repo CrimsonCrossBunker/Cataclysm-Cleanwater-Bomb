@@ -112,7 +112,9 @@ sol::object context_value_to_lua(
             "services.variables returned context exceeds its structural limits" );
     }
     if( value.is_empty() ) {
-        return sol::make_object( lua, sol::nil );
+        // nil would remove an array slot, including a trailing empty element.
+        return depth == 0 ? sol::make_object( lua, sol::nil ) :
+               sol::make_object( lua, script_null_value{} );
     }
     if( value.is_dbl() ) {
         return sol::make_object( lua, value.dbl() );

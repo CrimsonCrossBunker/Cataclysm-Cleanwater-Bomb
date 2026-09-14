@@ -84,6 +84,23 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     const cata::lua_platform::game_handle partner_handle =
         cata::lua_platform::game_handle::from_creature(
             partner, { "npc", 4802, 0, 0, 0, {} }, runtime, 1 );
+    player.set_value( "array_input", diag_value( diag_array{
+        diag_value{}, diag_value( 0.0 ),
+        diag_value( diag_array{ diag_value( "nested" ), diag_value{} } ), diag_value{}
+    } ) );
+    lua.open_libraries( sol::lib::base );
+    lua["services"] = services;
+    lua["array_owner"] = player_handle;
+    const sol::protected_function_result array_read = lua.safe_script( R"(
+        local result = services.variables.get(array_owner, "array_input")
+        assert(result.ok and result.value.exists)
+        local values = result.value.value
+        assert(#values == 4)
+        assert(values[1] == services.types.null and values[2] == 0)
+        assert(#values[3] == 2 and values[3][1] == "nested")
+        assert(values[3][2] == services.types.null and values[4] == services.types.null)
+    )", sol::script_pass_on_error );
+    REQUIRE( array_read.valid() );
     sol::table data = lua.create_table();
     sol::protected_function resolve = services["variables"]["resolve"];
     sol::protected_function_result read = resolve(

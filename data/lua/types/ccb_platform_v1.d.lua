@@ -10007,7 +10007,7 @@ function CcbTypesApi.id_kinds() end
 
 ---@class CcbVariableReadValue
 ---@field exists boolean Whether the requested variable is present.
----@field value? any Stored value; missing variables have no value.
+---@field value? any Stored value; empty array slots use NullValue. Top-level empty and missing values are nil; use exists to distinguish.
 
 ---@class CcbVariableReadResult: CcbResult
 ---@field value? CcbVariableReadValue
