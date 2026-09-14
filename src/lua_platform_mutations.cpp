@@ -1207,7 +1207,7 @@ sol::table set_active_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const bool desired,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool retrigger )
 {
     require_mutation_id(
         requested_id, "services.mutations.set_active" );
@@ -1239,10 +1239,10 @@ sol::table set_active_state(
     sol::table before = snapshot_state(
                             state, *character, id, variant );
     if( desired ) {
-        if( !character->has_active_mutation( id ) ) {
+        if( retrigger || !character->has_active_mutation( id ) ) {
             character->activate_mutation( id );
         }
-    } else if( character->has_active_mutation( id ) ) {
+    } else if( retrigger || character->has_active_mutation( id ) ) {
         character->deactivate_mutation( id );
     }
     const bool present =
@@ -1504,12 +1504,12 @@ void install_mutation_api(
         "set_active",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const script_game_id & id, const bool active ) {
+    const script_game_id & id, const bool active, const sol::optional<bool> &retrigger ) {
         require_write();
         return set_active_state(
                    lua_state, handle, id, active,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), retrigger.value_or( false ) );
     } );
     mutations.set_function(
         "set_variant",

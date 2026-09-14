@@ -425,6 +425,7 @@ TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
     mutation_fixture legacy( 2500 );
     mutation_fixture platform( 2600 );
     const bool npc_target = GENERATE( false, true );
+    const bool retrigger = GENERATE( false, true );
     Character &old_target = legacy.target( npc_target );
     Character &new_target = platform.target( npc_target );
     old_target.set_mutation( trait_SNAIL_TRAIL );
@@ -441,14 +442,18 @@ TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
     for( int attempt = 0; attempt < 101; ++attempt ) {
         legacy.legacy_effect( source );
         sol::protected_function_result call = activate( platform.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true );
+                                              cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true, retrigger );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
     }
     CHECK( old_target.has_active_mutation( trait_SNAIL_TRAIL ) );
     CHECK( new_target.has_active_mutation( trait_SNAIL_TRAIL ) );
     CHECK( new_target.get_thirst() > 0 );
-    CHECK( old_target.get_thirst() > new_target.get_thirst() );
+    if( retrigger ) {
+        CHECK( old_target.get_thirst() == new_target.get_thirst() );
+    } else {
+        CHECK( old_target.get_thirst() > new_target.get_thirst() );
+    }
 }
 
 TEST_CASE( "lua_platform_mutations_seeded_category_matches_legacy_effect",

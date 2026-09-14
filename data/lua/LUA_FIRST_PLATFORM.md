@@ -710,3 +710,10 @@ Persistent values also accept absolute map-square `TripointCoord` values, includ
 inside arrays. They save three integer components under `tripoint_abs_ms` and
 restore a typed coordinate, without retaining any map pointer. Other coordinate
 spaces remain rejected at this persistence boundary.
+
+Mutation `set_active(character, mutation, active, retrigger)` remains idempotent
+by default. Passing `retrigger = true` explicitly invokes activation or
+deactivation even when the requested state is already satisfied, allowing repeated
+resource costs, charge progression, and native callbacks. Existing permanent-trait
+and activatable-trait requirements still apply. Native parity for other mutation
+shapes remains unverified.

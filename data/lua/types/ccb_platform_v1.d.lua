@@ -10208,7 +10208,8 @@ function CcbMutationsApi.remove(character, mutation) end
 ---@param mutation GameId GameId<mutation>.
 ---@param active boolean
 ---@return CcbResult result `value` contains before, after, requested, accepted and present.
-function CcbMutationsApi.set_active(character, mutation, active) end
+---@param retrigger? boolean Invoke activation/deactivation again even if already in the requested state; defaults to false. Repeated calls may consume resources or run callbacks.
+function CcbMutationsApi.set_active(character, mutation, active, retrigger) end
 
 ---Remove all mutations of a category using native unset semantics, without purifier downgrades.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
