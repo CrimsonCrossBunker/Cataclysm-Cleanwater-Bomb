@@ -10470,7 +10470,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_FIND_MOUNT"), services.time.duration(600, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "find_mount")', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_TRAIN"), services.time.duration(3600, "turn"))', main)
             self.assertNotIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD")', main)
             self.assertIn(
@@ -20872,6 +20872,48 @@ assert(calls==3)
 calls=0;mode='stale_npc'
 local ok,err=pcall(migrated_eoc_functions.interactive_jobs,{actors={npc=npc}},nil)
 assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_find_mount_migration_continues_only_for_no_match(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "mount",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["find_mount", "revert_activity"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc={}
+local mode='no_match'
+local calls,continued=0,0
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={activities={
+ assign_npc_job=function(target,job)
+  assert(target==npc and job=='find_mount')
+  calls=calls+1
+  if mode=='success' then return {ok=true,value={}} end
+  return {ok=false,error={code=mode}}
+ end,
+ revert_npc_job=function(target)
+  assert(target==npc);continued=continued+1
+  return {ok=true,value={}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,status in ipairs({'no_match','success','stale_npc','assignment_rejected'}) do
+ mode=status;calls=0;continued=0
+ local ok,err=pcall(migrated_eoc_functions.mount,{actors={npc=npc}},nil)
+ assert(calls==1)
+ if status=='no_match' or status=='success' then assert(ok and continued==1)
+ else assert(not ok and continued==0 and tostring(err):find(status,1,true)) end
+end
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

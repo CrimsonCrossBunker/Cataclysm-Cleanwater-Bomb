@@ -8310,8 +8310,8 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field equipment CcbEquipmentApi
 local CcbPlatformServices = {}
 ---@param handle GameHandle
----@param job string
----@return any
+---@param job string Native NPC job. find_mount returns no_match when no mount is available and restores the NPC if it was performing a player activity.
+---@return CcbResult
 function CcbPlatformActivitiesApi.assign_npc_job(handle, job) end
 ---@param character_handle GameHandle
 ---@return any

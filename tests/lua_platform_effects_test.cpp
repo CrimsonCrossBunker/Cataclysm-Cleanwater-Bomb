@@ -25,6 +25,7 @@
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "json_loader.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_bindings_values.h"
@@ -699,6 +700,52 @@ TEST_CASE( "lua_platform_npc_jobs_match_native_assignment",
         REQUIRE( fixture.other.activity.actor );
         REQUIRE( native.activity.actor );
         CHECK( fixture.other.activity.actor->get_type() == native.activity.actor->get_type() );
+        CHECK( fixture.other.mission == native.mission );
+        CHECK( fixture.other.get_attitude() == native.get_attitude() );
+        CHECK( fixture.other.current_activity_id == native.current_activity_id );
+    }
+}
+
+
+TEST_CASE( "lua_platform_find_mount_no_match_restores_active_npc",
+           "[lua][platform][activities][semantic]" )
+{
+    REQUIRE( g != nullptr );
+    g->clear_zombies();
+    for( const bool active : {
+             false, true
+         } ) {
+        effect_fixture fixture;
+        npc native;
+        const auto prepare = [active]( npc & worker ) {
+            worker.normalize();
+            worker.set_mission( NPC_MISSION_GUARD );
+            worker.set_attitude( NPCATT_FOLLOW );
+            if( active ) {
+                worker.assign_activity( activity_id( "ACT_WAIT" ), 100 );
+                worker.set_mission( NPC_MISSION_ACTIVITY );
+                worker.set_attitude( NPCATT_ACTIVITY );
+            }
+        };
+        prepare( native );
+        prepare( fixture.other );
+        REQUIRE( fixture.other.has_player_activity() == active );
+        talk_function::find_mount( native );
+        cata::lua_platform::install_activity_api(
+        fixture.services, [&]() {
+            return fixture.runtime;
+        },
+        [&]() {
+            return fixture.world;
+        }, []() {}, []() {} );
+        sol::protected_function assign = fixture.services["activities"]["assign_npc_job"];
+        sol::protected_function_result call = assign( fixture.handle( true ), "find_mount" );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+        sol::table error = result["error"];
+        CHECK( error["code"].get<std::string>() == "no_match" );
+        CHECK( fixture.other.activity.id() == native.activity.id() );
         CHECK( fixture.other.mission == native.mission );
         CHECK( fixture.other.get_attitude() == native.get_attitude() );
         CHECK( fixture.other.current_activity_id == native.current_activity_id );

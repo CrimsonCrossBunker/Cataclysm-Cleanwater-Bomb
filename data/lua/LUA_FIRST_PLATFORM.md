@@ -821,3 +821,11 @@ Migrated NPC reading, ebook reading and crafting use the corresponding
 return-without-assignment behavior; other service errors propagate. Generated
 Lua tests cover success, no assignment and stale-handle failure. Interactive
 selection and gameplay acceptance remain pending.
+
+The `find_mount` NPC job follows native creature traversal and assigns the
+selected mount. When none is available, it restores an active player-directed
+NPC job before returning `no_match`; idle NPCs remain unchanged. Migrated
+`find_mount` treats that result as a normal return and propagates other errors.
+Generated Lua branch tests pass; native active/idle no-match comparison source
+is present but has not executed. Successful mount selection still needs runtime
+acceptance.

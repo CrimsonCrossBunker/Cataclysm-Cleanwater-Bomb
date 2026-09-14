@@ -5679,12 +5679,14 @@ def render_message_effect(
     return lines
 
 
-def render_optional_npc_job(target: str, job: str) -> list[str]:
+def render_optional_npc_job(
+    target: str, job: str, normal_return: str = "assignment_rejected",
+) -> list[str]:
     """Native interactive jobs may return without assigning an activity."""
     return [
         "    do",
         f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
-        '        if not assignment.ok and assignment.error.code ~= "assignment_rejected" then',
+        f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
         "            service_value(assignment)",
         "        end",
         "    end",
@@ -30985,7 +30987,7 @@ def render_eoc(
                 lines.append(render_named_character_activity("actor", "ACT_DROP", 1))
                 converted_effect = True
             elif npc_actor_proven and effect == "find_mount":
-                lines.append(render_named_character_activity("actor", "ACT_FIND_MOUNT", 10))
+                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))
                 converted_effect = True
             elif npc_actor_proven and isinstance(effect, str) and effect in {"start_training", "start_training_seminar"}:
                 lines.append(render_named_character_activity("actor", "ACT_TRAIN", 60))

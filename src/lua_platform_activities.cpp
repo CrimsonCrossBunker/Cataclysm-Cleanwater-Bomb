@@ -378,6 +378,9 @@ void install_activity_api(
                 }
             }
             if( mount == nullptr ) {
+                if( worker->has_player_activity() ) {
+                    worker->revert_after_activity();
+                }
                 return make_game_error_result( state, {
                     "no_match", "No mountable creature is available"
                 } );
