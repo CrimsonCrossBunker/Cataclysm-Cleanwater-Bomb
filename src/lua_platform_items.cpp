@@ -5836,7 +5836,6 @@ bool restore_trade_owners( item &value,
 std::optional<game_handle_error> insert_owned_trade_item(
     const resolved_item_holder &destination, item &value,
     trade_item_insertion &inserted,
-    const std::set<item *> *ignored_stack_items = nullptr,
     const bool notify_pickup = true )
 {
     inserted = {};
@@ -5850,25 +5849,8 @@ std::optional<game_handle_error> insert_owned_trade_item(
     }
 
     Character &character = *destination.character;
-    bool stack_conflict = false;
-    character.visit_items( [&value, &stack_conflict,
-            ignored_stack_items]( item * candidate, item * ) {
-        if( candidate != nullptr &&
-            ( ignored_stack_items == nullptr ||
-              ignored_stack_items->find( candidate ) == ignored_stack_items->end() ) &&
-            candidate->stacks_with( value ) ) {
-            stack_conflict = true;
-            return VisitResponse::ABORT;
-        }
-        return VisitResponse::NEXT;
-    } );
-    if( stack_conflict ) {
-        return game_handle_error{
-            "destination_rejected",
-            "The trade destination already contains a compatible Item stack"
-        };
-    }
-
+    // add_item(..., should_stack=false) preserves the exact transferred UID even
+    // when compatible stacks already exist. They are not capacity failures.
     const std::int64_t expected_uid = value.uid().get_value();
     item &result = character.inv->add_item(
                        std::move( value ), false, false, false );
@@ -5933,7 +5915,7 @@ bool restore_trade_source_item( prepared_trade_item &entry, item &value )
         source_holder.descriptor.slot = entry.source_slot;
         source_holder.character = entry.source;
         trade_item_insertion restored;
-        return !insert_owned_trade_item( source_holder, value, restored, nullptr,
+        return !insert_owned_trade_item( source_holder, value, restored,
                                          entry.original_owners.empty() );
     }
     if( entry.source_slot == "worn" ) {
@@ -6268,7 +6250,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
         }
         trade_item_insertion reservation;
         if( const std::optional<game_handle_error> error = insert_owned_trade_item(
-                    destination, probe, reservation, &target_pointers ) ) {
+                    destination, probe, reservation ) ) {
             const bool released = release_trade_reservations( reservations );
             if( !released ) {
                 bump_item_query_mutation_epoch();

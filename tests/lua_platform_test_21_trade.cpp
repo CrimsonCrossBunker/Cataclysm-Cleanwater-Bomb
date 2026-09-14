@@ -879,9 +879,10 @@ TEST_CASE( "lua_platform_trade_commit_partial_charges",
     CHECK( count_platform_trade_items( *fixture.buyer, transferred_uid ) == 1 );
 }
 
-TEST_CASE( "lua_platform_trade_commit_capacity_rollback",
-           "[lua][platform][trade][commit][rollback]" )
+TEST_CASE( "lua_platform_trade_commit_preserves_compatible_destination_stacks",
+           "[lua][platform][trade][commit][semantic]" )
 {
+    const int quantity = GENERATE( 3, 8 );
     platform_trade_commit_fixture fixture( 153, 503, 121021, 121022 );
     REQUIRE( fixture.ready() );
     item *blocker = fixture.add_buyer_item( itype_id( "9mm" ), 2 );
@@ -893,7 +894,7 @@ TEST_CASE( "lua_platform_trade_commit_capacity_rollback",
 
     sol::table requested_lines = fixture.lua.create_table();
     requested_lines[1] = fixture.line(
-                             "seller_to_buyer", 3, fixture.seller_item_handle,
+                             "seller_to_buyer", quantity, fixture.seller_item_handle,
                              fixture.seller_handle, fixture.buyer_handle );
     const sol::protected_function_result quote_result = fixture.quote( requested_lines );
     REQUIRE( quote_result.valid() );
@@ -906,20 +907,30 @@ TEST_CASE( "lua_platform_trade_commit_capacity_rollback",
     const sol::protected_function_result commit_result = fixture.commit( token );
     REQUIRE( commit_result.valid() );
     const sol::table commit_envelope = commit_result.get<sol::table>();
-    REQUIRE_FALSE( commit_envelope["ok"].get<bool>() );
-    const std::string code =
-        commit_envelope["error"].get<sol::table>()["code"].get<std::string>();
-    CHECK( ( code == "destination_rejected" || code == "destination_capacity" ) );
-    CHECK( fixture.live_item->charges == source_charges );
+    REQUIRE( commit_envelope["ok"].get<bool>() );
+    const sol::table transferred_line =
+        commit_envelope["value"].get<sol::table>()["lines"].get<sol::table>()[1];
+    const auto transferred_uid = transferred_line["transferred_item_uid"].get<lua_Integer>();
+    CHECK( transferred_uid != blocker_uid );
+    item *received = find_platform_trade_item( *fixture.buyer, transferred_uid );
+    REQUIRE( received != nullptr );
+    CHECK( received->charges == quantity );
+    item *remaining = find_platform_trade_item( fixture.seller, source_uid );
+    if( quantity == source_charges ) {
+        CHECK( remaining == nullptr );
+        CHECK( transferred_uid == source_uid );
+    } else {
+        REQUIRE( remaining != nullptr );
+        CHECK( remaining->charges == source_charges - quantity );
+        CHECK( transferred_uid != source_uid );
+    }
     item *unchanged_blocker = find_platform_trade_item( *fixture.buyer, blocker_uid );
     REQUIRE( unchanged_blocker != nullptr );
     CHECK( unchanged_blocker->charges == blocker_charges );
-    CHECK( count_platform_trade_items( fixture.seller, source_uid ) == 1 );
-    CHECK( token.registered() );
+    CHECK( count_platform_trade_items( *fixture.buyer, blocker_uid ) == 1 );
+    CHECK( count_platform_trade_items( *fixture.buyer, transferred_uid ) == 1 );
+    CHECK_FALSE( token.registered() );
 
-    const sol::protected_function_result retry_read = fixture.get( token );
-    REQUIRE( retry_read.valid() );
-    CHECK( retry_read.get<sol::table>()["ok"].get<bool>() );
 }
 
 TEST_CASE( "lua_platform_trade_commit_mid_extract_rollback",
