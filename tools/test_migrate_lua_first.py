@@ -18624,6 +18624,7 @@ end
                         "missing": {scope: "missing", "default": "fallback"},
                         "empty": {scope: "empty", "default": "fallback"},
                         "zero": {scope: "zero", "default": 42},
+                        "boolean_default": {scope: "missing", "default": True},
                     }}, {"child": "child"}, actor_expression="actor",
                     npc_actor_expression="actor")
                 self.assertIsNotNone(lines)
@@ -18643,6 +18644,7 @@ local function child(ctx)
     assert(ctx.data.missing == "fallback")
     assert(ctx.data.empty == null)
     assert(ctx.data.zero == 0)
+    assert(ctx.data.boolean_default == null)
 end
 """ + "\n".join(lines) + "\nassert(called)"
                 result = subprocess.run(["lua", "-"], input=script, text=True,

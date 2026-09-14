@@ -3885,8 +3885,12 @@ def render_static_run_eocs(
                 return None
             if render_eoc_value_expression(descriptor, "nil", variable_actor) is None:
                 return None
-            default = ("services.types.null" if value["default"] is None else
+            # Native diag_value leaves JSON booleans as the empty variant.
+            default = ("services.types.null" if value["default"] is None or
+                       isinstance(value["default"], bool) else
                        render_eoc_value_expression(value["default"], "nil", variable_actor))
+            if isinstance(value["default"], dict) and value["default"].get("i18n"):
+                return None
             # Defaults are native diag_value literals, not another variable read.
             if isinstance(value["default"], dict) and not set(value["default"]) <= {
                 "str", "i18n", "//~", "tripoint",

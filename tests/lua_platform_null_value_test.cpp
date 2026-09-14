@@ -87,4 +87,24 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
     CHECK( restored_table.get<sol::object>( "missing" ).get_type() == sol::type::nil );
 }
 
+TEST_CASE( "lua_platform_native_variable_default_presence_contract",
+           "[lua][platform][semantic][variables]" )
+{
+    using native_assignment = value_or_var<diag_value, eoc_math, string_mutator<translation>>;
+    dialogue context;
+    const JsonObject input = json_loader::from_string(
+                                 R"({"value":{"context_val":"wanted","default":"fallback"},
+                                     "boolean":{"context_val":"missing","default":true}})" ).get_object();
+    native_assignment assignment;
+    assignment.deserialize( input.get_member( "value" ) );
+    CHECK( assignment.evaluate( context ).str() == "fallback" );
+    context.set_value( "wanted", diag_value{} );
+    CHECK( assignment.evaluate( context ).str().empty() );
+    context.set_value( "wanted", diag_value( 0.0 ) );
+    CHECK( assignment.evaluate( context ).dbl() == 0.0 );
+    native_assignment boolean_default;
+    boolean_default.deserialize( input.get_member( "boolean" ) );
+    CHECK( boolean_default.evaluate( context ).str().empty() );
+}
+
 #endif
