@@ -20457,6 +20457,27 @@ assert(calls==2)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_empty_body_and_long_lists_keep_native_iteration(self) -> None:
+        for body in (None, [], [{"u_message": "visit"}] * 65):
+            effect = {"foreach": "array", "target": [str(i) for i in range(300)],
+                      "var": {"context_val": "entry"}}
+            if body is not None:
+                effect["effect"] = body
+            lines = migrate_lua_first.render_static_foreach(
+                effect, True, False, {}, actor_expression="actor")
+            self.assertIsNotNone(lines)
+            script = r"""
+local context={data={entry='original'}}
+local calls=0
+local services={message=function(message) assert(message=='visit');calls=calls+1 end}
+BODY
+assert(context.data.entry=='299' and calls==COUNT)
+""".replace("BODY", "\n".join(lines)).replace("COUNT", str(300 * len(body or [])))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

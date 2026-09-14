@@ -5637,10 +5637,8 @@ def render_static_foreach(
         npc_actor_expression or (actor_expression if npc_actor_proven else None))
     if scope in {"u_val", "npc_val"} and owner is None:
         return None
-    body = effect.get("effect")
+    body = effect.get("effect", [])
     body = body if isinstance(body, list) else [body]
-    if not body or len(body) > 64:
-        return None
     target = effect.get("target")
     mode = effect.get("foreach")
     lines: list[str] = ["    context.actors = context.actors or {}"]
@@ -5693,7 +5691,7 @@ def render_static_foreach(
         return True
 
     if mode == "array":
-        if not isinstance(target, list) or len(target) > 256:
+        if not isinstance(target, list):
             return None
         values: list[str] = []
         for value in target:
