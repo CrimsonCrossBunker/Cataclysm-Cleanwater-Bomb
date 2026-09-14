@@ -18696,11 +18696,11 @@ local function child(next_context, next_actor)
     assert(next_actor == actor)
     for _, key in ipairs({"explicit", "absent", "inherited"}) do
         assert(next_context.data[key] == null, key)
-        assert(next_context.data["_" .. key] == null, key)
+        assert(next_context.data["_" .. key] == nil, key)
     end
     assert(next_context.data.false_value == false)
     assert(reads == 1)
-    assert(next_context.data.once == next_context.data._once)
+    assert(next_context.data._once == nil)
     assert(context.data.inherited == "old")
     assert(context.data.explicit == nil)
 end
@@ -18843,7 +18843,7 @@ context.data.original[2][1]=99
 assert(queued.source[2][1]==2 and queued.source[2][2]==null)
 assert(#queued.literal==3 and queued.literal[1]==null and queued.literal[3][2]==null)
 assert(queued.fallback[1]==null and queued.fallback[2]==7)
-assert(queued._literal[3][1]=="nested")
+assert(queued._literal==nil)
 """
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -20267,6 +20267,31 @@ assert(called and context.data.source[1]==null and context.data.source[2][1]==2)
         self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
             {"run_eocs": "step"}, {"step": "step"},
             actor_expression="actor", avatar_actor_proven=True))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_preserves_distinct_underscore_variable_names(self) -> None:
+        for values in ({"name": "new"}, {"_name": "explicit", "name": "new"}):
+            lines = migrate_lua_first.render_static_run_eocs(
+                {"run_eocs": "step", "variables": values}, {"step": "step"},
+                actor_expression="actor", avatar_actor_proven=True)
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor={}
+local services={}
+local context={data={_name='inherited'}}
+local called=false
+local function step(child)
+ assert(child.data.name=='new' and child.data._name==EXPECTED)
+ called=true
+end
+BODY
+assert(called and context.data._name=='inherited' and context.data.name==nil)
+""".replace("BODY", "\n".join(lines))
+            script = script.replace("EXPECTED", migrate_lua_first.lua_quote(
+                values.get("_name", "inherited")))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

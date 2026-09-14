@@ -4082,10 +4082,6 @@ def render_static_run_eocs(
             f"    child_data[{lua_quote(name)}] = {rendered}",
             f"    child_data[{lua_quote(name)}] = copy_child_value(child_data[{lua_quote(name)}])",
         ])
-        if not name.startswith("_"):
-            prefix.append(
-                f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
-            )
     prefix.extend([
         "    local child_conditions = {}",
         "    for name, predicate in pairs(context.conditions or {}) do",
