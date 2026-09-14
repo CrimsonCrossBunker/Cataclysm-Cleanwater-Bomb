@@ -747,3 +747,10 @@ through `services.vitamins.definitions`. Native order is retained after query
 filtering and before pagination; the default remains ID order. Migrated vitamin
 iteration requests native order. Its C++ regression source covers both ordering
 modes and filtered pages; native execution remains part of batch acceptance.
+
+`services.registry.list` and `services.registry.definitions.list` also accept
+`order = "native"`; omitted or `"id"` keeps identifier sorting. Each order has a
+separate catalog cache, invalidated together on language changes. Native order
+means the registry's enumeration order, not a stable order across different data
+loads. Filtering retains that order and pagination is applied afterward. Migrated
+body-part and JSON-flag traversal requests it. Native test execution is still due.

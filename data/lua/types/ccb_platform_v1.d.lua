@@ -10829,3 +10829,25 @@ local CcbVitaminsApi = {}
 ---@param options? CcbVitaminDefinitionQuery
 ---@return table page Contains items, total, offset, limit, returned and has_more; items contain vitamin GameIds in id.
 function CcbVitaminsApi.definitions(options) end
+
+---@class CcbRegistryQuery
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+---@field details? boolean
+---@field order? "id"|"native" Default id; native retains registry enumeration order before filtering and pagination.
+
+---@class CcbRegistryDefinitionsApi
+local CcbRegistryDefinitionsApi = {}
+---@param kind string
+---@param options? CcbRegistryQuery
+---@return table page
+function CcbRegistryDefinitionsApi.list(kind, options) end
+
+---@class CcbRegistryApi
+---@field definitions CcbRegistryDefinitionsApi
+local CcbRegistryApi = {}
+---@param kind string
+---@param options? CcbRegistryQuery
+---@return table page
+function CcbRegistryApi.list(kind, options) end

@@ -5737,7 +5737,7 @@ def render_static_foreach(
         if target in registry_kinds:
             page_expression = (
                 f"services.registry.list({lua_quote(registry_kinds[target])}, "
-                "{ offset = foreach_offset, limit = 256 })"
+                '{ offset = foreach_offset, limit = 256, order = "native" })'
             )
             return (
                 lines if append_paged_loop(page_expression, "entries", "entry.id")

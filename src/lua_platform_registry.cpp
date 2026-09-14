@@ -165,10 +165,6 @@ std::vector<registry_metadata> make_index( const Range &range, Id id, Name name 
     for( const auto &entry : range ) {
         result.push_back( { id( entry ), name( entry ) } );
     }
-    std::sort( result.begin(), result.end(),
-    []( const registry_metadata & lhs, const registry_metadata & rhs ) {
-        return lhs.id < rhs.id;
-    } );
     return result;
 }
 
@@ -377,9 +373,11 @@ sol::table skill_snapshot( sol::state_view lua, const Skill &definition )
 class script_registry_catalog
 {
     public:
-        const std::vector<registry_metadata> &index( const std::string &kind ) {
+        const std::vector<registry_metadata> &index( const std::string &kind,
+                const bool native_order = false ) {
             refresh_language();
-            const auto existing = indexes_.find( kind );
+            const std::string cache_key = native_order ? kind + ":native" : kind;
+            const auto existing = indexes_.find( cache_key );
             if( existing != indexes_.end() ) {
                 return existing->second;
             }
@@ -477,11 +475,13 @@ class script_registry_catalog
                     return entry.name();
                 } );
             }
-            std::sort( built.begin(), built.end(),
-            []( const registry_metadata & lhs, const registry_metadata & rhs ) {
-                return lhs.id < rhs.id;
-            } );
-            return indexes_.emplace( kind, std::move( built ) ).first->second;
+            if( !native_order ) {
+                std::sort( built.begin(), built.end(),
+                []( const registry_metadata & lhs, const registry_metadata & rhs ) {
+                    return lhs.id < rhs.id;
+                } );
+            }
+            return indexes_.emplace( cache_key, std::move( built ) ).first->second;
         }
 
         int revision() {
@@ -587,6 +587,7 @@ sol::object typed_definition_snapshot(
 }
 
 struct list_options {
+    bool native_order = false;
     int offset = 0;
     int limit = default_page_limit;
     std::string query;
@@ -601,6 +602,17 @@ list_options read_list_options( const sol::optional<sol::table> &options )
         result.limit = options->get_or( "limit", default_page_limit );
         result.query = options->get_or( "query", std::string() );
         result.details = options->get_or( "details", false );
+        const sol::object order = ( *options )["order"];
+        if( order.valid() && order.get_type() != sol::type::nil ) {
+            if( order.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "registry.list order must be id or native" );
+            }
+            const std::string name = order.as<std::string>();
+            if( name != "id" && name != "native" ) {
+                throw std::invalid_argument( "registry.list order must be id or native" );
+            }
+            result.native_order = name == "native";
+        }
     }
     if( result.offset < 0 || result.offset > maximum_offset ) {
         throw std::invalid_argument( "registry.list offset must be within 0..1000000" );
@@ -650,7 +662,7 @@ void install_registry_api(
         }
         const list_options options = read_list_options( raw_options );
         sol::state_view state( lua_state );
-        const std::vector<registry_metadata> &index = catalog->index( kind );
+        const std::vector<registry_metadata> &index = catalog->index( kind, options.native_order );
         std::vector<const registry_metadata *> matches;
         matches.reserve( index.size() );
         for( const registry_metadata &entry : index ) {
@@ -754,7 +766,7 @@ void install_registry_api(
         }
         const list_options options = read_list_options( raw_options );
         sol::state_view state( lua_state );
-        const std::vector<registry_metadata> &index = catalog->index( kind );
+        const std::vector<registry_metadata> &index = catalog->index( kind, options.native_order );
         std::vector<const registry_metadata *> matches;
         matches.reserve( index.size() );
         for( const registry_metadata &entry : index ) {

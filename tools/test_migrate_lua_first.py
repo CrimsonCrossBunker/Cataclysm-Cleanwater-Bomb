@@ -10156,7 +10156,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('foreach_values[2] = "b"', main)
             self.assertIn(
                 'services.registry.list("body_part", '
-                '{ offset = foreach_offset, limit = 256 })',
+                '{ offset = foreach_offset, limit = 256, order = "native" })',
                 main,
             )
             self.assertIn(
@@ -20489,7 +20489,7 @@ assert(context.data.entry=='299' and calls==COUNT)
 local context={data={}}
 local pages,calls=0,0
 local services={registry={list=function(kind,options)
- assert(kind=='body_part' and calls==0 and options.offset==pages)
+ assert(kind=='body_part' and calls==0 and options.offset==pages and options.order=='native')
  pages=pages+1
  return {entries={{id=pages==1 and 'first' or 'second'}},returned=1,has_more=pages==1}
 end},message=function()

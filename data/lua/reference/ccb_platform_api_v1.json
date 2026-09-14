@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 706,
+    "class_count": 709,
     "classes": [
       {
         "fields": [
@@ -7596,6 +7596,50 @@
       {
         "fields": [],
         "name": "CcbRecipesApi"
+      },
+      {
+        "fields": [
+          {
+            "line": 10848,
+            "name": "definitions",
+            "type": "CcbRegistryDefinitionsApi"
+          }
+        ],
+        "name": "CcbRegistryApi"
+      },
+      {
+        "fields": [],
+        "name": "CcbRegistryDefinitionsApi"
+      },
+      {
+        "fields": [
+          {
+            "line": 10837,
+            "name": "details",
+            "type": "boolean"
+          },
+          {
+            "line": 10835,
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "line": 10834,
+            "name": "offset",
+            "type": "integer"
+          },
+          {
+            "line": 10838,
+            "name": "order",
+            "type": "\"id\"|\"native\""
+          },
+          {
+            "line": 10836,
+            "name": "query",
+            "type": "string"
+          }
+        ],
+        "name": "CcbRegistryQuery"
       },
       {
         "fields": [],
@@ -20162,7 +20206,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1284,
+    "function_count": 1286,
     "functions": [
       {
         "line": "2713",
@@ -24459,6 +24503,18 @@
         "name": "snapshot",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part"
+      },
+      {
+        "line": "10853",
+        "name": "list",
+        "owner": "CcbRegistryApi",
+        "parameters": "kind, options"
+      },
+      {
+        "line": "10845",
+        "name": "list",
+        "owner": "CcbRegistryDefinitionsApi",
+        "parameters": "kind, options"
       },
       {
         "line": "7544",
