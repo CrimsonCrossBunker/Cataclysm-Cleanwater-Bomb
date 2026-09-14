@@ -1202,6 +1202,175 @@ TEST_CASE( "sealed_containers", "[pocket][seal]" )
     }
 }
 
+TEST_CASE( "pocket_exact_escrow_restores_identity_and_order", "[pocket][transaction]" )
+{
+    const int index = GENERATE( 0, 1, 2 );
+    pocket_data data( pocket_type::CONTAINER );
+    item_pocket pocket( &data );
+    const item rock( itype_test_rock );
+    REQUIRE_FALSE( rock.count_by_charges() );
+    for( int i = 0; i < 3; ++i ) {
+        pocket.add( rock );
+    }
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 3 );
+    const std::vector<item *> items( original.begin(), original.end() );
+    const std::int64_t uid = items[index]->uid().get_value();
+    REQUIRE( uid > 0 );
+    std::list<item> escrow;
+    const auto position = pocket.extract_item_to( *items[index], escrow );
+    REQUIRE( position );
+    REQUIRE( escrow.size() == 1 );
+    CHECK( &escrow.front() == items[index] );
+    CHECK( escrow.front().uid().get_value() == uid );
+    CHECK( pocket.size() == 2 );
+    REQUIRE( pocket.restore_item_from( escrow, *position ) );
+    CHECK( escrow.empty() );
+    CHECK( pocket.all_items_top() == original );
+    CHECK( items[index]->uid().get_value() == uid );
+    CHECK_FALSE( pocket.restore_item_from( escrow, *position ) );
+}
+
+TEST_CASE( "pocket_exact_escrow_rejects_changed_gap_and_wrong_pocket",
+           "[pocket][transaction]" )
+{
+    pocket_data data( pocket_type::CONTAINER );
+    item_pocket pocket( &data );
+    item_pocket other( &data );
+    const item rock( itype_test_rock );
+    REQUIRE_FALSE( rock.count_by_charges() );
+    for( int i = 0; i < 3; ++i ) {
+        pocket.add( rock );
+    }
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 3 );
+    const std::vector<item *> items( original.begin(), original.end() );
+    std::list<item> first;
+    std::list<item> second;
+    const auto first_position = pocket.extract_item_to( *items[1], first );
+    REQUIRE( first_position );
+    CHECK_FALSE( other.restore_item_from( first, *first_position ) );
+    CHECK( other.size() == 0 );
+    REQUIRE( first.size() == 1 );
+    const auto second_position = pocket.extract_item_to( *items[2], second );
+    REQUIRE( second_position );
+    // The captured successor is absent. Do not silently append to a different gap.
+    CHECK_FALSE( pocket.restore_item_from( first, *first_position ) );
+    CHECK( pocket.size() == 1 );
+    CHECK( first.size() == 1 );
+    REQUIRE( pocket.restore_item_from( second, *second_position ) );
+    REQUIRE( pocket.restore_item_from( first, *first_position ) );
+    CHECK( pocket.all_items_top() == original );
+}
+
+TEST_CASE( "pocket_exact_escrow_unwinds_multiple_extractions_in_reverse",
+           "[pocket][transaction]" )
+{
+    pocket_data data( pocket_type::CONTAINER );
+    item_pocket pocket( &data );
+    const item rock( itype_test_rock );
+    REQUIRE_FALSE( rock.count_by_charges() );
+    for( int i = 0; i < 3; ++i ) {
+        pocket.add( rock );
+    }
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 3 );
+    const std::vector<item *> items( original.begin(), original.end() );
+    std::vector<std::list<item>> escrows( 3 );
+    std::vector<item_pocket::item_position> positions;
+    const std::vector<int> order = { 1, 0, 2 };
+    for( int i = 0; i < 3; ++i ) {
+        const auto position = pocket.extract_item_to( *items[order[i]], escrows[i] );
+        REQUIRE( position );
+        positions.push_back( *position );
+    }
+    CHECK( pocket.size() == 0 );
+    for( int i = 2; i >= 0; --i ) {
+        REQUIRE( pocket.restore_item_from( escrows[i], positions[i] ) );
+    }
+    CHECK( pocket.all_items_top() == original );
+}
+
+TEST_CASE( "pocket_exact_escrow_rejects_copy_and_bulk_fill_interleaving",
+           "[pocket][transaction]" )
+{
+    pocket_data data( pocket_type::CONTAINER );
+    item_pocket pocket( &data );
+    pocket.add( item( itype_test_rock ) );
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 1 );
+    std::list<item> escrow;
+    pocket.begin_bulk_fill();
+    CHECK_FALSE( pocket.extract_item_to( *original.front(), escrow ) );
+    CHECK( escrow.empty() );
+    CHECK( pocket.all_items_top() == original );
+    pocket.end_bulk_fill();
+    const auto position = pocket.extract_item_to( *original.front(), escrow );
+    REQUIRE( position );
+    std::list<item> copy;
+    copy.push_back( escrow.front() );
+    REQUIRE( copy.front().uid() != escrow.front().uid() );
+    CHECK_FALSE( pocket.restore_item_from( copy, *position ) );
+    CHECK( pocket.empty() );
+    CHECK( copy.size() == 1 );
+    pocket.begin_bulk_fill();
+    CHECK_FALSE( pocket.restore_item_from( escrow, *position ) );
+    CHECK( pocket.empty() );
+    CHECK( escrow.size() == 1 );
+    pocket.end_bulk_fill();
+    REQUIRE( pocket.restore_item_from( escrow, *position ) );
+    CHECK( pocket.all_items_top() == original );
+}
+
+TEST_CASE( "pocket_exact_escrow_does_not_extract_nested_or_foreign_items",
+           "[pocket][transaction]" )
+{
+    pocket_data data( pocket_type::CONTAINER );
+    item_pocket pocket( &data );
+    item bag( itype_id( "backpack" ) );
+    bag.force_insert_item( item( itype_test_rock ), pocket_type::CONTAINER );
+    pocket.add( bag );
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 1 );
+    const auto children = original.front()->get_contents().all_items_top();
+    REQUIRE( children.size() == 1 );
+    std::list<item> escrow;
+    CHECK_FALSE( pocket.extract_item_to( bag, escrow ) );
+    CHECK_FALSE( pocket.extract_item_to( *children.front(), escrow ) );
+    CHECK( escrow.empty() );
+    escrow.emplace_back( itype_test_rock );
+    CHECK_FALSE( pocket.extract_item_to( *original.front(), escrow ) );
+    CHECK( escrow.size() == 1 );
+    CHECK( pocket.all_items_top() == original );
+    CHECK( original.front()->get_contents().all_items_top() == children );
+}
+
+TEST_CASE( "pocket_exact_escrow_preserves_seal_and_charge_stack", "[pocket][transaction]" )
+{
+    item can( itype_test_can_drink );
+    const auto pockets = can.get_container_pockets();
+    REQUIRE_FALSE( pockets.empty() );
+    item_pocket &pocket = *pockets.front();
+    REQUIRE( pocket.insert_item( item( itype_water ) ).success() );
+    REQUIRE( pocket.seal() );
+    const auto original = pocket.all_items_top();
+    REQUIRE( original.size() == 1 );
+    item *water = original.front();
+    const int charges = water->charges;
+    const std::int64_t uid = water->uid().get_value();
+    std::list<item> escrow;
+    const auto position = pocket.extract_item_to( *water, escrow );
+    REQUIRE( position );
+    CHECK( pocket.sealed() );
+    REQUIRE( escrow.size() == 1 );
+    CHECK( escrow.front().charges == charges );
+    CHECK( escrow.front().uid().get_value() == uid );
+    REQUIRE( pocket.restore_item_from( escrow, *position ) );
+    CHECK( pocket.sealed() );
+    CHECK( pocket.all_items_top() == original );
+    CHECK( water->charges == charges );
+}
+
 // Better pockets
 // --------------
 // Pockets are ranked according to item_pocket::better_pocket, which considers player-defined
