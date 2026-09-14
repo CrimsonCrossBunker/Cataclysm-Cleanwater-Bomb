@@ -31,6 +31,7 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_effects.h"
+#include "lua_platform_npc_services.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
@@ -750,6 +751,41 @@ TEST_CASE( "lua_platform_find_mount_no_match_restores_active_npc",
         CHECK( fixture.other.get_attitude() == native.get_attitude() );
         CHECK( fixture.other.current_activity_id == native.current_activity_id );
     }
+}
+
+
+TEST_CASE( "lua_platform_seminar_checks_avatar_before_opening_selection",
+           "[lua][platform][training]" )
+{
+    effect_fixture fixture;
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+    npcs, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function start = npcs["training"]["start_selected"];
+    for( const std::string mode : {
+             std::string( "player" ), std::string( "seminar" )
+         } ) {
+        sol::protected_function_result call = start(
+                fixture.handle( true ), fixture.handle( true ), mode );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE_FALSE( result["ok"].get<bool>() );
+        sol::table error = result["error"];
+        CHECK( error["code"].get<std::string>() != "unsupported_target" );
+        CHECK_FALSE( fixture.other.activity );
+    }
+    sol::protected_function_result call = start(
+            fixture.handle( true ), fixture.handle( false ), "unknown" );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE_FALSE( result["ok"].get<bool>() );
+    sol::table error = result["error"];
+    CHECK( error["code"].get<std::string>() == "unsupported_target" );
 }
 
 #endif

@@ -841,3 +841,10 @@ exact NPC provider and avatar student. It retains the native selected course,
 payment and duration calculation instead of assigning a fixed training timer.
 A successful call that starts no training remains a normal return. Generated
 Lua routing/error tests pass; native course/payment execution remains pending.
+
+`npcs.training.start_selected(provider, avatar, "seminar")` opens native
+seminar participant selection, retaining follower eligibility and cancellation.
+The avatar handle is validated before selection; returned provider/player flags
+do not enumerate all seminar students. Migrated `start_training_seminar` uses
+this mode. Generated Lua cancellation/routing tests pass; native menu, payment
+and multi-student training acceptance remain pending.

@@ -30995,7 +30995,9 @@ def render_eoc(
                     'services.characters.avatar(), "player"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "start_training_seminar":
-                lines.append(render_named_character_activity("actor", "ACT_TRAIN", 60))
+                lines.append(
+                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
+                    'services.characters.avatar(), "seminar"))')
                 converted_effect = True
             elif effect == "distribute_food_auto":
                 # This legacy operation discovers a camp from the NPC's

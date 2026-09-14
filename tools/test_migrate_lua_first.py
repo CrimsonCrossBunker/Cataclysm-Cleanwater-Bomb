@@ -10471,7 +10471,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
             self.assertIn('services.activities.assign_npc_job(actor, "find_mount")', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_TRAIN"), services.time.duration(3600, "turn"))', main)
+            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "seminar")', main)
             self.assertNotIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD")', main)
             self.assertIn(
                 "needs explicit camp, manager, and storage holder handles",
@@ -20976,6 +20976,51 @@ local services={
  characters={avatar=function() return avatar end},
  npcs={training={start_selected=function(provider,student,mode)
   assert(provider==expected and student==avatar and mode=='player')
+  calls=calls+1
+  if fail then return {ok=false,error={code='stale_npc'}} end
+  return {ok=true,value={player_training=false,provider_training=false}}
+ end}},
+ activities={revert_npc_job=function(target)
+  assert(target==expected);continued=continued+1;return {ok=true,value={}}
+ end}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.train({actors={npc=npc}},nil)
+assert(calls==1 and continued==1)
+expected=override
+migrated_eoc_functions.train({actors={npc=npc}},override)
+assert(calls==2 and continued==2)
+fail=true
+local ok,err=pcall(migrated_eoc_functions.train,{actors={npc=npc}},override)
+assert(not ok and tostring(err):find('stale_npc',1,true))
+assert(calls==3 and continued==2)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_seminar_training_preserves_cancel_and_provider(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["start_training_seminar", "revert_activity"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc,override={},{},{}
+local expected=npc
+local calls,continued=0,0
+local fail=false
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={
+ characters={avatar=function() return avatar end},
+ npcs={training={start_selected=function(provider,student,mode)
+  assert(provider==expected and student==avatar and mode=='seminar')
   calls=calls+1
   if fail then return {ok=false,error={code='stale_npc'}} end
   return {ok=true,value={player_training=false,provider_training=false}}
