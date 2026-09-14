@@ -4525,6 +4525,24 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
             'error("string game option required") end; return option.value end)'
             f'(services.gameplay.options.get({option}))'
         )
+    if isinstance(value, dict) and value.get("mutator") in {
+            "mon_faction", "ma_technique_name", "ma_technique_description"}:
+        monster = value["mutator"] == "mon_faction"
+        key = "mtype_id" if monster else "matec_id"
+        if set(value) != {"mutator", key}:
+            return None
+        identifier = render_participant_string(value[key], target, alpha, beta)
+        if identifier is None:
+            return None
+        if monster:
+            return (
+                '(function(definition) if definition == nil then '
+                'error("unknown monster definition") end; return definition.default_faction.value end)'
+                f'(services.registry.get("monster", {identifier}))'
+            )
+        field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
+        return ('services.martial_arts.technique_definition('
+                f'services.types.id("martial_art_technique", {identifier})).{field}')
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -5721,7 +5739,8 @@ def render_static_foreach(
             elif isinstance(value, dict) and (
                     set(value) - {"default"} in (
                         {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}) or
-                    value.get("mutator") == "game_option"):
+                    value.get("mutator") in {
+                        "game_option", "mon_faction", "ma_technique_name", "ma_technique_description"}):
                 rendered_value = render_participant_string(
                     value, actor_expression or "nil",
                     actor_expression if avatar_actor_proven else None,

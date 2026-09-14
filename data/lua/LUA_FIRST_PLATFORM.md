@@ -778,3 +778,10 @@ Its option name resolves dialogue participants independently, and all option
 values are read before the first iterator write or body effect. Missing or
 non-string options fail explicitly. Generated Lua tests cover both participants,
 snapshot timing and failure before body execution; native execution is pending.
+
+Dynamic `foreach` strings can read monster default factions and translated
+martial-art technique names or flavor descriptions through typed definition
+services. Their identifiers may recursively use supported string expressions;
+participant variables retain their own alpha/beta ownership. Generated Lua
+execution checks nested option lookup and full-array evaluation before effects.
+Native comparison execution and the remaining string mutators are still due.

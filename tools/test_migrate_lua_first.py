@@ -20446,6 +20446,69 @@ assert(tostring(err):find('game option',1,true))
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_definition_strings_keep_nested_participant_resolution(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": [
+                {"mutator": "mon_faction", "mtype_id": {"npc_val": "selected"}},
+                {"mutator": "ma_technique_name", "matec_id": {
+                    "mutator": "game_option", "option": {"u_val": "selected"}}},
+                {"mutator": "ma_technique_description", "matec_id": {"context_val": "technique"}},
+            ],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, True, {}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={technique='tec'}}
+local calls,lookups=0,0
+local function service_value(value) return value end
+local services={
+ variables={resolve=function(data,owner,scope,name,participants)
+  assert(participants.alpha==actor and participants.beta==partner and calls==0)
+  return {exists=true,value=scope=='npc' and 'mon' or scope=='u' and 'SETTING' or data[name]}
+ end},
+ gameplay={options={get=function(name)
+  assert(name=='SETTING' and calls==0)
+  return {type='string_select',value='tec'}
+ end}},
+ types={id=function(kind,id) assert(kind=='martial_art_technique' and id=='tec');return id end},
+ registry={get=function(kind,id)
+  assert(kind=='monster' and id=='mon' and calls==0)
+  lookups=lookups+1;return {default_faction={value='faction'}}
+ end},
+ martial_arts={technique_definition=function(id)
+  assert(id=='tec' and calls==0)
+  lookups=lookups+1
+  return {name='translated name',flavor_description='translated flavor',description='full rules'}
+ end},
+ message=function()
+  calls=calls+1
+  assert(lookups==3)
+  assert(context.data.entry==({'faction','translated name','translated flavor'})[calls])
+ end
+}
+BODY
+assert(calls==3)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_foreach_definition_string_invalid_shapes_remain_gaps(self) -> None:
+        for value in (
+            {"mutator": "mon_faction"},
+            {"mutator": "mon_faction", "mtype_id": 12},
+            {"mutator": "ma_technique_name", "matec_id": {"npc_val": "selected"}},
+            {"mutator": "ma_technique_description", "matec_id": "tec", "unexpected": True},
+        ):
+            with self.subTest(value=value):
+                self.assertIsNone(migrate_lua_first.render_static_foreach({
+                    "foreach": "array", "target": [value],
+                    "var": {"context_val": "entry"}, "effect": [],
+                }, True, False, {}, actor_expression="actor"))
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
