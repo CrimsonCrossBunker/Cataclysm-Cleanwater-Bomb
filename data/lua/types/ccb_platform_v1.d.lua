@@ -6438,7 +6438,7 @@ function CcbPlatformPresentation.notice(message) end
 function CcbPlatformPresentation.confirm(question) end
 
 ---@param prompt string
----@param entries PlatformChoice[] Dense one-based array, including an empty menu; holes and non-integer keys are rejected.
+---@param entries PlatformChoice[] Dense one-based array, including an empty menu; holes and non-integer keys are rejected. Limited only by native signed-int menu indexing, not a fixed script entry quota.
 ---@return string|nil selected_id
 function CcbPlatformPresentation.choose(prompt, entries) end
 

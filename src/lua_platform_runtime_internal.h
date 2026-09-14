@@ -94,7 +94,8 @@ inline constexpr std::int64_t maximum_character_recurrence_turns =
     365LL * 24LL * 60LL * 60LL;
 inline constexpr std::size_t maximum_platform_dialogue_topics = 8192;
 inline constexpr std::size_t maximum_presentation_text_bytes = 32768;
-inline constexpr std::size_t maximum_presentation_choices = 128;
+// uilist indexes and return values use int; there is no separate script quota.
+inline constexpr std::size_t maximum_presentation_choices = std::numeric_limits<int>::max();
 
 class runtime : public std::enable_shared_from_this<runtime>
 {

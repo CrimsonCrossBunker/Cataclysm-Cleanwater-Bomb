@@ -106,6 +106,12 @@ TEST_CASE( "lua_platform_choice_positions_reject_invalid_shapes_before_ui",
         end
         rejected({{id="a",label="A",position={x=1,y=2,z=0}}}, "typed abs_ms")
         rejected({{id="a",label="A",position=relative}}, "abs_ms coordinates")
+        -- Reach validation of entry 129, rather than failing the former quota.
+        -- The invalid final position keeps this test from opening a modal UI.
+        local many = {}
+        for i = 1, 129 do many[i] = {id=tostring(i),label="Ally " .. i} end
+        many[129].position = relative
+        rejected(many, "abs_ms coordinates")
         rejected({{id="a",label="A",position=loaded},{id="b",label="B"}}, "every entry or none")
         rejected({{id="a",label="A"},{id="b",label="B",position=loaded}}, "every entry or none")
     )", sol::script_pass_on_error );
