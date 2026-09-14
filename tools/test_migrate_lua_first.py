@@ -11662,22 +11662,27 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
             self.assertNotIn('actor, "install"', main)
 
-    def test_grooming_services_use_explicit_beta_and_current_player(self) -> None:
+    def test_player_services_use_explicit_beta_and_current_player(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps({
                 "type": "effect_on_condition", "id": "grooming_pair",
                 "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["barber_hair", "barber_beard", "buy_haircut", "buy_shave"],
+                "effect": ["barber_hair", "barber_beard", "buy_haircut", "buy_shave",
+                           "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid"],
             }), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "grooming_pair_mod")
             main = result.files[Path("main.lua")]
-            self.assertEqual(main.count("local provider = context.actors.beta"), 4)
-            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 4)
+            self.assertEqual(main.count("local provider = context.actors.beta"), 8)
+            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 8)
             for method, choice in (("open_style", "hair"), ("open_style", "beard"),
                                    ("provide", "haircut"), ("provide", "shave")):
                 self.assertIn(f'services.npcs.grooming.{method}(provider, services.characters.avatar(), "{choice}")', main)
+            for level in ("basic", "advanced"):
+                for allies in ("true", "false"):
+                    self.assertIn(f'services.npcs.medical.provide_aid(provider, services.characters.avatar(), "{level}", {allies})', main)
+
 
     def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11822,7 +11827,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn(
-                'services.npcs.medical.provide_aid(actor, services.characters.avatar(), "advanced", false)',
+                'services.npcs.medical.provide_aid(provider, services.characters.avatar(), "advanced", false)',
                 main,
             )
             self.assertIn(
@@ -21522,7 +21527,7 @@ end
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
         script = r"""
-local npc,override,avatar={},{},{}
+local npc,override,avatar={subtype="npc"},{subtype="npc"},{subtype="avatar"}
 local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={characters={avatar=function() return avatar end},npcs={medical={
@@ -21543,6 +21548,9 @@ for _,target in ipairs({npc,override}) do
  assert(not pcall(migrated_eoc_functions.aid,{actors={npc=npc}},target))
  assert(#calls==1)
 end
+calls={};fail=false
+migrated_eoc_functions.aid({actors={npc=avatar}},avatar)
+assert(#calls==0)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

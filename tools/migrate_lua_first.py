@@ -31401,14 +31401,19 @@ def render_eoc(
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:
-                if npc_actor_proven:
+                if npc_actor_proven or npc_actor_expression is not None:
                     level = "basic" if effect.startswith("lesser_") else "advanced"
                     include_allies = "true" if "all_aid" in effect else "false"
-                    lines.append(
-                        "    service_value(services.npcs.medical.provide_aid("
-                        f"{npc_actor_expression or 'actor'}, services.characters.avatar(), "
-                        f"{lua_quote(level)}, {include_allies}))"
-                    )
+                    lines.extend([
+                        "    do",
+                        f"        local provider = {npc_actor_expression or 'actor'}",
+                        '        if provider ~= nil and provider.subtype == "npc" then',
+                        "            service_value(services.npcs.medical.provide_aid("
+                        "provider, services.characters.avatar(), "
+                        f"{lua_quote(level)}, {include_allies}))",
+                        "        end",
+                        "    end",
+                    ])
                     converted_effect = True
                 else:
                     lines.append("    -- TODO: medical aid requires an explicit NPC provider.")
