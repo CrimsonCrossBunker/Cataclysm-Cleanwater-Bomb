@@ -717,3 +717,10 @@ deactivation even when the requested state is already satisfied, allowing repeat
 resource costs, charge progression, and native callbacks. Existing permanent-trait
 and activatable-trait requirements still apply. Native parity for other mutation
 shapes remains unverified.
+
+`services.mutations.invoke_activation(character, mutation, active)` executes the
+native activation/deactivation action directly, including repeated costs,
+transformations, and callbacks. Unlike setting a permanent mutation's state,
+this action also permits cached or absent traits and does not require the
+`activated` definition flag. It validates the mutation id and exact Character
+handle, and returns the resulting permanent-presence and active flags.
