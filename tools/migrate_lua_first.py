@@ -30919,8 +30919,10 @@ def render_eoc(
                     f"    service_value(services.npcs.grooming.{method}("
                     f"{npc_actor_expression or 'actor'}, services.characters.avatar(), {lua_quote(choice)}))")
                 converted_effect = True
-            elif effect == "start_trade":
-                # Trade participant migration is handled separately.
+            elif npc_actor_proven and effect == "start_trade":
+                lines.append(
+                    f"    service_value(services.trade.open({npc_actor_expression or 'actor'}, "
+                    'services.characters.avatar(), 0, services.translate("Trade"), true))')
                 converted_effect = True
             elif npc_actor_proven and effect == "revert_activity":
                 lines.append(

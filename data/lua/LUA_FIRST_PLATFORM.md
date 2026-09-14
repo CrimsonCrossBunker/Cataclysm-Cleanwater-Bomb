@@ -861,3 +861,10 @@ native haircut/shave services with the exact NPC and avatar client. These
 effects are no longer silently discarded. Without a proven NPC they remain
 explicit migration gaps. Generated Lua tests cover all four calls and missing
 provider handling; native appearance and morale outcomes await acceptance.
+
+`trade.open` optionally resolves the seller's native intercom trade delegate;
+default calls retain the explicit seller. Migrated `start_trade` enables
+delegation, uses the active avatar, zero initial cost and a translated title.
+Cancellation is a normal return. Generated Lua tests cover that contract;
+native buyer-validation test source is present but unexecuted, and delegated
+barter UI acceptance remains pending.

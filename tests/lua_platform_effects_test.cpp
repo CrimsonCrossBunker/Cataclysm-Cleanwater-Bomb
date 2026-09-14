@@ -32,6 +32,7 @@
 #include "lua_platform_creatures.h"
 #include "lua_platform_effects.h"
 #include "lua_platform_npc_services.h"
+#include "lua_platform_trade.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
@@ -786,6 +787,32 @@ TEST_CASE( "lua_platform_seminar_checks_avatar_before_opening_selection",
     REQUIRE_FALSE( result["ok"].get<bool>() );
     sol::table error = result["error"];
     CHECK( error["code"].get<std::string>() == "unsupported_target" );
+}
+
+
+TEST_CASE( "lua_platform_trade_delegate_option_keeps_buyer_validation",
+           "[lua][platform][trade]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_trade_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function open = fixture.services["trade"]["open"];
+    for( const int mode : {
+             0, 1, 2
+         } ) {
+        sol::protected_function_result call = mode == 0 ?
+                                              open( fixture.handle( true ), fixture.handle( true ), 0, "Trade" ) :
+                                              open( fixture.handle( true ), fixture.handle( true ), 0, "Trade", mode == 2 );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE_FALSE( result["ok"].get<bool>() );
+        REQUIRE( result["error"].get<sol::table>().valid() );
+    }
 }
 
 #endif

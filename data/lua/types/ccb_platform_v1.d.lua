@@ -9771,8 +9771,9 @@ local CcbTradeApi = {}
 ---@param buyer GameHandle Exact active avatar handle.
 ---@param cost integer Nonnegative service cost added to the barter balance.
 ---@param title string Deal title, at most 4096 bytes and no NUL.
+---@param use_delegate? boolean Resolve the seller's native intercom trade delegate; defaults to false.
 ---@return CcbResult result `value` is true when accepted, false when cancelled.
-function CcbTradeApi.open(seller, buyer, cost, title) end
+function CcbTradeApi.open(seller, buyer, cost, title, use_delegate) end
 
 ---Pay the NPC using their existing credit ledger or the native barter window. No implicit buyer. Runtime write phase only.
 ---@param seller GameHandle Exact NPC handle.

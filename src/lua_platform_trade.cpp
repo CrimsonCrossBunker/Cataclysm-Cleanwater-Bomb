@@ -1711,9 +1711,9 @@ sol::table get_trade_quote(
 // quote/commit API: this opens the existing barter UI or pays for a service.
 // Both parties are explicit; the UI itself only supports the active avatar.
 sol::table interactive_trade( sol::this_state lua, const game_handle &seller_handle,
-                             const game_handle &buyer_handle, const int cost, const std::string &title,
-                             const bool payment, const game_handle_runtime &runtime,
-                             const std::size_t world_generation )
+                              const game_handle &buyer_handle, const int cost, const std::string &title,
+                              const bool payment, const game_handle_runtime &runtime,
+                              const std::size_t world_generation, const bool use_delegate = false )
 {
     if( cost < 0 || title.size() > 4096 || title.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument( "interactive trade requires a nonnegative cost and bounded title" );
@@ -1734,13 +1734,13 @@ sol::table interactive_trade( sol::this_state lua, const game_handle &seller_han
         } );
     }
     const bool accepted = payment ? npc_trading::pay_npc( *seller, cost ) :
-                          npc_trading::trade( *seller, cost, title );
+                          npc_trading::trade( use_delegate ? seller->get_trade_delegate() : *seller, cost, title );
     return make_game_value_result( state, sol::make_object( state, accepted ) );
 }
 
 sol::table order_price( sol::this_state lua, const game_handle &seller_handle,
-                       const game_handle &buyer_handle, const script_game_id &id, const int count,
-                       const game_handle_runtime &runtime, const std::size_t world_generation )
+                        const game_handle &buyer_handle, const script_game_id &id, const int count,
+                        const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     if( id.kind() != "item" || !id.is_valid() || count < 1 || count > 1000000 ) {
         throw std::invalid_argument( "order_price requires a valid item ID and count within 1..1000000" );
@@ -1942,21 +1942,22 @@ void install_trade_api(
     } );
     sol::table trade = lua.create_table();
     trade.set_function( "open", [current_runtime_generation, current_world_generation,
-                                require_write]( sol::this_state state, const game_handle & seller,
-    const game_handle & buyer, const int cost, const std::string & title ) {
+                                                             require_write]( sol::this_state state, const game_handle & seller,
+                                         const game_handle & buyer, const int cost, const std::string & title,
+    sol::optional<bool> use_delegate ) {
         require_write();
         return interactive_trade( state, seller, buyer, cost, title, false,
-                                  current_runtime_generation(), current_world_generation() );
+                                  current_runtime_generation(), current_world_generation(), use_delegate.value_or( false ) );
     } );
     trade.set_function( "pay", [current_runtime_generation, current_world_generation,
-                               require_write]( sol::this_state state, const game_handle & seller,
+                                                            require_write]( sol::this_state state, const game_handle & seller,
     const game_handle & buyer, const int cost ) {
         require_write();
         return interactive_trade( state, seller, buyer, cost, std::string(), true,
                                   current_runtime_generation(), current_world_generation() );
     } );
     trade.set_function( "order_price", [current_runtime_generation, current_world_generation,
-                                       require_read]( sol::this_state state, const game_handle & seller,
+                                                                    require_read]( sol::this_state state, const game_handle & seller,
     const game_handle & buyer, const script_game_id & id, const int count ) {
         require_read();
         return order_price( state, seller, buyer, id, count,

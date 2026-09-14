@@ -21130,6 +21130,52 @@ assert(table.concat(calls,',')=='style:hair,style:beard,provide:haircut,provide:
         self.assertNotIn("services.npcs.grooming", main)
         self.assertTrue(unbound.todos)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_start_trade_retains_delegate_and_cancel_semantics(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "trade",
+            "required_event": "npc_becomes_hostile", "effect": ["start_trade", "revert_activity"]})
+        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc={},{}
+local mode='cancel'
+local continued=0
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={
+ characters={avatar=function() return avatar end},
+ translate=function(text) assert(text=='Trade');return 'localized trade' end,
+ trade={open=function(seller,buyer,cost,title,delegate)
+  assert(seller==npc and buyer==avatar and cost==0 and title=='localized trade' and delegate==true)
+  if mode=='error' then return {ok=false,error={code='stale_npc'}} end
+  return {ok=true,value=mode=='accept'}
+ end},
+ activities={revert_npc_job=function(target)
+  assert(target==npc);continued=continued+1;return {ok=true,value={}}
+ end}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,next_mode in ipairs({'cancel','accept','error'}) do
+ mode=next_mode;continued=0
+ local ok,err=pcall(migrated_eoc_functions.trade,{actors={npc=npc}},nil)
+ if mode=='error' then assert(not ok and continued==0 and tostring(err):find('stale_npc',1,true))
+ else assert(ok and continued==1) end
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        missing = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing_seller",
+                                   "required_event": "game_start", "effect": "start_trade"}), missing)
+        self.assertNotIn("services.trade.open", main)
+        self.assertTrue(missing.todos)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
