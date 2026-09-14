@@ -18892,6 +18892,49 @@ end
             self.assertIn("non-finite values rejected", report)
             self.assertNotIn("typed callback/task conversion", report)
 
+    def test_global_recurrence_retries_failed_schedule_and_preserves_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([{
+                "type": "effect_on_condition", "id": "repeat", "global": True,
+                "recurrence": 2, "effect": {"message": {"context_val": "text"}},
+            }]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "recurrence")
+        main = result.files[Path("main.lua")]
+        script = r"""
+local handlers, state, queue, messages = {}, {}, {}, {}
+local fail = true
+local ccb={content={}, services={characters={avatar=function() return {} end},
+    message=function(text) messages[#messages+1]=text end}, runtime={
+    handler=function(id,fn) handlers[id]=fn end, on=function() end},
+    state={character={get=function(key,fallback) return state[key] or fallback end,
+    set=function(key,value) state[key]=value end}}, tasks={after=function(turns,id,payload)
+        if fail then error("schedule failure") end
+        local saved={}
+        for key,value in pairs(payload) do
+            assert(type(value)~="table")
+            saved[key]=value
+        end
+        queue[#queue+1]={id=id,payload=saved}
+    end}}
+package.preload.ccb=function() return ccb end
+""" + main + r"""
+local start=handlers["migrated.repeat.schedule"]
+local event={data={text="tick", data="user field"}}
+assert(not pcall(start,event))
+assert(not state["recurrence.repeat.scheduled"])
+fail=false
+assert(start(event)==true and #queue==1)
+assert(start(event)==false and #queue==1)
+event.data.text="changed"
+handlers[queue[1].id]({payload=queue[1].payload})
+assert(#messages==1 and messages[1]=="tick")
+assert(#queue==2 and queue[2].payload.data=="user field")
+"""
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_global_dynamic_recurrence_uses_persistent_self_scheduling(
         self,
     ) -> None:

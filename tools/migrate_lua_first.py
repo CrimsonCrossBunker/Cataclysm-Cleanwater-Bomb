@@ -32398,10 +32398,10 @@ def render_eoc(
             "    end",
             "    local actor = services.characters.avatar()",
             "    local context = { data = event and event.data or {} }",
-            f"    ccb.state.character.set({lua_quote(scheduled_state_key)}, true)",
             f"    local first_recurrence = {recurrence_expression}",
             f"    ccb.tasks.after(first_recurrence, {lua_quote(recurring_handler_id)}, "
             "context.data, 1, \"character\")",
+            f"    ccb.state.character.set({lua_quote(scheduled_state_key)}, true)",
             "    return true",
             "end)",
             f"runtime.on(\"world_ready\", {lua_quote(schedule_handler_id)})",
