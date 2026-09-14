@@ -815,4 +815,56 @@ TEST_CASE( "lua_platform_trade_delegate_option_keeps_buyer_validation",
     }
 }
 
+
+TEST_CASE( "lua_platform_wake_and_rule_reset_match_native_orders",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = []( npc & worker ) {
+        worker.normalize();
+        worker.rules.enable_override( ally_rule::allow_sleep );
+        worker.rules.set_override( ally_rule::allow_sleep );
+        for( const std::string id : {
+                 "allow_sleep", "lying_down", "npc_suspend", "sleep"
+             } ) {
+            worker.add_effect( efftype_id( id ), 10_minutes );
+        }
+    };
+    prepare( native );
+    prepare( fixture.other );
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+    npcs, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function run = npcs["orders"]["run"];
+    for( const std::string order : {
+             "wake", "clear_temporary_rules"
+         } ) {
+        if( order == "wake" ) {
+            talk_function::wake_up( native );
+        } else {
+            talk_function::clear_overrides( native );
+        }
+        sol::protected_function_result call = run( fixture.handle( true ), order );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        for( const std::string id : {
+                 "allow_sleep", "lying_down", "npc_suspend", "sleep"
+             } ) {
+            CHECK( fixture.other.has_effect( efftype_id( id ) ) == native.has_effect( efftype_id( id ) ) );
+            CHECK_FALSE( fixture.other.has_effect( efftype_id( id ) ) );
+        }
+        CHECK( fixture.other.rules.has_override_enable( ally_rule::allow_sleep ) ==
+               native.rules.has_override_enable( ally_rule::allow_sleep ) );
+        CHECK( fixture.other.rules.has_override( ally_rule::allow_sleep ) ==
+               native.rules.has_override( ally_rule::allow_sleep ) );
+    }
+}
+
 #endif

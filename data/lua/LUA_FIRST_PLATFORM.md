@@ -868,3 +868,10 @@ delegation, uses the active avatar, zero initial cost and a translated title.
 Cancellation is a normal return. Generated Lua tests cover that contract;
 native buyer-validation test source is present but unexecuted, and delegated
 barter UI acceptance remains pending.
+
+NPC wake, dismount, temporary-rule reset and lead-to-safety effects migrate
+to native NPC orders. This preserves wake effects/rules and native dismount
+and destination behavior instead of skipping the command or only changing
+attitude. Generated Lua routing tests pass; wake/rule-reset native comparison
+test source is present but unexecuted. Mounted and pathfinding outcomes still
+require native acceptance.

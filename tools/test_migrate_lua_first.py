@@ -10279,7 +10279,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "lead")', main)
+            self.assertIn('services.npcs.orders.run(actor, "lead_to_safety")', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
             self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
             self.assertIn(
@@ -21174,6 +21174,40 @@ end
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing_seller",
                                    "required_event": "game_start", "effect": "start_trade"}), missing)
         self.assertNotIn("services.trade.open", main)
+        self.assertTrue(missing.todos)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_npc_orders_are_executed(self) -> None:
+        effects = ["wake_up", "dismount", "clear_overrides", "lead_to_safety"]
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "orders",
+            "required_event": "npc_becomes_hostile", "effect": effects})
+        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected=npc
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={orders={run=function(target,order)
+ assert(target==expected);calls[#calls+1]=order;return {ok=true,value={}}
+end}}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target;calls={}
+ migrated_eoc_functions.orders({actors={npc=npc}},target)
+ assert(table.concat(calls,',')=='wake,dismount,clear_temporary_rules,lead_to_safety')
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        missing = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "no_npc",
+                                   "required_event": "game_start", "effect": effects}), missing)
+        self.assertNotIn("services.npcs.orders.run", main)
         self.assertTrue(missing.todos)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:

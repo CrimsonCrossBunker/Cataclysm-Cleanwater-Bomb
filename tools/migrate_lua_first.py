@@ -30748,14 +30748,20 @@ def render_eoc(
                             "math.min(2147483647, math.floor((" + turn_cost + ") + 0.5))) })"
                         )
                         converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {"wake_up", "reveal_stats"}:
-                # Deliberate no-op in headless/scripted context.
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "wake_up", "dismount", "clear_overrides", "lead_to_safety"
+            }:
+                order = {"wake_up": "wake", "dismount": "dismount",
+                         "clear_overrides": "clear_temporary_rules",
+                         "lead_to_safety": "lead_to_safety"}[effect]
+                lines.append(
+                    f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
+                converted_effect = True
+            elif npc_actor_proven and effect == "reveal_stats":
+                # Native presentation conversion remains pending.
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
                 lines.append('    services.npcs.set_attitude(actor, "kill")')
-                converted_effect = True
-            elif npc_actor_proven and effect == "lead_to_safety":
-                lines.append('    services.npcs.set_attitude(actor, "lead")')
                 converted_effect = True
             elif npc_actor_proven and effect == "leave":
                 lines.append('    services.npcs.set_attitude(actor, "null")')
@@ -31074,10 +31080,10 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
-                "dismount", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
+                "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
                 "pick_style", "take_control",
                 "clear_dimension",
-                "clear_overrides", "place_override",
+                "place_override",
             }:
                 # Deliberate presentation/interaction no-op in headless/scripted context.
                 converted_effect = True
