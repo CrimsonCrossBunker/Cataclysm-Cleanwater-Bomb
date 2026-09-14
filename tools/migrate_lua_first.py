@@ -26594,6 +26594,10 @@ def render_eoc_condition_expression(
         # Native conditional_t uses all_of/any_of, including empty ranges.
         if not entries:
             return "true" if operator == "and" else "false"
+        # Nested native predicates accept only strings or condition objects.
+        # None/bool are internal top-level defaults, not valid array entries.
+        if any(not isinstance(entry, (str, dict)) for entry in entries):
+            return None
         rendered = [
             render_eoc_condition_expression(
                 entry, avatar_actor_proven, weapon_actor_proven,
@@ -26608,6 +26612,8 @@ def render_eoc_condition_expression(
             return None
         return f" {operator} ".join(f"({entry})" for entry in rendered)
     if set(condition) == {"not"}:
+        if not isinstance(condition["not"], (str, dict)):
+            return None
         rendered = render_eoc_condition_expression(
             condition["not"], avatar_actor_proven, weapon_actor_proven,
             npc_actor_proven, creature_actor_proven, eoc_conditions,

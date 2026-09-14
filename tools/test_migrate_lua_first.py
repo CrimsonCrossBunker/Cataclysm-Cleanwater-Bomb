@@ -15,6 +15,17 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
+        for invalid in (None, True, False, 0, 1, 1.5, []):
+            for operator in ("and", "or", "not"):
+                condition = {operator: invalid if operator == "not" else [invalid]}
+                with self.subTest(condition=condition):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(condition))
+        # Internal default conditions remain supported outside native groups.
+        for value, expected in ((None, "true"), (True, "true"), (False, "false")):
+            self.assertEqual(migrate_lua_first.render_eoc_condition_expression(value), expected)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_boolean_groups_preserve_empty_identity_and_random_order(self) -> None:
         chance = lambda n: {"one_in_chance": n}
