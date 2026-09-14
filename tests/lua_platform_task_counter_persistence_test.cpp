@@ -201,6 +201,14 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
     platform::assign_persistent_value( before->world_state, "empty", platform::script_null_value{} );
     sol::table payload = old_lua.create_table();
     payload["empty"] = platform::script_null_value{};
+    // Generated task envelopes must respect the native scalar payload codec.
+    sol::table nested_payload = old_lua.create_table();
+    nested_payload["__ccb_task"] = true;
+    nested_payload["data"] = payload;
+    const sol::protected_function_result rejected = old_lua["ccb"]["tasks"]["after"](
+                1, "tick", nested_payload, 1, "world" );
+    CHECK_FALSE( rejected.valid() );
+    CHECK( before->tasks.empty() );
     const sol::protected_function_result scheduled = old_lua["ccb"]["tasks"]["after"](
                 1, "tick", payload, 1, "world" );
     REQUIRE( scheduled.valid() );
