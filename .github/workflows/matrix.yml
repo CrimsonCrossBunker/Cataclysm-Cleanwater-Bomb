@@ -227,6 +227,7 @@ jobs:
             full_debug_symbols: 0
             num_build_jobs: 1
             pch: 1
+            semantic_acceptance: true
             title: GCC 14, Ubuntu, Curses, Lua API
             ccache_limit: 6.5G
             ccache_key: linux-gcc-14
@@ -424,6 +425,11 @@ jobs:
     - name: run tests
       if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'false' }}
       run: bash ./build-scripts/gha_test_only.sh
+    # Reuse the Lua binary when broad suites are disabled; never count a
+    # successful build as semantic execution evidence.
+    - name: run Lua semantic acceptance
+      if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test '[lua][platform][semantic]' --rng-seed 4902 --order lex --error-format=github-action
     - name: upload artifacts if failed
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       if: failure()
