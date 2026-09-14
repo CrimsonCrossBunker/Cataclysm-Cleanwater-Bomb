@@ -20836,11 +20836,13 @@ def render_static_give_equipment_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Reject legacy allowance/gift equipment requests.
+    """Keep allowance gifts explicit until native selling offers are exposed.
 
-    The old NPC equipment service selected an avatar and an item policy from
-    UI state.  It cannot provide the exact Item handle and holder transaction
-    required by ``services.equipment``.
+    Native give_equipment_allowance randomly selects from init_selling offers
+    using strict price < owed + allowance, rather than asking the UI to pick an
+    item. A faithful Lua rewrite needs those exact Item handles and native offer
+    prices, then ownership transfer, debt adjustment and the three-hour cooldown.
+    Do not restore an implicit purchase helper or replace this with item spawning.
     """
     return None
 
