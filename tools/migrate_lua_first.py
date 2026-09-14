@@ -5625,10 +5625,17 @@ def render_static_foreach(
     if "foreach" not in effect or set(effect) - {"foreach", "var", "target", "effect"}:
         return None
     variable = effect.get("var")
-    if (
-        not isinstance(variable, dict) or set(variable) != {"context_val"} or
-        not bounded_utf8_string(variable.get("context_val"), 256)
-    ):
+    if not isinstance(variable, dict) or len(variable) != 1:
+        return None
+    scope = next(iter(variable))
+    if scope not in {"context_val", "global_val", "u_val", "npc_val"}:
+        return None
+    name = variable[scope]
+    if not bounded_utf8_string(name, 256 if scope == "context_val" else 128):
+        return None
+    owner = (actor_expression if avatar_actor_proven else None) if scope == "u_val" else (
+        npc_actor_expression or (actor_expression if npc_actor_proven else None))
+    if scope in {"u_val", "npc_val"} and owner is None:
         return None
     body = effect.get("effect")
     body = body if isinstance(body, list) else [body]
@@ -5639,10 +5646,12 @@ def render_static_foreach(
     lines: list[str] = ["    context.actors = context.actors or {}"]
 
     def append_body(item_expression: str) -> bool:
-        lines.append(
-            f"        context.data[{lua_quote(variable['context_val'])}] = "
-            f"{item_expression}"
-        )
+        if scope == "context_val":
+            lines.append(f"        context.data[{lua_quote(name)}] = {item_expression}")
+        elif scope == "global_val":
+            lines.append(f"        services.variables.set_global({lua_quote(name)}, {item_expression})")
+        else:
+            lines.append(f"        services.variables.set({owner}, {lua_quote(name)}, {item_expression})")
         for nested in body:
             rendered = render_static_false_effect(
                 nested, avatar_actor_proven, npc_actor_proven,

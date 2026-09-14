@@ -20399,6 +20399,34 @@ assert(calls==2)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_writes_exact_character_or_global_iterator(self) -> None:
+        for scope in ("u_val", "npc_val", "global_val"):
+            lines = migrate_lua_first.render_static_foreach({
+                "foreach": "array", "target": ["first", "second"],
+                "var": {scope: "entry"}, "effect": {"u_message": "visit"},
+            }, True, False, {}, actor_expression="actor", npc_actor_expression="partner")
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor,partner,globals={},{},{}
+local context={data={}}
+local expected=OWNER
+local writes,calls=0,0
+local function put(owner,key,value)
+ assert(owner==expected and key=='entry');writes=writes+1;owner[key]=value
+end
+local services={variables={set=put,set_global=function(key,value) put(globals,key,value) end},
+ message=function()
+ calls=calls+1;assert(writes==calls and expected.entry==({'first','second'})[calls])
+end}
+BODY
+assert(writes==2 and calls==2 and expected.entry=='second' and context.data.entry==nil)
+""".replace("OWNER", {"u_val": "actor", "npc_val": "partner", "global_val": "globals"}[scope])
+            script = script.replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
