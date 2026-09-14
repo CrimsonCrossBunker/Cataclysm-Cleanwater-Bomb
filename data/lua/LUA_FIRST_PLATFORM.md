@@ -806,3 +806,11 @@ Migrated `revert_activity` calls this operation instead of cancellation.
 The result reports `restored = true`; the legacy `changed` field only records
 whether a job was active beforehand. Generated Lua routing/error tests pass;
 the idle-NPC native comparison test still awaits execution.
+
+NPC work migration uses `activities.assign_npc_job` for butchery, planks,
+trees, construction, farming, fishing, mining, mopping, repeated reading,
+study, loot sorting, disassembly, and vehicle deconstruction/repair. These
+operations assign the native activity actors instead of approximating work
+with a fixed duration. Generated Lua tests verify all fourteen routes and
+failure propagation. Native assignment comparison test source is present but
+has not executed; other interactive NPC job paths still require review.

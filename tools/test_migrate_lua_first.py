@@ -10415,22 +10415,22 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.partial), 0)
             self.assertIn('service_value(services.activities.revert_npc_job(actor))', main)
             self.assertIn('services.activities.assign_timed(services.characters.avatar(), services.types.id("activity", "ACT_SOCIALIZE"), services.time.duration(600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_BUTCHER"), services.time.duration(1800, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CHOP_PLANKS"), services.time.duration(1800, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CHOP_TREE"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_BUILD"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_PLANT_SEED"), services.time.duration(1800, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_FISH"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_MINING"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_MOPPING"), services.time.duration(900, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "butcher")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "chop_planks")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "chop_trees")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "construction")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "farming")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "fishing")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "mining")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "mopping")', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_READ"), services.time.duration(1800, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_READ"), services.time.duration(7200, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_STUDY_SPELL"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_SORT_LOOT"), services.time.duration(1800, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "read_repeatedly")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "study")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "sort_loot")', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CRAFT"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISASSEMBLE"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_VEHICLE_DECONSTRUCT"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_VEHICLE_REPAIR"), services.time.duration(3600, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "disassembly")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "vehicle_deconstruct")', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "vehicle_repair")', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DROP"), services.time.duration(60, "turn"))', main)
             self.assertNotIn("needs review", report)
 
@@ -20785,6 +20785,57 @@ local ok,err=pcall(migrated_eoc_functions.restore_job,{actors={npc=npc}},overrid
 assert(not ok and tostring(err):find('restore failed',1,true))
 assert(calls==3)
 """.replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_job_migration_executes_native_jobs_in_order(self) -> None:
+        jobs = {
+            "do_butcher": "butcher", "do_chop_plank": "chop_planks",
+            "do_chop_trees": "chop_trees", "do_construction": "construction",
+            "do_farming": "farming", "do_fishing": "fishing",
+            "do_mining": "mining", "do_mopping": "mopping",
+            "do_read_repeatedly": "read_repeatedly", "do_study": "study",
+            "sort_loot": "sort_loot", "do_disassembly": "disassembly",
+            "do_vehicle_deconstruct": "vehicle_deconstruct", "do_vehicle_repair": "vehicle_repair",
+        }
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "jobs",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": list(jobs)}), migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local target=npc
+local expected={EXPECTED}
+local calls=0
+local fail=false
+local function service_value(result)
+ if not result.ok then error(result.error.message) end
+ return result.value
+end
+local services={activities={
+ assign_timed=function() error('wrong activity implementation') end,
+ assign_npc_job=function(worker,job)
+  calls=calls+1
+  assert(worker==target and job==expected[calls])
+  if fail then return {ok=false,error={message='assignment failed'}} end
+  return {ok=true,value={}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.jobs({actors={npc=npc}},nil)
+assert(calls==14)
+calls=0;target=override
+migrated_eoc_functions.jobs({actors={npc=npc}},override)
+assert(calls==14)
+calls=0;fail=true
+local ok,err=pcall(migrated_eoc_functions.jobs,{actors={npc=npc}},override)
+assert(not ok and tostring(err):find('assignment failed',1,true) and calls==1)
+""".replace("EXPECTED", ",".join(migrate_lua_first.lua_quote(job) for job in jobs.values()))
+        script = script.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)

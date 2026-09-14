@@ -6,8 +6,10 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
+#include "activity_actor.h"
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
@@ -31,6 +33,7 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
+#include "npctalk.h"
 #include "rng.h"
 #include "type_id.h"
 
@@ -650,6 +653,56 @@ TEST_CASE( "lua_platform_revert_idle_npc_restores_native_state",
     CHECK_FALSE( fixture.other.activity );
     CHECK( fixture.other.current_activity_id == native.current_activity_id );
     CHECK_FALSE( fixture.other.has_destination() );
+}
+
+
+TEST_CASE( "lua_platform_npc_jobs_match_native_assignment",
+           "[lua][platform][activities][semantic]" )
+{
+    const std::vector<std::pair<std::string, void ( * )( npc & )>> jobs = {
+        { "butcher", &talk_function::do_butcher },
+        { "chop_planks", &talk_function::do_chop_plank },
+        { "chop_trees", &talk_function::do_chop_trees },
+        { "construction", &talk_function::do_construction },
+        { "farming", &talk_function::do_farming },
+        { "fishing", &talk_function::do_fishing },
+        { "mining", &talk_function::do_mining },
+        { "mopping", &talk_function::do_mopping },
+        { "read_repeatedly", &talk_function::do_read_repeatedly },
+        { "study", &talk_function::do_study },
+        { "sort_loot", &talk_function::sort_loot },
+        { "disassembly", &talk_function::do_disassembly },
+        { "vehicle_deconstruct", &talk_function::do_vehicle_deconstruct },
+        { "vehicle_repair", &talk_function::do_vehicle_repair }
+    };
+    for( const auto &job : jobs ) {
+        CAPTURE( job.first );
+        effect_fixture fixture;
+        npc native;
+        native.normalize();
+        job.second( native );
+        cata::lua_platform::install_activity_api(
+        fixture.services, [&]() {
+            return fixture.runtime;
+        },
+        [&]() {
+            return fixture.world;
+        }, []() {}, []() {} );
+        sol::protected_function assign = fixture.services["activities"]["assign_npc_job"];
+        sol::protected_function_result call = assign( fixture.handle( true ), job.first );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( fixture.other.activity.id() == native.activity.id() );
+        CHECK( fixture.other.activity.moves_total == native.activity.moves_total );
+        CHECK( fixture.other.activity.moves_left == native.activity.moves_left );
+        REQUIRE( fixture.other.activity.actor );
+        REQUIRE( native.activity.actor );
+        CHECK( fixture.other.activity.actor->get_type() == native.activity.actor->get_type() );
+        CHECK( fixture.other.mission == native.mission );
+        CHECK( fixture.other.get_attitude() == native.get_attitude() );
+        CHECK( fixture.other.current_activity_id == native.current_activity_id );
+    }
 }
 
 #endif
