@@ -1000,3 +1000,9 @@ current avatar owner; it does not substitute beta or use alpha as the owner.
 Generated Lua verifies independent alpha/beta registrations. Non-NPC misuse is
 skipped; parity with the original null-NPC debug diagnostic remains outstanding.
 This diagnostic boundary and native runtime evidence prevent full semantic acceptance.
+
+`trade.selling_offers(npc)` returns native `init_selling` entries in their original
+order, with exact Item handles and native price/count/charges. It neither reserves nor
+transfers items and does not replace the exact-item quote/commit transaction. Prices
+are native NPC offer valuations, not guaranteed settlement prices. A native comparison
+source is present but unexecuted. Allowance-gift selection and settlement remain pending.

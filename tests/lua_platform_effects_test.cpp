@@ -27,6 +27,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "json_loader.h"
+#include "item.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
@@ -44,6 +45,7 @@
 #include "messages.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "npctrade.h"
 #include "options_helpers.h"
 #include "rng.h"
 #include "type_id.h"
@@ -1384,6 +1386,41 @@ TEST_CASE( "lua_platform_request_talk_repeated_request_has_no_notification",
     CHECK( fixture.other.chatbin.first_topic == "TALK_TEST" );
     CHECK( Messages::recent_messages( 10 ).empty() );
     Messages::clear_messages();
+}
+
+TEST_CASE( "lua_platform_selling_offers_match_native_items_and_prices",
+           "[lua][platform][trade][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.other.set_fac( faction_id( "your_followers" ) );
+    item stock( itype_id( "rock" ), calendar::turn );
+    stock.set_owner( fixture.other );
+    fixture.other.i_add( stock );
+    std::vector<item_pricing> expected = npc_trading::init_selling( fixture.other );
+    REQUIRE_FALSE( expected.empty() );
+    cata::lua_platform::install_trade_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function list = fixture.services["trade"]["selling_offers"];
+    sol::protected_function_result call = list( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table offers = result["value"];
+    REQUIRE( offers.size() == expected.size() );
+    for( std::size_t i = 0; i < expected.size(); ++i ) {
+        sol::table offer = offers[i + 1];
+        const auto handle = offer["item"].get<cata::lua_platform::game_handle>();
+        const auto resolved = handle.resolve_item( fixture.runtime, fixture.world );
+        REQUIRE( resolved );
+        CHECK( resolved.value == expected[i].loc.get_item() );
+        CHECK( offer["price"].get<double>() == expected[i].price );
+        CHECK( offer["count"].get<int>() == expected[i].count );
+        CHECK( offer["charges"].get<int>() == expected[i].charges );
+    }
 }
 
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",

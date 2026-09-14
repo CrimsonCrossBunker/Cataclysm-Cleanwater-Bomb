@@ -1738,6 +1738,37 @@ sol::table interactive_trade( sol::this_state lua, const game_handle &seller_han
     return make_game_value_result( state, sol::make_object( state, accepted ) );
 }
 
+sol::table selling_offers( sol::this_state lua, const game_handle &seller_handle,
+                           const game_handle_runtime &runtime, const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *seller = resolve_exact_npc( seller_handle, runtime, world_generation, error );
+    if( seller == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    std::vector<item_pricing> offers = npc_trading::init_selling( *seller );
+    sol::table items = state.create_table();
+    std::size_t index = 0;
+    for( item_pricing &offer : offers ) {
+        item *entry = offer.loc.get_item();
+        if( entry == nullptr ) {
+            return make_game_error_result( state, {
+                "stale_item", "A native selling offer no longer references an item"
+            } );
+        }
+        sol::table row = state.create_table();
+        row["item"] = game_handle::from_item( *entry,
+        { "character_inventory", entry->uid().get_value(), 0, 0, 0, {} },
+        runtime, world_generation );
+        row["price"] = offer.price;
+        row["count"] = offer.count;
+        row["charges"] = offer.charges;
+        items[++index] = std::move( row );
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( items ) ) );
+}
+
 sol::table order_price( sol::this_state lua, const game_handle &seller_handle,
                         const game_handle &buyer_handle, const script_game_id &id, const int count,
                         const game_handle_runtime &runtime, const std::size_t world_generation )
@@ -1955,6 +1986,11 @@ void install_trade_api(
         require_write();
         return interactive_trade( state, seller, buyer, cost, std::string(), true,
                                   current_runtime_generation(), current_world_generation() );
+    } );
+    trade.set_function( "selling_offers", [current_runtime_generation, current_world_generation,
+                                require_read]( sol::this_state state, const game_handle & seller ) {
+        require_read();
+        return selling_offers( state, seller, current_runtime_generation(), current_world_generation() );
     } );
     trade.set_function( "order_price", [current_runtime_generation, current_world_generation,
                                                                     require_read]( sol::this_state state, const game_handle & seller,

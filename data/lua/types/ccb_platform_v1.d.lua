@@ -9796,6 +9796,17 @@ function CcbTradeApi.pay(seller, buyer, cost) end
 ---@return CcbResult result `value` is { item: GameId, item_name: string, count: integer, cost_cents: integer, count_by_charges: boolean }. Invalid/nonpositive/overflow prices fail closed.
 function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 
+---@class CcbSellingOffer
+---@field item GameHandle Exact live offered Item.
+---@field price number Native NPC selling-offer valuation; not a locked settlement quote.
+---@field count integer Native offer count.
+---@field charges integer Native offer charges.
+
+---@param seller GameHandle Exact NPC.
+---@return CcbResult result Value is a dense CcbSellingOffer[] in native order, without truncation. Query does not reserve or transfer items; revalidate through exact-item transactions.
+function CcbTradeApi.selling_offers(seller) end
+
+
 ---@param seller GameHandle Exact seller Character/NPC handle; never inferred from avatar/current trader.
 ---@param buyer GameHandle Exact buyer Character/NPC handle; never inferred from avatar/current trader.
 ---@param lines CcbTradeQuoteLineInput[] Dense explicit direction, Item, quantity, source-holder, and destination-holder lines.
