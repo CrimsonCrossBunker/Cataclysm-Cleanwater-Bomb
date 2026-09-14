@@ -4736,6 +4736,12 @@ def render_static_false_effect(
     Keep the accepted set deliberately narrow; unsupported branches remain a
     visible migration TODO instead of being silently discarded.
     """
+    if isinstance(effect, dict) and "foreach" in effect:
+        return render_static_foreach(
+            effect, avatar_actor_proven, npc_actor_proven,
+            eoc_function_names, eoc_actor_requirements,
+            actor_expression, eoc_conditions, npc_actor_expression,
+        )
     activation = render_mutation_action(
         effect, "actor" if avatar_actor_proven else None,
         npc_actor_expression or ("actor" if npc_actor_proven else None))
@@ -5617,10 +5623,9 @@ def render_static_foreach(
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
-    The legacy selector exposes a finite registry page for ``ids`` and a
-    literal array mode.  Platform callbacks keep the same dense one-based
-    context variable and render the nested branch with the ordinary typed
-    false-effect helpers.
+    Snapshot each native registry or dynamic string array before its body.
+    Nested loops share dialogue variables, while their input snapshots remain
+    lexical Lua locals. Unsupported body effects remain explicit migration gaps.
     """
     if "foreach" not in effect or set(effect) - {"foreach", "var", "target", "effect"}:
         return None

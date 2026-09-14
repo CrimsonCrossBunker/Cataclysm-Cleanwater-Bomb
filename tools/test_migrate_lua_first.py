@@ -20334,6 +20334,54 @@ assert(context.data.entry=='previous')
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_nested_foreach_shares_iterator_without_restoring_outer_value(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": ["outer1", "outer2"],
+            "var": {"context_val": "entry"},
+            "effect": [
+                {"u_message": "before"},
+                {"foreach": "array",
+                 "target": [{"context_val": "entry"}, "inner"],
+                 "var": {"context_val": "entry"},
+                 "effect": {"u_message": "inside"}},
+                {"u_message": "after"},
+            ],
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={}}
+local visits={}
+local function service_value(value) return value end
+local services={
+ variables={resolve=function(data, owner, scope, name)
+  assert(scope=='context' and name=='entry')
+  return {exists=data[name]~=nil,value=data[name]}
+ end},
+ message=function(message)
+  visits[#visits+1]=message..':'..context.data.entry
+ end
+}
+BODY
+assert(table.concat(visits,',') ==
+ 'before:outer1,inside:outer1,inside:inner,after:inner,'..
+ 'before:outer2,inside:outer2,inside:inner,after:inner')
+assert(context.data.entry=='inner')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_nested_foreach_preserves_unsupported_body_gap(self) -> None:
+        self.assertIsNone(migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": ["outer"],
+            "var": {"context_val": "entry"},
+            "effect": {"foreach": "array", "target": ["inner"],
+                       "var": {"context_val": "entry"},
+                       "effect": {"unknown_effect": True}},
+        }, True, False, {}, actor_expression="actor"))
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

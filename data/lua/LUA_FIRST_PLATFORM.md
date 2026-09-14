@@ -766,3 +766,9 @@ the native item-group pointer-set traversal order. The default remains sorted
 unique item IDs. Native order is meaningful within the current process and data
 load, not a stable ordering across launches. Migrated item-group iteration uses
 this option. Native comparison test source is present; execution remains due.
+
+Migrated nested `foreach` loops snapshot their inputs separately and share
+the dialogue variable store. An inner loop does not restore the outer iterator
+value on return; the next outer iteration overwrites it normally. Unsupported
+nested effects still leave a migration gap. Generated Lua execution covers this
+ordering; native comparison execution remains due.
