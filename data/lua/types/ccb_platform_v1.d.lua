@@ -10748,6 +10748,14 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 function CcbPlatformServices.message(text) end
 
+---Format text with the game's native printf syntax, including positional %1$s arguments.
+---Available after world_ready. Pass translated text from translate/translate_plural when needed.
+---Arguments are a dense array; NUL text/strings, unsupported values and format mismatches raise errors.
+---@param text string Native printf format string.
+---@param arguments (string|number|boolean)[] Dense ordered arguments; use an empty array for no arguments.
+---@return string
+function CcbPlatformServices.format(text, arguments) end
+
 ---Translate runtime text using the current game language. Available after world_ready.
 ---Missing translations return the source text. Text/context must not contain NUL.
 ---@param text string Literal source text for extraction.

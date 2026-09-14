@@ -28,6 +28,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         }
     };
     run( R"(
+        assert(not pcall(ccb.services.format, "%s", {"before world ready"}))
         assert(not pcall(ccb.services.translate, "before world ready"))
         assert(not pcall(ccb.services.translate_plural, "one", "many", 1))
     )" );
@@ -47,6 +48,21 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         assert(not pcall(ccb.services.translate_plural, one, "a\0b", 2))
         assert(not pcall(ccb.services.translate_plural, one, many, 2, "a\0b"))
     )" );
+    run( R"(
+        local format = ccb.services.format
+        assert(format("%2$s -> %1$s", {"NPC", "book"}) == "book -> NPC")
+        assert(format("[%2$6s] %1$04d %%", {7, "x"}) == "[     x] 0007 %")
+        assert(format("%d %.2f", {3, 1.25}) == "3 1.25")
+        assert(format("%d", {true}) == "1")
+        assert(format("100%%", {}) == "100%")
+        assert(not pcall(format, "%s", {}))
+        assert(not pcall(format, "%d", {"not a number"}))
+        assert(not pcall(format, "%s", {{}}))
+        assert(not pcall(format, "%s", {[2] = "hole"}))
+        assert(not pcall(format, "%s", {[1] = "value", extra = "field"}))
+        assert(not pcall(format, "a\0b", {}))
+        assert(not pcall(format, "%s", {"a\0b"}))
+    )" );
     lua["native_count_accepts_2_to_32"] = sizeof( std::size_t ) > 4;
     run( R"(
         local success = pcall(ccb.services.translate_plural,
@@ -56,6 +72,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
     )" );
     cata::lua_platform::clear_active_runtimes();
     run( R"(
+        assert(not pcall(ccb.services.format, "%s", {"after world unload"}))
         assert(not pcall(ccb.services.translate, "after world unload"))
         assert(not pcall(ccb.services.translate_plural, "one", "many", 2))
     )" );

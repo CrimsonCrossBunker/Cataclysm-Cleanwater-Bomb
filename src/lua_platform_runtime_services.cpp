@@ -17,6 +17,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <fmt/args.h>
+#include <fmt/printf.h>
 extern "C" {
 #include <lua.h>
 }
@@ -1598,6 +1600,46 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
 
     sol::table services = lua.create_table();
+    services.set_function( "format", [weak]( const std::string & text,
+    const sol::table & arguments ) -> std::string {
+        require_live_runtime( weak, "services.format" );
+        if( text.find( '\0' ) != std::string::npos )
+        {
+            throw std::runtime_error( "format text must not contain NUL" );
+        }
+        const std::size_t count = require_dense_array( arguments, "services.format arguments",
+                0, std::numeric_limits<std::size_t>::max() );
+        fmt::dynamic_format_arg_store<fmt::printf_context> values;
+        for( std::size_t index = 1; index <= count; ++index )
+        {
+            const sol::object value = arguments.raw_get<sol::object>( index );
+            switch( value.get_type() ) {
+                case sol::type::string: {
+                    const std::string argument = value.as<std::string>();
+                    if( argument.find( '\0' ) != std::string::npos ) {
+                        throw std::runtime_error( "format arguments must not contain NUL" );
+                    }
+                    values.push_back( argument );
+                    break;
+                }
+                case sol::type::number:
+                    if( value.is<lua_Integer>() ) {
+                        values.push_back( value.as<lua_Integer>() );
+                    } else {
+                        values.push_back( value.as<double>() );
+                    }
+                    break;
+                case sol::type::boolean:
+                    values.push_back( value.as<bool>() );
+                    break;
+                default:
+                    throw std::runtime_error( "format arguments must be strings, numbers or booleans" );
+            }
+        }
+        // Use the native printf parser, including positional translation arguments.
+        // Let format errors become recoverable Lua errors rather than debug popups.
+        return fmt::vsprintf( text, values );
+    } );
     services.set_function( "translate", [weak]( const std::string & text,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate" );

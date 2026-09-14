@@ -7416,47 +7416,47 @@
       {
         "fields": [
           {
-            "line": 10846,
+            "line": 10854,
             "name": "ModDefinition",
             "type": "fun(options:"
           },
           {
-            "line": 10847,
+            "line": 10855,
             "name": "content",
             "type": "CcbPlatformContent"
           },
           {
-            "line": 10849,
+            "line": 10857,
             "name": "dialogue",
             "type": "CcbPlatformDialogueApi"
           },
           {
-            "line": 10845,
+            "line": 10853,
             "name": "platform_version",
             "type": "1"
           },
           {
-            "line": 10852,
+            "line": 10860,
             "name": "presentation",
             "type": "CcbPlatformPresentation"
           },
           {
-            "line": 10848,
+            "line": 10856,
             "name": "runtime",
             "type": "CcbPlatformRuntime"
           },
           {
-            "line": 10853,
+            "line": 10861,
             "name": "services",
             "type": "CcbPlatformServices"
           },
           {
-            "line": 10850,
+            "line": 10858,
             "name": "state",
             "type": "CcbPlatformState"
           },
           {
-            "line": 10851,
+            "line": 10859,
             "name": "tasks",
             "type": "CcbPlatformTasks"
           }
@@ -7619,7 +7619,7 @@
       {
         "fields": [
           {
-            "line": 10887,
+            "line": 10895,
             "name": "definitions",
             "type": "CcbRegistryDefinitionsApi"
           }
@@ -7633,27 +7633,27 @@
       {
         "fields": [
           {
-            "line": 10876,
+            "line": 10884,
             "name": "details",
             "type": "boolean"
           },
           {
-            "line": 10874,
+            "line": 10882,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 10873,
+            "line": 10881,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 10877,
+            "line": 10885,
             "name": "order",
             "type": "\"id\"|\"native\""
           },
           {
-            "line": 10875,
+            "line": 10883,
             "name": "query",
             "type": "string"
           }
@@ -9091,22 +9091,22 @@
       {
         "fields": [
           {
-            "line": 10860,
+            "line": 10868,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 10859,
+            "line": 10867,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 10862,
+            "line": 10870,
             "name": "order",
             "type": "\"id\"|\"native\""
           },
           {
-            "line": 10861,
+            "line": 10869,
             "name": "query",
             "type": "string"
           }
@@ -20309,7 +20309,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1290,
+    "function_count": 1291,
     "functions": [
       {
         "line": "2713",
@@ -21548,7 +21548,7 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "10908",
+        "line": "10916",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
@@ -24356,49 +24356,55 @@
         "parameters": "event_name, handler_id"
       },
       {
-        "line": "10836",
+        "line": "10844",
         "name": "activity_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10826",
+        "line": "10834",
         "name": "bionics_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10773",
+        "line": "10781",
         "name": "character_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character"
       },
       {
-        "line": "10816",
+        "line": "10824",
         "name": "current_tile_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, field_limit"
       },
       {
-        "line": "10794",
+        "line": "10802",
         "name": "effects_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10804",
+        "line": "10812",
         "name": "equipment_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10789",
+        "line": "10757",
+        "name": "format",
+        "owner": "CcbPlatformServices",
+        "parameters": "text, arguments"
+      },
+      {
+        "line": "10797",
         "name": "inventory_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10811",
+        "line": "10819",
         "name": "item_contents_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, item_handle, offset, limit"
@@ -24410,61 +24416,61 @@
         "parameters": "text"
       },
       {
-        "line": "10831",
+        "line": "10839",
         "name": "missions_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10777",
+        "line": "10785",
         "name": "movement_modes_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character"
       },
       {
-        "line": "10821",
+        "line": "10829",
         "name": "mutations_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10842",
+        "line": "10850",
         "name": "nearby_creatures_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, radius, limit"
       },
       {
-        "line": "10799",
+        "line": "10807",
         "name": "skills_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "10780",
+        "line": "10788",
         "name": "time_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": ""
       },
       {
-        "line": "10756",
+        "line": "10764",
         "name": "translate",
         "owner": "CcbPlatformServices",
         "parameters": "text, context"
       },
       {
-        "line": "10766",
+        "line": "10774",
         "name": "translate_plural",
         "owner": "CcbPlatformServices",
         "parameters": "singular, plural, count, context"
       },
       {
-        "line": "10769",
+        "line": "10777",
         "name": "turn",
         "owner": "CcbPlatformServices",
         "parameters": ""
       },
       {
-        "line": "10783",
+        "line": "10791",
         "name": "weather_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": ""
@@ -24620,13 +24626,13 @@
         "parameters": "character, body_part"
       },
       {
-        "line": "10892",
+        "line": "10900",
         "name": "list",
         "owner": "CcbRegistryApi",
         "parameters": "kind, options"
       },
       {
-        "line": "10884",
+        "line": "10892",
         "name": "list",
         "owner": "CcbRegistryDefinitionsApi",
         "parameters": "kind, options"
@@ -24668,7 +24674,7 @@
         "parameters": "teacher, student"
       },
       {
-        "line": "10901",
+        "line": "10909",
         "name": "monster",
         "owner": "CcbSpawnsApi",
         "parameters": "monster_type, position, radius, upgrade"
@@ -24902,7 +24908,7 @@
         "parameters": "vehicle, options"
       },
       {
-        "line": "10870",
+        "line": "10878",
         "name": "definitions",
         "owner": "CcbVitaminsApi",
         "parameters": "options"
@@ -28355,7 +28361,7 @@
         "lua_name": "ComputerAccessContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 1573,
+          "line": 1575,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
@@ -28915,7 +28921,7 @@
         "lua_name": "ItemUseContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 1563,
+          "line": 1565,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
@@ -30702,47 +30708,47 @@
   "public_root": {
     "fields": [
       {
-        "line": 10846,
+        "line": 10854,
         "name": "ModDefinition",
         "type": "fun(options:"
       },
       {
-        "line": 10847,
+        "line": 10855,
         "name": "content",
         "type": "CcbPlatformContent"
       },
       {
-        "line": 10849,
+        "line": 10857,
         "name": "dialogue",
         "type": "CcbPlatformDialogueApi"
       },
       {
-        "line": 10845,
+        "line": 10853,
         "name": "platform_version",
         "type": "1"
       },
       {
-        "line": 10852,
+        "line": 10860,
         "name": "presentation",
         "type": "CcbPlatformPresentation"
       },
       {
-        "line": 10848,
+        "line": 10856,
         "name": "runtime",
         "type": "CcbPlatformRuntime"
       },
       {
-        "line": 10853,
+        "line": 10861,
         "name": "services",
         "type": "CcbPlatformServices"
       },
       {
-        "line": 10850,
+        "line": 10858,
         "name": "state",
         "type": "CcbPlatformState"
       },
       {
-        "line": 10851,
+        "line": 10859,
         "name": "tasks",
         "type": "CcbPlatformTasks"
       }
