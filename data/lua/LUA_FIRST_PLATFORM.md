@@ -785,3 +785,10 @@ services. Their identifiers may recursively use supported string expressions;
 participant variables retain their own alpha/beta ownership. Generated Lua
 execution checks nested option lookup and full-array evaluation before effects.
 Native comparison execution and the remaining string mutators are still due.
+
+Migrated `foreach` strings support `valid_technique` through
+`characters.choose_technique`, selecting for alpha against beta before body
+execution. Dynamic blacklist strings retain participant ownership. The current
+256-entry blacklist bound and required character provenance remain explicit
+migration limits. Generated Lua tests cover flags, blacklist and selection timing;
+this is not evidence of full native selector parity.

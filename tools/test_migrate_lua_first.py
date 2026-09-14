@@ -20509,6 +20509,62 @@ assert(calls==3)
                     "var": {"context_val": "entry"}, "effect": [],
                 }, True, False, {}, actor_expression="actor"))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_technique_selection_precedes_body_and_keeps_participants(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": [{"mutator": "valid_technique", "crit": True,
+                        "dodge_counter": True, "block_counter": True,
+                        "blacklist": [{"npc_val": "excluded"}, "tec_other"]},
+                       {"mutator": "valid_technique"}],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, True, {}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={}}
+local choices,calls=0,0
+local function service_value(value) return value end
+local services={
+ variables={resolve=function(data,owner,scope,name,participants)
+  assert(scope=='npc' and name=='excluded' and participants.beta==partner)
+  return {exists=true,value='tec_excluded'}
+ end},
+ characters={choose_technique=function(alpha,beta,options)
+  assert(alpha==actor and beta==partner and calls==0)
+  choices=choices+1
+  if choices==1 then
+   assert(options.critical and options.dodge_counter and options.block_counter)
+   assert(table.concat(options.blacklist,',')=='tec_excluded,tec_other')
+  else assert(next(options)==nil) end
+  return {technique={value=choices==1 and 'tec_selected' or 'tec_none'}}
+ end},
+ message=function()
+  calls=calls+1
+  assert(choices==2 and context.data.entry==({'tec_selected','tec_none'})[calls])
+ end
+}
+BODY
+assert(calls==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_foreach_technique_selection_reports_current_limits(self) -> None:
+        for value, beta in (
+            ({"mutator": "valid_technique"}, None),
+            ({"mutator": "valid_technique", "crit": "true"}, "partner"),
+            ({"mutator": "valid_technique", "blacklist": ["tec"] * 257}, "partner"),
+            ({"mutator": "valid_technique", "blacklist": [12]}, "partner"),
+        ):
+            with self.subTest(value=value, beta=beta):
+                self.assertIsNone(migrate_lua_first.render_static_foreach({
+                    "foreach": "array", "target": [value],
+                    "var": {"context_val": "entry"}, "effect": [],
+                }, True, beta is not None, {}, actor_expression="actor",
+                    npc_actor_expression=beta))
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

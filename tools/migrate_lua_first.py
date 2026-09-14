@@ -4543,6 +4543,34 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
         return ('services.martial_arts.technique_definition('
                 f'services.types.id("martial_art_technique", {identifier})).{field}')
+    if isinstance(value, dict) and value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                alpha is None or beta is None):
+            return None
+        options = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            if flag:
+                options.append(f"{name} = true")
+        blacklist = value.get("blacklist", [])
+        if not isinstance(blacklist, list) or len(blacklist) > 256:
+            return None
+        entries = [render_participant_string(
+            entry, target, alpha, beta) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        rendered_options = "{ " + ", ".join(options) + " }"
+        # Native always selects for dialogue alpha against beta, regardless
+        # of the variable destination or the surrounding effect's target.
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{alpha}, {beta}, {rendered_options})).technique.value'
+        )
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -5740,7 +5768,8 @@ def render_static_foreach(
                     set(value) - {"default"} in (
                         {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}) or
                     value.get("mutator") in {
-                        "game_option", "mon_faction", "ma_technique_name", "ma_technique_description"}):
+                        "game_option", "mon_faction", "ma_technique_name", "ma_technique_description",
+                        "valid_technique"}):
                 rendered_value = render_participant_string(
                     value, actor_expression or "nil",
                     actor_expression if avatar_actor_proven else None,
