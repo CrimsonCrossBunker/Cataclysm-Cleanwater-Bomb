@@ -5758,12 +5758,45 @@ struct prepared_trade_item {
     std::int64_t source_uid = 0;
     item escrow;
     item *destination_item = nullptr;
+    std::vector<std::pair<std::int64_t, faction_id>> original_owners;
 };
+
+void capture_trade_owners( item &value,
+                           std::vector<std::pair<std::int64_t, faction_id>> &owners )
+{
+    owners.emplace_back( value.uid().get_value(), value.get_owner() );
+    for( item *child : value.get_contents().all_items_top() ) {
+        capture_trade_owners( *child, owners );
+    }
+}
+
+bool restore_trade_owners( item &value,
+                           const std::vector<std::pair<std::int64_t, faction_id>> &owners )
+{
+    if( owners.empty() ) {
+        return true;
+    }
+    const auto original = std::find_if( owners.begin(), owners.end(), [&value]( const auto & owner ) {
+        return owner.first == value.uid().get_value();
+    } );
+    if( original == owners.end() ) {
+        return false;
+    }
+    // set_owner is recursive. Restore parent first, then each child's own owner.
+    value.set_owner( original->second );
+    for( item *child : value.get_contents().all_items_top() ) {
+        if( !restore_trade_owners( *child, owners ) ) {
+            return false;
+        }
+    }
+    return true;
+}
 
 std::optional<game_handle_error> insert_owned_trade_item(
     const resolved_item_holder &destination, item &value,
     trade_item_insertion &inserted,
-    const std::set<item *> *ignored_stack_items = nullptr )
+    const std::set<item *> *ignored_stack_items = nullptr,
+    const bool notify_pickup = true )
 {
     inserted = {};
     if( destination.descriptor.kind != item_holder_kind::character ||
@@ -5809,7 +5842,9 @@ std::optional<game_handle_error> insert_owned_trade_item(
             "The Character inventory rejected the exact trade Item"
         };
     }
-    result.on_pickup( character );
+    if( notify_pickup ) {
+        result.on_pickup( character );
+    }
     inserted.character = &character;
     inserted.value = &result;
     inserted.location = location;
@@ -5833,13 +5868,17 @@ bool restore_trade_source_item( prepared_trade_item &entry, item &value )
     if( entry.source == nullptr ) {
         return false;
     }
+    if( !restore_trade_owners( value, entry.original_owners ) ) {
+        return false;
+    }
     if( entry.source_slot == "inventory" ) {
         resolved_item_holder source_holder;
         source_holder.descriptor.kind = item_holder_kind::character;
         source_holder.descriptor.slot = entry.source_slot;
         source_holder.character = entry.source;
         trade_item_insertion restored;
-        return !insert_owned_trade_item( source_holder, value, restored );
+        return !insert_owned_trade_item( source_holder, value, restored, nullptr,
+                                         entry.original_owners.empty() );
     }
     if( entry.source_slot == "worn" ) {
         return entry.source->wear_item( value, false, true, true, true ).has_value();
@@ -6126,6 +6165,12 @@ std::optional<game_handle_error> stage_platform_trade_items(
         entry.available = available;
         entry.full_item = request.quantity == available;
         entry.source_uid = resolved.value->uid().get_value();
+        if( request.transfer_ownership ) {
+            if( !entry.full_item ) {
+                return game_handle_error{ "unsupported_item", "Ownership transfer requires a whole Item" };
+            }
+            capture_trade_owners( *resolved.value, entry.original_owners );
+        }
         prepared.push_back( std::move( entry ) );
     }
 
@@ -6137,6 +6182,9 @@ std::optional<game_handle_error> stage_platform_trade_items(
         destination.descriptor.slot = "inventory";
         destination.character = entry.destination;
         item probe = *entry.source_item;
+        if( !entry.original_owners.empty() ) {
+            probe.set_owner( *entry.destination );
+        }
         if( probe.count_by_charges() ) {
             probe.charges = entry.quantity;
         }
@@ -6278,6 +6326,9 @@ std::optional<game_handle_error> stage_platform_trade_items(
         destination.descriptor.kind = item_holder_kind::character;
         destination.descriptor.slot = "inventory";
         destination.character = entry.destination;
+        if( !entry.original_owners.empty() ) {
+            entry.escrow.set_owner( *entry.destination );
+        }
         const std::int64_t destination_uid = entry.escrow.uid().get_value();
         trade_item_insertion inserted;
         if( const std::optional<game_handle_error> error = insert_owned_trade_item(

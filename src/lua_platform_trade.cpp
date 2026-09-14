@@ -9,6 +9,7 @@ extern "C" {
 }
 #include <npc_opinion.h>
 #include <cstddef>
+#include <cmath>
 #include <cstdint>
 #include <exception>
 #include <limits>
@@ -74,6 +75,8 @@ struct trade_quote_token::state {
     std::int64_t expires_turn = 0;
     std::string settlement_strategy;
     std::string currency;
+    std::optional<int> allowance;
+    std::optional<double> allowance_offer_price;
     std::vector<std::string> available_settlement_modes;
     std::int64_t seller_to_buyer_total = 0;
     std::int64_t buyer_to_seller_total = 0;
@@ -121,6 +124,8 @@ struct trade_line_input {
 struct trade_quote_options {
     std::string settlement_strategy;
     std::string currency;
+    std::optional<int> allowance;
+    std::optional<double> allowance_offer_price;
     std::int64_t expiry_turns = default_trade_quote_expiry_turns;
 };
 
@@ -623,7 +628,7 @@ trade_quote_options read_trade_quote_options( const sol::table &requested )
                 "services.trade.quote settlement keys must be strings" );
         }
         const std::string name = field.first.as<std::string>();
-        if( name != "strategy" && name != "currency" ) {
+        if( name != "strategy" && name != "currency" && name != "allowance" ) {
             throw std::invalid_argument(
                 "services.trade.quote settlement received unknown field '" + name + "'" );
         }
@@ -638,6 +643,20 @@ trade_quote_options read_trade_quote_options( const sol::table &requested )
     }
     result.settlement_strategy = raw_strategy.as<std::string>();
     result.currency = raw_currency.as<std::string>();
+    const sol::object raw_allowance = settlement.raw_get<sol::object>( "allowance" );
+    if( result.settlement_strategy == "npc_allowance" ) {
+        if( !raw_allowance.is<lua_Integer>() ) {
+            throw std::invalid_argument( "npc_allowance requires an explicit integer allowance" );
+        }
+        const lua_Integer amount = raw_allowance.as<lua_Integer>();
+        if( amount < std::numeric_limits<int>::min() || amount > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "npc_allowance must fit native integer storage" );
+        }
+        result.allowance = static_cast<int>( amount );
+    } else if( present( raw_allowance ) ) {
+        throw std::invalid_argument( "allowance is only valid with npc_allowance settlement" );
+    }
+
     const sol::object raw_expiry =
         requested.raw_get<sol::object>( "expiry_turns" );
     if( present( raw_expiry ) ) {
@@ -683,6 +702,42 @@ trade_commit_settlement read_trade_commit_settlement( const sol::table &requeste
     return result;
 }
 
+std::optional<game_handle_error> bind_allowance_offer(
+    Character &seller, Character &buyer, const game_handle &item_handle,
+    const std::string &direction, const std::int64_t quantity,
+    const game_handle_runtime &runtime, const std::size_t world_generation,
+    double &price )
+{
+    npc *provider = seller.as_npc();
+    if( provider == nullptr || &buyer != &get_avatar() ) {
+        return game_handle_error{
+            "unsupported_participants", "npc_allowance requires an NPC seller and the active avatar buyer"
+        };
+    }
+    const auto resolved = item_handle.resolve_item( runtime, world_generation );
+    if( !resolved ) {
+        return resolved.error;
+    }
+    item &entry = *resolved.value;
+    const std::int64_t whole_quantity = entry.count_by_charges() ? entry.charges : 1;
+    if( direction != "seller_to_buyer" || quantity != whole_quantity ) {
+        return game_handle_error{
+            "unsupported_lines", "npc_allowance requires one whole offered item moving to the buyer"
+        };
+    }
+    std::vector<item_pricing> offers = npc_trading::init_selling( *provider );
+    for( item_pricing &offer : offers ) {
+        if( offer.loc.get_item() == &entry ) {
+            if( !std::isfinite( offer.price ) ) {
+                return game_handle_error{ "invalid_price", "The native selling offer price is not finite" };
+            }
+            price = offer.price;
+            return std::nullopt;
+        }
+    }
+    return game_handle_error{ "offer_unavailable", "The exact item is no longer offered by this NPC" };
+}
+
 std::optional<game_handle_error> prepare_trade_settlement(
     const trade_quote_options &options, Character &seller, Character &buyer,
     npc *seller_npc, npc *buyer_npc, const std::int64_t seller_to_buyer_total,
@@ -708,10 +763,10 @@ std::optional<game_handle_error> prepare_trade_settlement(
         };
     }
     if( options.settlement_strategy != "cash" &&
-        options.settlement_strategy != "npc_debt" ) {
+        options.settlement_strategy != "npc_debt" && options.settlement_strategy != "npc_allowance" ) {
         return game_handle_error{
             "unsupported_settlement",
-            "trade quote settlement strategy is unsupported; choose cash or npc_debt"
+            "trade quote settlement strategy is unsupported; choose cash, npc_debt or npc_allowance"
         };
     }
     if( options.settlement_strategy == "npc_debt" &&
@@ -738,6 +793,33 @@ std::optional<game_handle_error> prepare_trade_settlement(
         result.debt_after = result.debt_before;
         result.sold_before = buyer_npc->op_of_u.sold;
         result.sold_after = result.sold_before;
+    }
+
+    if( options.settlement_strategy == "npc_allowance" ) {
+        if( seller_npc == nullptr || &buyer != &get_avatar() ||
+            !options.allowance || !options.allowance_offer_price ) {
+            return game_handle_error{ "invalid_allowance", "An allowance settlement requires a bound native offer" };
+        }
+        const double price = *options.allowance_offer_price;
+        const double budget = static_cast<double>( result.debt_before ) + *options.allowance;
+        if( !std::isfinite( price ) || !( price < budget ) ) {
+            return game_handle_error{ "allowance_exceeded", "The offer must cost strictly less than debt plus allowance" };
+        }
+        const double remainder = std::trunc( static_cast<double>( *options.allowance ) - price );
+        if( !std::isfinite( remainder ) || remainder < std::numeric_limits<int>::min() ||
+            remainder > std::numeric_limits<int>::max() ) {
+            return game_handle_error{ "numeric_overflow", "The allowance remainder exceeds native integer storage" };
+        }
+        // Native int allowance -= double price truncates toward zero before debt adjustment.
+        const int native_remainder = static_cast<int>( remainder );
+        const std::int64_t debt = result.debt_before + ( native_remainder < 0 ? native_remainder : 0 );
+        if( debt < std::numeric_limits<int>::min() || debt > std::numeric_limits<int>::max() ) {
+            return game_handle_error{ "numeric_overflow", "The allowance debt exceeds native integer storage" };
+        }
+        result.debt_after = debt;
+        result.amount = result.debt_before - debt;
+        result.free_exchange = false;
+        return std::nullopt;
     }
 
     if( result.free_exchange ) {
@@ -864,7 +946,9 @@ bool is_trade_commit_stale_error( const std::string_view code )
            code == "stale_participant" || code == "stale_item" ||
            code == "wrong_holder" || code == "wrong_subtype" ||
            code == "destroyed_creature" || code == "dead_creature" ||
-           code == "pricing_changed" || code == "faction_changed" ||
+           code == "pricing_changed" || code == "price_changed" ||
+           code == "offer_unavailable" || code == "stale_avatar_identity" ||
+           code == "faction_changed" ||
            code == "debt_changed" || code == "opinion_changed" ||
            code == "settlement_changed" || code == "source_changed" ||
            code == "rollback_failed";
@@ -901,6 +985,11 @@ sol::table trade_commit_result(
     value["commit_generation"] = static_cast<lua_Integer>( commit_generation );
     value["settlement_strategy"] = snapshot.settlement_strategy;
     value["currency"] = snapshot.currency;
+    if( snapshot.allowance ) {
+        value["allowance"] = *snapshot.allowance;
+        value["allowance_offer_price"] = *snapshot.allowance_offer_price;
+    }
+
     value["settlement_amount"] = settlement.amount;
     value["debt_before"] = settlement.debt_before;
     value["debt_after"] = settlement.debt_after;
@@ -988,6 +1077,11 @@ sol::table trade_quote_snapshot( sol::state_view lua,
     value["opinion_generation"] = static_cast<lua_Integer>( snapshot.opinion_generation );
     value["settlement_strategy"] = snapshot.settlement_strategy;
     value["currency"] = snapshot.currency;
+    if( snapshot.allowance ) {
+        value["allowance"] = *snapshot.allowance;
+        value["allowance_offer_price"] = *snapshot.allowance_offer_price;
+    }
+
     value["seller_to_buyer_total"] = snapshot.seller_to_buyer_total;
     value["buyer_to_seller_total"] = snapshot.buyer_to_seller_total;
     value["net"] = snapshot.net;
@@ -1185,16 +1279,17 @@ std::optional<game_handle_error> validate_trade_quote(
         }
         Character *pricing_buyer = line.direction == "seller_to_buyer" ? buyer : seller;
         Character *pricing_seller = line.direction == "seller_to_buyer" ? seller : buyer;
-        const int unit_price = authoritative_trade_price(
+        const bool allowance = snapshot.settlement_strategy == "npc_allowance";
+        const int unit_price = allowance ? 0 : authoritative_trade_price(
                                    *pricing_buyer, *pricing_seller,
                                    line.direction == "seller_to_buyer" ? *seller : *buyer,
                                    *resolved_item, 1 );
-        const int total_price = authoritative_trade_price(
+        const int total_price = allowance ? 0 : authoritative_trade_price(
                                     *pricing_buyer, *pricing_seller,
                                     line.direction == "seller_to_buyer" ? *seller : *buyer,
                                     *resolved_item, static_cast<int>( input.quantity ) );
         if( unit_price != line.unit_price || total_price != line.total ||
-            unit_price <= 0 || total_price <= 0 ) {
+            ( !allowance && ( unit_price <= 0 || total_price <= 0 ) ) ) {
             return game_handle_error{
                 "price_changed", "The authoritative trade price or permission changed"
             };
@@ -1237,6 +1332,24 @@ std::optional<game_handle_error> validate_trade_quote(
     trade_quote_options options;
     options.settlement_strategy = snapshot.settlement_strategy;
     options.currency = snapshot.currency;
+    options.allowance = snapshot.allowance;
+    options.allowance_offer_price = snapshot.allowance_offer_price;
+    if( options.settlement_strategy == "npc_allowance" ) {
+        if( snapshot.lines.size() != 1 || !snapshot.allowance_offer_price ) {
+            return game_handle_error{ "invalid_quote", "The allowance quote has no single native offer" };
+        }
+        const auto &line = snapshot.lines.front();
+        double price = 0;
+        if( const auto error = bind_allowance_offer( *seller, *buyer, line.item, line.direction,
+                               line.quantity, runtime, world_generation, price ) ) {
+            return error;
+        }
+        if( price != *snapshot.allowance_offer_price ) {
+            return game_handle_error{ "price_changed", "The native allowance offer price changed" };
+        }
+        options.allowance_offer_price = price;
+    }
+
     trade_settlement_plan settlement;
     if( const std::optional<game_handle_error> error = prepare_trade_settlement(
                 options, *seller, *buyer, seller->as_npc(), buyer->as_npc(),
@@ -1282,10 +1395,11 @@ sol::table commit_trade(
 
     const trade_commit_settlement requested = read_trade_commit_settlement(
                 requested_settlement );
-    if( requested.settlement_strategy != "npc_debt" ) {
+    if( requested.settlement_strategy != "npc_debt" &&
+        requested.settlement_strategy != "npc_allowance" ) {
         return make_game_error_result( state, {
             "unsupported_settlement",
-            "trade commit currently supports only explicit npc_debt settlement"
+            "trade commit supports explicit npc_debt or npc_allowance settlement"
         } );
     }
     if( requested.currency != "cash" || snapshot->currency != "cash" ) {
@@ -1294,7 +1408,7 @@ sol::table commit_trade(
             "trade commit currently supports only explicit currency cash"
         } );
     }
-    if( snapshot->settlement_strategy != "npc_debt" ||
+    if( snapshot->settlement_strategy != requested.settlement_strategy ||
         requested.currency != snapshot->currency ) {
         return make_game_error_result( state, {
             "settlement_changed",
@@ -1336,8 +1450,10 @@ sol::table commit_trade(
     }
 
     trade_quote_options options;
-    options.settlement_strategy = "npc_debt";
+    options.settlement_strategy = snapshot->settlement_strategy;
     options.currency = snapshot->currency;
+    options.allowance = snapshot->allowance;
+    options.allowance_offer_price = snapshot->allowance_offer_price;
     trade_settlement_plan settlement;
     if( const std::optional<game_handle_error> error = prepare_trade_settlement(
                 options, *seller, *buyer, seller_npc, buyer_npc,
@@ -1365,6 +1481,7 @@ sol::table commit_trade(
         }
         platform_trade_item_request request;
         request.item_handle = line.item;
+        request.transfer_ownership = snapshot->settlement_strategy == "npc_allowance";
         request.source_holder.character = line.source_holder;
         request.source_holder.slot = line.source_slot;
         request.destination_holder.character = line.destination_holder;
@@ -1494,11 +1611,12 @@ sol::table commit_trade(
 
     if( post_settlement.debt_after < std::numeric_limits<int>::min() ||
         post_settlement.debt_after > std::numeric_limits<int>::max() ||
-        !npc_trading::npc_will_accept_trade(
-            *account, static_cast<int>( post_settlement.debt_after ) ) ||
-        npc_trading::calc_npc_owes_you(
-            *account, static_cast<int>( post_settlement.debt_after ) ) !=
-        post_settlement.debt_after ) {
+        ( options.settlement_strategy == "npc_debt" &&
+          ( !npc_trading::npc_will_accept_trade(
+                *account, static_cast<int>( post_settlement.debt_after ) ) ||
+            npc_trading::calc_npc_owes_you(
+                *account, static_cast<int>( post_settlement.debt_after ) ) !=
+            post_settlement.debt_after ) ) ) {
         return rollback_after_item_stage( {
             "credit_limit", "The authoritative NPC debt rule rejected the new owed value"
         } );
@@ -1547,7 +1665,7 @@ sol::table quote_trade(
     const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     sol::state_view state( lua );
-    const trade_quote_options options = read_trade_quote_options( requested_options );
+    trade_quote_options options = read_trade_quote_options( requested_options );
     std::optional<game_handle_error> error;
     Character *seller = nullptr;
     Character *buyer = nullptr;
@@ -1571,6 +1689,21 @@ sol::table quote_trade(
         } );
     }
     const std::vector<trade_line_input> input_lines = read_trade_lines( requested_lines );
+    if( options.settlement_strategy == "npc_allowance" ) {
+        if( input_lines.size() != 1 ) {
+            return make_game_error_result( state, {
+                "unsupported_lines", "npc_allowance requires exactly one offered item"
+            } );
+        }
+        double price = 0;
+        const trade_line_input &line = input_lines.front();
+        if( const auto error = bind_allowance_offer( *seller, *buyer, line.item, line.direction,
+                               line.quantity, runtime, world_generation, price ) ) {
+            return make_game_error_result( state, *error );
+        }
+        options.allowance_offer_price = price;
+    }
+
     auto snapshot = std::make_shared<trade_quote_token::state>();
     snapshot->runtime = runtime;
     snapshot->world_generation = world_generation;
@@ -1581,10 +1714,16 @@ sol::table quote_trade(
     snapshot->holder_mutation_generation = item_holder_mutation_generation();
     snapshot->settlement_strategy = options.settlement_strategy;
     snapshot->currency = options.currency;
+    snapshot->allowance = options.allowance;
+    snapshot->allowance_offer_price = options.allowance_offer_price;
     snapshot->issued_turn = to_turn<std::int64_t>( calendar::turn );
     snapshot->expires_turn = snapshot->issued_turn + options.expiry_turns;
     snapshot->tax = 0;
     snapshot->available_settlement_modes.push_back( "cash" );
+    if( options.settlement_strategy == "npc_allowance" ) {
+        snapshot->available_settlement_modes.push_back( "npc_allowance" );
+    }
+
     if( ( seller->as_npc() == nullptr ) != ( buyer->as_npc() == nullptr ) &&
         ( seller->is_avatar() || buyer->is_avatar() ) ) {
         snapshot->available_settlement_modes.push_back( "npc_debt" );
@@ -1609,12 +1748,14 @@ sol::table quote_trade(
         Character *pricing_buyer = input.direction == "seller_to_buyer" ? buyer : seller;
         Character *pricing_seller = input.direction == "seller_to_buyer" ? seller : buyer;
         Character &source = input.direction == "seller_to_buyer" ? *seller : *buyer;
-        const int unit_price = authoritative_trade_price(
+        // Gifts use the bound native selling offer, not a second barter permission/price.
+        const bool allowance = options.settlement_strategy == "npc_allowance";
+        const int unit_price = allowance ? 0 : authoritative_trade_price(
                                    *pricing_buyer, *pricing_seller, source, *entry, 1 );
-        const int total_price = authoritative_trade_price(
+        const int total_price = allowance ? 0 : authoritative_trade_price(
                                     *pricing_buyer, *pricing_seller, source, *entry,
                                     static_cast<int>( input.quantity ) );
-        if( unit_price <= 0 || total_price <= 0 ) {
+        if( !allowance && ( unit_price <= 0 || total_price <= 0 ) ) {
             return trade_error_result( state, {
                 "trade_refused",
                 "The authoritative NPC permission or price rule rejected this Item"
@@ -1761,6 +1902,14 @@ sol::table selling_offers( sol::this_state lua, const game_handle &seller_handle
         row["item"] = game_handle::from_item( *entry,
         { "character_inventory", entry->uid().get_value(), 0, 0, 0, {} },
         runtime, world_generation );
+        if( seller->parents( *entry ).empty() ) {
+            sol::table holder = state.create_table();
+            holder["kind"] = "character";
+            holder["character"] = seller_handle;
+            holder["slot"] = seller->is_wielding( *entry ) ? "wielded" :
+                             seller->is_worn( *entry ) ? "worn" : "inventory";
+            row["source_holder"] = std::move( holder );
+        }
         row["price"] = offer.price;
         row["count"] = offer.count;
         row["charges"] = offer.charges;

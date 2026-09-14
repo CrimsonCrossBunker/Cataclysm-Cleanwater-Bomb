@@ -9609,21 +9609,25 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field registered boolean True only while the token is in the active runtime registry.
 ---@field is_valid fun(self: TradeQuoteToken): boolean False after any runtime, world, participant, Item, holder, pricing, settlement, expiry, save, or shutdown invalidation.
 
----@alias CcbTradeQuoteSettlementStrategy 'cash'|'npc_debt'
+---@alias CcbTradeQuoteSettlementStrategy 'cash'|'npc_debt'|'npc_allowance'
 
 ---@class CcbTradeQuoteSettlement
 ---@field strategy CcbTradeQuoteSettlementStrategy Explicit quote settlement preflight strategy.
 ---@field currency 'cash' Explicit supported currency; quote rejects other currencies.
+---@field allowance? integer Required only for npc_allowance; native signed int. One whole native offered Item, NPC seller and active avatar buyer required; strict price < owed + allowance. The native offer price is recomputed, never supplied by Lua.
 
----@alias CcbTradeCommitSettlementStrategy 'npc_debt'
+---@alias CcbTradeCommitSettlementStrategy 'npc_debt'|'npc_allowance'
 
 ---@class CcbTradeNpcDebtSettlement
----@field strategy 'npc_debt' The only currently publishable commit settlement.
+---@field strategy 'npc_debt' Ordinary NPC debt settlement.
 ---@field currency 'cash' Explicit cash-denominated NPC debt account.
 
----Commit settlement is an intentionally one-member union.  A cash publish
----settlement is not exposed until its atomic currency path is source-complete.
----@alias CcbTradeSettlement CcbTradeNpcDebtSettlement
+---@class CcbTradeAllowanceSettlement
+---@field strategy 'npc_allowance' Commit the allowance and native offer price already bound into the quote.
+---@field currency 'cash' Cash-denominated NPC allowance; no cash balance is transferred.
+
+---Cash publication remains unavailable. Allowance is supplied only at quote time.
+---@alias CcbTradeSettlement CcbTradeNpcDebtSettlement|CcbTradeAllowanceSettlement
 
 ---@class CcbTradeQuoteHolder
 ---@field kind 'character' Exact Character holder kind; no map/container/vehicle or implicit selection.
@@ -9656,14 +9660,16 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field destination_holder CcbTradeQuoteHolderSnapshot Canonical destination holder locator and generation snapshot.
 ---@field source_holder_mutation_generation integer Global holder mutation epoch at quote time.
 ---@field destination_holder_mutation_generation integer Global holder mutation epoch at quote time.
----@field unit_price integer Authoritative detached per-unit price.
----@field total integer Authoritative detached line total.
+---@field unit_price integer Authoritative detached barter per-unit price; zero for npc_allowance, whose price is allowance_offer_price.
+---@field total integer Authoritative detached barter line total; zero for npc_allowance.
 ---@field tax integer Detached line tax; currently zero when the native rule has no tax.
 ---@field accepted boolean True for a line in a successful detached quote.
 ---@field rejection_reason? string Present only when a line is rejected.
 
 ---@class CcbTradeQuoteSnapshot
 ---@field token TradeQuoteToken Runtime-owned nonpersistent QuoteToken.
+---@field allowance? integer Native allowance bound at quote time; present only for npc_allowance.
+---@field allowance_offer_price? number Native selling offer price bound at quote time; may be fractional.
 ---@field seller GameHandle Exact seller Character/NPC handle.
 ---@field buyer GameHandle Exact buyer Character/NPC handle.
 ---@field seller_stable_id integer
@@ -9713,6 +9719,8 @@ function CcbNpcsApi.ai_rules(handle) end
 ---| 'faction_changed'
 ---| 'debt_changed'
 ---| 'opinion_changed'
+---| 'offer_unavailable'
+---| 'stale_avatar_identity'
 
 ---@alias CcbTradeCommitRollbackErrorCode 'source_changed'|'rollback_failed'
 
@@ -9736,6 +9744,10 @@ function CcbNpcsApi.ai_rules(handle) end
 ---| 'credit_limit'
 ---| 'numeric_overflow'
 ---| 'settlement_publish_failed'
+---| 'invalid_allowance'
+---| 'allowance_exceeded'
+---| 'invalid_price'
+---| 'unsupported_lines'
 
 ---@class CcbTradeCommitError: CcbPlatformResultError
 ---@field code CcbTradeCommitErrorCode Stable commit rejection, stale, or rollback code.
@@ -9749,6 +9761,8 @@ function CcbNpcsApi.ai_rules(handle) end
 
 ---@class CcbTradeCommitValue
 ---@field committed true True only after every Item and settlement publication succeeds.
+---@field allowance? integer Native allowance bound at quote time; present only for npc_allowance.
+---@field allowance_offer_price? number Native selling offer price bound at quote time; may be fractional.
 ---@field consumed true The QuoteToken is permanently single-use after success.
 ---@field quote_id integer Committed quote identity.
 ---@field commit_generation integer Monotonic generation after consuming the token.
@@ -9766,7 +9780,7 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field lines CcbTradeCommitLineResult[] Detached per-line transfer results.
 
 ---@class CcbTradeCommitResult: CcbResult
----@field value? CcbTradeCommitValue Present only after atomic Item transfer and npc_debt publication.
+---@field value? CcbTradeCommitValue Present only after atomic Item transfer and publication of the selected NPC debt or allowance settlement.
 ---@field error? CcbTradeCommitError Present for invalid, consumed, stale, rejected, or rollback-failed commits.
 
 ---@class CcbTradeApi
@@ -9797,6 +9811,7 @@ function CcbTradeApi.pay(seller, buyer, cost) end
 function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 
 ---@class CcbSellingOffer
+---@field source_holder? CcbTradeQuoteHolder Present for top-level inventory, worn and wielded items. Nested offers remain in native order but require container-aware transfer support.
 ---@field item GameHandle Exact live offered Item.
 ---@field price number Native NPC selling-offer valuation; not a locked settlement quote.
 ---@field count integer Native offer count.
@@ -9819,7 +9834,7 @@ function CcbTradeApi.quote(seller, buyer, lines, options) end
 function CcbTradeApi.get(token) end
 
 ---@param token TradeQuoteToken Runtime-owned nonpersistent quote token.
----@param settlement CcbTradeSettlement Explicit currently supported `npc_debt` settlement; no implicit avatar/current trader is used.
+---@param settlement CcbTradeSettlement Explicit `npc_debt` or `npc_allowance` settlement matching the quote; no implicit avatar/current trader is used.
 ---@return CcbTradeCommitResult result `value` is published only after atomic two-way Item transfer and NPC debt settlement; `error.code` reports consumed/stale/rejection/rollback failures.
 function CcbTradeApi.commit(token, settlement) end
 

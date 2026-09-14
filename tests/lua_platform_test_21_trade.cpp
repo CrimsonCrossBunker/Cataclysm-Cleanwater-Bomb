@@ -1,5 +1,236 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "player_helpers.h"
+
+TEST_CASE( "lua_platform_allowance_quote_rejects_nonactive_avatar",
+           "[lua][platform][trade][semantic]" )
+{
+    platform_trade_quote_fixture fixture( 941, 942, 943001, 943002 );
+    REQUIRE( fixture.ready() );
+    sol::table options = fixture.options();
+    sol::table settlement = options["settlement"];
+    settlement["strategy"] = "npc_allowance";
+    settlement["allowance"] = 100;
+    sol::table lines = fixture.lua.create_table();
+    lines[1] = fixture.line( "seller_to_buyer", 1, fixture.item_handle,
+                             fixture.buyer_handle, fixture.seller_handle );
+    const int owed = fixture.buyer->op_of_u.owed;
+    const int charges = fixture.live_item->charges;
+    const auto call = fixture.quote_participants(
+                          fixture.buyer_handle, fixture.seller_handle, lines, options );
+    REQUIRE( call.valid() );
+    const sol::table result = call.get<sol::table>();
+    REQUIRE_FALSE( result["ok"].get<bool>() );
+    const sol::table error = result["error"];
+    CHECK( error["code"].get<std::string>() == "unsupported_participants" );
+    CHECK( fixture.buyer->op_of_u.owed == owed );
+    CHECK( fixture.live_item->charges == charges );
+}
+
+TEST_CASE( "lua_platform_allowance_quote_rejects_malformed_settlement_without_mutation",
+           "[lua][platform][trade][semantic]" )
+{
+    platform_trade_quote_fixture fixture( 961, 962, 963001, 963002 );
+    REQUIRE( fixture.ready() );
+    sol::table options = fixture.options();
+    sol::table settlement = options["settlement"];
+    settlement["strategy"] = "npc_allowance";
+    SECTION( "missing allowance" ) {}
+    SECTION( "string allowance" ) {
+        settlement["allowance"] = "100";
+    }
+    SECTION( "fractional allowance" ) {
+        settlement["allowance"] = 1.5;
+    }
+    SECTION( "allowance above native range" ) {
+        settlement["allowance"] = static_cast<lua_Integer>( std::numeric_limits<int>::max() ) + 1;
+    }
+    SECTION( "allowance below native range" ) {
+        settlement["allowance"] = static_cast<lua_Integer>( std::numeric_limits<int>::min() ) - 1;
+    }
+    SECTION( "allowance on ordinary debt settlement" ) {
+        settlement["strategy"] = "npc_debt";
+        settlement["allowance"] = 100;
+    }
+    SECTION( "caller supplied offer price" ) {
+        settlement["allowance"] = 100;
+        settlement["allowance_offer_price"] = 0;
+    }
+    const int owed = fixture.buyer->op_of_u.owed;
+    const int charges = fixture.live_item->charges;
+    const auto call = fixture.quote( fixture.lines( 1 ), options );
+    REQUIRE_FALSE( call.valid() );
+    CHECK( fixture.buyer->op_of_u.owed == owed );
+    CHECK( fixture.live_item->charges == charges );
+    CHECK( fixture.seller.has_item( *fixture.live_item ) );
+}
+
+TEST_CASE( "lua_platform_allowance_commit_transfers_whole_item_and_debits_even_allies",
+           "[lua][platform][trade][semantic]" )
+{
+    const int allowance = GENERATE( -1, 0, 10 );
+    const int rejection = GENERATE( 0, 1, 2 );
+    const bool change_debt = rejection == 1;
+    const bool change_strategy = rejection == 2;
+    const bool exact_budget = GENERATE( false, true );
+    clear_avatar();
+    avatar &recipient = get_avatar();
+    platform_trade_quote_fixture fixture( 951, 952, 953001, 953002 );
+    REQUIRE( fixture.ready() );
+    fixture.buyer->op_of_u.owed = 100000;
+    item stock( itype_id( "2x4" ), calendar::turn );
+    stock.set_owner( *fixture.buyer );
+    item *offered = &fixture.buyer->inv->add_item( std::move( stock ), false, false, false );
+    std::vector<item_pricing> native_offers = npc_trading::init_selling( *fixture.buyer );
+    std::optional<double> native_price;
+    for( item_pricing &offer : native_offers ) {
+        if( offer.loc.get_item() == offered ) {
+            native_price = offer.price;
+        }
+    }
+    REQUIRE( native_price );
+    REQUIRE( *native_price < fixture.buyer->op_of_u.owed + allowance );
+    if( exact_budget ) {
+        REQUIRE( *native_price == static_cast<int>( *native_price ) );
+        fixture.buyer->op_of_u.owed = static_cast<int>( *native_price ) - allowance;
+    }
+    const int remainder = static_cast<int>( allowance - *native_price );
+    const int expected_owed = 100000 + ( remainder < 0 ? remainder : 0 );
+    const auto recipient_handle = cata::lua_platform::game_handle::from_creature(
+                                      recipient, { "avatar", recipient.getID().get_value(), 0, 0, 0, {} },
+                                      fixture.runtime, fixture.active_world_generation );
+    const auto offered_handle = cata::lua_platform::game_handle::from_item(
+                                    *offered, { "npc_inventory", offered->uid().get_value(), 0, 0, 0, {} },
+                                    fixture.runtime, fixture.active_world_generation );
+    sol::table lines = fixture.lua.create_table();
+    lines[1] = fixture.line( "seller_to_buyer", 1, offered_handle, fixture.buyer_handle,
+                             recipient_handle );
+    sol::table options = fixture.options();
+    sol::table requested = options["settlement"];
+    requested["strategy"] = "npc_allowance";
+    requested["allowance"] = allowance;
+    const auto quoted = fixture.quote_participants( fixture.buyer_handle, recipient_handle,
+                        lines, options );
+    REQUIRE( quoted.valid() );
+    const sol::table quote_result = quoted.get<sol::table>();
+    if( exact_budget ) {
+        REQUIRE_FALSE( quote_result["ok"].get<bool>() );
+        CHECK( quote_result["error"].get<sol::table>()["code"].get<std::string>() == "allowance_exceeded" );
+        CHECK( fixture.buyer->has_item( *offered ) );
+        CHECK( fixture.buyer->op_of_u.owed == static_cast<int>( *native_price ) - allowance );
+        clear_avatar();
+        return;
+    }
+    REQUIRE( quote_result["ok"].get<bool>() );
+    const sol::table value = quote_result["value"];
+    CHECK( value["debt_after"].get<int>() == expected_owed );
+    CHECK( value["allowance"].get<int>() == allowance );
+    CHECK( value["allowance_offer_price"].get<double>() == *native_price );
+    CHECK( value["net"].get<int>() == 0 );
+    const sol::table quoted_lines = value["lines"];
+    const sol::table quoted_line = quoted_lines[1];
+    CHECK( quoted_line["unit_price"].get<int>() == 0 );
+    CHECK( quoted_line["total"].get<int>() == 0 );
+    const auto token = value["token"].get<cata::lua_platform::trade_quote_token>();
+    sol::table settlement = fixture.lua.create_table();
+    settlement["strategy"] = "npc_allowance";
+    settlement["currency"] = "cash";
+    const int cash_before = recipient.cash;
+    const int npc_cash_before = fixture.buyer->cash;
+    const int sold_before = fixture.buyer->op_of_u.sold;
+    sol::protected_function commit = fixture.services["trade"]["commit"];
+    if( change_debt ) {
+        ++fixture.buyer->op_of_u.owed;
+    }
+    if( change_strategy ) {
+        settlement["strategy"] = "npc_debt";
+    }
+    const auto committed = commit( token, settlement );
+    REQUIRE( committed.valid() );
+    const sol::table result = committed.get<sol::table>();
+    if( change_debt || change_strategy ) {
+        REQUIRE_FALSE( result["ok"].get<bool>() );
+        CHECK( result["error"].get<sol::table>()["code"].get<std::string>() ==
+               ( change_debt ? "pricing_changed" : "settlement_changed" ) );
+        CHECK( fixture.buyer->op_of_u.owed == ( change_debt ? 100001 : 100000 ) );
+        CHECK( fixture.buyer->has_item( *offered ) );
+        CHECK( recipient.items_with( []( const item & entry ) {
+            return entry.typeId() == itype_id( "2x4" );
+        } ).empty() );
+        CHECK( recipient.cash == cash_before );
+        CHECK( fixture.buyer->cash == npc_cash_before );
+        CHECK( fixture.buyer->op_of_u.sold == sold_before );
+        clear_avatar();
+        return;
+    }
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( fixture.buyer->op_of_u.owed == expected_owed );
+    CHECK( fixture.buyer->op_of_u.sold == sold_before );
+    CHECK( recipient.cash == cash_before );
+    CHECK( fixture.buyer->cash == npc_cash_before );
+    const auto received = recipient.items_with( []( const item & entry ) {
+        return entry.typeId() == itype_id( "2x4" );
+    } );
+    REQUIRE( received.size() == 1 );
+    CHECK( received.front()->is_owned_by( recipient ) );
+    const auto repeated = commit( token, settlement );
+    REQUIRE( repeated.valid() );
+    const sol::table repeat_result = repeated.get<sol::table>();
+    REQUIRE_FALSE( repeat_result["ok"].get<bool>() );
+    CHECK( repeat_result["error"].get<sol::table>()["code"].get<std::string>() == "consumed_quote" );
+    CHECK( fixture.buyer->op_of_u.owed == expected_owed );
+    clear_avatar();
+}
+
+TEST_CASE( "lua_platform_allowance_item_rollback_restores_mixed_content_owners",
+           "[lua][platform][trade][semantic]" )
+{
+    platform_trade_quote_fixture fixture( 971, 972, 973001, 973002 );
+    REQUIRE( fixture.ready() );
+    item bag( itype_id( "backpack" ), calendar::turn );
+    bag.force_insert_item( item( itype_id( "rock" ), calendar::turn ), pocket_type::CONTAINER );
+    bag.set_owner( *fixture.buyer );
+    const auto contents = bag.get_contents().all_items_top();
+    REQUIRE( contents.size() == 1 );
+    contents.front()->set_owner( faction_id::NULL_ID() );
+    const faction_id original_owner = bag.get_owner();
+    const std::int64_t bag_uid = bag.uid().get_value();
+    const std::int64_t child_uid = contents.front()->uid().get_value();
+    item &source = fixture.buyer->inv->add_item( std::move( bag ), false, false, false );
+    cata::lua_platform::platform_trade_item_request request;
+    request.item_handle = cata::lua_platform::game_handle::from_item(
+                              source, { "npc_inventory", bag_uid, 0, 0, 0, {} }, fixture.runtime,
+                              fixture.active_world_generation );
+    request.source_holder = { fixture.buyer_handle, "inventory" };
+    request.destination_holder = { fixture.seller_handle, "inventory" };
+    request.quantity = 1;
+    request.transfer_ownership = true;
+    std::vector<cata::lua_platform::platform_trade_item_result> transferred;
+    cata::lua_platform::platform_item_transaction transaction;
+    const auto error = cata::lua_platform::stage_platform_trade_items(
+    { request }, fixture.runtime, fixture.active_world_generation,
+    cata::lua_platform::item_holder_mutation_generation(), transferred, transaction );
+    REQUIRE_FALSE( error );
+    const auto received = fixture.seller.items_with( [bag_uid]( const item & entry ) {
+        return entry.uid().get_value() == bag_uid;
+    } );
+    REQUIRE( received.size() == 1 );
+    CHECK( received.front()->is_owned_by( fixture.seller ) );
+    const auto received_contents = received.front()->get_contents().all_items_top();
+    REQUIRE( received_contents.size() == 1 );
+    CHECK( received_contents.front()->is_owned_by( fixture.seller ) );
+    REQUIRE( transaction.rollback_now() );
+    const auto restored = fixture.buyer->items_with( [bag_uid]( const item & entry ) {
+        return entry.uid().get_value() == bag_uid;
+    } );
+    REQUIRE( restored.size() == 1 );
+    CHECK( restored.front()->get_owner() == original_owner );
+    const auto restored_contents = restored.front()->get_contents().all_items_top();
+    REQUIRE( restored_contents.size() == 1 );
+    CHECK( restored_contents.front()->uid().get_value() == child_uid );
+    CHECK( restored_contents.front()->get_owner().is_null() );
+    CHECK( count_platform_trade_items( fixture.seller, bag_uid ) == 0 );
+}
 
 TEST_CASE( "lua_platform_native_order_price_uses_explicit_parties_and_native_pricing",
            "[lua][platform][trade][order]" )
@@ -181,7 +412,7 @@ TEST_CASE( "lua_platform_trade_quote_rejects_duplicate_uid_and_partial_charge_mi
            ["code"].get<std::string>() == "duplicate_item" );
 
     const sol::protected_function_result partial_mismatch_result = fixture.quote(
-            fixture.live_item->charges + 1 );
+                fixture.live_item->charges + 1 );
     REQUIRE( partial_mismatch_result.valid() );
     const sol::table partial_mismatch_envelope =
         partial_mismatch_result.get<sol::table>();
@@ -262,7 +493,7 @@ TEST_CASE( "lua_platform_trade_quote_expires_and_retires_on_runtime_world_or_sav
             .get<cata::lua_platform::trade_quote_token>();
         const std::int64_t issued = to_turn<std::int64_t>( calendar::turn );
         calendar::turn = calendar::turn + time_duration::from_turns(
-                              token.expires_turn() - issued );
+                             token.expires_turn() - issued );
         const sol::protected_function_result expired_result = fixture.get( token );
         REQUIRE( expired_result.valid() );
         const sol::table expired_envelope = expired_result.get<sol::table>();

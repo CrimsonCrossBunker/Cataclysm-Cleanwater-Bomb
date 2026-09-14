@@ -60,6 +60,8 @@ struct platform_trade_item_request {
     platform_trade_item_holder source_holder;
     platform_trade_item_holder destination_holder;
     std::int64_t quantity = 0;
+    // Native gifts transfer ownership before pickup; rollback restores every content owner.
+    bool transfer_ownership = false;
 };
 
 /** Detached result metadata for one successfully transferred trade Item. */
