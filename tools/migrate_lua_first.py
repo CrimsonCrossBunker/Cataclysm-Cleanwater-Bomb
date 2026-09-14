@@ -5642,11 +5642,6 @@ def render_static_foreach(
             f"        context.data[{lua_quote(variable['context_val'])}] = "
             f"{item_expression}"
         )
-        if not variable["context_val"].startswith("_"):
-            lines.append(
-                f"        context.data[{lua_quote('_' + variable['context_val'])}] = "
-                f"{item_expression}"
-            )
         for nested in body:
             rendered = render_static_false_effect(
                 nested, avatar_actor_proven, npc_actor_proven,

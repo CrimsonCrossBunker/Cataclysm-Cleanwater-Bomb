@@ -20293,6 +20293,29 @@ assert(called and context.data._name=='inherited' and context.data.name==nil)
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_writes_only_the_requested_context_name(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": ["first", "second"],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local context={data={_entry='independent'}}
+local calls=0
+local services={message=function(message)
+ calls=calls+1
+ assert(message=='visit' and context.data.entry==({'first','second'})[calls])
+ assert(context.data._entry=='independent')
+end}
+BODY
+assert(calls==2 and context.data.entry=='second' and context.data._entry=='independent')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
