@@ -29768,33 +29768,6 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                ("npc_change_class" in effect or "npc_change_faction" in effect)
-            ):
-                key = (
-                    "npc_change_class"
-                    if "npc_change_class" in effect else "npc_change_faction"
-                )
-                kind = "npc_class" if key == "npc_change_class" else "faction"
-                if set(effect) == {key} and bounded_platform_id(effect[key]):
-                    lines.append(
-                        f"    services.npcs.set_{'class' if key == 'npc_change_class' else 'faction'}("
-                        f"actor, services.types.id(\"{kind}\", {lua_quote(effect[key])}))"
-                    )
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the NPC class/faction update "
-                        "through the typed NPC service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
-                    )
-                    all_effects_converted = False
-            elif (
                 isinstance(effect, dict) and
                 ("u_make_sound" in effect or "npc_make_sound" in effect)
             ):
@@ -29955,40 +29928,30 @@ def render_eoc(
             elif npc_actor_proven and effect == "flee":
                 lines.append(f"    service_value(services.npcs.start_fleeing({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_change_class"} and
-                safe_platform_id(effect.get("npc_change_class"))
-            ):
-                lines.append(
-                    "    services.npcs.set_class(actor, "
-                    "services.types.id(\"npc_class\", "
-                    f"{lua_quote(effect['npc_change_class'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_change_faction"} and
-                safe_platform_id(effect.get("npc_change_faction"))
-            ):
-                lines.append(
-                    "    services.npcs.set_faction(actor, "
-                    "services.types.id(\"faction\", "
-                    f"{lua_quote(effect['npc_change_faction'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_first_topic"} and
-                bounded_utf8_string(
-                    effect.get("npc_first_topic"), 256, allow_empty=False
-                )
-            ):
-                lines.append(
-                    "    services.npcs.set_first_topic(actor, "
-                    f"{lua_quote(effect['npc_first_topic'])})"
-                )
-                converted_effect = True
+            elif npc_actor_proven and isinstance(effect, dict) and len(effect) == 1 and next(iter(effect)) in {
+                "npc_change_class", "npc_change_faction", "npc_first_topic",
+            }:
+                key = next(iter(effect))
+                target = npc_actor_expression or "actor"
+                requested = render_participant_string_expression(
+                    effect[key], target, "actor" if avatar_actor_proven else None, target)
+                if requested is not None:
+                    if key == "npc_first_topic":
+                        call = f"services.npcs.set_first_topic({target}, {requested})"
+                    else:
+                        kind = "npc_class" if key == "npc_change_class" else "faction"
+                        method = "set_class" if key == "npc_change_class" else "set_faction"
+                        call = f"services.npcs.{method}({target}, services.types.id({lua_quote(kind)}, {requested}))"
+                    lines.append(f"    service_value({call})")
+                    converted_effect = True
+                else:
+                    lines.append(f"    -- TODO: {key} needs a supported string expression and explicit participants.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{key} needs a supported string expression and explicit participants"
+                    )
+                    all_effects_converted = False
             elif effect == "npc_make_radio_representative":
                 lines.append(
                     "    -- TODO: translate NPC radio representation only with "

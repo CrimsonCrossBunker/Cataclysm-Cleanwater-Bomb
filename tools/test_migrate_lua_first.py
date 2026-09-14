@@ -21558,6 +21558,48 @@ end
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_identity_strings_are_evaluated_at_each_effect(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "strings",
+                                   "required_event": "npc_becomes_hostile", "effect": [
+                                       {"npc_change_class": {"context_val": "value"}},
+                                       {"npc_change_faction": {"context_val": "value"}},
+                                       {"npc_first_topic": {"context_val": "value"}},
+                                   ]}), migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected,context,calls,fail
+local function service_value(result) assert(result.ok);return result.value end
+local services={types={id=function(kind,id) return {kind=kind,id=id} end},npcs={
+ set_class=function(target,id)
+  assert(target==expected and id.kind=='npc_class' and id.id=='NC_TEST')
+  calls=calls+1;context.data.value='test_faction';return {ok=not fail,value={}}
+ end,
+ set_faction=function(target,id)
+  assert(target==expected and id.kind=='faction' and id.id=='test_faction')
+  calls=calls+1;context.data.value='TALK_TEST';return {ok=true,value={}}
+ end,
+ set_first_topic=function(target,topic)
+  assert(target==expected and topic=='TALK_TEST');calls=calls+1;return {ok=true,value={}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target
+ for _,reject in ipairs({false,true}) do
+  fail=reject;calls=0;context={actors={npc=npc},data={value='NC_TEST'}}
+  local ok=pcall(migrated_eoc_functions.strings,context,target)
+  assert(ok==not fail);assert(calls==(fail and 1 or 3))
+ end
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

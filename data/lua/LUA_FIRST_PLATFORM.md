@@ -970,3 +970,10 @@ and personal-info requests, checking failures and retaining the resolved partici
 The native cooldown durations are unchanged. Generated Lua verifies all request routes
 and failure propagation; repeated-request duration/permanence comparison exists as
 unexecuted C++ test source.
+
+NPC class/faction/first-topic migration resolves supported string expressions at each
+operation through the participant-aware string renderer, then checks the service result.
+The earlier class/faction branch that rejected dynamic values has been consolidated.
+Generated Lua tests mutate a context variable between operations to verify live lookup,
+participant overrides and failure propagation. Full native parameter/participant
+coverage remains unverified; unsupported expressions retain explicit migration gaps.
