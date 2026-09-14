@@ -372,6 +372,39 @@ TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
     }
 }
 
+TEST_CASE( "lua_platform_mutation_replace_matches_native_conflicts_and_repeat",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3100 );
+    mutation_fixture platform( 3200 );
+    const bool npc_target = GENERATE( false, true );
+    Character &old_target = legacy.target( npc_target );
+    Character &new_target = platform.target( npc_target );
+    for( Character *target : {
+             &old_target, &new_target
+         } ) {
+        target->toggle_trait( trait_VULNERABLECHILL );
+        target->set_mutation( trait_QUICK );
+    }
+    platform.target( !npc_target ).set_mutation( trait_VULNERABLECHILL );
+    const std::string effect = std::string( R"({")" ) + ( npc_target ? "npc_" : "u_" ) +
+                               R"(add_trait":"STRONGER_VULNERABLEWARM","variant":"unknown"})";
+    for( int attempt = 0; attempt < 2; ++attempt ) {
+        legacy.legacy_effect( effect );
+        const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                    platform.handle( npc_target ),
+                    cata::lua_platform::script_game_id( "mutation", "STRONGER_VULNERABLEWARM" ), "unknown" );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( old_target.get_mutations() == new_target.get_mutations() );
+        CHECK( old_target.has_base_trait( trait_VULNERABLECHILL ) ==
+               new_target.has_base_trait( trait_VULNERABLECHILL ) );
+        CHECK( new_target.has_trait( trait_QUICK ) );
+        CHECK_FALSE( new_target.has_trait( trait_VULNERABLECHILL ) );
+        CHECK( platform.target( !npc_target ).has_trait( trait_VULNERABLECHILL ) );
+    }
+}
+
 TEST_CASE( "lua_platform_mutations_bulk_removal_matches_legacy_effects",
            "[lua][platform][mutations][semantic]" )
 {

@@ -1109,6 +1109,40 @@ const mutation_variant *requested_variant(
     return variant;
 }
 
+sol::table replace_conflicting_state(
+    sol::this_state lua, const game_handle &handle, const script_game_id &requested_id,
+    const sol::optional<std::string> &requested_variant_id,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    require_mutation_id( requested_id, "services.mutations.replace" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
+                           error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    const mutation_variant *variant = id->variant( requested_variant_id.value_or( "" ) );
+    const auto existing = character->get_mutations();
+    for( const trait_id &other : existing ) {
+        if( other == id ) {
+            continue;
+        }
+        for( const std::string &type : other->types ) {
+            if( id->types.find( type ) != id->types.end() ) {
+                character->unset_mutation( other );
+                break;
+            }
+        }
+    }
+    character->set_mutation( id, variant );
+    sol::table result = state.create_table();
+    result["present"] = character->has_permanent_trait( id );
+    result["variant"] = mutation_variant_id( *character, id, false );
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table grant_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -1490,6 +1524,15 @@ void install_mutation_api(
                    lua_state, handle, id, category, use_vitamins,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    mutations.set_function(
+        "replace",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+    const sol::optional<std::string> &variant ) {
+        require_write();
+        return replace_conflicting_state( lua_state, handle, id, variant,
+                                          current_runtime_generation(), current_world_generation() );
     } );
     mutations.set_function(
         "grant",

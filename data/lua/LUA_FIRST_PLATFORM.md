@@ -729,3 +729,9 @@ handle, and returns the resulting permanent-presence and active flags.
 retaining base-trait bookkeeping and emitting no additional loss event. It accepts
 an already-absent mutation. `remove` continues to perform its documented base-trait
 and event synchronization. Both operations retain native cache and hook behavior.
+
+`services.mutations.replace(character, mutation, variant)` clears other mutations
+sharing any mutation type before invoking native set semantics. It preserves
+base-trait bookkeeping, adds no gain/loss events, and permits repeated assignment.
+Native hooks and variant fallback remain active. `grant` retains its distinct
+non-conflicting grant and gain-event behavior.
