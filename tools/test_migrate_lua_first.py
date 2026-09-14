@@ -11696,7 +11696,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             source.write_text(json.dumps({
                 "type": "effect_on_condition", "id": "trade_pair",
                 "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["start_trade"],
+                "effect": ["start_trade", "revert_activity", "morale_chat_activity"],
             }), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "trade_pair_mod")
@@ -11704,6 +11704,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("local provider = context.actors.beta", main)
             self.assertIn('if provider ~= nil and provider.subtype == "npc" then', main)
             self.assertIn('services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true)', main)
+            self.assertIn("services.activities.revert_npc_job(context.actors.beta)", main)
+            self.assertIn('services.activities.socialize(services.characters.avatar(), context.actors.beta, services.time.duration(600, "turn"))', main)
+
 
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -20896,7 +20899,7 @@ assert(#targets==0)
                                    "required_event": "npc_becomes_hostile",
                                    "effect": "revert_activity"}), migrate_lua_first.MigrationResult())
         script = r"""
-local npc,override={},{}
+local npc,override={subtype="npc"},{subtype="npc"}
 local expected=npc
 local calls=0
 local fail=false
@@ -21070,7 +21073,7 @@ end
                                    "effect": ["morale_chat_activity", "drop_items_in_place"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc,override={},{},{}
+local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
 local expected=npc
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
@@ -21107,7 +21110,7 @@ assert(table.concat(calls,',')=='socialize,drop')
                                    "effect": ["start_training", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc,override={},{},{}
+local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false
@@ -21152,7 +21155,7 @@ assert(calls==3 and continued==2)
                                    "effect": ["start_training_npc", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc,override={},{},{}
+local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false
@@ -21197,7 +21200,7 @@ assert(calls==3 and continued==2)
                                    "effect": ["start_training_seminar", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc,override={},{},{}
+local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false

@@ -31038,15 +31038,20 @@ def render_eoc(
                     "    end",
                 ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "revert_activity":
-                lines.append(
-                    f"    service_value(services.activities.revert_npc_job({npc_actor_expression or 'actor'}))")
-                converted_effect = True
-            elif npc_actor_proven and effect == "morale_chat_activity":
-                lines.append(
-                    f"    service_value(services.activities.socialize(services.characters.avatar(), "
-                    f"{npc_actor_expression or 'actor'}, services.time.duration(600, \"turn\")))"
-                )
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "revert_activity", "morale_chat_activity",
+            }:
+                partner = npc_actor_expression or "actor"
+                if effect == "revert_activity":
+                    call = f"services.activities.revert_npc_job({partner})"
+                else:
+                    call = ("services.activities.socialize(services.characters.avatar(), "
+                            f'{partner}, services.time.duration(600, "turn"))')
+                lines.extend([
+                    f'    if ({partner}) ~= nil and ({partner}).subtype == "npc" then',
+                    f"        service_value({call})",
+                    "    end",
+                ])
                 converted_effect = True
             elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
