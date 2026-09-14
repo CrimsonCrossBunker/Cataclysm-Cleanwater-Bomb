@@ -1883,35 +1883,9 @@ sol::table set_npc_guarding(
                             state, *entry, runtime_generation,
                             world_generation );
     if( enabled ) {
-        if( !entry->is_player_ally() ) {
-            entry->set_mission( NPC_MISSION_GUARD );
-            entry->set_omt_destination();
-        } else {
-            if( entry->has_player_activity() ) {
-                entry->revert_after_activity();
-            }
-            entry->set_attitude( NPCATT_NULL );
-            entry->set_mission( NPC_MISSION_GUARD_ALLY );
-            entry->chatbin.first_topic = entry->assigned_camp ?
-                                         "TALK_FRIEND_GUARD_CAMP" :
-                                         entry->chatbin.talk_friend_guard;
-            entry->clear_committed_goal();
-            entry->set_omt_destination();
-        }
-    } else if( !entry->is_player_ally() ) {
-        entry->set_attitude( NPCATT_NULL );
-        entry->set_mission( NPC_MISSION_NULL );
+        talk_function::assign_guard( *entry );
     } else {
-        entry->set_attitude( NPCATT_FOLLOW );
-        entry->set_mission( NPC_MISSION_NULL );
-        if( entry->has_companion_mission() ) {
-            entry->reset_companion_mission();
-        }
-        entry->chatbin.first_topic = entry->chatbin.talk_friend;
-        entry->goal = npc::no_goal_point;
-        entry->guard_pos = std::nullopt;
-        entry->clear_ai_guard_pos();
-        entry->clear_committed_goal();
+        talk_function::stop_guard( *entry );
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );

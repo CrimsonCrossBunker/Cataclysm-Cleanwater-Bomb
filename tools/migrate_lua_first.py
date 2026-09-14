@@ -30808,10 +30808,10 @@ def render_eoc(
                 lines.append(f"    service_value(services.npcs.clear_stolen_item_claim({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "assign_guard":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, true))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stop_guard":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, false))")
                 converted_effect = True
             elif npc_actor_proven and effect == "buy_chicken":
                 lines.append(

@@ -911,3 +911,9 @@ hostility notification, flee/mugging messages, departure patience and stolen-ite
 claim clearing. Generated Lua exercises participant overrides and error propagation;
 native message/patience comparison source is present but unexecuted. Hostile event,
 visibility and stolen-item lifecycle runtime acceptance remain pending.
+
+Guard assignment/removal migration uses `set_guarding` and its native talk functions,
+rather than attitude-only changes. This retains the allied/non-allied branches,
+activity restoration, guard destinations and topics, and the allied stop notification.
+Generated Lua participant/error tests pass; allied/non-allied stop-state comparison
+source remains unexecuted, and assignment/camp/activity runtime coverage is pending.

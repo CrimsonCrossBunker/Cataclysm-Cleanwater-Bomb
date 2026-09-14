@@ -1028,6 +1028,59 @@ TEST_CASE( "lua_platform_confrontation_preserves_native_messages_and_patience",
     CHECK( fixture.other.patience == 8 );
 }
 
+TEST_CASE( "lua_platform_stop_guard_matches_allied_and_independent_state",
+           "[lua][platform][npc][semantic]" )
+{
+    const bool allied = GENERATE( false, true );
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = [allied]( npc & worker ) {
+        worker.normalize();
+        worker.name = "Test guard";
+        if( allied ) {
+            worker.set_fac( faction_id( "your_followers" ) );
+        }
+        worker.set_mission( allied ? NPC_MISSION_GUARD_ALLY : NPC_MISSION_GUARD );
+        worker.set_attitude( NPCATT_NULL );
+        worker.chatbin.first_topic = "TALK_TEST";
+        worker.chatbin.talk_friend = "TALK_FRIEND";
+        worker.goal = tripoint_abs_omt( 12, 13, 0 );
+        worker.set_guard_pos( tripoint_abs_ms( 14, 15, 0 ) );
+        worker.set_committed_goal( "guard_test" );
+    };
+    prepare( native );
+    prepare( fixture.other );
+    REQUIRE( fixture.other.is_player_ally() == allied );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    Messages::clear_messages();
+    talk_function::stop_guard( native );
+    const auto expected_messages = Messages::recent_messages( 10 );
+    Messages::clear_messages();
+    sol::protected_function stop = fixture.services["npcs"]["set_guarding"];
+    sol::protected_function_result call = stop( fixture.handle( true ), false );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( fixture.other.get_attitude() == native.get_attitude() );
+    CHECK( fixture.other.get_attitude() == ( allied ? NPCATT_FOLLOW : NPCATT_NULL ) );
+    CHECK( fixture.other.mission == native.mission );
+    CHECK( fixture.other.get_previous_mission() == native.get_previous_mission() );
+    CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
+    CHECK( fixture.other.goal == native.goal );
+    CHECK( fixture.other.get_guard_post() == native.get_guard_post() );
+    CHECK( fixture.other.get_ai_guard_pos() == native.get_ai_guard_pos() );
+    CHECK( fixture.other.get_committed_goal() == native.get_committed_goal() );
+    CHECK( Messages::recent_messages( 10 ) == expected_messages );
+    CHECK( expected_messages.size() == ( allied ? 1 : 0 ) );
+    Messages::clear_messages();
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {
