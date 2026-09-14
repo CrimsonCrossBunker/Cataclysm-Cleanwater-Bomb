@@ -217,9 +217,15 @@ static script_persistent_value read_persistent_value_impl( const JsonObject &ent
         if( coordinate.size() != 3 ) {
             throw std::invalid_argument( "Persistent tripoint must contain three integers" );
         }
-        result = script_persistent_tripoint{
-            coordinate.get_int( 0 ), coordinate.get_int( 1 ), coordinate.get_int( 2 )
+        const auto component = [&coordinate]( const std::size_t index ) {
+            const JsonValue value = coordinate[index];
+            if( !value.test_int() || value.get_float() < std::numeric_limits<int>::min() ||
+                value.get_float() > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument( "Persistent tripoint component exceeds integer range" );
+            }
+            return value.get_int();
         };
+        result = script_persistent_tripoint{ component( 0 ), component( 1 ), component( 2 ) };
     } else if( type == "array" ) {
         script_persistent_array array;
         for( const JsonObject child : entry.get_array( "value" ) ) {

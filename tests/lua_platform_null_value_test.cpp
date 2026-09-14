@@ -239,4 +239,15 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
 }
 
+TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
+           "[lua][platform][semantic][state]" )
+{
+    const std::string coordinates = GENERATE(
+                                        "[]", "[1,2]", "[1,2,3,4]", "[1.5,2,3]", "[true,2,3]",
+                                        "[2147483648,0,0]", "[-2147483649,0,0]", "[18446744073709551615,0,0]" );
+    const std::string input = R"({"type":"tripoint_abs_ms","value":)" + coordinates + "}";
+    CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
+                      json_loader::from_string( input ).get_object() ) );
+}
+
 #endif
