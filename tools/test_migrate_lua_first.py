@@ -18616,6 +18616,39 @@ end
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_run_eocs_variable_defaults_distinguish_missing_and_null(self) -> None:
+        for scope in ("context_val", "global_val", "u_val", "npc_val"):
+            with self.subTest(scope=scope):
+                lines = migrate_lua_first.render_static_run_eocs(
+                    {"run_eocs": "child", "variables": {
+                        "missing": {scope: "missing", "default": "fallback"},
+                        "empty": {scope: "empty", "default": "fallback"},
+                        "zero": {scope: "zero", "default": 42},
+                    }}, {"child": "child"}, actor_expression="actor",
+                    npc_actor_expression="actor")
+                self.assertIsNotNone(lines)
+                script = r"""
+local null = {}
+local actor = {}
+local context = {data={empty=null, zero=0}}
+local function read(key)
+    return {ok=true, value={exists=key ~= "missing", value=key == "zero" and 0 or nil}}
+end
+local services = {types={null=null}, variables={get_global=read,
+    resolve=function(data, owner, scope, key) return read(key) end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(ctx)
+    called = true
+    assert(ctx.data.missing == "fallback")
+    assert(ctx.data.empty == null)
+    assert(ctx.data.zero == 0)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(
             {"run_eocs": "child", "variables": {

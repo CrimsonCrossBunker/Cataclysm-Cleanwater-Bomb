@@ -3876,6 +3876,36 @@ def render_static_run_eocs(
                 variable_actor = parent_beta
             elif "u_val" in value:
                 variable_actor = parent_alpha
+        if isinstance(value, dict) and "default" in value:
+            descriptor = {key: entry for key, entry in value.items() if key != "default"}
+            if len(descriptor) != 1:
+                return None
+            scope, name = next(iter(descriptor.items()))
+            if scope not in {"u_val", "npc_val", "global_val", "context_val"}:
+                return None
+            if render_eoc_value_expression(descriptor, "nil", variable_actor) is None:
+                return None
+            default = ("services.types.null" if value["default"] is None else
+                       render_eoc_value_expression(value["default"], "nil", variable_actor))
+            # Defaults are native diag_value literals, not another variable read.
+            if isinstance(value["default"], dict) and not set(value["default"]) <= {
+                "str", "i18n", "//~", "tripoint",
+            }:
+                return None
+            if default is None:
+                return None
+            quoted = lua_quote(name)
+            if scope == "context_val":
+                return (f'(function(value) if value == nil then return {default} end; '
+                        f'return value end)(context.data[{quoted}])')
+            snapshot = (
+                f'services.variables.get_global({quoted})' if scope == "global_val" else
+                'services.variables.resolve(context.data, '
+                f'{variable_actor}, {lua_quote(scope.removesuffix("_val"))}, {quoted})'
+            )
+            return (f'(function(snapshot) if not snapshot.exists then return {default} end; '
+                    'if snapshot.value == nil then return services.types.null end; '
+                    f'return snapshot.value end)(service_value({snapshot}))')
         rendered = render_eoc_value_expression(value, "nil", variable_actor)
         if rendered is None:
             rendered = render_eoc_numeric_expression(value, "0", variable_actor)
