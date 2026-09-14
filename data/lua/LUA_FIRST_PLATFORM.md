@@ -964,3 +964,9 @@ Spawn-upgrade regression source additionally uses an upgrade-capable test monste
 with evolution enabled, covering omitted/true/false arguments and uninitialized
 upgrade time for the disabled path. It remains unexecuted; ordinary pet species
 alone are not evidence that the upgrade option works.
+
+Refusal migration uses `npcs.record_refusal` for follow, lead, equipment, training
+and personal-info requests, checking failures and retaining the resolved participant.
+The native cooldown durations are unchanged. Generated Lua verifies all request routes
+and failure propagation; repeated-request duration/permanence comparison exists as
+unexecuted C++ test source.

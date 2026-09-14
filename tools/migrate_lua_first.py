@@ -30770,29 +30770,12 @@ def render_eoc(
             elif npc_actor_proven and effect == "follow_only":
                 lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "deny_follow":
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "deny_follow", "deny_lead", "deny_equipment", "deny_train", "deny_personal_info",
+            }:
+                request = "training" if effect == "deny_train" else effect.removeprefix("deny_")
                 lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_follow"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_lead":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_lead"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_equipment":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_for_item"), services.time.duration(3600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_train":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_train"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_personal_info":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_personal_info"), services.time.duration(10800, "turn"))'
+                    f"    service_value(services.npcs.record_refusal({npc_actor_expression or 'actor'}, {lua_quote(request)}))"
                 )
                 converted_effect = True
             elif npc_actor_proven and effect == "player_leaving":

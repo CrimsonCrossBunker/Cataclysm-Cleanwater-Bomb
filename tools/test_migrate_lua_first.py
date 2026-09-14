@@ -10283,28 +10283,23 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('services.npcs.leave_player(actor, services.characters.avatar())', main)
             self.assertIn('services.npcs.follow_temporarily(actor)', main)
             self.assertIn(
-                'services.effects.add(actor, services.types.id("effect", "asked_to_follow"), '
-                'services.time.duration(21600, "turn"))',
+                'services.npcs.record_refusal(actor, "follow")',
                 main,
             )
             self.assertIn(
-                'services.effects.add(actor, services.types.id("effect", "asked_to_lead"), '
-                'services.time.duration(21600, "turn"))',
+                'services.npcs.record_refusal(actor, "lead")',
                 main,
             )
             self.assertIn(
-                'services.effects.add(actor, services.types.id("effect", "asked_for_item"), '
-                'services.time.duration(3600, "turn"))',
+                'services.npcs.record_refusal(actor, "equipment")',
                 main,
             )
             self.assertIn(
-                'services.effects.add(actor, services.types.id("effect", "asked_to_train"), '
-                'services.time.duration(21600, "turn"))',
+                'services.npcs.record_refusal(actor, "training")',
                 main,
             )
             self.assertIn(
-                'services.effects.add(actor, services.types.id("effect", "asked_personal_info"), '
-                'services.time.duration(10800, "turn"))',
+                'services.npcs.record_refusal(actor, "personal_info")',
                 main,
             )
             self.assertIn("condition TODO", report)
@@ -21525,6 +21520,38 @@ for _,target in ipairs({npc,override}) do
    end
   end
  end
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_refusal_migration_preserves_requests_and_failure_propagation(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "refusals",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["deny_follow", "deny_lead", "deny_equipment",
+                                              "deny_train", "deny_personal_info"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected,calls,fail
+local function service_value(result) assert(result.ok);return result.value end
+local services={npcs={record_refusal=function(target,request)
+ assert(target==expected);calls[#calls+1]=request
+ return {ok=not fail,value={already_active=true}}
+end}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target;calls={};fail=false
+ migrated_eoc_functions.refusals({actors={npc=npc}},target)
+ assert(table.concat(calls,',')=='follow,lead,equipment,training,personal_info')
+ calls={};fail=true
+ assert(not pcall(migrated_eoc_functions.refusals,{actors={npc=npc}},target))
+ assert(#calls==1)
 end
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,

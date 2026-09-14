@@ -1292,6 +1292,45 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
     g->clear_zombies();
 }
 
+TEST_CASE( "lua_platform_refusal_cooldowns_match_native_repeated_requests",
+           "[lua][platform][npc][semantic]" )
+{
+    const int index = GENERATE( 0, 1, 2, 3, 4 );
+    const std::vector<std::string> requests = { "follow", "lead", "equipment", "training", "personal_info" };
+    const std::vector<efftype_id> effects = {
+        efftype_id( "asked_to_follow" ), efftype_id( "asked_to_lead" ),
+        efftype_id( "asked_for_item" ), efftype_id( "asked_to_train" ),
+        efftype_id( "asked_personal_info" )
+    };
+    const std::vector<void ( * )( npc & )> native_calls = {
+        talk_function::deny_follow, talk_function::deny_lead, talk_function::deny_equipment,
+        talk_function::deny_train, talk_function::deny_personal_info
+    };
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function record = fixture.services["npcs"]["record_refusal"];
+    for( int repetition = 0; repetition < 2; ++repetition ) {
+        native_calls[index]( native );
+        sol::protected_function_result call = record( fixture.handle( true ), requests[index] );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        sol::table value = result["value"];
+        CHECK( value["already_active"].get<bool>() == ( repetition != 0 ) );
+        CHECK( fixture.other.has_effect( effects[index] ) );
+        CHECK( fixture.other.get_effect_dur( effects[index] ) == native.get_effect_dur( effects[index] ) );
+        CHECK( fixture.other.get_effect( effects[index] ).is_permanent() ==
+               native.get_effect( effects[index] ).is_permanent() );
+    }
+}
+
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",
            "[lua][platform][npc][semantic]" )
 {
