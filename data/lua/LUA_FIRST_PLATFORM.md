@@ -835,3 +835,9 @@ avatar and the exact NPC partner for ten minutes. `drop_items_in_place` uses
 the native `drop_carried_items` order, retaining its inventory filtering and
 empty-inventory behavior. Generated Lua tests verify event and overridden NPC
 participants; native activity execution and inventory outcomes remain unverified.
+
+Migrated `start_training` calls `npcs.training.start_selected` with the
+exact NPC provider and avatar student. It retains the native selected course,
+payment and duration calculation instead of assigning a fixed training timer.
+A successful call that starts no training remains a normal return. Generated
+Lua routing/error tests pass; native course/payment execution remains pending.
