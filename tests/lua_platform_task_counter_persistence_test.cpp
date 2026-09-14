@@ -1,6 +1,9 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "cata_path.h"
+#include "calendar.h"
+#include "lua_platform_state.h"
+#include <variant>
 #include "lua_platform_runtime_internal.h"
 #include "path_info.h"
 #include "worldfactory.h"
@@ -153,4 +156,67 @@ TEST_CASE( "lua_platform_preserves_absent_mod_task_counters_and_reads_legacy_rec
     retained.allow_omitted_members();
     CHECK( retained.get_int64( "last_task_id" ) == 77 );
 }
+TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
+           "[lua][platform][tasks][persistence][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    REQUIRE( world_generator != nullptr );
+    const platform_lua_test_directory temporary;
+    const std::string old_savedir = PATH_INFO::savedir();
+    WORLD *old_world = world_generator->active_world;
+    WORLD isolated_world( "null_payload_persistence" );
+    sol::state old_lua;
+    sol::state new_lua;
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    const on_out_of_scope cleanup( [&]() {
+        platform::clear_active_runtimes();
+        world_generator->active_world = old_world;
+        PATH_INFO::set_savedir( old_savedir );
+    } );
+    PATH_INFO::set_savedir( temporary.root.string() + "/" );
+    world_generator->active_world = &isolated_world;
+    REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
+    int calls = 0;
+    const auto install = [&calls]( sol::state & lua ) {
+        const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
+                    "null-payload-owner", 4910, lua );
+        sol::table ccb = lua.create_table();
+        platform::install_runtime_api( owner, lua, ccb );
+        lua["ccb"] = ccb;
+        lua.set_function( "receive", [&calls]( const sol::table & context ) {
+            const sol::table payload = context["payload"];
+            CHECK( payload.get<sol::object>( "empty" ).is<platform::script_null_value>() );
+            CHECK( payload.get<sol::object>( "missing" ).get_type() == sol::type::nil );
+            ++calls;
+        } );
+        const sol::protected_function_result registered = ccb["runtime"]["handler"](
+                    "tick", lua["receive"] );
+        REQUIRE( registered.valid() );
+        platform::set_active_runtimes( { owner } );
+        return owner;
+    };
+    const std::shared_ptr<platform::runtime> before = install( old_lua );
+    platform::runtime_world_ready( true );
+    platform::assign_persistent_value( before->world_state, "empty", platform::script_null_value{} );
+    sol::table payload = old_lua.create_table();
+    payload["empty"] = platform::script_null_value{};
+    const sol::protected_function_result scheduled = old_lua["ccb"]["tasks"]["after"](
+                1, "tick", payload, 1, "world" );
+    REQUIRE( scheduled.valid() );
+    std::string error;
+    REQUIRE( platform::runtime_save( error ) );
+    platform::clear_active_runtimes();
+    const std::shared_ptr<platform::runtime> after = install( new_lua );
+    platform::runtime_world_ready( false );
+    REQUIRE( after->tasks.size() == 1 );
+    CHECK( std::holds_alternative<platform::script_null_value>
+           ( after->tasks.front().payload.at( "empty" ) ) );
+    CHECK( std::holds_alternative<platform::script_null_value>( after->world_state.at( "empty" ) ) );
+    calendar::turn += 1_turns;
+    platform::runtime_process_tasks();
+    CHECK( calls == 1 );
+    CHECK( after->tasks.empty() );
+}
+
 #endif
