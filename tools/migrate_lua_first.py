@@ -31090,20 +31090,18 @@ def render_eoc(
                 lines.append(
                     f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
                 converted_effect = True
-            elif npc_actor_proven and effect == "start_training_npc":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "npc"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "start_training":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "player"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "start_training_seminar":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "seminar"))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "start_training", "start_training_npc", "start_training_seminar",
+            }:
+                mode = {"start_training": "player", "start_training_npc": "npc",
+                        "start_training_seminar": "seminar"}[effect]
+                provider = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f'        service_value(services.npcs.training.start_selected({provider}, '
+                    f'services.characters.avatar(), {lua_quote(mode)}))',
+                    "    end",
+                ])
                 converted_effect = True
             elif effect == "distribute_food_auto":
                 # This legacy operation discovers a camp from the NPC's

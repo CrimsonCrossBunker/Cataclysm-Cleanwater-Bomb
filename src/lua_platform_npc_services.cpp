@@ -1636,6 +1636,11 @@ sol::table start_selected_npc_training(
     if( student_avatar == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    if( student_avatar != &get_avatar() ) {
+        return make_game_error_result( state, {
+            "invalid_patient", "Selected training requires the active avatar participant"
+        } );
+    }
     Character *student = student_avatar;
     if( mode == "seminar" ) {
         talk_function::start_training_seminar( *provider );

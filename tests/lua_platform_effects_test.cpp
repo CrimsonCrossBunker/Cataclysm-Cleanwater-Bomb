@@ -1463,6 +1463,12 @@ TEST_CASE( "lua_platform_player_services_reject_a_different_avatar",
         CHECK_FALSE( result["ok"].get<bool>() );
         CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
     };
+    sol::protected_function training = fixture.services["npcs"]["training"]["start_selected"];
+    for( const std::string mode : {
+             "player", "npc", "seminar"
+         } ) {
+        rejected( training( fixture.handle( true ), fixture.handle( false ), mode ) );
+    }
     sol::protected_function aid = fixture.services["npcs"]["medical"]["provide_aid"];
     for( const std::string level : {
              "basic", "advanced"

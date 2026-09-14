@@ -11696,7 +11696,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             source.write_text(json.dumps({
                 "type": "effect_on_condition", "id": "trade_pair",
                 "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["start_trade", "revert_activity", "morale_chat_activity"],
+                "effect": ["start_trade", "revert_activity", "morale_chat_activity",
+                           "start_training", "start_training_npc", "start_training_seminar"],
             }), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "trade_pair_mod")
@@ -11706,6 +11707,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true)', main)
             self.assertIn("services.activities.revert_npc_job(context.actors.beta)", main)
             self.assertIn('services.activities.socialize(services.characters.avatar(), context.actors.beta, services.time.duration(600, "turn"))', main)
+
+            for mode in ("player", "npc", "seminar"):
+                self.assertIn(f'services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "{mode}")', main)
 
 
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:

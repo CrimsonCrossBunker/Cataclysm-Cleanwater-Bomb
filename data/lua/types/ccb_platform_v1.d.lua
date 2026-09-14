@@ -9420,7 +9420,7 @@ function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@return CcbResult
 function CcbNpcTrainingApi.start(teacher, students, subject) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param student GameHandle Exact avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
+---@param student GameHandle Exact active avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
 ---@param mode 'player'|'seminar'|'npc' Uses the NPC's selected course. npc mode teaches that NPC from the avatar; other modes teach from the NPC. Seminar cancellation is a normal return; result flags describe NPC/avatar activity only.
 ---@return CcbResult
 function CcbNpcTrainingApi.start_selected(provider, student, mode) end
