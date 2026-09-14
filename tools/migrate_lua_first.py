@@ -31009,7 +31009,7 @@ def render_eoc(
                         "needs vehicle service conversion"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
             }:
                 method, choice = {
@@ -31018,9 +31018,15 @@ def render_eoc(
                     "buy_haircut": ("provide", "haircut"),
                     "buy_shave": ("provide", "shave"),
                 }[effect]
-                lines.append(
-                    f"    service_value(services.npcs.grooming.{method}("
-                    f"{npc_actor_expression or 'actor'}, services.characters.avatar(), {lua_quote(choice)}))")
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression or 'actor'}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    f"            service_value(services.npcs.grooming.{method}("
+                    f"provider, services.characters.avatar(), {lua_quote(choice)}))",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif npc_actor_proven and effect == "start_trade":
                 lines.append(

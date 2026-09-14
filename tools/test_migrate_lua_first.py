@@ -11662,6 +11662,23 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
             self.assertNotIn('actor, "install"', main)
 
+    def test_grooming_services_use_explicit_beta_and_current_player(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition", "id": "grooming_pair",
+                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                "effect": ["barber_hair", "barber_beard", "buy_haircut", "buy_shave"],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "grooming_pair_mod")
+            main = result.files[Path("main.lua")]
+            self.assertEqual(main.count("local provider = context.actors.beta"), 4)
+            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 4)
+            for method, choice in (("open_style", "hair"), ("open_style", "beard"),
+                                   ("provide", "haircut"), ("provide", "shave")):
+                self.assertIn(f'services.npcs.grooming.{method}(provider, services.characters.avatar(), "{choice}")', main)
+
     def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -21173,19 +21190,20 @@ assert(calls==3 and continued==2)
             "required_event": "npc_becomes_hostile", "effect": effects})
         rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
         script = r"""
-local avatar,npc={},{}
+local avatar,npc={subtype="avatar"},{subtype="npc"}
 local calls={}
+local fail=false
 local function service_value(result) assert(result.ok);return result.value end
 local services={
  characters={avatar=function() return avatar end},
  npcs={grooming={
   open_style=function(provider,client,area)
    assert(provider==npc and client==avatar);calls[#calls+1]='style:'..area
-   return {ok=true,value={}}
+   return {ok=not fail,value={}}
   end,
   provide=function(provider,client,service)
    assert(provider==npc and client==avatar);calls[#calls+1]='provide:'..service
-   return {ok=true,value={}}
+   return {ok=not fail,value={}}
   end
  }}
 }
@@ -21194,6 +21212,12 @@ local runtime={handler=function() end,on=function() end}
 BODY
 migrated_eoc_functions.groom({actors={npc=npc}},nil)
 assert(table.concat(calls,',')=='style:hair,style:beard,provide:haircut,provide:shave')
+calls={}
+migrated_eoc_functions.groom({actors={npc=avatar}},avatar)
+assert(#calls==0)
+fail=true
+assert(not pcall(migrated_eoc_functions.groom,{actors={npc=npc}},npc))
+assert(#calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
