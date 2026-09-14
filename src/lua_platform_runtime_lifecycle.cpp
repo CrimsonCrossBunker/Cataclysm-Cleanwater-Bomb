@@ -267,28 +267,7 @@ persistent_state read_typed_values( const JsonObject &values )
     for( const JsonMember member : values ) {
         const std::string key = member.name();
         const JsonObject entry = member.get_object();
-        const std::string type = entry.get_string( "type" );
-        if( type == "null" ) {
-            if( !entry.get_member( "value" ).test_null() ) {
-                throw std::runtime_error( "Platform null state value must be null" );
-            }
-            assign_persistent_value( result, key, script_null_value{} );
-        } else if( type == "boolean" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_bool( "value" ) );
-        } else if( type == "integer" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_int64( "value" ) );
-        } else if( type == "float" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_float( "value" ) );
-        } else if( type == "string" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_string( "value" ) );
-        } else {
-            throw std::runtime_error( "unknown Platform state value type '" + type + "'" );
-        }
-        entry.allow_omitted_members();
+        assign_persistent_value( result, key, detail::read_persistent_value( entry ) );
     }
     values.allow_omitted_members();
     return result;

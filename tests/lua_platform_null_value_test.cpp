@@ -171,4 +171,19 @@ TEST_CASE( "lua_platform_context_copy_empty_value_matches_native",
     }
 }
 
+TEST_CASE( "lua_platform_null_storage_rejects_mismatched_types",
+           "[lua][platform][semantic][state]" )
+{
+    using namespace cata::lua_platform;
+    const std::string invalid_value = GENERATE( "0", "false", "\"null\"", "[]", "{}" );
+    const std::string entry = R"({"type":"null","value":)" + invalid_value + "}";
+    CHECK_THROWS( cata::lua_platform::detail::read_persistent_value( json_loader::from_string(
+                      entry ).get_object() ) );
+    const std::string document = R"({"version":1,"values":{"empty":)" + entry + "}}";
+    CHECK_THROWS( read_persistent_state( json_loader::from_string( document ) ) );
+    const auto valid = cata::lua_platform::detail::read_persistent_value(
+                           json_loader::from_string( R"({"type":"null","value":null})" ).get_object() );
+    CHECK( std::holds_alternative<script_null_value>( valid ) );
+}
+
 #endif

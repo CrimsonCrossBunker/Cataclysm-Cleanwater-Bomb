@@ -12,6 +12,7 @@
 #include <variant>
 
 class JsonValue;
+class JsonObject;
 class JsonOut;
 
 namespace cata::lua_platform
@@ -60,6 +61,7 @@ class bounded_state_output_buffer final : public std::streambuf
 };
 // Write the type and value members inside an already-open JSON object.
 void write_persistent_value( JsonOut &json, const script_persistent_value &value );
+script_persistent_value read_persistent_value( const JsonObject &entry );
 } // namespace detail
 
 // Assign one validated value without partially changing the state on failure.

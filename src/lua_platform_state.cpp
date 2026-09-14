@@ -136,6 +136,30 @@ void detail::write_persistent_value( JsonOut &json, const script_persistent_valu
     }, value );
 }
 
+script_persistent_value detail::read_persistent_value( const JsonObject &entry )
+{
+    const std::string type = entry.get_string( "type" );
+    script_persistent_value result;
+    if( type == "null" ) {
+        if( !entry.get_member( "value" ).test_null() ) {
+            throw std::invalid_argument( "Lua null state value must be null" );
+        }
+        result = script_null_value{};
+    } else if( type == "boolean" ) {
+        result = entry.get_bool( "value" );
+    } else if( type == "integer" ) {
+        result = entry.get_int64( "value" );
+    } else if( type == "float" ) {
+        result = entry.get_float( "value" );
+    } else if( type == "string" ) {
+        result = entry.get_string( "value" );
+    } else {
+        throw std::invalid_argument( "Unknown Lua persistent state value type '" + type + "'" );
+    }
+    entry.allow_omitted_members();
+    return result;
+}
+
 void assign_persistent_value( script_persistent_state &state, const std::string &key,
                               const script_persistent_value &value )
 {
@@ -215,24 +239,7 @@ script_persistent_state read_persistent_state( const JsonValue &input )
     for( const JsonMember member : values ) {
         const std::string key = member.name();
         const JsonObject entry = member.get_object();
-        const std::string type = entry.get_string( "type" );
-        if( type == "null" ) {
-            if( !entry.get_member( "value" ).test_null() ) {
-                throw std::invalid_argument( "Lua null state value must be null" );
-            }
-            assign_persistent_value( result, key, script_null_value{} );
-        } else if( type == "boolean" ) {
-            assign_persistent_value( result, key, entry.get_bool( "value" ) );
-        } else if( type == "integer" ) {
-            assign_persistent_value( result, key, entry.get_int64( "value" ) );
-        } else if( type == "float" ) {
-            assign_persistent_value( result, key, entry.get_float( "value" ) );
-        } else if( type == "string" ) {
-            assign_persistent_value( result, key, entry.get_string( "value" ) );
-        } else {
-            throw std::invalid_argument( "Unknown Lua persistent state value type '" + type + "'" );
-        }
-        entry.allow_omitted_members();
+        assign_persistent_value( result, key, detail::read_persistent_value( entry ) );
     }
     root.allow_omitted_members();
     return result;
