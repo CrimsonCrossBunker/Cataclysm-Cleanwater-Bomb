@@ -10423,11 +10423,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('services.activities.assign_npc_job(actor, "fishing")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "mining")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "mopping")', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_READ"), services.time.duration(1800, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "read")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "read_repeatedly")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "study")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "sort_loot")', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CRAFT"), services.time.duration(3600, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(actor, "craft")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "disassembly")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "vehicle_deconstruct")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "vehicle_repair")', main)
@@ -20836,6 +20836,43 @@ local ok,err=pcall(migrated_eoc_functions.jobs,{actors={npc=npc}},override)
 assert(not ok and tostring(err):find('assignment failed',1,true) and calls==1)
 """.replace("EXPECTED", ",".join(migrate_lua_first.lua_quote(job) for job in jobs.values()))
         script = script.replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_interactive_npc_jobs_preserve_cancel_and_real_errors(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "interactive_jobs",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["do_read", "do_eread", "do_craft"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local npc={}
+local calls=0
+local mode='assignment_rejected'
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={activities={assign_npc_job=function(target,job)
+ calls=calls+1
+ assert(target==npc and job==({'read','read_ebook','craft'})[calls])
+ if mode=='success' then return {ok=true,value={}} end
+ return {ok=false,error={code=mode}}
+end}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.interactive_jobs({actors={npc=npc}},nil)
+assert(calls==3)
+calls=0;mode='success'
+migrated_eoc_functions.interactive_jobs({actors={npc=npc}},nil)
+assert(calls==3)
+calls=0;mode='stale_npc'
+local ok,err=pcall(migrated_eoc_functions.interactive_jobs,{actors={npc=npc}},nil)
+assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
+""".replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)

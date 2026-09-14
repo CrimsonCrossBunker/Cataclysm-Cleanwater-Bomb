@@ -814,3 +814,10 @@ operations assign the native activity actors instead of approximating work
 with a fixed duration. Generated Lua tests verify all fourteen routes and
 failure propagation. Native assignment comparison test source is present but
 has not executed; other interactive NPC job paths still require review.
+
+Migrated NPC reading, ebook reading and crafting use the corresponding
+`assign_npc_job` operations and native selection flows. A returned
+`assignment_rejected` leaves execution free to continue, matching native
+return-without-assignment behavior; other service errors propagate. Generated
+Lua tests cover success, no assignment and stale-handle failure. Interactive
+selection and gameplay acceptance remain pending.

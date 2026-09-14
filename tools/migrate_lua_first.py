@@ -5679,6 +5679,18 @@ def render_message_effect(
     return lines
 
 
+def render_optional_npc_job(target: str, job: str) -> list[str]:
+    """Native interactive jobs may return without assigning an activity."""
+    return [
+        "    do",
+        f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
+        '        if not assignment.ok and assignment.error.code ~= "assignment_rejected" then',
+        "            service_value(assignment)",
+        "        end",
+        "    end",
+    ]
+
+
 def render_static_foreach(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
@@ -30939,7 +30951,8 @@ def render_eoc(
                     f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mopping"))')
                 converted_effect = True
             elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
-                lines.append(render_named_character_activity("actor", "ACT_READ", 30))
+                lines.extend(render_optional_npc_job(
+                    npc_actor_expression or "actor", "read_ebook" if effect == "do_eread" else "read"))
                 converted_effect = True
             elif npc_actor_proven and effect == "do_read_repeatedly":
                 lines.append(
@@ -30954,7 +30967,7 @@ def render_eoc(
                     f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "sort_loot"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_craft":
-                lines.append(render_named_character_activity("actor", "ACT_CRAFT", 60))
+                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "craft"))
                 converted_effect = True
             elif npc_actor_proven and effect == "do_disassembly":
                 lines.append(
