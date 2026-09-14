@@ -848,3 +848,10 @@ The avatar handle is validated before selection; returned provider/player flags
 do not enumerate all seminar students. Migrated `start_training_seminar` uses
 this mode. Generated Lua cancellation/routing tests pass; native menu, payment
 and multi-student training acceptance remain pending.
+
+Selected training also supports `"npc"` mode: the avatar teaches the exact
+NPC using that NPC's selected dialogue course. The avatar argument remains
+explicit and validated even though its role changes to teacher. Migrated
+`start_training_npc` uses this mode when its NPC is proven. Generated Lua
+role/routing tests pass; native skill transfer, fees and activity completion
+remain pending acceptance.

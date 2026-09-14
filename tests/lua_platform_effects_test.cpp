@@ -768,7 +768,7 @@ TEST_CASE( "lua_platform_seminar_checks_avatar_before_opening_selection",
     }, []() {}, []() {} );
     sol::protected_function start = npcs["training"]["start_selected"];
     for( const std::string mode : {
-             std::string( "player" ), std::string( "seminar" )
+             std::string( "player" ), std::string( "seminar" ), std::string( "npc" )
          } ) {
         sol::protected_function_result call = start(
                 fixture.handle( true ), fixture.handle( true ), mode );

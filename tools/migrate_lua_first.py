@@ -30989,6 +30989,11 @@ def render_eoc(
             elif npc_actor_proven and effect == "find_mount":
                 lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))
                 converted_effect = True
+            elif npc_actor_proven and effect == "start_training_npc":
+                lines.append(
+                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
+                    'services.characters.avatar(), "npc"))')
+                converted_effect = True
             elif npc_actor_proven and effect == "start_training":
                 lines.append(
                     f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '

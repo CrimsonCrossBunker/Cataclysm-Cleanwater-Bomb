@@ -11382,16 +11382,16 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 0)
-            self.assertTrue(result.partial)
+            self.assertEqual(len(result.converted), 1)
+            self.assertFalse(result.partial)
             self.assertIn("services.npcs.open_rules(actor)", main)
             self.assertIn(
                 "services.npcs.orders.open_pickup_rules(actor)", main
             )
-            self.assertNotIn("services.npcs.training.start_selected", main)
-            self.assertIn("needs domain-service conversion", report)
+            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "npc")', main)
+            self.assertNotIn("needs domain-service conversion", report)
 
-    def test_keeps_implicit_npc_dialogue_and_training_as_todos(self) -> None:
+    def test_keeps_implicit_dialogue_gaps_while_migrating_npc_training(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11416,17 +11416,16 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 3)
+            self.assertEqual(len(result.todos), 2)
             self.assertNotIn("services.dialogue.open_topic", main)
             self.assertNotIn("services.npcs.open_dialogue", main)
-            self.assertNotIn("services.characters.avatar()", main)
-            self.assertNotIn("services.npcs.training.start_selected", main)
+            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "npc")', main)
             self.assertIn(
                 "exact NPC and avatar handles plus an explicit topic", main
             )
             self.assertIn("explicit dialogue participant conversion", report)
             self.assertIn("exact NPC/avatar handles and topic", report)
-            self.assertIn("needs domain-service conversion", report)
+            self.assertNotIn("needs domain-service conversion", report)
 
     def test_npc_radio_representation_requires_an_explicit_avatar_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -20976,6 +20975,51 @@ local services={
  characters={avatar=function() return avatar end},
  npcs={training={start_selected=function(provider,student,mode)
   assert(provider==expected and student==avatar and mode=='player')
+  calls=calls+1
+  if fail then return {ok=false,error={code='stale_npc'}} end
+  return {ok=true,value={player_training=false,provider_training=false}}
+ end}},
+ activities={revert_npc_job=function(target)
+  assert(target==expected);continued=continued+1;return {ok=true,value={}}
+ end}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.train({actors={npc=npc}},nil)
+assert(calls==1 and continued==1)
+expected=override
+migrated_eoc_functions.train({actors={npc=npc}},override)
+assert(calls==2 and continued==2)
+fail=true
+local ok,err=pcall(migrated_eoc_functions.train,{actors={npc=npc}},override)
+assert(not ok and tostring(err):find('stale_npc',1,true))
+assert(calls==3 and continued==2)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_training_uses_avatar_teacher_mode(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["start_training_npc", "revert_activity"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc,override={},{},{}
+local expected=npc
+local calls,continued=0,0
+local fail=false
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={
+ characters={avatar=function() return avatar end},
+ npcs={training={start_selected=function(provider,student,mode)
+  assert(provider==expected and student==avatar and mode=='npc')
   calls=calls+1
   if fail then return {ok=false,error={code='stale_npc'}} end
   return {ok=true,value={player_training=false,provider_training=false}}

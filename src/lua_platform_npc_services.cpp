@@ -1631,10 +1631,10 @@ sol::table start_selected_npc_training(
         return make_game_error_result(
                    state, *error );
     }
-    if( mode != "player" && mode != "seminar" ) {
+    if( mode != "player" && mode != "seminar" && mode != "npc" ) {
         return make_game_error_result( state, {
             "unsupported_target",
-            "services.npcs.training.start_selected requires player or seminar mode"
+            "services.npcs.training.start_selected requires player, seminar or npc mode"
         } );
     }
     avatar *student_avatar = resolve_exact_avatar(
@@ -1646,6 +1646,8 @@ sol::table start_selected_npc_training(
     Character *student = student_avatar;
     if( mode == "seminar" ) {
         talk_function::start_training_seminar( *provider );
+    } else if( mode == "npc" ) {
+        talk_function::start_training_npc( *provider );
     } else {
         talk_function::start_training( *provider );
     }
