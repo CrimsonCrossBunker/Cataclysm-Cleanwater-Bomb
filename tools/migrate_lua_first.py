@@ -5757,7 +5757,8 @@ def render_static_foreach(
     if mode == "item_group":
         lines.append(
             "    local foreach_page = services.items.possible_from_group("
-            f"services.types.id(\"item_group\", {lua_quote(target)}))"
+            f"services.types.id(\"item_group\", {lua_quote(target)}), "
+            '{ order = "native" })'
         )
         lines.append("    for _, entry in ipairs(foreach_page.items) do")
         if not append_body("entry.value"):

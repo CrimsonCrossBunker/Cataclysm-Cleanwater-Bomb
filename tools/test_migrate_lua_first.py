@@ -10168,7 +10168,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn(
-                'services.items.possible_from_group(services.types.id("item_group", "forest"))',
+                'services.items.possible_from_group(services.types.id("item_group", "forest"), { order = "native" })',
                 main,
             )
             self.assertIn(

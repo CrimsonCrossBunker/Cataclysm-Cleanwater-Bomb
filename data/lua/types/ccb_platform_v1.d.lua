@@ -8958,8 +8958,9 @@ function CcbItemsApi.snapshot(handle, relation_limit) end
 ---@return integer
 function CcbItemsApi.food_fun(id) end
 ---@param group GameId GameId<item_group>
+---@param options? {order?: "id"|"native"} Default ID sorting; native preserves current item-group enumeration order.
 ---@return table
-function CcbItemsApi.possible_from_group(group) end
+function CcbItemsApi.possible_from_group(group, options) end
 ---@param handle GameHandle Exact live item handle.
 ---@param updates CcbItemUpdateOptions
 ---@return CcbResult

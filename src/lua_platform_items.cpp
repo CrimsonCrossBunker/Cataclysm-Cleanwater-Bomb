@@ -1733,12 +1733,30 @@ int item_type_food_fun( const script_game_id &requested_id )
 }
 
 sol::table possible_items_from_group(
-    sol::this_state lua, const script_game_id &requested_group )
+    sol::this_state lua, const script_game_id &requested_group,
+    const sol::optional<sol::table> &options )
 {
     constexpr std::string_view api_name =
         "services.items.possible_from_group";
     require_id_kind(
         requested_group, "item_group", std::string( api_name ) );
+    bool native_order = false;
+    if( options ) {
+        for( const auto &field : *options ) {
+            if( field.first.get_type() != sol::type::string ||
+                field.first.as<std::string>() != "order" ||
+                field.second.get_type() != sol::type::string ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) + " expects an order string option" );
+            }
+            const std::string order = field.second.as<std::string>();
+            if( order != "id" && order != "native" ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) + " order must be id or native" );
+            }
+            native_order = order == "native";
+        }
+    }
     std::vector<std::string> ids;
     for( const itype *entry : item_group::every_possible_item_from(
              item_group_id( requested_group.value() ) ) ) {
@@ -1746,8 +1764,10 @@ sol::table possible_items_from_group(
             ids.push_back( entry->get_id().str() );
         }
     }
-    std::sort( ids.begin(), ids.end() );
-    ids.erase( std::unique( ids.begin(), ids.end() ), ids.end() );
+    if( !native_order ) {
+        std::sort( ids.begin(), ids.end() );
+        ids.erase( std::unique( ids.begin(), ids.end() ), ids.end() );
+    }
 
     sol::state_view state( lua );
     sol::table items = state.create_table(
@@ -6822,10 +6842,10 @@ void install_item_api(
     items.set_function(
         "possible_from_group",
         [require_read]( sol::this_state lua_state,
-    const script_game_id & group ) {
+    const script_game_id & group, const sol::optional<sol::table> &options ) {
         require_read();
         return possible_items_from_group(
-                   lua_state, group );
+                   lua_state, group, options );
     } );
     items.set_function(
         "update",

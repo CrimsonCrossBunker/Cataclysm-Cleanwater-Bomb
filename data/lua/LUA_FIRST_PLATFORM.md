@@ -760,3 +760,9 @@ native group traversal sequence, including repeated monster occurrences. Default
 `order = "id"` keeps the sorted, unique list. Pagination in native mode counts
 occurrences, and migrated monster-group iteration requests this mode. Native
 comparison test source is present; execution remains due at batch acceptance.
+
+`services.items.possible_from_group(group, {order = "native"})` preserves
+the native item-group pointer-set traversal order. The default remains sorted
+unique item IDs. Native order is meaningful within the current process and data
+load, not a stable ordering across launches. Migrated item-group iteration uses
+this option. Native comparison test source is present; execution remains due.
