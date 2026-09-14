@@ -17894,7 +17894,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertEqual(result.todos, [])
             self.assertIn(
                 'ccb.tasks.after(2, "migrated-task.delayed_target", '
-                'context.data, 1, "world")',
+                'child_context.data, 1, "world")',
                 main,
             )
             self.assertIn(
@@ -17938,7 +17938,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertEqual(result.todos, [])
             self.assertIn(
                 'ccb.tasks.after(2, "migrated-task.npc_delayed_target", '
-                'context.data, 1, '
+                'child_context.data, 1, '
                 '"character", delayed_task_actor)',
                 main,
             )
@@ -17989,7 +17989,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertEqual(result.todos, [])
             self.assertIn(
                 'ccb.tasks.after(10, "migrated-task.delayed_talker_target", '
-                'context.data, 1, "world", '
+                'child_context.data, 1, "world", '
                 'nil, { alpha = selected_alpha, beta = selected_beta })',
                 main,
             )
@@ -18237,7 +18237,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertIn(
                 'migrated_eoc_functions["recipe_result_callback"]', main
             )
-            self.assertIn("migrated_eoc_recipe_result_callback(context, actor)", main)
+            self.assertIn("migrated_eoc_recipe_result_callback(child_context, actor)", main)
             self.assertNotIn("typed callback/task conversion", report)
 
     def test_delayed_run_eocs_accept_dynamic_bounded_time_ranges(self) -> None:
@@ -20122,6 +20122,15 @@ assert(calls==2 and context.conditions.check==original and context.conditions.ad
 assert(context.data.nested[2][1]==2)
 """.replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        no_variables = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": ["first", "second"]},
+            {"first": "first", "second": "second"}, actor_expression="actor",
+            avatar_actor_proven=True)
+        self.assertIsNotNone(no_variables)
+        plain_script = script.replace("\n".join(lines), "\n".join(no_variables))
+        result = subprocess.run(["lua", "-"], input=plain_script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 

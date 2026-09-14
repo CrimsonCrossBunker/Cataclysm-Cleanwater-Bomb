@@ -4057,39 +4057,39 @@ def render_static_run_eocs(
         return None
     context_expression = "context"
     prefix: list[str] = []
-    if variables:
-        prefix.extend([
-            "    local function copy_child_value(value)",
-            "        if services.types and value == services.types.null then return value end",
-            "        if type(value) ~= \"table\" then return value end",
-            "        local copied = {}",
-            "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
-            "        return copied",
-            "    end",
-            "    local child_data = {}",
-            "    for name, value in pairs((context and context.data) or {}) do",
-            "        child_data[name] = copy_child_value(value)",
-            "    end",
-        ])
-        for name, value in variables.items():
-            rendered = variable_expression(value)
-            if rendered is None:
-                return None
+    prefix.extend([
+        "    local function copy_child_value(value)",
+        "        if services.types and value == services.types.null then return value end",
+        "        if type(value) ~= \"table\" then return value end",
+        "        local copied = {}",
+        "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
+        "        return copied",
+        "    end",
+        "    local child_data = {}",
+        "    for name, value in pairs((context and context.data) or {}) do",
+        "        child_data[name] = copy_child_value(value)",
+        "    end",
+    ])
+    for name, value in (variables or {}).items():
+        rendered = variable_expression(value)
+        if rendered is None:
+            return None
+        prefix.append(
+            f"    child_data[{lua_quote(name)}] = {rendered}"
+        )
+        if not name.startswith("_"):
             prefix.append(
-                f"    child_data[{lua_quote(name)}] = {rendered}"
+                f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
             )
-            if not name.startswith("_"):
-                prefix.append(
-                    f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
-                )
-        prefix.extend([
-            "    local child_conditions = {}",
-            "    for name, predicate in pairs(context.conditions or {}) do",
-            "        child_conditions[name] = predicate",
-            "    end",
-            "    local child_context = { data = child_data, conditions = child_conditions }",
-        ])
-        context_expression = "child_context"
+    prefix.extend([
+        "    local child_conditions = {}",
+        "    for name, predicate in pairs(context.conditions or {}) do",
+        "        child_conditions[name] = predicate",
+        "    end",
+        "    local child_context = { data = child_data, conditions = child_conditions, actors = {} }",
+        "    for name, handle in pairs(context.actors or {}) do child_context.actors[name] = handle end",
+    ])
+    context_expression = "child_context"
     iterations = effect.get("iterations")
     loop_count_expression = None
     if iterations is not None:
