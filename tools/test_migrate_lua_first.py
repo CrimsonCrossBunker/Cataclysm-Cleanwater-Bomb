@@ -11674,6 +11674,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "do_vehicle_deconstruct": "vehicle_deconstruct",
                 "do_vehicle_repair": "vehicle_repair",
                 }
+        jobs.update({"do_read": "read", "do_eread": "read_ebook",
+                     "do_craft": "craft", "find_mount": "find_mount"})
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps({
@@ -20989,7 +20991,7 @@ assert(calls==0)
                                    "effect": ["do_read", "do_eread", "do_craft"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local npc={}
+local npc={subtype="npc"}
 local calls=0
 local mode='assignment_rejected'
 local function service_value(result)
@@ -21026,7 +21028,7 @@ assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
                                    "effect": ["find_mount", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local npc={}
+local npc={subtype="npc"}
 local mode='no_match'
 local calls,continued=0,0
 local function service_value(result)

@@ -5684,7 +5684,7 @@ def render_optional_npc_job(
 ) -> list[str]:
     """Native interactive jobs may return without assigning an activity."""
     return [
-        "    do",
+        f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
         f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
         f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
         "            service_value(assignment)",
@@ -31072,19 +31072,18 @@ def render_eoc(
                     "    end",
                 ])
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "do_read", "do_eread", "do_craft", "find_mount",
+            }:
+                job = {"do_read": "read", "do_eread": "read_ebook",
+                       "do_craft": "craft", "find_mount": "find_mount"}[effect]
+                normal_return = "no_match" if effect == "find_mount" else "assignment_rejected"
                 lines.extend(render_optional_npc_job(
-                    npc_actor_expression or "actor", "read_ebook" if effect == "do_eread" else "read"))
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_craft":
-                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "craft"))
+                    npc_actor_expression or "actor", job, normal_return))
                 converted_effect = True
             elif npc_actor_proven and effect == "drop_items_in_place":
                 lines.append(
                     f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "find_mount":
-                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))
                 converted_effect = True
             elif npc_actor_proven and effect == "start_training_npc":
                 lines.append(
