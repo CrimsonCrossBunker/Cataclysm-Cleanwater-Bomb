@@ -1436,7 +1436,7 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
     CHECK_FALSE( query().valid() );
 }
 
-TEST_CASE( "lua_platform_bionic_repair_rejects_a_different_avatar",
+TEST_CASE( "lua_platform_player_services_reject_a_different_avatar",
            "[lua][platform][npc][semantic]" )
 {
     effect_fixture fixture;
@@ -1455,6 +1455,36 @@ TEST_CASE( "lua_platform_bionic_repair_rejects_a_different_avatar",
     sol::table result = call;
     CHECK_FALSE( result["ok"].get<bool>() );
     CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
+    CHECK( get_avatar().get_moves() == moves_before );
+    CHECK( fixture.other.op_of_u.owed == debt_before );
+    const auto rejected = []( sol::protected_function_result call ) {
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+        CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
+    };
+    sol::protected_function aid = fixture.services["npcs"]["medical"]["provide_aid"];
+    for( const std::string level : {
+             "basic", "advanced"
+         } ) {
+        for( const bool allies : {
+                 false, true
+             } ) {
+            rejected( aid( fixture.handle( true ), fixture.handle( false ), level, allies ) );
+        }
+    }
+    sol::protected_function style = fixture.services["npcs"]["grooming"]["open_style"];
+    for( const std::string area : {
+             "hair", "beard"
+         } ) {
+        rejected( style( fixture.handle( true ), fixture.handle( false ), area ) );
+    }
+    sol::protected_function groom = fixture.services["npcs"]["grooming"]["provide"];
+    for( const std::string kind : {
+             "haircut", "shave"
+         } ) {
+        rejected( groom( fixture.handle( true ), fixture.handle( false ), kind ) );
+    }
     CHECK( get_avatar().get_moves() == moves_before );
     CHECK( fixture.other.op_of_u.owed == debt_before );
 }

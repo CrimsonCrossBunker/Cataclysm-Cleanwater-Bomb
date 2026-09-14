@@ -9380,7 +9380,7 @@ function CcbNpcMissionsApi.claim_selected_reward(provider, owner) end
 ---@class CcbNpcMedicalApi
 local CcbNpcMedicalApi = {}
 ---@param provider GameHandle Exact NPC provider handle.
----@param patient GameHandle Exact avatar handle; required, no avatar fallback.
+---@param patient GameHandle Exact active avatar handle; required, no avatar fallback.
 ---@param level? 'basic'|'advanced'
 ---@param include_allies? boolean
 ---@return CcbResult
@@ -9398,12 +9398,12 @@ function CcbNpcMedicalApi.repair_bionic_limbs(provider, patient) end
 ---@class CcbNpcGroomingApi
 local CcbNpcGroomingApi = {}
 ---@param provider GameHandle Exact NPC provider handle.
----@param client GameHandle Exact avatar handle; required, no fallback.
+---@param client GameHandle Exact active avatar handle; required, no fallback.
 ---@param area 'hair'|'beard'
 ---@return CcbResult
 function CcbNpcGroomingApi.open_style(provider, client, area) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param client GameHandle Exact avatar handle; required, no fallback.
+---@param client GameHandle Exact active avatar handle; required, no fallback.
 ---@param service 'haircut'|'shave'
 ---@return CcbResult
 function CcbNpcGroomingApi.provide(provider, client, service) end
