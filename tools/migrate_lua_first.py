@@ -5673,13 +5673,13 @@ def render_static_foreach(
         page_expression: str, entries_field: str, item_expression: str,
     ) -> bool:
         lines.extend([
+            "    local foreach_values = {}",
             "    local foreach_offset = 0",
             "    while true do",
             f"        local foreach_page = {page_expression}",
             f"        for _, entry in ipairs(foreach_page.{entries_field}) do",
         ])
-        if not append_body(item_expression):
-            return False
+        lines.append(f"            foreach_values[#foreach_values + 1] = {item_expression}")
         lines.extend([
             "        end",
             "        if not foreach_page.has_more or foreach_page.returned == 0 then",
@@ -5688,6 +5688,10 @@ def render_static_foreach(
             "        foreach_offset = foreach_offset + foreach_page.returned",
             "    end",
         ])
+        lines.append("    for _, entry in ipairs(foreach_values) do")
+        if not append_body("entry"):
+            return False
+        lines.append("    end")
         return True
 
     if mode == "array":

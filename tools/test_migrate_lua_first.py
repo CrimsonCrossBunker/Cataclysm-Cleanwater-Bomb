@@ -20478,6 +20478,30 @@ assert(context.data.entry=='299' and calls==COUNT)
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_collects_registry_pages_before_effects(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "ids", "target": "bodypart", "var": {"context_val": "entry"},
+            "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local context={data={}}
+local pages,calls=0,0
+local services={registry={list=function(kind,options)
+ assert(kind=='body_part' and calls==0 and options.offset==pages)
+ pages=pages+1
+ return {entries={{id=pages==1 and 'first' or 'second'}},returned=1,has_more=pages==1}
+end},message=function()
+ calls=calls+1;assert(pages==2 and context.data.entry==({'first','second'})[calls])
+end}
+BODY
+assert(pages==2 and calls==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
