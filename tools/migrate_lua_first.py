@@ -25018,8 +25018,10 @@ def render_static_character_copy_var(
         '            copied = service_value(services.variables.resolve(',
         '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
         '        end',
+        '        local copied_value = copied.value',
+        '        if copied_value == nil then copied_value = services.types.null end',
         '        service_value(services.variables.set_resolved(',
-        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied_value))',
         '    end',
     ])
     return lines

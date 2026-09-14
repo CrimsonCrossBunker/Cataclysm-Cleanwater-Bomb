@@ -349,13 +349,14 @@ assert(EXPRESSION==EXPECTED and calls==2)
                      ("var_val", "context.data", "_"), ("var_val", "globals", "")]
         for source, source_store, source_prefix in addresses:
             for target, target_store, target_prefix in addresses:
-                for value in ('"text"', '0', 'nil'):
+                for value in ('"text"', '0', 'nil', 'null'):
                     lines = migrate_lua_first.render_static_character_copy_var(
                         {"copy_var": {source: "source_ref" if source_prefix is not None else "input"},
                          "target_var": {target: "target_ref" if target_prefix is not None else "output"}},
                         True, True, "partner")
                     self.assertIsNotNone(lines)
                     script = r"""
+local null={}
 local actor={input='alpha'}
 local partner={input='beta'}
 local globals={input='global'}
@@ -363,7 +364,7 @@ local context={data={input='context',source_ref=SOURCE_REF,target_ref=TARGET_REF
 SOURCE_STORE.input=VALUE
 local writes=0
 local function service_value(r) assert(r.ok);return r.value end
-local services={variables={
+local services={types={null=null},variables={
  copy=function(source,key,target,out)
   assert((source or globals)==SOURCE_STORE and (target or globals)==TARGET_STORE)
   assert(key=='input' and out=='output');writes=writes+1;return {ok=true,value={}}
@@ -375,7 +376,12 @@ local services={variables={
  end,
  set_resolved=function(data,owner,scope,key,value)
   local store=scope=='global' and globals or scope=='context' and data or owner
-  assert(store==TARGET_STORE and key=='output' and value==VALUE)
+  assert(store==TARGET_STORE and key=='output')
+  local expected=VALUE
+  if expected==nil then expected=null end
+  assert(value==expected)
+  store[key]=value
+  assert(store.output~=nil)
   writes=writes+1;return {ok=true,value={}}
  end
 }}
