@@ -20658,6 +20658,39 @@ assert(called)
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_nested_activity_cancel_keeps_each_participant(self) -> None:
+        cases = [
+            ("u_cancel_activity", True, False, "selected", None, "selected"),
+            ("npc_cancel_activity", False, True, "selected", None, "selected"),
+            ("npc_cancel_activity", True, False, "selected", "partner", "partner"),
+            ("npc_cancel_activity", True, True, "selected", "partner", "partner"),
+        ]
+        for effect, alpha_proven, beta_proven, alpha, beta, expected in cases:
+            lines = migrate_lua_first.render_static_foreach({
+                "foreach": "array", "target": ["first", "second"],
+                "var": {"context_val": "entry"}, "effect": effect,
+            }, alpha_proven, beta_proven, {}, actor_expression=alpha,
+                npc_actor_expression=beta)
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor,selected,partner={},{},{}
+local context={data={}}
+local calls=0
+local services={activities={cancel=function(target)
+ assert(target==EXPECTED and target~=actor)
+ calls=calls+1
+ assert(context.data.entry==({'first','second'})[calls])
+end}}
+BODY
+assert(calls==2)
+""".replace("EXPECTED", expected).replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_static_false_effect(
+            "npc_cancel_activity", True, False, {}, actor_expression="selected"))
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):

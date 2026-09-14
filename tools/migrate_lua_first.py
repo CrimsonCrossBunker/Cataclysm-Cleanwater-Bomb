@@ -4814,9 +4814,10 @@ def render_static_false_effect(
     if effect == "nothing":
         return []
     if effect == "u_cancel_activity" and avatar_actor_proven:
-        return ["        services.activities.cancel(actor)"]
-    if effect == "npc_cancel_activity" and npc_actor_proven:
-        return ["        services.activities.cancel(actor)"]
+        return [f"        services.activities.cancel({actor_expression or 'actor'})"]
+    if effect == "npc_cancel_activity" and (npc_actor_proven or npc_actor_expression is not None):
+        target = npc_actor_expression or actor_expression or "actor"
+        return [f"        services.activities.cancel({target})"]
     if isinstance(effect, dict) and "u_spawn_item" in effect:
         rendered = render_static_spawn_item_effect(
             effect, avatar_actor_proven
