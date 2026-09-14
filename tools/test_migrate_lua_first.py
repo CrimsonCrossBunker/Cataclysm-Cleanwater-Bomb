@@ -11662,6 +11662,25 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
             self.assertNotIn('actor, "install"', main)
 
+    def test_npc_work_assignments_preserve_explicit_beta(self) -> None:
+        jobs = {"do_butcher": "butcher", "do_chop_plank": "chop_planks",
+                "do_chop_trees": "chop_trees", "do_construction": "construction",
+                "do_farming": "farming", "do_fishing": "fishing",
+                "do_mining": "mining", "do_mopping": "mopping"}
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition", "id": "work_pair",
+                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                "effect": list(jobs),
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "work_pair_mod")
+            main = result.files[Path("main.lua")]
+            self.assertEqual(main.count('(context.actors.beta).subtype == "npc"'), len(jobs))
+            for job in jobs.values():
+                self.assertIn(f'services.activities.assign_npc_job(context.actors.beta, "{job}")', main)
+
     def test_start_trade_retains_explicit_beta_and_delegate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -20916,7 +20935,7 @@ assert(calls==3)
                                    "required_event": "npc_becomes_hostile",
                                    "effect": list(jobs)}), migrate_lua_first.MigrationResult())
         script = r"""
-local npc,override={},{}
+local npc,override={subtype="npc"},{subtype="npc"}
 local target=npc
 local expected={EXPECTED}
 local calls=0

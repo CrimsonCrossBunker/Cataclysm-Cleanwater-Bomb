@@ -31048,37 +31048,22 @@ def render_eoc(
                     f"{npc_actor_expression or 'actor'}, services.time.duration(600, \"turn\")))"
                 )
                 converted_effect = True
-            elif npc_actor_proven and effect == "do_butcher":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "butcher"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_chop_plank":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_planks"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_chop_trees":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_trees"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_construction":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "construction"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_farming":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "farming"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_fishing":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "fishing"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_mining":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mining"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_mopping":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mopping"))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
+                "do_farming", "do_fishing", "do_mining", "do_mopping",
+            }:
+                job = {
+                    "do_butcher": "butcher", "do_chop_plank": "chop_planks",
+                    "do_chop_trees": "chop_trees", "do_construction": "construction",
+                    "do_farming": "farming", "do_fishing": "fishing",
+                    "do_mining": "mining", "do_mopping": "mopping",
+                }[effect]
+                worker = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'        service_value(services.activities.assign_npc_job({worker}, {lua_quote(job)}))',
+                    "    end",
+                ])
                 converted_effect = True
             elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
                 lines.extend(render_optional_npc_job(
