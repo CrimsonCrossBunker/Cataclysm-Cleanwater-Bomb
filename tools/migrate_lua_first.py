@@ -31081,7 +31081,6 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
-                "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
                 "take_control",
                 "clear_dimension",
                 "place_override",
@@ -31286,15 +31285,26 @@ def render_eoc(
                     "drop_stolen_item needs explicit equipment/trade holders"
                 )
                 all_effects_converted = False
-            elif (
-                effect == "give_aid" and
-                npc_event_character_actor_proven and avatar_actor_proven
-            ):
-                lines.append(
-                    "    service_value(services.npcs.medical.provide_aid("
-                    "actor, services.characters.avatar(), \"advanced\", false))"
-                )
-                converted_effect = True
+            elif isinstance(effect, str) and effect in {
+                "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
+            }:
+                if npc_actor_proven:
+                    level = "basic" if effect.startswith("lesser_") else "advanced"
+                    include_allies = "true" if "all_aid" in effect else "false"
+                    lines.append(
+                        "    service_value(services.npcs.medical.provide_aid("
+                        f"{npc_actor_expression or 'actor'}, services.characters.avatar(), "
+                        f"{lua_quote(level)}, {include_allies}))"
+                    )
+                    converted_effect = True
+                else:
+                    lines.append("    -- TODO: medical aid requires an explicit NPC provider.")
+                    result.add_todo(
+                        "semantic_choice",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "medical aid requires an explicit NPC provider"
+                    )
+                    all_effects_converted = False
             elif effect == "u_make_radio_representative" and avatar_actor_proven:
                 lines.append(
                     "    -- The legacy u_ talker is the avatar here; "

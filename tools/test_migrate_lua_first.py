@@ -11733,7 +11733,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "NPC mission assignment through the typed mission provider service",
                 main,
             )
-            self.assertNotIn("services.npcs.medical.provide_aid(", main)
+            self.assertIn(
+                'services.npcs.medical.provide_aid(actor, services.characters.avatar(), "advanced", false)',
+                main,
+            )
             self.assertIn(
                 "services.npcs.add_faction_rep(\n        actor, 2)",
                 main,
@@ -11751,7 +11754,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
             self.assertNotIn("services.npcs.medical.repair_bionic_limbs(", main)
-            self.assertNotIn("services.characters.avatar()", main)
+            self.assertEqual(main.count("services.characters.avatar()"), 1)
             self.assertIn("domain-service conversion", report)
 
     def test_roll_remainder_runs_true_and_false_callbacks(self) -> None:
@@ -21414,6 +21417,45 @@ end
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_medical_aid_migrates_levels_allies_and_provider(self) -> None:
+        effects = ["lesser_give_aid", "give_aid", "lesser_give_all_aid", "give_all_aid"]
+        source = {"type": "effect_on_condition", "id": "aid",
+                  "required_event": "npc_becomes_hostile", "effect": effects}
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override,avatar={},{},{}
+local expected,calls,fail
+local function service_value(result) assert(result.ok);return result.value end
+local services={characters={avatar=function() return avatar end},npcs={medical={
+ provide_aid=function(provider,patient,level,allies)
+  assert(provider==expected and patient==avatar)
+  calls[#calls+1]=level..':'..tostring(allies)
+  return {ok=not fail,value={}}
+ end
+}}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target;calls={};fail=false
+ migrated_eoc_functions.aid({actors={npc=npc}},target)
+ assert(table.concat(calls,',')=='basic:false,advanced:false,basic:true,advanced:true')
+ calls={};fail=true
+ assert(not pcall(migrated_eoc_functions.aid,{actors={npc=npc}},target))
+ assert(#calls==1)
+end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        source.pop("required_event")
+        unproven = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
+        self.assertNotIn("services.npcs.medical.provide_aid(", unproven)
+        self.assertEqual(unproven.count("medical aid requires an explicit NPC provider"), 4)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):

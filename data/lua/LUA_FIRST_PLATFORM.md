@@ -922,3 +922,11 @@ Gratitude migration checks the `make_thankful` result and retains the resolved N
 participant. Generated Lua covers routing and failure propagation; native comparison
 source covers hostile/non-hostile attitudes, friend-topic retention and personality
 bounds, but has not been compiled or executed.
+
+Medical-aid migration uses `npcs.medical.provide_aid` for all four native aid effects:
+basic/advanced treatment with or without nearby walking allies. The existing service
+calls the native talk functions, including healing, relevant wound removal, patient
+waiting activity and provider busy duration. Unproven NPC providers remain explicit
+migration gaps. Generated Lua tests cover all four level/allies combinations, avatar
+patient identity, provider overrides and failure propagation. Random healing, ally
+range filtering and activity/effect duration runtime acceptance remain pending.
