@@ -31086,9 +31086,13 @@ def render_eoc(
                 lines.extend(render_optional_npc_job(
                     npc_actor_expression or "actor", job, normal_return))
                 converted_effect = True
-            elif npc_actor_proven and effect == "drop_items_in_place":
-                lines.append(
-                    f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "drop_items_in_place":
+                worker = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'        service_value(services.npcs.orders.run({worker}, "drop_carried_items"))',
+                    "    end",
+                ])
                 converted_effect = True
             elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "start_training", "start_training_npc", "start_training_seminar",
