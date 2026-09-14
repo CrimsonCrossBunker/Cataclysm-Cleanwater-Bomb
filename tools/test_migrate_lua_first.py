@@ -20749,19 +20749,25 @@ assert(reads==1 and writes==1)
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
-local context={data={nested={1,2}},actors={alpha=actor}}
+local original=function() return true end
+local context={data={nested={1,2}},actors={alpha=actor},conditions={check=original}}
 local calls=0
 local function first(child,owner)
  assert(owner==actor and child.actors.alpha==actor)
+ assert(child.conditions.check==original)
+ child.conditions.check=function() return false end
+ child.conditions.added=function() return true end
  child.data.nested[1]=9;child.data.added=true;child.actors.alpha=nil;calls=calls+1
 end
 local function second(child,owner)
  assert(calls==1 and child.data.nested[1]==9 and child.data.added and child.actors.alpha==nil)
+ assert(not child.conditions.check() and child.conditions.added())
  calls=calls+1
 end
 BODY
 assert(calls==2 and context.data.nested[1]==1 and context.data.added==nil)
 assert(context.actors.alpha==actor)
+assert(context.conditions.check==original and context.conditions.check() and context.conditions.added==nil)
 """.replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

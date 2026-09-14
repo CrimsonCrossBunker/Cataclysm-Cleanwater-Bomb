@@ -23119,6 +23119,7 @@ def render_adjacent_failure_callbacks(
         "        local failure_context = {}",
         "        for key, value in pairs(context) do failure_context[key] = value end",
         "        failure_context.data = copy_data(context.data or {})",
+        "        failure_context.conditions = copy_data(context.conditions or {})",
         "        failure_context.actors = {}",
         "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
     ]
