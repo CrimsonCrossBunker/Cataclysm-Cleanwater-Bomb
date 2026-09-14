@@ -20254,6 +20254,20 @@ assert(called and context.data.source[1]==null and context.data.source[2][1]==2)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_run_eocs_only_accepts_native_object_loop_guards(self) -> None:
+        for invalid in (None, True, False, 0, [], "is_day"):
+            with self.subTest(condition=invalid):
+                self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+                    {"run_eocs": "step", "condition": invalid}, {"step": "step"},
+                    actor_expression="actor", avatar_actor_proven=True))
+        for condition in ({"and": []}, {"or": []}, {"not": "is_day"}):
+            self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
+                {"run_eocs": "step", "condition": condition}, {"step": "step"},
+                actor_expression="actor", avatar_actor_proven=True))
+        self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "step"}, {"step": "step"},
+            actor_expression="actor", avatar_actor_proven=True))
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

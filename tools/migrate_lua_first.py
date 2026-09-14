@@ -3850,6 +3850,10 @@ def render_static_run_eocs(
     )
     condition_expression = None
     if "condition" in effect:
+        # Native f_run_eocs installs its loop guard only for an object.
+        # Do not reinterpret other JSON shapes as a looping predicate.
+        if not isinstance(effect["condition"], dict):
+            return None
         condition_expression = render_eoc_condition_expression(
             effect["condition"], avatar_actor_proven,
             avatar_actor_proven or npc_actor_proven,
