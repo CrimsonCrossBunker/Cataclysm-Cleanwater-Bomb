@@ -11697,7 +11697,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "type": "effect_on_condition", "id": "trade_pair",
                 "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
                 "effect": ["start_trade", "revert_activity", "morale_chat_activity",
-                           "start_training", "start_training_npc", "start_training_seminar", "drop_items_in_place", "npc_rules_menu", "set_npc_pickup"],
+                           "start_training", "start_training_npc", "start_training_seminar", "drop_items_in_place", "npc_rules_menu", "set_npc_pickup", "reveal_stats", "pick_style"],
             }), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "trade_pair_mod")
@@ -11715,6 +11715,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
             self.assertIn("services.npcs.open_rules(context.actors.beta)", main)
             self.assertIn("services.npcs.orders.open_pickup_rules(context.actors.beta)", main)
+
+            self.assertIn("services.npcs.orders.open_character_sheet(context.actors.beta)", main)
+            self.assertIn("services.npcs.orders.choose_combat_style(context.actors.beta)", main)
 
 
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:
@@ -21384,7 +21387,7 @@ end
                                    "required_event": "npc_becomes_hostile", "effect": effects}),
             migrate_lua_first.MigrationResult())
         script = r"""
-local npc={topic='TALK_TEST'}
+local npc={subtype='npc',topic='TALK_TEST'}
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={

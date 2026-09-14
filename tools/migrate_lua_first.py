@@ -30866,11 +30866,16 @@ def render_eoc(
                 lines.append(
                     f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "reveal_stats":
-                lines.append(f"    service_value(services.npcs.orders.open_character_sheet({npc_actor_expression or 'actor'}))")
-                converted_effect = True
-            elif npc_actor_proven and effect == "pick_style":
-                lines.append(f"    service_value(services.npcs.orders.choose_combat_style({npc_actor_expression or 'actor'}))")
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "reveal_stats", "pick_style",
+            }:
+                method = "open_character_sheet" if effect == "reveal_stats" else "choose_combat_style"
+                target = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
+                    f"        service_value(services.npcs.orders.{method}({target}))",
+                    "    end",
+                ])
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
                 lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
