@@ -1417,6 +1417,9 @@ TEST_CASE( "lua_platform_selling_offers_match_native_items_and_prices",
         const auto resolved = handle.resolve_item( fixture.runtime, fixture.world );
         REQUIRE( resolved );
         CHECK( resolved.value == expected[i].loc.get_item() );
+        CHECK( offer["item_name"].get<std::string>() == resolved.value->tname() );
+        CHECK( offer["quantity"].get<int>() ==
+               ( resolved.value->count_by_charges() ? resolved.value->charges : 1 ) );
         CHECK( offer["price"].get<double>() == expected[i].price );
         CHECK( offer["count"].get<int>() == expected[i].count );
         CHECK( offer["charges"].get<int>() == expected[i].charges );

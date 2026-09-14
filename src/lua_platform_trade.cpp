@@ -2012,6 +2012,8 @@ sol::table selling_offers( sol::this_state lua, const game_handle &seller_handle
             holder["pocket_index"] = pocket_index;
         }
         row["source_holder"] = std::move( holder );
+        row["item_name"] = entry->tname();
+        row["quantity"] = entry->count_by_charges() ? entry->charges : 1;
         row["price"] = offer.price;
         row["count"] = offer.count;
         row["charges"] = offer.charges;

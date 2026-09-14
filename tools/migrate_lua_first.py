@@ -20832,19 +20832,70 @@ def render_static_companion_mission_effect(
     ]
 
 
-def render_static_give_equipment_effect(
-    effect: dict[str, Any], npc_actor_proven: bool,
-    avatar_actor_proven: bool,
-) -> list[str] | None:
-    """Keep allowance gifts explicit until native selling offers are exposed.
+def render_equipment_offer_selection(seller: str, allowance: str) -> str:
+    """Build native random rejection sampling; settlement is a separate step."""
+    return (
+        "(function(seller, allowance) "
+        "local offers = service_value(services.trade.selling_offers(seller)); "
+        "local owed = service_value(services.npcs.get(seller)).opinion.owed; "
+        "while #offers > 0 do "
+        "local index = services.random.int(1, #offers); local offer = offers[index]; "
+        "if offer.price < owed + allowance then return offer end; "
+        "table.remove(offers, index); end; return nil end)("
+        f"{seller}, {allowance})"
+    )
 
-    Native give_equipment_allowance randomly selects from init_selling offers
-    using strict price < owed + allowance, rather than asking the UI to pick an
-    item. A faithful Lua rewrite needs those exact Item handles and native offer
-    prices, then ownership transfer, debt adjustment and the three-hour cooldown.
-    Do not restore an implicit purchase helper or replace this with item spawning.
+
+def render_static_give_equipment_effect(
+    effect: dict[str, Any] | str, npc_actor_proven: bool,
+    avatar_actor_proven: bool, *, npc_actor_expression: str | None = None,
+) -> list[str] | None:
+    """Compose fixed/default allowance gifts from exact native offers and settlement.
+
+    Trial modifier arrays still need both original talkers and are handled
+    separately; a current avatar is only the gift recipient, not proof of alpha.
     """
-    return None
+    target = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    if target is None:
+        return None
+    if effect == "give_equipment":
+        payload: Any = {}
+    elif isinstance(effect, dict) and set(effect) == {"give_equipment"}:
+        payload = effect["give_equipment"]
+    else:
+        return None
+    if not isinstance(payload, dict) or set(payload) - {"allowance"}:
+        return None
+    allowance = payload.get("allowance", 0)
+    if allowance == []:
+        allowance = 0
+    if type(allowance) is not int or not -(2**31) <= allowance < 2**31:
+        return None
+    selection = render_equipment_offer_selection("provider", "allowance")
+    return [
+        "    do",
+        f"        local provider = {target}",
+        '        if provider ~= nil and provider.subtype == "npc" then',
+        f"            local allowance = {allowance}",
+        f"            local offer = {selection}",
+        "            local provider_name = service_value(services.npcs.get(provider)).name",
+        "            if offer == nil then",
+        '                ccb.presentation.notice(services.format(services.translate("%s has nothing to give!"), {provider_name}))',
+        "            else",
+        "                local recipient = services.characters.avatar()",
+        "                local quote = service_value(services.trade.quote(provider, recipient, {{",
+        '                    direction = "seller_to_buyer", item = offer.item, quantity = offer.quantity,',
+        "                    source_holder = offer.source_holder,",
+        '                    destination_holder = {kind = "character", character = recipient, slot = "inventory"},',
+        '                }}, {settlement = {strategy = "npc_allowance", currency = "cash", allowance = allowance}}))',
+        '                local notice = services.format(services.translate("%1$s gives you a %2$s."), {provider_name, offer.item_name})',
+        '                service_value(services.trade.commit(quote.token, {strategy = "npc_allowance", currency = "cash"}))',
+        "                ccb.presentation.notice(notice)",
+        '                service_value(services.effects.add(provider, services.types.id("effect", "asked_for_item"), services.time.duration(10800, "turn")))',
+        "            end",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_follower_service_effect(
@@ -31498,10 +31549,10 @@ def render_eoc(
                         "needs a bounded inventory-removal conversion"
                     )
                     all_effects_converted = False
-            elif isinstance(effect, dict) and "give_equipment" in effect:
+            elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":
                 rendered = render_static_give_equipment_effect(
-                    effect, npc_event_character_actor_proven,
-                    avatar_actor_proven,
+                    effect, npc_actor_proven, avatar_actor_proven,
+                    npc_actor_expression=npc_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -31509,7 +31560,7 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: translate the equipment allowance through "
-                        "the typed NPC equipment service."
+                        "exact offers and both original talkers' modifiers."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -32587,7 +32638,7 @@ def render_eoc(
                     "npc_pickup_items", "npc_remove_item_with", "player_weapon_drop",
                     "quote_npc_trade_item", "set_item_category_spawn_rates", "u_buy_item",
                     "u_consume_item", "u_consume_item_sum", "u_map_run_item_eocs",
-                    "u_pickup_items", "u_remove_item_with", "u_sell_item", "give_equipment",
+                    "u_pickup_items", "u_remove_item_with", "u_sell_item",
                     "mission_reward", "mission_success", "offer_mission",
                     "remove_active_mission", "reveal_map", "revert_location",
                     "set_furniture", "set_terrain", "u_location_variable", "u_set_field",
@@ -32622,7 +32673,7 @@ def render_eoc(
                     "abandon_camp", "return_to_camp_duties", "start_camp",
                     "quote_vehicle_full_repair", "select_vehicle_part_service",
                     "start_vehicle_full_repair", "mapgen_update", "npc_map_run_eocs",
-                    "drop_stolen_item", "drop_weapon", "player_weapon_drop", "give_equipment",
+                    "drop_stolen_item", "drop_weapon", "player_weapon_drop",
                     "mission_reward", "mission_success", "offer_mission",
                     "remove_active_mission", "reveal_map", "revert_location",
                     "set_furniture", "set_terrain", "u_map_run_eocs",

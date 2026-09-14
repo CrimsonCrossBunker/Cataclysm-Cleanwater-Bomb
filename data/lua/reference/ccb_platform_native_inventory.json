@@ -1095,7 +1095,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_trade.cpp",
-          "line": 2174
+          "line": 2176
         },
         "direct_roots": [
           "TradeQuoteToken"
@@ -28076,7 +28076,7 @@
       "registration_name": "TradeQuoteToken",
       "registration": {
         "path": "src/lua_platform_trade.cpp",
-        "line": 2182,
+        "line": 2184,
         "installer": "shared.install_trade_api",
         "namespace": "global"
       },
@@ -28114,7 +28114,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2221
+                "line": 2223
               }
             ]
           },
@@ -28131,7 +28131,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2219
+                "line": 2221
               }
             ]
           },
@@ -28148,7 +28148,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2195
+                "line": 2197
               }
             ]
           },
@@ -28165,7 +28165,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2191
+                "line": 2193
               }
             ]
           },
@@ -28182,7 +28182,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2203
+                "line": 2205
               }
             ]
           },
@@ -28199,7 +28199,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2208
+                "line": 2210
               }
             ]
           },
@@ -28216,7 +28216,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2201
+                "line": 2203
               }
             ]
           },
@@ -28233,7 +28233,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2197
+                "line": 2199
               }
             ]
           },
@@ -28248,7 +28248,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2210
+                "line": 2212
               }
             ]
           },
@@ -28265,7 +28265,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2207
+                "line": 2209
               }
             ]
           },
@@ -28282,7 +28282,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2205
+                "line": 2207
               }
             ]
           },
@@ -28299,7 +28299,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2199
+                "line": 2201
               }
             ]
           },
@@ -28316,7 +28316,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2184
+                "line": 2186
               }
             ]
           },
@@ -28333,7 +28333,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2209
+                "line": 2211
               }
             ]
           },
@@ -28350,7 +28350,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2185
+                "line": 2187
               }
             ]
           },
@@ -28367,7 +28367,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2193
+                "line": 2195
               }
             ]
           },
@@ -28384,7 +28384,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2189
+                "line": 2191
               }
             ]
           },
@@ -28401,7 +28401,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_trade.cpp",
-                "line": 2187
+                "line": 2189
               }
             ]
           }

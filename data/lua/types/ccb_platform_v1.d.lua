@@ -9815,6 +9815,8 @@ function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 ---@class CcbSellingOffer
 ---@field source_holder CcbTradeQuoteHolder Exact source including container and pocket for nested Items; usable as quote line source_holder.
 ---@field item GameHandle Exact live offered Item.
+---@field item_name string Complete native tname at query time, for translated offer messages.
+---@field quantity integer Whole Item quantity for exact transfers: all charges for charge-counted Items, otherwise one. Native offer count/charges fields below describe pricing, not the transfer quantity.
 ---@field price number Native NPC selling-offer valuation; not a locked settlement quote.
 ---@field count integer Native offer count.
 ---@field charges integer Native offer charges.
