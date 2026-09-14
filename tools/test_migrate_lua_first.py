@@ -20333,6 +20333,18 @@ assert(context.data.entry=='previous')
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_foreach_literal_array_rejects_non_string_values(self) -> None:
+        for invalid in (0, 1.5, True, False, None, ["nested"]):
+            with self.subTest(value=invalid):
+                self.assertIsNone(migrate_lua_first.render_static_foreach({
+                    "foreach": "array", "target": ["valid", invalid],
+                    "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+                }, True, False, {}, actor_expression="actor"))
+        self.assertIsNotNone(migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": ["", "0", "true"],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor"))
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

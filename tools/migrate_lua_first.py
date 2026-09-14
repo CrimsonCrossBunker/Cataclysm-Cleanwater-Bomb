@@ -5677,10 +5677,11 @@ def render_static_foreach(
     if mode == "array":
         if (
             not isinstance(target, list) or len(target) > 256 or
-            not all(lua_scalar_literal(value) is not None for value in target)
+            not all(isinstance(value, str) and lua_scalar_literal(value) is not None
+                    for value in target)
         ):
             return None
-        values = ", ".join(lua_scalar_literal(value) for value in target)
+        values = ", ".join(lua_quote(value) for value in target)
         lines.append(f"    for _, entry in ipairs({{ {values} }}) do")
         if not append_body("entry"):
             return None
