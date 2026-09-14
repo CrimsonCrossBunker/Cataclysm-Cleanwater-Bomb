@@ -5613,6 +5613,7 @@ def render_static_foreach(
     eoc_actor_requirements: dict[str, str] | None = None,
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
@@ -5647,6 +5648,7 @@ def render_static_foreach(
                 nested, avatar_actor_proven, npc_actor_proven,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
+                npc_actor_expression=npc_actor_expression,
             )
             if rendered is None:
                 return False
@@ -5686,7 +5688,7 @@ def render_static_foreach(
                 rendered_value = render_participant_string(
                     value, actor_expression or "nil",
                     actor_expression if avatar_actor_proven else None,
-                    actor_expression if npc_actor_proven else None,
+                    npc_actor_expression or (actor_expression if npc_actor_proven else None),
                 )
             else:
                 return None
@@ -28640,7 +28642,7 @@ def render_eoc(
                     effect, avatar_actor_proven, npc_event_character_actor_proven,
                     eoc_function_names or {}, eoc_actor_requirements,
                     actor_expression,
-                    eoc_conditions,
+                    eoc_conditions, npc_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)

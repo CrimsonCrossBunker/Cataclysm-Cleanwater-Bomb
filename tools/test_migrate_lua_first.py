@@ -20374,6 +20374,31 @@ assert(reads==3 and calls==3)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_dynamic_values_keep_distinct_participants(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array", "target": [{"u_val": "name"}, {"npc_val": "name"}],
+            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+        }, True, False, {}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={name='alpha'},{name='beta'}
+local context={data={}}
+local calls=0
+local function service_value(r) return r.value end
+local services={variables={resolve=function(data,owner,scope,key,p)
+ assert(p.alpha==actor and p.beta==partner and key=='name')
+ return {value={exists=true,value=(scope=='u' and p.alpha or p.beta).name}}
+end},message=function()
+ calls=calls+1;assert(context.data.entry==({'alpha','beta'})[calls])
+end}
+BODY
+assert(calls==2)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
