@@ -16,6 +16,42 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 class LuaFirstMigrationTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_boolean_groups_preserve_empty_identity_and_random_order(self) -> None:
+        chance = lambda n: {"one_in_chance": n}
+        cases = [
+            ({"and": []}, True, []),
+            ({"or": []}, False, []),
+            ({"not": {"and": []}}, False, []),
+            ({"not": {"or": []}}, True, []),
+            ({"and": [{"or": []}, chance(2)]}, False, []),
+            ({"or": [{"and": []}, chance(2)]}, True, []),
+            ({"and": [chance(2), chance(3), chance(4)]}, False, [2, 3]),
+            ({"or": [chance(3), chance(2), chance(4)]}, True, [3, 2]),
+            ({"not": {"or": [chance(3), {"and": [chance(2), chance(4)]}]}},
+             False, [3, 2, 4]),
+        ]
+        for condition, expected, calls in cases:
+            with self.subTest(condition=condition):
+                expression = migrate_lua_first.render_eoc_condition_expression(condition)
+                self.assertIsNotNone(expression)
+                script = r"""
+local calls={}
+local services={random={one_in=function(n)
+ calls[#calls+1]=n
+ return n~=3
+end}}
+assert((EXPRESSION)==EXPECTED)
+assert(table.concat(calls, ',')==CALLS)
+""".replace("EXPRESSION", expression).replace("EXPECTED", str(expected).lower())
+                script = script.replace("CALLS", migrate_lua_first.lua_quote(",".join(map(str, calls))))
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        for condition in ({"and": False}, {"or": {}},
+                          {"and": [{"or": []}, {"unknown_condition": True}]}):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(condition))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_one_in_native_range_and_owner_are_not_clamped(self) -> None:
         values = (2147483647.9, -2147483648.9,
                   {"npc_val": "chance"}, [-2147483648, 2147483647])

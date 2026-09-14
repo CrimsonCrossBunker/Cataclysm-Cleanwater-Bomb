@@ -26589,8 +26589,11 @@ def render_eoc_condition_expression(
     if set(condition) in ({"and"}, {"or"}):
         operator = "and" if "and" in condition else "or"
         entries = condition[operator]
-        if not isinstance(entries, list) or not entries:
+        if not isinstance(entries, list):
             return None
+        # Native conditional_t uses all_of/any_of, including empty ranges.
+        if not entries:
+            return "true" if operator == "and" else "false"
         rendered = [
             render_eoc_condition_expression(
                 entry, avatar_actor_proven, weapon_actor_proven,
