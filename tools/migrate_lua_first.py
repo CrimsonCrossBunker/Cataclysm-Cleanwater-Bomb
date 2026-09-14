@@ -4805,8 +4805,8 @@ def render_static_false_effect(
             actor_expression, eoc_conditions, npc_actor_expression,
         )
     activation = render_mutation_action(
-        effect, "actor" if avatar_actor_proven else None,
-        npc_actor_expression or ("actor" if npc_actor_proven else None))
+        effect, (actor_expression or "actor") if avatar_actor_proven else None,
+        npc_actor_expression or ((actor_expression or "actor") if npc_actor_proven else None))
     if activation is not None:
         return activation
     if mutation_migration_gap(effect) is not None:

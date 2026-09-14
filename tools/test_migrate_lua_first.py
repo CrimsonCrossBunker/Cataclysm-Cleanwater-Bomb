@@ -20625,6 +20625,39 @@ assert(calls==3)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_mutation_body_uses_explicit_actor_expression(self) -> None:
+        for npc in (False, True):
+            lines = migrate_lua_first.render_static_foreach({
+                "foreach": "array", "target": ["QUICK"],
+                "var": {"context_val": "entry"},
+                "effect": {("npc_" if npc else "u_") + "activate_trait": {"context_val": "entry"}},
+            }, not npc, npc, {}, actor_expression="selected")
+            self.assertIsNotNone(lines)
+            script = r"""
+local actor,selected={},{}
+local context={data={}}
+local called=false
+local function service_value(value) return value end
+local services={
+ variables={resolve=function(data,owner,scope,name,participants)
+  assert(scope=='context' and name=='entry')
+  assert(participants.PARTICIPANT==selected)
+  return {exists=true,value=data[name]}
+ end},
+ types={id=function(kind,id) assert(kind=='mutation' and id=='QUICK');return id end},
+ mutations={invoke_activation=function(target,id,active)
+  assert(target==selected and target~=actor and id=='QUICK' and active)
+  called=true;return {}
+ end}
+}
+BODY
+assert(called)
+""".replace("PARTICIPANT", "beta" if npc else "alpha").replace("BODY", "\n".join(lines))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):
             with self.subTest(value=invalid):
