@@ -22,6 +22,15 @@ void script_null_value::serialize( JsonOut &json ) const
     json.write_null();
 }
 
+void script_persistent_tripoint::serialize( JsonOut &json ) const
+{
+    json.start_array();
+    json.write( x );
+    json.write( y );
+    json.write( z );
+    json.end_array();
+}
+
 script_array_value::script_array_value( script_persistent_array value ) :
     value_( std::make_shared<const script_persistent_array>( std::move( value ) ) ) {}
 
@@ -181,6 +190,8 @@ void detail::write_persistent_value( JsonOut &json, const script_persistent_valu
             json.member( "type", "null" );
         } else if constexpr( std::is_same_v<value_type, script_array_value> ) {
             json.member( "type", "array" );
+        } else if constexpr( std::is_same_v<value_type, script_persistent_tripoint> ) {
+            json.member( "type", "tripoint_abs_ms" );
         } else {
             json.member( "type", "string" );
         }
@@ -201,6 +212,14 @@ static script_persistent_value read_persistent_value_impl( const JsonObject &ent
             throw std::invalid_argument( "Lua null state value must be null" );
         }
         result = script_null_value{};
+    } else if( type == "tripoint_abs_ms" ) {
+        const JsonArray coordinate = entry.get_array( "value" );
+        if( coordinate.size() != 3 ) {
+            throw std::invalid_argument( "Persistent tripoint must contain three integers" );
+        }
+        result = script_persistent_tripoint{
+            coordinate.get_int( 0 ), coordinate.get_int( 1 ), coordinate.get_int( 2 )
+        };
     } else if( type == "array" ) {
         script_persistent_array array;
         for( const JsonObject child : entry.get_array( "value" ) ) {

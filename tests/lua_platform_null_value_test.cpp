@@ -15,6 +15,7 @@
 #include "math_parser_diag_value.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_state.h"
@@ -62,7 +63,8 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
         assert(missing.ok and not missing.value.exists)
         assert(with_default(missing.value) == "fallback")
         data.wanted = null
-        data.array = {null, 42, {"nested", null}}
+        data.position = services.coords.tripoint_abs_ms(-17, 42, -3)
+        data.array = {null, 42, {"nested", null, data.position}}
         return data
     )", sol::script_pass_on_error );
     REQUIRE( result.valid() );
@@ -92,9 +94,16 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
     CHECK( array.get<sol::object>( 1 ).is<script_null_value>() );
     CHECK( array.get<std::int64_t>( 2 ) == 42 );
     const sol::table nested = array[3];
-    CHECK( nested.size() == 2 );
+    CHECK( nested.size() == 3 );
     CHECK( nested.get<std::string>( 1 ) == "nested" );
     CHECK( nested.get<sol::object>( 2 ).is<script_null_value>() );
+    const script_tripoint_coord position = restored_table.get<script_tripoint_coord>( "position" );
+    CHECK( position.origin() == "abs" );
+    CHECK( position.scale() == "ms" );
+    CHECK( position.x() == -17 );
+    CHECK( position.y() == 42 );
+    CHECK( position.z() == -3 );
+    CHECK( nested.get<script_tripoint_coord>( 3 ).to_native() == position.to_native() );
 }
 
 TEST_CASE( "lua_platform_native_variable_default_presence_contract",

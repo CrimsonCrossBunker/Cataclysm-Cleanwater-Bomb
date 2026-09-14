@@ -31,6 +31,20 @@ struct script_null_value {
     }
 };
 
+// Absolute map-square coordinates are values, not live map references.
+struct script_persistent_tripoint {
+    int x;
+    int y;
+    int z;
+    void serialize( JsonOut &json ) const;
+    bool operator==( const script_persistent_tripoint &other ) const {
+        return x == other.x && y == other.y && z == other.z;
+    }
+    bool operator!=( const script_persistent_tripoint &other ) const {
+        return !( *this == other );
+    }
+};
+
 struct script_persistent_array;
 // Immutable, owned array storage; copies never retain a Lua table or game pointer.
 class script_array_value
@@ -46,7 +60,7 @@ class script_array_value
 };
 
 using script_persistent_value = std::variant<bool, std::int64_t, double, std::string,
-      script_null_value, script_array_value>;
+      script_null_value, script_array_value, script_persistent_tripoint>;
 struct script_persistent_array {
     std::vector<script_persistent_value> values;
 };

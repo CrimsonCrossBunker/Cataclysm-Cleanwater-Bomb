@@ -1,4 +1,5 @@
 #include "lua_platform_values.h"
+#include "lua_platform_bindings_coords.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 extern "C" {
@@ -45,6 +46,13 @@ static script_persistent_value read_value( const sol::object &value, const std::
     }
     if( value.is<script_null_value>() ) {
         return script_null_value{};
+    }
+    if( value.is<script_tripoint_coord>() ) {
+        const auto coordinate = value.as<script_tripoint_coord>();
+        if( coordinate.origin() != "abs" || coordinate.scale() != "ms" ) {
+            throw std::invalid_argument( api_name + " persistent coordinates must be absolute map squares" );
+        }
+        return script_persistent_tripoint{ coordinate.x(), coordinate.y(), coordinate.z() };
     }
     switch( value.get_type() ) {
         case sol::type::boolean:
@@ -109,6 +117,10 @@ sol::object script_persistent_value_to_lua( sol::state_view lua,
                 result[index++] = script_persistent_value_to_lua( lua, child );
             }
             return sol::make_object( lua, result );
+        } else if constexpr( std::is_same_v<value_type, script_persistent_tripoint> )
+        {
+            return sol::make_object( lua, script_tripoint_coord::from(
+                                         "abs", "ms", entry.x, entry.y, entry.z ) );
         } else
         {
             return sol::make_object( lua, entry );

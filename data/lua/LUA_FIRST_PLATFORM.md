@@ -705,3 +705,8 @@ save/load. Existing scalar encodings are unchanged. Each value allows at most
 limits. Sparse tables, named keys inside arrays, cycles, nonfinite numbers,
 functions, and live handles fail before the state or task is changed.
 Source and regression tests are present; native acceptance remains pending.
+
+Persistent values also accept absolute map-square `TripointCoord` values, including
+inside arrays. They save three integer components under `tripoint_abs_ms` and
+restore a typed coordinate, without retaining any map pointer. Other coordinate
+spaces remain rejected at this persistence boundary.
