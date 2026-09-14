@@ -20063,6 +20063,20 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn('services.message("zero")', main)
             self.assertNotIn("switch-control-flow conversion", report)
 
+    def test_test_eoc_distinguishes_missing_and_invalid_conditions(self) -> None:
+        def render(definition):
+            return migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "target"}, eoc_conditions={"target": definition})
+
+        self.assertEqual(render({"effect": []}), "true")
+        self.assertEqual(render({"condition": {"and": []}}), "true")
+        self.assertEqual(render({"condition": {"or": []}}), "false")
+        for invalid in (None, True, False, 0, 1.5, []):
+            with self.subTest(condition=invalid):
+                self.assertIsNone(render({"condition": invalid}))
+        self.assertIsNone(render({"condition": {"test_eoc": "target"}}))
+        self.assertIsNone(render({"condition": {"test_eoc": "missing"}}))
+
     def test_test_eoc_conditions_inline_the_referenced_native_predicate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

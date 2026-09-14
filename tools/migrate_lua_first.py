@@ -26483,6 +26483,10 @@ def render_eoc_condition_expression(
         ):
             nested = eoc_conditions[referenced]
             if isinstance(nested, dict):
+                # An omitted native EOC condition is unconditional, but an
+                # explicit null/bool/number is rejected by read_condition.
+                if "condition" in nested and not isinstance(nested["condition"], (str, dict)):
+                    return None
                 return render_eoc_condition_expression(
                     nested.get("condition", True),
                     avatar_actor_proven,
