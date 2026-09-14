@@ -5628,7 +5628,7 @@ def render_static_foreach(
     if not isinstance(variable, dict) or len(variable) != 1:
         return None
     scope = next(iter(variable))
-    if scope not in {"context_val", "global_val", "u_val", "npc_val"}:
+    if scope not in {"context_val", "global_val", "u_val", "npc_val", "var_val"}:
         return None
     name = variable[scope]
     if not bounded_utf8_string(name, 256 if scope == "context_val" else 128):
@@ -5650,6 +5650,13 @@ def render_static_foreach(
             lines.append(f"        context.data[{lua_quote(name)}] = {item_expression}")
         elif scope == "global_val":
             lines.append(f"        services.variables.set_global({lua_quote(name)}, {item_expression})")
+        elif scope == "var_val":
+            alpha = actor_expression if avatar_actor_proven else "nil"
+            beta = npc_actor_expression or (actor_expression if npc_actor_proven else "nil")
+            lines.append(
+                "        service_value(services.variables.set_resolved(context.data, nil, \"var\", "
+                f"{lua_quote(name)}, {item_expression}, {{alpha={alpha or 'nil'}, beta={beta or 'nil'}}}))"
+            )
         else:
             lines.append(f"        services.variables.set({owner}, {lua_quote(name)}, {item_expression})")
         for nested in body:
