@@ -34,6 +34,11 @@
 #include "lua_platform_npc_services.h"
 #include "lua_platform_npcs.h"
 #include "lua_platform_trade.h"
+#include "lua_platform_world_services.h"
+#include "map.h"
+#include "map_helpers.h"
+#include "monster.h"
+#include "mtype.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "messages.h"
@@ -1164,6 +1169,84 @@ TEST_CASE( "lua_platform_control_rejection_preserves_identity_and_handles",
     CHECK( fixture.other.getID() == npc_id );
     CHECK( fixture.other.get_attitude() == attitude );
     CHECK( fixture.other.get_fac_id() == faction );
+}
+
+TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
+           "[lua][platform][npc][semantic]" )
+{
+    const std::string species = GENERATE( "mon_chicken", "mon_horse", "mon_cow" );
+    clear_map();
+    effect_fixture fixture;
+    fixture.other.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    const efftype_id pet_effect( "pet" );
+    rng_set_engine_seed( 58163 );
+    if( species == "mon_chicken" ) {
+        talk_function::buy_chicken( fixture.other );
+    } else if( species == "mon_horse" ) {
+        talk_function::buy_horse( fixture.other );
+    } else {
+        talk_function::buy_cow( fixture.other );
+    }
+    std::vector<monster *> native_pets;
+    for( monster &entry : g->all_monsters() ) {
+        native_pets.push_back( &entry );
+    }
+    REQUIRE( native_pets.size() == 1 );
+    const tripoint_abs_ms expected_position = native_pets.front()->pos_abs();
+    const int expected_friendly = native_pets.front()->friendly;
+    const time_duration expected_duration = native_pets.front()->get_effect_dur( pet_effect );
+    const bool expected_permanent = native_pets.front()->get_effect( pet_effect ).is_permanent();
+    g->clear_zombies();
+    cata::lua_platform::install_game_world_service_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {}, []() {
+        return true;
+    } );
+    cata::lua_platform::install_creature_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function spawn = fixture.services["spawns"]["monster"];
+    const auto position = cata::lua_platform::script_tripoint_coord::from_native(
+                              coords::origin::abs, coords::scale::map_square,
+                              fixture.other.pos_abs().raw() );
+    rng_set_engine_seed( 58163 );
+    sol::protected_function_result call = spawn(
+            cata::lua_platform::script_game_id( "monster", species ), position, 1, false );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    const auto handle = value["handle"].get<cata::lua_platform::game_handle>();
+    sol::protected_function friendly = fixture.services["monsters"]["set_friendly"];
+    sol::protected_function_result friend_call = friendly( handle, true );
+    REQUIRE( friend_call.valid() );
+    sol::table friend_result = friend_call;
+    REQUIRE( friend_result["ok"].get<bool>() );
+    sol::table options = fixture.lua.create_table();
+    options["permanent"] = true;
+    sol::protected_function add = fixture.services["effects"]["add"];
+    sol::protected_function_result effect_call = add(
+                handle, cata::lua_platform::script_game_id( "effect", "pet" ),
+                cata::lua_platform::script_time_duration::from_native( 1_turns ), options );
+    REQUIRE( effect_call.valid() );
+    sol::table effect_result = effect_call;
+    REQUIRE( effect_result["ok"].get<bool>() );
+    std::optional<cata::lua_platform::game_handle_error> error;
+    monster *actual = cata::lua_platform::resolve_exact_monster(
+                          handle, fixture.runtime, fixture.world, error );
+    REQUIRE( actual != nullptr );
+    CHECK( actual->type->id.str() == species );
+    CHECK( actual->pos_abs() == expected_position );
+    CHECK( actual->friendly == expected_friendly );
+    CHECK( actual->get_effect_dur( pet_effect ) == expected_duration );
+    CHECK( actual->get_effect( pet_effect ).is_permanent() == expected_permanent );
+    g->clear_zombies();
 }
 
 TEST_CASE( "lua_platform_temporary_follow_clears_native_guard_state",

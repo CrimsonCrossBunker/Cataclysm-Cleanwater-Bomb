@@ -957,3 +957,5 @@ effect. Blocked placement continues; other errors propagate. These native effect
 not charge payment themselves. Generated Lua tests cover species, participant overrides,
 pet setup and blocked/error continuation. Native placement/upgrade/pet runtime acceptance
 and the original blocked-placement debug notification remain outstanding.
+A fixed-seed native comparison source now covers chicken/horse/cow position, type,
+friendliness and permanent pet duration; it has not been compiled or executed.
