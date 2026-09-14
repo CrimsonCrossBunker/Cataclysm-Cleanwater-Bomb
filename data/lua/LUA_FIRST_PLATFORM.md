@@ -687,3 +687,9 @@ and explicit `services.types.null` storage keep their existing behavior.
 Variable snapshots represent empty elements inside native arrays with
 `services.types.null`, preserving leading, trailing, and nested array slots.
 A top-level empty variable still uses `exists = true, value = nil`.
+
+Variable writes accept dense arrays recursively, including `services.types.null`
+slots. Array conversion uses the same depth and node bounds as snapshot reads;
+sparse arrays, named keys, cycles, and unsupported elements fail before native
+mutation. This enables native variable-array round trips, without extending the
+separate scalar-only task payload or persistent-state contracts.

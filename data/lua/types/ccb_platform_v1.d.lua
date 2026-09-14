@@ -10041,7 +10041,7 @@ function CcbVariablesApi.get(character, key) end
 ---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string
----@param value boolean|number|string|TripointCoord|NullValue|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set(character, key, value) end
 
@@ -10055,7 +10055,7 @@ function CcbVariablesApi.remove(character, key) end
 function CcbVariablesApi.get_global(key) end
 
 ---@param key string
----@param value boolean|number|string|TripointCoord|NullValue|nil
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set_global(key, value) end
 
@@ -10080,7 +10080,7 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
 ---@param key string
----@param value boolean|number|string|TripointCoord|NullValue|nil
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
 function CcbVariablesApi.set_resolved(context, actor, scope, key, value, participants) end

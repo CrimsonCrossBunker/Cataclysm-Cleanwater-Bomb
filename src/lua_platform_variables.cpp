@@ -59,9 +59,35 @@ void validate_context_key( const std::string_view key )
     }
 }
 
-diag_value context_value_from_lua(
-    const sol::object &value, const std::string &key )
+diag_value context_value_from_lua_impl(
+    const sol::object &value, const std::string &key, const int depth, std::size_t &nodes )
 {
+    if( ++nodes > maximum_context_nodes || depth > maximum_context_depth ) {
+        throw std::invalid_argument( "services.variables input exceeds its structural limits" );
+    }
+    if( value.get_type() == sol::type::table ) {
+        const sol::table table = value.as<sol::table>();
+        std::size_t count = 0;
+        for( const auto &entry : table ) {
+            if( ++count > maximum_context_nodes || entry.first.get_type() != sol::type::number ) {
+                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
+            }
+            const double index = entry.first.as<double>();
+            if( index < 1 || index > maximum_context_nodes || std::floor( index ) != index ) {
+                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
+            }
+        }
+        diag_array result;
+        result.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object element = table.raw_get<sol::object>( index );
+            if( !element.valid() || element.get_type() == sol::type::nil ) {
+                throw std::invalid_argument( "services.variables arrays require explicit NullValue slots" );
+            }
+            result.push_back( context_value_from_lua_impl( element, key, depth + 1, nodes ) );
+        }
+        return diag_value( std::move( result ) );
+    }
     if( value.get_type() == sol::type::nil || value.is<script_null_value>() ) {
         return diag_value();
     }
@@ -99,7 +125,13 @@ diag_value context_value_from_lua(
     }
     throw std::invalid_argument(
         "services.variables context value '" + key +
-        "' must be nil, boolean, number, string, or TripointCoord" );
+        "' must be nil, NullValue, boolean, number, string, TripointCoord, or a dense array" );
+}
+
+diag_value context_value_from_lua( const sol::object &value, const std::string &key )
+{
+    std::size_t nodes = 0;
+    return context_value_from_lua_impl( value, key, 0, nodes );
 }
 
 sol::object context_value_to_lua(

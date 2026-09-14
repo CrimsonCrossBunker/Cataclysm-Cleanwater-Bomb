@@ -99,6 +99,17 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
         assert(values[1] == services.types.null and values[2] == 0)
         assert(#values[3] == 2 and values[3][1] == "nested")
         assert(values[3][2] == services.types.null and values[4] == services.types.null)
+        assert(services.variables.set(array_owner, "array_output", values).ok)
+        local restored = services.variables.get(array_owner, "array_output").value.value
+        assert(#restored == 4 and #restored[3] == 2)
+        assert(restored[1] == services.types.null and restored[4] == services.types.null)
+        local cycle = {}; cycle[1] = cycle
+        for _, invalid in ipairs({{[2]=1}, {bad=1}, cycle, {function() end}}) do
+            local ok = pcall(services.variables.set, array_owner, "array_output", invalid)
+            assert(not ok)
+            local unchanged = services.variables.get(array_owner, "array_output").value.value
+            assert(#unchanged == 4 and unchanged[3][1] == "nested")
+        end
     )", sol::script_pass_on_error );
     REQUIRE( array_read.valid() );
     sol::table data = lua.create_table();
