@@ -5744,7 +5744,7 @@ def render_static_foreach(
                 else None
             )
         if target in definition_sources:
-            order = ', order = "native"' if target == "trait" else ""
+            order = ', order = "native"'
             page_expression = (
                 f"{definition_sources[target]}"
                 f"({{ offset = foreach_offset, limit = 256{order} }})"

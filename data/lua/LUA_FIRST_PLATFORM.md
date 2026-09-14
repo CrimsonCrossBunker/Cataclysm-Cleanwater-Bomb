@@ -741,3 +741,9 @@ to retain the loaded registry order, including across pages. The default `order 
 continues to sort identifiers. Migrated trait iteration requests native order so that
 random draws and the final iteration variable follow the source traversal. This option
 and its native regression source still require the batch native acceptance gate.
+
+Vitamin definition enumeration supports the same `order = "id" | "native"` option
+through `services.vitamins.definitions`. Native order is retained after query
+filtering and before pagination; the default remains ID order. Migrated vitamin
+iteration requests native order. Its C++ regression source covers both ordering
+modes and filtered pages; native execution remains part of batch acceptance.

@@ -10164,7 +10164,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn(
-                "services.vitamins.definitions({ offset = foreach_offset, limit = 256 })",
+                'services.vitamins.definitions({ offset = foreach_offset, limit = 256, order = "native" })',
                 main,
             )
             self.assertIn(

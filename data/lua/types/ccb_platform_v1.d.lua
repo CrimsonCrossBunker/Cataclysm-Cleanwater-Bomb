@@ -10815,3 +10815,17 @@ function CcbPlatformServices.nearby_creatures_snapshot(character, radius, limit)
 local ccb = {}
 
 return ccb
+
+---@class CcbVitaminDefinitionQuery
+---@field offset? integer
+---@field limit? integer
+---@field query? string Filter identifier or translated name.
+---@field order? "id"|"native" Default id; native preserves loaded registry order after filtering.
+
+---@class CcbVitaminsApi
+local CcbVitaminsApi = {}
+
+---Read detached vitamin definitions with bounded pagination.
+---@param options? CcbVitaminDefinitionQuery
+---@return table page Contains items, total, offset, limit, returned and has_more; items contain vitamin GameIds in id.
+function CcbVitaminsApi.definitions(options) end

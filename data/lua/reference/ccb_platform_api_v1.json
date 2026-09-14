@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 704,
+    "class_count": 706,
     "classes": [
       {
         "fields": [
@@ -8940,6 +8940,35 @@
       {
         "fields": [],
         "name": "CcbVehiclesApi"
+      },
+      {
+        "fields": [
+          {
+            "line": 10821,
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "line": 10820,
+            "name": "offset",
+            "type": "integer"
+          },
+          {
+            "line": 10823,
+            "name": "order",
+            "type": "\"id\"|\"native\""
+          },
+          {
+            "line": 10822,
+            "name": "query",
+            "type": "string"
+          }
+        ],
+        "name": "CcbVitaminDefinitionQuery"
+      },
+      {
+        "fields": [],
+        "name": "CcbVitaminsApi"
       },
       {
         "fields": [],
@@ -20133,7 +20162,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1283,
+    "function_count": 1284,
     "functions": [
       {
         "line": "2713",
@@ -24688,6 +24717,12 @@
         "name": "value",
         "owner": "CcbVehiclesApi",
         "parameters": "vehicle, options"
+      },
+      {
+        "line": "10831",
+        "name": "definitions",
+        "owner": "CcbVitaminsApi",
+        "parameters": "options"
       },
       {
         "line": "7767",
