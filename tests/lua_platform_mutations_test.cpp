@@ -342,6 +342,36 @@ TEST_CASE( "lua_platform_mutations_legacy_writes_require_semantic_choice",
     }
 }
 
+TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 2900 );
+    mutation_fixture platform( 3000 );
+    const bool npc_target = GENERATE( false, true );
+    const bool base = GENERATE( false, true );
+    Character &old_target = legacy.target( npc_target );
+    Character &new_target = platform.target( npc_target );
+    if( base ) {
+        old_target.toggle_trait( trait_QUICK );
+        new_target.toggle_trait( trait_QUICK );
+    } else {
+        old_target.set_mutation( trait_QUICK );
+        new_target.set_mutation( trait_QUICK );
+    }
+    const std::string effect = std::string( R"({")" ) +
+                               ( npc_target ? "npc_" : "u_" ) + R"(lose_trait":"QUICK"})";
+    for( int attempt = 0; attempt < 2; ++attempt ) {
+        legacy.legacy_effect( effect );
+        const sol::protected_function_result call = platform.services["mutations"]["erase"](
+                    platform.handle( npc_target ), cata::lua_platform::script_game_id( "mutation", "QUICK" ) );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( old_target.has_trait( trait_QUICK ) == new_target.has_trait( trait_QUICK ) );
+        CHECK( old_target.has_base_trait( trait_QUICK ) == new_target.has_base_trait( trait_QUICK ) );
+        CHECK( new_target.has_base_trait( trait_QUICK ) == base );
+    }
+}
+
 TEST_CASE( "lua_platform_mutations_bulk_removal_matches_legacy_effects",
            "[lua][platform][mutations][semantic]" )
 {

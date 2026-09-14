@@ -724,3 +724,8 @@ transformations, and callbacks. Unlike setting a permanent mutation's state,
 this action also permits cached or absent traits and does not require the
 `activated` definition flag. It validates the mutation id and exact Character
 handle, and returns the resulting permanent-presence and active flags.
+
+`services.mutations.erase(character, mutation)` invokes native mutation clearing,
+retaining base-trait bookkeeping and emitting no additional loss event. It accepts
+an already-absent mutation. `remove` continues to perform its documented base-trait
+and event synchronization. Both operations retain native cache and hook behavior.

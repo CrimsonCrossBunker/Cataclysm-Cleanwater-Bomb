@@ -10195,6 +10195,13 @@ function CcbMutationsApi.set_purifiable(character, mutation, purifiable) end
 ---@return CcbResult result `value` is a detached mutation state snapshot.
 function CcbMutationsApi.grant(character, mutation, variant) end
 
+---Clear native mutation state, retaining base-trait bookkeeping and adding no loss event.
+---An absent mutation is accepted; native unset hooks and cache updates still run as applicable.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` contains existed, present and base_trait.
+function CcbMutationsApi.erase(character, mutation) end
+
 ---Remove a permanent mutation and synchronize base-trait bookkeeping and native events.
 ---An absent permanent mutation returns not_permanent. This is not legacy unset_mutation semantics.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
