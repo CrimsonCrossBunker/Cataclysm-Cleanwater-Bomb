@@ -21002,12 +21002,7 @@ def render_static_give_equipment_effect(
 def render_static_follower_service_effect(
     effect: str, npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Render follower-selected NPC service workflows.
-
-    The legacy effects open a follower picker.  Platform exposes the same
-    choice through a bounded follower snapshot and native presentation menu;
-    truncated follower pages deliberately fail closed.
-    """
+    """Select from visible scene allies in native order, not the follower roster."""
     if not npc_actor_proven or effect not in {
         "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
     }:
@@ -21017,36 +21012,32 @@ def render_static_follower_service_effect(
         "bionic_remove_allies": "remove",
     }.get(effect)
     lines = [
-        "    local follower_page = service_value(services.followers.list())",
-        "    if not follower_page.truncated then",
+        "    do",
+        "        local followers = service_value(services.npcs.visible_allies())",
         "        local follower_choices = {}",
         "        local follower_handles = {}",
-        "        for _, follower in ipairs(follower_page.items) do",
-        "            if follower.available then",
-        "                local follower_id = tostring(follower.id)",
-        "                follower_choices[#follower_choices + 1] = {",
-        "                    id = follower_id, label = follower.name,",
-        "                }",
-        "                follower_handles[follower_id] = follower.handle",
-        "            end",
+        "        for _, follower in ipairs(followers) do",
+        "            local follower_id = tostring(follower.id)",
+        "            follower_choices[#follower_choices + 1] = {",
+        "                id = follower_id, label = follower.name, position = follower.position,",
+        "            }",
+        "            follower_handles[follower_id] = follower.handle",
         "        end",
-        "        if #follower_choices > 0 then",
-        '            local selected_id = ccb.presentation.choose("Select a follower", follower_choices)',
-        "            local selected_handle = selected_id and follower_handles[selected_id] or nil",
-        "            if selected_handle ~= nil then",
+        '        local selected_id = ccb.presentation.choose(services.translate("Select a follower"), follower_choices)',
+        "        local selected_handle = selected_id and follower_handles[selected_id] or nil",
+        "        if selected_handle ~= nil then",
     ]
     if operation is not None:
         lines.extend([
-            "                service_value(services.npcs.medical.open_bionic_service(",
+            "            service_value(services.npcs.medical.open_bionic_service(",
             f'                    actor, "{operation}", selected_handle))',
         ])
     else:
         lines.extend([
-            "                service_value(services.npcs.copy_ai_rules(",
+            "            service_value(services.npcs.copy_ai_rules(",
             "                    actor, selected_handle))",
         ])
     lines.extend([
-        "            end",
         "        end",
         "    end",
     ])

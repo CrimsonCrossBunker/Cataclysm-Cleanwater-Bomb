@@ -28,6 +28,7 @@
 #include "game.h"
 #include "json_loader.h"
 #include "item.h"
+#include "item_location.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
@@ -47,6 +48,8 @@
 #include "npctalk.h"
 #include "npctrade.h"
 #include "options_helpers.h"
+#include "player_helpers.h"
+#include "viewer.h"
 #include "rng.h"
 #include "type_id.h"
 
@@ -1359,6 +1362,114 @@ TEST_CASE( "lua_platform_radio_registration_retains_other_representatives",
         CHECK( fixture.player.faction_representatives.count( existing ) == 1 );
         CHECK( fixture.player.faction_representatives.count( fixture.other.getID() ) == 1 );
         CHECK( fixture.player.faction_representatives.size() == 2 );
+    }
+}
+
+TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
+           "[lua][platform][npc][semantic]" )
+{
+    clear_map();
+    clear_avatar();
+    const time_point previous_turn = calendar::turn;
+    struct cleanup_scene {
+        time_point turn;
+        ~cleanup_scene() {
+            get_avatar().remove_effect( efftype_id( "blind" ) );
+            clear_npcs();
+            calendar::turn = turn;
+        }
+    } cleanup{ previous_turn };
+    calendar::turn = calendar::turn_zero + 12_hours;
+    avatar &player = get_avatar();
+    npc &first = spawn_npc( player.pos_bub().xy() + point( 2, 0 ), "test_talker" );
+    npc &second = spawn_npc( player.pos_bub().xy() + point( 0, 2 ), "test_talker" );
+    npc &stranger = spawn_npc( player.pos_bub().xy() + point( -2, 0 ), "test_talker" );
+    first.set_fac( faction_id( "your_followers" ) );
+    second.set_fac( faction_id( "your_followers" ) );
+    stranger.set_fac( faction_id( "no_faction" ) );
+    REQUIRE_FALSE( stranger.is_player_ally() );
+    get_map().build_map_cache( player.pos_bub().z() );
+    REQUIRE( get_player_view().sees( get_map(), first ) );
+    REQUIRE( get_player_view().sees( get_map(), second ) );
+    std::vector<int> expected;
+    for( npc &candidate : g->all_npcs() ) {
+        if( candidate.is_player_ally() && get_player_view().sees( get_map(), candidate ) ) {
+            expected.push_back( candidate.getID().get_value() );
+        }
+    }
+    REQUIRE( expected.size() == 2 );
+    effect_fixture fixture;
+    bool readable = true;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, [&]() {
+        if( !readable ) {
+            throw std::runtime_error( "read denied" );
+        }
+    }, []() {}, []() {} );
+    sol::protected_function query = fixture.services["npcs"]["visible_allies"];
+    sol::protected_function_result call = query();
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table items = result["value"];
+    REQUIRE( items.size() == expected.size() );
+    for( std::size_t i = 0; i < expected.size(); ++i ) {
+        sol::table entry = items[i + 1];
+        CHECK( entry["id"].get<int>() == expected[i] );
+        const auto handle = entry["handle"].get<cata::lua_platform::game_handle>();
+        CHECK_FALSE( handle.validation_error( fixture.runtime, fixture.world ).has_value() );
+    }
+    player.add_effect( efftype_id( "blind" ), 1_hours );
+    REQUIRE_FALSE( get_player_view().sees( get_map(), first ) );
+    REQUIRE_FALSE( get_player_view().sees( get_map(), second ) );
+    sol::protected_function_result blind_call = query();
+    REQUIRE( blind_call.valid() );
+    sol::table blind_result = blind_call;
+    REQUIRE( blind_result["ok"].get<bool>() );
+    CHECK( blind_result["value"].get<sol::table>().size() == 0 );
+    CHECK( items.size() == expected.size() ); // Detached snapshot remains unchanged.
+    readable = false;
+    CHECK_FALSE( query().valid() );
+}
+
+TEST_CASE( "lua_platform_copy_rules_does_not_re_equip_or_spend_moves",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture target;
+    effect_fixture source( 3200 );
+    target.other.remove_weapon();
+    target.other.i_add( item( itype_id( "katana" ), calendar::turn ) );
+    REQUIRE_FALSE( target.other.get_wielded_item() );
+    // The old wrapper called wield_better_weapon after copying, even on self-copy.
+    REQUIRE( target.other.evaluate_best_weapon() != &null_item_reference() );
+    source.other.rules.set_flag( ally_rule::allow_sleep );
+    target.other.rules.clear_flag( ally_rule::allow_sleep );
+    cata::lua_platform::install_npc_api(
+    target.services, [&]() {
+        return target.runtime;
+    }, [&]() {
+        return target.world;
+    }, []() {}, []() {}, []() {} );
+    const auto source_handle = cata::lua_platform::game_handle::from_creature(
+                                   source.other,
+    { "npc", source.other.getID().get_value(), 0, 0, 0, {} },
+    target.runtime, target.world );
+    sol::protected_function copy = target.services["npcs"]["copy_ai_rules"];
+    const int moves_before = target.other.get_moves();
+    for( const auto &from : {
+             source_handle, target.handle( true )
+         } ) {
+        sol::protected_function_result call = copy( target.handle( true ), from );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( target.other.rules.has_flag( ally_rule::allow_sleep ) );
+        CHECK_FALSE( target.other.get_wielded_item() );
+        CHECK( target.other.get_moves() == moves_before );
     }
 }
 

@@ -6345,6 +6345,7 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 function CcbPlatformTasks.cancel(task_id) end
 
 ---@class PlatformChoice
+---@field position? Tripoint Loaded abs_ms map marker. Supply for every entry or none.
 ---@field id string Stable value returned to Lua when selected.
 ---@field label string Player-facing label.
 ---@field description? string Optional longer explanation.
@@ -6437,7 +6438,7 @@ function CcbPlatformPresentation.notice(message) end
 function CcbPlatformPresentation.confirm(question) end
 
 ---@param prompt string
----@param entries PlatformChoice[] Dense one-based array; holes and non-integer keys are rejected.
+---@param entries PlatformChoice[] Dense one-based array, including an empty menu; holes and non-integer keys are rejected.
 ---@return string|nil selected_id
 function CcbPlatformPresentation.choose(prompt, entries) end
 
@@ -9451,6 +9452,10 @@ function CcbNpcsApi.class(id) end
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded list of exact NPC snapshots.
 function CcbNpcsApi.list(options) end
+---Loaded scene NPCs allied to the player and visible to the active player view.
+---Preserves native scene iteration order; a complete snapshot, not the persistent follower roster.
+---@return CcbResult result `value` is a dense CcbNpcSnapshot[] with exact live handles.
+function CcbNpcsApi.visible_allies() end
 ---@param handle GameHandle Exact live NPC handle.
 ---@return CcbResult result `value` is a detached CcbNpcSnapshot.
 function CcbNpcsApi.get(handle) end
@@ -9524,6 +9529,7 @@ function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
 ---@param state 'inherit'|'allow'|'deny'
 ---@return CcbResult
 function CcbNpcsApi.set_ally_override(handle, rule, state) end
+---Copies AI rules only; does not re-equip or advance the NPC. Self-copy is a no-op.
 ---@param target GameHandle Exact target NPC handle.
 ---@param source GameHandle Exact source NPC handle.
 ---@return CcbResult

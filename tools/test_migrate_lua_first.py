@@ -11599,6 +11599,51 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertEqual(report.count("map holder requires"), 2)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_follower_services_keep_scene_order_cancel_and_copy_direction(self) -> None:
+        for effect, operation in (("bionic_install_allies", "install"),
+                                  ("bionic_remove_allies", "remove"),
+                                  ("copy_npc_rules", "copy")):
+            with self.subTest(effect=effect):
+                lines = migrate_lua_first.render_static_follower_service_effect(effect, True)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,other={},{}
+local candidates={{id=9,name='Other',handle=other,position={x=9}},
+ {id=2,name='Provider',handle=actor,position={x=2}}}
+local selected,calls,menus='9',0,0
+local function service_value(r) assert(r.ok);return r.value end
+local services={translate=function(s) assert(s=='Select a follower');return 'translated' end,
+ npcs={visible_allies=function() return {ok=true,value=candidates} end,
+ copy_ai_rules=function(target,source)
+  assert(target==actor and (source==other or source==actor))
+  if target~=source then calls=calls+1 end;return {ok=true}
+ end,medical={open_bionic_service=function(provider,operation,patient)
+  assert(provider==actor and operation=='OPERATION')
+  assert(patient==(selected=='9' and other or actor));calls=calls+1;return {ok=true}
+ end}}}
+local ccb={presentation={choose=function(title,entries)
+ assert(title=='translated');menus=menus+1
+ assert(#entries==#candidates)
+ for i,c in ipairs(candidates) do
+  assert(entries[i].id==tostring(c.id) and entries[i].label==c.name)
+  assert(entries[i].position==c.position)
+ end
+ return selected
+end}}
+local function run()
+BODY
+end
+run();assert(calls==1)
+selected=nil;run();assert(calls==1)
+selected='2';run();assert(calls==SELF_CALLS)
+candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
+""".replace("BODY", "\n".join(lines)).replace("OPERATION", operation).replace(
+                    "SELF_CALLS", "1" if operation == "copy" else "2")
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_translates_bounded_follower_and_item_selection_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -11626,7 +11671,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
-            self.assertEqual(main.count("services.followers.list()"), 3)
+            self.assertEqual(main.count("services.npcs.visible_allies()"), 3)
             self.assertIn(
                 'services.npcs.medical.open_bionic_service(\n'
                 '                    actor, "install", selected_handle)',
