@@ -20102,21 +20102,24 @@ assert(#queue==2 and queue[2].payload.data=="user field")
         script = r"""
 local actor={}
 local original=function() return true end
-local context={data={},conditions={check=original},actors={alpha=actor}}
+local context={data={nested={1,{2}}},conditions={check=original},actors={alpha=actor}}
 local services={characters={avatar=function() return actor end}}
 local calls=0
 local function first(child)
  assert(child.conditions.check==original)
+ child.data.nested[2][1]=9
  child.conditions.check=function() return false end
  child.conditions.added=original
  calls=calls+1
 end
 local function second(child)
+ assert(child.data.nested[2][1]==9)
  assert(calls==1 and not child.conditions.check() and child.conditions.added())
  calls=calls+1
 end
 BODY
 assert(calls==2 and context.conditions.check==original and context.conditions.added==nil)
+assert(context.data.nested[2][1]==2)
 """.replace("BODY", "\n".join(lines))
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

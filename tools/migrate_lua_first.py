@@ -4059,9 +4059,16 @@ def render_static_run_eocs(
     prefix: list[str] = []
     if variables:
         prefix.extend([
+            "    local function copy_child_value(value)",
+            "        if services.types and value == services.types.null then return value end",
+            "        if type(value) ~= \"table\" then return value end",
+            "        local copied = {}",
+            "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
+            "        return copied",
+            "    end",
             "    local child_data = {}",
             "    for name, value in pairs((context and context.data) or {}) do",
-            "        child_data[name] = value",
+            "        child_data[name] = copy_child_value(value)",
             "    end",
         ])
         for name, value in variables.items():
