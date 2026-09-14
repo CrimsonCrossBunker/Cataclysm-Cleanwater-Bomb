@@ -5,6 +5,7 @@
 #include <json_loader.h>
 #include <lua_platform_runtime.h>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -47,6 +48,34 @@ TEST_CASE( "lua_platform_state_codec_preserves_double_precision_and_signed_zero"
         CHECK( value == values[index] );
         CHECK( std::signbit( value ) == std::signbit( values[index] ) );
     }
+}
+
+TEST_CASE( "lua_platform_array_codec_preserves_integer_and_float_boundaries",
+           "[lua][platform][semantic][state][persistence]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::script_persistent_array array;
+    array.values = {
+        std::numeric_limits<std::int64_t>::min(),
+        std::numeric_limits<std::int64_t>::max(),
+        std::int64_t( 1 ), 1.0, -0.0, std::nextafter( 1.0, 2.0 ),
+        platform::script_array_value( platform::script_persistent_array{
+            { std::int64_t( 9007199254740993LL ), platform::script_null_value{} }
+        } )
+    };
+    platform::script_persistent_state source;
+    platform::assign_persistent_value( source, "values", platform::script_array_value( array ) );
+    std::ostringstream output;
+    platform::write_persistent_state( output, source );
+    const auto restored = platform::read_persistent_state( json_loader::from_string( output.str() ) );
+    const auto &values = std::get<platform::script_array_value>( restored.at( "values" ) ).get().values;
+    REQUIRE( values.size() == array.values.size() );
+    CHECK( values == array.values );
+    CHECK( std::holds_alternative<std::int64_t>( values[2] ) );
+    CHECK( std::holds_alternative<double>( values[3] ) );
+    CHECK( std::signbit( std::get<double>( values[4] ) ) );
+    const auto &nested = std::get<platform::script_array_value>( values[6] ).get().values;
+    CHECK( std::get<std::int64_t>( nested[0] ) == 9007199254740993LL );
 }
 
 TEST_CASE( "lua_platform_runtime_scope_files_preserve_small_and_adjacent_doubles",
