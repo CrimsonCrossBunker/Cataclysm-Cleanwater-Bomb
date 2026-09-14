@@ -5744,9 +5744,10 @@ def render_static_foreach(
                 else None
             )
         if target in definition_sources:
+            order = ', order = "native"' if target == "trait" else ""
             page_expression = (
                 f"{definition_sources[target]}"
-                "({ offset = foreach_offset, limit = 256 })"
+                f"({{ offset = foreach_offset, limit = 256{order} }})"
             )
             return (
                 lines if append_paged_loop(page_expression, "items", "entry.id.value")

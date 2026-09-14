@@ -10160,7 +10160,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn(
-                "services.mutations.definitions({ offset = foreach_offset, limit = 256 })",
+                'services.mutations.definitions({ offset = foreach_offset, limit = 256, order = "native" })',
                 main,
             )
             self.assertIn(

@@ -735,3 +735,9 @@ sharing any mutation type before invoking native set semantics. It preserves
 base-trait bookkeeping, adds no gain/loss events, and permits repeated assignment.
 Native hooks and variant fallback remain active. `grant` retains its distinct
 non-conflicting grant and gain-event behavior.
+
+Mutation definition enumeration accepts `services.mutations.definitions({order = "native"})`
+to retain the loaded registry order, including across pages. The default `order = "id"`
+continues to sort identifiers. Migrated trait iteration requests native order so that
+random draws and the final iteration variable follow the source traversal. This option
+and its native regression source still require the batch native acceptance gate.

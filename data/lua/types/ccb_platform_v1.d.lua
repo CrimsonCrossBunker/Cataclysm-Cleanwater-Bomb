@@ -10159,6 +10159,16 @@ function CcbEffectsApi.remove(character, effect, body_part) end
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
 
+---@class CcbMutationDefinitionQuery
+---@field offset? integer
+---@field limit? integer
+---@field order? "id"|"native" Default id; native preserves the loaded mutation registry order.
+
+---Read detached mutation definitions in pages, optionally preserving native registry order.
+---@param options? CcbMutationDefinitionQuery
+---@return table page Contains items, total, offset, limit, returned and has_more; each item has a mutation GameId in id.
+function CcbMutationsApi.definitions(options) end
+
 ---Read whether the explicit Character has a mutation; compose multiple queries with Lua `or`.
 ---@param character GameHandle Exact avatar or NPC handle.
 ---@param mutation GameId GameId<mutation>.

@@ -419,6 +419,7 @@ sol::table snapshot_definition(
 }
 
 struct definition_options {
+    bool native_order = false;
     std::size_t offset = 0;
     int limit = default_definition_limit;
 };
@@ -437,6 +438,18 @@ definition_options read_definition_options(
                 "services.mutations.definitions option keys must be strings" );
         }
         const sol::object value = entry.second;
+        const std::string key = key_object.as<std::string>();
+        if( key == "order" ) {
+            if( value.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "services.mutations.definitions order must be id or native" );
+            }
+            const std::string order = value.as<std::string>();
+            if( order != "id" && order != "native" ) {
+                throw std::invalid_argument( "services.mutations.definitions order must be id or native" );
+            }
+            result.native_order = order == "native";
+            continue;
+        }
         if( !value.is<lua_Integer>() ) {
             throw std::invalid_argument(
                 "services.mutations.definitions options must be integers" );
@@ -446,7 +459,6 @@ definition_options read_definition_options(
             throw std::invalid_argument(
                 "services.mutations.definitions options cannot be negative" );
         }
-        const std::string key = key_object.as<std::string>();
         if( key == "offset" ) {
             result.offset = static_cast<std::size_t>(
                                 std::min<lua_Integer>(
@@ -479,15 +491,17 @@ sol::table list_definitions(
     for( const mutation_branch &definition : all ) {
         definitions.push_back( &definition );
     }
-    std::sort(
-        definitions.begin(), definitions.end(),
-        []( const mutation_branch * lhs,
-    const mutation_branch * rhs ) {
-        // Stable API identifiers must not depend on the UI locale.
-        // NOLINTNEXTLINE(cata-use-localized-sorting)
-        return lhs->id.str() <
-               rhs->id.str();
-    } );
+    if( !options.native_order ) {
+        std::sort(
+            definitions.begin(), definitions.end(),
+            []( const mutation_branch * lhs,
+        const mutation_branch * rhs ) {
+            // Stable API identifiers must not depend on the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
+            return lhs->id.str() <
+                   rhs->id.str();
+        } );
+    }
     const std::size_t offset = std::min(
                                    options.offset,
                                    definitions.size() );

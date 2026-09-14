@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
@@ -22,6 +23,7 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_mutations.h"
 #include "lua_platform_sol.h"
+#include "mutation.h"
 #include "npc.h"
 #include "options_helpers.h"
 #include "rng.h"
@@ -596,6 +598,52 @@ TEST_CASE( "lua_platform_mutations_seeded_category_matches_legacy_effect",
     if( category == "CATTLE" && !use_vitamins && true_random ) {
         CHECK_FALSE( actual.empty() );
     }
+}
+
+TEST_CASE( "lua_platform_mutation_definitions_native_order", "[lua][mutations]" )
+{
+    mutation_fixture fixture;
+    sol::protected_function definitions = fixture.services["mutations"]["definitions"];
+    const auto &native = mutation_branch::get_all();
+    REQUIRE( native.size() > 2 );
+    sol::table options = fixture.lua.create_table();
+    options["order"] = "native";
+    options["offset"] = 1;
+    options["limit"] = 2;
+    sol::protected_function_result call = definitions( options );
+    REQUIRE( call.valid() );
+    sol::table page = call;
+    sol::table items = page["items"];
+    REQUIRE( items.size() == 2 );
+    for( std::size_t index = 1; index <= 2; ++index ) {
+        sol::table entry = items[index];
+        CHECK( entry["id"].get<cata::lua_platform::script_game_id>().value() == native[index].id.str() );
+    }
+    std::vector<std::string> sorted_ids;
+    for( const mutation_branch &definition : native ) {
+        sorted_ids.push_back( definition.id.str() );
+    }
+    std::sort( sorted_ids.begin(), sorted_ids.end() );
+    for( const bool explicit_order : {
+             false, true
+         } ) {
+        options["order"] = sol::nil;
+        if( explicit_order ) {
+            options["order"] = "id";
+        }
+        sol::protected_function_result sorted_call = definitions( options );
+        REQUIRE( sorted_call.valid() );
+        sol::table sorted_page = sorted_call;
+        sol::table sorted_items = sorted_page["items"];
+        for( std::size_t index = 1; index <= 2; ++index ) {
+            sol::table entry = sorted_items[index];
+            CHECK( entry["id"].get<cata::lua_platform::script_game_id>().value() == sorted_ids[index] );
+        }
+    }
+    options["order"] = "invalid";
+    CHECK_FALSE( definitions( options ).valid() );
+    options["order"] = 1;
+    CHECK_FALSE( definitions( options ).valid() );
 }
 
 #endif
