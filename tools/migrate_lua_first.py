@@ -30896,7 +30896,8 @@ def render_eoc(
                 # Deliberate presentation/interaction no-op in headless/scripted context.
                 converted_effect = True
             elif npc_actor_proven and effect == "revert_activity":
-                lines.append('    services.activities.cancel(actor)')
+                lines.append(
+                    f"    service_value(services.activities.revert_npc_job({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "morale_chat_activity":
                 lines.append(

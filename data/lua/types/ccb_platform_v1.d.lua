@@ -8352,8 +8352,8 @@ function CcbPlatformActivitiesApi.read(character_handle, book_handle, duration, 
 ---@param character_handle GameHandle
 ---@return any
 function CcbPlatformActivitiesApi.resume(character_handle) end
----@param handle GameHandle
----@return any
+---@param handle GameHandle Exact NPC.
+---@return CcbResult result Always restores native mission/attitude and clears activity, backlog and destination. value.restored is true; legacy value.changed indicates a previously active job only.
 function CcbPlatformActivitiesApi.revert_npc_job(handle) end
 ---@param character_handle GameHandle
 ---@param partner_handle GameHandle

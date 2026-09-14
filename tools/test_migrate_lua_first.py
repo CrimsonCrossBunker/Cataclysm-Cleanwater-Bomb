@@ -10413,7 +10413,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.activities.cancel(actor)', main)
+            self.assertIn('service_value(services.activities.revert_npc_job(actor))', main)
             self.assertIn('services.activities.assign_timed(services.characters.avatar(), services.types.id("activity", "ACT_SOCIALIZE"), services.time.duration(600, "turn"))', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_BUTCHER"), services.time.duration(1800, "turn"))', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CHOP_PLANKS"), services.time.duration(1800, "turn"))', main)
@@ -20749,6 +20749,45 @@ assert(#targets==0)
                 {"effect": [{"run_eocs": [prefix + "callback"]}]}, prefix))
             self.assertFalse(migrate_lua_first._node_has_actor_prefix(
                 {"effect": [{"set_string_var": [prefix + "text"]}]}, prefix))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_revert_job_uses_native_restore_and_propagates_failure(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "restore_job",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": "revert_activity"}), migrate_lua_first.MigrationResult())
+        script = r"""
+local npc,override={},{}
+local expected=npc
+local calls=0
+local fail=false
+local function service_value(result)
+ if not result.ok then error(result.error.message) end
+ return result.value
+end
+local services={activities={
+ cancel=function() error('wrong lifecycle operation') end,
+ revert_npc_job=function(target)
+  assert(target==expected)
+  calls=calls+1
+  if fail then return {ok=false,error={message='restore failed'}} end
+  return {ok=true,value={restored=true}}
+ end
+}}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.restore_job({actors={npc=npc}},nil)
+expected=override
+migrated_eoc_functions.restore_job({actors={npc=npc}},override)
+fail=true
+local ok,err=pcall(migrated_eoc_functions.restore_job,{actors={npc=npc}},override)
+assert(not ok and tostring(err):find('restore failed',1,true))
+assert(calls==3)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_foreach_literal_array_rejects_non_string_values(self) -> None:
         for invalid in (0, 1.5, True, False, None, ["nested"]):

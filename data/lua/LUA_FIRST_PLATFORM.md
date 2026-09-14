@@ -799,3 +799,10 @@ Explicit `{str = ..., i18n = true}` string expressions in migrated
 arguments. Plain string literals remain untranslated. Translation runs while
 building the input snapshot, before body effects. Generated Lua execution covers
 this order; native localization comparison is still pending.
+
+`activities.revert_npc_job` always performs native NPC state restoration,
+including idle NPCs with pending backlog or saved mission/attitude state.
+Migrated `revert_activity` calls this operation instead of cancellation.
+The result reports `restored = true`; the legacy `changed` field only records
+whether a job was active beforehand. Generated Lua routing/error tests pass;
+the idle-NPC native comparison test still awaits execution.

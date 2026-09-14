@@ -24,6 +24,7 @@
 #include "event_subscriber.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "lua_platform_activities.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_effects.h"
@@ -604,6 +605,51 @@ TEST_CASE( "lua_platform_technique_large_blacklist_matches_native",
     sol::table value = result["value"];
     CHECK( value["technique"].get<cata::lua_platform::script_game_id>().value() ==
            std::get<0>( expected ).str() );
+}
+
+
+TEST_CASE( "lua_platform_revert_idle_npc_restores_native_state",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = []( npc & worker ) {
+        worker.normalize();
+        worker.set_mission( NPC_MISSION_GUARD );
+        worker.set_attitude( NPCATT_FOLLOW );
+        worker.backlog.emplace_back( activity_id( "ACT_WAIT" ), 100 );
+    };
+    prepare( native );
+    prepare( fixture.other );
+    REQUIRE_FALSE( fixture.other.activity );
+    REQUIRE_FALSE( fixture.other.has_player_activity() );
+    REQUIRE_FALSE( fixture.other.backlog.empty() );
+    const npc_mission expected_mission = native.get_previous_mission();
+    const npc_attitude expected_attitude = native.get_previous_attitude();
+    native.revert_after_activity();
+    cata::lua_platform::install_activity_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function restore = fixture.services["activities"]["revert_npc_job"];
+    sol::protected_function_result call = restore( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    CHECK( value["restored"].get<bool>() );
+    CHECK_FALSE( value["changed"].get<bool>() );
+    CHECK( fixture.other.mission == native.mission );
+    CHECK( fixture.other.mission == expected_mission );
+    CHECK( fixture.other.get_attitude() == native.get_attitude() );
+    CHECK( fixture.other.get_attitude() == expected_attitude );
+    CHECK( fixture.other.backlog.empty() );
+    CHECK_FALSE( fixture.other.activity );
+    CHECK( fixture.other.current_activity_id == native.current_activity_id );
+    CHECK_FALSE( fixture.other.has_destination() );
 }
 
 #endif

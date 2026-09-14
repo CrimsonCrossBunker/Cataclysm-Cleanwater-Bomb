@@ -494,11 +494,12 @@ void install_activity_api(
                                 state, worker->activity );
         const bool changed = static_cast<bool>( worker->activity ) ||
                              worker->has_player_activity();
-        if( changed ) {
-            worker->revert_after_activity();
-        }
+        // Native restoration also resets mission, attitude, destination and
+        // backlog when there is no active job.
+        worker->revert_after_activity();
         sol::table value = state.create_table();
         value["changed"] = changed;
+        value["restored"] = true;
         value["before"] = std::move( before );
         value["after"] = activity_snapshot(
                              state, worker->activity );
