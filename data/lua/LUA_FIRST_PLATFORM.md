@@ -887,3 +887,10 @@ Combat-insult migration invokes `npcs.dialogue.provoke_combat`, preserving
 the native topic change and hostility together. Generated Lua tests verify
 event/override NPC routing; native topic/attitude comparison source is present
 but unexecuted. This does not establish combat gameplay acceptance.
+
+Follower migration uses `join_player`, `stop_temporary_following` and
+`make_neutral` instead of attitude-only writes. This retains follower/faction
+setup and cash transfer, the allied-NPC stop guard and stranger-topic reset.
+Generated Lua routing tests pass; allied/non-allied state comparison source
+is present but unexecuted. Join-state runtime evidence and native notification
+parity remain outstanding.

@@ -32,6 +32,7 @@
 #include "lua_platform_creatures.h"
 #include "lua_platform_effects.h"
 #include "lua_platform_npc_services.h"
+#include "lua_platform_npcs.h"
 #include "lua_platform_trade.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
@@ -931,6 +932,50 @@ TEST_CASE( "lua_platform_combat_insult_matches_native_topic_and_attitude",
     CHECK( fixture.other.chatbin.first_topic == "TALK_DONE" );
     CHECK( fixture.other.get_attitude() == native.get_attitude() );
     CHECK( fixture.other.get_attitude() == NPCATT_KILL );
+}
+
+
+TEST_CASE( "lua_platform_stop_following_and_neutral_match_native_state",
+           "[lua][platform][npc][semantic]" )
+{
+    const bool allied = GENERATE( false, true );
+    effect_fixture fixture;
+    npc native;
+    const auto prepare = [allied]( npc & worker ) {
+        worker.normalize();
+        if( allied ) {
+            worker.set_fac( faction_id( "your_followers" ) );
+        }
+        worker.set_attitude( NPCATT_FOLLOW );
+        worker.chatbin.first_topic = "TALK_TEST";
+        worker.chatbin.talk_stranger_neutral = "TALK_STRANGER_NEUTRAL";
+    };
+    prepare( native );
+    prepare( fixture.other );
+    REQUIRE( fixture.other.is_player_ally() == allied );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    for( const std::string operation : {
+             "stop_temporary_following", "make_neutral"
+         } ) {
+        if( operation == "stop_temporary_following" ) {
+            talk_function::stop_following( native );
+        } else {
+            talk_function::stranger_neutral( native );
+        }
+        sol::protected_function run = fixture.services["npcs"][operation];
+        sol::protected_function_result call = run( fixture.handle( true ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( fixture.other.get_attitude() == native.get_attitude() );
+        CHECK( fixture.other.chatbin.first_topic == native.chatbin.first_topic );
+    }
 }
 
 #endif

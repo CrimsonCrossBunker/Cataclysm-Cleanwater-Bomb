@@ -10090,8 +10090,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "reveal_route has no transactional Platform API",
                 report,
             )
-            self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
-            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
+            self.assertIn('services.npcs.join_player(actor, services.characters.avatar())', main)
+            self.assertIn("services.npcs.stop_temporary_following(actor)", main)
             self.assertNotIn("needs review", report)
 
     def test_translates_foreach_with_native_definition_pages(self) -> None:
@@ -21272,6 +21272,45 @@ migrated_eoc_functions.insult({actors={npc=npc}},nil)
 expected=override
 migrated_eoc_functions.insult({actors={npc=npc}},override)
 assert(calls==2)
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_follower_migration_preserves_relationship_operations(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "relations",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["follow", "stop_following", "stranger_neutral"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc,override={},{},{}
+local expected=npc
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ characters={avatar=function() return avatar end},
+ npcs={
+  join_player=function(target,owner)
+   assert(target==expected and owner==avatar);calls[#calls+1]='join';return {ok=true,value={}}
+  end,
+  stop_temporary_following=function(target)
+   assert(target==expected);calls[#calls+1]='stop';return {ok=true,value={blocked_by_ally=true}}
+  end,
+  make_neutral=function(target)
+   assert(target==expected);calls[#calls+1]='neutral';return {ok=true,value={}}
+  end
+ }
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+for _,target in ipairs({npc,override}) do
+ expected=target;calls={}
+ migrated_eoc_functions.relations({actors={npc=npc}},target)
+ assert(table.concat(calls,',')=='join,stop,neutral')
+end
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

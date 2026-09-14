@@ -30699,13 +30699,14 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif npc_actor_proven and effect == "follow":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(
+                    f"    service_value(services.npcs.join_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stop_following":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.stop_temporary_following({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stranger_neutral":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.make_neutral({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "end_conversation":
                 lines.append(f"    service_value(services.npcs.dialogue.finish({npc_actor_expression or 'actor'}))")
