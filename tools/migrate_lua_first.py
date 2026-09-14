@@ -30915,9 +30915,8 @@ def render_eoc(
                 converted_effect = True
             elif npc_actor_proven and effect == "morale_chat_activity":
                 lines.append(
-                    render_named_character_activity(
-                        "services.characters.avatar()", "ACT_SOCIALIZE", 10
-                    )
+                    f"    service_value(services.activities.socialize(services.characters.avatar(), "
+                    f"{npc_actor_expression or 'actor'}, services.time.duration(600, \"turn\")))"
                 )
                 converted_effect = True
             elif npc_actor_proven and effect == "do_butcher":
@@ -30984,7 +30983,8 @@ def render_eoc(
                     f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_repair"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "drop_items_in_place":
-                lines.append(render_named_character_activity("actor", "ACT_DROP", 1))
+                lines.append(
+                    f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "find_mount":
                 lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))

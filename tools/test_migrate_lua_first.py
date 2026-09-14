@@ -10414,7 +10414,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
             self.assertIn('service_value(services.activities.revert_npc_job(actor))', main)
-            self.assertIn('services.activities.assign_timed(services.characters.avatar(), services.types.id("activity", "ACT_SOCIALIZE"), services.time.duration(600, "turn"))', main)
+            self.assertIn('services.activities.socialize(services.characters.avatar(), actor, services.time.duration(600, "turn"))', main)
             self.assertIn('services.activities.assign_npc_job(actor, "butcher")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "chop_planks")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "chop_trees")', main)
@@ -10431,7 +10431,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('services.activities.assign_npc_job(actor, "disassembly")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "vehicle_deconstruct")', main)
             self.assertIn('services.activities.assign_npc_job(actor, "vehicle_repair")', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DROP"), services.time.duration(60, "turn"))', main)
+            self.assertIn('services.npcs.orders.run(actor, "drop_carried_items")', main)
             self.assertNotIn("needs review", report)
 
     def test_translates_npc_mount_training_and_interaction_effects(self) -> None:
@@ -20914,6 +20914,43 @@ for _,status in ipairs({'no_match','success','stale_npc','assignment_rejected'})
  if status=='no_match' or status=='success' then assert(ok and continued==1)
  else assert(not ok and continued==0 and tostring(err):find(status,1,true)) end
 end
+""".replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_socialize_and_drop_preserve_native_participants(self) -> None:
+        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {"type": "effect_on_condition", "id": "social_drop",
+                                   "required_event": "npc_becomes_hostile",
+                                   "effect": ["morale_chat_activity", "drop_items_in_place"]}),
+            migrate_lua_first.MigrationResult())
+        script = r"""
+local avatar,npc,override={},{},{}
+local expected=npc
+local calls={}
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ characters={avatar=function() return avatar end},
+ time={duration=function(value,unit) assert(value==600 and unit=='turn');return value end},
+ activities={socialize=function(character,partner,duration)
+  assert(character==avatar and partner==expected and duration==600)
+  calls[#calls+1]='socialize';return {ok=true,value={}}
+ end},
+ npcs={orders={run=function(target,order)
+  assert(target==expected and order=='drop_carried_items')
+  calls[#calls+1]='drop';return {ok=true,value={}}
+ end}}
+}
+local migrated_eoc_functions={}
+local runtime={handler=function() end,on=function() end}
+BODY
+migrated_eoc_functions.social_drop({actors={npc=npc}},nil)
+assert(table.concat(calls,',')=='socialize,drop')
+calls={};expected=override
+migrated_eoc_functions.social_drop({actors={npc=npc}},override)
+assert(table.concat(calls,',')=='socialize,drop')
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)

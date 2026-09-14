@@ -829,3 +829,9 @@ NPC job before returning `no_match`; idle NPCs remain unchanged. Migrated
 Generated Lua branch tests pass; native active/idle no-match comparison source
 is present but has not executed. Successful mount selection still needs runtime
 acceptance.
+
+Migrated `morale_chat_activity` uses the native socialize actor for the
+avatar and the exact NPC partner for ten minutes. `drop_items_in_place` uses
+the native `drop_carried_items` order, retaining its inventory filtering and
+empty-inventory behavior. Generated Lua tests verify event and overridden NPC
+participants; native activity execution and inventory outcomes remain unverified.
