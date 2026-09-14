@@ -3860,11 +3860,35 @@ def render_static_run_eocs(
             return None
     variables = effect.get("variables")
 
+    def array_literal(value: list[Any]) -> str | None:
+        nodes = 0
+
+        def render(entry: Any, depth: int) -> str | None:
+            nonlocal nodes
+            nodes += 1
+            if nodes > 512 or depth > 8:
+                return None
+            if isinstance(entry, list):
+                children = [render(child, depth + 1) for child in entry]
+                if any(child is None for child in children):
+                    return None
+                return "{" + ", ".join(children) + "}"
+            if entry is None or isinstance(entry, bool):
+                return "services.types.null"
+            if isinstance(entry, dict) and (entry.get("i18n") or not set(entry) <= {
+                    "str", "i18n", "//~", "tripoint"}):
+                return None
+            return render_eoc_value_expression(entry, "nil", fallback_actor)
+
+        return render(value, 0)
+
     def variable_expression(value: Any) -> str | None:
         # Native diag_value_or_var assigns an explicit empty value, even when
         # a referenced variable is absent. Do not erase an inherited key.
         if value is None:
             return "services.types.null"
+        if isinstance(value, list):
+            return array_literal(value)
         literal = lua_scalar_literal(value)
         if literal is not None:
             return literal
@@ -3996,6 +4020,10 @@ def render_static_run_eocs(
     has_delay = (
         delay_turns != 0 or delay_turns_expression not in (None, "0")
     )
+    if has_delay and variables and any(isinstance(value, list) for value in variables.values()):
+        # Native task payload persistence is scalar-only; do not emit arrays
+        # that load successfully but fail when scheduled.
+        return None
     delayed_talker_pair = has_delay and has_talker_override
     task_references = list(references)
     force_global_avatar_task = False

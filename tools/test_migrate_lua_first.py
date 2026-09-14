@@ -18678,6 +18678,29 @@ local function child(ctx) called=true; assert(ctx.data.value == "beta value") en
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_run_eocs_array_assignment_preserves_empty_slots(self) -> None:
+        effect = {"run_eocs": "child", "variables": {"values": [None, 0, ["text", None]]}}
+        lines = migrate_lua_first.render_static_run_eocs(
+            effect, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local services={types={null={}}}
+local actor={}
+local context={data={}}
+local called=false
+local function child(ctx)
+    called=true
+    local values=ctx.data.values
+    assert(#values==3 and values[1]==services.types.null and values[2]==0)
+    assert(#values[3]==2 and values[3][1]=="text" and values[3][2]==services.types.null)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
+
     def test_run_eocs_variables_read_parent_participants(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs(
             {"run_eocs": "child", "variables": {
