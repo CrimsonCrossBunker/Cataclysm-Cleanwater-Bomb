@@ -3861,16 +3861,24 @@ def render_static_run_eocs(
     variables = effect.get("variables")
 
     def variable_expression(value: Any) -> str | None:
-        rendered = lua_scalar_literal(value)
+        # Native diag_value_or_var assigns an explicit empty value, even when
+        # a referenced variable is absent. Do not erase an inherited key.
+        if value is None:
+            return "services.types.null"
+        literal = lua_scalar_literal(value)
+        if literal is not None:
+            return literal
+        rendered = render_eoc_value_expression(value, "nil", fallback_actor)
         if rendered is None:
-            rendered = render_eoc_value_expression(
-                value, "nil", fallback_actor
-            )
+            rendered = render_eoc_numeric_expression(value, "0", fallback_actor)
         if rendered is None:
-            rendered = render_eoc_numeric_expression(
-                value, "0", fallback_actor
-            )
-        return rendered
+            return None
+        if not isinstance(value, dict) or not set(value).intersection({
+            "u_val", "npc_val", "global_val", "context_val", "var_val",
+        }):
+            return rendered
+        return ('(function(value) if value == nil then return services.types.null end; '
+                f'return value end)({rendered})')
 
     if variables is not None:
         if not isinstance(variables, dict) or len(variables) > 64:

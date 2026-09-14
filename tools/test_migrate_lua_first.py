@@ -18577,6 +18577,37 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 report,
             )
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_context_preserves_explicit_and_missing_source_null(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {
+                "explicit": None, "absent": {"context_val": "missing"},
+                "inherited": {"context_val": "missing"},
+                "false_value": {"context_val": "false_source"},
+            }}, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null = setmetatable({}, {__tostring=function() return "" end})
+local services = {types={null=null}}
+local actor = {}
+local context = {data={inherited="old", false_source=false}}
+local calls = 0
+local function child(next_context, next_actor)
+    calls = calls + 1
+    assert(next_actor == actor)
+    for _, key in ipairs({"explicit", "absent", "inherited"}) do
+        assert(next_context.data[key] == null, key)
+        assert(next_context.data["_" .. key] == null, key)
+    end
+    assert(next_context.data.false_value == false)
+    assert(context.data.inherited == "old")
+    assert(context.data.explicit == nil)
+end
+""" + "\n".join(lines) + "\nassert(calls == 1)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_run_eocs_variables_accept_bounded_translation_scalars(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
