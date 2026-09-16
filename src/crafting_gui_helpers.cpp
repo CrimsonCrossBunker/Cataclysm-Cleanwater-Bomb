@@ -26,7 +26,6 @@
 #include "flag.h"
 #include "flat_set.h"
 #include "game_constants.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_factory.h"
 #include "iteminfo_query.h"
@@ -38,6 +37,7 @@
 #include "requirements.h"
 #include "skill.h"
 #include "string_formatter.h"
+#include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"
@@ -133,12 +133,12 @@ float availability::get_max_proficiency_skill_maluses() const
 }
 
 availability::availability( Character &_crafter, const recipe *r, int batch_size,
-                            bool camp_crafting, inventory *inventory_override ) :
+                            bool camp_crafting, temp_crafting_inventory *inventory_override ) :
     crafter( _crafter )
 {
     rec = r;
     inv_override = inventory_override;
-    const inventory &inv = camp_crafting ? *inv_override : crafter.crafting_inventory();
+    const temp_crafting_inventory &inv = camp_crafting ? *inv_override : crafter.crafting_inventory();
     auto all_items_filter = r->get_component_filter( recipe_filter_flags::none );
     auto no_rotten_filter = r->get_component_filter( recipe_filter_flags::no_rotten );
     auto no_favorite_filter = r->get_component_filter( recipe_filter_flags::no_favorite );
@@ -163,16 +163,16 @@ availability::availability( Character &_crafter, const recipe *r, int batch_size
                     req.can_make_with_inventory( &crafter, inv, all_items_filter, batch_size, flag );
     }
     would_use_rotten = !req.can_make_with_inventory( &crafter, inv, no_rotten_filter, batch_size,
-                       flag );
+        flag );
     would_use_favorite = !req.can_make_with_inventory( &crafter, inv, no_favorite_filter, batch_size,
-                         flag );
+        flag );
     useless_practice = r->is_practice() && cannot_gain_skill_or_prof( crafter, *r );
     is_nested_category = r->is_nested();
     const requirement_data &simple_req = r->simple_requirements();
     apparently_craftable = ( !r->is_practice() || has_all_skills ) && has_proficiencies &&
                            meets_character_requirements &&
                            simple_req.can_make_with_inventory( &crafter, inv, all_items_filter,
-                                   batch_size, flag );
+                               batch_size, flag );
     for( const auto &[skill, skill_lvl] : r->required_skills ) {
         if( crafter.get_skill_level( skill ) < skill_lvl ) {
             has_all_skills = false;
@@ -378,7 +378,8 @@ std::vector<std::string> recipe_info(
                           recp.has_flag( "BLIND_HARD" ) ? _( "Hard" ) :
                           _( "Impossible" ) );
 
-    const inventory &crafting_inv = avail.inv_override ? *avail.inv_override : guy.crafting_inventory();
+    const temp_crafting_inventory &crafting_inv = avail.inv_override ? *avail.inv_override :
+        guy.crafting_inventory();
     if( recp.result() ) {
         const int nearby_amount = crafting_inv.count_item( recp.result() );
         std::string nearby_string;
@@ -559,62 +560,62 @@ recipe_subset filter_recipes( const recipe_subset &available_recipes,
             switch( qry_filter_str[0] ) {
                 case 't':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::tool, progress_callback );
+                        recipe_subset::search_type::tool, progress_callback );
                     break;
 
                 case 'c':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::component, progress_callback );
+                        recipe_subset::search_type::component, progress_callback );
                     break;
 
                 case 's':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::skill, progress_callback );
+                        recipe_subset::search_type::skill, progress_callback );
                     break;
 
                 case 'p':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::primary_skill, progress_callback );
+                        recipe_subset::search_type::primary_skill, progress_callback );
                     break;
 
                 case 'Q':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::quality, progress_callback );
+                        recipe_subset::search_type::quality, progress_callback );
                     break;
 
                 case 'q':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::quality_result, progress_callback );
+                        recipe_subset::search_type::quality_result, progress_callback );
                     break;
 
                 case 'L':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::length, progress_callback );
+                        recipe_subset::search_type::length, progress_callback );
                     break;
 
                 case 'V':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::volume, progress_callback );
+                        recipe_subset::search_type::volume, progress_callback );
                     break;
 
                 case 'M':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::mass, progress_callback );
+                        recipe_subset::search_type::mass, progress_callback );
                     break;
 
                 case 'v':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::covers, progress_callback );
+                        recipe_subset::search_type::covers, progress_callback );
                     break;
 
                 case 'e':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::layer, progress_callback );
+                        recipe_subset::search_type::layer, progress_callback );
                     break;
 
                 case 'd':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::description_result, progress_callback );
+                        recipe_subset::search_type::description_result, progress_callback );
                     break;
 
                 case 'm': {
@@ -634,17 +635,17 @@ recipe_subset filter_recipes( const recipe_subset &available_recipes,
 
                 case 'P':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::proficiency, progress_callback );
+                        recipe_subset::search_type::proficiency, progress_callback );
                     break;
 
                 case 'b':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ), crafter,
-                                       recipe_subset::search_type::book, progress_callback );
+                        recipe_subset::search_type::book, progress_callback );
                     break;
 
                 case 'l':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::difficulty, progress_callback );
+                        recipe_subset::search_type::difficulty, progress_callback );
                     break;
 
                 case 'r': {
@@ -665,18 +666,18 @@ recipe_subset filter_recipes( const recipe_subset &available_recipes,
 
                 case 'a':
                     filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 2 ),
-                                       recipe_subset::search_type::activity_level, progress_callback );
+                        recipe_subset::search_type::activity_level, progress_callback );
                     break;
                 default:
                     break;
             }
         } else if( qry_filter_str.size() > 1 && qry_filter_str[0] == '-' ) {
             filtered_recipes = filtered_recipes.reduce( qry_filter_str.substr( 1 ),
-                               recipe_subset::search_type::exclude_name, progress_callback );
+                recipe_subset::search_type::exclude_name, progress_callback );
         } else {
             filtered_recipes = filtered_recipes.reduce( qry_filter_str,
-                               recipe_subset::search_type::name,
-                               std::function<void( size_t, size_t )> {} );
+                recipe_subset::search_type::name,
+                std::function<void( size_t, size_t )> {} );
         }
 
         qry_begin = qry_end + 1;
@@ -722,7 +723,7 @@ static void insert_block_separator( std::vector<iteminfo> &info_vec,
 {
     info_vec.emplace_back( "DESCRIPTION", "--" );
     info_vec.emplace_back( "DESCRIPTION", std::string( center_text_pos( title, 0,
-                           panel_width ), ' ' ) +
+            panel_width ), ' ' ) +
                            "<bold>" + title + "</bold>" );
     info_vec.emplace_back( "DESCRIPTION", "--" );
 }
@@ -944,7 +945,7 @@ static void recursively_expand_recipes( std::vector<const recipe *> &current,
                                         std::map<const recipe *, availability> &availability_cache, int i,
                                         Character &crafter, bool unread_recipes_first, bool highlight_unread_recipes,
                                         const recipe_subset &available_recipes, const std::set<recipe_id> &hidden_recipes,
-                                        bool camp_crafting, inventory *inventory_override )
+                                        bool camp_crafting, temp_crafting_inventory *inventory_override )
 {
     std::vector<const recipe *> tmp;
     for( const recipe_id &nested : current[i]->nested_category_data ) {
@@ -965,7 +966,7 @@ static void recursively_expand_recipes( std::vector<const recipe *> &current,
     const bool want_unread = highlight_unread_recipes && unread_recipes_first;
     const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
     std::stable_sort( tmp.begin(), tmp.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx
+                          &crafter, &availability_cache, want_unread, &sort_ctx
     ]( const recipe * const a, const recipe * const b ) {
         const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
         const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );
@@ -983,7 +984,7 @@ static void expand_recipes( std::vector<const recipe *> &current,
                             std::map<const recipe *, availability> &availability_cache,
                             Character &crafter, bool unread_recipes_first, bool highlight_unread_recipes,
                             const recipe_subset &available_recipes, const std::set<recipe_id> &hidden_recipes,
-                            bool camp_crafting, inventory *inventory_override )
+                            bool camp_crafting, temp_crafting_inventory *inventory_override )
 {
     for( size_t i = 0; i < current.size(); ++i ) {
         if( current[i]->is_nested()
@@ -1022,7 +1023,7 @@ recipe_list_data build_recipe_list(
     bool skip_sort,
     Character &crafter,
     bool camp_crafting,
-    inventory *inventory_override,
+    temp_crafting_inventory *inventory_override,
     bool highlight_unread,
     bool unread_first,
     std::map<const recipe *, availability> &availability_cache,
@@ -1067,7 +1068,7 @@ recipe_list_data build_recipe_list(
         const bool want_unread = highlight_unread && unread_first;
         const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
         std::stable_sort( result.entries.begin(), result.entries.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx
+                              &crafter, &availability_cache, want_unread, &sort_ctx
         ]( const recipe * const a, const recipe * const b ) {
             const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
             const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );

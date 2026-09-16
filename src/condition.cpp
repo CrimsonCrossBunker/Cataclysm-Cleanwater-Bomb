@@ -40,7 +40,6 @@
 #include "game.h"
 #include "generic_factory.h"
 #include "global_vars.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_location.h"
@@ -70,6 +69,7 @@
 #include "rng.h"
 #include "string_formatter.h"
 #include "talker.h"
+#include "temp_crafting_inventory.h"
 #include "translation.h"
 #include "type_id.h"
 #include "units.h"
@@ -746,17 +746,19 @@ conditional_t::func f_has_items_sum( const JsonObject &jo, std::string_view memb
         double charges_present;
         double total_present;
         const Character *you = d.const_actor( is_npc )->get_const_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(), pickup_range );
+        temp_crafting_inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
+            pickup_range );
 
         // Include cargo from vehicles owned by the actor's faction.  Vehicle
         // inventories are not part of crafting_inventory(), but mission
         // deliveries should accept items stored in the player's truck.
         map &here = get_map();
+        std::set<vehicle *> vehicles_found;
         for( const wrapped_vehicle &wv : here.get_vehicles() ) {
             if( wv.v->owner == you->get_faction_id() ) {
                 for( const tripoint_abs_ms &veh_pt : wv.v->get_points() ) {
                     if( optional_vpart_position vp = here.veh_at( veh_pt ) ) {
-                        vp->form_inventory( here, inventory_and_around );
+                        vp->form_inventory( here, inventory_and_around, vehicles_found );
                     }
                 }
             }
@@ -1860,8 +1862,8 @@ conditional_t::func f_test_eoc( const JsonObject &jo, std::string_view member )
     return [eocToTest]( const_dialogue const & d ) -> bool {
         effect_on_condition_id tested( eocToTest.evaluate( d ) );
         if( !tested.is_valid() )
-        {
-            debugmsg( "Invalid eoc id: %s", eocToTest.evaluate( d ) );
+    {
+        debugmsg( "Invalid eoc id: %s", eocToTest.evaluate( d ) );
             return false;
         }
         return tested->condition( d );
@@ -2180,8 +2182,8 @@ static std::function<T( const_dialogue const & )> get_get_str_( const JsonObject
                 bl.emplace_back( sv.evaluate( d ) );
             }
             return ret_func( d.const_actor( false )->get_random_technique( *d.const_actor(
-                                 true )->get_const_creature(),
-                             crit, dodge_counter, block_counter, bl ).str() );
+                        true )->get_const_creature(),
+                    crit, dodge_counter, block_counter, bl ).str() );
         };
     } else if( mutator == "topic_item" ) {
         return [ret_func]( const_dialogue const & d ) {

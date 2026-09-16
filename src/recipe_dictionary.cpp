@@ -28,7 +28,6 @@
 #include "flexbuffer_json.h"
 #include "init.h"
 #include "input.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -41,11 +40,13 @@
 #include "skill.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
+#include "temp_crafting_inventory.h"
 #include "translation.h"
 #include "translations.h"
 #include "uistate.h"
 #include "units.h"
 #include "value_ptr.h"
+#include "visitable.h"
 
 static const flag_id json_flag_NUTRIENT_OVERRIDE( "NUTRIENT_OVERRIDE" );
 
@@ -321,17 +322,24 @@ std::vector<const recipe *> recipe_subset::search(
                     return false;
                 }
                 const Character &crafter_ref = crafter->get();
-                const inventory &crafting_inventory = crafter_ref.crafting_inventory();
+                const temp_crafting_inventory &crafting_inventory = crafter_ref.crafting_inventory();
 
-                for( const auto &stack : crafting_inventory.const_slice() ) {
-                    const item &item = stack->front();
-
-                    for( const auto &recipe : item.get_available_recipes( crafter_ref ) ) {
-                        if( recipe.first == r && ( lcmatch( item.display_name(), txt ) ||
-                                                   lcmatch( item::nname( item.typeId() ), txt ) ) ) {
-                            return true;
+                bool found = false;
+                crafting_inventory.visit_items(
+                [&]( item * node, item * ) {
+                    for( const auto &recipe : node->get_available_recipes( crafter_ref ) ) {
+                        if( recipe.first == r && ( lcmatch( node->display_name(), txt ) ||
+                                                   lcmatch( item::nname( node->typeId() ), txt ) ) ) {
+                            found = true;
+                            return VisitResponse::ABORT;
                         }
                     }
+                    return VisitResponse::NEXT;
+                }
+                );
+
+                if( found ) {
+                    return true;
                 }
 
                 std::vector<const Character *> knowing_helpers;
@@ -781,7 +789,7 @@ void recipe_dictionary::finalize()
         for( const auto &bk : r.booksets ) {
             const itype *booktype = item::find_type( bk.first );
             int req = bk.second.skill_req > 0 ? bk.second.skill_req : std::max( booktype->book->req,
-                      r.difficulty );
+                r.difficulty );
             islot_book::recipe_with_description_t desc{ &r, req, bk.second.alt_name, bk.second.hidden };
             const_cast<islot_book &>( *booktype->book ).recipes.insert( desc );
         }
