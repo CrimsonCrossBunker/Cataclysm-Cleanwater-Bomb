@@ -4650,7 +4650,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "repairs_with", repairs_with, auto_flags_reader<material_id> {} );
     optional( jo, was_loaded, "ememory_size", ememory_size );
 
-    optional( jo, was_loaded, "color", color, nc_color_reader{} );
+    optional( jo, was_loaded, "color", color, nc_color_reader{}, c_white );
 
     optional( jo, was_loaded, "repairs_like", repairs_like );
 
