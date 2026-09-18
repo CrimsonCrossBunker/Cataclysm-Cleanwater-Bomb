@@ -280,6 +280,9 @@ const char *GetRenderDriverName( int index );
 // SDL3: SDL_RendererInfo struct removed. Name via SDL_GetRendererName,
 // capabilities via SDL_GetRendererProperties.
 const char *GetRendererName( const SDL_Renderer_Ptr &renderer );
+// Name of the SDL GPU backend under a gpu renderer, such as "vulkan", or "none"
+// off the gpu driver
+const char *GetGPUBackendName( const SDL_Renderer_Ptr &renderer );
 bool IsRendererSoftware( const SDL_Renderer_Ptr &renderer );
 // block until event is queued or `timeout_ms` passes (0 polls, -1 has no
 // timeout); the event stays queued for SDL_PollEvent. false on timeout
@@ -343,6 +346,8 @@ void GetWindowSizeInPixels( SDL_Window *window, int *w, int *h );
 void SetTextureScaleQuality( const SDL_Texture_Ptr &texture, const std::string &quality );
 // Store a default scale quality applied by CreateTexture/CreateTextureFromSurface.
 void SetDefaultTextureScaleQuality( const std::string &quality );
+// SDL_GetTextureScaleMode. SDL_SCALEMODE_INVALID for a null texture or on failure.
+SDL_ScaleMode GetTextureScaleMode( const std::shared_ptr<SDL_Texture> &texture );
 
 // Text input state belongs to the specified window.
 void StartTextInput( SDL_Window *window );
