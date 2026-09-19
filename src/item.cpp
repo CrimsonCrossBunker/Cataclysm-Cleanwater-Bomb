@@ -4082,8 +4082,11 @@ bool item::use_charges( const itype_id &what, int &qty, std::list<item> &used,
         // ammo_consume mutates e->charges in place, so the copy in `used` records
         // the remaining charges instead of the amount consumed, leaves behind
         // 0-charge stacks, and triggers spurious retry over-consumption. Items
-        // that are not count_by_charges continue to take the TOOL/gun path unchanged.
-        if( ( e->is_tool() || e->is_gun() ) && !e->count_by_charges() ) {
+        // that are not count_by_charges continue to take the TOOL/gun path.
+        // Explicit in_tools requests also consume loaded magazines and belts,
+        // matching the stock counted by has_charges().
+        if( ( e->is_tool() || e->is_gun() || ( in_tools && e->is_magazine() ) ) &&
+            !e->count_by_charges() ) {
             if( e->typeId() == what || ( in_tools && e->ammo_current() == what ) ) {
                 int n = 0;
                 if( e->uses_firing_requirements() ) {
