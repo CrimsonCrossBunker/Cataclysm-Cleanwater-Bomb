@@ -4746,11 +4746,8 @@ void iexamine::compost_empty( Character &you, const tripoint_bub_ms &examp )
         } else {
             add_msg( _( "You close the lid and start anaerobic digestion." ) );
         }
-        // Set timer for biogas production
-        map &here = get_map();
-        map_stack items_here = here.i_at( examp );
-        item &ferm = *items_here.end();
-        ferm.set_birthday( calendar::turn );
+        // The biomass age tracks fermentation; gas collection has its own timer.
+        here.i_at( examp ).only_item().erase_var( "compost_last_gas_collection" );
     }
 }
 
@@ -4759,16 +4756,19 @@ void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
     map &here = get_map();
     map_stack items_here = here.i_at( examp );
     if( items_here.empty() ) {
-        debugmsg( "biomass_full was empty!" );
+        // Liquid transfer activities can empty the tank after this examine function returns.
+        add_msg( _( "This tank is empty." ) );
         compost_set_empty( examp );
         return;
     }
 
-    for( item &it : items_here ) {
-        if( !it.made_of_from_type( phase_id::LIQUID ) ) {
-            add_msg( _( "You remove %s from the tank." ), it.tname() );
-            here.add_item_or_charges( you.pos_bub(), it );
-            here.i_rem( examp, &it );
+    for( auto it = items_here.begin(); it != items_here.end(); ) {
+        if( !it->made_of_from_type( phase_id::LIQUID ) ) {
+            add_msg( _( "You remove %s from the tank." ), it->tname() );
+            here.add_item_or_charges( you.pos_bub(), *it );
+            it = items_here.erase( it );
+        } else {
+            ++it;
         }
     }
 
@@ -4778,12 +4778,13 @@ void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
     }
 
     item &compost_i = *items_here.begin();
-    item &ferm = *items_here.end();
-    const time_duration last_open_time = ferm.age();
-    int fermented_days =  to_days<int>( last_open_time );
-    // Biogas generating process starts after one month.
-    int gas_gatherable =  fermented_days < 30 ? fermented_days : fermented_days - 30 ;
-    int max_gas_gatherable = gas_gatherable < 5 ? gas_gatherable : 5 ;
+    // Default to the first day of gas production for existing saves. Never reset
+    // the biomass birthday when collecting gas: that would restart fermentation.
+    const time_duration last_collection = time_duration::from_turns(
+            static_cast<int>( compost_i.get_var( "compost_last_gas_collection",
+                static_cast<double>( to_turns<int>( 30_days ) ) ) ) );
+    const int gas_gatherable = std::max( 0, to_days<int>( compost_i.age() - last_collection ) );
+    const int max_gas_gatherable = std::min( gas_gatherable, 5 );
     // Does the tank contain unfermented biomass, or already fermented liquid?
     if( compost_i.is_compostable() ) {
         add_msg( _( "There's a tank of %s set to ferment there." ), compost_i.tname() );
@@ -4834,7 +4835,8 @@ void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
                     add_msg( n_gettext( "Biogas generating process started for about %d day.",
                                         "Biogas generating process started for about %d days.",
                                         max_gas_gatherable ), max_gas_gatherable );
-                    ferm.set_birthday( calendar::turn );
+                    compost_i.set_var( "compost_last_gas_collection",
+                                       to_turns<int>( compost_i.age() ) );
                 }
             }
             return;
@@ -4886,7 +4888,7 @@ void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
 
     const std::string compost_name = compost_i.tname();
     item_location loc( map_cursor( examp ), &*items_here.begin() );
-    if( liquid_handler::handle_liquid( loc ) && loc->charges == 0 ) {
+    if( liquid_handler::handle_liquid( loc ) && ( !loc || loc->charges == 0 ) ) {
         compost_set_empty( examp );
         add_msg( _( "You squeeze the last drops of %s from the tank." ), compost_name );
     }
