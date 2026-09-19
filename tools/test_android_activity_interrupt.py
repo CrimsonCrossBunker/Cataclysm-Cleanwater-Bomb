@@ -16,18 +16,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ActivityInterruptTest(unittest.TestCase):
     def test_taps_and_route_cancellation(self):
-        source = Path(os.environ.get("CCB_SDLTILES_SOURCE", ROOT / "src/sdltiles.cpp")).read_text()
-        tap = braced_block(source, source.index("void handle_finger_input( uint32_t ticks )"))
-        source = Path(os.environ.get("CCB_HANDLE_ACTION_SOURCE", ROOT / "src/handle_action.cpp")).read_text()
-        route = braced_block(source, source.index("if( player_character.has_destination() )", source.index("bool game::handle_action(")))
+        source = Path(os.environ.get("CCB_SDLTILES_SOURCE",
+                      ROOT / "src/sdltiles.cpp")).read_text()
+        tap = braced_block(source, source.index(
+            "void handle_finger_input( uint32_t ticks )"))
+        source = Path(os.environ.get("CCB_HANDLE_ACTION_SOURCE",
+                      ROOT / "src/handle_action.cpp")).read_text()
+        route = braced_block(source, source.index(
+            "if( player_character.has_destination() )",
+            source.index("bool game::handle_action(")))
         code = FIXTURE.replace("// TAP", tap).replace("// ROUTE", route)
         with tempfile.TemporaryDirectory() as temp:
             cpp = Path(temp) / "probe.cpp"
             binary = Path(temp) / "probe"
             cpp.write_text(code)
-            result = subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", str(cpp), "-o", str(binary)], capture_output=True, text=True)
+            result = subprocess.run([os.environ.get(
+                "CXX", "c++"), "-std=c++17", str(cpp), "-o", str(binary)],
+                capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            result = subprocess.run([str(binary)], capture_output=True, text=True)
+            result = subprocess.run(
+                [str(binary)],
+                capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
 
 
@@ -51,7 +60,8 @@ struct Context {
     bool is_action_registered(const char *) { return false; }
     std::string get_category() { return category; }
 } touch_input_context;
-struct Client { void process_cata_input(input_event) {} } client, *imclient = &client;
+struct Client { void process_cata_input(input_event) {} };
+Client client, *imclient = &client;
 bool active_world = true;
 bool android_has_active_world() { return active_world; }
 struct Avatar {
@@ -77,7 +87,9 @@ uint32_t finger_down_time=1000, last_tap_time=0;
 // TAP
 int polls=0;
 bool cancel=false;
-void handle_key_blocking_activity() { ++polls; if(cancel) avatar.abort_automove(); }
+void handle_key_blocking_activity() {
+    ++polls; if(cancel) avatar.abort_automove();
+}
 const int ACTION_NULL=0, m_info=0;
 const char *_(const char *s) { return s; }
 void add_msg(int, const char *) {}
@@ -88,7 +100,7 @@ bool route_step() {
     return act != ACTION_NULL;
 }
 int main() {
-    // A short busy tap is immediate, including repeated attempts and rebound pause.
+    // Busy taps are immediate, including repeats and rebound pause.
     for(bool route : {false, true}) {
         avatar.activity = !route; avatar.steps = route ? 3 : 0;
         for(uint32_t previous : {0u, 1050u}) {
@@ -106,12 +118,13 @@ int main() {
     // Movement gestures still steer rather than becoming cancellation.
     touch_input_context.category="DEFAULTMODE"; finger_curr_x=100;
     handle_finger_input(1150); assert(last_input.key == KEY_RIGHT);
-    // Cancellation never consumes or executes a route step, including the last.
+    // Cancellation must not execute a route step, including the last.
     for(int remaining : {1, 3}) {
         avatar.steps=remaining; avatar.consumed=0; cancel=true; polls=0;
         assert(!route_step()); assert(avatar.consumed == 0 && polls == 1);
         avatar.steps=remaining; cancel=false; polls=0;
-        assert(route_step()); assert(avatar.steps == remaining-1 && polls == 1);
+        assert(route_step());
+        assert(avatar.steps == remaining-1 && polls == 1);
     }
 }
 '''
