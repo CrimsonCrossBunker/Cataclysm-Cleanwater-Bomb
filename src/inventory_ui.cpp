@@ -803,14 +803,9 @@ std::string inventory_selector_preset::get_caption( const inventory_entry &entry
     std::string disp_name;
     if( entry.any_item()->is_money() ) {
         disp_name = entry.any_item()->display_money( count, entry.any_item()->ammo_remaining( ) );
-    } else if( entry.any_item()->is_stackable() ) {
+    } else if( entry.any_item()->count_by_charges() ) {
         count = entry.get_total_charges();
-        disp_name = entry.any_item()->display_name( count );
-    } else if( entry.is_collation_header() && entry.any_item()->count_by_charges() ) {
-        item temp( *entry.any_item() );
-        temp.charges = entry.get_total_charges();
-        disp_name = temp.display_name( 1, true );
-        count = 1;
+        disp_name = entry.any_item()->display_name( count, true, false );
     } else {
         disp_name = entry.any_item()->display_name( count, true );
     }

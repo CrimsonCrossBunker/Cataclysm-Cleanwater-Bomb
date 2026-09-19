@@ -1657,7 +1657,8 @@ std::string item::display_money( unsigned int quantity, unsigned int total,
     }
 }
 
-std::string item::display_name( unsigned int quantity, bool color_faults ) const
+std::string item::display_name( unsigned int quantity, bool color_faults,
+                                bool show_stack_count ) const
 {
     std::string name = tname( quantity, tname::default_tname, color_faults );
     std::string sidetxt;
@@ -1850,7 +1851,8 @@ std::string item::display_name( unsigned int quantity, bool color_faults ) const
             }
         }
         show_amt = !has_flag( flag_RELOAD_AND_SHOOT );
-    } else if( count_by_charges() && !has_infinite_charges() && !type->is_stackable() ) {
+    } else if( show_stack_count && count_by_charges() && !has_infinite_charges() &&
+               !type->is_stackable() ) {
         // A chargeable item
         amount = charges;
         const itype *adata = ammo_data();

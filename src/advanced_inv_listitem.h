@@ -52,9 +52,8 @@ class advanced_inv_listitem
         int stacks = 0;
         /**
          * The quantity shown in the amount column. Equals @ref stacks for
-         * discrete items and for ammo/liquids (whose charge count already shows
-         * in the name), but for "stackable" resources it is the summed
-         * charges so the amount column reflects the real quantity.
+         * discrete items; resources, loose ammo and liquids show the summed
+         * charges. Loaded gun/tool charges are not the number of items.
          */
         int amount = 0;
         /**

@@ -473,7 +473,10 @@ class item : public visitable
          * Returns the item name and the charges or contained charges (if the item can have
          * charges at all). Calls @ref tname with given quantity and with_prefix being true.
          */
-        std::string display_name( unsigned int quantity = 1, bool color_faults = false ) const;
+        // Hide loose stack quantities when the caller provides a quantity column
+        // or prefix. Loaded ammunition and container contents remain visible.
+        std::string display_name( unsigned int quantity = 1, bool color_faults = false,
+                                  bool show_stack_count = true ) const;
 
         std::vector<iteminfo> get_info( bool showtext ) const;
         std::vector<iteminfo> get_info( bool showtext, int batch ) const;

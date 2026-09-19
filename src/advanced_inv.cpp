@@ -394,7 +394,7 @@ void advanced_inventory::print_items( side p, bool active )
     //~ Items list header (length type 2). Table fields length without spaces: src - 2, amt - 4, weight - 5, vol - 4.
     const int table_hdr_len2 = utf8_width( _( "src amt weight vol" ) );
 
-    mvwprintz( window, point( compact ? 1 : 4, 5 ), c_light_gray, _( "Name (charges)" ) );
+    mvwprintz( window, point( compact ? 1 : 4, 5 ), c_light_gray, _( "Name" ) );
     if( pane.get_area() == AIM_ALL && !compact ) {
         mvwprintz( window, point( lastcol - table_hdr_len2 + 1, 5 ), c_light_gray,
                    _( "src amt weight vol" ) );
@@ -488,9 +488,9 @@ void advanced_inventory::print_items( side p, bool active )
             }
         } else {
             if( stolen ) {
-                item_name = string_format( "%s %s", stolen_string, it.display_name( 1, true ) );
+                item_name = string_format( "%s %s", stolen_string, it.display_name( 1, true, false ) );
             } else {
-                item_name = it.display_name( 1, true );
+                item_name = it.display_name( 1, true, false );
             }
         }
         if( get_option<bool>( "ITEM_SYMBOLS" ) ) {
@@ -508,14 +508,15 @@ void advanced_inventory::print_items( side p, bool active )
         }
 
         //print "amount" column
-        int it_amt = sitem.amount;
-        if( it_amt > 1 ) {
+        const int it_amt = sitem.amount;
+        if( it_amt >= 1 ) {
             print_color = thiscolor;
             if( it_amt > 9999 ) {
-                it_amt = 9999;
                 print_color = selected ? hilite( c_red ) : c_red;
+                mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "9999+" );
+            } else {
+                mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "%4d", it_amt );
             }
-            mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "%4d", it_amt );
         }
 
         //print weight column
