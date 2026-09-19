@@ -1109,6 +1109,40 @@ const mutation_variant *requested_variant(
     return variant;
 }
 
+sol::table replace_conflicting_state(
+    sol::this_state lua, const game_handle &handle, const script_game_id &requested_id,
+    const sol::optional<std::string> &requested_variant_id,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    require_mutation_id( requested_id, "services.mutations.replace" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
+                           error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    const mutation_variant *variant = id->variant( requested_variant_id.value_or( "" ) );
+    const auto existing = character->get_mutations();
+    for( const trait_id &other : existing ) {
+        if( other == id ) {
+            continue;
+        }
+        for( const std::string &type : other->types ) {
+            if( id->types.find( type ) != id->types.end() ) {
+                character->unset_mutation( other );
+                break;
+            }
+        }
+    }
+    character->set_mutation( id, variant );
+    sol::table result = state.create_table();
+    result["present"] = character->has_permanent_trait( id );
+    result["variant"] = mutation_variant_id( *character, id, false );
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table grant_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -1158,6 +1192,28 @@ sol::table grant_state(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table erase_state(
+    sol::this_state lua, const game_handle &handle, const script_game_id &requested_id,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    require_mutation_id( requested_id, "services.mutations.erase" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
+                           error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    const bool existed = character->has_permanent_trait( id );
+    character->unset_mutation( id );
+    sol::table result = state.create_table();
+    result["existed"] = existed;
+    result["present"] = character->has_permanent_trait( id );
+    result["base_trait"] = character->has_base_trait( id );
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table remove_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -1203,11 +1259,36 @@ sol::table remove_state(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table invoke_activation(
+    sol::this_state lua, const game_handle &handle, const script_game_id &requested_id,
+    const bool active, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id( requested_id, "services.mutations.invoke_activation" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
+                           error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( active ) {
+        character->activate_mutation( id );
+    } else {
+        character->deactivate_mutation( id );
+    }
+    sol::table result = state.create_table();
+    result["present"] = character->has_permanent_trait( id );
+    result["active"] = character->has_active_mutation( id );
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table set_active_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const bool desired,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool retrigger )
 {
     require_mutation_id(
         requested_id, "services.mutations.set_active" );
@@ -1239,10 +1320,10 @@ sol::table set_active_state(
     sol::table before = snapshot_state(
                             state, *character, id, variant );
     if( desired ) {
-        if( !character->has_active_mutation( id ) ) {
+        if( retrigger || !character->has_active_mutation( id ) ) {
             character->activate_mutation( id );
         }
-    } else if( character->has_active_mutation( id ) ) {
+    } else if( retrigger || character->has_active_mutation( id ) ) {
         character->deactivate_mutation( id );
     }
     const bool present =
@@ -1445,6 +1526,15 @@ void install_mutation_api(
                    current_world_generation() );
     } );
     mutations.set_function(
+        "replace",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+    const sol::optional<std::string> &variant ) {
+        require_write();
+        return replace_conflicting_state( lua_state, handle, id, variant,
+                                          current_runtime_generation(), current_world_generation() );
+    } );
+    mutations.set_function(
         "grant",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
@@ -1455,6 +1545,14 @@ void install_mutation_api(
                    lua_state, handle, id, variant,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    mutations.set_function(
+        "erase",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const script_game_id & id ) {
+        require_write();
+        return erase_state( lua_state, handle, id,
+                            current_runtime_generation(), current_world_generation() );
     } );
     mutations.set_function(
         "remove",
@@ -1501,15 +1599,24 @@ void install_mutation_api(
                    current_world_generation() );
     } );
     mutations.set_function(
-        "set_active",
+        "invoke_activation",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
     const script_game_id & id, const bool active ) {
         require_write();
+        return invoke_activation( lua_state, handle, id, active,
+                                  current_runtime_generation(), current_world_generation() );
+    } );
+    mutations.set_function(
+        "set_active",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const bool active, const sol::optional<bool> &retrigger ) {
+        require_write();
         return set_active_state(
                    lua_state, handle, id, active,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), retrigger.value_or( false ) );
     } );
     mutations.set_function(
         "set_variant",

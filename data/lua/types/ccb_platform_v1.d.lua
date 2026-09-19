@@ -10195,6 +10195,21 @@ function CcbMutationsApi.set_purifiable(character, mutation, purifiable) end
 ---@return CcbResult result `value` is a detached mutation state snapshot.
 function CcbMutationsApi.grant(character, mutation, variant) end
 
+---Replace other mutations sharing any type, then apply the requested mutation using native set semantics.
+---Keeps base-trait bookkeeping and adds no gain/loss events; native hooks still apply.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param variant? string Native variant selection; unknown or omitted variants use native fallback.
+---@return CcbResult result `value` contains present and variant.
+function CcbMutationsApi.replace(character, mutation, variant) end
+
+---Clear native mutation state, retaining base-trait bookkeeping and adding no loss event.
+---An absent mutation is accepted; native unset hooks and cache updates still run as applicable.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@return CcbResult result `value` contains existed, present and base_trait.
+function CcbMutationsApi.erase(character, mutation) end
+
 ---Remove a permanent mutation and synchronize base-trait bookkeeping and native events.
 ---An absent permanent mutation returns not_permanent. This is not legacy unset_mutation semantics.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
@@ -10202,13 +10217,22 @@ function CcbMutationsApi.grant(character, mutation, variant) end
 ---@return CcbResult result `value` contains the removed snapshot and remaining present flag.
 function CcbMutationsApi.remove(character, mutation) end
 
+---Invoke the native activation/deactivation action, including repeat costs, transforms and callbacks.
+---Does not require a permanent or activatable trait. The native action may create cached mutation state.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId GameId<mutation>.
+---@param active boolean true invokes activation; false invokes deactivation.
+---@return CcbResult result `value` contains resulting present and active flags.
+function CcbMutationsApi.invoke_activation(character, mutation, active) end
+
 ---Request an activatable permanent mutation's state, skipping an already-satisfied state.
 ---Not-permanent or non-activatable mutations return errors; accepted indicates the resulting state.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
 ---@param mutation GameId GameId<mutation>.
 ---@param active boolean
 ---@return CcbResult result `value` contains before, after, requested, accepted and present.
-function CcbMutationsApi.set_active(character, mutation, active) end
+---@param retrigger? boolean Invoke activation/deactivation again even if already in the requested state; defaults to false. Repeated calls may consume resources or run callbacks.
+function CcbMutationsApi.set_active(character, mutation, active, retrigger) end
 
 ---Remove all mutations of a category using native unset semantics, without purifier downgrades.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.

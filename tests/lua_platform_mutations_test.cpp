@@ -342,6 +342,69 @@ TEST_CASE( "lua_platform_mutations_legacy_writes_require_semantic_choice",
     }
 }
 
+TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 2900 );
+    mutation_fixture platform( 3000 );
+    const bool npc_target = GENERATE( false, true );
+    const bool base = GENERATE( false, true );
+    Character &old_target = legacy.target( npc_target );
+    Character &new_target = platform.target( npc_target );
+    if( base ) {
+        old_target.toggle_trait( trait_QUICK );
+        new_target.toggle_trait( trait_QUICK );
+    } else {
+        old_target.set_mutation( trait_QUICK );
+        new_target.set_mutation( trait_QUICK );
+    }
+    const std::string effect = std::string( R"({")" ) +
+                               ( npc_target ? "npc_" : "u_" ) + R"(lose_trait":"QUICK"})";
+    for( int attempt = 0; attempt < 2; ++attempt ) {
+        legacy.legacy_effect( effect );
+        const sol::protected_function_result call = platform.services["mutations"]["erase"](
+                    platform.handle( npc_target ), cata::lua_platform::script_game_id( "mutation", "QUICK" ) );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( old_target.has_trait( trait_QUICK ) == new_target.has_trait( trait_QUICK ) );
+        CHECK( old_target.has_base_trait( trait_QUICK ) == new_target.has_base_trait( trait_QUICK ) );
+        CHECK( new_target.has_base_trait( trait_QUICK ) == base );
+    }
+}
+
+TEST_CASE( "lua_platform_mutation_replace_matches_native_conflicts_and_repeat",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3100 );
+    mutation_fixture platform( 3200 );
+    const bool npc_target = GENERATE( false, true );
+    Character &old_target = legacy.target( npc_target );
+    Character &new_target = platform.target( npc_target );
+    for( Character *target : {
+             &old_target, &new_target
+         } ) {
+        target->toggle_trait( trait_VULNERABLECHILL );
+        target->set_mutation( trait_QUICK );
+    }
+    platform.target( !npc_target ).set_mutation( trait_VULNERABLECHILL );
+    const std::string effect = std::string( R"({")" ) + ( npc_target ? "npc_" : "u_" ) +
+                               R"(add_trait":"STRONGER_VULNERABLEWARM","variant":"unknown"})";
+    for( int attempt = 0; attempt < 2; ++attempt ) {
+        legacy.legacy_effect( effect );
+        const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                    platform.handle( npc_target ),
+                    cata::lua_platform::script_game_id( "mutation", "STRONGER_VULNERABLEWARM" ), "unknown" );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( old_target.get_mutations() == new_target.get_mutations() );
+        CHECK( old_target.has_base_trait( trait_VULNERABLECHILL ) ==
+               new_target.has_base_trait( trait_VULNERABLECHILL ) );
+        CHECK( new_target.has_trait( trait_QUICK ) );
+        CHECK_FALSE( new_target.has_trait( trait_VULNERABLECHILL ) );
+        CHECK( platform.target( !npc_target ).has_trait( trait_VULNERABLECHILL ) );
+    }
+}
+
 TEST_CASE( "lua_platform_mutations_bulk_removal_matches_legacy_effects",
            "[lua][platform][mutations][semantic]" )
 {
@@ -425,6 +488,7 @@ TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
     mutation_fixture legacy( 2500 );
     mutation_fixture platform( 2600 );
     const bool npc_target = GENERATE( false, true );
+    const bool retrigger = GENERATE( false, true );
     Character &old_target = legacy.target( npc_target );
     Character &new_target = platform.target( npc_target );
     old_target.set_mutation( trait_SNAIL_TRAIL );
@@ -441,14 +505,48 @@ TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
     for( int attempt = 0; attempt < 101; ++attempt ) {
         legacy.legacy_effect( source );
         sol::protected_function_result call = activate( platform.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true );
+                                              cata::lua_platform::script_game_id( "mutation", "SNAIL_TRAIL" ), true, retrigger );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
     }
     CHECK( old_target.has_active_mutation( trait_SNAIL_TRAIL ) );
     CHECK( new_target.has_active_mutation( trait_SNAIL_TRAIL ) );
     CHECK( new_target.get_thirst() > 0 );
-    CHECK( old_target.get_thirst() > new_target.get_thirst() );
+    if( retrigger ) {
+        CHECK( old_target.get_thirst() == new_target.get_thirst() );
+    } else {
+        CHECK( old_target.get_thirst() > new_target.get_thirst() );
+    }
+}
+
+TEST_CASE( "lua_platform_mutation_action_matches_native_without_permanent_trait",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 2700 );
+    mutation_fixture platform( 2800 );
+    const bool npc_target = GENERATE( false, true );
+    const bool active = GENERATE( false, true );
+    const bool present = GENERATE( false, true );
+    Character &old_target = legacy.target( npc_target );
+    Character &new_target = platform.target( npc_target );
+    if( present ) {
+        old_target.set_mutation( trait_QUICK );
+        new_target.set_mutation( trait_QUICK );
+    }
+    const std::string effect = std::string( R"({")" ) + ( npc_target ? "npc_" : "u_" ) +
+                               ( active ? "activate_trait" : "deactivate_trait" ) + R"(":"QUICK"})";
+    for( int attempt = 0; attempt < 2; ++attempt ) {
+        legacy.legacy_effect( effect );
+        const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
+                    platform.handle( npc_target ),
+                    cata::lua_platform::script_game_id( "mutation", "QUICK" ), active );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( old_target.has_active_mutation( trait_QUICK ) == new_target.has_active_mutation(
+                   trait_QUICK ) );
+        CHECK( old_target.has_permanent_trait( trait_QUICK ) == new_target.has_permanent_trait(
+                   trait_QUICK ) );
+    }
 }
 
 TEST_CASE( "lua_platform_mutations_seeded_category_matches_legacy_effect",

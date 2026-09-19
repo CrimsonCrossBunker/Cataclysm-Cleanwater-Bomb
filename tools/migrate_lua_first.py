@@ -4502,28 +4502,75 @@ def render_static_spawn_item_effect(
     ]
 
 
-def mutation_semantic_choice(effect: Any) -> str | None:
-    """Do not mistake a domain operation for identical legacy side effects."""
+def render_mutation_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+    source = target
+    if isinstance(value, dict):
+        if "u_val" in value:
+            source = alpha
+        elif "npc_val" in value:
+            source = beta
+    if source is None:
+        return None
+    mutation = render_eoc_string_expression(value, source)
+    if isinstance(value, dict):
+        descriptors = set(value) - {"default"}
+        if len(descriptors) == 1 and next(iter(descriptors)) in {
+                "u_val", "npc_val", "context_val", "global_val", "var_val"}:
+            descriptor = next(iter(descriptors))
+            name = value[descriptor]
+            if not bounded_utf8_string(name, 128) or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+                return None
+            fallback = value.get("default", "")
+            if not isinstance(fallback, str):
+                return None
+            scope = descriptor.removesuffix("_val")
+            mutation = (
+                '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
+                ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
+                '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
+                ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
+            )
+    return mutation
+
+
+def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> list[str] | None:
     if not isinstance(effect, dict):
         return None
-    for prefix in ("u_", "npc_"):
-        if prefix + "add_trait" in effect:
-            return (
-                "choose mutation conflict replacement and event policy: legacy add_trait "
-                "clears other mutations sharing types, while mutations.grant preserves them "
-                "and emits gains_mutation"
-            )
-        if prefix + "lose_trait" in effect:
-            return (
-                "choose mutation removal and event policy: legacy unset_mutation and "
-                "mutations.remove differ in base-trait bookkeeping, absent traits and events"
-            )
-        if any(prefix + name in effect for name in ("activate_trait", "deactivate_trait")):
-            return (
-                "choose mutation activation semantics: repeated legacy activation or "
-                "deactivation can consume resources, transform or run callbacks, while "
-                "mutations.set_active skips an already-satisfied state"
-            )
+    keys = set(effect) & {"u_activate_trait", "npc_activate_trait", "u_deactivate_trait", "npc_deactivate_trait",
+                          "u_lose_trait", "npc_lose_trait", "u_add_trait", "npc_add_trait"}
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    allowed = {key, "variant"} if key.endswith("_add_trait") else {key}
+    if set(effect) - allowed:
+        return None
+    value = effect[key]
+    target = beta if key.startswith("npc_") else alpha
+    if target is None:
+        return None
+    mutation = render_mutation_string(value, target, alpha, beta)
+    if mutation is None:
+        return None
+    if key.endswith("_add_trait"):
+        variant = render_mutation_string(effect.get("variant", ""), target, alpha, beta)
+        if variant is None:
+            return None
+        return ["    service_value(services.mutations.replace(",
+                f'        {target}, services.types.id("mutation", {mutation}), {variant}))']
+    if key.endswith("_lose_trait"):
+        return ["    service_value(services.mutations.erase(",
+                f'        {target}, services.types.id("mutation", {mutation})))']
+    active = key.endswith("_activate_trait")
+    return ["    service_value(services.mutations.invoke_activation(",
+            f'        {target}, services.types.id("mutation", {mutation}), {lua_boolean(active)}))']
+
+
+def mutation_migration_gap(effect: Any) -> str | None:
+    """Explain a missing target or parameter shape after action rendering fails."""
+    if isinstance(effect, dict) and any(
+            prefix + operation in effect for prefix in ("u_", "npc_")
+            for operation in ("add_trait", "lose_trait", "activate_trait", "deactivate_trait")):
+        return "resolve an exact Character target and supported mutation ID/variant expressions"
     return None
 
 
@@ -4679,7 +4726,12 @@ def render_static_false_effect(
     Keep the accepted set deliberately narrow; unsupported branches remain a
     visible migration TODO instead of being silently discarded.
     """
-    if mutation_semantic_choice(effect) is not None:
+    activation = render_mutation_action(
+        effect, "actor" if avatar_actor_proven else None,
+        npc_actor_expression or ("actor" if npc_actor_proven else None))
+    if activation is not None:
+        return activation
+    if mutation_migration_gap(effect) is not None:
         return None
     if effect == "nothing":
         return []
@@ -28201,14 +28253,14 @@ def render_eoc(
                         )
                     ):
                         false_todo = "translate " + _map_mutation_todo()
-                    semantic_choice = mutation_semantic_choice(false_value)
+                    semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
                         false_todo = semantic_choice
                     lines.append(
                         f"        -- TODO: {false_todo}."
                     )
                     result.add_todo(
-                        "semantic_choice" if semantic_choice is not None else "manual_rewrite",
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} false_effect "
                         f"#{false_index} TODO: {false_todo}"
                     )
@@ -28235,11 +28287,16 @@ def render_eoc(
     all_effects_converted = false_effect_converted
     if isinstance(effects, list):
         for effect_index, effect in enumerate(effects):
-            semantic_choice = mutation_semantic_choice(effect)
-            if semantic_choice is not None:
+            semantic_choice = mutation_migration_gap(effect)
+            activation = render_mutation_action(
+                effect, "actor" if avatar_actor_proven else None, npc_actor_expression)
+            if activation is not None:
+                lines.extend(activation)
+                converted_effect = True
+            elif semantic_choice is not None:
                 lines.append(f"    -- TODO: {semantic_choice}.")
                 result.add_todo(
-                    "semantic_choice",
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index}: {semantic_choice}"
                 )
                 all_effects_converted = False

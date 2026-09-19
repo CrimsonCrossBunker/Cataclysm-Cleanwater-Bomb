@@ -182,16 +182,13 @@ end
                     )
                     self.assertIn('context.data["mutation_id"]', expression)
 
-    def test_non_equivalent_mutation_writes_require_an_explicit_choice(self):
+    def test_mutation_replacement_uses_native_action(self):
         for prefix, event in (
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
         ):
             for operation in (
                 "add_trait",
-                "lose_trait",
-                "activate_trait",
-                "deactivate_trait",
             ):
                 for trait in ("VULNERABLECHILL", {"context_val": "mutation"}):
                     with self.subTest(
@@ -199,9 +196,9 @@ end
                     ):
                         effect = {prefix + operation: trait}
                         result = self.migrate_effect(event, effect)
-                        self.assertEqual(result.converted, [])
-                        self.assertEqual(len(result.partial), 1)
-                        self.assertTrue(
+                        self.assertEqual(len(result.converted), 1)
+                        self.assertEqual(result.partial, [])
+                        self.assertFalse(
                             any(
                                 todo.category == "semantic_choice"
                                 for todo in result.todos
@@ -212,22 +209,19 @@ end
                             self.assertNotIn(
                                 "services.mutations." + method + "(", main
                             )
-                        self.assertIsNone(
+                        self.assertIsNotNone(
                             migration.render_static_false_effect(
                                 effect, prefix == "u_", prefix == "npc_", {}
                             )
                         )
 
-    def test_false_branch_preserves_mutation_semantic_choice(self):
+    def test_false_branch_uses_native_mutation_replacement(self):
         for prefix, event in (
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
         ):
             for operation in (
                 "add_trait",
-                "lose_trait",
-                "activate_trait",
-                "deactivate_trait",
             ):
                 with self.subTest(prefix=prefix, operation=operation):
                     result = self.migrate_effect(
@@ -236,17 +230,14 @@ end
                         condition={prefix + "has_trait": "QUICK"},
                         false_effect={prefix + operation: "VULNERABLECHILL"},
                     )
-                    self.assertEqual(result.converted, [])
-                    self.assertTrue(
+                    self.assertEqual(len(result.converted), 1)
+                    self.assertFalse(
                         any(
                             todo.category == "semantic_choice"
                             for todo in result.todos
                         )
                     )
-                    self.assertIn(
-                        "false_effect #0",
-                        result.files[Path("MIGRATION_REPORT.md")],
-                    )
+                    self.assertIn("services.mutations.replace(", result.files[Path("main.lua")])
                     for method in ("grant", "remove", "set_active"):
                         self.assertNotIn(
                             "services.mutations." + method + "(",
@@ -259,12 +250,12 @@ end
             (
                 "data/mods/Magiclysm/Spells/druid.json",
                 "EOC_GAIN_WHISPER_LEAVES",
-                2,
+                1,
             ),
             (
                 "data/mods/Xedra_Evolved/mutations/xe_lilin_trait_eocs.json",
                 "EOC_LILIN_TEMPORARY_GLORIOUS_deactivate_future",
-                2,
+                1,
             ),
         ):
             with self.subTest(source=relative):
@@ -283,11 +274,15 @@ end
                     for todo in result.todos
                     if todo.category == "semantic_choice"
                 ]
-                self.assertGreaterEqual(len(choices), expected_choices)
-                self.assertEqual(result.converted, [])
+                self.assertEqual(len(choices), expected_choices)
+                if expected_choices:
+                    self.assertEqual(result.converted, [])
                 report = result.files[Path("MIGRATION_REPORT.md")]
                 self.assertIn(relative, report)
                 self.assertIn(identifier, report)
+                self.assertIn("needs an explicit Platform trigger", report)
+                self.assertIn("resolve an exact Character target", report)
+                self.assertNotIn("choose mutation conflict replacement", report)
                 for method in ("grant", "remove", "set_active"):
                     self.assertNotIn(
                         "services.mutations." + method + "(",

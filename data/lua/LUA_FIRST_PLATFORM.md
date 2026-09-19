@@ -710,3 +710,28 @@ Persistent values also accept absolute map-square `TripointCoord` values, includ
 inside arrays. They save three integer components under `tripoint_abs_ms` and
 restore a typed coordinate, without retaining any map pointer. Other coordinate
 spaces remain rejected at this persistence boundary.
+
+Mutation `set_active(character, mutation, active, retrigger)` remains idempotent
+by default. Passing `retrigger = true` explicitly invokes activation or
+deactivation even when the requested state is already satisfied, allowing repeated
+resource costs, charge progression, and native callbacks. Existing permanent-trait
+and activatable-trait requirements still apply. Native parity for other mutation
+shapes remains unverified.
+
+`services.mutations.invoke_activation(character, mutation, active)` executes the
+native activation/deactivation action directly, including repeated costs,
+transformations, and callbacks. Unlike setting a permanent mutation's state,
+this action also permits cached or absent traits and does not require the
+`activated` definition flag. It validates the mutation id and exact Character
+handle, and returns the resulting permanent-presence and active flags.
+
+`services.mutations.erase(character, mutation)` invokes native mutation clearing,
+retaining base-trait bookkeeping and emitting no additional loss event. It accepts
+an already-absent mutation. `remove` continues to perform its documented base-trait
+and event synchronization. Both operations retain native cache and hook behavior.
+
+`services.mutations.replace(character, mutation, variant)` clears other mutations
+sharing any mutation type before invoking native set semantics. It preserves
+base-trait bookkeeping, adds no gain/loss events, and permits repeated assignment.
+Native hooks and variant fallback remain active. `grant` retains its distinct
+non-conflicting grant and gain-event behavior.
