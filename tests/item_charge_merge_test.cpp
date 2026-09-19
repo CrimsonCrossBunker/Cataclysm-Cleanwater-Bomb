@@ -34,4 +34,3 @@ TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][char
     CHECK( lhs.charges == 10 );
     CHECK( rhs.charges == 10 );
 }
-
