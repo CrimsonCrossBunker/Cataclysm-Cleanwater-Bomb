@@ -21,6 +21,7 @@
 #include "point.h"
 #include "projectile.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "type_id.h"
 #include "value_ptr.h"
 
@@ -31,6 +32,44 @@ static const itype_id itype_boomer_head( "boomer_head" );
 static const itype_id itype_hazmat_suit( "hazmat_suit" );
 static const itype_id itype_m1a( "m1a" );
 static const itype_id itype_mask_gas( "mask_gas" );
+
+TEST_CASE( "recovered_arrow_preserves_stack_identity", "[projectile][ammo][stacking]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    Character &shooter = get_player_character();
+    map &here = get_map();
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    shooter.setpos( here, origin );
+    shooter.set_str_base( 30 );
+    // This arrow has 100% recovery, so the test does not depend on a lucky shot.
+    arm_shooter( shooter, itype_id( "greatbow_meteor" ), {}, itype_id( "arrow_meteor" ) );
+    item &bow = *shooter.get_wielded_item();
+    item &arrow = bow.first_ammo();
+    arrow.set_var( "item_label", "recover me" );
+    arrow.set_favorite( true );
+    arrow.set_damage( 1000 );
+    const item original = arrow;
+    const unsigned int seed = 192026;
+    CAPTURE( seed );
+    rng_set_engine_seed( seed );
+    REQUIRE( shooter.fire_gun( here, origin + tripoint_rel_ms::east * 5, 1, bow ) == 1 );
+
+    int recovered = 0;
+    for( const tripoint_bub_ms &pos : here.points_in_radius( origin, 30 ) ) {
+        for( const item &it : here.i_at( pos ) ) {
+            if( it.typeId() != original.typeId() ) {
+                continue;
+            }
+            recovered += it.charges;
+            CHECK( it.get_var( "item_label" ) == original.get_var( "item_label" ) );
+            CHECK( it.damage() == original.damage() );
+            CHECK( it.is_favorite == original.is_favorite );
+            CHECK( it.stacks_with( original ) );
+        }
+    }
+    CHECK( recovered == 1 );
+}
 
 
 static tripoint_bub_ms projectile_end_point( const std::vector<tripoint_bub_ms> &range,

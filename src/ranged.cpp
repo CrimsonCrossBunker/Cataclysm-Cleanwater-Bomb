@@ -2684,9 +2684,11 @@ static projectile make_gun_projectile( const item &gun, Character &guy )
         bool recover = x_in_y( ammo->recovery_chance, 100 );
 
         if( recover && !fx.count( ammo_effect_IGNITE ) && !fx.count( ammo_effect_EXPLOSIVE ) ) {
-            item drop( gun.ammo_current(), calendar::turn, 1 );
+            // Recover the actual round, including its damage, flags and label.
+            // Recreating it from the type loses the state needed for restacking.
+            item drop = gun.loaded_ammo();
+            drop.charges = 1;
             drop.active = fx.count( ammo_effect_ACT_ON_RANGED_HIT );
-            drop.set_favorite( gun.get_contents().first_ammo().is_favorite );
             proj.set_drop( drop );
         }
 
