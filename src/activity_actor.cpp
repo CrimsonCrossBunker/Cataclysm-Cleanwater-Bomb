@@ -12755,7 +12755,20 @@ void heat_activity_actor::finish( player_activity &act, Character &p )
                 p.add_msg_if_player( _( "You can't find the appliance any more." ) );
                 return;
             }
-            vp->vehicle().discharge_battery( here, heating_cost.ammo * heat_source.heating_effect );
+            const int cost = heating_cost.ammo * heat_source.heating_effect;
+            vehicle &veh = vp->vehicle();
+            const int available = heat_source.fuel_type == itype_battery ?
+                                  veh.connected_battery_power_level( here ).first :
+                                  veh.fuel_left( here, heat_source.fuel_type );
+            if( available < cost ) {
+                p.add_msg_if_player( _( "The appliance doesn't have enough power." ) );
+                return;
+            }
+            if( heat_source.fuel_type == itype_battery ) {
+                veh.discharge_battery( here, cost );
+            } else {
+                veh.drain( here, heat_source.fuel_type, cost );
+            }
         } else {
             if( !heat_source.loc ) {
                 p.add_msg_if_player( _( "You can't find the heater any more." ) );
