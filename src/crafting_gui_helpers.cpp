@@ -5,6 +5,7 @@
 #include <translation.h>
 #include <algorithm>
 #include <bitset>
+#include <climits>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -40,6 +41,36 @@
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"
+
+crafting_component_groups build_component_display( const recipe &rec, const Character &crafter,
+        const inventory &inv, int batch_size )
+{
+    crafting_component_groups result;
+    const requirement_data &req = rec.simple_requirements();
+    const auto filter = rec.get_component_filter();
+    req.can_make_with_inventory( &crafter, inv, filter, batch_size );
+    for( const auto &alternatives : req.get_components() ) {
+        auto &group = result.emplace_back();
+        bool any_available = false;
+        for( const item_comp &comp : alternatives ) {
+            const bool enough = comp.has( &crafter, inv, filter, batch_size );
+            const int count = item::count_by_charges( comp.type ) ?
+                              inv.charges_of( comp.type, INT_MAX, filter ) :
+                              inv.amount_of( comp.type, false, INT_MAX, filter );
+            any_available |= enough;
+            group.push_back( { &comp, count, enough ? 0 : count > 0 ? 1 : 2, c_red } );
+        }
+        for( crafting_component_display &entry : group ) {
+            entry.color = entry.component->get_color( &crafter, any_available, inv, filter,
+                batch_size );
+        }
+        std::stable_sort( group.begin(), group.end(),
+        []( const crafting_component_display & a, const crafting_component_display & b ) {
+            return a.rank < b.rank;
+        } );
+    }
+    return result;
+}
 
 bool cannot_gain_skill_or_prof( const Character &crafter, const recipe &recp )
 {
