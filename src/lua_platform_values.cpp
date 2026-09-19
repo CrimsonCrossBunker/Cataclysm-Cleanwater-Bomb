@@ -107,7 +107,7 @@ script_persistent_value script_persistent_value_from_lua( const sol::object &val
 sol::object script_persistent_value_to_lua( sol::state_view lua,
         const script_persistent_value &value )
 {
-    return std::visit( [lua]( const auto & entry ) -> sol::object {
+    return std::visit( [&lua]( const auto & entry ) -> sol::object {
         using value_type = std::decay_t<decltype( entry )>;
         if constexpr( std::is_same_v<value_type, script_array_value> )
         {

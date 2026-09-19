@@ -235,8 +235,14 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     REQUIRE( std::holds_alternative<script_array_value>( state.at( "kept" ) ) );
     sol::table first = script_persistent_value_to_lua( lua, state.at( "kept" ) );
     first[1] = 99;
+    sol::table nested = first.get<sol::table>( 2 );
+    nested[1] = 88;
     const sol::table second = script_persistent_value_to_lua( lua, state.at( "kept" ) );
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
+    CHECK( second.get<sol::table>( 2 ).get<std::int64_t>( 1 ) == 2 );
+    const sol::table empty = script_persistent_value_to_lua( lua,
+        script_array_value( script_persistent_array{} ) );
+    CHECK( empty.size() == 0 );
 }
 
 TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
