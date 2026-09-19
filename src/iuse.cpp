@@ -8318,6 +8318,7 @@ void heater::serialize( JsonOut &jsout ) const
     jsout.member( "consume_flag", consume_flag );
     jsout.member( "pseudo_flag", pseudo_flag );
     jsout.member( "vpt", vpt );
+    jsout.member( "fuel_type", fuel_type );
     jsout.end_object();
 }
 
@@ -8329,6 +8330,7 @@ void heater::deserialize( const JsonValue &jsin )
     data.read( "consume_flag", consume_flag );
     data.read( "pseudo_flag", pseudo_flag );
     data.read( "vpt", vpt );
+    data.read( "fuel_type", fuel_type );
 }
 
 heater find_heater( Character *p, item *it, bool force_use_it )
@@ -8386,11 +8388,15 @@ heater find_heater( Character *p, item *it, bool force_use_it )
             } else {
                 pseudo_flag = true;
                 optional_vpart_position vp = here.veh_at( app.value().first );
-                available_heater = vp->vehicle().connected_battery_power_level( here ).first;
+                const item heater_item( app->second );
+                const itype_id fuel_type = heater_item.ammo_default();
+                available_heater = fuel_type == itype_battery ?
+                                   vp->vehicle().connected_battery_power_level( here ).first :
+                                   vp->vehicle().fuel_left( here, fuel_type );
                 heating_effect = app.value().second->charges_to_use();
                 vpt = here.get_abs( app.value().first );
                 if( available_heater >= heating_effect ) {
-                    return {loc, consume_flag, available_heater, heating_effect, vpt, pseudo_flag};
+                    return {loc, consume_flag, available_heater, heating_effect, vpt, pseudo_flag, fuel_type};
                 } else {
                     p->add_msg_if_player( m_info, _( "The appliance doesn't have enough power." ) );
                     return {loc, true, -1, 0, vpt, pseudo_flag};

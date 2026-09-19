@@ -258,6 +258,7 @@ struct heater {
     int heating_effect;
     tripoint_abs_ms vpt;
     bool pseudo_flag;
+    itype_id fuel_type = itype_id( "battery" );
     void serialize( JsonOut &jsout ) const;
     void deserialize( const JsonValue &jsin );
 };
