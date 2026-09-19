@@ -1303,6 +1303,11 @@ def _node_has_actor_prefix(node: Any, prefix: str) -> bool:
         if isinstance(value, str):
             if value.startswith(prefix):
                 return True
+        elif isinstance(value, list):
+            if any((key in {"effect", "false_effect", "then", "else"} and
+                    isinstance(entry, str) and entry.startswith(prefix)) or
+                   _node_has_actor_prefix(entry, prefix) for entry in value):
+                return True
         elif _node_has_actor_prefix(value, prefix):
             return True
     return False
@@ -4805,8 +4810,8 @@ def render_static_false_effect(
             actor_expression, eoc_conditions, npc_actor_expression,
         )
     activation = render_mutation_action(
-        effect, "actor" if avatar_actor_proven else None,
-        npc_actor_expression or ("actor" if npc_actor_proven else None))
+        effect, (actor_expression or "actor") if avatar_actor_proven else None,
+        npc_actor_expression or ((actor_expression or "actor") if npc_actor_proven else None))
     if activation is not None:
         return activation
     if mutation_migration_gap(effect) is not None:
@@ -4814,9 +4819,10 @@ def render_static_false_effect(
     if effect == "nothing":
         return []
     if effect == "u_cancel_activity" and avatar_actor_proven:
-        return ["        services.activities.cancel(actor)"]
-    if effect == "npc_cancel_activity" and npc_actor_proven:
-        return ["        services.activities.cancel(actor)"]
+        return [f"        services.activities.cancel({actor_expression or 'actor'})"]
+    if effect == "npc_cancel_activity" and (npc_actor_proven or npc_actor_expression is not None):
+        target = npc_actor_expression or actor_expression or "actor"
+        return [f"        services.activities.cancel({target})"]
     if isinstance(effect, dict) and "u_spawn_item" in effect:
         rendered = render_static_spawn_item_effect(
             effect, avatar_actor_proven
@@ -5671,6 +5677,20 @@ def render_message_effect(
     if same_snippet or store_in_lore:
         lines.append("    end")
     return lines
+
+
+def render_optional_npc_job(
+    target: str, job: str, normal_return: str = "assignment_rejected",
+) -> list[str]:
+    """Native interactive jobs may return without assigning an activity."""
+    return [
+        "    do",
+        f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
+        f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
+        "            service_value(assignment)",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_foreach(
@@ -28749,12 +28769,12 @@ def render_eoc(
                         "needs bounded foreach traversal conversion"
                     )
                     all_effects_converted = False
-            elif avatar_actor_proven and effect == "u_cancel_activity":
-                lines.append("    services.activities.cancel(actor)")
+            elif character_actor_proven and effect == "u_cancel_activity":
+                lines.append(f"    services.activities.cancel({actor_expression or 'actor'})")
                 converted_effect = True
             elif npc_event_character_actor_proven and \
                     effect == "npc_cancel_activity":
-                lines.append("    services.activities.cancel(actor)")
+                lines.append(f"    services.activities.cancel({npc_actor_expression or actor_expression or 'actor'})")
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and
@@ -29748,33 +29768,6 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                ("npc_change_class" in effect or "npc_change_faction" in effect)
-            ):
-                key = (
-                    "npc_change_class"
-                    if "npc_change_class" in effect else "npc_change_faction"
-                )
-                kind = "npc_class" if key == "npc_change_class" else "faction"
-                if set(effect) == {key} and bounded_platform_id(effect[key]):
-                    lines.append(
-                        f"    services.npcs.set_{'class' if key == 'npc_change_class' else 'faction'}("
-                        f"actor, services.types.id(\"{kind}\", {lua_quote(effect[key])}))"
-                    )
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the NPC class/faction update "
-                        "through the typed NPC service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
-                    )
-                    all_effects_converted = False
-            elif (
                 isinstance(effect, dict) and
                 ("u_make_sound" in effect or "npc_make_sound" in effect)
             ):
@@ -29908,82 +29901,69 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif npc_actor_proven and effect == "npc_wants_to_talk":
-                lines.append('    services.npcs.set_attitude(actor, "talk")')
+                target = npc_actor_expression or "actor"
+                if callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract:
+                    lines.extend([
+                        f'    if ({target}).subtype == "npc" then',
+                        f"        service_value(services.npcs.request_talk({target}))",
+                        "    end",
+                    ])
+                else:
+                    lines.append(f"    service_value(services.npcs.request_talk({target}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "u_wants_to_talk":
-                # Avatar target has no NPC talker (d.actor(false)->get_npc() is null),
-                # so this effect is a deliberate no-op under npc_becomes_hostile.
+            elif effect == "u_wants_to_talk" and (
+                callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
+            ):
+                # In explicit callbacks alpha may itself be an NPC. Native get_npc()
+                # is a no-op for other talker kinds, not for every u_ prefix.
+                lines.extend([
+                    '    if actor.subtype == "npc" then',
+                    '        service_value(services.npcs.request_talk(actor))',
+                    '    end',
+                ])
                 converted_effect = True
-            elif effect == "npc_make_radio_representative":
+            elif (npc_actor_proven or avatar_actor_proven) and effect == "u_wants_to_talk":
+                # The implicit native alpha in this event is the avatar.
+                converted_effect = True
+            elif npc_actor_proven and effect == "npc_make_radio_representative":
                 lines.append(
-                    "    -- TODO: translate NPC radio representation only with "
-                    "an explicit avatar participant handle."
+                    f"    service_value(services.npcs.set_radio_representative({npc_actor_expression or 'actor'}, "
+                    "services.characters.avatar(), true))"
                 )
-                result.add_todo(
-                    "semantic_choice",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "requires an explicit avatar participant handle for NPC "
-                    "radio representation"
-                )
-                all_effects_converted = False
+                converted_effect = True
             elif npc_actor_proven and effect == "npc_thankful":
-                lines.append("    services.npcs.make_thankful(actor)")
+                lines.append(f"    service_value(services.npcs.make_thankful({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "hostile":
-                lines.append('    services.npcs.set_attitude(actor, "kill")')
+                lines.append(f"    service_value(services.npcs.become_hostile({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "flee":
-                lines.append('    services.npcs.set_attitude(actor, "flee")')
+                lines.append(f"    service_value(services.npcs.start_fleeing({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_change_class"} and
-                safe_platform_id(effect.get("npc_change_class"))
-            ):
-                lines.append(
-                    "    services.npcs.set_class(actor, "
-                    "services.types.id(\"npc_class\", "
-                    f"{lua_quote(effect['npc_change_class'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_change_faction"} and
-                safe_platform_id(effect.get("npc_change_faction"))
-            ):
-                lines.append(
-                    "    services.npcs.set_faction(actor, "
-                    "services.types.id(\"faction\", "
-                    f"{lua_quote(effect['npc_change_faction'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and isinstance(effect, dict) and
-                set(effect) == {"npc_first_topic"} and
-                bounded_utf8_string(
-                    effect.get("npc_first_topic"), 256, allow_empty=False
-                )
-            ):
-                lines.append(
-                    "    services.npcs.set_first_topic(actor, "
-                    f"{lua_quote(effect['npc_first_topic'])})"
-                )
-                converted_effect = True
-            elif effect == "npc_make_radio_representative":
-                lines.append(
-                    "    -- TODO: translate NPC radio representation only with "
-                    "an explicit avatar participant handle."
-                )
-                result.add_todo(
-                    "semantic_choice",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "requires an explicit avatar participant handle for NPC "
-                    "radio representation"
-                )
-                all_effects_converted = False
-            elif npc_actor_proven and effect == "npc_thankful":
-                lines.append("    services.npcs.make_thankful(actor)")
-                converted_effect = True
+            elif npc_actor_proven and isinstance(effect, dict) and len(effect) == 1 and next(iter(effect)) in {
+                "npc_change_class", "npc_change_faction", "npc_first_topic",
+            }:
+                key = next(iter(effect))
+                target = npc_actor_expression or "actor"
+                requested = render_participant_string_expression(
+                    effect[key], target, "actor" if avatar_actor_proven else None, target)
+                if requested is not None:
+                    if key == "npc_first_topic":
+                        call = f"services.npcs.set_first_topic({target}, {requested})"
+                    else:
+                        kind = "npc_class" if key == "npc_change_class" else "faction"
+                        method = "set_class" if key == "npc_change_class" else "set_faction"
+                        call = f"services.npcs.{method}({target}, services.types.id({lua_quote(kind)}, {requested}))"
+                    lines.append(f"    service_value({call})")
+                    converted_effect = True
+                else:
+                    lines.append(f"    -- TODO: {key} needs a supported string expression and explicit participants.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{key} needs a supported string expression and explicit participants"
+                    )
+                    all_effects_converted = False
             elif (
                 npc_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
@@ -30679,16 +30659,17 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif npc_actor_proven and effect == "follow":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(
+                    f"    service_value(services.npcs.join_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stop_following":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.stop_temporary_following({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stranger_neutral":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.make_neutral({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif effect == "end_conversation":
-                # Deliberate no-op.
+            elif npc_actor_proven and effect == "end_conversation":
+                lines.append(f"    service_value(services.npcs.dialogue.finish({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -30728,78 +30709,72 @@ def render_eoc(
                             "math.min(2147483647, math.floor((" + turn_cost + ") + 0.5))) })"
                         )
                         converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {"wake_up", "reveal_stats"}:
-                # Deliberate no-op in headless/scripted context.
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "wake_up", "dismount", "clear_overrides", "lead_to_safety"
+            }:
+                order = {"wake_up": "wake", "dismount": "dismount",
+                         "clear_overrides": "clear_temporary_rules",
+                         "lead_to_safety": "lead_to_safety"}[effect]
+                lines.append(
+                    f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
+                converted_effect = True
+            elif npc_actor_proven and effect == "reveal_stats":
+                lines.append(f"    service_value(services.npcs.orders.open_character_sheet({npc_actor_expression or 'actor'}))")
+                converted_effect = True
+            elif npc_actor_proven and effect == "pick_style":
+                lines.append(f"    service_value(services.npcs.orders.choose_combat_style({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
-                lines.append('    services.npcs.set_attitude(actor, "kill")')
-                converted_effect = True
-            elif npc_actor_proven and effect == "lead_to_safety":
-                lines.append('    services.npcs.set_attitude(actor, "lead")')
+                lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "leave":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.leave_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
                 converted_effect = True
             elif npc_actor_proven and effect == "follow_only":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "deny_follow":
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "deny_follow", "deny_lead", "deny_equipment", "deny_train", "deny_personal_info",
+            }:
+                request = "training" if effect == "deny_train" else effect.removeprefix("deny_")
                 lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_follow"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_lead":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_lead"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_equipment":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_for_item"), services.time.duration(3600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_train":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_to_train"), services.time.duration(21600, "turn"))'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "deny_personal_info":
-                lines.append(
-                    '    services.effects.add(actor, services.types.id("effect", "asked_personal_info"), services.time.duration(10800, "turn"))'
+                    f"    service_value(services.npcs.record_refusal({npc_actor_expression or 'actor'}, {lua_quote(request)}))"
                 )
                 converted_effect = True
             elif npc_actor_proven and effect == "player_leaving":
-                lines.append('    services.npcs.set_attitude(actor, "wait_for_leave")')
+                lines.append(f"    service_value(services.npcs.warn_player_departure({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "start_mugging":
-                lines.append('    services.npcs.set_attitude(actor, "mug")')
+                lines.append(f"    service_value(services.npcs.start_mugging({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "remove_stolen_status":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.clear_stolen_item_claim({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "assign_guard":
-                lines.append('    services.npcs.set_attitude(actor, "null")')
+                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, true))")
                 converted_effect = True
             elif npc_actor_proven and effect == "stop_guard":
-                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, false))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "buy_chicken":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_chicken"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "buy_horse":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_horse"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
-                converted_effect = True
-            elif npc_actor_proven and effect == "buy_cow":
-                lines.append(
-                    '    services.spawns.monster(services.types.id("monster", "mon_cow"), '
-                    'service_value(services.characters.snapshot(actor)).creature.position, 1)'
-                )
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "buy_chicken", "buy_horse", "buy_cow",
+            }:
+                animal = "mon_" + effect.removeprefix("buy_")
+                target = npc_actor_expression or "actor"
+                lines.extend([
+                    "    do",
+                    f"        local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
+                    f"service_value(services.characters.snapshot({target})).creature.position, 1, false)",
+                    "        if purchase.ok then",
+                    "            local pet = purchase.value.handle",
+                    "            service_value(services.monsters.set_friendly(pet, true))",
+                    "            service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
+                    "services.time.duration(1, \"turn\"), { permanent = true }))",
+                    "        elseif purchase.error.code ~= \"blocked\" then",
+                    "            service_value(purchase)",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and any(key in effect for key in (
@@ -30886,75 +30861,118 @@ def render_eoc(
                         "needs vehicle service conversion"
                     )
                     all_effects_converted = False
-            elif isinstance(effect, str) and effect in {"start_trade", "barber_hair", "barber_beard", "buy_haircut", "buy_shave"}:
-                # Deliberate presentation/interaction no-op in headless/scripted context.
+            elif npc_actor_proven and isinstance(effect, str) and effect in {
+                "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
+            }:
+                method, choice = {
+                    "barber_hair": ("open_style", "hair"),
+                    "barber_beard": ("open_style", "beard"),
+                    "buy_haircut": ("provide", "haircut"),
+                    "buy_shave": ("provide", "shave"),
+                }[effect]
+                lines.append(
+                    f"    service_value(services.npcs.grooming.{method}("
+                    f"{npc_actor_expression or 'actor'}, services.characters.avatar(), {lua_quote(choice)}))")
+                converted_effect = True
+            elif npc_actor_proven and effect == "start_trade":
+                lines.append(
+                    f"    service_value(services.trade.open({npc_actor_expression or 'actor'}, "
+                    'services.characters.avatar(), 0, services.translate("Trade"), true))')
                 converted_effect = True
             elif npc_actor_proven and effect == "revert_activity":
-                lines.append('    services.activities.cancel(actor)')
+                lines.append(
+                    f"    service_value(services.activities.revert_npc_job({npc_actor_expression or 'actor'}))")
                 converted_effect = True
             elif npc_actor_proven and effect == "morale_chat_activity":
                 lines.append(
-                    render_named_character_activity(
-                        "services.characters.avatar()", "ACT_SOCIALIZE", 10
-                    )
+                    f"    service_value(services.activities.socialize(services.characters.avatar(), "
+                    f"{npc_actor_expression or 'actor'}, services.time.duration(600, \"turn\")))"
                 )
                 converted_effect = True
             elif npc_actor_proven and effect == "do_butcher":
-                lines.append(render_named_character_activity("actor", "ACT_BUTCHER", 30))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "butcher"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_chop_plank":
-                lines.append(render_named_character_activity("actor", "ACT_CHOP_PLANKS", 30))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_planks"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_chop_trees":
-                lines.append(render_named_character_activity("actor", "ACT_CHOP_TREE", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_trees"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_construction":
-                lines.append(render_named_character_activity("actor", "ACT_BUILD", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "construction"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_farming":
-                lines.append(render_named_character_activity("actor", "ACT_PLANT_SEED", 30))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "farming"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_fishing":
-                lines.append(render_named_character_activity("actor", "ACT_FISH", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "fishing"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_mining":
-                lines.append(render_named_character_activity("actor", "ACT_MINING", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mining"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_mopping":
-                lines.append(render_named_character_activity("actor", "ACT_MOPPING", 15))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mopping"))')
                 converted_effect = True
             elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
-                lines.append(render_named_character_activity("actor", "ACT_READ", 30))
+                lines.extend(render_optional_npc_job(
+                    npc_actor_expression or "actor", "read_ebook" if effect == "do_eread" else "read"))
                 converted_effect = True
             elif npc_actor_proven and effect == "do_read_repeatedly":
-                lines.append(render_named_character_activity("actor", "ACT_READ", 120))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "read_repeatedly"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_study":
-                lines.append(render_named_character_activity("actor", "ACT_STUDY_SPELL", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "study"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "sort_loot":
-                lines.append(render_named_character_activity("actor", "ACT_SORT_LOOT", 30))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "sort_loot"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_craft":
-                lines.append(render_named_character_activity("actor", "ACT_CRAFT", 60))
+                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "craft"))
                 converted_effect = True
             elif npc_actor_proven and effect == "do_disassembly":
-                lines.append(render_named_character_activity("actor", "ACT_DISASSEMBLE", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "disassembly"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_vehicle_deconstruct":
-                lines.append(render_named_character_activity("actor", "ACT_VEHICLE_DECONSTRUCT", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_deconstruct"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "do_vehicle_repair":
-                lines.append(render_named_character_activity("actor", "ACT_VEHICLE_REPAIR", 60))
+                lines.append(
+                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_repair"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "drop_items_in_place":
-                lines.append(render_named_character_activity("actor", "ACT_DROP", 1))
+                lines.append(
+                    f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
                 converted_effect = True
             elif npc_actor_proven and effect == "find_mount":
-                lines.append(render_named_character_activity("actor", "ACT_FIND_MOUNT", 10))
+                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {"start_training", "start_training_seminar"}:
-                lines.append(render_named_character_activity("actor", "ACT_TRAIN", 60))
+            elif npc_actor_proven and effect == "start_training_npc":
+                lines.append(
+                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
+                    'services.characters.avatar(), "npc"))')
+                converted_effect = True
+            elif npc_actor_proven and effect == "start_training":
+                lines.append(
+                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
+                    'services.characters.avatar(), "player"))')
+                converted_effect = True
+            elif npc_actor_proven and effect == "start_training_seminar":
+                lines.append(
+                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
+                    'services.characters.avatar(), "seminar"))')
                 converted_effect = True
             elif effect == "distribute_food_auto":
                 # This legacy operation discovers a camp from the NPC's
@@ -31011,13 +31029,23 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
-                "dismount", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
-                "pick_style", "take_control",
-                "clear_dimension",
-                "clear_overrides", "place_override",
+                "take_control", "clear_dimension", "place_override",
             }:
-                # Deliberate presentation/interaction no-op in headless/scripted context.
-                converted_effect = True
+                if effect == "take_control":
+                    reason = (
+                        "control transfer requires original dialogue participants, "
+                        "callback branches and refreshed handles after avatar replacement"
+                    )
+                    category = "manual_rewrite"
+                else:
+                    reason = f"{effect} requires its native object parameters, not a bare string"
+                    category = "semantic_choice"
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, str) and
                 effect in {
@@ -31216,14 +31244,34 @@ def render_eoc(
                     "drop_stolen_item needs explicit equipment/trade holders"
                 )
                 all_effects_converted = False
-            elif (
-                effect == "give_aid" and
-                npc_event_character_actor_proven and avatar_actor_proven
+            elif isinstance(effect, str) and effect in {
+                "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
+            }:
+                if npc_actor_proven:
+                    level = "basic" if effect.startswith("lesser_") else "advanced"
+                    include_allies = "true" if "all_aid" in effect else "false"
+                    lines.append(
+                        "    service_value(services.npcs.medical.provide_aid("
+                        f"{npc_actor_expression or 'actor'}, services.characters.avatar(), "
+                        f"{lua_quote(level)}, {include_allies}))"
+                    )
+                    converted_effect = True
+                else:
+                    lines.append("    -- TODO: medical aid requires an explicit NPC provider.")
+                    result.add_todo(
+                        "semantic_choice",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "medical aid requires an explicit NPC provider"
+                    )
+                    all_effects_converted = False
+            elif effect == "u_make_radio_representative" and (
+                callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
             ):
-                lines.append(
-                    "    service_value(services.npcs.medical.provide_aid("
-                    "actor, services.characters.avatar(), \"advanced\", false))"
-                )
+                lines.extend([
+                    '    if actor.subtype == "npc" then',
+                    '        service_value(services.npcs.set_radio_representative(actor, services.characters.avatar(), true))',
+                    '    end',
+                ])
                 converted_effect = True
             elif effect == "u_make_radio_representative" and avatar_actor_proven:
                 lines.append(
@@ -32458,8 +32506,15 @@ def render_eoc(
                 else:
                     all_effects_converted = False
             elif effect == "take_control_menu":
-                # Presentation menu no-op
-                converted_effect = True
+                reason = (
+                    "control menu requires refreshed participant handles after avatar replacement"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 any(key in effect for key in (

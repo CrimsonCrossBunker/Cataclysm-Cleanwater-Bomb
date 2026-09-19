@@ -57,6 +57,8 @@
 #include "npc.h"
 #include "npc_class.h"
 #include "npctalk.h"
+#include "messages.h"
+#include "translations.h"
 #include "npctalk_rules.h"
 #include "overmapbuffer.h"
 #include "talker_npc.h"
@@ -1733,16 +1735,22 @@ sol::table set_npc_relationship_state(
     const bool blocked_by_ally = non_ally_only && entry->is_player_ally();
     bool follow_state_changed = false;
     if( !blocked_by_ally ) {
-        entry->set_attitude( attitude );
+        if( non_ally_only ) {
+            talk_function::stop_following( *entry );
+        } else if( reset_stranger_topic ) {
+            talk_function::stranger_neutral( *entry );
+        } else if( attitude == NPCATT_FLEE ) {
+            talk_function::flee( *entry );
+        } else if( attitude == NPCATT_MUG ) {
+            talk_function::start_mugging( *entry );
+        } else {
+            entry->set_attitude( attitude );
+        }
         if( attitude == NPCATT_FOLLOW ) {
             follow_state_changed = entry->mission != NPC_MISSION_NULL ||
                                    entry->goal != npc::no_goal_point || entry->guard_pos.has_value() ||
                                    entry->get_ai_guard_pos().has_value() || !entry->get_committed_goal().empty();
             reset_npc_follow_destination( *entry );
-        }
-        if( reset_stranger_topic ) {
-            entry->chatbin.first_topic =
-                entry->chatbin.talk_stranger_neutral;
         }
     }
     sol::table value = state.create_table();
@@ -1827,6 +1835,7 @@ sol::table leave_npc_player(
     sol::table before = snapshot_npc(
                             state, *entry, runtime_generation,
                             world_generation );
+    add_msg( _( "%s leaves." ), entry->get_name() );
     owner->follower_ids.erase( entry->getID() );
     const faction_id solo_faction(
         "solo_" + entry->name +
@@ -1843,7 +1852,7 @@ sol::table leave_npc_player(
     entry->chatbin.first_topic =
         entry->chatbin.talk_stranger_neutral;
     entry->set_attitude( NPCATT_NULL );
-    entry->set_mission( NPC_MISSION_NULL );
+    entry->mission = NPC_MISSION_NULL;
     entry->long_term_goal_action();
     sol::table value = state.create_table();
     value["before"] = std::move( before );
@@ -1874,35 +1883,9 @@ sol::table set_npc_guarding(
                             state, *entry, runtime_generation,
                             world_generation );
     if( enabled ) {
-        if( !entry->is_player_ally() ) {
-            entry->set_mission( NPC_MISSION_GUARD );
-            entry->set_omt_destination();
-        } else {
-            if( entry->has_player_activity() ) {
-                entry->revert_after_activity();
-            }
-            entry->set_attitude( NPCATT_NULL );
-            entry->set_mission( NPC_MISSION_GUARD_ALLY );
-            entry->chatbin.first_topic = entry->assigned_camp ?
-                                         "TALK_FRIEND_GUARD_CAMP" :
-                                         entry->chatbin.talk_friend_guard;
-            entry->clear_committed_goal();
-            entry->set_omt_destination();
-        }
-    } else if( !entry->is_player_ally() ) {
-        entry->set_attitude( NPCATT_NULL );
-        entry->set_mission( NPC_MISSION_NULL );
+        talk_function::assign_guard( *entry );
     } else {
-        entry->set_attitude( NPCATT_FOLLOW );
-        entry->set_mission( NPC_MISSION_NULL );
-        if( entry->has_companion_mission() ) {
-            entry->reset_companion_mission();
-        }
-        entry->chatbin.first_topic = entry->chatbin.talk_friend;
-        entry->goal = npc::no_goal_point;
-        entry->guard_pos = std::nullopt;
-        entry->clear_ai_guard_pos();
-        entry->clear_committed_goal();
+        talk_function::stop_guard( *entry );
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
@@ -1911,6 +1894,29 @@ sol::table set_npc_guarding(
                          world_generation );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table request_npc_talk(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc( handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool changed = entry->get_attitude() != NPCATT_TALK;
+    if( changed ) {
+        if( entry->sees( get_map(), get_player_character() ) ) {
+            add_msg( _( "%s wants to talk to you." ), entry->get_name() );
+        }
+        entry->set_attitude( NPCATT_TALK );
+    }
+    sol::table value = state.create_table();
+    value["changed"] = changed;
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table make_npc_hostile(
@@ -1928,11 +1934,7 @@ sol::table make_npc_hostile(
     }
     const npc_attitude before = entry->get_attitude();
     const bool changed = before != NPCATT_KILL;
-    if( changed ) {
-        get_event_bus().send<event_type::npc_becomes_hostile>(
-            entry->getID(), entry->name );
-        entry->set_attitude( NPCATT_KILL );
-    }
+    talk_function::hostile( *entry );
     sol::table value = state.create_table();
     value["before"] = npc_attitude_id( before );
     value["after"] = npc_attitude_id( entry->get_attitude() );
@@ -3014,6 +3016,14 @@ void install_npc_api(
         return set_npc_guarding(
                    lua_state, handle, enabled,
                    current_runtime_generation(), current_world_generation() );
+    } );
+    npcs.set_function(
+        "request_talk",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_write();
+        return request_npc_talk( lua_state, handle,
+                                 current_runtime_generation(), current_world_generation() );
     } );
     npcs.set_function(
         "become_hostile",

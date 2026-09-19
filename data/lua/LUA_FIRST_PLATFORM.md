@@ -799,3 +799,204 @@ Explicit `{str = ..., i18n = true}` string expressions in migrated
 arguments. Plain string literals remain untranslated. Translation runs while
 building the input snapshot, before body effects. Generated Lua execution covers
 this order; native localization comparison is still pending.
+
+`activities.revert_npc_job` always performs native NPC state restoration,
+including idle NPCs with pending backlog or saved mission/attitude state.
+Migrated `revert_activity` calls this operation instead of cancellation.
+The result reports `restored = true`; the legacy `changed` field only records
+whether a job was active beforehand. Generated Lua routing/error tests pass;
+the idle-NPC native comparison test still awaits execution.
+
+NPC work migration uses `activities.assign_npc_job` for butchery, planks,
+trees, construction, farming, fishing, mining, mopping, repeated reading,
+study, loot sorting, disassembly, and vehicle deconstruction/repair. These
+operations assign the native activity actors instead of approximating work
+with a fixed duration. Generated Lua tests verify all fourteen routes and
+failure propagation. Native assignment comparison test source is present but
+has not executed; other interactive NPC job paths still require review.
+
+Migrated NPC reading, ebook reading and crafting use the corresponding
+`assign_npc_job` operations and native selection flows. A returned
+`assignment_rejected` leaves execution free to continue, matching native
+return-without-assignment behavior; other service errors propagate. Generated
+Lua tests cover success, no assignment and stale-handle failure. Interactive
+selection and gameplay acceptance remain pending.
+
+The `find_mount` NPC job follows native creature traversal and assigns the
+selected mount. When none is available, it restores an active player-directed
+NPC job before returning `no_match`; idle NPCs remain unchanged. Migrated
+`find_mount` treats that result as a normal return and propagates other errors.
+Generated Lua branch tests pass; native active/idle no-match comparison source
+is present but has not executed. Successful mount selection still needs runtime
+acceptance.
+
+Migrated `morale_chat_activity` uses the native socialize actor for the
+avatar and the exact NPC partner for ten minutes. `drop_items_in_place` uses
+the native `drop_carried_items` order, retaining its inventory filtering and
+empty-inventory behavior. Generated Lua tests verify event and overridden NPC
+participants; native activity execution and inventory outcomes remain unverified.
+
+Migrated `start_training` calls `npcs.training.start_selected` with the
+exact NPC provider and avatar student. It retains the native selected course,
+payment and duration calculation instead of assigning a fixed training timer.
+A successful call that starts no training remains a normal return. Generated
+Lua routing/error tests pass; native course/payment execution remains pending.
+
+`npcs.training.start_selected(provider, avatar, "seminar")` opens native
+seminar participant selection, retaining follower eligibility and cancellation.
+The avatar handle is validated before selection; returned provider/player flags
+do not enumerate all seminar students. Migrated `start_training_seminar` uses
+this mode. Generated Lua cancellation/routing tests pass; native menu, payment
+and multi-student training acceptance remain pending.
+
+Selected training also supports `"npc"` mode: the avatar teaches the exact
+NPC using that NPC's selected dialogue course. The avatar argument remains
+explicit and validated even though its role changes to teacher. Migrated
+`start_training_npc` uses this mode when its NPC is proven. Generated Lua
+role/routing tests pass; native skill transfer, fees and activity completion
+remain pending acceptance.
+
+Grooming effect migration invokes native style selection for hair/beard and
+native haircut/shave services with the exact NPC and avatar client. These
+effects are no longer silently discarded. Without a proven NPC they remain
+explicit migration gaps. Generated Lua tests cover all four calls and missing
+provider handling; native appearance and morale outcomes await acceptance.
+
+`trade.open` optionally resolves the seller's native intercom trade delegate;
+default calls retain the explicit seller. Migrated `start_trade` enables
+delegation, uses the active avatar, zero initial cost and a translated title.
+Cancellation is a normal return. Generated Lua tests cover that contract;
+native buyer-validation test source is present but unexecuted, and delegated
+barter UI acceptance remains pending.
+
+NPC wake, dismount, temporary-rule reset and lead-to-safety effects migrate
+to native NPC orders. This preserves wake effects/rules and native dismount
+and destination behavior instead of skipping the command or only changing
+attitude. Generated Lua routing tests pass; wake/rule-reset native comparison
+test source is present but unexecuted. Mounted and pathfinding outcomes still
+require native acceptance.
+
+Migrated NPC conversation ending calls `npcs.dialogue.finish`, preserving
+the native first-topic change to `TALK_DONE` without exiting the Lua callback.
+Stat reveal and combat-style selection open their native NPC interfaces.
+Generated Lua tests cover the three operations in sequence; native topic-state
+comparison source is present but unexecuted, and the two menus await interactive
+acceptance. Missing NPC provenance remains a migration gap.
+
+Combat-insult migration invokes `npcs.dialogue.provoke_combat`, preserving
+the native topic change and hostility together. Generated Lua tests verify
+event/override NPC routing; native topic/attitude comparison source is present
+but unexecuted. This does not establish combat gameplay acceptance.
+
+Follower migration uses `join_player`, `stop_temporary_following` and
+`make_neutral` instead of attitude-only writes. This retains follower/faction
+setup and cash transfer, the allied-NPC stop guard and stranger-topic reset.
+Generated Lua routing tests pass; allied/non-allied state comparison source
+is present but unexecuted. Join-state runtime evidence remains outstanding. Stop/neutral operations
+now call native talk functions so their notification rules are retained; message
+comparison test source is present but has not executed.
+
+Migrated `leave` uses `leave_player` to remove follower membership, create
+the independent faction and reset work priorities/topic. Native leave notification
+and direct mission reset are preserved, including the previous-mission value.
+`follow_only` uses `follow_temporarily` to clear guard and long-term goals
+without transferring cash or joining the player faction. Generated Lua routing
+tests pass; temporary-follow native comparison source is unexecuted and full
+leave/faction runtime acceptance remains pending.
+
+Confrontation migration routes `hostile`, `flee`, `player_leaving`,
+`start_mugging` and `remove_stolen_status` through their existing NPC services.
+This preserves hostile-event dispatch and its already-hostile guard, visibility-based
+hostility notification, flee/mugging messages, departure patience and stolen-item
+claim clearing. Generated Lua exercises participant overrides and error propagation;
+native message/patience comparison source is present but unexecuted. Hostile event,
+visibility and stolen-item lifecycle runtime acceptance remain pending.
+
+Guard assignment/removal migration uses `set_guarding` and its native talk functions,
+rather than attitude-only changes. This retains the allied/non-allied branches,
+activity restoration, guard destinations and topics, and the allied stop notification.
+Generated Lua participant/error tests pass; allied/non-allied stop-state comparison
+source remains unexecuted, and assignment/camp/activity runtime coverage is pending.
+
+Gratitude migration checks the `make_thankful` result and retains the resolved NPC
+participant. Generated Lua covers routing and failure propagation; native comparison
+source covers hostile/non-hostile attitudes, friend-topic retention and personality
+bounds, but has not been compiled or executed.
+
+Medical-aid migration uses `npcs.medical.provide_aid` for all four native aid effects:
+basic/advanced treatment with or without nearby walking allies. The existing service
+calls the native talk functions, including healing, relevant wound removal, patient
+waiting activity and provider busy duration. Unproven NPC providers remain explicit
+migration gaps. Generated Lua tests cover all four level/allies combinations, avatar
+patient identity, provider overrides and failure propagation. Random healing, ally
+range filtering and activity/effect duration runtime acceptance remain pending.
+
+Control transfer and its menu are no longer classified as successfully migrated
+no-ops. Their migration still needs participant continuity across handle invalidation
+and, for direct transfer, original dialogue branching. Bare-string `clear_dimension`
+and `place_override` are also explicit gaps: their native registrations require
+object parameters. This does not affect the existing object-form world renderers.
+
+Control-service rejection test source checks non-allied targets and wrong avatar
+participants, including identity/faction/attitude retention and no handle invalidation.
+This source has not run and does not establish successful transfer, menu cancellation,
+or post-transfer callback continuity. The menu implementation already invalidates
+handles only when the native avatar identity changes.
+
+Avatar handles now capture the native character ID and reject an in-place identity
+change with `stale_avatar_identity`, even before the enclosing control service
+invalidates the runtime handles. Fresh handles use the new character ID. This closes
+the stale-avatar window during native control-transfer hooks without changing their
+ordering. A focused in-place identity regression is present as unexecuted test source;
+full control-transfer and hook runtime acceptance remain pending.
+
+Animal-purchase migration keeps center-first nearby placement and passes
+`upgrade=false` to `spawns.monster` (omitted upgrade retains the existing true default).
+Successful chicken/horse/cow placement sets friendliness to -1 and the permanent pet
+effect. Blocked placement continues; other errors propagate. These native effects do
+not charge payment themselves. Generated Lua tests cover species, participant overrides,
+pet setup and blocked/error continuation. Native placement/upgrade/pet runtime acceptance
+and the original blocked-placement debug notification remain outstanding.
+A fixed-seed native comparison source now covers chicken/horse/cow position, type,
+friendliness and permanent pet duration; it has not been compiled or executed.
+
+Spawn-upgrade regression source additionally uses an upgrade-capable test monster
+with evolution enabled, covering omitted/true/false arguments and uninitialized
+upgrade time for the disabled path. It remains unexecuted; ordinary pet species
+alone are not evidence that the upgrade option works.
+
+Refusal migration uses `npcs.record_refusal` for follow, lead, equipment, training
+and personal-info requests, checking failures and retaining the resolved participant.
+The native cooldown durations are unchanged. Generated Lua verifies all request routes
+and failure propagation; repeated-request duration/permanence comparison exists as
+unexecuted C++ test source.
+
+NPC class/faction/first-topic migration resolves supported string expressions at each
+operation through the participant-aware string renderer, then checks the service result.
+The earlier class/faction branch that rejected dynamic values has been consolidated.
+Generated Lua tests mutate a context variable between operations to verify live lookup,
+participant overrides and failure propagation. Full native parameter/participant
+coverage remains unverified; unsupported expressions retain explicit migration gaps.
+
+NPC radio-representative migration now calls `set_radio_representative` with the
+resolved NPC and current avatar owner, matching the native global-owner choice.
+Generated Lua checks participant overrides, owner identity and failure propagation.
+Unexecuted native test source checks representative marking, repeated registration
+and retention of other representatives. Full native dialogue/owner acceptance is pending.
+
+`npcs.request_talk` retains the native wants-to-talk notification: only on an actual
+attitude transition and only when the NPC sees the avatar. NPC wants-to-talk migration
+uses this service and checks its result. Generated routing/error tests pass; repeated
+request silence has unexecuted C++ coverage, and visible/hidden native comparison
+remains pending. Generic attitude writes keep their existing behavior.
+
+Explicit callback wants-to-talk migration distinguishes alpha (`u_`) and beta (`npc_`).
+Either participant may be an NPC; non-NPC participants are skipped as in native
+`get_npc()` handling. Generated Lua covers two NPCs, avatar alpha, and two non-NPC
+participants. This routing evidence does not replace native visibility acceptance.
+
+Explicit callback `u_make_radio_representative` now registers an NPC alpha with the
+current avatar owner; it does not substitute beta or use alpha as the owner.
+Generated Lua verifies independent alpha/beta registrations. Non-NPC misuse is
+skipped; parity with the original null-NPC debug diagnostic remains outstanding.
+This diagnostic boundary and native runtime evidence prevent full semantic acceptance.

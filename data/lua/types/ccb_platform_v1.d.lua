@@ -8291,6 +8291,7 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field serde CcbSerdeApi
 ---@field skills CcbSkillsApi
 ---@field sound CcbPlatformSoundApi
+---@field monsters CcbMonstersApi
 ---@field spawns CcbSpawnsApi
 ---@field spells CcbSpellsApi
 ---@field statistics CcbStatisticsApi
@@ -8310,8 +8311,8 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field equipment CcbEquipmentApi
 local CcbPlatformServices = {}
 ---@param handle GameHandle
----@param job string
----@return any
+---@param job string Native NPC job. find_mount returns no_match when no mount is available and restores the NPC if it was performing a player activity.
+---@return CcbResult
 function CcbPlatformActivitiesApi.assign_npc_job(handle, job) end
 ---@param character_handle GameHandle
 ---@return any
@@ -8352,8 +8353,8 @@ function CcbPlatformActivitiesApi.read(character_handle, book_handle, duration, 
 ---@param character_handle GameHandle
 ---@return any
 function CcbPlatformActivitiesApi.resume(character_handle) end
----@param handle GameHandle
----@return any
+---@param handle GameHandle Exact NPC.
+---@return CcbResult result Always restores native mission/attitude and clears activity, backlog and destination. value.restored is true; legacy value.changed indicates a previously active job only.
 function CcbPlatformActivitiesApi.revert_npc_job(handle) end
 ---@param character_handle GameHandle
 ---@param partner_handle GameHandle
@@ -9412,8 +9413,8 @@ function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@return CcbResult
 function CcbNpcTrainingApi.start(teacher, students, subject) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param student GameHandle Exact avatar handle for player training.
----@param mode 'player'
+---@param student GameHandle Exact avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
+---@param mode 'player'|'seminar'|'npc' Uses the NPC's selected course. npc mode teaches that NPC from the avatar; other modes teach from the NPC. Seminar cancellation is a normal return; result flags describe NPC/avatar activity only.
 ---@return CcbResult
 function CcbNpcTrainingApi.start_selected(provider, student, mode) end
 
@@ -9547,6 +9548,11 @@ function CcbNpcsApi.leave_player(handle, avatar) end
 ---@param enabled boolean
 function CcbNpcsApi.set_guarding(handle, enabled) end
 function CcbNpcsApi.become_hostile(handle) end
+
+---@param handle GameHandle Exact NPC.
+---@return CcbResult result Value.changed is false when already talking. Otherwise sets talk attitude and emits the native notification only when the NPC sees the avatar.
+function CcbNpcsApi.request_talk(handle) end
+
 function CcbNpcsApi.warn_player_departure(handle) end
 function CcbNpcsApi.clear_stolen_item_claim(handle) end
 ---@param handle GameHandle Exact NPC handle.
@@ -9771,8 +9777,9 @@ local CcbTradeApi = {}
 ---@param buyer GameHandle Exact active avatar handle.
 ---@param cost integer Nonnegative service cost added to the barter balance.
 ---@param title string Deal title, at most 4096 bytes and no NUL.
+---@param use_delegate? boolean Resolve the seller's native intercom trade delegate; defaults to false.
 ---@return CcbResult result `value` is true when accepted, false when cancelled.
-function CcbTradeApi.open(seller, buyer, cost, title) end
+function CcbTradeApi.open(seller, buyer, cost, title, use_delegate) end
 
 ---Pay the NPC using their existing credit ledger or the native barter window. No implicit buyer. Runtime write phase only.
 ---@param seller GameHandle Exact NPC handle.
@@ -10855,3 +10862,19 @@ local CcbRegistryApi = {}
 ---@param options? CcbRegistryQuery
 ---@return table page
 function CcbRegistryApi.list(kind, options) end
+
+---@class CcbSpawnsApi
+local CcbSpawnsApi = {}
+---@param monster_type GameId Monster definition ID.
+---@param position TripointCoord Loaded absolute map-square coordinate.
+---@param radius? integer Search radius 0..60, default 0; center first, then nearest available ring.
+---@param upgrade? boolean Apply native monster upgrade after placement; defaults to true.
+---@return CcbResult result Value contains handle, monster, position and hallucination; blocked when no position exists.
+function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
+
+---@class CcbMonstersApi
+local CcbMonstersApi = {}
+---@param monster GameHandle Exact live monster.
+---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
+---@return CcbResult result
+function CcbMonstersApi.set_friendly(monster, friendly) end

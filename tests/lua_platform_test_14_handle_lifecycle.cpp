@@ -23,6 +23,29 @@ TEST_CASE( "lua_platform_creature_handles_fail_closed_after_unload", "[lua][plat
     CHECK( error->code == "destroyed" );
 }
 
+TEST_CASE( "lua_platform_avatar_handle_rejects_in_place_identity_change", "[lua][platform]" )
+{
+    avatar player;
+    player.normalize();
+    player.setID( character_id( 4301 ), true );
+    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 9 );
+    const auto old = cata::lua_platform::game_handle::from_creature(
+                         player, { "avatar", 0, 0, 0, 0, {} }, runtime, 4 );
+    REQUIRE( old.resolve_creature( runtime, 4 ) );
+    CHECK( old.locator().stable_id == 4301 );
+    // Control transfer changes identity in the same avatar storage before hooks run.
+    player.setID( character_id( 4302 ), true );
+    const auto stale = old.resolve_creature( runtime, 4 );
+    REQUIRE_FALSE( stale );
+    REQUIRE( stale.error );
+    CHECK( stale.error->code == "stale_avatar_identity" );
+    const auto current = cata::lua_platform::game_handle::from_creature(
+                             player, { "avatar", 0, 0, 0, 0, {} }, runtime, 4 );
+    CHECK( current.resolve_creature( runtime, 4 ) );
+    CHECK( current.locator().stable_id == 4302 );
+}
+
 TEST_CASE( "lua_platform_native_identity_is_not_reused_by_copy_or_move", "[lua][platform]" )
 {
     cata::lua_platform::native_object_identity original;
@@ -38,7 +61,7 @@ TEST_CASE( "lua_platform_native_identity_is_not_reused_by_copy_or_move", "[lua][
 TEST_CASE( "lua_platform_hooks_use_semantic_participant_fields", "[lua][platform]" )
 {
     const auto contains = []( const std::vector<std::string_view> &fields,
-                              const std::string_view wanted ) {
+    const std::string_view wanted ) {
         return std::find( fields.begin(), fields.end(), wanted ) != fields.end();
     };
     const cata::lua_platform::script_hook_spec *start =

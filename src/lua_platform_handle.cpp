@@ -392,6 +392,10 @@ game_handle game_handle::from_creature(
         result.npc_identity_generation_ = result.npc_identity_->generation;
         result.npc_stable_id_ = npc_value->getID().get_value();
         result.locator_.stable_id = *result.npc_stable_id_;
+    } else if( Character *character = value.as_character();
+               character != nullptr && character->is_avatar() ) {
+        result.avatar_stable_id_ = character->getID().get_value();
+        result.locator_.stable_id = *result.avatar_stable_id_;
     } else if( monster *monster_value = value.as_monster() ) {
         result.locator_.stable_id = monster_value->uid().get_value();
     }
@@ -571,6 +575,16 @@ std::optional<game_handle_error> game_handle::validation_error(
             }
             if( creature_.get()->is_dead_state() ) {
                 return dead_error( kind_ );
+            }
+            if( avatar_stable_id_ ) {
+                const Character *character = creature_.get()->as_character();
+                if( character == nullptr || !character->is_avatar() ||
+                    character->getID().get_value() != *avatar_stable_id_ ) {
+                    return game_handle_error{
+                        "stale_avatar_identity",
+                        "GameHandle avatar identity changed after control transfer"
+                    };
+                }
             }
             if( npc_identity_ ) {
                 if( !npc_identity_->active ||
