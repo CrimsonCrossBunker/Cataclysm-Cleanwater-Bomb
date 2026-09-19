@@ -20882,8 +20882,8 @@ def render_trial_modifier_reader(attribute: str) -> str | None:
             trait = encoded[len(prefix):].decode("utf-8")
         except UnicodeError:
             return None
-        if (not bounded_utf8_string(trait, 256, allow_empty=True)
-                or any(ord(char) < 32 or ord(char) == 127 for char in trait)):
+        if (not bounded_utf8_string(trait, 256, allow_empty=True) or
+                any(ord(char) < 32 or ord(char) == 127 for char in trait)):
             return None
         query = (
             '(function() local id = services.types.id("mutation", '
@@ -20910,8 +20910,8 @@ def render_equipment_modifier_allowance(
     parsed: list[tuple[str, int, str | None]] = []
     needs_talkers = False
     for entry in modifiers:
-        if (not isinstance(entry, list) or len(entry) != 2 or not isinstance(entry[0], str)
-                or type(entry[1]) is not int or not -(2**31) <= entry[1] < 2**31):
+        if (not isinstance(entry, list) or len(entry) != 2 or not isinstance(entry[0], str) or
+                type(entry[1]) is not int or not -(2**31) <= entry[1] < 2**31):
             return None
         name, factor = entry
         reader = None if name == "TOTAL" else render_trial_modifier_reader(name)

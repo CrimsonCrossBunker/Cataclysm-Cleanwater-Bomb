@@ -237,7 +237,8 @@ end
                             for todo in result.todos
                         )
                     )
-                    self.assertIn("services.mutations.replace(", result.files[Path("main.lua")])
+                    self.assertIn("services.mutations.replace(",
+                                  result.files[Path("main.lua")])
                     for method in ("grant", "remove", "set_active"):
                         self.assertNotIn(
                             "services.mutations." + method + "(",
@@ -282,7 +283,8 @@ end
                 self.assertIn(identifier, report)
                 self.assertIn("needs an explicit Platform trigger", report)
                 self.assertIn("resolve an exact Character target", report)
-                self.assertNotIn("choose mutation conflict replacement", report)
+                self.assertNotIn(
+                    "choose mutation conflict replacement", report)
                 for method in ("grant", "remove", "set_active"):
                     self.assertNotIn(
                         "services.mutations." + method + "(",
