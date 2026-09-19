@@ -1,10 +1,14 @@
 #include <functional>
+#include <initializer_list>
+#include <list>
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "avatar.h"
 #include "bodypart.h"
+#include "body_part_set.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character_attire.h"
@@ -126,4 +130,30 @@ TEST_CASE( "worn_clothing_protects_from_heat", "[character][clothing][heat]" )
 
     CHECK( protected_parts.at( body_part_torso ) > unprotected.at( body_part_torso ) );
     CHECK( protected_parts.at( body_part_head ) == unprotected.at( body_part_head ) );
+}
+
+TEST_CASE( "burnt_out_smoking_items_do_not_provide_wind_resistance", "[character][clothing][wind]" )
+{
+    for( const auto &smoking_item : {
+             std::make_pair( "cig_lit", "cig_butt" ),
+             std::make_pair( "cigar_lit", "cigar_butt" ),
+             std::make_pair( "joint_lit", "joint_roach" )
+         } ) {
+        CAPTURE( smoking_item.first );
+        avatar &dummy = get_avatar();
+        clear_character( dummy );
+        dummy.wear_item( item( itype_test_protective_clothing ), false );
+        const auto expected = dummy.worn.wind_resistance( dummy );
+        const auto worn = dummy.wear_item( item( itype_id( smoking_item.first ) ), false );
+        REQUIRE( worn.has_value() );
+        // Smoking converts the worn item in place when it burns out.
+        ( **worn ).convert( itype_id( smoking_item.second ) );
+        REQUIRE( ( **worn ).get_covered_body_parts().none() );
+        std::map<bodypart_id, int> actual;
+        const std::string debug_message = capture_debugmsg_during( [&] {
+            actual = dummy.worn.wind_resistance( dummy );
+        } );
+        CHECK( debug_message.empty() );
+        CHECK( actual == expected );
+    }
 }

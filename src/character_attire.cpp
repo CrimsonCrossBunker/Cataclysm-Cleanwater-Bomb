@@ -2003,6 +2003,10 @@ std::map<bodypart_id, int> outfit::wind_resistance( const Character &guy ) const
     std::vector<float> exposed_by_bodypart( bodyparts.size(), 1.0f );
     for( const item &clothing : worn ) {
         const body_part_set covered_bodyparts = clothing.get_covered_body_parts();
+        // Burnt-out smoking items can remain worn without covering any body part.
+        if( covered_bodyparts.none() ) {
+            continue;
+        }
         const int penalty = 100 - clothing.wind_resist();
         for( std::size_t i = 0; i < bodyparts.size(); ++i ) {
             const bodypart_id &bp = bodyparts[i];
