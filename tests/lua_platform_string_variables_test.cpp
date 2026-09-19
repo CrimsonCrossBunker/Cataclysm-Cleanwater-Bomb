@@ -85,6 +85,34 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     const cata::lua_platform::game_handle partner_handle =
         cata::lua_platform::game_handle::from_creature(
             partner, { "npc", 4802, 0, 0, 0, {} }, runtime, 1 );
+    player.set_value( "array_input", diag_value( diag_array{
+        diag_value{}, diag_value( 0.0 ),
+        diag_value( diag_array{ diag_value( "nested" ), diag_value{} } ), diag_value{}
+    } ) );
+    lua.open_libraries( sol::lib::base );
+    lua["services"] = services;
+    lua["array_owner"] = player_handle;
+    const sol::protected_function_result array_read = lua.safe_script( R"(
+        local result = services.variables.get(array_owner, "array_input")
+        assert(result.ok and result.value.exists)
+        local values = result.value.value
+        assert(#values == 4)
+        assert(values[1] == services.types.null and values[2] == 0)
+        assert(#values[3] == 2 and values[3][1] == "nested")
+        assert(values[3][2] == services.types.null and values[4] == services.types.null)
+        assert(services.variables.set(array_owner, "array_output", values).ok)
+        local restored = services.variables.get(array_owner, "array_output").value.value
+        assert(#restored == 4 and #restored[3] == 2)
+        assert(restored[1] == services.types.null and restored[4] == services.types.null)
+        local cycle = {}; cycle[1] = cycle
+        for _, invalid in ipairs({{[2]=1}, {bad=1}, cycle, {function() end}}) do
+            local ok = pcall(services.variables.set, array_owner, "array_output", invalid)
+            assert(not ok)
+            local unchanged = services.variables.get(array_owner, "array_output").value.value
+            assert(#unchanged == 4 and unchanged[3][1] == "nested")
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( array_read.valid() );
     sol::table data = lua.create_table();
     sol::protected_function resolve = services["variables"]["resolve"];
     sol::protected_function_result read = resolve(
@@ -96,6 +124,25 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     sol::table snapshot = read_result["value"];
     const std::string value = snapshot["value"];
     CHECK( value == ( source_npc ? "beta value" : "alpha value" ) );
+    sol::table participants = lua.create_table();
+    participants["alpha"] = player_handle;
+    participants["beta"] = partner_handle;
+    data["participant_reference"] = source_npc ? "n_string_input" : "u_string_input";
+    const sol::protected_function_result participant_read = resolve(
+                data, player_handle, "var", "participant_reference", participants );
+    REQUIRE( participant_read.valid() );
+    const sol::table participant_result = participant_read;
+    REQUIRE( participant_result["ok"].get<bool>() );
+    const sol::table participant_snapshot = participant_result["value"];
+    CHECK( participant_snapshot["value"].get<std::string>() == value );
+    participants[source_npc ? "beta" : "alpha"] = sol::nil;
+    const sol::protected_function_result missing_participant = resolve(
+                data, player_handle, "var", "participant_reference", participants );
+    REQUIRE( missing_participant.valid() );
+    const sol::table missing_result = missing_participant;
+    REQUIRE( missing_result["ok"].get<bool>() );
+    const sol::table missing_snapshot = missing_result["value"];
+    CHECK_FALSE( missing_snapshot["exists"].get<bool>() );
     // Compose the same typed variable read with native environment predicates.
     // A stored null is present and must not select the missing-value fallback.
     const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };
@@ -147,7 +194,6 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             CHECK( actual.get<bool>() == predicate( context ) );
         }
     }
-    // Generated Lua resolves indirect prefixes before this single-owner API.
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
             data, target_npc ? partner_handle : player_handle,
@@ -155,6 +201,23 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     REQUIRE( write.valid() );
     sol::table write_result = write;
     REQUIRE( write_result["ok"].get<bool>() );
+    participants["alpha"] = player_handle;
+    participants["beta"] = partner_handle;
+    data["write_reference"] = target_npc ? "n_indirect_output" : "u_indirect_output";
+    const sol::protected_function_result indirect_write = set(
+                data, player_handle, "var", "write_reference", value, participants );
+    REQUIRE( indirect_write.valid() );
+    const sol::table indirect_result = indirect_write;
+    REQUIRE( indirect_result["ok"].get<bool>() );
+    const Character &indirect_target = target_npc ? static_cast<Character &>( partner ) : player;
+    CHECK( indirect_target.get_value( "indirect_output" ).str() == value );
+    participants[target_npc ? "beta" : "alpha"] = sol::nil;
+    const sol::protected_function_result absent_write = set(
+                data, player_handle, "var", "write_reference", "wrong", participants );
+    REQUIRE( absent_write.valid() );
+    const sol::table absent_result = absent_write;
+    CHECK_FALSE( absent_result["ok"].get<bool>() );
+    CHECK( indirect_target.get_value( "indirect_output" ).str() == value );
     const Character &target = target_npc ? static_cast<const Character &>( partner ) : player;
     CHECK( target.get_value( "platform_output" ).str() == target.get_value( "legacy_output" ).str() );
     sol::protected_function_result null_write = set(
@@ -232,6 +295,48 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     REQUIRE( result["ok"].get<bool>() );
     REQUIRE( get_globals().maybe_get_global_value( key ) != nullptr );
     CHECK( get_globals().get_global_value( key ).is_empty() );
+    // Global values must retain the same missing/present-null distinction
+    // when consumed as dynamic strings by environment conditions.
+    lua["services"] = services;
+    lua["key"] = key;
+    sol::protected_function query = lua.load( R"(
+        local result = services.variables.resolve(nil, nil, "global", key)
+        assert(result.ok)
+        local value = result.value
+        if value.exists == false then return current == fallback end
+        return current == tostring(value.value or "")
+    )" );
+    dialogue context;
+    const bool indirect = GENERATE( false, true );
+    context.set_value( "environment_global_ref", key );
+    const std::array<std::string, 4> seasons = { "spring", "summer", "autumn", "winter" };
+    for( const std::string selector : {
+             "is_season", "is_weather"
+         } ) {
+        const std::string current = selector == "is_season" ?
+                                    seasons[season_of_year( calendar::turn )] : get_weather().weather_id.str();
+        lua["current"] = current;
+        lua["fallback"] = current;
+        for( int state = 0; state < 4; ++state ) {
+            CAPTURE( selector, state, indirect );
+            get_globals().remove_global_value( key );
+            if( state == 1 ) {
+                get_globals().set_global_value( key, current );
+            } else if( state == 2 ) {
+                get_globals().set_global_value( key, "unknown" );
+            } else if( state == 3 ) {
+                get_globals().set_global_value( key, diag_value{} );
+            }
+            const std::string condition_json = R"({")" + selector + R"(":{")" +
+                                               ( indirect ? "var_val" : "global_val" ) + R"(":")" +
+                                               ( indirect ? "environment_global_ref" : key ) +
+                                               R"(","default":")" + current + R"("}})";
+            conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
+            const sol::protected_function_result actual = query();
+            REQUIRE( actual.valid() );
+            CHECK( actual.get<bool>() == predicate( context ) );
+        }
+    }
     sol::protected_function copy = services["variables"]["copy"];
     sol::protected_function_result self_copy = copy( sol::nil, key, sol::nil, key );
     REQUIRE( self_copy.valid() );

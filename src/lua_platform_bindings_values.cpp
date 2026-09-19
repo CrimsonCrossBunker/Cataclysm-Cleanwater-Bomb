@@ -3,6 +3,7 @@
 #include "lua_platform_bindings_values.h"
 
 extern "C" {
+#include "lua_platform_state.h"
 #include <lua.h>
 }
 #include <algorithm>
@@ -1154,6 +1155,15 @@ std::string script_time_point::to_string() const
 void install_value_type_api(
     sol::state &lua, sol::table &services, std::function<void()> require_values )
 {
+    lua.new_usertype<script_null_value>(
+        "NullValue", sol::no_constructor,
+    sol::meta_function::to_string, []( const script_null_value & ) {
+        return std::string{};
+    },
+    sol::meta_function::equal_to,
+    []( const script_null_value &, const script_null_value & ) {
+        return true;
+    } );
     lua.new_usertype<script_game_id>(
         "GameId", sol::no_constructor,
         "kind", sol::property( &script_game_id::kind ),
@@ -1193,6 +1203,7 @@ void install_value_type_api(
     } );
 
     sol::table types = lua.create_table();
+    types["null"] = script_null_value{};
     types.set_function(
         "id",
     [require_values]( const std::string & kind, const std::string & value ) {

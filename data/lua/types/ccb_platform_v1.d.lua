@@ -6160,11 +6160,11 @@ function PlatformDialogueContext:speaker() end
 function PlatformDialogueContext:interlocutor() end
 
 ---@param key string
----@return boolean|number|string|nil value
+---@return boolean|number|string|NullValue|nil value
 function PlatformDialogueContext:get(key) end
 
 ---@param key string
----@param value boolean|number|string|nil
+---@param value boolean|number|string|NullValue|nil
 function PlatformDialogueContext:set(key, value) end
 
 ---@param key string
@@ -6232,7 +6232,7 @@ function CcbPlatformDialogueApi.limits() end
 ---@param handler_id string
 ---@param from_version integer
 ---@param to_version integer
----@param callback fun(payload: table<string, boolean|integer|number|string>, migration: PlatformTaskMigration): table<string, boolean|integer|number|string>
+---@param callback fun(payload: table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]>, migration: PlatformTaskMigration): table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]>
 function CcbPlatformRuntime.migrate_task_payload(handler_id, from_version, to_version, callback) end
 
 ---@class CcbPlatformStateKeyPage
@@ -6248,12 +6248,12 @@ function CcbPlatformRuntime.migrate_task_payload(handler_id, from_version, to_ve
 local CcbPlatformStateScope = {}
 
 ---@param key string
----@param fallback? boolean|integer|number|string
----@return boolean|integer|number|string|nil
+---@param fallback? boolean|integer|number|string|NullValue|TripointCoord|any[]
+---@return boolean|integer|number|string|NullValue|TripointCoord|any[]|nil
 function CcbPlatformStateScope.get(key, fallback) end
 
 ---@param key string
----@param value boolean|integer|number|string|nil
+---@param value boolean|integer|number|string|NullValue|TripointCoord|any[]|nil
 function CcbPlatformStateScope.set(key, value) end
 
 ---Read-only discovery for this Mod's selected scope after world_ready.
@@ -6284,7 +6284,7 @@ function CcbPlatformStateScope.keys(after_key, requested_limit) end
 ---@field actor_vehicle_uid? integer Transient callback-only stable Vehicle uid; nil for a Character, Item, Monster, or absent actor.
 ---@field participants table<string, GameHandle> Transient callback-only exact live required participant handles keyed by role; never persisted in the payload.
 ---@field payload_version integer
----@field payload table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@field payload table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 
 ---@class CcbPlatformTaskParticipantDescriptor
 ---@field kind 'character'|'item'|'monster'|'vehicle' Persisted participant identity kind.
@@ -6317,7 +6317,7 @@ function CcbPlatformStateScope.keys(after_key, requested_limit) end
 ---@field payload_version integer
 ---@field handler_available boolean
 ---@field payload_current boolean
----@field payload table<string, boolean|integer|number|string>
+---@field payload table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]>
 
 ---@class CcbPlatformTaskPage
 ---@field items CcbPlatformTaskSnapshot[]
@@ -6331,7 +6331,7 @@ local CcbPlatformTasks = {}
 
 ---@param turns integer Non-negative delay in game turns.
 ---@param handler_id string
----@param payload? table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@param payload? table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
 ---@param scope? 'character'|'world'
 ---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.
@@ -8387,7 +8387,7 @@ function CcbMapgenApi.register_palette(descriptor) end
 function CcbPlatformModQueries.load_order(id) end
 ---@param interval_turns integer
 ---@param handler_id string
----@param payload? table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
+---@param payload? table<string, boolean|integer|number|string|NullValue|TripointCoord|any[]> Persistent scalar or dense-array payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
 ---@param scope? 'character'|'world'
 ---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.
@@ -9988,7 +9988,12 @@ function CcbBionicsApi.grant(character, bionic) end
 ---@return CcbResult result `value` contains changed and count.
 function CcbBionicsApi.remove_type(character, bionic) end
 
+---Explicit present empty value. Unlike nil it occupies a table/state key.
+---Compare with services.types.null; tostring yields the empty string.
+---@class NullValue
+
 ---@class CcbTypesApi
+---@field null NullValue Immutable empty value retained across scalar payloads and saves.
 local CcbTypesApi = {}
 
 ---Construct a typed ID; use is_valid() to inspect whether its definition exists.
@@ -10002,7 +10007,7 @@ function CcbTypesApi.id_kinds() end
 
 ---@class CcbVariableReadValue
 ---@field exists boolean Whether the requested variable is present.
----@field value? any Stored value; missing variables have no value.
+---@field value? any Stored value; empty array slots use NullValue. Top-level empty and missing values are nil; use exists to distinguish.
 
 ---@class CcbVariableReadResult: CcbResult
 ---@field value? CcbVariableReadValue
@@ -10036,7 +10041,7 @@ function CcbVariablesApi.get(character, key) end
 ---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string
----@param value boolean|number|string|TripointCoord|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set(character, key, value) end
 
@@ -10050,7 +10055,7 @@ function CcbVariablesApi.remove(character, key) end
 function CcbVariablesApi.get_global(key) end
 
 ---@param key string
----@param value boolean|number|string|TripointCoord|nil
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set_global(key, value) end
 
@@ -10059,22 +10064,26 @@ function CcbVariablesApi.set_global(key, value) end
 function CcbVariablesApi.remove_global(key) end
 
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
----Indirect var references retain that same owner. Choose the resolved participant explicitly when owners differ.
+---Optional participants select alpha for u and beta for npc, including indirect references.
+---When supplied, an absent participant means missing; otherwise actor remains the explicit owner.
 ---@param context table<string, any>|nil Callback data for context/var references.
 ---@param actor GameHandle|nil Explicit owner for actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
 ---@param key string
 ---@return CcbVariableReadResult
-function CcbVariablesApi.resolve(context, actor, scope, key) end
+---@param participants {alpha: GameHandle?, beta: GameHandle?}?
+function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 
----For context scope, nil clears the Lua table entry; Lua tables cannot retain a stored nil.
+---For context scope, nil clears the entry; services.types.null retains an empty value.
+---resolve returns exists=true,value=nil for that explicit empty value.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
 ---@param key string
----@param value boolean|number|string|TripointCoord|nil
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
-function CcbVariablesApi.set_resolved(context, actor, scope, key, value) end
+---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
+function CcbVariablesApi.set_resolved(context, actor, scope, key, value, participants) end
 
 ---@class CcbEffectRelatedIdPage
 ---@field items GameId[] Detached related IDs.
@@ -10583,14 +10592,14 @@ local CcbPlatformMathApi = {}
 ---runner; it returns a finite number and follows native variable semantics.
 ---@param expression string Native math expression, at most 8192 bytes.
 ---@param actor? GameHandle Character/creature used for u_/npc_ variables.
----@param context? table<string, boolean|number|string|TripointCoord>
+---@param context? table<string, boolean|number|string|TripointCoord|NullValue>
 ---@return CcbResult result `value` is the finite numeric result.
 function CcbPlatformMathApi.evaluate(expression, actor, context) end
 
 ---Evaluate and apply a native assignment expression against an active callback.
 ---@param expression string Native math assignment/expression, at most 8192 bytes.
 ---@param actor? GameHandle Character/creature used for u_/npc_ variables.
----@param context? table<string, boolean|number|string|TripointCoord>
+---@param context? table<string, boolean|number|string|TripointCoord|NullValue>
 ---@return CcbResult result `value` is the finite numeric result.
 function CcbPlatformMathApi.apply(expression, actor, context) end
 

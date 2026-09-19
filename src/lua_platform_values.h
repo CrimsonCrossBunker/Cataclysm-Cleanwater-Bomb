@@ -18,11 +18,17 @@ struct script_value_map_limits {
     std::size_t storage_bytes = 16U * 1024U;
 };
 
-// Copy a Lua table across an API boundary.  Only scalar values are accepted,
-// so no live table, userdata, function, or game pointer can cross sources.
+// Copy a Lua value map across an API boundary. Scalars, NullValue, and dense
+// arrays are copied into owned storage; live tables, arbitrary userdata,
+// functions, and game pointers are never retained.
 script_value_map read_script_value_map(
     const sol::optional<sol::table> &input, const script_value_map_limits &limits,
     const std::string &api_name );
+script_persistent_value script_persistent_value_from_lua(
+    const sol::object &value, const std::string &api_name,
+    std::size_t string_bytes = persistent_state_max_string_bytes );
+sol::object script_persistent_value_to_lua( sol::state_view lua,
+        const script_persistent_value &value );
 sol::table script_value_map_to_lua( sol::state_view lua,
                                     const script_value_map &values );
 

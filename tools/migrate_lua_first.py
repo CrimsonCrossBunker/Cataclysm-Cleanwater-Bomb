@@ -3860,17 +3860,94 @@ def render_static_run_eocs(
             return None
     variables = effect.get("variables")
 
+    def array_literal(value: list[Any]) -> str | None:
+        nodes = 0
+
+        def render(entry: Any, depth: int) -> str | None:
+            nonlocal nodes
+            nodes += 1
+            if nodes > 512 or depth > 8:
+                return None
+            if isinstance(entry, list):
+                children = [render(child, depth + 1) for child in entry]
+                if any(child is None for child in children):
+                    return None
+                return "{" + ", ".join(children) + "}"
+            if entry is None or isinstance(entry, bool):
+                return "services.types.null"
+            if isinstance(entry, dict) and (entry.get("i18n") or not set(entry) <= {
+                    "str", "i18n", "//~", "tripoint"}):
+                return None
+            return render_eoc_value_expression(entry, "nil", fallback_actor)
+
+        return render(value, 0)
+
     def variable_expression(value: Any) -> str | None:
-        rendered = lua_scalar_literal(value)
-        if rendered is None:
-            rendered = render_eoc_value_expression(
-                value, "nil", fallback_actor
+        # Native diag_value_or_var assigns an explicit empty value, even when
+        # a referenced variable is absent. Do not erase an inherited key.
+        if value is None:
+            return "services.types.null"
+        if isinstance(value, list):
+            return array_literal(value)
+        literal = lua_scalar_literal(value)
+        if literal is not None:
+            return literal
+        # Native evaluates assignments against the parent dialogue, before
+        # applying the child alpha/beta overrides.
+        variable_actor = fallback_actor
+        if isinstance(value, dict):
+            if "npc_val" in value:
+                variable_actor = parent_beta
+            elif "u_val" in value:
+                variable_actor = parent_alpha
+        if isinstance(value, dict) and ("default" in value or "var_val" in value):
+            descriptor = {key: entry for key, entry in value.items() if key != "default"}
+            if len(descriptor) != 1:
+                return None
+            scope, name = next(iter(descriptor.items()))
+            if scope not in {"u_val", "npc_val", "global_val", "context_val", "var_val"}:
+                return None
+            if render_eoc_value_expression(descriptor, "nil", variable_actor) is None:
+                return None
+            # Native diag_value leaves JSON booleans as the empty variant.
+            default = ("services.types.null" if value.get("default") is None or
+                       isinstance(value.get("default"), bool) else
+                       render_eoc_value_expression(value.get("default"), "nil", variable_actor))
+            if isinstance(value.get("default"), list):
+                default = array_literal(value["default"])
+            if isinstance(value.get("default"), dict) and value.get("default").get("i18n"):
+                return None
+            # Defaults are native diag_value literals, not another variable read.
+            if isinstance(value.get("default"), dict) and not set(value.get("default")) <= {
+                "str", "i18n", "//~", "tripoint",
+            }:
+                return None
+            if default is None:
+                return None
+            quoted = lua_quote(name)
+            if scope == "context_val":
+                return (f'(function(value) if value == nil then return {default} end; '
+                        f'return value end)(context.data[{quoted}])')
+            snapshot = (
+                f'services.variables.get_global({quoted})' if scope == "global_val" else
+                'services.variables.resolve(context.data, '
+                f'{variable_actor}, {lua_quote(scope.removesuffix("_val"))}, {quoted}, '
+                f'{{alpha={parent_alpha}, beta={parent_beta}}})'
             )
+            return (f'(function(snapshot) if not snapshot.exists then return {default} end; '
+                    'if snapshot.value == nil then return services.types.null end; '
+                    f'return snapshot.value end)(service_value({snapshot}))')
+        rendered = render_eoc_value_expression(value, "nil", variable_actor)
         if rendered is None:
-            rendered = render_eoc_numeric_expression(
-                value, "0", fallback_actor
-            )
-        return rendered
+            rendered = render_eoc_numeric_expression(value, "0", variable_actor)
+        if rendered is None:
+            return None
+        if not isinstance(value, dict) or not set(value).intersection({
+            "u_val", "npc_val", "global_val", "context_val", "var_val",
+        }):
+            return rendered
+        return ('(function(value) if value == nil then return services.types.null end; '
+                f'return value end)({rendered})')
 
     if variables is not None:
         if not isinstance(variables, dict) or len(variables) > 64:
@@ -3996,7 +4073,7 @@ def render_static_run_eocs(
             )
             if not name.startswith("_"):
                 prefix.append(
-                    f"    child_data[{lua_quote('_' + name)}] = {rendered}"
+                    f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
                 )
         prefix.append(
             "    local child_context = { data = child_data, conditions = context.conditions }"
@@ -4104,9 +4181,7 @@ def render_static_run_eocs(
         return wrap_talker_context(
             prefix + callback_lines(context_expression, "    ")
         )
-    task_payload = (
-        "{ __ccb_task = true, data = " + context_expression + ".data }"
-    )
+    task_payload = context_expression + ".data"
     task_scope = "\"character\"" if delayed_character else "\"world\""
     task_delay_expression = delay_turns_expression
     if not randomize_delay and len(task_references) > 1:
@@ -4124,7 +4199,7 @@ def render_static_run_eocs(
         task_actor_arguments = ""
     task_lines = [
         f"    ccb.tasks.after({task_delay_expression}, "
-        f"{lua_quote('migrated.' + reference)}, {task_payload}, 1, {task_scope}"
+        f"{lua_quote('migrated-task.' + reference)}, {task_payload}, 1, {task_scope}"
         f"{task_actor_arguments})"
         for reference in task_references
     ]
@@ -4239,7 +4314,7 @@ def render_static_eoc_selector(
                 # so the typed callback preserves that established contract.
                 if not name.startswith("_"):
                     lines.append(
-                        f"        context.data[{lua_quote('_' + name)}] = {rendered_value}"
+                        f"        context.data[{lua_quote('_' + name)}] = context.data[{lua_quote(name)}]"
                     )
         lines.append(
             f"        {eoc_function_names[reference]}(context, {actor_expression or 'nil'})"
@@ -24967,8 +25042,10 @@ def render_static_character_copy_var(
         '            copied = service_value(services.variables.resolve(',
         '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
         '        end',
+        '        local copied_value = copied.value',
+        '        if copied_value == nil then copied_value = services.types.null end',
         '        service_value(services.variables.set_resolved(',
-        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied.value))',
+        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied_value))',
         '    end',
     ])
     return lines
@@ -32277,14 +32354,13 @@ def render_eoc(
         lines.extend((
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
-            "    local task_payload = context and context.payload",
-            "    if task_payload ~= nil and task_payload.__ccb_task == true then",
-            "        local task_context = { data = task_payload.data or {} }",
-            "        task_context.actors = context.participants or {}",
-            "        local task_actor = context.actor or task_context.actors.alpha",
-            f"        return {function_name}(task_context, task_actor)",
-            "    end",
             f"    return {function_name}(context, nil)",
+            "end)",
+            f"runtime.handler({lua_quote('migrated-task.' + eoc_id)}, function(context)",
+            "    local task_context = { data = context.payload or {} }",
+            "    task_context.actors = context.participants or {}",
+            "    local task_actor = context.actor or task_context.actors.alpha",
+            f"    return {function_name}(task_context, task_actor)",
             "end)",
             "",
         ))
@@ -32298,7 +32374,7 @@ def render_eoc(
         lines.extend([
             f"runtime.handler({lua_quote(recurring_handler_id)}, function(task)",
             "    local actor = services.characters.avatar()",
-            "    local context = { data = task and task.payload and task.payload.data or {} }",
+            "    local context = { data = task and task.payload or {} }",
         ])
         if deactivate_expression is not None:
             lines.extend([
@@ -32311,7 +32387,7 @@ def render_eoc(
         lines.extend([
             f"    local next_recurrence = {recurrence_expression}",
             f"    ccb.tasks.after(next_recurrence, {lua_quote(recurring_handler_id)}, "
-            "{ data = context.data }, 1, \"character\")",
+            "context.data, 1, \"character\")",
             "    return true",
             "end)",
             f"runtime.handler({lua_quote(schedule_handler_id)}, function(event)",
@@ -32320,10 +32396,10 @@ def render_eoc(
             "    end",
             "    local actor = services.characters.avatar()",
             "    local context = { data = event and event.data or {} }",
-            f"    ccb.state.character.set({lua_quote(scheduled_state_key)}, true)",
             f"    local first_recurrence = {recurrence_expression}",
             f"    ccb.tasks.after(first_recurrence, {lua_quote(recurring_handler_id)}, "
-            "{ data = context.data }, 1, \"character\")",
+            "context.data, 1, \"character\")",
+            f"    ccb.state.character.set({lua_quote(scheduled_state_key)}, true)",
             "    return true",
             "end)",
             f"runtime.on(\"world_ready\", {lua_quote(schedule_handler_id)})",

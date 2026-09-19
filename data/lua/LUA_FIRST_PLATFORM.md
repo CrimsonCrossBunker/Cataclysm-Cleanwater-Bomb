@@ -651,3 +651,62 @@ promotes a planned capability into a shipped one.
 模板只能建议目录结构，不能把建议变成加载器要求。发现、生命周期、原生注册、声明、
 schema、迁移行为或 roadmap 状态变化时同步更新本文和对应 CCB-Docs id；源码与测试始终
 优先于说明文案。
+
+### Explicit empty scalar values / 显式空值
+
+`ccb.services.types.null` is an immutable `NullValue`: it retains a key in a
+Lua context, scalar callback/task payload, or persistent state. `nil` retains
+its ordinary Lua deletion semantics. `tostring(null)` is the empty string;
+compare against the explicit value rather than using Lua truthiness. Variable
+snapshots expose a present empty value as `exists=true, value=nil`, so a
+missing-value fallback applies only when `exists=false`. Native dialogue `get`
+returns `NullValue` for a stored empty value and `nil` for an absent key.
+Typed save entries encode it as `type="null", value=null`; existing scalar
+entries keep their encoding. Context-to-native math conversion retains it as
+an empty native value. Native regression execution for this addition is pending
+batch acceptance; it does not promote EOC selectors to verified by itself.
+
+显式空值可跨上下文、标量任务载荷和存档保留“键存在”的信息。`nil` 仍用于删除，
+默认值只在键不存在时生效；不能用 Lua 的真假判断代替存在性判断。本项新增原生
+回归须在批次末实际运行，通过前不提升相关 EOC 完成标记。
+
+### Variable reads with two participants
+
+`services.variables.resolve(context, actor, scope, key, participants)` accepts an
+optional `{ alpha = handle, beta = handle }` table. When supplied, actor-scoped
+reads select that participant, including the final target of indirect references.
+An absent participant reports a missing value and does not fall back to `actor`.
+Calls without the table retain their explicit-owner behavior. This extension has
+source and regression coverage; native execution remains part of batch acceptance.
+
+`services.variables.set_resolved(context, actor, scope, key, value, participants)`
+uses the same optional participant selection for writes. Missing participants return
+`missing_actor` without writing through the fallback actor. Context nil deletion
+and explicit `services.types.null` storage keep their existing behavior.
+
+Variable snapshots represent empty elements inside native arrays with
+`services.types.null`, preserving leading, trailing, and nested array slots.
+A top-level empty variable still uses `exists = true, value = nil`.
+
+Variable writes accept dense arrays recursively, including `services.types.null`
+slots. Array conversion uses the same depth and node bounds as snapshot reads;
+sparse arrays, named keys, cycles, and unsupported elements fail before native
+mutation. This enables native variable-array round trips. Task payloads and persistent
+state also support owned dense arrays as described below.
+
+### Persistent dense arrays
+
+Task payload fields and state values accept dense arrays of scalars, explicit
+`services.types.null`, and nested arrays. Conversion copies every element into
+immutable owned storage; reads produce fresh Lua tables. Type-tagged array
+entries preserve integers, floats, strings, booleans, and empty elements across
+save/load. Existing scalar encodings are unchanged. Each value allows at most
+512 nodes and 8 nesting levels, within the existing string and total storage
+limits. Sparse tables, named keys inside arrays, cycles, nonfinite numbers,
+functions, and live handles fail before the state or task is changed.
+Source and regression tests are present; native acceptance remains pending.
+
+Persistent values also accept absolute map-square `TripointCoord` values, including
+inside arrays. They save three integer components under `tripoint_abs_ms` and
+restore a typed coordinate, without retaining any map pointer. Other coordinate
+spaces remain rejected at this persistence boundary.

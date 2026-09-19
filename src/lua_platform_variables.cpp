@@ -2,6 +2,7 @@
 
 #include "lua_platform_variables.h"
 
+#include "lua_platform_state.h"
 #include <coordinates.h>
 #include <point.h>
 #include <talker.h>
@@ -58,10 +59,36 @@ void validate_context_key( const std::string_view key )
     }
 }
 
-diag_value context_value_from_lua(
-    const sol::object &value, const std::string &key )
+diag_value context_value_from_lua_impl(
+    const sol::object &value, const std::string &key, const int depth, std::size_t &nodes )
 {
-    if( value.get_type() == sol::type::nil ) {
+    if( ++nodes > maximum_context_nodes || depth > maximum_context_depth ) {
+        throw std::invalid_argument( "services.variables input exceeds its structural limits" );
+    }
+    if( value.get_type() == sol::type::table ) {
+        const sol::table table = value.as<sol::table>();
+        std::size_t count = 0;
+        for( const auto &entry : table ) {
+            if( ++count > maximum_context_nodes || entry.first.get_type() != sol::type::number ) {
+                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
+            }
+            const double index = entry.first.as<double>();
+            if( index < 1 || index > maximum_context_nodes || std::floor( index ) != index ) {
+                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
+            }
+        }
+        diag_array result;
+        result.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object element = table.raw_get<sol::object>( index );
+            if( !element.valid() || element.get_type() == sol::type::nil ) {
+                throw std::invalid_argument( "services.variables arrays require explicit NullValue slots" );
+            }
+            result.push_back( context_value_from_lua_impl( element, key, depth + 1, nodes ) );
+        }
+        return diag_value( std::move( result ) );
+    }
+    if( value.get_type() == sol::type::nil || value.is<script_null_value>() ) {
         return diag_value();
     }
     if( value.get_type() == sol::type::boolean ) {
@@ -98,7 +125,13 @@ diag_value context_value_from_lua(
     }
     throw std::invalid_argument(
         "services.variables context value '" + key +
-        "' must be nil, boolean, number, string, or TripointCoord" );
+        "' must be nil, NullValue, boolean, number, string, TripointCoord, or a dense array" );
+}
+
+diag_value context_value_from_lua( const sol::object &value, const std::string &key )
+{
+    std::size_t nodes = 0;
+    return context_value_from_lua_impl( value, key, 0, nodes );
 }
 
 sol::object context_value_to_lua(
@@ -111,7 +144,9 @@ sol::object context_value_to_lua(
             "services.variables returned context exceeds its structural limits" );
     }
     if( value.is_empty() ) {
-        return sol::make_object( lua, sol::nil );
+        // nil would remove an array slot, including a trailing empty element.
+        return depth == 0 ? sol::make_object( lua, sol::nil ) :
+               sol::make_object( lua, script_null_value{} );
     }
     if( value.is_dbl() ) {
         return sol::make_object( lua, value.dbl() );
@@ -380,7 +415,8 @@ sol::table resolve_variable(
     sol::this_state lua, const sol::optional<sol::table> &context,
     const sol::optional<game_handle> &actor, const std::string &scope,
     const std::string &key, const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const sol::optional<sol::table> &participants )
 {
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
@@ -410,7 +446,8 @@ sol::table resolve_variable(
             if( current_scope == "context" ) {
                 sol::table result = state.create_table();
                 result["exists"] = true;
-                result["value"] = stored;
+                result["value"] = stored.is<script_null_value>() ?
+                                  sol::make_object( state, sol::nil ) : stored;
                 return make_game_value_result(
                            state, sol::make_object( state, std::move( result ) ) );
             }
@@ -454,7 +491,12 @@ sol::table resolve_variable(
             return make_game_value_result(
                        state, sol::make_object( state, std::move( result ) ) );
         }
-        if( !actor ) {
+        sol::optional<game_handle> selected_actor = actor;
+        if( participants ) {
+            selected_actor = participants->raw_get<sol::optional<game_handle>>(
+                                 current_scope == "npc" ? "beta" : "alpha" );
+        }
+        if( !selected_actor ) {
             sol::table result = state.create_table();
             result["exists"] = false;
             result["value"] = sol::nil;
@@ -462,7 +504,7 @@ sol::table resolve_variable(
                        state, sol::make_object( state, std::move( result ) ) );
         }
         const resolved_variable_talker resolved = resolve_variable_talker(
-                    *actor, runtime_generation, world_generation );
+                    *selected_actor, runtime_generation, world_generation );
         if( resolved.error ) {
             return make_game_error_result( state, *resolved.error );
         }
@@ -486,7 +528,8 @@ sol::table set_resolved_variable(
     const sol::optional<game_handle> &actor, const std::string &scope,
     const std::string &key, const sol::object &requested,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const sol::optional<sol::table> &participants )
 {
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
@@ -497,7 +540,12 @@ sol::table set_resolved_variable(
         return set_global_variable( lua, key, requested );
     }
     if( scope == "u" || scope == "npc" ) {
-        if( !actor ) {
+        sol::optional<game_handle> selected_actor = actor;
+        if( participants ) {
+            selected_actor = participants->raw_get<sol::optional<game_handle>>(
+                                 scope == "npc" ? "beta" : "alpha" );
+        }
+        if( !selected_actor ) {
             sol::state_view state( lua );
             return make_game_error_result( state, {
                 "missing_actor",
@@ -505,7 +553,7 @@ sol::table set_resolved_variable(
             } );
         }
         return set_variable(
-                   lua, *actor, key, requested,
+                   lua, *selected_actor, key, requested,
                    runtime_generation, world_generation );
     }
     if( !context ) {
@@ -566,7 +614,7 @@ sol::table set_resolved_variable(
     }
     return set_resolved_variable(
                lua, context, actor, nested_scope, nested.name, requested,
-               runtime_generation, world_generation );
+               runtime_generation, world_generation, participants );
 }
 
 sol::table copy_variable(
@@ -702,11 +750,11 @@ void install_variable_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
-    const std::string & key ) {
+    const std::string & key, const sol::optional<sol::table> &participants ) {
         require_read();
         return resolve_variable( lua_state, context, actor, scope, key,
                                  current_runtime_generation(),
-                                 current_world_generation() );
+                                 current_world_generation(), participants );
     } );
     variables.set_function(
         "set_resolved",
@@ -714,12 +762,13 @@ void install_variable_api(
                                      require_write, has_active_callback](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
-    const std::string & key, const sol::object & value ) {
+            const std::string & key, const sol::object & value,
+    const sol::optional<sol::table> &participants ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_resolved" );
         return set_resolved_variable(
                    lua_state, context, actor, scope, key, value,
-                   current_runtime_generation(), current_world_generation() );
+                   current_runtime_generation(), current_world_generation(), participants );
     } );
     services["variables"] = std::move( variables );
 }

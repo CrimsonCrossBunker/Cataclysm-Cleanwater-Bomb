@@ -1,5 +1,6 @@
 #include "lua_platform_dialogue.h"
 
+#include "lua_platform_state.h"
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue.h>
@@ -676,8 +677,11 @@ sol::object context::get( const std::string &key ) const
     const ::dialogue &d = require_state().dialogue_ref();
     const diag_value *value = d.maybe_get_value( key );
     sol::state_view lua( require_state().lua_state );
-    if( value == nullptr || value->is_empty() ) {
+    if( value == nullptr ) {
         return sol::make_object( lua, sol::lua_nil );
+    }
+    if( value->is_empty() ) {
+        return sol::make_object( lua, script_null_value{} );
     }
     if( value->is_dbl() ) {
         return sol::make_object( lua, value->dbl() );
@@ -693,6 +697,8 @@ void context::set( const std::string &key, const sol::object &value ) const
     ::dialogue &d = require_write_state().dialogue_ref();
     if( value.get_type() == sol::type::nil ) {
         d.remove_value( key );
+    } else if( value.is<script_null_value>() ) {
+        d.set_value( key, diag_value{} );
     } else if( value.get_type() == sol::type::number ) {
         d.set_value( key, value.as<double>() );
     } else if( value.get_type() == sol::type::string ) {

@@ -349,13 +349,14 @@ assert(EXPRESSION==EXPECTED and calls==2)
                      ("var_val", "context.data", "_"), ("var_val", "globals", "")]
         for source, source_store, source_prefix in addresses:
             for target, target_store, target_prefix in addresses:
-                for value in ('"text"', '0', 'nil'):
+                for value in ('"text"', '0', 'nil', 'null'):
                     lines = migrate_lua_first.render_static_character_copy_var(
                         {"copy_var": {source: "source_ref" if source_prefix is not None else "input"},
                          "target_var": {target: "target_ref" if target_prefix is not None else "output"}},
                         True, True, "partner")
                     self.assertIsNotNone(lines)
                     script = r"""
+local null={}
 local actor={input='alpha'}
 local partner={input='beta'}
 local globals={input='global'}
@@ -363,7 +364,7 @@ local context={data={input='context',source_ref=SOURCE_REF,target_ref=TARGET_REF
 SOURCE_STORE.input=VALUE
 local writes=0
 local function service_value(r) assert(r.ok);return r.value end
-local services={variables={
+local services={types={null=null},variables={
  copy=function(source,key,target,out)
   assert((source or globals)==SOURCE_STORE and (target or globals)==TARGET_STORE)
   assert(key=='input' and out=='output');writes=writes+1;return {ok=true,value={}}
@@ -375,7 +376,12 @@ local services={variables={
  end,
  set_resolved=function(data,owner,scope,key,value)
   local store=scope=='global' and globals or scope=='context' and data or owner
-  assert(store==TARGET_STORE and key=='output' and value==VALUE)
+  assert(store==TARGET_STORE and key=='output')
+  local expected=VALUE
+  if expected==nil then expected=null end
+  assert(value==expected)
+  store[key]=value
+  assert(store.output~=nil)
   writes=writes+1;return {ok=true,value={}}
  end
 }}
@@ -17767,6 +17773,48 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
 
+    def test_delayed_generated_module_uses_scalar_payload_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {"type": "effect_on_condition", "id": "target", "required_event": "game_start",
+                 "effect": {"message": {"context_val": "text"}}},
+                {"type": "effect_on_condition", "id": "owner", "required_event": "game_start",
+                 "effect": {"run_eocs": "target", "time_in_future": 2}},
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "task_snapshot")
+        main = result.files[Path("main.lua")]
+        script = r"""
+local handlers, scheduled = {}, nil
+local messages = {}
+local ccb = {content={}, runtime={
+    handler=function(id, fn) assert(handlers[id]==nil); handlers[id]=fn end,
+    on=function() end}, services={message=function(text) messages[#messages+1]=text end},
+    tasks={after=function(turns, handler, payload, version, scope)
+        assert(turns==2 and version==1 and scope=="world")
+        local saved={}
+        for key,value in pairs(payload) do
+            assert(type(value)=="string" or type(value)=="number" or type(value)=="boolean")
+            saved[key]=value
+        end
+        scheduled={handler=handler, payload=saved}
+    end}}
+package.preload.ccb=function() return ccb end
+""" + main + r"""
+local data={text="before", data="user field", __ccb_task=true}
+handlers["migrated.owner"]({data=data})
+assert(scheduled and scheduled.payload.data=="user field")
+assert(scheduled.payload.__ccb_task==true)
+data.text="after"
+handlers[scheduled.handler]({payload=scheduled.payload, participants={}})
+assert(#messages==1 and messages[1]=="before")
+handlers["migrated.target"]({data=data})
+assert(#messages==2 and messages[2]=="after")
+"""
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_delayed_run_eocs_use_persistent_platform_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -17800,12 +17848,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(2, "migrated.delayed_target", '
-                '{ __ccb_task = true, data = context.data }, 1, "world")',
+                'ccb.tasks.after(2, "migrated-task.delayed_target", '
+                'context.data, 1, "world")',
                 main,
             )
             self.assertIn(
-                "if task_payload ~= nil and task_payload.__ccb_task == true",
+                'runtime.handler("migrated-task.delayed_target"',
                 main,
             )
 
@@ -17844,8 +17892,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(2, "migrated.npc_delayed_target", '
-                '{ __ccb_task = true, data = context.data }, 1, '
+                'ccb.tasks.after(2, "migrated-task.npc_delayed_target", '
+                'context.data, 1, '
                 '"character", delayed_task_actor)',
                 main,
             )
@@ -17895,13 +17943,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                'ccb.tasks.after(10, "migrated.delayed_talker_target", '
-                '{ __ccb_task = true, data = context.data }, 1, "world", '
+                'ccb.tasks.after(10, "migrated-task.delayed_talker_target", '
+                'context.data, 1, "world", '
                 'nil, { alpha = selected_alpha, beta = selected_beta })',
                 main,
             )
             self.assertIn(
-                "local task_context = { data = task_payload.data or {} }",
+                "local task_context = { data = context.payload or {} }",
                 main,
             )
             self.assertIn(
@@ -17955,7 +18003,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn(
-                'ccb.tasks.after(10, "migrated.unproven_delayed_talker_target"',
+                'ccb.tasks.after(10, "migrated-task.unproven_delayed_talker_target"',
                 main,
             )
             self.assertIn("explicit avatar participant handle", report)
@@ -18010,7 +18058,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 report = result.files[Path("MIGRATION_REPORT.md")]
 
                 self.assertNotIn(
-                    'ccb.tasks.after(2, "migrated.delayed_target"', main
+                    'ccb.tasks.after(2, "migrated-task.delayed_target"', main
                 )
                 self.assertNotIn("delayed or context-bound run_eocs", main)
                 self.assertNotIn("typed callback/task conversion", report)
@@ -18049,7 +18097,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn(
-                'ccb.tasks.after(2, "migrated.character_delayed_target"',
+                'ccb.tasks.after(2, "migrated-task.character_delayed_target"',
                 main,
             )
             self.assertIn("typed callback/task conversion", report)
@@ -18096,7 +18144,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertTrue(result.todos)
             self.assertNotIn("services.characters.avatar()", main)
             self.assertNotIn(
-                'ccb.tasks.after(2, "migrated.global_delayed_target"', main
+                'ccb.tasks.after(2, "migrated-task.global_delayed_target"', main
             )
             self.assertIn("typed callback/task conversion", report)
 
@@ -18577,6 +18625,213 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 report,
             )
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_run_eocs_context_preserves_explicit_and_missing_source_null(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {
+                "explicit": None, "absent": {"context_val": "missing"},
+                "inherited": {"context_val": "missing"},
+                "false_value": {"context_val": "false_source"},
+                "once": {"math": ["rand(1, 100)"]},
+            }}, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null = setmetatable({}, {__tostring=function() return "" end})
+local reads = 0
+local services = {types={null=null}, gameplay={math={evaluate=function()
+    reads = reads + 1
+    return {ok=true, value=reads}
+end}}}
+local function service_value(result) assert(result.ok); return result.value end
+local actor = {}
+local context = {data={inherited="old", false_source=false}}
+local calls = 0
+local function child(next_context, next_actor)
+    calls = calls + 1
+    assert(next_actor == actor)
+    for _, key in ipairs({"explicit", "absent", "inherited"}) do
+        assert(next_context.data[key] == null, key)
+        assert(next_context.data["_" .. key] == null, key)
+    end
+    assert(next_context.data.false_value == false)
+    assert(reads == 1)
+    assert(next_context.data.once == next_context.data._once)
+    assert(context.data.inherited == "old")
+    assert(context.data.explicit == nil)
+end
+""" + "\n".join(lines) + "\nassert(calls == 1)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_run_eocs_variable_defaults_distinguish_missing_and_null(self) -> None:
+        for scope in ("context_val", "global_val", "u_val", "npc_val"):
+            with self.subTest(scope=scope):
+                lines = migrate_lua_first.render_static_run_eocs(
+                    {"run_eocs": "child", "variables": {
+                        "missing": {scope: "missing", "default": "fallback"},
+                        "empty": {scope: "empty", "default": "fallback"},
+                        "zero": {scope: "zero", "default": 42},
+                        "boolean_default": {scope: "missing", "default": True},
+                    }}, {"child": "child"}, actor_expression="actor",
+                    npc_actor_expression="actor")
+                self.assertIsNotNone(lines)
+                script = r"""
+local null = {}
+local actor = {}
+local context = {data={empty=null, zero=0}}
+local function read(key)
+    return {ok=true, value={exists=key ~= "missing", value=key == "zero" and 0 or nil}}
+end
+local services = {types={null=null}, variables={get_global=read,
+    resolve=function(data, owner, scope, key) return read(key) end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(ctx)
+    called = true
+    assert(ctx.data.missing == "fallback")
+    assert(ctx.data.empty == null)
+    assert(ctx.data.zero == 0)
+    assert(ctx.data.boolean_default == null)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_run_eocs_indirect_variable_uses_parent_participants(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {"value": {"var_val": "reference"}}},
+            {"child": "child"}, actor_expression="actor", npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor, partner = {}, {}
+local context = {data={reference="n_input"}}
+local services = {types={null={}}, variables={resolve=function(data, owner, scope, key, participants)
+    assert(scope == "var" and key == "reference")
+    assert(participants.alpha == actor and participants.beta == partner)
+    return {ok=true, value={exists=true, value="beta value"}}
+end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(ctx) called=true; assert(ctx.data.value == "beta value") end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_run_eocs_array_assignment_preserves_empty_slots(self) -> None:
+        effect = {"run_eocs": "child", "variables": {"values": [None, 0, ["text", None]]}}
+        lines = migrate_lua_first.render_static_run_eocs(
+            effect, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local services={types={null={}}}
+local actor={}
+local context={data={}}
+local called=false
+local function child(ctx)
+    called=true
+    local values=ctx.data.values
+    assert(#values==3 and values[1]==services.types.null and values[2]==0)
+    assert(#values[3]==2 and values[3][1]=="text" and values[3][2]==services.types.null)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
+            dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
+
+    def test_run_eocs_array_default_only_applies_when_missing(self) -> None:
+        effect = {"run_eocs": "child", "variables": {
+            "missing": {"context_val": "missing", "default": [None, 0]},
+            "present": {"context_val": "empty", "default": [None, 0]},
+        }}
+        lines = migrate_lua_first.render_static_run_eocs(
+            effect, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null={}
+local services={types={null=null}}
+local actor={}
+local context={data={empty=null}}
+local called=false
+local function child(ctx)
+    called=true
+    assert(#ctx.data.missing==2 and ctx.data.missing[1]==null and ctx.data.missing[2]==0)
+    assert(ctx.data.present==null)
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(migrate_lua_first.render_static_run_eocs(
+            dict(effect, time_in_future=1), {"child": "child"}, actor_expression="actor"))
+
+    def test_delayed_run_eocs_copies_array_variables_and_defaults(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "time_in_future": 1, "variables": {
+                "literal": [None, 0, ["nested", None]],
+                "fallback": {"context_val": "missing", "default": [None, 7]},
+                "source": {"context_val": "original"},
+            }}, {"child": "child"}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local null={}
+local services={types={null=null}}
+local actor={}
+local context={data={original={1,{2,null}}}}
+local queued=nil
+local function copy(value)
+    if value==null or type(value)~="table" then return value end
+    local result={}
+    for key,child in pairs(value) do result[key]=copy(child) end
+    return result
+end
+local ccb={tasks={after=function(turns, handler, payload, version, scope)
+    assert(turns==1 and handler=="migrated-task.child" and version==1 and scope=="world")
+    queued=copy(payload)
+end}}
+""" + "\n".join(lines) + r"""
+context.data.original[2][1]=99
+assert(queued.source[2][1]==2 and queued.source[2][2]==null)
+assert(#queued.literal==3 and queued.literal[1]==null and queued.literal[3][2]==null)
+assert(queued.fallback[1]==null and queued.fallback[2]==7)
+assert(queued._literal[3][1]=="nested")
+"""
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_run_eocs_variables_read_parent_participants(self) -> None:
+        lines = migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "child", "variables": {
+                "alpha_value": {"u_val": "name"},
+                "beta_value": {"npc_val": "name"},
+            }}, {"child": "child"}, actor_expression="actor",
+            npc_actor_expression="partner")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor, alpha, partner = {}, {}, {}
+local context = {data={}, actors={alpha=alpha, beta=partner}}
+local services = {types={null={}}, variables={resolve=function(data, owner, scope, key)
+    assert(data == context.data and key == "name")
+    assert(owner == (scope == "u" and alpha or partner))
+    return {ok=true, value={exists=true, value=scope .. "-parent"}}
+end}}
+local function service_value(result) assert(result.ok); return result.value end
+local called = false
+local function child(next_context)
+    called = true
+    assert(next_context.data.alpha_value == "u-parent")
+    assert(next_context.data.beta_value == "npc-parent")
+end
+""" + "\n".join(lines) + "\nassert(called)"
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_run_eocs_variables_accept_bounded_translation_scalars(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -18697,6 +18952,49 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.todos), 0)
             self.assertIn("non-finite values rejected", report)
             self.assertNotIn("typed callback/task conversion", report)
+
+    def test_global_recurrence_retries_failed_schedule_and_preserves_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([{
+                "type": "effect_on_condition", "id": "repeat", "global": True,
+                "recurrence": 2, "effect": {"message": {"context_val": "text"}},
+            }]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "recurrence")
+        main = result.files[Path("main.lua")]
+        script = r"""
+local handlers, state, queue, messages = {}, {}, {}, {}
+local fail = true
+local ccb={content={}, services={characters={avatar=function() return {} end},
+    message=function(text) messages[#messages+1]=text end}, runtime={
+    handler=function(id,fn) handlers[id]=fn end, on=function() end},
+    state={character={get=function(key,fallback) return state[key] or fallback end,
+    set=function(key,value) state[key]=value end}}, tasks={after=function(turns,id,payload)
+        if fail then error("schedule failure") end
+        local saved={}
+        for key,value in pairs(payload) do
+            assert(type(value)~="table")
+            saved[key]=value
+        end
+        queue[#queue+1]={id=id,payload=saved}
+    end}}
+package.preload.ccb=function() return ccb end
+""" + main + r"""
+local start=handlers["migrated.repeat.schedule"]
+local event={data={text="tick", data="user field"}}
+assert(not pcall(start,event))
+assert(not state["recurrence.repeat.scheduled"])
+fail=false
+assert(start(event)==true and #queue==1)
+assert(start(event)==false and #queue==1)
+event.data.text="changed"
+handlers[queue[1].id]({payload=queue[1].payload})
+assert(#messages==1 and messages[1]=="tick")
+assert(#queue==2 and queue[2].payload.data=="user field")
+"""
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_global_dynamic_recurrence_uses_persistent_self_scheduling(
         self,

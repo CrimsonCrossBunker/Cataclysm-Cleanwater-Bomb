@@ -2,6 +2,8 @@
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "lua_platform_values.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -157,23 +159,7 @@ std::int64_t nonnegative_turn_difference( const std::int64_t later,
 persistent_value persistent_from_lua( const sol::object &value,
                                       const std::string &api_name )
 {
-    switch( value.get_type() ) {
-        case sol::type::boolean:
-            return value.as<bool>();
-        case sol::type::number:
-            if( value.is<lua_Integer>() ) {
-                return static_cast<std::int64_t>( value.as<lua_Integer>() );
-            }
-            if( const double number = value.as<double>(); std::isfinite( number ) ) {
-                return number;
-            }
-            throw std::runtime_error( api_name + " only accepts finite numbers" );
-        case sol::type::string:
-            return value.as<std::string>();
-        default:
-            throw std::runtime_error( api_name +
-                                      " only accepts boolean, number, or string values" );
-    }
+    return script_persistent_value_from_lua( value, api_name );
 }
 
 void set_persistent_value( persistent_state &store, const std::string &key,
@@ -199,9 +185,7 @@ sol::object get_persistent_value( const persistent_state &store,
         }
         return fallback.value_or( sol::make_object( lua, sol::lua_nil ) );
     }
-    return std::visit( [lua]( const auto & entry ) {
-        return sol::make_object( lua, entry );
-    }, found->second );
+    return script_persistent_value_to_lua( lua, found->second );
 }
 
 sol::table persistent_table( sol::state &lua, const persistent_state &values )
@@ -209,9 +193,7 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
         const std::string persistent_key = key;
-        std::visit( [&result, &persistent_key]( const auto & entry ) {
-            result[persistent_key] = entry;
-        }, value );
+        result[persistent_key] = script_persistent_value_to_lua( lua, value );
     }
     return result;
 }
@@ -252,19 +234,7 @@ void write_typed_values( JsonOut &json, const persistent_state &values )
     for( const std::string &key : keys ) {
         json.member( key );
         json.start_object();
-        std::visit( [&json]( const auto & value ) {
-            using value_type = std::decay_t<decltype( value )>;
-            if constexpr( std::is_same_v<value_type, bool> ) {
-                json.member( "type", "boolean" );
-            } else if constexpr( std::is_same_v<value_type, std::int64_t> ) {
-                json.member( "type", "integer" );
-            } else if constexpr( std::is_same_v<value_type, double> ) {
-                json.member( "type", "float" );
-            } else {
-                json.member( "type", "string" );
-            }
-            json.member( "value", value );
-        }, values.at( key ) );
+        detail::write_persistent_value( json, values.at( key ) );
         json.end_object();
     }
     json.end_object();
@@ -276,23 +246,7 @@ persistent_state read_typed_values( const JsonObject &values )
     for( const JsonMember member : values ) {
         const std::string key = member.name();
         const JsonObject entry = member.get_object();
-        const std::string type = entry.get_string( "type" );
-        if( type == "boolean" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_bool( "value" ) );
-        } else if( type == "integer" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_int64( "value" ) );
-        } else if( type == "float" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_float( "value" ) );
-        } else if( type == "string" ) {
-            cata::lua_platform::assign_persistent_value( result, key,
-                    entry.get_string( "value" ) );
-        } else {
-            throw std::runtime_error( "unknown Platform state value type '" + type + "'" );
-        }
-        entry.allow_omitted_members();
+        assign_persistent_value( result, key, detail::read_persistent_value( entry ) );
     }
     values.allow_omitted_members();
     return result;

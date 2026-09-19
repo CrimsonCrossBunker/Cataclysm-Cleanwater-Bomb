@@ -6,17 +6,65 @@
 #include <cstdint>
 #include <iosfwd>
 #include <map>
+#include <memory>
+#include <vector>
 #include <streambuf>
 #include <string>
 #include <unordered_map>
 #include <variant>
 
 class JsonValue;
+class JsonObject;
+class JsonOut;
 
 namespace cata::lua_platform
 {
 
-using script_persistent_value = std::variant<bool, std::int64_t, double, std::string>;
+// A present empty value, distinct from Lua nil (which removes a table key).
+struct script_null_value {
+    void serialize( JsonOut &json ) const;
+    bool operator==( const script_null_value & ) const {
+        return true;
+    }
+    bool operator!=( const script_null_value & ) const {
+        return false;
+    }
+};
+
+// Absolute map-square coordinates are values, not live map references.
+struct script_persistent_tripoint {
+    int x;
+    int y;
+    int z;
+    void serialize( JsonOut &json ) const;
+    bool operator==( const script_persistent_tripoint &other ) const {
+        return x == other.x && y == other.y && z == other.z;
+    }
+    bool operator!=( const script_persistent_tripoint &other ) const {
+        return !( *this == other );
+    }
+};
+
+struct script_persistent_array;
+// Immutable, owned array storage; copies never retain a Lua table or game pointer.
+class script_array_value
+{
+    public:
+        explicit script_array_value( script_persistent_array value );
+        const script_persistent_array &get() const;
+        void serialize( JsonOut &json ) const;
+        bool operator==( const script_array_value &other ) const;
+        bool operator!=( const script_array_value &other ) const;
+    private:
+        std::shared_ptr<const script_persistent_array> value_;
+};
+
+using script_persistent_value = std::variant<bool, std::int64_t, double, std::string,
+      script_null_value, script_array_value, script_persistent_tripoint>;
+struct script_persistent_array {
+    std::vector<script_persistent_value> values;
+};
+
 using script_persistent_state = std::unordered_map<std::string, script_persistent_value>;
 using script_value_map = std::map<std::string, script_persistent_value>;
 
@@ -45,6 +93,9 @@ class bounded_state_output_buffer final : public std::streambuf
         std::string limit_error_;
         std::string output_;
 };
+// Write the type and value members inside an already-open JSON object.
+void write_persistent_value( JsonOut &json, const script_persistent_value &value );
+script_persistent_value read_persistent_value( const JsonObject &entry );
 } // namespace detail
 
 // Assign one validated value without partially changing the state on failure.
