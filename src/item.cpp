@@ -444,6 +444,7 @@ item &item::convert( const itype_id &new_type, Character *carrier )
 {
     // Carry over relative rot similar to crafting
     const double rel_rot = get_relative_rot();
+    const bool was_counted_by_charges = count_by_charges();
     type = find_type( new_type );
     set_relative_rot( rel_rot );
     requires_tags_processing = true; // new type may have "active" flags
@@ -458,7 +459,7 @@ item &item::convert( const itype_id &new_type, Character *carrier )
     temp.contents.combine( contents, true );
     contents = temp.contents;
     current_phase = new_type->phase;
-    if( count_by_charges() != new_type->count_by_charges() ) {
+    if( was_counted_by_charges != count_by_charges() ) {
         charges = new_type->charges_default();
     }
 
