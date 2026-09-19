@@ -4450,6 +4450,12 @@ bool game::handle_action()
     avatar &player_character = get_avatar();
     // Check if we have an auto-move destination
     if( player_character.has_destination() ) {
+        // Poll before consuming a route step: cancellation can clear the route,
+        // and consuming its last step first would skip interruption polling.
+        handle_key_blocking_activity();
+        if( !player_character.has_destination() ) {
+            return false;
+        }
         act = player_character.get_next_auto_move_direction();
 #ifdef MP_ENABLED
         if( cata_mp::is_client_mode() ) {
@@ -4462,7 +4468,6 @@ bool game::handle_action()
             player_character.abort_automove();
             return false;
         }
-        handle_key_blocking_activity();
     } else if( player_character.has_destination_activity() ) {
         // starts destination activity after the player successfully reached his destination
         player_character.start_destination_activity();
