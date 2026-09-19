@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -23,7 +24,6 @@
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
-#include "type_id.h"
 #include "weather.h"
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
@@ -64,6 +64,7 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime{ owner, 1 };
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     sol::table services = lua.create_table();
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api( lua, services, [runtime]() {
@@ -128,13 +129,21 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             } else if( state == 3 ) {
                 environment_source.set_value( "environment_input", diag_value{} );
             }
-            const std::string condition_json = R"({")" + selector + R"(":{")" +
-                                               ( indirect ? "var_val" : source_key ) + R"(":")" +
-                                               ( indirect ? "environment_ref" : "environment_input" ) +
-                                               R"(","default":")" + current + R"("}})";
+            std::string condition_json = R"({")";
+            condition_json += selector;
+            condition_json += R"(":{")";
+            condition_json += indirect ? "var_val" : source_key;
+            condition_json += R"(":")";
+            condition_json += indirect ? "environment_ref" : "environment_input";
+            condition_json += R"(","default":")";
+            condition_json += current;
+            condition_json += R"("}})";
             conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
             const sol::protected_function_result actual = environment_query();
-            REQUIRE( actual.valid() );
+            if( !actual.valid() ) {
+                const sol::error error = actual;
+                FAIL( error.what() );
+            }
             CHECK( actual.get<bool>() == predicate( context ) );
         }
     }
@@ -207,6 +216,7 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime{ owner, 1 };
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     sol::table services = lua.create_table();
     cata::lua_platform::install_variable_api( services, [runtime]() {
         return runtime;
