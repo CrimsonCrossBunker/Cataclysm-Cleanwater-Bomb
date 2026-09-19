@@ -735,3 +735,67 @@ sharing any mutation type before invoking native set semantics. It preserves
 base-trait bookkeeping, adds no gain/loss events, and permits repeated assignment.
 Native hooks and variant fallback remain active. `grant` retains its distinct
 non-conflicting grant and gain-event behavior.
+
+Mutation definition enumeration accepts `services.mutations.definitions({order = "native"})`
+to retain the loaded registry order, including across pages. The default `order = "id"`
+continues to sort identifiers. Migrated trait iteration requests native order so that
+random draws and the final iteration variable follow the source traversal. This option
+and its native regression source still require the batch native acceptance gate.
+
+Vitamin definition enumeration supports the same `order = "id" | "native"` option
+through `services.vitamins.definitions`. Native order is retained after query
+filtering and before pagination; the default remains ID order. Migrated vitamin
+iteration requests native order. Its C++ regression source covers both ordering
+modes and filtered pages; native execution remains part of batch acceptance.
+
+`services.registry.list` and `services.registry.definitions.list` also accept
+`order = "native"`; omitted or `"id"` keeps identifier sorting. Each order has a
+separate catalog cache, invalidated together on language changes. Native order
+means the registry's enumeration order, not a stable order across different data
+loads. Filtering retains that order and pagination is applied afterward. Migrated
+body-part and JSON-flag traversal requests it. Native test execution is still due.
+
+`services.hordes.monsters(group, recursive, {order = "native"})` preserves the
+native group traversal sequence, including repeated monster occurrences. Default
+`order = "id"` keeps the sorted, unique list. Pagination in native mode counts
+occurrences, and migrated monster-group iteration requests this mode. Native
+comparison test source is present; execution remains due at batch acceptance.
+
+`services.items.possible_from_group(group, {order = "native"})` preserves
+the native item-group pointer-set traversal order. The default remains sorted
+unique item IDs. Native order is meaningful within the current process and data
+load, not a stable ordering across launches. Migrated item-group iteration uses
+this option. Native comparison test source is present; execution remains due.
+
+Migrated nested `foreach` loops snapshot their inputs separately and share
+the dialogue variable store. An inner loop does not restore the outer iterator
+value on return; the next outer iteration overwrites it normally. Unsupported
+nested effects still leave a migration gap. Generated Lua execution covers this
+ordering; native comparison execution remains due.
+
+Migrated `foreach` arrays also accept the string `game_option` mutator.
+Its option name resolves dialogue participants independently, and all option
+values are read before the first iterator write or body effect. Missing or
+non-string options fail explicitly. Generated Lua tests cover both participants,
+snapshot timing and failure before body execution; native execution is pending.
+
+Dynamic `foreach` strings can read monster default factions and translated
+martial-art technique names or flavor descriptions through typed definition
+services. Their identifiers may recursively use supported string expressions;
+participant variables retain their own alpha/beta ownership. Generated Lua
+execution checks nested option lookup and full-array evaluation before effects.
+Native comparison execution and the remaining string mutators are still due.
+
+Migrated `foreach` strings support `valid_technique` through
+`characters.choose_technique`, selecting for alpha against beta before body
+execution. Dynamic blacklist strings retain participant ownership. Blacklists
+have no additional entry-count cap; required character provenance and ID
+validation remain explicit migration limits. Generated Lua tests cover flags,
+300-entry lists and selection timing. A same-seed native comparison test is
+provided but has not run; this is not evidence of full native selector parity.
+
+Explicit `{str = ..., i18n = true}` string expressions in migrated
+`foreach` arrays use `services.translate`, including nested supported mutator
+arguments. Plain string literals remain untranslated. Translation runs while
+building the input snapshot, before body effects. Generated Lua execution covers
+this order; native localization comparison is still pending.

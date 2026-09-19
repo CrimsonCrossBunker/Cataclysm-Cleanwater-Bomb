@@ -7423,7 +7423,7 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field critical? boolean Defaults to false.
 ---@field dodge_counter? boolean Defaults to false.
 ---@field block_counter? boolean Defaults to false.
----@field blacklist? (string|GameId)[] Up to 256 technique IDs; typed entries use martial_art_technique kind.
+---@field blacklist? (string|GameId)[] Technique IDs; typed entries use martial_art_technique kind.
 
 ---@class CcbTechniqueChoice
 ---@field found boolean Whether native selection produced a technique.
@@ -8182,9 +8182,12 @@ function CcbHordesApi.definitions(options) end
 ---@return CcbHordeDefinition
 function CcbHordesApi.definition(id, options) end
 
+---@class CcbHordeMonsterQuery: CcbHordePageOptions
+---@field order? "id"|"native" Default id sorts and deduplicates; native retains original order and duplicate occurrences.
+
 ---@param id GameId GameId<monster_group> Horde definition identity.
 ---@param recursive? boolean Include recursively referenced groups.
----@param options? CcbHordePageOptions
+---@param options? CcbHordeMonsterQuery
 ---@return CcbHordeMonsterPage
 function CcbHordesApi.monsters(id, recursive, options) end
 
@@ -8955,8 +8958,9 @@ function CcbItemsApi.snapshot(handle, relation_limit) end
 ---@return integer
 function CcbItemsApi.food_fun(id) end
 ---@param group GameId GameId<item_group>
+---@param options? {order?: "id"|"native"} Default ID sorting; native preserves current item-group enumeration order.
 ---@return table
-function CcbItemsApi.possible_from_group(group) end
+function CcbItemsApi.possible_from_group(group, options) end
 ---@param handle GameHandle Exact live item handle.
 ---@param updates CcbItemUpdateOptions
 ---@return CcbResult
@@ -10159,6 +10163,16 @@ function CcbEffectsApi.remove(character, effect, body_part) end
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
 
+---@class CcbMutationDefinitionQuery
+---@field offset? integer
+---@field limit? integer
+---@field order? "id"|"native" Default id; native preserves the loaded mutation registry order.
+
+---Read detached mutation definitions in pages, optionally preserving native registry order.
+---@param options? CcbMutationDefinitionQuery
+---@return table page Contains items, total, offset, limit, returned and has_more; each item has a mutation GameId in id.
+function CcbMutationsApi.definitions(options) end
+
 ---Read whether the explicit Character has a mutation; compose multiple queries with Lua `or`.
 ---@param character GameHandle Exact avatar or NPC handle.
 ---@param mutation GameId GameId<mutation>.
@@ -10805,3 +10819,39 @@ function CcbPlatformServices.nearby_creatures_snapshot(character, radius, limit)
 local ccb = {}
 
 return ccb
+
+---@class CcbVitaminDefinitionQuery
+---@field offset? integer
+---@field limit? integer
+---@field query? string Filter identifier or translated name.
+---@field order? "id"|"native" Default id; native preserves loaded registry order after filtering.
+
+---@class CcbVitaminsApi
+local CcbVitaminsApi = {}
+
+---Read detached vitamin definitions with bounded pagination.
+---@param options? CcbVitaminDefinitionQuery
+---@return table page Contains items, total, offset, limit, returned and has_more; items contain vitamin GameIds in id.
+function CcbVitaminsApi.definitions(options) end
+
+---@class CcbRegistryQuery
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+---@field details? boolean
+---@field order? "id"|"native" Default id; native retains registry enumeration order before filtering and pagination.
+
+---@class CcbRegistryDefinitionsApi
+local CcbRegistryDefinitionsApi = {}
+---@param kind string
+---@param options? CcbRegistryQuery
+---@return table page
+function CcbRegistryDefinitionsApi.list(kind, options) end
+
+---@class CcbRegistryApi
+---@field definitions CcbRegistryDefinitionsApi
+local CcbRegistryApi = {}
+---@param kind string
+---@param options? CcbRegistryQuery
+---@return table page
+function CcbRegistryApi.list(kind, options) end

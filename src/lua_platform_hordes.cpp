@@ -337,6 +337,7 @@ class legacy_horde_token
 };
 
 struct page_options {
+    bool native_order = false;
     std::size_t offset = 0;
     int limit = default_page_limit;
 };
@@ -375,7 +376,7 @@ bool require_boolean(
 
 page_options read_page_options(
     const sol::optional<sol::table> &requested,
-    const std::string &api_name )
+    const std::string &api_name, const bool allow_native_order = false )
 {
     page_options result;
     if( !requested ) {
@@ -387,7 +388,17 @@ page_options read_page_options(
                 api_name + " option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
-        if( key == "offset" ) {
+        if( key == "order" && allow_native_order ) {
+            const sol::object value = entry.second;
+            if( value.get_type() != sol::type::string ) {
+                throw std::invalid_argument( api_name + " order must be id or native" );
+            }
+            const std::string order = value.as<std::string>();
+            if( order != "id" && order != "native" ) {
+                throw std::invalid_argument( api_name + " order must be id or native" );
+            }
+            result.native_order = order == "native";
+        } else if( key == "offset" ) {
             const lua_Integer value = require_integer(
                                           entry.second, api_name, key );
             if( value < 0 ||
@@ -1108,20 +1119,22 @@ sol::table group_monsters(
     }
     const page_options options =
         read_page_options(
-            requested, std::string( api_name ) );
+            requested, std::string( api_name ), true );
     std::vector<mtype_id> monsters =
         MonsterGroupManager::GetMonstersFromGroup(
             mongroup_id( requested_group.value() ),
             recursive );
-    std::sort(
-        monsters.begin(), monsters.end(),
-    []( const mtype_id & lhs, const mtype_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
-    monsters.erase(
-        std::unique(
-            monsters.begin(), monsters.end() ),
-        monsters.end() );
+    if( !options.native_order ) {
+        std::sort(
+            monsters.begin(), monsters.end(),
+        []( const mtype_id & lhs, const mtype_id & rhs ) {
+            return lhs.str() < rhs.str();
+        } );
+        monsters.erase(
+            std::unique(
+                monsters.begin(), monsters.end() ),
+            monsters.end() );
+    }
     const std::size_t offset =
         std::min( options.offset, monsters.size() );
     const std::size_t returned =

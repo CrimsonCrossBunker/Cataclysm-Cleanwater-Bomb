@@ -3850,6 +3850,10 @@ def render_static_run_eocs(
     )
     condition_expression = None
     if "condition" in effect:
+        # Native f_run_eocs installs its loop guard only for an object.
+        # Do not reinterpret other JSON shapes as a looping predicate.
+        if not isinstance(effect["condition"], dict):
+            return None
         condition_expression = render_eoc_condition_expression(
             effect["condition"], avatar_actor_proven,
             avatar_actor_proven or npc_actor_proven,
@@ -4057,28 +4061,41 @@ def render_static_run_eocs(
         return None
     context_expression = "context"
     prefix: list[str] = []
-    if variables:
+    prefix.extend([
+        "    local function copy_child_value(value)",
+        "        if services.types and value == services.types.null then return value end",
+        "        if type(value) ~= \"table\" then return value end",
+        "        local copied = {}",
+        "        for key, entry in pairs(value) do copied[key] = copy_child_value(entry) end",
+        "        return copied",
+        "    end",
+        "    local child_data = {}",
+        "    for name, value in pairs((context and context.data) or {}) do",
+        "        child_data[name] = copy_child_value(value)",
+        "    end",
+    ])
+    for name, value in (variables or {}).items():
+        rendered = variable_expression(value)
+        if rendered is None:
+            return None
         prefix.extend([
-            "    local child_data = {}",
-            "    for name, value in pairs((context and context.data) or {}) do",
-            "        child_data[name] = value",
-            "    end",
+            f"    child_data[{lua_quote(name)}] = {rendered}",
+            f"    child_data[{lua_quote(name)}] = copy_child_value(child_data[{lua_quote(name)}])",
         ])
-        for name, value in variables.items():
-            rendered = variable_expression(value)
-            if rendered is None:
-                return None
-            prefix.append(
-                f"    child_data[{lua_quote(name)}] = {rendered}"
-            )
-            if not name.startswith("_"):
-                prefix.append(
-                    f"    child_data[{lua_quote('_' + name)}] = child_data[{lua_quote(name)}]"
-                )
-        prefix.append(
-            "    local child_context = { data = child_data, conditions = context.conditions }"
-        )
-        context_expression = "child_context"
+    prefix.extend([
+        "    local child_conditions = {}",
+        "    for name, predicate in pairs(context.conditions or {}) do",
+        "        child_conditions[name] = predicate",
+        "    end",
+        "    local child_context = { data = child_data, conditions = child_conditions, actors = {} }",
+        "    for name, handle in pairs(context.actors or {}) do child_context.actors[name] = handle end",
+    ])
+    if has_talker_override:
+        prefix.extend([
+            "    child_context.actors.alpha = selected_alpha",
+            "    child_context.actors.beta = selected_beta",
+        ])
+    context_expression = "child_context"
     iterations = effect.get("iterations")
     loop_count_expression = None
     if iterations is not None:
@@ -4109,25 +4126,18 @@ def render_static_run_eocs(
             f"        local selected_beta = {beta_expression}",
             "        if selected_alpha == nil and selected_beta == nil then",
         ]
-        wrapped.extend(
-            f"            {eoc_function_names[reference]}(context, "
-            f"{actor_expression or 'nil'})"
-            for reference in false_references
+        failure_lines = render_copied_eoc_callbacks(
+            false_references, eoc_function_names, actor_expression or "nil"
         )
+        assert failure_lines is not None  # References were validated above.
+        wrapped.extend("    " + line for line in failure_lines)
         wrapped.extend([
             "        else",
-            "            context.actors = context.actors or {}",
-            "            local previous_alpha = context.actors.alpha",
-            "            local previous_beta = context.actors.beta",
-            "            context.actors.alpha = selected_alpha",
-            "            context.actors.beta = selected_beta",
         ])
         wrapped.extend(
             line.replace("    ", "            ", 1) for line in lines
         )
         wrapped.extend([
-            "            context.actors.alpha = previous_alpha",
-            "            context.actors.beta = previous_beta",
             "        end",
             "    end",
         ])
@@ -4502,7 +4512,69 @@ def render_static_spawn_item_effect(
     ]
 
 
-def render_mutation_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
+    if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
+        if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
+            return None
+        return render_participant_translation_expression(value, target, alpha, beta)
+    if isinstance(value, dict) and value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_participant_string(value["option"], target, alpha, beta)
+        if option is None:
+            return None
+        return (
+            '(function(option) if option == nil then error("unknown game option") end; '
+            'if option.type ~= "string_select" and option.type ~= "string_input" then '
+            'error("string game option required") end; return option.value end)'
+            f'(services.gameplay.options.get({option}))'
+        )
+    if isinstance(value, dict) and value.get("mutator") in {
+            "mon_faction", "ma_technique_name", "ma_technique_description"}:
+        monster = value["mutator"] == "mon_faction"
+        key = "mtype_id" if monster else "matec_id"
+        if set(value) != {"mutator", key}:
+            return None
+        identifier = render_participant_string(value[key], target, alpha, beta)
+        if identifier is None:
+            return None
+        if monster:
+            return (
+                '(function(definition) if definition == nil then '
+                'error("unknown monster definition") end; return definition.default_faction.value end)'
+                f'(services.registry.get("monster", {identifier}))'
+            )
+        field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
+        return ('services.martial_arts.technique_definition('
+                f'services.types.id("martial_art_technique", {identifier})).{field}')
+    if isinstance(value, dict) and value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                alpha is None or beta is None):
+            return None
+        options = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            if flag:
+                options.append(f"{name} = true")
+        blacklist = value.get("blacklist", [])
+        if not isinstance(blacklist, list):
+            return None
+        entries = [render_participant_string(
+            entry, target, alpha, beta) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        rendered_options = "{ " + ", ".join(options) + " }"
+        # Native always selects for dialogue alpha against beta, regardless
+        # of the variable destination or the surrounding effect's target.
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{alpha}, {beta}, {rendered_options})).technique.value'
+        )
     source = target
     if isinstance(value, dict):
         if "u_val" in value:
@@ -4548,11 +4620,11 @@ def render_mutation_action(effect: Any, alpha: str | None, beta: str | None) -> 
     target = beta if key.startswith("npc_") else alpha
     if target is None:
         return None
-    mutation = render_mutation_string(value, target, alpha, beta)
+    mutation = render_participant_string(value, target, alpha, beta)
     if mutation is None:
         return None
     if key.endswith("_add_trait"):
-        variant = render_mutation_string(effect.get("variant", ""), target, alpha, beta)
+        variant = render_participant_string(effect.get("variant", ""), target, alpha, beta)
         if variant is None:
             return None
         return ["    service_value(services.mutations.replace(",
@@ -4726,6 +4798,12 @@ def render_static_false_effect(
     Keep the accepted set deliberately narrow; unsupported branches remain a
     visible migration TODO instead of being silently discarded.
     """
+    if isinstance(effect, dict) and "foreach" in effect:
+        return render_static_foreach(
+            effect, avatar_actor_proven, npc_actor_proven,
+            eoc_function_names, eoc_actor_requirements,
+            actor_expression, eoc_conditions, npc_actor_expression,
+        )
     activation = render_mutation_action(
         effect, "actor" if avatar_actor_proven else None,
         npc_actor_expression or ("actor" if npc_actor_proven else None))
@@ -5603,45 +5681,55 @@ def render_static_foreach(
     eoc_actor_requirements: dict[str, str] | None = None,
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
-    The legacy selector exposes a finite registry page for ``ids`` and a
-    literal array mode.  Platform callbacks keep the same dense one-based
-    context variable and render the nested branch with the ordinary typed
-    false-effect helpers.
+    Snapshot each native registry or dynamic string array before its body.
+    Nested loops share dialogue variables, while their input snapshots remain
+    lexical Lua locals. Unsupported body effects remain explicit migration gaps.
     """
     if "foreach" not in effect or set(effect) - {"foreach", "var", "target", "effect"}:
         return None
     variable = effect.get("var")
-    if (
-        not isinstance(variable, dict) or set(variable) != {"context_val"} or
-        not bounded_utf8_string(variable.get("context_val"), 256)
-    ):
+    if not isinstance(variable, dict) or len(variable) != 1:
         return None
-    body = effect.get("effect")
+    scope = next(iter(variable))
+    if scope not in {"context_val", "global_val", "u_val", "npc_val", "var_val"}:
+        return None
+    name = variable[scope]
+    if not bounded_utf8_string(name, 256 if scope == "context_val" else 128):
+        return None
+    owner = (actor_expression if avatar_actor_proven else None) if scope == "u_val" else (
+        npc_actor_expression or (actor_expression if npc_actor_proven else None))
+    if scope in {"u_val", "npc_val"} and owner is None:
+        return None
+    body = effect.get("effect", [])
     body = body if isinstance(body, list) else [body]
-    if not body or len(body) > 64:
-        return None
     target = effect.get("target")
     mode = effect.get("foreach")
     lines: list[str] = ["    context.actors = context.actors or {}"]
 
     def append_body(item_expression: str) -> bool:
-        lines.append(
-            f"        context.data[{lua_quote(variable['context_val'])}] = "
-            f"{item_expression}"
-        )
-        if not variable["context_val"].startswith("_"):
+        if scope == "context_val":
+            lines.append(f"        context.data[{lua_quote(name)}] = {item_expression}")
+        elif scope == "global_val":
+            lines.append(f"        services.variables.set_global({lua_quote(name)}, {item_expression})")
+        elif scope == "var_val":
+            alpha = actor_expression if avatar_actor_proven else "nil"
+            beta = npc_actor_expression or (actor_expression if npc_actor_proven else "nil")
             lines.append(
-                f"        context.data[{lua_quote('_' + variable['context_val'])}] = "
-                f"{item_expression}"
+                "        service_value(services.variables.set_resolved(context.data, nil, \"var\", "
+                f"{lua_quote(name)}, {item_expression}, {{alpha={alpha or 'nil'}, beta={beta or 'nil'}}}))"
             )
+        else:
+            lines.append(f"        services.variables.set({owner}, {lua_quote(name)}, {item_expression})")
         for nested in body:
             rendered = render_static_false_effect(
                 nested, avatar_actor_proven, npc_actor_proven,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
+                npc_actor_expression=npc_actor_expression,
             )
             if rendered is None:
                 return False
@@ -5652,13 +5740,13 @@ def render_static_foreach(
         page_expression: str, entries_field: str, item_expression: str,
     ) -> bool:
         lines.extend([
+            "    local foreach_values = {}",
             "    local foreach_offset = 0",
             "    while true do",
             f"        local foreach_page = {page_expression}",
             f"        for _, entry in ipairs(foreach_page.{entries_field}) do",
         ])
-        if not append_body(item_expression):
-            return False
+        lines.append(f"            foreach_values[#foreach_values + 1] = {item_expression}")
         lines.extend([
             "        end",
             "        if not foreach_page.has_more or foreach_page.returned == 0 then",
@@ -5667,16 +5755,41 @@ def render_static_foreach(
             "        foreach_offset = foreach_offset + foreach_page.returned",
             "    end",
         ])
+        lines.append("    for _, entry in ipairs(foreach_values) do")
+        if not append_body("entry"):
+            return False
+        lines.append("    end")
         return True
 
     if mode == "array":
-        if (
-            not isinstance(target, list) or not target or len(target) > 256 or
-            not all(lua_scalar_literal(value) is not None for value in target)
-        ):
+        if not isinstance(target, list):
             return None
-        values = ", ".join(lua_scalar_literal(value) for value in target)
-        lines.append(f"    for _, entry in ipairs({{ {values} }}) do")
+        values: list[str] = []
+        for value in target:
+            if isinstance(value, str):
+                rendered_value = lua_scalar_literal(value)
+            elif isinstance(value, dict) and (
+                    set(value) - {"default"} in (
+                        {"u_val"}, {"npc_val"}, {"context_val"}, {"global_val"}, {"var_val"}) or
+                    (value.get("i18n") is True and "str" in value) or
+                    value.get("mutator") in {
+                        "game_option", "mon_faction", "ma_technique_name", "ma_technique_description",
+                        "valid_technique"}):
+                rendered_value = render_participant_string(
+                    value, actor_expression or "nil",
+                    actor_expression if avatar_actor_proven else None,
+                    npc_actor_expression or (actor_expression if npc_actor_proven else None),
+                )
+            else:
+                return None
+            if rendered_value is None:
+                return None
+            values.append(rendered_value)
+        # Native foreach evaluates the entire input before running any effects.
+        lines.append("    local foreach_values = {}")
+        lines.extend(f"    foreach_values[{index}] = {value}"
+                     for index, value in enumerate(values, 1))
+        lines.append("    for _, entry in ipairs(foreach_values) do")
         if not append_body("entry"):
             return None
         lines.append("    end")
@@ -5696,16 +5809,17 @@ def render_static_foreach(
         if target in registry_kinds:
             page_expression = (
                 f"services.registry.list({lua_quote(registry_kinds[target])}, "
-                "{ offset = foreach_offset, limit = 256 })"
+                '{ offset = foreach_offset, limit = 256, order = "native" })'
             )
             return (
                 lines if append_paged_loop(page_expression, "entries", "entry.id")
                 else None
             )
         if target in definition_sources:
+            order = ', order = "native"'
             page_expression = (
                 f"{definition_sources[target]}"
-                "({ offset = foreach_offset, limit = 256 })"
+                f"({{ offset = foreach_offset, limit = 256{order} }})"
             )
             return (
                 lines if append_paged_loop(page_expression, "items", "entry.id.value")
@@ -5715,7 +5829,8 @@ def render_static_foreach(
     if mode == "item_group":
         lines.append(
             "    local foreach_page = services.items.possible_from_group("
-            f"services.types.id(\"item_group\", {lua_quote(target)}))"
+            f"services.types.id(\"item_group\", {lua_quote(target)}), "
+            '{ order = "native" })'
         )
         lines.append("    for _, entry in ipairs(foreach_page.items) do")
         if not append_body("entry.value"):
@@ -5726,7 +5841,7 @@ def render_static_foreach(
         page_expression = (
             "services.hordes.monsters("
             f"services.types.id(\"monster_group\", {lua_quote(target)}), "
-            "true, { offset = foreach_offset, limit = 256 })"
+            'true, { offset = foreach_offset, limit = 256, order = "native" })'
         )
         return (
             lines if append_paged_loop(page_expression, "items", "entry.value")
@@ -22363,6 +22478,7 @@ def _coordinate_source_expression(
     value: Any,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> str | None:
     """Resolve a context or same-scope Character coordinate value."""
     context = _context_coordinate_expression(value)
@@ -22384,13 +22500,20 @@ def _coordinate_source_expression(
             "actor" if (avatar_actor_proven or npc_actor_proven)
             else "services.characters.avatar()"
         )
+        participants = ""
+        if npc_actor_expression is not None:
+            alpha = "actor" if avatar_actor_proven else "nil"
+            participants = f", {{ alpha = {alpha}, beta = {npc_actor_expression} }}"
         return (
             "(service_value(services.variables.resolve(context.data, "
-            f"{actor_expression}, \"var\", {lua_quote(descriptor[1])})).value or "
+            f"{actor_expression}, \"var\", {lua_quote(descriptor[1])}{participants})).value or "
             "services.coords.tripoint_abs_ms(0, 0, 0))"
         )
-    handle = _coordinate_variable_handle(
-        descriptor[0], avatar_actor_proven, npc_actor_proven
+    handle = (
+        npc_actor_expression if descriptor[0] == "npc" and npc_actor_expression is not None
+        else _coordinate_variable_handle(
+            descriptor[0], avatar_actor_proven, npc_actor_proven
+        )
     )
     if handle is None:
         return None
@@ -22405,6 +22528,7 @@ def _coordinate_output_lines(
     selected_expression: str,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Render the nil-guarded output assignment for query effects."""
     context = _context_coordinate_expression(value)
@@ -22427,13 +22551,20 @@ def _coordinate_output_lines(
             "actor" if (avatar_actor_proven or npc_actor_proven)
             else "services.characters.avatar()"
         )
+        participants = ""
+        if npc_actor_expression is not None:
+            alpha = "actor" if avatar_actor_proven else "nil"
+            participants = f", {{ alpha = {alpha}, beta = {npc_actor_expression} }}"
         return [
             "        service_value(services.variables.set_resolved(",
             f"            context.data, {actor_expression}, \"var\", "
-            f"{lua_quote(descriptor[1])}, {selected_expression}))",
+            f"{lua_quote(descriptor[1])}, {selected_expression}{participants}))",
         ]
-    handle = _coordinate_variable_handle(
-        descriptor[0], avatar_actor_proven, npc_actor_proven
+    handle = (
+        npc_actor_expression if descriptor[0] == "npc" and npc_actor_expression is not None
+        else _coordinate_variable_handle(
+            descriptor[0], avatar_actor_proven, npc_actor_proven
+        )
     )
     if handle is None:
         return None
@@ -23084,6 +23215,34 @@ def render_static_query_omt(
     return lines
 
 
+def render_copied_eoc_callbacks(
+    value: Any, function_names: dict[str, str], actor_expression: str = "actor",
+) -> list[str] | None:
+    references = _validated_eoc_references(value, function_names, allow_empty=True)
+    if references is None:
+        return None
+    if not references:
+        return []
+    # run_eoc_vector copies the dialogue once, then shares it across callbacks.
+    lines = [
+        "        local function copy_data(value)",
+        "            if type(value) ~= \"table\" then return value end",
+        "            local result = {}",
+        "            for key, entry in pairs(value) do result[key] = copy_data(entry) end",
+        "            return result",
+        "        end",
+        "        local failure_context = {}",
+        "        for key, value in pairs(context) do failure_context[key] = value end",
+        "        failure_context.data = copy_data(context.data or {})",
+        "        failure_context.conditions = copy_data(context.conditions or {})",
+        "        failure_context.actors = {}",
+        "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
+    ]
+    lines.extend(f"        {function_names[reference]}(failure_context, {actor_expression})"
+                 for reference in references)
+    return lines
+
+
 def render_static_choose_adjacent_highlight(
     effect: dict[str, Any],
     key: str,
@@ -23091,8 +23250,9 @@ def render_static_choose_adjacent_highlight(
     npc_actor_proven: bool = False,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Lower the unconditional avatar adjacent selector."""
+    """Lower the avatar adjacent selector and its native candidate filter."""
     if key != "u_choose_adjacent_highlight" or not avatar_actor_proven or key not in effect:
         return None
     if set(effect) - {
@@ -23103,7 +23263,10 @@ def render_static_choose_adjacent_highlight(
     output = effect[key]
     if _coordinate_variable_descriptor(output) is None and _context_coordinate_expression(output) is None:
         return None
-    if effect.get("false_eocs", []) not in ([], None):
+    failure_callbacks = render_copied_eoc_callbacks(
+        effect.get("false_eocs", []), eoc_function_names or {}
+    )
+    if failure_callbacks is None:
         return None
     message = effect.get("message", "")
     failure_message = effect.get("failure_message", "")
@@ -23119,64 +23282,67 @@ def render_static_choose_adjacent_highlight(
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
         return None
     condition = effect.get("condition", True)
-    if condition is True and "target_var" not in effect and not failure_message:
-        lines = [
-            f"    local selected = services.targeting.choose_adjacent({lua_quote(message)}, {lua_boolean(allow_vertical)})",
-            "    if selected ~= nil then",
-        ]
-    else:
-        center = (
-            _coordinate_source_expression(
-                effect["target_var"], avatar_actor_proven,
-                npc_actor_proven,
-            )
-            if "target_var" in effect else
-            "service_value(services.characters.snapshot(actor)).creature.position"
+    if "condition" in effect and not isinstance(condition, (str, dict)):
+        return None
+    center = (
+        _coordinate_source_expression(
+            effect["target_var"], avatar_actor_proven,
+            npc_actor_proven, npc_actor_expression,
         )
-        if center is None:
+        if "target_var" in effect else
+        "service_value(services.characters.snapshot(actor)).creature.position"
+    )
+    if center is None:
+        return None
+    predicate = "true"
+    if condition is not True:
+        predicate = render_eoc_condition_expression(
+            condition, avatar_actor_proven, avatar_actor_proven,
+            npc_actor_proven, False, eoc_conditions,
+            npc_actor_expression=npc_actor_expression,
+        ) or ""
+        if not predicate:
             return None
-        predicate = "true"
-        if condition is not True:
-            predicate = render_eoc_condition_expression(
-                condition, avatar_actor_proven, avatar_actor_proven,
-                npc_actor_proven, False, eoc_conditions,
-                npc_actor_expression=npc_actor_expression,
-            ) or ""
-            if not predicate:
-                return None
-        offsets = [
-            (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-            (0, -1, 0), (0, 1, 0),
-            (1, -1, 0), (1, 0, 0), (1, 1, 0),
-        ]
-        if allow_vertical:
-            offsets.extend(((0, 0, -1), (0, 0, 1)))
-        offset_values = ",\n".join(
-            "        services.coords.tripoint_rel_ms("
-            f"{x}, {y}, {z})" for x, y, z in offsets
-        )
-        lines = [
-            f"    local center = {center}",
-            "    local candidate_offsets = {",
-            offset_values,
-            "    }",
-            "    local candidates = {}",
-            "    for _, offset in ipairs(candidate_offsets) do",
-            "        local candidate = center:add(offset)",
-            "        context.data[\"loc\"] = candidate",
-            f"        if {predicate} then",
-            "            candidates[#candidates + 1] = candidate",
-            "        end",
-            "    end",
-            "    local selected = services.targeting.choose_adjacent_where_at(",
-            f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
-            f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
-            "    if selected ~= nil then",
-        ]
-    output_lines = _coordinate_output_lines(output, "selected", avatar_actor_proven, False)
+    offsets = [
+        (-1, -1, 0), (0, -1, 0), (1, -1, 0),
+        (-1, 0, 0), (0, 0, 0), (1, 0, 0),
+        (-1, 1, 0), (0, 1, 0), (1, 1, 0),
+    ]
+    offset_values = ",\n".join(
+        "        services.coords.tripoint_rel_ms("
+        f"{x}, {y}, {z})" for x, y, z in offsets
+    )
+    lines = [
+        f"    local center = {center}",
+        "    local candidate_offsets = {",
+        offset_values,
+        "    }",
+        "    local bounds = services.world.bounds()",
+        "    local candidates = {}",
+        "    for _, offset in ipairs(candidate_offsets) do",
+        "        local candidate = center:add(offset)",
+        "        if candidate.x >= bounds.minimum.x and candidate.x <= bounds.maximum.x and",
+        "           candidate.y >= bounds.minimum.y and candidate.y <= bounds.maximum.y then",
+        "        context.data[\"loc\"] = candidate",
+        f"        if {predicate} then",
+        "            candidates[#candidates + 1] = candidate",
+        "        end",
+        "    end",
+        "    end",
+        "    local selected = services.targeting.choose_adjacent_where_at(",
+        f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
+        f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
+        "    if selected ~= nil then",
+    ]
+    output_lines = _coordinate_output_lines(
+        output, "selected", avatar_actor_proven, npc_actor_proven, npc_actor_expression
+    )
     if output_lines is None:
         return None
     lines.extend(output_lines)
+    if failure_callbacks:
+        lines.append("    else")
+        lines.extend(failure_callbacks)
     lines.append("    end")
     return lines
 
@@ -23186,8 +23352,11 @@ def render_static_npc_choose_adjacent_highlight(
     key: str,
     npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
+    avatar_actor_proven: bool = False,
+    eoc_conditions: dict[str, Any] | None = None,
+    eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Lower an unconditional NPC-centered adjacent selector."""
+    """Lower an NPC-centered adjacent selector with native condition filtering."""
     if (
         key != "npc_choose_adjacent_highlight" or key not in effect or
         (not npc_actor_proven and npc_actor_expression is None)
@@ -23204,8 +23373,23 @@ def render_static_npc_choose_adjacent_highlight(
         _context_coordinate_expression(output_value) is None
     ):
         return None
-    if effect.get("condition", True) is not True or effect.get("false_eocs", []) not in ([], None):
+    failure_callbacks = render_copied_eoc_callbacks(
+        effect.get("false_eocs", []), eoc_function_names or {}
+    )
+    if failure_callbacks is None:
         return None
+    predicate = "true"
+    if "condition" in effect:
+        if not isinstance(effect["condition"], (str, dict)):
+            return None
+        predicate = render_eoc_condition_expression(
+            effect["condition"], avatar_actor_proven,
+            avatar_actor_proven or npc_actor_proven, npc_actor_proven,
+            eoc_conditions=eoc_conditions,
+            npc_actor_expression=npc_actor_expression,
+        )
+        if predicate is None:
+            return None
     message = effect.get("message", "")
     failure_message = effect.get("failure_message", "")
     if (
@@ -23220,12 +23404,10 @@ def render_static_npc_choose_adjacent_highlight(
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
         return None
     offsets = [
-        (-1, -1, 0), (-1, 0, 0), (-1, 1, 0),
-        (0, -1, 0), (0, 1, 0),
-        (1, -1, 0), (1, 0, 0), (1, 1, 0),
+        (-1, -1, 0), (0, -1, 0), (1, -1, 0),
+        (-1, 0, 0), (0, 0, 0), (1, 0, 0),
+        (-1, 1, 0), (0, 1, 0), (1, 1, 0),
     ]
-    if allow_vertical:
-        offsets.extend(((0, 0, -1), (0, 0, 1)))
     candidates = ",\n".join(
         "            center:add(services.coords.tripoint_rel_ms("
         f"{x}, {y}, {z}))"
@@ -23233,7 +23415,7 @@ def render_static_npc_choose_adjacent_highlight(
     )
     center_expression = (
         _coordinate_source_expression(
-            effect["target_var"], False, npc_actor_proven
+            effect["target_var"], avatar_actor_proven, npc_actor_proven, npc_actor_expression
         ) if "target_var" in effect else
         "service_value(services.characters.snapshot(" +
         (npc_actor_expression or "actor") + ")).creature.position"
@@ -23242,18 +23424,34 @@ def render_static_npc_choose_adjacent_highlight(
         return None
     lines = [
         f"    local center = {center_expression}",
-        "    local candidates = {",
+        "    local candidate_points = {",
         candidates,
         "    }",
+        "    local bounds = services.world.bounds()",
+        "    local candidates = {}",
+        "    for _, candidate in ipairs(candidate_points) do",
+        "        if candidate.x >= bounds.minimum.x and candidate.x <= bounds.maximum.x and",
+        "           candidate.y >= bounds.minimum.y and candidate.y <= bounds.maximum.y then",
+        "            context.data[\"loc\"] = candidate",
+        f"            if {predicate} then",
+        "                candidates[#candidates + 1] = candidate",
+        "            end",
+        "        end",
+        "    end",
         "    local selected = services.targeting.choose_adjacent_where_at(",
         f"        center, {lua_quote(message)}, {lua_quote(failure_message)},",
         f"        candidates, {lua_boolean(allow_vertical)}, {lua_boolean(allow_autoselect)})",
         "    if selected ~= nil then",
     ]
-    output_lines = _coordinate_output_lines(output_value, "selected", False, True)
+    output_lines = _coordinate_output_lines(
+        output_value, "selected", avatar_actor_proven, npc_actor_proven, npc_actor_expression
+    )
     if output_lines is None:
         return None
     lines.extend(output_lines)
+    if failure_callbacks:
+        lines.append("    else")
+        lines.extend(failure_callbacks)
     lines.append("    end")
     return lines
 
@@ -24752,7 +24950,7 @@ def render_participant_string_expression(
             if flag:
                 options.append(f"{name} = true")
         blacklist = value.get("blacklist", [])
-        if not isinstance(blacklist, list) or len(blacklist) > 256:
+        if not isinstance(blacklist, list):
             return None
         entries = [render_participant_string_expression(
             entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
@@ -26483,6 +26681,10 @@ def render_eoc_condition_expression(
         ):
             nested = eoc_conditions[referenced]
             if isinstance(nested, dict):
+                # An omitted native EOC condition is unconditional, but an
+                # explicit null/bool/number is rejected by read_condition.
+                if "condition" in nested and not isinstance(nested["condition"], (str, dict)):
+                    return None
                 return render_eoc_condition_expression(
                     nested.get("condition", True),
                     avatar_actor_proven,
@@ -26589,7 +26791,14 @@ def render_eoc_condition_expression(
     if set(condition) in ({"and"}, {"or"}):
         operator = "and" if "and" in condition else "or"
         entries = condition[operator]
-        if not isinstance(entries, list) or not entries:
+        if not isinstance(entries, list):
+            return None
+        # Native conditional_t uses all_of/any_of, including empty ranges.
+        if not entries:
+            return "true" if operator == "and" else "false"
+        # Nested native predicates accept only strings or condition objects.
+        # None/bool are internal top-level defaults, not valid array entries.
+        if any(not isinstance(entry, (str, dict)) for entry in entries):
             return None
         rendered = [
             render_eoc_condition_expression(
@@ -26605,6 +26814,8 @@ def render_eoc_condition_expression(
             return None
         return f" {operator} ".join(f"({entry})" for entry in rendered)
     if set(condition) == {"not"}:
+        if not isinstance(condition["not"], (str, dict)):
+            return None
         rendered = render_eoc_condition_expression(
             condition["not"], avatar_actor_proven, weapon_actor_proven,
             npc_actor_proven, creature_actor_proven, eoc_conditions,
@@ -28144,7 +28355,7 @@ def render_eoc(
         lines.append("    local prevent_death = false")
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
-    if deactivate_condition is not None:
+    if isinstance(deactivate_condition, (str, dict)):
         deactivate_expression = render_eoc_condition_expression(
             deactivate_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
@@ -28164,7 +28375,17 @@ def render_eoc(
         set(raw_condition) == {"math"} and
         raw_condition.get("math") == []
     )
-    if empty_math_condition:
+    invalid_condition_shape = (
+        "condition" in value and not isinstance(raw_condition, (str, dict))
+    )
+    if invalid_condition_shape:
+        condition_expression = "false"
+        condition_converted = False
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: EOC {eoc_id} has invalid condition syntax; expected a string or object"
+        )
+    elif empty_math_condition:
         # Native eoc_math concatenates the array and asks the math parser to
         # parse the resulting empty expression.  That is invalid source data,
         # not a missing Platform predicate.  Emit an executable fail-closed
@@ -28513,7 +28734,7 @@ def render_eoc(
                     effect, avatar_actor_proven, npc_event_character_actor_proven,
                     eoc_function_names or {}, eoc_actor_requirements,
                     actor_expression,
-                    eoc_conditions,
+                    eoc_conditions, npc_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -30328,12 +30549,12 @@ def render_eoc(
                     render_static_choose_adjacent_highlight(
                         effect, key, avatar_actor_proven,
                         npc_event_character_actor_proven,
-                        eoc_conditions, npc_actor_expression,
+                        eoc_conditions, npc_actor_expression, eoc_function_names,
                     )
                     if key == "u_choose_adjacent_highlight" else
                     render_static_npc_choose_adjacent_highlight(
                         effect, key, npc_event_character_actor_proven,
-                        npc_actor_expression,
+                        npc_actor_expression, avatar_actor_proven, eoc_conditions, eoc_function_names,
                     )
                 )
                 if rendered is not None:
@@ -32540,7 +32761,7 @@ def render_eoc(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} recurrence needs a bounded task interval"
         )
-    if deactivate_condition is not None and deactivate_expression is None:
+    if "deactivate_condition" in value and deactivate_expression is None:
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} deactivate_condition needs a native Lua predicate"
@@ -32579,6 +32800,7 @@ def render_eoc(
         all_effects_converted and
         has_trigger and
         condition_converted and
+        ("deactivate_condition" not in value or deactivate_expression is not None) and
         not unresolved
     ):
         result.converted.append(f"{source.location}: EOC {eoc_id}")

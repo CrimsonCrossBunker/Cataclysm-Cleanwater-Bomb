@@ -37,6 +37,7 @@ constexpr int maximum_state_offset = 1000000;
 constexpr int maximum_pool_adjustment = 1000000000;
 
 struct definition_options {
+    bool native_order = false;
     int offset = 0;
     int limit = default_definition_limit;
     std::string query;
@@ -62,6 +63,17 @@ definition_options read_definition_options(
                            "limit", result.limit );
         result.query = requested->get_or(
                            "query", result.query );
+        const sol::object order = ( *requested )["order"];
+        if( order.valid() && order.get_type() != sol::type::nil ) {
+            if( order.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "services.vitamins.definitions order must be id or native" );
+            }
+            const std::string name = order.as<std::string>();
+            if( name != "id" && name != "native" ) {
+                throw std::invalid_argument( "services.vitamins.definitions order must be id or native" );
+            }
+            result.native_order = name == "native";
+        }
     }
     if( result.offset < 0 ||
         result.offset > maximum_definition_offset ) {
@@ -161,7 +173,7 @@ sol::table snapshot_definition(
 }
 
 std::vector<const vitamin *> matching_definitions(
-    const std::string &requested_query )
+    const std::string &requested_query, const bool native_order )
 {
     const std::string query = lowercase_ascii( requested_query );
     const std::vector<vitamin> &all = vitamin::all();
@@ -177,11 +189,13 @@ std::vector<const vitamin *> matching_definitions(
             result.push_back( &definition );
         }
     }
-    std::sort(
-        result.begin(), result.end(),
-    []( const vitamin * lhs, const vitamin * rhs ) {
-        return lhs->get_id().str() < rhs->get_id().str();
-    } );
+    if( !native_order ) {
+        std::sort(
+            result.begin(), result.end(),
+        []( const vitamin * lhs, const vitamin * rhs ) {
+            return lhs->get_id().str() < rhs->get_id().str();
+        } );
+    }
     return result;
 }
 
@@ -192,7 +206,7 @@ sol::table list_definitions(
     const definition_options options =
         read_definition_options( requested );
     const std::vector<const vitamin *> definitions =
-        matching_definitions( options.query );
+        matching_definitions( options.query, options.native_order );
     const std::size_t first = std::min<std::size_t>(
                                   options.offset, definitions.size() );
     const std::size_t last = std::min<std::size_t>(

@@ -1046,7 +1046,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_hordes.cpp",
-          "line": 2328
+          "line": 2341
         },
         "direct_roots": [
           "HordeEntityToken",
@@ -10248,7 +10248,7 @@
       "registration_name": "HordeEntityToken",
       "registration": {
         "path": "src/lua_platform_hordes.cpp",
-        "line": 2336,
+        "line": 2349,
         "installer": "shared.install_horde_api",
         "namespace": "global"
       },
@@ -10290,7 +10290,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2371
+                "line": 2384
               }
             ]
           },
@@ -10307,7 +10307,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2369
+                "line": 2382
               }
             ]
           },
@@ -10324,7 +10324,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2353
+                "line": 2366
               }
             ]
           },
@@ -10339,7 +10339,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2356
+                "line": 2369
               }
             ]
           },
@@ -10356,7 +10356,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2341
+                "line": 2354
               }
             ]
           },
@@ -10409,7 +10409,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2350
+                "line": 2363
               }
             ]
           },
@@ -10426,7 +10426,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2338
+                "line": 2351
               }
             ]
           },
@@ -10443,7 +10443,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2344
+                "line": 2357
               }
             ]
           },
@@ -10460,7 +10460,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2347
+                "line": 2360
               }
             ]
           }
@@ -11595,7 +11595,7 @@
       "registration_name": "LegacyHordeToken",
       "registration": {
         "path": "src/lua_platform_hordes.cpp",
-        "line": 2376,
+        "line": 2389,
         "installer": "shared.install_horde_api",
         "namespace": "global"
       },
@@ -11637,7 +11637,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2411
+                "line": 2424
               }
             ]
           },
@@ -11654,7 +11654,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2409
+                "line": 2422
               }
             ]
           },
@@ -11671,7 +11671,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2381
+                "line": 2394
               }
             ]
           },
@@ -11688,7 +11688,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2393
+                "line": 2406
               }
             ]
           },
@@ -11703,7 +11703,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2396
+                "line": 2409
               }
             ]
           },
@@ -11756,7 +11756,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2390
+                "line": 2403
               }
             ]
           },
@@ -11773,7 +11773,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2378
+                "line": 2391
               }
             ]
           },
@@ -11790,7 +11790,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2384
+                "line": 2397
               }
             ]
           },
@@ -11807,7 +11807,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_hordes.cpp",
-                "line": 2387
+                "line": 2400
               }
             ]
           }
