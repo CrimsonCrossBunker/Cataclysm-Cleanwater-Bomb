@@ -4780,9 +4780,11 @@ void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
     item &compost_i = *items_here.begin();
     // Default to the first day of gas production for existing saves. Never reset
     // the biomass birthday when collecting gas: that would restart fermentation.
+    const double production_start = to_turns<int>( 30_days );
+    const double last_collection_turns = compost_i.get_var( "compost_last_gas_collection",
+                                         production_start );
     const time_duration last_collection = time_duration::from_turns(
-            static_cast<int>( compost_i.get_var( "compost_last_gas_collection",
-                static_cast<double>( to_turns<int>( 30_days ) ) ) ) );
+            static_cast<int>( last_collection_turns ) );
     const int gas_gatherable = std::max( 0, to_days<int>( compost_i.age() - last_collection ) );
     const int max_gas_gatherable = std::min( gas_gatherable, 5 );
     // Does the tank contain unfermented biomass, or already fermented liquid?
