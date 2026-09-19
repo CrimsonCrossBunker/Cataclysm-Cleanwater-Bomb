@@ -4115,6 +4115,9 @@ void iexamine::stook_full( Character &, const tripoint_bub_ms &examp )
     for( item &it : items ) {
         if( it.is_smokable() ) {
             item result( it.get_comestible()->smoking_result, it.birthday() );
+            if( result.count_by_charges() ) {
+                result.charges = it.count();
+            }
             recipe rec;
             result.inherit_flags( it, rec );
             if( !result.has_flag( flag_NUTRIENT_OVERRIDE ) ) {
@@ -4124,6 +4127,7 @@ void iexamine::stook_full( Character &, const tripoint_bub_ms &examp )
                     it = item( it.get_comestible()->cooks_like, it.birthday(), 1 );
                 }
                 result.components.add( it );
+                result.recipe_charges = it.count();
             }
             add_msg( _( "You take down the stook as the drying process is now finished." ) );
             it = result;
