@@ -742,6 +742,7 @@ bool game::setup()
 void game::reset_game_state()
 {
     new_game = true;
+    dimension_checkpoint_pending = false;
 
     next_npc_id = character_id( 1 );
     next_mission_id = 1;
@@ -10438,6 +10439,7 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
         }
     }
     game::mon_info_update();
+    dimension_checkpoint_pending = true;
     get_event_bus().send<event_type::dimension_travel>( player.getID(), previous_dimension,
             dimension_prefix );
     return true;

@@ -713,6 +713,7 @@ bool game::do_turn()
         return turn_handler::cleanup_at_end();
     }
     simulate_turn_suffix();
+    save_pending_dimension_checkpoint();
     present_turn();
 
     return false;
@@ -919,6 +920,7 @@ bool game::do_avatar_action_loop()
                 {
                     const unsigned long long pre_msg = cata_mp::is_hosting() ? Messages::size() :
                                                        0;
+                    save_pending_dimension_checkpoint();
                     if( handle_action() ) {
                         ++moves_since_last_save;
                         u.action_taken();

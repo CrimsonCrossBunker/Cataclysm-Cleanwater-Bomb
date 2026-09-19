@@ -68,6 +68,7 @@
 #include "messages.h"
 #include "mod_id_compat.h"
 #include "mod_manager.h"
+#include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "options.h"
 #include "output.h"
@@ -878,6 +879,7 @@ bool game::save()
             // is called.
             EM_ASM( window.game_unsaved = false; );
 #endif
+            dimension_checkpoint_pending = false;
             if constexpr( cata::lua_platform::is_enabled() ) {
                 cata::lua_platform::after_save( platform_state_saved,
                                                 platform_state_error );
@@ -1011,7 +1013,8 @@ void game::quicksave()
     restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
     quicksave_in_progress = true;
     //Don't autosave if the player hasn't done anything since the last autosave/quicksave,
-    if( !moves_since_last_save && !world_generator->active_world->world_saves.empty() ) {
+    if( !moves_since_last_save && !dimension_checkpoint_pending &&
+        !world_generator->active_world->world_saves.empty() ) {
         return;
     }
     add_msg( m_info, _( "Saving game, this may take a while." ) );
@@ -1177,6 +1180,19 @@ void game::quit_to_last_snapshot()
 
     u.set_moves( 0 );
     uquit = QUIT_NOSAVED;
+}
+
+void game::save_pending_dimension_checkpoint()
+{
+    if( !dimension_checkpoint_pending || !world_generator || !world_generator->active_world ||
+        new_game || !should_draw || uquit != QUIT_NO || save_in_progress ||
+        cata_mp::is_client_mode() || u.is_dead_state() ) {
+        return;
+    }
+    // Bypass periodic autosave settings: source maps have already been written,
+    // so an older avatar save no longer describes those maps. On failure the
+    // pending flag remains set, allowing a retry at the next safe boundary.
+    save();
 }
 
 void game::autosave()

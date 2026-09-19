@@ -1170,6 +1170,7 @@ class game
         void autosave();         // automatic quicksaves - Performs some checks before calling quicksave()
     public:
         void quicksave();        // Saves the game without quitting
+        void save_pending_dimension_checkpoint();
         void quickload();        // Loads the previously saved game if it exists
         void snapshot_menu();    // Opens the snapshot (multi-save) save/load menu
         // Restore the most recent snapshot and quit to the main menu, discarding
@@ -1475,6 +1476,9 @@ class game
 
         //currently used as a hacky workaround for dimension swapping
         bool swapping_dimensions = false; // NOLINT (cata-serialize)
+        // Maps are persisted during dimension travel. Save the matching avatar
+        // after the enclosing action and its callbacks have finished.
+        bool dimension_checkpoint_pending = false; // NOLINT(cata-serialize)
     private:
         // the currently occupied dimension
         dimension_id dimension_prefix;
