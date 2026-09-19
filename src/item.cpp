@@ -588,6 +588,9 @@ bool item::display_stacked_with( const item &rhs, bool check_components ) const
 
 bool item::can_combine( const item &rhs ) const
 {
+    if( damage_ != rhs.damage_ ) {
+        return false;
+    }
     if( !contents.empty() || !rhs.contents.empty() ) {
         return false;
     }
@@ -1026,7 +1029,9 @@ stacking_info item::stacks_with( const item &rhs, bool check_components, bool co
 
 bool item::merge_charges( const item &rhs )
 {
-    if( !count_by_charges() || !stacks_with( rhs ) ) {
+    // Display grouping may round damage and ignore crafting components, but
+    // destructive merging must not replace either item's physical state.
+    if( !count_by_charges() || damage_ != rhs.damage_ || !stacks_with( rhs, true ) ) {
         return false;
     }
     // Prevent overflow when either item has "near infinite" charges.
