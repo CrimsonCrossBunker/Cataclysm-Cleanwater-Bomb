@@ -2395,9 +2395,9 @@ void crafting_ui_impl::recalculate_recipes()
         static_popup popup;
         std::chrono::steady_clock::time_point last_update = std::chrono::steady_clock::now();
         static constexpr std::chrono::milliseconds update_interval( 500 );
-        input_context dummy;
-        dummy.register_action( "QUIT" );
-        std::string cancel_btn = dummy.get_button_text( "QUIT", _( "Cancel" ) );
+        // Building a label must not activate the shared "default" context:
+        // Android caches its shortcuts, including character creation keys.
+        const std::string cancel_btn = ctxt_ptr->get_button_text( "QUIT", _( "Cancel" ) );
         std::function<void( size_t, size_t )> progress_callback =
         [&]( size_t at, size_t out_of ) {
             std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
