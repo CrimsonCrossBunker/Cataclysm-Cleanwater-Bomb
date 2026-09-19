@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the production activity loop with a deterministic clock and fake actor."""
+"""Run the production activity loop with a fake clock and actor."""
 from pathlib import Path
 import os
 import subprocess
@@ -9,14 +9,17 @@ from test_android_joystick_repeat import braced_block
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
 class ActivityPollingTest(unittest.TestCase):
     def test_activity_steps_yield_to_input(self):
-        source = Path(os.environ.get('CCB_DO_TURN_SOURCE', ROOT / 'src/do_turn.cpp')).read_text()
+        source = Path(os.environ.get('CCB_DO_TURN_SOURCE',
+                      ROOT / 'src/do_turn.cpp')).read_text()
         marker = 'void process_avatar_activity( avatar &u )'
         if marker in source:
             body = braced_block(source, source.index(marker))
         else:
-            loop = braced_block(source, source.index('while( u.get_moves() > 0 && u.activity )'))
+            loop = braced_block(source, source.index(
+                'while( u.get_moves() > 0 && u.activity )'))
             body = marker + ' {' + loop + '}'
         # Replace only the clock provider, not scheduling or activity logic.
         body = body.replace('std::chrono::steady_clock::now()', 'clock_now()')
@@ -24,10 +27,14 @@ class ActivityPollingTest(unittest.TestCase):
             cpp = Path(temp) / 'probe.cpp'
             binary = Path(temp) / 'probe'
             cpp.write_text(FIXTURE.replace('// PRODUCTION', body))
-            build = subprocess.run([os.environ.get('CXX', 'c++'), '-std=c++17', str(cpp), '-o', str(binary)], capture_output=True, text=True)
+            build = subprocess.run([os.environ.get(
+                'CXX', 'c++'), '-std=c++17', str(cpp), '-o', str(binary)],
+                capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)
-            run = subprocess.run([str(binary)], capture_output=True, text=True)
+            run = subprocess.run([str(binary)],
+                                 capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
+
 
 FIXTURE = r'''
 #include <cassert>
@@ -35,7 +42,8 @@ FIXTURE = r'''
 int elapsed=0, calls=0, polls=0;
 bool inside_actor=false, cancel=true, spend_moves=false;
 std::chrono::steady_clock::time_point clock_now() {
-    return std::chrono::steady_clock::time_point(std::chrono::milliseconds(elapsed));
+    return std::chrono::steady_clock::time_point(
+        std::chrono::milliseconds(elapsed));
 }
 struct avatar;
 struct Activity {
