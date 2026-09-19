@@ -158,3 +158,28 @@ TEST_CASE( "compost_fermentation_preserves_biomass_age", "[iexamine][compost]" )
     CHECK( here.i_at( pos ).only_item().charges == 10 );
     CHECK( here.furn( pos ) == furn_id( "f_compost_full" ) );
 }
+
+TEST_CASE( "stook_preserves_grain_quantity_and_nutrients", "[iexamine][stook][stackable]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    Character &you = get_player_character();
+    const tripoint_bub_ms pos = tripoint_bub_ms::zero;
+    const int count = GENERATE( 1, 10 );
+    here.furn_set( pos, furn_id( "f_stook_full" ) );
+    item grain( itype_id( "wheat_stalks" ), calendar::turn - 336_hours, count );
+    const int kcal = you.compute_effective_nutrients( grain ).kcal();
+    REQUIRE( grain.count() == count );
+    here.add_item( pos, grain );
+
+    iexamine::stook_full( you, pos );
+
+    int dried_count = 0;
+    for( const item &it : here.i_at( pos ) ) {
+        REQUIRE( it.typeId() == itype_id( "dry_wheat_stalks" ) );
+        dried_count += it.count();
+        CHECK( you.compute_effective_nutrients( it ).kcal() == kcal );
+    }
+    CHECK( dried_count == count );
+    CHECK( here.furn( pos ) == furn_str_id::NULL_ID() );
+}
