@@ -28,6 +28,7 @@
 #include "game.h"
 #include "json_loader.h"
 #include "item.h"
+#include "item_location.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
@@ -47,6 +48,8 @@
 #include "npctalk.h"
 #include "npctrade.h"
 #include "options_helpers.h"
+#include "player_helpers.h"
+#include "viewer.h"
 #include "rng.h"
 #include "type_id.h"
 
@@ -1359,6 +1362,251 @@ TEST_CASE( "lua_platform_radio_registration_retains_other_representatives",
         CHECK( fixture.player.faction_representatives.count( existing ) == 1 );
         CHECK( fixture.player.faction_representatives.count( fixture.other.getID() ) == 1 );
         CHECK( fixture.player.faction_representatives.size() == 2 );
+    }
+}
+
+TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
+           "[lua][platform][npc][semantic]" )
+{
+    clear_map();
+    clear_avatar();
+    const time_point previous_turn = calendar::turn;
+    struct cleanup_scene {
+        time_point turn;
+        ~cleanup_scene() {
+            get_avatar().remove_effect( efftype_id( "blind" ) );
+            clear_npcs();
+            calendar::turn = turn;
+        }
+    } cleanup{ previous_turn };
+    calendar::turn = calendar::turn_zero + 12_hours;
+    avatar &player = get_avatar();
+    npc &first = spawn_npc( player.pos_bub().xy() + point( 2, 0 ), "test_talker" );
+    npc &second = spawn_npc( player.pos_bub().xy() + point( 0, 2 ), "test_talker" );
+    npc &stranger = spawn_npc( player.pos_bub().xy() + point( -2, 0 ), "test_talker" );
+    first.set_fac( faction_id( "your_followers" ) );
+    second.set_fac( faction_id( "your_followers" ) );
+    stranger.set_fac( faction_id( "no_faction" ) );
+    REQUIRE_FALSE( stranger.is_player_ally() );
+    get_map().build_map_cache( player.pos_bub().z() );
+    REQUIRE( get_player_view().sees( get_map(), first ) );
+    REQUIRE( get_player_view().sees( get_map(), second ) );
+    std::vector<int> expected;
+    for( npc &candidate : g->all_npcs() ) {
+        if( candidate.is_player_ally() && get_player_view().sees( get_map(), candidate ) ) {
+            expected.push_back( candidate.getID().get_value() );
+        }
+    }
+    REQUIRE( expected.size() == 2 );
+    effect_fixture fixture;
+    bool readable = true;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, [&]() {
+        if( !readable ) {
+            throw std::runtime_error( "read denied" );
+        }
+    }, []() {}, []() {} );
+    sol::protected_function query = fixture.services["npcs"]["visible_allies"];
+    sol::protected_function_result call = query();
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table items = result["value"];
+    REQUIRE( items.size() == expected.size() );
+    for( std::size_t i = 0; i < expected.size(); ++i ) {
+        sol::table entry = items[i + 1];
+        CHECK( entry["id"].get<int>() == expected[i] );
+        const auto handle = entry["handle"].get<cata::lua_platform::game_handle>();
+        CHECK_FALSE( handle.validation_error( fixture.runtime, fixture.world ).has_value() );
+    }
+    player.add_effect( efftype_id( "blind" ), 1_hours );
+    REQUIRE_FALSE( get_player_view().sees( get_map(), first ) );
+    REQUIRE_FALSE( get_player_view().sees( get_map(), second ) );
+    sol::protected_function_result blind_call = query();
+    REQUIRE( blind_call.valid() );
+    sol::table blind_result = blind_call;
+    REQUIRE( blind_result["ok"].get<bool>() );
+    CHECK( blind_result["value"].get<sol::table>().size() == 0 );
+    CHECK( items.size() == expected.size() ); // Detached snapshot remains unchanged.
+    readable = false;
+    CHECK_FALSE( query().valid() );
+}
+
+TEST_CASE( "lua_platform_rule_menus_reject_wrong_or_stale_targets_before_ui",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function rules = fixture.services["npcs"]["open_rules"];
+    sol::protected_function pickup = fixture.services["npcs"]["orders"]["open_pickup_rules"];
+    for( const sol::protected_function &menu : {
+             rules, pickup
+         } ) {
+        sol::protected_function_result call = menu( fixture.handle( false ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+        CHECK( result["error"]["code"].get<std::string>() == "wrong_subtype" );
+    }
+    const auto stale = fixture.handle( true );
+    ++fixture.world;
+    for( const sol::protected_function &menu : {
+             rules, pickup
+         } ) {
+        sol::protected_function_result call = menu( stale );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+    }
+}
+
+TEST_CASE( "lua_platform_player_services_reject_a_different_avatar",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    REQUIRE( &fixture.player != &get_avatar() );
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function repair = fixture.services["npcs"]["medical"]["repair_bionic_limbs"];
+    const int moves_before = get_avatar().get_moves();
+    const int debt_before = fixture.other.op_of_u.owed;
+    sol::protected_function_result call = repair( fixture.handle( true ), fixture.handle( false ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    CHECK_FALSE( result["ok"].get<bool>() );
+    CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
+    CHECK( get_avatar().get_moves() == moves_before );
+    CHECK( fixture.other.op_of_u.owed == debt_before );
+    const auto rejected = []( sol::protected_function_result call ) {
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        CHECK_FALSE( result["ok"].get<bool>() );
+        CHECK( result["error"]["code"].get<std::string>() == "invalid_patient" );
+    };
+    sol::protected_function training = fixture.services["npcs"]["training"]["start_selected"];
+    for( const std::string mode : {
+             "player", "npc", "seminar"
+         } ) {
+        rejected( training( fixture.handle( true ), fixture.handle( false ), mode ) );
+    }
+    sol::protected_function aid = fixture.services["npcs"]["medical"]["provide_aid"];
+    for( const std::string level : {
+             "basic", "advanced"
+         } ) {
+        for( const bool allies : {
+                 false, true
+             } ) {
+            rejected( aid( fixture.handle( true ), fixture.handle( false ), level, allies ) );
+        }
+    }
+    sol::protected_function style = fixture.services["npcs"]["grooming"]["open_style"];
+    for( const std::string area : {
+             "hair", "beard"
+         } ) {
+        rejected( style( fixture.handle( true ), fixture.handle( false ), area ) );
+    }
+    sol::protected_function groom = fixture.services["npcs"]["grooming"]["provide"];
+    for( const std::string kind : {
+             "haircut", "shave"
+         } ) {
+        rejected( groom( fixture.handle( true ), fixture.handle( false ), kind ) );
+    }
+    CHECK( get_avatar().get_moves() == moves_before );
+    CHECK( fixture.other.op_of_u.owed == debt_before );
+}
+
+TEST_CASE( "lua_platform_bionic_service_preserves_native_patient_domain",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.other.set_fac( faction_id( "no_faction" ) );
+    REQUIRE_FALSE( fixture.other.is_player_ally() );
+    REQUIRE( fixture.other.num_bionics() == 0 );
+    REQUIRE( fixture.player.num_bionics() == 0 );
+    bool writable = true;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, [&]() {
+        if( !writable ) {
+            throw std::runtime_error( "write denied" );
+        }
+    }, []() {} );
+    sol::protected_function service = fixture.services["npcs"]["medical"]["open_bionic_service"];
+    // No installed bionics: native removal shows a notice and returns without
+    // a selection menu. Popup is noninteractive in test_mode.
+    for( const bool npc_patient : {
+             false, true
+         } ) {
+        const int moves = fixture.target( npc_patient ).get_moves();
+        sol::protected_function_result call = service(
+                fixture.handle( true ), "remove", fixture.handle( npc_patient ) );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK_FALSE( result["value"]["changed"].get<bool>() );
+        CHECK( fixture.target( npc_patient ).num_bionics() == 0 );
+        CHECK( fixture.target( npc_patient ).get_moves() == moves );
+    }
+    const auto stale = fixture.handle( true );
+    ++fixture.world;
+    sol::protected_function_result stale_call = service( stale, "remove", fixture.handle( false ) );
+    REQUIRE( stale_call.valid() );
+    sol::table stale_result = stale_call;
+    CHECK_FALSE( stale_result["ok"].get<bool>() );
+    writable = false;
+    CHECK_FALSE( service( fixture.handle( true ), "remove", fixture.handle( true ) ).valid() );
+}
+
+TEST_CASE( "lua_platform_copy_rules_does_not_re_equip_or_spend_moves",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture target;
+    effect_fixture source( 3200 );
+    target.other.remove_weapon();
+    target.other.i_add( item( itype_id( "katana" ), calendar::turn ) );
+    REQUIRE_FALSE( target.other.get_wielded_item() );
+    // The old wrapper called wield_better_weapon after copying, even on self-copy.
+    REQUIRE( target.other.evaluate_best_weapon() != &null_item_reference() );
+    source.other.rules.set_flag( ally_rule::allow_sleep );
+    target.other.rules.clear_flag( ally_rule::allow_sleep );
+    cata::lua_platform::install_npc_api(
+    target.services, [&]() {
+        return target.runtime;
+    }, [&]() {
+        return target.world;
+    }, []() {}, []() {}, []() {} );
+    const auto source_handle = cata::lua_platform::game_handle::from_creature(
+                                   source.other,
+    { "npc", source.other.getID().get_value(), 0, 0, 0, {} },
+    target.runtime, target.world );
+    sol::protected_function copy = target.services["npcs"]["copy_ai_rules"];
+    const int moves_before = target.other.get_moves();
+    for( const auto &from : {
+             source_handle, target.handle( true )
+         } ) {
+        sol::protected_function_result call = copy( target.handle( true ), from );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( target.other.rules.has_flag( ally_rule::allow_sleep ) );
+        CHECK_FALSE( target.other.get_wielded_item() );
+        CHECK( target.other.get_moves() == moves_before );
     }
 }
 

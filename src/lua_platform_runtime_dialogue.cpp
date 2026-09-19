@@ -21,6 +21,9 @@
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "game.h"
+#include "map.h"
+#include "lua_platform_bindings_coords.h"
 #include "item_category.h"
 #include "itype.h"
 #include "lua_platform_canvas.h"
@@ -432,13 +435,14 @@ struct presentation_choice {
     std::string label;
     std::string description;
     bool enabled = true;
+    std::optional<tripoint_bub_ms> position;
 };
 
 std::vector<presentation_choice> presentation_choices_from_lua(
     const sol::table &entries )
 {
     const std::size_t count = detail::checked_dense_array(
-                                  entries, "presentation choices", 1,
+                                  entries, "presentation choices", 0,
                                   maximum_presentation_choices );
 
     std::vector<presentation_choice> result;
@@ -455,6 +459,29 @@ std::vector<presentation_choice> presentation_choices_from_lua(
         choice.label = entry.get_or( "label", std::string() );
         choice.description = entry.get_or( "description", std::string() );
         choice.enabled = entry.get_or( "enabled", true );
+        const sol::object raw_position = entry["position"];
+        if( raw_position.valid() && raw_position.get_type() != sol::type::nil ) {
+            if( !raw_position.is<script_tripoint_coord>() ) {
+                throw std::invalid_argument( "choice position must be a typed abs_ms Tripoint" );
+            }
+            const auto position = raw_position.as<script_tripoint_coord>();
+            if( position.native_origin() != coords::origin::abs ||
+                position.native_scale() != coords::scale::map_square ) {
+                throw std::invalid_argument( "choice position must use abs_ms coordinates" );
+            }
+            if( g == nullptr ) {
+                throw std::runtime_error( "choice position requires an active map" );
+            }
+            const tripoint_bub_ms local = get_map().get_bub(
+                                              tripoint_abs_ms( position.to_native() ) );
+            if( !get_map().inbounds( local ) ) {
+                throw std::invalid_argument( "choice position must be inside the loaded map" );
+            }
+            choice.position = local;
+        }
+        if( !result.empty() && result.front().position.has_value() != choice.position.has_value() ) {
+            throw std::invalid_argument( "choice positions must be supplied for every entry or none" );
+        }
         require_presentation_text( choice.id, "choice id", 96 );
         require_presentation_text( choice.label, "choice label", 512 );
         if( choice.description.size() > 4096 ||
@@ -888,7 +915,19 @@ void detail::install_runtime_dialogue_presentation_api(
         require_presentation_text( prompt, "choice prompt" );
         const std::vector<presentation_choice> choices =
             presentation_choices_from_lua( entries );
+        std::vector<tripoint_bub_ms> locations;
+        for( const presentation_choice &choice : choices ) {
+            if( choice.position ) {
+                locations.push_back( *choice.position );
+            }
+        }
+        // Callback owns the highlighted scene point for the entire modal query.
+        std::unique_ptr<pointmenu_cb> map_callback;
+        if( !locations.empty() ) {
+            map_callback = std::make_unique<pointmenu_cb>( locations );
+        }
         uilist menu;
+        menu.callback = map_callback.get();
         menu.text = prompt;
         menu.desc_enabled = std::any_of( choices.begin(), choices.end(),
         []( const presentation_choice & choice ) {

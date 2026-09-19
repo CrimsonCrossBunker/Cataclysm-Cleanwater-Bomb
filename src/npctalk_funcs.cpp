@@ -1780,15 +1780,16 @@ static void generic_barber( const std::string &mut_type )
         hair_menu.addentry( index, true, MENU_AUTOASSIGN, elem.name() );
     }
     hair_menu.query();
-    int choice = hair_menu.ret;
-    if( choice != 0 ) {
-        if( player_character.has_trait( cur_hair.trait ) ) {
-            player_character.remove_mutation( cur_hair.trait, true );
-        }
-        const trait_and_var &chosen = hair_muts[choice - 1];
-        player_character.set_mutation( chosen.trait, chosen.trait->variant( chosen.variant ) );
-        add_msg( m_info, _( "You get a trendy new cut!" ) );
+    const int choice = hair_menu.ret;
+    if( choice <= 0 || static_cast<std::size_t>( choice ) > hair_muts.size() ) {
+        return;
     }
+    if( player_character.has_trait( cur_hair.trait ) ) {
+        player_character.remove_mutation( cur_hair.trait, true );
+    }
+    const trait_and_var &chosen = hair_muts[choice - 1];
+    player_character.set_mutation( chosen.trait, chosen.trait->variant( chosen.variant ) );
+    add_msg( m_info, _( "You get a trendy new cut!" ) );
 }
 
 void talk_function::barber_beard( npc &/*p*/ )

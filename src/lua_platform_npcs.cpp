@@ -62,6 +62,7 @@
 #include "npctalk_rules.h"
 #include "overmapbuffer.h"
 #include "talker_npc.h"
+#include "viewer.h"
 
 namespace cata::lua_platform
 {
@@ -704,6 +705,31 @@ std::vector<npc *> matching_npcs(
                rhs->getID().get_value();
     } );
     return result;
+}
+
+// Keep the scene order: presentation choices must not silently become the
+// ID-sorted persistent follower roster (which includes off-screen NPCs).
+sol::table visible_player_allies(
+    sol::this_state lua,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+                   state, { "unavailable", "No active game is available" } );
+    }
+    sol::table items = state.create_table();
+    std::size_t index = 0;
+    const map &here = get_map();
+    for( npc &entry : g->all_npcs() ) {
+        if( entry.is_player_ally() && get_player_view().sees( here, entry ) ) {
+            items[++index] = snapshot_npc(
+                                 state, entry, runtime_generation, world_generation );
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( items ) ) );
 }
 
 sol::table list_npcs(
@@ -1602,9 +1628,9 @@ sol::table copy_npc_ai_rules(
         return make_game_error_result( state, *source_error );
     }
     sol::table before = snapshot_ai_rules( state, *target );
-    target->rules = source->rules;
-    target->invalidate_range_cache();
-    target->wield_better_weapon();
+    if( target != source ) {
+        target->rules = source->rules;
+    }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_ai_rules( state, *target );
@@ -2562,12 +2588,6 @@ sol::table open_npc_rules(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    if( !entry->is_player_ally() ) {
-        return make_game_error_result( state, {
-            "not_an_ally",
-            "services.npcs.open_rules requires an allied NPC"
-        } );
-    }
     sol::table before = snapshot_ai_rules( state, *entry );
     follower_rules_ui rules_ui;
     rules_ui.draw_follower_rules_ui( entry );
@@ -2717,6 +2737,14 @@ void install_npc_api(
     const script_game_id & id ) {
         require_read();
         return get_class( lua_state, id );
+    } );
+    npcs.set_function(
+        "visible_allies",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state ) {
+        require_read();
+        return visible_player_allies(
+                   lua_state, current_runtime_generation(), current_world_generation() );
     } );
     npcs.set_function(
         "list",

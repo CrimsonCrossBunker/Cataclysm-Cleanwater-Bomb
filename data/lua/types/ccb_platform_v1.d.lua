@@ -6345,6 +6345,7 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 function CcbPlatformTasks.cancel(task_id) end
 
 ---@class PlatformChoice
+---@field position? Tripoint Loaded abs_ms map marker. Supply for every entry or none.
 ---@field id string Stable value returned to Lua when selected.
 ---@field label string Player-facing label.
 ---@field description? string Optional longer explanation.
@@ -6437,7 +6438,7 @@ function CcbPlatformPresentation.notice(message) end
 function CcbPlatformPresentation.confirm(question) end
 
 ---@param prompt string
----@param entries PlatformChoice[] Dense one-based array; holes and non-integer keys are rejected.
+---@param entries PlatformChoice[] Dense one-based array, including an empty menu; holes and non-integer keys are rejected. Limited only by native signed-int menu indexing, not a fixed script entry quota.
 ---@return string|nil selected_id
 function CcbPlatformPresentation.choose(prompt, entries) end
 
@@ -9379,30 +9380,30 @@ function CcbNpcMissionsApi.claim_selected_reward(provider, owner) end
 ---@class CcbNpcMedicalApi
 local CcbNpcMedicalApi = {}
 ---@param provider GameHandle Exact NPC provider handle.
----@param patient GameHandle Exact avatar handle; required, no avatar fallback.
+---@param patient GameHandle Exact active avatar handle; required, no avatar fallback.
 ---@param level? 'basic'|'advanced'
 ---@param include_allies? boolean
 ---@return CcbResult
 function CcbNpcMedicalApi.provide_aid(provider, patient, level, include_allies) end
 ---@param provider GameHandle Exact NPC provider handle.
 ---@param operation 'install'|'remove'
----@param patient GameHandle Exact Character handle; required, with no implicit avatar fallback.
+---@param patient GameHandle Exact Character handle, including the provider; no ally restriction or implicit avatar fallback.
 ---@return CcbResult
 function CcbNpcMedicalApi.open_bionic_service(provider, operation, patient) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param patient GameHandle Exact avatar handle; required, no fallback.
+---@param patient GameHandle Exact active avatar handle; required, no fallback.
 ---@return CcbResult
 function CcbNpcMedicalApi.repair_bionic_limbs(provider, patient) end
 
 ---@class CcbNpcGroomingApi
 local CcbNpcGroomingApi = {}
 ---@param provider GameHandle Exact NPC provider handle.
----@param client GameHandle Exact avatar handle; required, no fallback.
+---@param client GameHandle Exact active avatar handle; required, no fallback.
 ---@param area 'hair'|'beard'
 ---@return CcbResult
 function CcbNpcGroomingApi.open_style(provider, client, area) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param client GameHandle Exact avatar handle; required, no fallback.
+---@param client GameHandle Exact active avatar handle; required, no fallback.
 ---@param service 'haircut'|'shave'
 ---@return CcbResult
 function CcbNpcGroomingApi.provide(provider, client, service) end
@@ -9419,7 +9420,7 @@ function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@return CcbResult
 function CcbNpcTrainingApi.start(teacher, students, subject) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param student GameHandle Exact avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
+---@param student GameHandle Exact active avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
 ---@param mode 'player'|'seminar'|'npc' Uses the NPC's selected course. npc mode teaches that NPC from the avatar; other modes teach from the NPC. Seminar cancellation is a normal return; result flags describe NPC/avatar activity only.
 ---@return CcbResult
 function CcbNpcTrainingApi.start_selected(provider, student, mode) end
@@ -9440,7 +9441,24 @@ function CcbNpcDialogueActionsApi.provoke_combat(handle) end
 ---@field started boolean True only when the native dialogue UI started.
 ---@field completed boolean True only after a started dialogue synchronously ended.
 
+---@class CcbNpcOrdersApi
+local CcbNpcOrdersApi = {}
+---@param handle GameHandle Exact NPC handle.
+---@param order 'dismount'|'drop_carried_items'|'drop_weapon'|'wake'|'clear_temporary_rules'|'lead_to_safety'
+---@return CcbResult
+function CcbNpcOrdersApi.run(handle, order) end
+---@param handle GameHandle Exact NPC handle; ally membership is not required.
+---@return CcbResult
+function CcbNpcOrdersApi.open_pickup_rules(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcOrdersApi.choose_combat_style(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcOrdersApi.open_character_sheet(handle) end
+
 ---@class CcbNpcsApi
+---@field orders CcbNpcOrdersApi
 local CcbNpcsApi = {}
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded NPC-class page.
@@ -9451,6 +9469,10 @@ function CcbNpcsApi.class(id) end
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded list of exact NPC snapshots.
 function CcbNpcsApi.list(options) end
+---Loaded scene NPCs allied to the player and visible to the active player view.
+---Preserves native scene iteration order; a complete snapshot, not the persistent follower roster.
+---@return CcbResult result `value` is a dense CcbNpcSnapshot[] with exact live handles.
+function CcbNpcsApi.visible_allies() end
 ---@param handle GameHandle Exact live NPC handle.
 ---@return CcbResult result `value` is a detached CcbNpcSnapshot.
 function CcbNpcsApi.get(handle) end
@@ -9524,6 +9546,7 @@ function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
 ---@param state 'inherit'|'allow'|'deny'
 ---@return CcbResult
 function CcbNpcsApi.set_ally_override(handle, rule, state) end
+---Copies AI rules only; does not re-equip or advance the NPC. Self-copy is a no-op.
 ---@param target GameHandle Exact target NPC handle.
 ---@param source GameHandle Exact source NPC handle.
 ---@return CcbResult
@@ -9582,6 +9605,8 @@ function CcbNpcsApi.offer_item(recipient, giver, item, use_item) end
 ---@param topic string Required registered topic id; never inferred from either participant.
 ---@return CcbResult result `value` is a detached CcbNpcDialogueResult after synchronous UI teardown; it never carries a persistent or live dialogue session token.
 function CcbNpcsApi.open_dialogue(npc, speaker, topic) end
+---@param handle GameHandle Exact NPC handle; ally membership is not required.
+---@return CcbResult
 function CcbNpcsApi.open_rules(handle) end
 ---@param avatar GameHandle Exact avatar handle; required.
 function CcbNpcsApi.open_control_menu(avatar) end

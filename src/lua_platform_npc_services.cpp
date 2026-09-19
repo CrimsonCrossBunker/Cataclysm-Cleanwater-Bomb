@@ -128,8 +128,15 @@ Character *resolve_npc_service_character(
     std::optional<game_handle_error> &error )
 {
     if( avatar_only ) {
-        return resolve_exact_avatar(
-                   handle, runtime_generation, world_generation, error );
+        avatar *patient = resolve_exact_avatar(
+                              handle, runtime_generation, world_generation, error );
+        if( patient != nullptr && patient != &get_avatar() ) {
+            error = game_handle_error{
+                "invalid_patient", "This NPC service requires the active avatar"
+            };
+            return nullptr;
+        }
+        return patient;
     }
     Character *result = resolve_exact_character(
                             handle, runtime_generation,
@@ -219,20 +226,6 @@ sol::table open_bionic_service(
                              world_generation, error );
     if( patient == nullptr ) {
         return make_game_error_result( state, *error );
-    }
-    npc *patient_npc = patient->as_npc();
-    if( !patient->is_avatar() &&
-        ( patient_npc == nullptr || !patient_npc->is_player_ally() ) ) {
-        return make_game_error_result( state, {
-            "invalid_patient",
-            "Bionic service patients must be the avatar or an allied NPC"
-        } );
-    }
-    if( patient == provider ) {
-        return make_game_error_result( state, {
-            "invalid_patient",
-            "A bionic service provider cannot operate on themselves"
-        } );
     }
     sol::table patient_before = character_service_state(
                                     state, *patient );
@@ -1200,12 +1193,6 @@ sol::table open_npc_pickup_rules(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    if( !entry->is_player_ally() ) {
-        return make_game_error_result( state, {
-            "not_an_ally",
-            "services.npcs.orders.open_pickup_rules requires an allied NPC"
-        } );
-    }
     const bool before = !entry->rules.pickup_whitelist->empty();
     talk_function::set_npc_pickup( *entry );
     sol::table value = state.create_table();
@@ -1642,6 +1629,11 @@ sol::table start_selected_npc_training(
                                  world_generation, error );
     if( student_avatar == nullptr ) {
         return make_game_error_result( state, *error );
+    }
+    if( student_avatar != &get_avatar() ) {
+        return make_game_error_result( state, {
+            "invalid_patient", "Selected training requires the active avatar participant"
+        } );
     }
     Character *student = student_avatar;
     if( mode == "seminar" ) {

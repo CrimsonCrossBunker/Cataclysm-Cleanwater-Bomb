@@ -5684,7 +5684,7 @@ def render_optional_npc_job(
 ) -> list[str]:
     """Native interactive jobs may return without assigning an activity."""
     return [
-        "    do",
+        f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
         f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
         f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
         "            service_value(assignment)",
@@ -21000,53 +21000,47 @@ def render_static_give_equipment_effect(
 
 
 def render_static_follower_service_effect(
-    effect: str, npc_actor_proven: bool,
+    effect: str, npc_actor_proven: bool, *, npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render follower-selected NPC service workflows.
-
-    The legacy effects open a follower picker.  Platform exposes the same
-    choice through a bounded follower snapshot and native presentation menu;
-    truncated follower pages deliberately fail closed.
-    """
-    if not npc_actor_proven or effect not in {
+    """Select from visible scene allies in native order, not the follower roster."""
+    target = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    if target is None or effect not in {
         "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
     }:
         return None
+    if target != "actor":
+        target = f"({target})"
     operation = {
         "bionic_install_allies": "install",
         "bionic_remove_allies": "remove",
     }.get(effect)
     lines = [
-        "    local follower_page = service_value(services.followers.list())",
-        "    if not follower_page.truncated then",
+        f'    if {target} ~= nil and {target}.subtype == "npc" then',
+        "        local followers = service_value(services.npcs.visible_allies())",
         "        local follower_choices = {}",
         "        local follower_handles = {}",
-        "        for _, follower in ipairs(follower_page.items) do",
-        "            if follower.available then",
-        "                local follower_id = tostring(follower.id)",
-        "                follower_choices[#follower_choices + 1] = {",
-        "                    id = follower_id, label = follower.name,",
-        "                }",
-        "                follower_handles[follower_id] = follower.handle",
-        "            end",
+        "        for _, follower in ipairs(followers) do",
+        "            local follower_id = tostring(follower.id)",
+        "            follower_choices[#follower_choices + 1] = {",
+        "                id = follower_id, label = follower.name, position = follower.position,",
+        "            }",
+        "            follower_handles[follower_id] = follower.handle",
         "        end",
-        "        if #follower_choices > 0 then",
-        '            local selected_id = ccb.presentation.choose("Select a follower", follower_choices)',
-        "            local selected_handle = selected_id and follower_handles[selected_id] or nil",
-        "            if selected_handle ~= nil then",
+        '        local selected_id = ccb.presentation.choose(services.translate("Select a follower"), follower_choices)',
+        "        local selected_handle = selected_id and follower_handles[selected_id] or nil",
+        "        if selected_handle ~= nil then",
     ]
     if operation is not None:
         lines.extend([
-            "                service_value(services.npcs.medical.open_bionic_service(",
-            f'                    actor, "{operation}", selected_handle))',
+            "            service_value(services.npcs.medical.open_bionic_service(",
+            f'                    {target}, "{operation}", selected_handle))',
         ])
     else:
         lines.extend([
-            "                service_value(services.npcs.copy_ai_rules(",
-            "                    actor, selected_handle))",
+            "            service_value(services.npcs.copy_ai_rules(",
+            f"                    {target}, selected_handle))",
         ])
     lines.extend([
-        "            end",
         "        end",
         "    end",
     ])
@@ -30872,11 +30866,16 @@ def render_eoc(
                 lines.append(
                     f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
                 converted_effect = True
-            elif npc_actor_proven and effect == "reveal_stats":
-                lines.append(f"    service_value(services.npcs.orders.open_character_sheet({npc_actor_expression or 'actor'}))")
-                converted_effect = True
-            elif npc_actor_proven and effect == "pick_style":
-                lines.append(f"    service_value(services.npcs.orders.choose_combat_style({npc_actor_expression or 'actor'}))")
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "reveal_stats", "pick_style",
+            }:
+                method = "open_character_sheet" if effect == "reveal_stats" else "choose_combat_style"
+                target = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
+                    f"        service_value(services.npcs.orders.{method}({target}))",
+                    "    end",
+                ])
                 converted_effect = True
             elif npc_actor_proven and effect == "insult_combat":
                 lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
@@ -31015,7 +31014,7 @@ def render_eoc(
                         "needs vehicle service conversion"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
             }:
                 method, choice = {
@@ -31024,109 +31023,94 @@ def render_eoc(
                     "buy_haircut": ("provide", "haircut"),
                     "buy_shave": ("provide", "shave"),
                 }[effect]
-                lines.append(
-                    f"    service_value(services.npcs.grooming.{method}("
-                    f"{npc_actor_expression or 'actor'}, services.characters.avatar(), {lua_quote(choice)}))")
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression or 'actor'}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    f"            service_value(services.npcs.grooming.{method}("
+                    f"provider, services.characters.avatar(), {lua_quote(choice)}))",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "start_trade":
-                lines.append(
-                    f"    service_value(services.trade.open({npc_actor_expression or 'actor'}, "
-                    'services.characters.avatar(), 0, services.translate("Trade"), true))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "start_trade":
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression or 'actor'}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '            service_value(services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true))',
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "revert_activity":
-                lines.append(
-                    f"    service_value(services.activities.revert_npc_job({npc_actor_expression or 'actor'}))")
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "revert_activity", "morale_chat_activity",
+            }:
+                partner = npc_actor_expression or "actor"
+                if effect == "revert_activity":
+                    call = f"services.activities.revert_npc_job({partner})"
+                else:
+                    call = ("services.activities.socialize(services.characters.avatar(), "
+                            f'{partner}, services.time.duration(600, "turn"))')
+                lines.extend([
+                    f'    if ({partner}) ~= nil and ({partner}).subtype == "npc" then',
+                    f"        service_value({call})",
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "morale_chat_activity":
-                lines.append(
-                    f"    service_value(services.activities.socialize(services.characters.avatar(), "
-                    f"{npc_actor_expression or 'actor'}, services.time.duration(600, \"turn\")))"
-                )
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
+                "do_farming", "do_fishing", "do_mining", "do_mopping",
+                "do_read_repeatedly", "do_study", "sort_loot", "do_disassembly", "do_vehicle_deconstruct", "do_vehicle_repair",
+            }:
+                job = {
+                    "do_butcher": "butcher", "do_chop_plank": "chop_planks",
+                    "do_chop_trees": "chop_trees", "do_construction": "construction",
+                    "do_farming": "farming", "do_fishing": "fishing",
+                    "do_mining": "mining", "do_mopping": "mopping",
+                    "do_read_repeatedly": "read_repeatedly",
+                    "do_study": "study",
+                    "sort_loot": "sort_loot",
+                    "do_disassembly": "disassembly",
+                    "do_vehicle_deconstruct": "vehicle_deconstruct",
+                    "do_vehicle_repair": "vehicle_repair",
+                }[effect]
+                worker = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'        service_value(services.activities.assign_npc_job({worker}, {lua_quote(job)}))',
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "do_butcher":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "butcher"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_chop_plank":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_planks"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_chop_trees":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "chop_trees"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_construction":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "construction"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_farming":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "farming"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_fishing":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "fishing"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_mining":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mining"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_mopping":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "mopping"))')
-                converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "do_read", "do_eread", "do_craft", "find_mount",
+            }:
+                job = {"do_read": "read", "do_eread": "read_ebook",
+                       "do_craft": "craft", "find_mount": "find_mount"}[effect]
+                normal_return = "no_match" if effect == "find_mount" else "assignment_rejected"
                 lines.extend(render_optional_npc_job(
-                    npc_actor_expression or "actor", "read_ebook" if effect == "do_eread" else "read"))
+                    npc_actor_expression or "actor", job, normal_return))
                 converted_effect = True
-            elif npc_actor_proven and effect == "do_read_repeatedly":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "read_repeatedly"))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "drop_items_in_place":
+                worker = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'        service_value(services.npcs.orders.run({worker}, "drop_carried_items"))',
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and effect == "do_study":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "study"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "sort_loot":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "sort_loot"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_craft":
-                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "craft"))
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_disassembly":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "disassembly"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_vehicle_deconstruct":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_deconstruct"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "do_vehicle_repair":
-                lines.append(
-                    f'    service_value(services.activities.assign_npc_job({npc_actor_expression or "actor"}, "vehicle_repair"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "drop_items_in_place":
-                lines.append(
-                    f'    service_value(services.npcs.orders.run({npc_actor_expression or "actor"}, "drop_carried_items"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "find_mount":
-                lines.extend(render_optional_npc_job(npc_actor_expression or "actor", "find_mount", "no_match"))
-                converted_effect = True
-            elif npc_actor_proven and effect == "start_training_npc":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "npc"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "start_training":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "player"))')
-                converted_effect = True
-            elif npc_actor_proven and effect == "start_training_seminar":
-                lines.append(
-                    f'    service_value(services.npcs.training.start_selected({npc_actor_expression or "actor"}, '
-                    'services.characters.avatar(), "seminar"))')
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                "start_training", "start_training_npc", "start_training_seminar",
+            }:
+                mode = {"start_training": "player", "start_training_npc": "npc",
+                        "start_training_seminar": "seminar"}[effect]
+                provider = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f'        service_value(services.npcs.training.start_selected({provider}, '
+                    f'services.characters.avatar(), {lua_quote(mode)}))',
+                    "    end",
+                ])
                 converted_effect = True
             elif effect == "distribute_food_auto":
                 # This legacy operation discovers a camp from the NPC's
@@ -31401,14 +31385,19 @@ def render_eoc(
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:
-                if npc_actor_proven:
+                if npc_actor_proven or npc_actor_expression is not None:
                     level = "basic" if effect.startswith("lesser_") else "advanced"
                     include_allies = "true" if "all_aid" in effect else "false"
-                    lines.append(
-                        "    service_value(services.npcs.medical.provide_aid("
-                        f"{npc_actor_expression or 'actor'}, services.characters.avatar(), "
-                        f"{lua_quote(level)}, {include_allies}))"
-                    )
+                    lines.extend([
+                        "    do",
+                        f"        local provider = {npc_actor_expression or 'actor'}",
+                        '        if provider ~= nil and provider.subtype == "npc" then',
+                        "            service_value(services.npcs.medical.provide_aid("
+                        "provider, services.characters.avatar(), "
+                        f"{lua_quote(level)}, {include_allies}))",
+                        "        end",
+                        "    end",
+                    ])
                     converted_effect = True
                 else:
                     lines.append("    -- TODO: medical aid requires an explicit NPC provider.")
@@ -31579,22 +31568,28 @@ def render_eoc(
                     "needs proven camp, manager, and worker handles"
                 )
                 all_effects_converted = False
-            elif (
-                isinstance(effect, str) and effect in {
-                    "bionic_install", "bionic_remove", "repair_bionic_limbs",
-                } and npc_event_character_actor_proven and avatar_actor_proven
-            ):
-                if effect == "repair_bionic_limbs":
-                    lines.append(
-                        "    service_value(services.npcs.medical.repair_bionic_limbs("
-                        "actor, services.characters.avatar()))"
-                    )
-                else:
-                    operation = "install" if effect == "bionic_install" else "remove"
-                    lines.append(
-                        "    service_value(services.npcs.medical.open_bionic_service("
-                        f"actor, {lua_quote(operation)}, services.characters.avatar()))"
-                    )
+            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and npc_actor_expression is not None:
+                operation = "install" if effect == "bionic_install" else "remove"
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    "            service_value(services.npcs.medical.open_bionic_service("
+                    f"provider, {lua_quote(operation)}, services.characters.avatar()))",
+                    "        end",
+                    "    end",
+                ])
+                converted_effect = True
+            elif effect == "repair_bionic_limbs" and npc_actor_expression is not None:
+                lines.extend([
+                    "    do",
+                    f"        local provider = {npc_actor_expression}",
+                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    "            service_value(services.npcs.medical.repair_bionic_limbs("
+                    "provider, services.characters.avatar()))",
+                    "        end",
+                    "    end",
+                ])
                 converted_effect = True
             elif isinstance(effect, dict) and "companion_mission" in effect:
                 rendered = render_static_companion_mission_effect(
@@ -32624,7 +32619,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                npc_actor_proven and isinstance(effect, str) and
+                (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and
                 effect in {
                     "npc_rules_menu", "set_npc_pickup",
                 }
@@ -32632,19 +32627,24 @@ def render_eoc(
                 # These legacy effects open native NPC service surfaces.  The
                 # Platform contract exposes the same bounded services without
                 # retaining an EOC runner or raw dialogue object.
+                provider = npc_actor_expression or "actor"
                 native_call = {
-                    "npc_rules_menu": "services.npcs.open_rules(actor)",
+                    "npc_rules_menu": f"services.npcs.open_rules({provider})",
                     "set_npc_pickup": (
-                        "services.npcs.orders.open_pickup_rules(actor)"
+                        f"services.npcs.orders.open_pickup_rules({provider})"
                     ),
                 }[effect]
-                lines.append(f"    service_value({native_call})")
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f"        service_value({native_call})",
+                    "    end",
+                ])
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
                 "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
             }:
                 rendered = render_static_follower_service_effect(
-                    effect, npc_actor_proven
+                    effect, npc_actor_proven, npc_actor_expression=npc_actor_expression
                 )
                 if rendered is not None:
                     lines.extend(rendered)
