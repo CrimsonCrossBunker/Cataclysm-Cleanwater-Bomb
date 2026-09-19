@@ -279,6 +279,7 @@ void item_pocket::restack()
         // Restack magazine contents in a way that preserves order of items
         for( auto iter = contents.begin(); iter != contents.end(); ) {
             if( !iter->count_by_charges() ) {
+                ++iter;
                 continue;
             }
 
@@ -288,7 +289,7 @@ void item_pocket::restack()
             }
 
             if( iter->combine( *next ) ) {
-                iter = contents.erase( next );
+                contents.erase( next );
             } else {
                 ++iter;
             }
@@ -324,6 +325,7 @@ item *item_pocket::restack( /*const*/ item *it )
         // Restack magazine contents in a way that preserves order of items
         for( auto iter = contents.begin(); iter != contents.end(); ) {
             if( !iter->count_by_charges() ) {
+                ++iter;
                 continue;
             }
 
@@ -337,7 +339,7 @@ item *item_pocket::restack( /*const*/ item *it )
                 if( &( *next ) == ret ) {
                     ret = &( *iter );
                 }
-                iter = contents.erase( next );
+                contents.erase( next );
             } else {
                 ++iter;
             }

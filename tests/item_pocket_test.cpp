@@ -458,6 +458,48 @@ TEST_CASE( "max_container_volume", "[pocket][max_contains_volume]" )
 // item_pocket::can_contain
 // item_pocket::insert_item
 //
+TEST_CASE( "magazine_restack_merges_adjacent_runs_and_preserves_order",
+           "[pocket][magazine][stacking]" )
+{
+    pocket_data data( pocket_type::MAGAZINE );
+    data.ammo_restriction.emplace( ammo_test_9mm, 100 );
+    item_pocket pocket( &data );
+    const bool track_item = GENERATE( false, true );
+    const bool different_middle = GENERATE( false, true );
+    item *last = nullptr;
+    for( int i = 0; i < 3; ++i ) {
+        item ammo( itype_test_9mm_ammo, calendar::turn_zero, i + 1 );
+        if( different_middle && i == 1 ) {
+            ammo.set_var( "item_label", "middle" );
+        }
+        const ret_val<item *> inserted = pocket.insert_item( ammo, true, false );
+        REQUIRE( inserted.success() );
+        last = inserted.value();
+    }
+    REQUIRE( pocket.size() == 3 );
+    if( track_item ) {
+        last = pocket.restack( last );
+    } else {
+        pocket.restack();
+    }
+    if( different_middle ) {
+        REQUIRE( pocket.size() == 3 );
+        int expected = 1;
+        for( const item *it : pocket.all_items_top() ) {
+            CHECK( it->charges == expected++ );
+        }
+        if( track_item ) {
+            CHECK( last->charges == 3 );
+        }
+    } else {
+        REQUIRE( pocket.size() == 1 );
+        CHECK( pocket.front().charges == 6 );
+        if( track_item ) {
+            CHECK( last == &pocket.front() );
+        }
+    }
+}
+
 TEST_CASE( "magazine_with_ammo_restriction", "[pocket][magazine][ammo_restriction]" )
 {
     pocket_data data_mag( pocket_type::MAGAZINE );
