@@ -1757,6 +1757,63 @@ bool item_pocket::can_reload_with( const item &ammo, const bool now ) const
     return false;
 }
 
+std::optional<item_pocket::item_position> item_pocket::extract_item_to(
+    const item &it, std::list<item> &escrow )
+{
+    if( !escrow.empty() || bulk_fill_volume || !it.uid().is_valid() ) {
+        return std::nullopt;
+    }
+    const auto found = std::find_if( contents.begin(), contents.end(), [&it]( const item & entry ) {
+        return &entry == &it;
+    } );
+    if( found == contents.end() ) {
+        return std::nullopt;
+    }
+    item_position position;
+    position.source = this;
+    position.uid = it.uid().get_value();
+    if( found != contents.begin() ) {
+        position.previous_uid = std::prev( found )->uid().get_value();
+    }
+    const auto next = std::next( found );
+    if( next != contents.end() ) {
+        position.next_uid = next->uid().get_value();
+    }
+    escrow.splice( escrow.end(), contents, found );
+    return position;
+}
+
+bool item_pocket::restore_item_from( std::list<item> &escrow, const item_position &position )
+{
+    if( position.source != this || bulk_fill_volume || escrow.size() != 1 ||
+        position.uid <= 0 || escrow.front().uid().get_value() != position.uid ) {
+        return false;
+    }
+    auto insertion = contents.end();
+    if( position.next_uid != 0 ) {
+        insertion = std::find_if( contents.begin(), contents.end(), [&position]( const item & entry ) {
+            return entry.uid().get_value() == position.next_uid;
+        } );
+        if( insertion == contents.end() ) {
+            return false;
+        }
+    }
+    const std::int64_t previous_uid = insertion == contents.begin() ? 0 :
+                                      std::prev( insertion )->uid().get_value();
+    if( previous_uid != position.previous_uid ) {
+        return false;
+    }
+    const bool duplicate = std::any_of( contents.begin(), contents.end(),
+    [&position]( const item & entry ) {
+        return entry.uid().get_value() == position.uid;
+    } );
+    if( duplicate ) {
+        return false;
+    }
+    contents.splice( insertion, escrow, escrow.begin() );
+    return true;
+}
+
 std::optional<item> item_pocket::remove_item( const item &it )
 {
     item ret( it );

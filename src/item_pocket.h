@@ -3,6 +3,7 @@
 #define CATA_SRC_ITEM_POCKET_H
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -299,6 +300,27 @@ class item_pocket
         void remove_all_mods( Character &guy );
 
         void set_item_defaults();
+
+        /** Native, nonpersistent position captured by extract_item_to. */
+        class item_position
+        {
+            public:
+                item_position() = default;
+            private:
+                friend class item_pocket;
+                const item_pocket *source = nullptr;
+                std::int64_t uid = 0;
+                std::int64_t previous_uid = 0;
+                std::int64_t next_uid = 0;
+        };
+
+        /** Move one direct item node to empty escrow without copying, restacking or unsealing.
+         * The caller must keep this pocket alive and roll multiple extractions back in reverse
+         * order. Bulk-fill operations cannot be interleaved with this transaction. */
+        std::optional<item_position> extract_item_to( const item &it, std::list<item> &escrow );
+        /** Restore the single escrow node to its captured gap. Reject a changed gap, wrong
+         * pocket or different UID without mutating either list; no fallback placement. */
+        bool restore_item_from( std::list<item> &escrow, const item_position &position );
 
         // removes and returns the item from the pocket.
         std::optional<item> remove_item( const item &it );

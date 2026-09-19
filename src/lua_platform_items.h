@@ -52,6 +52,9 @@ struct platform_recipe_item_request {
 struct platform_trade_item_holder {
     game_handle character;
     std::string slot;
+    // Required only for contained sources; index addresses all native pockets.
+    std::optional<game_handle> container;
+    int pocket_index = -1;
 };
 
 /** One exact Item and its explicit source/destination Character holders. */
@@ -60,6 +63,8 @@ struct platform_trade_item_request {
     platform_trade_item_holder source_holder;
     platform_trade_item_holder destination_holder;
     std::int64_t quantity = 0;
+    // Native gifts transfer ownership before pickup; rollback restores every content owner.
+    bool transfer_ownership = false;
 };
 
 /** Detached result metadata for one successfully transferred trade Item. */

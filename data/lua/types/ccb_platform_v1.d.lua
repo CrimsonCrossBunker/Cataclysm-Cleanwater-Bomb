@@ -7463,6 +7463,11 @@ function CcbCharactersApi.body_parts(character) end
 ---@return CcbBodyPartIdResult
 function CcbCharactersApi.random_body_part(character, main_parts_only) end
 
+---Read native intimidation, including weapons, stimulants, drunkenness and enchantment modifiers.
+---@param character GameHandle Exact live Character; no implicit dialogue participant.
+---@return CcbResult result `value` is the current integer score; unavailable/stale handles return an error.
+function CcbCharactersApi.intimidation(character) end
+
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
 ---@return CcbResult result `value` is a detached Character snapshot.
@@ -9243,6 +9248,7 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field handle GameHandle Exact live NPC handle.
 ---@field id integer Native character identity; display-only.
 ---@field unique_id string Stable unique NPC identity when present.
+---@field assigned_missions_value integer Native sum over every assigned mission, including finished entries until removed from the assigned list; not a paginated subtotal.
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord
@@ -9609,26 +9615,32 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field registered boolean True only while the token is in the active runtime registry.
 ---@field is_valid fun(self: TradeQuoteToken): boolean False after any runtime, world, participant, Item, holder, pricing, settlement, expiry, save, or shutdown invalidation.
 
----@alias CcbTradeQuoteSettlementStrategy 'cash'|'npc_debt'
+---@alias CcbTradeQuoteSettlementStrategy 'cash'|'npc_debt'|'npc_allowance'
 
 ---@class CcbTradeQuoteSettlement
 ---@field strategy CcbTradeQuoteSettlementStrategy Explicit quote settlement preflight strategy.
 ---@field currency 'cash' Explicit supported currency; quote rejects other currencies.
+---@field allowance? integer Required only for npc_allowance; native signed int. One whole native offered Item, NPC seller and active avatar buyer required; strict price < owed + allowance. The native offer price is recomputed, never supplied by Lua.
 
----@alias CcbTradeCommitSettlementStrategy 'npc_debt'
+---@alias CcbTradeCommitSettlementStrategy 'npc_debt'|'npc_allowance'
 
 ---@class CcbTradeNpcDebtSettlement
----@field strategy 'npc_debt' The only currently publishable commit settlement.
+---@field strategy 'npc_debt' Ordinary NPC debt settlement.
 ---@field currency 'cash' Explicit cash-denominated NPC debt account.
 
----Commit settlement is an intentionally one-member union.  A cash publish
----settlement is not exposed until its atomic currency path is source-complete.
----@alias CcbTradeSettlement CcbTradeNpcDebtSettlement
+---@class CcbTradeAllowanceSettlement
+---@field strategy 'npc_allowance' Commit the allowance and native offer price already bound into the quote.
+---@field currency 'cash' Cash-denominated NPC allowance; no cash balance is transferred.
+
+---Cash publication remains unavailable. Allowance is supplied only at quote time.
+---@alias CcbTradeSettlement CcbTradeNpcDebtSettlement|CcbTradeAllowanceSettlement
 
 ---@class CcbTradeQuoteHolder
----@field kind 'character' Exact Character holder kind; no map/container/vehicle or implicit selection.
+---@field kind 'character' Exact Character owner; contained sources additionally name the exact container and pocket. No map/vehicle or implicit selection.
 ---@field character GameHandle Exact Character/NPC holder handle.
----@field slot 'inventory'|'worn'|'wielded' Explicit Character slot.
+---@field slot 'inventory'|'worn'|'wielded'|'contained' Explicit source slot; destinations must use inventory.
+---@field container? GameHandle Required only for contained sources: exact Item container held by character.
+---@field pocket_index? integer Required only for contained sources: zero-based index across all native pockets; the Item must be a direct member.
 
 ---@class CcbTradeQuoteHolderSnapshot: CcbTradeQuoteHolder
 ---@field locator table<string, any> Detached canonical holder locator captured at quote time.
@@ -9656,14 +9668,16 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field destination_holder CcbTradeQuoteHolderSnapshot Canonical destination holder locator and generation snapshot.
 ---@field source_holder_mutation_generation integer Global holder mutation epoch at quote time.
 ---@field destination_holder_mutation_generation integer Global holder mutation epoch at quote time.
----@field unit_price integer Authoritative detached per-unit price.
----@field total integer Authoritative detached line total.
+---@field unit_price integer Authoritative detached barter per-unit price; zero for npc_allowance, whose price is allowance_offer_price.
+---@field total integer Authoritative detached barter line total; zero for npc_allowance.
 ---@field tax integer Detached line tax; currently zero when the native rule has no tax.
 ---@field accepted boolean True for a line in a successful detached quote.
 ---@field rejection_reason? string Present only when a line is rejected.
 
 ---@class CcbTradeQuoteSnapshot
 ---@field token TradeQuoteToken Runtime-owned nonpersistent QuoteToken.
+---@field allowance? integer Native allowance bound at quote time; present only for npc_allowance.
+---@field allowance_offer_price? number Native selling offer price bound at quote time; may be fractional.
 ---@field seller GameHandle Exact seller Character/NPC handle.
 ---@field buyer GameHandle Exact buyer Character/NPC handle.
 ---@field seller_stable_id integer
@@ -9713,6 +9727,8 @@ function CcbNpcsApi.ai_rules(handle) end
 ---| 'faction_changed'
 ---| 'debt_changed'
 ---| 'opinion_changed'
+---| 'offer_unavailable'
+---| 'stale_avatar_identity'
 
 ---@alias CcbTradeCommitRollbackErrorCode 'source_changed'|'rollback_failed'
 
@@ -9736,6 +9752,10 @@ function CcbNpcsApi.ai_rules(handle) end
 ---| 'credit_limit'
 ---| 'numeric_overflow'
 ---| 'settlement_publish_failed'
+---| 'invalid_allowance'
+---| 'allowance_exceeded'
+---| 'invalid_price'
+---| 'unsupported_lines'
 
 ---@class CcbTradeCommitError: CcbPlatformResultError
 ---@field code CcbTradeCommitErrorCode Stable commit rejection, stale, or rollback code.
@@ -9749,6 +9769,8 @@ function CcbNpcsApi.ai_rules(handle) end
 
 ---@class CcbTradeCommitValue
 ---@field committed true True only after every Item and settlement publication succeeds.
+---@field allowance? integer Native allowance bound at quote time; present only for npc_allowance.
+---@field allowance_offer_price? number Native selling offer price bound at quote time; may be fractional.
 ---@field consumed true The QuoteToken is permanently single-use after success.
 ---@field quote_id integer Committed quote identity.
 ---@field commit_generation integer Monotonic generation after consuming the token.
@@ -9766,7 +9788,7 @@ function CcbNpcsApi.ai_rules(handle) end
 ---@field lines CcbTradeCommitLineResult[] Detached per-line transfer results.
 
 ---@class CcbTradeCommitResult: CcbResult
----@field value? CcbTradeCommitValue Present only after atomic Item transfer and npc_debt publication.
+---@field value? CcbTradeCommitValue Present only after atomic Item transfer and publication of the selected NPC debt or allowance settlement.
 ---@field error? CcbTradeCommitError Present for invalid, consumed, stale, rejected, or rollback-failed commits.
 
 ---@class CcbTradeApi
@@ -9796,6 +9818,20 @@ function CcbTradeApi.pay(seller, buyer, cost) end
 ---@return CcbResult result `value` is { item: GameId, item_name: string, count: integer, cost_cents: integer, count_by_charges: boolean }. Invalid/nonpositive/overflow prices fail closed.
 function CcbTradeApi.order_price(seller, buyer, item_type, count) end
 
+---@class CcbSellingOffer
+---@field source_holder CcbTradeQuoteHolder Exact source including container and pocket for nested Items; usable as quote line source_holder.
+---@field item GameHandle Exact live offered Item.
+---@field item_name string Complete native tname at query time, for translated offer messages.
+---@field quantity integer Whole Item quantity for exact transfers: all charges for charge-counted Items, otherwise one. Native offer count/charges fields below describe pricing, not the transfer quantity.
+---@field price number Native NPC selling-offer valuation; not a locked settlement quote.
+---@field count integer Native offer count.
+---@field charges integer Native offer charges.
+
+---@param seller GameHandle Exact NPC.
+---@return CcbResult result Value is a dense CcbSellingOffer[] in native order, without truncation. Query does not reserve or transfer items; revalidate through exact-item transactions.
+function CcbTradeApi.selling_offers(seller) end
+
+
 ---@param seller GameHandle Exact seller Character/NPC handle; never inferred from avatar/current trader.
 ---@param buyer GameHandle Exact buyer Character/NPC handle; never inferred from avatar/current trader.
 ---@param lines CcbTradeQuoteLineInput[] Dense explicit direction, Item, quantity, source-holder, and destination-holder lines.
@@ -9808,7 +9844,7 @@ function CcbTradeApi.quote(seller, buyer, lines, options) end
 function CcbTradeApi.get(token) end
 
 ---@param token TradeQuoteToken Runtime-owned nonpersistent quote token.
----@param settlement CcbTradeSettlement Explicit currently supported `npc_debt` settlement; no implicit avatar/current trader is used.
+---@param settlement CcbTradeSettlement Explicit `npc_debt` or `npc_allowance` settlement matching the quote; no implicit avatar/current trader is used.
 ---@return CcbTradeCommitResult result `value` is published only after atomic two-way Item transfer and NPC debt settlement; `error.code` reports consumed/stale/rejection/rollback failures.
 function CcbTradeApi.commit(token, settlement) end
 
@@ -10719,6 +10755,14 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 ---@field wind_direction number
 
 function CcbPlatformServices.message(text) end
+
+---Format text with the game's native printf syntax, including positional %1$s arguments.
+---Available after world_ready. Pass translated text from translate/translate_plural when needed.
+---Arguments are a dense array; NUL text/strings, unsupported values and format mismatches raise errors.
+---@param text string Native printf format string.
+---@param arguments (string|number|boolean)[] Dense ordered arguments; use an empty array for no arguments.
+---@return string
+function CcbPlatformServices.format(text, arguments) end
 
 ---Translate runtime text using the current game language. Available after world_ready.
 ---Missing translations return the source text. Text/context must not contain NUL.

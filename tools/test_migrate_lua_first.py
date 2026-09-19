@@ -11701,8 +11701,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertNotIn("request_gift", main)
             self.assertNotIn("return_stolen_items", main)
             self.assertIn("drop_stolen_item needs explicit Item handles", main)
-            self.assertIn("equipment allowance through", main)
-            self.assertNotIn("services.trade.", main)
+            self.assertIn("services.trade.quote(provider, recipient", main)
+            self.assertIn("services.trade.commit(quote.token", main)
             self.assertIn("monster-purchase conversion", report)
             self.assertIn("cash-payment conversion", report)
             self.assertNotIn("services.inventory.remove(actor, matching_items[index])", main)
@@ -11745,7 +11745,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
             self.assertNotIn("services.npcs.medical.repair_bionic_limbs(", main)
-            self.assertEqual(main.count("services.characters.avatar()"), 1)
+            self.assertEqual(main.count("services.characters.avatar()"), 2)
             self.assertIn("domain-service conversion", report)
 
     def test_roll_remainder_runs_true_and_false_callbacks(self) -> None:
@@ -21680,6 +21680,253 @@ BODY
 migrated_eoc_functions.alpha_radio({actors={alpha=alpha,beta=beta}},alpha)
 assert(#calls==2 and calls[1]==alpha and calls[2]==beta)
 """.replace("BODY", rendered)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_equipment_selection_keeps_strict_price_and_rejection_draws(self) -> None:
+        expression = migrate_lua_first.render_equipment_offer_selection("seller", "allowance")
+        script = r"""
+local seller={}
+local allowance=5
+local prices,draws,limits,owed
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ trade={selling_offers=function(target)
+  assert(target==seller);local offers={}
+  for i,price in ipairs(prices) do offers[i]={price=price,id=i} end
+  return {ok=true,value=offers}
+ end},
+ npcs={get=function(target) assert(target==seller);return {ok=true,value={opinion={owed=owed}}} end},
+ random={int=function(lo,hi)
+  assert(lo==1);limits[#limits+1]=hi;return table.remove(draws,1)
+ end}
+}
+local function choose() return EXPRESSION end
+owed=5;prices={10,9,12};draws={1,2,1};limits={}
+local selected=choose()
+assert(selected.id==2 and selected.price==9)
+assert(table.concat(limits,',')=='3,2,1')
+prices={10};draws={1};limits={};assert(choose()==nil)
+prices={};draws={};limits={};assert(choose()==nil and #limits==0)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_equipment_fixed_allowance_shapes_and_actor_proof(self) -> None:
+        render = migrate_lua_first.render_static_give_equipment_effect
+        for effect in ("give_equipment", {"give_equipment": {}},
+                       {"give_equipment": {"allowance": []}}):
+            lines = render(effect, True, False)
+            self.assertIsNotNone(lines)
+            self.assertIn("local allowance = 0", "\n".join(lines))
+        for value in (True, 1.5, "100", [["TRUST", 2]], 2**31, -(2**31)-1):
+            with self.subTest(value=value):
+                self.assertIsNone(render({"give_equipment": {"allowance": value}}, True, True))
+        self.assertIsNone(render("give_equipment", False, True))
+        self.assertIsNotNone(render("give_equipment", False, True,
+                                    npc_actor_expression="context.actors.beta"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_equipment_gift_composes_exact_offer_and_stops_after_errors(self) -> None:
+        lines = migrate_lua_first.render_static_give_equipment_effect(
+            {"give_equipment": {"allowance": 5}}, False, True,
+            npc_actor_expression="beta")
+        self.assertIsNotNone(lines)
+        script = r"""
+local beta={subtype='npc'}
+local avatar={subtype='avatar'}
+local selected={}
+local source={kind='character',character=beta,slot='contained',container={},pocket_index=0}
+local log,empty,fail_quote,fail_commit
+local function record(value) log[#log+1]=value end
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={
+ npcs={get=function(target)
+  assert(target==beta);return {ok=true,value={name='Provider',opinion={owed=100}}}
+ end},
+ characters={avatar=function() assert(not empty);return avatar end},
+ random={int=function(lo,hi) assert(lo==1 and hi==1);return 1 end},
+ trade={
+  selling_offers=function(target)
+   assert(target==beta)
+   return {ok=true,value=empty and {} or {{item=selected,source_holder=source,
+     item_name='full item name',quantity=7,price=9}}}
+  end,
+  quote=function(seller,buyer,lines,options)
+   record('quote');assert(seller==beta and buyer==avatar and #lines==1)
+   local line=lines[1]
+   assert(line.item==selected and line.quantity==7 and line.source_holder==source)
+   assert(line.direction=='seller_to_buyer' and line.destination_holder.character==avatar)
+   assert(line.destination_holder.kind=='character' and line.destination_holder.slot=='inventory')
+   assert(options.settlement.strategy=='npc_allowance' and options.settlement.allowance==5)
+   if fail_quote then return {ok=false,error={code='quote rejected'}} end
+   return {ok=true,value={token='bound token'}}
+  end,
+  commit=function(token,settlement)
+   record('commit');assert(token=='bound token' and settlement.strategy=='npc_allowance')
+   assert(settlement.currency=='cash' and settlement.allowance==nil)
+   if fail_commit then return {ok=false,error={code='commit rejected'}} end
+   return {ok=true,value={committed=true}}
+  end
+ },
+ translate=function(text) return text end,
+ format=function(text,args)
+  assert(args[1]=='Provider')
+  if text=='%s has nothing to give!' then assert(empty);return 'empty' end
+  assert(text=='%1$s gives you a %2$s.' and args[2]=='full item name');return 'success'
+ end,
+ types={id=function(kind,id) assert(kind=='effect' and id=='asked_for_item');return id end},
+ time={duration=function(value,unit) assert(value==10800 and unit=='turn');return value end},
+ effects={add=function(target,id,duration)
+  assert(target==beta and id=='asked_for_item' and duration==10800)
+  record('cooldown');return {ok=true,value=true}
+ end}
+}
+local ccb={presentation={notice=function(text) record(text) end}}
+local function give()
+BODY
+end
+log={};give();assert(table.concat(log,',')=='quote,commit,success,cooldown')
+log={};empty=true;give();assert(table.concat(log,',')=='empty')
+log={};empty=false;fail_quote=true;assert(not pcall(give));assert(table.concat(log,',')=='quote')
+log={};fail_quote=false;fail_commit=true;assert(not pcall(give));assert(table.concat(log,',')=='quote,commit')
+log={};beta.subtype='avatar';give();assert(#log==0)
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_equipment_modifier_migration_preserves_original_talker_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps({
+                "type": "effect_on_condition",
+                "id": "equipment_modifier_pair",
+                "condition": {"and": [
+                    {"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"},
+                ]},
+                "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
+            }), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "equipment_pair_mod")
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertIn("local provider = context.actors.beta", main)
+            self.assertIn("end)(actor, provider)", main)
+            self.assertIn('strategy = "npc_allowance"', main)
+            self.assertIn("needs an explicit Platform trigger", report)
+            self.assertNotIn("give_equipment", report)
+
+    def test_equipment_modifier_event_does_not_invent_second_talker(self) -> None:
+        # eoc_events::notify resolves alpha from the NPC event field; beta can
+        # remain null. An event NPC alone is not an original dialogue pair.
+        for event in ("npc_becomes_hostile", "game_start"):
+            with self.subTest(event=event):
+                result = migrate_lua_first.MigrationResult()
+                main = migrate_lua_first.render_eoc(
+                    migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                        "type": "effect_on_condition", "id": "equipment_event",
+                        "required_event": event,
+                        "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
+                    }), result)
+                self.assertIn("both original talkers' modifiers", main)
+                self.assertNotIn('strategy = "npc_allowance"', main)
+                self.assertNotIn("end)(actor, provider)", main)
+
+    def test_equipment_modifier_arrays_require_original_talker_proof(self) -> None:
+        render = migrate_lua_first.render_equipment_modifier_allowance
+        self.assertIsNone(render([["TRUST", 1]], None, "beta"))
+        self.assertEqual(render([["TOTAL", -2], ["unknown", 8]], None, "beta"), "0")
+        for entry in (["TRUST"], ["TRUST", True], ["TRUST", 1.5], ["TRUST", 2**31],
+                      ["npc_has_trait", 1], ["npc_has_trait: " + "x" * 257, 1]):
+            with self.subTest(entry=entry):
+                self.assertIsNone(render([entry], "alpha", "beta"))
+        effect = {"give_equipment": {"allowance": [["TRUST", 2]]}}
+        lines = migrate_lua_first.render_static_give_equipment_effect(
+            effect, False, False, npc_actor_expression="context.actors.beta",
+            alpha_actor_expression="actor")
+        self.assertIsNotNone(lines)
+        self.assertIn("end)(actor, provider)", "\n".join(lines))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_equipment_modifiers_sum_both_talkers_in_native_order(self) -> None:
+        render = migrate_lua_first.render_equipment_modifier_allowance
+        npc_expression = render([
+            ["TRUST", 2], ["TOTAL", 3], ["FEAR", 1], ["POS_FEAR", -1],
+            ["MISSIONS", 7], ["NPC_INTIMIDATE", 1], ["U_INTIMIDATE", 1],
+            ["npc_has_trait: STRONG", 5], ["unknown", 100],
+        ], "alpha", "beta")
+        mixed_expression = render([
+            ["TRUST", 2], ["U_INTIMIDATE", 1], ["NPC_INTIMIDATE", 1],
+            ["LOWFUNC_PSYCHOPATH", 10], ["HIGHFUNC_PSYCHOPATH", 20],
+            ["u_has_trait: STRONG", 7], ["npc_has_trait: STRONG", 3],
+            ["npc_has_trait: UNKNOWN", 100], ["xxnpc_has_trait: STRONG", 100],
+        ], "alpha", "beta")
+        overflow_expression = render([["TRUST", 1], ["TOTAL", 2**31-1], ["TOTAL", 0]], "alpha", "beta")
+        product_expression = render([["TRUST", 2**31-1]], "alpha", "beta")
+        sum_expression = render([["TRUST", 1]], "alpha", "beta")
+        personality_expression = render([[name, 1] for name in (
+            "ANGER", "VALUE", "AGGRESSION", "ALTRUISM", "BRAVERY", "COLLECTOR",
+        )], "alpha", "beta")
+        script = r"""
+local alpha={name='alpha',subtype='npc',opinion={trust=3,fear=-2},
+ assigned_missions_value=-1500,intimidation=11,trait=true}
+local beta={name='beta',subtype='npc',opinion={trust=5,fear=4},
+ assigned_missions_value=2500,intimidation=13,trait=false}
+local reads={}
+local function record(t) reads[#reads+1]=t.name end
+local function service_value(result) assert(result.ok);return result.value end
+local services={
+ npcs={get=function(t) assert(t.subtype=='npc');record(t);return {ok=true,value=t} end},
+ characters={
+  intimidation=function(t) record(t);return {ok=true,value=t.intimidation} end,
+  has_flag=function(t,id) assert(id.kind=='json_flag' and id.value=='PSYCHOPATH');return {ok=true,value=t.psy} end,
+  snapshot=function(t) return {ok=true,value={stats={intelligence=t.intelligence}}} end
+ },
+ types={id=function(kind,value)
+  return {kind=kind,value=value,is_valid=function(self) return self.value=='STRONG' end}
+ end},
+ mutations={has=function(t,id)
+  assert(id:is_valid());return {ok=true,value=t.trait}
+ end}
+}
+local function npcs() return NPC end
+local function mixed() return MIXED end
+local function overflow() return OVERFLOW end
+local function product() return PRODUCT end
+local function sum() return SUM end
+local function personality() return PERSONALITY end
+alpha.opinion.anger=2;alpha.opinion.value=3
+beta.opinion.anger=-2;beta.opinion.value=7
+alpha.personality={aggression=-1,altruism=2,bravery=3,collector=4}
+beta.personality={aggression=2,altruism=3,bravery=4,collector=5}
+assert(personality()==32)
+reads={}
+assert(npcs()==82)
+assert(reads[1]=='beta' and reads[2]=='alpha')
+reads={};assert(not pcall(product));assert(#reads==1 and reads[1]=='beta')
+assert(not pcall(overflow)) -- An eventual TOTAL zero must not hide earlier overflow.
+alpha={name='alpha',subtype='avatar',intimidation=17,intelligence=8,psy=true,trait=true}
+assert(mixed()==57)
+alpha.intelligence=16;assert(mixed()==67)
+alpha.psy=false;assert(mixed()==47)
+alpha={name='alpha',subtype='npc',opinion={trust=2147483647}}
+beta.opinion.trust=1;assert(not pcall(sum)) -- Each product fits; their sum does not.
+alpha.opinion.trust=0;beta.opinion.trust=-2147483648;assert(sum()==-2147483648)
+alpha={name='alpha',subtype='monster'};beta={name='beta',subtype='item'}
+assert(npcs()==0)
+"""
+        for token, expression in (("NPC", npc_expression), ("MIXED", mixed_expression),
+                                  ("OVERFLOW", overflow_expression), ("PRODUCT", product_expression),
+                                  ("SUM", sum_expression), ("PERSONALITY", personality_expression)):
+            self.assertIsNotNone(expression)
+            script = script.replace("return " + token + " end", "return " + expression + " end")
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
