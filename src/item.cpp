@@ -880,6 +880,11 @@ bool _stacks_components( item const &lhs, item const &rhs, bool check_components
 stacking_info item::stacks_with( const item &rhs, bool check_components, bool combine_liquid,
                                  bool check_cat, int depth, int maxdepth, bool precise ) const
 {
+    // A merged stack retains only one ownership record.  Keep distinct owners
+    // and theft histories separate, including when comparing container contents.
+    if( owner != rhs.owner || old_owner != rhs.old_owner ) {
+        return {};
+    }
     if( count_by_charges() && ( !container_type_pockets_empty() ||
                                 !rhs.container_type_pockets_empty() ) ) {
         return {};
