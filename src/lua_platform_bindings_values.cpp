@@ -1,9 +1,9 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_state.h"
 
 extern "C" {
-#include "lua_platform_state.h"
 #include <lua.h>
 }
 #include <algorithm>
