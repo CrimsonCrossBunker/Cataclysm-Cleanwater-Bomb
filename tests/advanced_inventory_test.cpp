@@ -13,10 +13,13 @@
 #include "advanced_inv_listitem.h"
 #include "advanced_inv_pane.h"
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "character_attire.h"
 #include "coordinates.h"
 #include "item.h"
+#include "inventory_ui.h"
+#include "itype.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -34,6 +37,43 @@ static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_test_9mm_ammo( "test_9mm_ammo" );
 static const itype_id itype_test_heavy_debug_backpack( "test_heavy_debug_backpack" );
+
+TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_inv][stacking]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub();
+    const itype_id type = GENERATE( itype_test_9mm_ammo, itype_id( "steel_chunk" ),
+                                    itype_knife_combat );
+    item specimen( type, calendar::turn, 5000 );
+    item &stored = here.add_item( pos, specimen );
+    const item_location loc( map_cursor( pos ), &stored );
+    const int expected = specimen.count_by_charges() ? 5000 : 1;
+    advanced_inv_listitem single( loc, 0, 1, AIM_CENTER, false );
+    advanced_inv_listitem grouped( std::vector<item_location> {loc}, 0, AIM_CENTER, false );
+    CHECK( single.amount == expected );
+    CHECK( grouped.amount == expected );
+    CHECK( single.stacks == 1 );
+    CHECK( single.weight == stored.weight() );
+    CHECK( single.volume == stored.volume() );
+    if( specimen.count_by_charges() ) {
+        CHECK( stored.display_name( 1, true, false ).find( "5000" ) == std::string::npos );
+        inventory_selector_preset preset;
+        inventory_entry entry( std::vector<item_location> {loc} );
+        CHECK( preset.get_cell_text( entry, 0 ).find( stored.type->item_measure_prefix( expected ) ) == 0 );
+    }
+}
+
+TEST_CASE( "quantity_format_preserves_loaded_ammunition", "[items][advanced_inv][stacking]" )
+{
+    item magazine( itype_id( "glockmag" ) );
+    magazine.ammo_set( itype_id( "9mm" ), 10 );
+    REQUIRE_FALSE( magazine.count_by_charges() );
+    CHECK( magazine.display_name( 1, true, false ) == magazine.display_name( 1, true ) );
+    CHECK( magazine.count() == 1 );
+}
 
 /*
     --------- AIM testing ----------

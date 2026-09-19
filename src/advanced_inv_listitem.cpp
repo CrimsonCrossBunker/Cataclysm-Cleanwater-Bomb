@@ -16,7 +16,7 @@ advanced_inv_listitem::advanced_inv_listitem( const item_location &an_item, int 
     , autopickup( get_auto_pickup().has_rule( & * an_item ) )
     , stacks( count )
       // stacks is always 1 for count_by_charges items, so count * count() == count()
-    , amount( an_item->is_stackable() ? an_item->count() : count )
+    , amount( an_item->count_by_charges() ? an_item->count() : count )
     , volume( an_item->volume() * stacks )
     , weight( an_item->weight() * stacks )
     , cat( &an_item->get_category_of_contents() )
@@ -41,10 +41,7 @@ advanced_inv_listitem::advanced_inv_listitem( const std::vector<item_location> &
 {
     int n = 0;
     for( const item_location &loc : list ) {
-        // Only "stackable" resources fold their charges into the amount
-        // column. Ammo / liquids already show their charge count in the name
-        // (see item::display_name), so counting them here would double up.
-        n += loc->is_stackable() ? loc->count() : 1;
+        n += loc->count();
     }
     return n;
 }
