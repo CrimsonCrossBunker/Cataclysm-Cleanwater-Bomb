@@ -2322,16 +2322,18 @@ void vehicle::check_falling_or_floating()
         }
         is_falling = !has_support( pos, true );
     }
-    // A buoyant airship stays aloft even without engine power: instead of
-    // falling it should be considered flying.
-    if( is_falling && is_aircraft( here ) ) {
-        is_falling = false;
-        is_flying = true;
-    }
     // in_deep_water if 2/3 of the vehicle is in deep water
     in_deep_water = 3 * deep_water_tiles >= 2 * pts.size();
     // in_water if 1/2 of the vehicle is in water at all
     in_water =  2 * water_tiles >= pts.size();
+    // Water counts as support above, but a buoyant airship still has lift
+    // at the water surface, even when loaded without the flying flag.
+    if( ( is_falling && is_aircraft( here ) ) || ( in_water && is_airship( here ) ) ) {
+        is_falling = false;
+        is_flying = true;
+        in_water = false;
+        in_deep_water = false;
+    }
 }
 
 float map::vehicle_wheel_traction( const vehicle &veh, bool ignore_movement_modifiers )
