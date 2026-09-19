@@ -17,6 +17,7 @@
 #include "lua_platform_sol.h"
 #include "type_id.h"
 #include "weather.h"
+#include "weather_type.h"
 
 namespace cata::lua_platform
 {
@@ -49,30 +50,42 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
              false, true
          } ) {
         calendar::set_eternal_season( eternal );
-        for( int season = 0; season < 4; ++season ) {
-            calendar::turn = calendar::turn_zero + calendar::season_length() * season;
-            for( const std::string wanted : {
-                     "spring", "summer", "autumn", "winter", "", "unknown"
-                 } ) {
-                CAPTURE( eternal, season, wanted );
-                lua["wanted"] = wanted;
-                conditional_t legacy( json_loader::from_string(
-                                          R"({"is_season":")" + wanted + R"("})" ).get_object() );
-                const sol::protected_function_result actual = season_query();
-                REQUIRE( actual.valid() );
-                CHECK( actual.get<bool>() == legacy( context ) );
+        for( int season = 0; season <= 8; ++season ) {
+            for( const time_duration offset : {
+                     -1_turns, 0_turns, 1_turns
+                     } ) {
+                if( season == 0 && offset < 0_turns ) {
+                    continue;
+                }
+                calendar::turn = calendar::turn_zero + calendar::season_length() * season + offset;
+                for( const std::string wanted : {
+                         "spring", "summer", "autumn", "winter", "", "unknown"
+                     } ) {
+                    CAPTURE( eternal, season, to_turns<int>( offset ), wanted );
+                    lua["wanted"] = wanted;
+                    conditional_t legacy( json_loader::from_string(
+                                              R"({"is_season":")" + wanted + R"("})" ).get_object() );
+                    const sol::protected_function_result actual = season_query();
+                    REQUIRE( actual.valid() );
+                    CHECK( actual.get<bool>() == legacy( context ) );
+                }
             }
         }
     }
     sol::protected_function weather_query = lua.load(
             "return services.weather.current().weather.value == wanted" );
-    for( const std::string current : {
-             "sunny", "rain", "snowing"
-         } ) {
+    std::vector<std::string> weather_ids;
+    weather_ids.reserve( weather_types::get_all().size() );
+    for( const weather_type &definition : weather_types::get_all() ) {
+        weather_ids.push_back( definition.id.str() );
+    }
+    REQUIRE_FALSE( weather_ids.empty() );
+    std::vector<std::string> wanted_ids = weather_ids;
+    wanted_ids.emplace_back( "" );
+    wanted_ids.emplace_back( "unknown" );
+    for( const std::string &current : weather_ids ) {
         get_weather().weather_id = weather_type_id( current );
-        for( const std::string wanted : {
-                 "sunny", "rain", "snowing", "", "unknown"
-             } ) {
+        for( const std::string &wanted : wanted_ids ) {
             CAPTURE( current, wanted );
             lua["wanted"] = wanted;
             conditional_t legacy( json_loader::from_string(
