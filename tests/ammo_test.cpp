@@ -1,13 +1,19 @@
+#include <list>
 #include <set>
 #include <string>
 
 #include "ammo.h"
+#include "avatar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "damage.h"
 #include "item.h"
+#include "item_location.h"
+#include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
+#include "talker_avatar.h"
+#include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 
@@ -353,4 +359,29 @@ TEST_CASE( "battery_energy_test", "[ammo][energy][item]" )
         CHECK( consumed == 0_kJ );
     }
 
+}
+
+TEST_CASE( "dialogue_consumes_ammo_from_belts_and_magazines", "[ammo][dialogue][charges]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    const itype_id magazine = GENERATE( itype_belt308, itype_glockmag );
+    item loaded( magazine );
+    const itype_id ammo = loaded.ammo_default();
+    loaded.ammo_set( ammo, 10 );
+    item_location loc = you.i_add( loaded );
+    REQUIRE( loc );
+    REQUIRE( loc->ammo_remaining() == 10 );
+    talker_avatar talker( &you );
+    REQUIRE( talker.has_charges( ammo, 10, true ) );
+
+    talker.use_charges( ammo, 6, true );
+
+    REQUIRE( loc );
+    CHECK( loc->ammo_remaining() == 4 );
+    CHECK_FALSE( talker.has_charges( ammo, 6, true ) );
+    talker.use_charges( ammo, 4, true );
+    REQUIRE( loc );
+    CHECK( loc->ammo_remaining() == 0 );
+    CHECK_FALSE( talker.has_charges( ammo, 1, true ) );
 }
