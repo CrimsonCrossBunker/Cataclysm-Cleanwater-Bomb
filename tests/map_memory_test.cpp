@@ -1,6 +1,5 @@
-#include <stddef.h>
-
 #include <bitset>
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -8,6 +7,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "game.h"
@@ -17,6 +17,7 @@
 #include "map_helpers.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
+#include "mapdata.h"
 #include "mdarray.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
@@ -24,12 +25,23 @@
 #include "type_id.h"
 #include "weather_type.h"
 
+#if defined(TILES)
+    #include "cached_options.h"
+#endif
+
+#if defined(TILES) || defined(HEADLESS)
+    #include "cursesdef.h"
+#endif
+
 static constexpr tripoint_abs_ms p1{ -SEEX - 2, -SEEY - 3, -1 };
 static constexpr tripoint_abs_ms p2{ 5, 7, -1 };
 static constexpr tripoint_abs_ms p3{ SEEX * 2 + 5, SEEY + 7, -1 };
 static constexpr tripoint_abs_ms p4{ SEEX * 3 + 2, SEEY * 7 + 1, -1 };
 
+static const furn_str_id furn_f_chair( "f_chair" );
+
 static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_wall( "t_wall" );
 
 TEST_CASE( "map_memory_keeps_region", "[map_memory]" )
@@ -220,8 +232,141 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
     CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
 }
 
+TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
+           "[map_memory][vision][ascii_regression]" )
+{
+#if defined(TILES)
+    restore_on_out_of_scope restore_use_tiles( use_tiles );
+    use_tiles = false;
+#endif
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    clear_map_without_vision();
+    clear_avatar();
+    calendar::turn = calendar::turn_zero;
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+
+    map &here = get_map();
+    avatar &you = get_avatar();
+    g->place_player( tripoint_bub_ms( 50, 50, 0 ) );
+    const tripoint_bub_ms p = you.pos_bub( here );
+    const tripoint_abs_ms abs_p = here.get_abs( p );
+    you.clear_map_memory();
+    g->reset_light_level();
+    you.recalc_sight_limits();
+
+    // Make both caches dirty through real terrain mutations.  Grass is
+    // deliberately non-connecting, so an orientation pass will not re-dirty it.
+    REQUIRE( here.ter_set( p, ter_t_wall ) );
+    REQUIRE( here.ter_set( p, ter_t_grass ) );
+    REQUIRE( ter_t_grass->connect_to_groups.none() );
+    REQUIRE( here.memory_cache_ter_is_dirty( p ) );
+    REQUIRE( here.memory_cache_dec_is_dirty( p ) );
+    const char32_t grass_symbol = ter_t_grass->symbol();
+    REQUIRE( grass_symbol != 0 );
+    const char32_t chair_symbol = furn_f_chair->symbol();
+    REQUIRE( grass_symbol != chair_symbol );
+
+    you.prepare_map_memory_region( abs_p, abs_p );
+    const auto check_grass_memory = [&]() {
+        CHECK( you.get_memorized_tile( abs_p ).get_ter_id() == ter_t_grass.str() );
+        CHECK( you.get_memorized_tile( abs_p ).symbol == grass_symbol );
+    };
+
+    SECTION( "visible_grass_is_recorded_without_any_render" ) {
+        REQUIRE( you.get_memorized_tile( abs_p ).symbol == 0 );
+        here.update_map_memory( you );
+        check_grass_memory();
+
+        // Moving away without any intervening render must not lose the only
+        // opportunity to record the glyph.  Midnight keeps the old position
+        // beyond the avatar's sight, matching a skipped or intermediate frame.
+        you.setpos( here, p + tripoint::east * 20, false );
+        here.update_map_memory( you );
+        const level_cache &cache = here.access_cache( p.z() );
+        REQUIRE( here.get_visibility( cache.visibility_cache[p.x()][p.y()],
+                                      here.get_visibility_variables_cache() ) != visibility_type::CLEAR );
+        check_grass_memory();
+    }
+
+#if defined(TILES) || defined(HEADLESS)
+    SECTION( "render_then_sim_then_render_keeps_newly_seen_grass" ) {
+        // These test backends can create windows without a real terminal.
+        const catacurses::window w = catacurses::newwin( 1, 1, point::zero );
+        REQUIRE( static_cast<bool>( w ) );
+        const auto memorize_ascii = [&]() {
+            here.drawsq( w, p, drawsq_params().center( p ).memorize( true ).output( false ) );
+        };
+        const bool had_terrain_memory = GENERATE( false, true );
+        INFO( "had terrain memory before drawing: " << had_terrain_memory );
+        if( had_terrain_memory ) {
+            you.memorize_terrain( abs_p, ter_t_grass.str(), 0, 0 );
+        }
+        // render_mid_step redraws before calling update_map_memory.
+        memorize_ascii();
+        REQUIRE( you.get_memorized_tile( abs_p ).symbol == grass_symbol );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( p ) );
+        REQUIRE( here.memory_cache_dec_is_dirty( p ) );
+
+        INFO( "after first draw: symbol=" << static_cast<int>( you.get_memorized_tile( abs_p ).symbol )
+              << " ter_dirty=" << here.memory_cache_ter_is_dirty( p )
+              << " dec_dirty=" << here.memory_cache_dec_is_dirty( p ) );
+        here.update_map_memory( you );
+        INFO( "after simulation: symbol=" << static_cast<int>( you.get_memorized_tile( abs_p ).symbol )
+              << " ter_dirty=" << here.memory_cache_ter_is_dirty( p )
+              << " dec_dirty=" << here.memory_cache_dec_is_dirty( p ) );
+        check_grass_memory();
+        memorize_ascii();
+        INFO( "after second draw: symbol=" << static_cast<int>( you.get_memorized_tile( abs_p ).symbol )
+              << " ter_dirty=" << here.memory_cache_ter_is_dirty( p )
+              << " dec_dirty=" << here.memory_cache_dec_is_dirty( p ) );
+        check_grass_memory();
+    }
+#endif
+
+    SECTION( "visible_grass_repairs_a_missing_symbol_with_clean_caches" ) {
+        here.update_map_memory( you );
+        // Model the valid glyph and clean cache from an earlier saved view.
+        you.memorize_symbol( abs_p, grass_symbol );
+        here.memory_cache_ter_set_dirty( p, false );
+        REQUIRE( you.get_memorized_tile( abs_p ).get_ter_id() == ter_t_grass.str() );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( p ) );
+        REQUIRE_FALSE( here.memory_cache_dec_is_dirty( p ) );
+        // Model an existing saved grass entry whose ASCII glyph was lost.
+        you.memorize_symbol( abs_p, 0 );
+        here.update_map_memory( you );
+        check_grass_memory();
+    }
+
+    SECTION( "furniture_addition_and_removal_refresh_the_composite_symbol" ) {
+        // Establish valid memory on the unfixed implementation as well, so
+        // this section isolates decoration invalidation from first visibility.
+        here.update_map_memory( you );
+        // Model the valid glyph and clean cache from an earlier saved view.
+        you.memorize_symbol( abs_p, grass_symbol );
+        here.memory_cache_ter_set_dirty( p, false );
+        REQUIRE( you.get_memorized_tile( abs_p ).symbol == grass_symbol );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( p ) );
+        REQUIRE_FALSE( here.memory_cache_dec_is_dirty( p ) );
+
+        REQUIRE( here.furn_set( p, furn_f_chair ) );
+        REQUIRE( here.memory_cache_dec_is_dirty( p ) );
+        // The current implementation only dirties decorations for furn_set.
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( abs_p ).get_ter_id() == ter_t_grass.str() );
+        CHECK( you.get_memorized_tile( abs_p ).get_dec_id() == furn_f_chair.str() );
+        CHECK( you.get_memorized_tile( abs_p ).symbol == chair_symbol );
+
+        REQUIRE( here.furn_set( p, furn_str_id::NULL_ID() ) );
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( abs_p ).get_dec_id().empty() );
+        check_grass_memory();
+    }
+}
+
 // TODO: map memory save / load
 
+// The wrapper expands TEST_CASE from cata_catch.h; this file has the required suffix.
+// NOLINTNEXTLINE(cata-test-filename)
 BENCHMARK_TEST_CASE( "lru_cache_benchmark", "[map_memory]" )
 {
     constexpr int max_size = 1000000;
@@ -252,7 +397,7 @@ static void check_quadrants( std::bitset<MAPSIZE *SEEX *MAPSIZE *SEEY> &test_cac
 {
     int y = 0;
     for( ; y < partition.y; ++y ) {
-        size_t y_offset = y * SEEX * MAPSIZE;
+        std::size_t y_offset = y * SEEX * MAPSIZE;
         int x = 0;
         for( ; x < partition.x; ++x ) {
             INFO( x << " " << y );
@@ -264,7 +409,7 @@ static void check_quadrants( std::bitset<MAPSIZE *SEEX *MAPSIZE *SEEY> &test_cac
         }
     }
     for( ; y < SEEY * MAPSIZE; ++y ) {
-        size_t y_offset = y * SEEX * MAPSIZE;
+        std::size_t y_offset = y * SEEX * MAPSIZE;
         int x = 0;
         for( ; x < partition.x; ++x ) {
             INFO( x << " " << y );
@@ -277,8 +422,8 @@ static void check_quadrants( std::bitset<MAPSIZE *SEEX *MAPSIZE *SEEY> &test_cac
     }
 }
 
-static constexpr size_t first_twelve = SEEX;
-static constexpr size_t last_twelve = ( SEEX *MAPSIZE ) - SEEX;
+static constexpr std::size_t first_twelve = SEEX;
+static constexpr std::size_t last_twelve = ( SEEX *MAPSIZE ) - SEEX;
 
 TEST_CASE( "shift_map_memory_bitset_cache" )
 {

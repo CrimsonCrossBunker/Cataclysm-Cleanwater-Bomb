@@ -717,6 +717,15 @@ void map::update_map_memory( avatar &you )
             for( int i = 0; i < 4; i++ ) {
                 invisible[1 + i] = neighbour_invisible( p + neighborhood[i] );
             }
+            // ASCII drawing may have already consumed the terrain dirty flag.
+            // Decoration refresh clears the composite glyph, so refresh both
+            // kinds of memory together.  Also repair visible missing glyphs.
+            if( !is_draw_tiles_mode() &&
+                ( here.memory_cache_dec_is_dirty( p ) ||
+                  ( you.should_show_map_memory() &&
+                    you.get_memorized_tile( here.get_abs( p ) ).symbol == 0 ) ) ) {
+                here.memory_cache_ter_set_dirty( p, true );
+            }
             // Bypass the decoration cache check for terrain in case we learn
             // something new about the terrain's connections.
             memorize_terrain_at( here, you, p, invisible );
@@ -728,18 +737,14 @@ void map::update_map_memory( avatar &you )
                 memorize_vpart_at( here, you, p, invisible );
                 here.memory_cache_dec_set_dirty( p, false );
             }
-            // Clear the terrain-memory dirty flag now that this pass has
-            // memorized the terrain content, mirroring the decoration clear
-            // above. Only in tiles mode: in curses mode the same flag also
-            // gates symbol memorization in map::draw_maptile, which consumes
-            // and clears it there, so clearing it here would starve that path.
-            // (Before, the tiles render path cleared this flag; moving the
-            // clear into this sim pass keeps it in lockstep with the memorize,
-            // so terrain that does not re-dirty itself every pass — anything
-            // without connects_to, e.g. grass — is no longer at risk of having
-            // the flag cleared by a redraw before this pass memorizes it.)
             if( is_draw_tiles_mode() ) {
                 here.memory_cache_ter_set_dirty( p, false );
+            } else if( here.memory_cache_ter_is_dirty( p ) ) {
+                // Use the same glyph selection as ASCII drawing, without
+                // waiting for a frame that may occur after this tile is hidden.
+                const const_maptile tile = here.maptile_at_internal( p );
+                here.draw_maptile( catacurses::window(), p, tile,
+                                   drawsq_params().memorize( true ).output( false ).show_items( false ) );
             }
         }
     }
