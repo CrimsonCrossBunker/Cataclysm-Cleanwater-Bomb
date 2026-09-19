@@ -28,7 +28,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_boolean_groups_preserve_empty_identity_and_random_order(self) -> None:
-        chance = lambda n: {"one_in_chance": n}
+        def chance(n):
+            return {"one_in_chance": n}
+
         cases = [
             ({"and": []}, True, []),
             ({"or": []}, False, []),
@@ -11440,12 +11442,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 migrate_lua_first.load_objects([source]), "npc_radio_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertFalse(result.partial)
             self.assertIn(
                 "services.npcs.set_radio_representative(actor, services.characters.avatar(), true)", main)
-
 
     def test_character_event_does_not_prove_an_avatar_participant(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11719,7 +11719,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.npcs.orders.open_character_sheet(context.actors.beta)", main)
             self.assertIn("services.npcs.orders.choose_combat_style(context.actors.beta)", main)
 
-
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -11740,7 +11739,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             for level in ("basic", "advanced"):
                 for allies in ("true", "false"):
                     self.assertIn(f'services.npcs.medical.provide_aid(provider, services.characters.avatar(), "{level}", {allies})', main)
-
 
     def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -20908,8 +20906,8 @@ assert(#targets==0)
     def test_revert_job_uses_native_restore_and_propagates_failure(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "restore_job",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": "revert_activity"}), migrate_lua_first.MigrationResult())
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": "revert_activity"}), migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={subtype="npc"},{subtype="npc"}
 local expected=npc
@@ -20956,8 +20954,8 @@ assert(calls==3)
         }
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "jobs",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": list(jobs)}), migrate_lua_first.MigrationResult())
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": list(jobs)}), migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={subtype="npc"},{subtype="npc"}
 local target=npc
@@ -21002,8 +21000,8 @@ assert(calls==0)
     def test_interactive_npc_jobs_preserve_cancel_and_real_errors(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "interactive_jobs",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["do_read", "do_eread", "do_craft"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["do_read", "do_eread", "do_craft"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc={subtype="npc"}
@@ -21039,8 +21037,8 @@ assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
     def test_find_mount_migration_continues_only_for_no_match(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "mount",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["find_mount", "revert_activity"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["find_mount", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc={subtype="npc"}
@@ -21081,8 +21079,8 @@ end
     def test_socialize_and_drop_preserve_native_participants(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "social_drop",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["morale_chat_activity", "drop_items_in_place"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["morale_chat_activity", "drop_items_in_place"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
@@ -21121,8 +21119,8 @@ assert(#calls==0)
     def test_player_training_uses_selected_native_course(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["start_training", "revert_activity"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["start_training", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
@@ -21166,8 +21164,8 @@ assert(calls==3 and continued==2)
     def test_npc_training_uses_avatar_teacher_mode(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["start_training_npc", "revert_activity"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["start_training_npc", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
@@ -21211,8 +21209,8 @@ assert(calls==3 and continued==2)
     def test_seminar_training_preserves_cancel_and_provider(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["start_training_seminar", "revert_activity"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["start_training_seminar", "revert_activity"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
@@ -21295,7 +21293,7 @@ assert(#calls==1)
         unbound = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "unbound_groom",
-                                   "required_event": "game_start", "effect": effects}), unbound)
+                                     "required_event": "game_start", "effect": effects}), unbound)
         self.assertNotIn("services.npcs.grooming", main)
         self.assertTrue(unbound.todos)
 
@@ -21341,7 +21339,7 @@ end
         missing = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing_seller",
-                                   "required_event": "game_start", "effect": "start_trade"}), missing)
+                                     "required_event": "game_start", "effect": "start_trade"}), missing)
         self.assertNotIn("services.trade.open", main)
         self.assertTrue(missing.todos)
 
@@ -21375,7 +21373,7 @@ end
         missing = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "no_npc",
-                                   "required_event": "game_start", "effect": effects}), missing)
+                                     "required_event": "game_start", "effect": effects}), missing)
         self.assertNotIn("services.npcs.orders.run", main)
         self.assertTrue(missing.todos)
 
@@ -21384,7 +21382,7 @@ end
         effects = ["end_conversation", "reveal_stats", "pick_style"]
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "presentation",
-                                   "required_event": "npc_becomes_hostile", "effect": effects}),
+                                     "required_event": "npc_becomes_hostile", "effect": effects}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc={subtype='npc',topic='TALK_TEST'}
@@ -21417,14 +21415,14 @@ assert(table.concat(calls,',')=='finish,sheet,style')
         missing = migrate_lua_first.MigrationResult()
         migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing",
-                                   "required_event": "game_start", "effect": effects}), missing)
+                                     "required_event": "game_start", "effect": effects}), missing)
         self.assertTrue(missing.todos)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_combat_insult_calls_complete_native_dialogue_action(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "insult",
-                                   "required_event": "npc_becomes_hostile", "effect": "insult_combat"}),
+                                     "required_event": "npc_becomes_hostile", "effect": "insult_combat"}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
@@ -21450,8 +21448,8 @@ assert(calls==2)
     def test_follower_migration_preserves_relationship_operations(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "relations",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["follow", "stop_following", "stranger_neutral"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["follow", "stop_following", "stranger_neutral"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc,override={},{},{}
@@ -21489,8 +21487,8 @@ end
     def test_leave_and_temporary_follow_use_relationship_services(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "leave_follow",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["leave", "follow_only"]}), migrate_lua_first.MigrationResult())
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["leave", "follow_only"]}), migrate_lua_first.MigrationResult())
         script = r"""
 local avatar,npc={},{}
 local calls={}
@@ -21520,9 +21518,9 @@ assert(table.concat(calls,',')=='leave,temporary')
     def test_npc_confrontation_routes_preserve_native_operations(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "confrontation",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["hostile", "flee", "player_leaving",
-                                              "start_mugging", "remove_stolen_status", "npc_thankful", "npc_wants_to_talk"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["hostile", "flee", "player_leaving",
+                                                "start_mugging", "remove_stolen_status", "npc_thankful", "npc_wants_to_talk"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
@@ -21557,8 +21555,8 @@ end
     def test_guard_migration_uses_native_lifecycle_and_participants(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "guard",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["assign_guard", "stop_guard"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["assign_guard", "stop_guard"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
@@ -21649,8 +21647,8 @@ assert(#calls==0)
     def test_purchased_animals_keep_pet_state_and_blocked_continuation(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "pets",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["buy_chicken", "buy_horse", "buy_cow"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["buy_chicken", "buy_horse", "buy_cow"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override,position={},{},{}
@@ -21704,9 +21702,9 @@ end
     def test_refusal_migration_preserves_requests_and_failure_propagation(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "refusals",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["deny_follow", "deny_lead", "deny_equipment",
-                                              "deny_train", "deny_personal_info"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["deny_follow", "deny_lead", "deny_equipment",
+                                                "deny_train", "deny_personal_info"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
@@ -21734,13 +21732,15 @@ end
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_identity_strings_are_evaluated_at_each_effect(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "strings",
-                                   "required_event": "npc_becomes_hostile", "effect": [
-                                       {"npc_change_class": {"context_val": "value"}},
-                                       {"npc_change_faction": {"context_val": "value"}},
-                                       {"npc_first_topic": {"context_val": "value"}},
-                                   ]}), migrate_lua_first.MigrationResult())
+        rendered = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(
+                Path("source.json"), 0, {
+                    "type": "effect_on_condition", "id": "strings",
+                    "required_event": "npc_becomes_hostile", "effect": [
+                        {"npc_change_class": {"context_val": "value"}},
+                        {"npc_change_faction": {"context_val": "value"}},
+                        {"npc_first_topic": {"context_val": "value"}},
+                    ]}), migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override={},{}
 local expected,context,calls,fail
@@ -21778,8 +21778,8 @@ end
     def test_radio_representative_routes_owner_and_propagates_failure(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "radio",
-                                   "required_event": "npc_becomes_hostile",
-                                   "effect": ["npc_make_radio_representative"]}),
+                                     "required_event": "npc_becomes_hostile",
+                                     "effect": ["npc_make_radio_representative"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local npc,override,avatar={},{},{}
@@ -21811,7 +21811,7 @@ end
     def test_u_talk_request_in_explicit_callback_uses_alpha_npc(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "alpha_talk",
-                                   "effect": ["u_wants_to_talk", "npc_wants_to_talk"]}),
+                                     "effect": ["u_wants_to_talk", "npc_wants_to_talk"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local alpha,beta={subtype='npc'},{subtype='npc'}
@@ -21840,7 +21840,7 @@ assert(#calls==0)
     def test_radio_registration_in_explicit_callback_uses_alpha_and_global_owner(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "alpha_radio",
-                                   "effect": ["u_make_radio_representative", "npc_make_radio_representative"]}),
+                                     "effect": ["u_make_radio_representative", "npc_make_radio_representative"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
 local alpha,beta,avatar={subtype='npc'},{subtype='npc'},{subtype='avatar'}
@@ -21900,7 +21900,7 @@ prices={};draws={};limits={};assert(choose()==nil and #limits==0)
             lines = render(effect, True, False)
             self.assertIsNotNone(lines)
             self.assertIn("local allowance = 0", "\n".join(lines))
-        for value in (True, 1.5, "100", [["TRUST", 2]], 2**31, -(2**31)-1):
+        for value in (True, 1.5, "100", [["TRUST", 2]], 2**31, -(2**31) - 1):
             with self.subTest(value=value):
                 self.assertIsNone(render({"give_equipment": {"allowance": value}}, True, True))
         self.assertIsNone(render("give_equipment", False, True))
@@ -22046,8 +22046,8 @@ log={};beta.subtype='avatar';give();assert(#log==0)
             ["u_has_trait: STRONG", 7], ["npc_has_trait: STRONG", 3],
             ["npc_has_trait: UNKNOWN", 100], ["xxnpc_has_trait: STRONG", 100],
         ], "alpha", "beta")
-        overflow_expression = render([["TRUST", 1], ["TOTAL", 2**31-1], ["TOTAL", 0]], "alpha", "beta")
-        product_expression = render([["TRUST", 2**31-1]], "alpha", "beta")
+        overflow_expression = render([["TRUST", 1], ["TOTAL", 2**31 - 1], ["TOTAL", 0]], "alpha", "beta")
+        product_expression = render([["TRUST", 2**31 - 1]], "alpha", "beta")
         sum_expression = render([["TRUST", 1]], "alpha", "beta")
         personality_expression = render([[name, 1] for name in (
             "ANGER", "VALUE", "AGGRESSION", "ALTRUISM", "BRAVERY", "COLLECTOR",
@@ -22125,7 +22125,7 @@ assert(npcs()==0)
     def test_foreach_snapshots_dynamic_strings_before_body(self) -> None:
         lines = migrate_lua_first.render_static_foreach({
             "foreach": "array", "target": [{"context_val": "value"},
-                {"context_val": "value"}, {"context_val": "missing", "default": "fallback"}],
+                                           {"context_val": "value"}, {"context_val": "missing", "default": "fallback"}],
             "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
         }, True, False, {}, actor_expression="actor")
         self.assertIsNotNone(lines)

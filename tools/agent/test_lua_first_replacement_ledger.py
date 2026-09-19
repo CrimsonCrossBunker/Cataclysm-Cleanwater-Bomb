@@ -22,15 +22,21 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}
         for prefix in ("u_", "npc_"):
-            for operation, method in (("add_trait", "replace"), ("lose_trait", "erase"),
-                                      ("activate_trait", "invoke_activation"),
-                                      ("deactivate_trait", "invoke_activation")):
+            for operation, method in (
+                ("add_trait", "replace"), ("lose_trait", "erase"),
+                ("activate_trait", "invoke_activation"),
+                ("deactivate_trait", "invoke_activation"),
+            ):
                 entry = entries[("eoc-effects", prefix + operation)]
-                self.assertEqual(entry["target"], "services.mutations." + method)
-                self.assertEqual(entry["status"], "bounded_implemented_unverified")
+                self.assertEqual(
+                    entry["target"], "services.mutations." + method)
+                self.assertEqual(
+                    entry["status"], "bounded_implemented_unverified")
                 self.assertEqual(entry["verification"], "source_only")
-                self.assertIn("tests/lua_platform_mutations_test.cpp", entry["evidence"])
-                self.assertIn("tools/test_lua_mutation_migration.py", entry["evidence"])
+                self.assertIn(
+                    "tests/lua_platform_mutations_test.cpp", entry["evidence"])
+                self.assertIn(
+                    "tools/test_lua_mutation_migration.py", entry["evidence"])
 
     def test_schema_requires_each_todo_category_and_core_input_contract(self):
         schema_root = Path(__file__).resolve().parents[2] / "ai"

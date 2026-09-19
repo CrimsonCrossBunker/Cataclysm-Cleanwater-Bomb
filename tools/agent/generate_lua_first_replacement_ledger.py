@@ -4117,17 +4117,21 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
 }
 
 # Proven Character targets and supported ID/variant expressions now render
-# native actions. This is source-level bounded coverage, not semantic acceptance.
+# native actions. This is source-level bounded coverage,
+# not semantic acceptance.
 for _prefix in ("u_", "npc_"):
     for _operation, _method in (
         ("add_trait", "replace"), ("lose_trait", "erase"),
-        ("activate_trait", "invoke_activation"), ("deactivate_trait", "invoke_activation"),
+        ("activate_trait", "invoke_activation"),
+        ("deactivate_trait", "invoke_activation"),
     ):
         _key = ("eoc-effects", _prefix + _operation)
         BOUNDED_IMPLEMENTED_EOC[_key] = "services.mutations." + _method
         BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE[_key] = [
-            "src/npctalk.cpp", "src/mutation.cpp", "src/lua_platform_mutations.cpp",
-            "tests/lua_platform_mutations_test.cpp", "tools/test_lua_mutation_migration.py",
+            "src/npctalk.cpp", "src/mutation.cpp",
+            "src/lua_platform_mutations.cpp",
+            "tests/lua_platform_mutations_test.cpp",
+            "tools/test_lua_mutation_migration.py",
         ]
 
 EXPLICIT_PRIMITIVE_EOC = {
