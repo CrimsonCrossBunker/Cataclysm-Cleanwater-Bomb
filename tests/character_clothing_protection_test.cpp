@@ -1,4 +1,6 @@
 #include <functional>
+#include <initializer_list>
+#include <list>
 #include <map>
 #include <optional>
 #include <string>
