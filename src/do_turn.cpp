@@ -319,6 +319,25 @@ void handle_key_blocking_activity( int timeout )
 
 namespace
 {
+void process_avatar_activity( avatar &u )
+{
+    // Poll between actor calls, never inside one: cancellation may destroy
+    // the currently running actor.  Some zone stages do not consume moves,
+    // so waiting until the whole move budget is spent can starve input.
+    static auto last_poll = std::chrono::steady_clock::now();
+    while( u.get_moves() > 0 && u.activity ) {
+        const auto now = std::chrono::steady_clock::now();
+        if( now - last_poll >= std::chrono::milliseconds( 100 ) ) {
+            last_poll = now;
+            handle_key_blocking_activity( 0 );
+            if( !u.activity || u.get_moves() <= 0 ) {
+                break;
+            }
+        }
+        u.activity.do_turn( u );
+    }
+}
+
 void monmove()
 {
     CATA_PROFILE_SCOPE();
@@ -829,7 +848,7 @@ void game::simulate_turn_prefix()
         u.healall( 100 );
     }
 
-    // process avatar activities (ignoring user input)
+    // Process avatar activities, polling for interruption between actor calls.
     // Snapshot moves and activity ID before the loop for client dispatch.
     const int pre_activity_moves = u.get_moves();
     const activity_id pre_activity_id = u.activity ? u.activity.id() : activity_id::NULL_ID();
@@ -843,9 +862,7 @@ void game::simulate_turn_prefix()
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
         }
     }
-    while( u.get_moves() > 0 && u.activity ) {
-        u.activity.do_turn( u );
-    }
+    process_avatar_activity( u );
     // Client-only: tick effects/needs once per elapsed host turn, without granting
     // local moves. SP/host process_turn() still runs in simulate_turn_suffix().
     if( cata_mp::is_client_mode() ) {
@@ -949,9 +966,7 @@ bool game::do_avatar_action_loop()
                 // avatar processes moves for activities started by handle_action()
                 const activity_id iter_pre_act = u.activity ? u.activity.id()
                                                  : activity_id::NULL_ID();
-                while( u.get_moves() > 0 && u.activity ) {
-                    u.activity.do_turn( u );
-                }
+                process_avatar_activity( u );
                 // Client: if a multi-turn activity just ended mid-input-loop,
                 // emit the end signal immediately and burn remaining moves to ack.
                 const std::string &mid_iter_act = cata_mp::get_client_turn_activity();
