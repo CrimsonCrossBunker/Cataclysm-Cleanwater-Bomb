@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstddef>
+#include <climits>
 #include <functional>
 #include <map>
 #include <memory>
@@ -25,6 +26,8 @@
 #include "player_helpers.h"
 #include "proficiency.h"
 #include "recipe.h"
+#include "requirements.h"
+#include "inventory.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "weather_type.h"
@@ -1184,4 +1187,43 @@ TEST_CASE( "list_nested_generates_tree", "[crafting][gui][recipe_list]" )
 
     CHECK( desc.find( "test nested weapons" ) != std::string::npos );
     CHECK( desc.find( "cudgel" ) != std::string::npos );
+}
+
+TEST_CASE( "crafting_component_snapshot_preserves_counts_and_colors", "[crafting][gui]" )
+{
+    Character &guy = setup_character();
+    item wood( itype_2x4 );
+    SECTION( "ordinary component" ) {}
+    SECTION( "favorite component" ) {
+        wood.set_favorite( true );
+    }
+    guy.i_add( wood );
+    guy.invalidate_crafting_inventory();
+    const recipe &rec = recipe_cudgel_test_no_tools.obj();
+    const inventory &inv = guy.crafting_inventory();
+    const auto filter = rec.get_component_filter();
+    for( const int batch_size : {
+             1, 2
+         } ) {
+        const auto display = build_component_display( rec, guy, inv, batch_size );
+        REQUIRE( display.size() == rec.simple_requirements().get_components().size() );
+        for( const auto &group : display ) {
+            const bool any_available = std::any_of( group.begin(), group.end(),
+            []( const crafting_component_display & entry ) {
+                return entry.rank == 0;
+            } );
+            int last_rank = -1;
+            for( const crafting_component_display &entry : group ) {
+                CHECK( entry.rank >= last_rank );
+                last_rank = entry.rank;
+                const item_comp &comp = *entry.component;
+                const int count = item::count_by_charges( comp.type ) ?
+                                  inv.charges_of( comp.type, INT_MAX, filter ) :
+                                  inv.amount_of( comp.type, false, INT_MAX, filter );
+                CHECK( entry.count == count );
+                CHECK( entry.color == comp.get_color( &guy, any_available, inv, filter,
+                                                      batch_size ) );
+            }
+        }
+    }
 }

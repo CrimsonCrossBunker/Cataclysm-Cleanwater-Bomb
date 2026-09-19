@@ -21,6 +21,20 @@ class recipe;
 class recipe_subset;
 struct crafting_cost_context;
 struct tool_comp;
+struct item_comp;
+
+struct crafting_component_display {
+    const item_comp *component;
+    int count;
+    int rank;
+    nc_color color;
+};
+
+using crafting_component_groups = std::vector<std::vector<crafting_component_display>>;
+
+// Snapshot quantities, availability and colors before sorting or drawing.
+crafting_component_groups build_component_display( const recipe &rec, const Character &crafter,
+        const inventory &inv, int batch_size );
 
 // Returns true if the character cannot gain any skill or proficiency from this recipe.
 // Used to mark practice recipes as "useless" when the crafter already exceeds
