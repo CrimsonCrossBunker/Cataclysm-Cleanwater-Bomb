@@ -133,3 +133,29 @@ TEST_CASE( "tool_power_consumption_rate", "[active_item]" )
     CHECK( seconds_of_discharge > to_seconds<int>( 9_hours + 30_minutes ) );
     CHECK( seconds_of_discharge < to_seconds<int>( 10_hours ) );
 }
+
+TEST_CASE( "tanning_countdown_produces_one_material", "[active_item][tanning][stackable]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const std::string source = GENERATE( "tanning_hide_active", "tanning_pelt_active" );
+    const itype_id target( source == "tanning_hide_active" ? "tanned_hide" : "tanned_pelt" );
+    item hide( itype_id( source ), calendar::turn );
+    REQUIRE_FALSE( hide.count_by_charges() );
+    REQUIRE( hide.active );
+    hide.countdown_point = calendar::turn;
+
+    CHECK_FALSE( hide.process( here, nullptr, tripoint_bub_ms::zero ) );
+
+    REQUIRE( hide.typeId() == target );
+    CHECK( hide.count() == 1 );
+    CHECK( hide.weight() == item( target ).weight() );
+    CHECK( hide.volume() == item( target ).volume() );
+}
+
+TEST_CASE( "converting_stackable_material_preserves_quantity", "[item][convert][stackable]" )
+{
+    item hide( itype_id( "tanned_hide" ), calendar::turn, 10 );
+    hide.convert( itype_id( "tanned_pelt" ) );
+    CHECK( hide.count() == 10 );
+}
