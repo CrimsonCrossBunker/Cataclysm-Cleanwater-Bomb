@@ -40,4 +40,3 @@ TEST_CASE( "stacking_preserves_ownership", "[item][stacking][ownership]" )
     CHECK( lhs.charges == 10 );
     CHECK( rhs.charges == 10 );
 }
-
