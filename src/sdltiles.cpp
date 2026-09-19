@@ -6036,8 +6036,18 @@ void handle_finger_input( uint32_t ticks )
             }
         }
     } else {
-        if( ticks - finger_down_time >= static_cast<uint32_t>
-            ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+        const bool interrupting = is_default_mode &&
+                                  ( get_avatar().has_destination() || get_avatar().activity );
+        const int interrupt_key = interrupting ?
+                                  choose_best_key_for_action( "pause", "DEFAULTMODE" ) : -1;
+        if( interrupt_key >= 0 ) {
+            // A busy-world tap interrupts immediately.  Waiting for double-tap
+            // recognition can lose the tap between polling contexts, or turn
+            // repeated attempts into Escape instead of the bound pause action.
+            last_input = input_event( interrupt_key, input_event_t::keyboard_char );
+            last_tap_time = 0;
+        } else if( ticks - finger_down_time >= static_cast<uint32_t>
+                   ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
             // Single tap (repeat) - held, so always treat this as a tap
             // We only allow repeats for waiting, not confirming in menus as that's a bit silly
             if( is_default_mode ) {
