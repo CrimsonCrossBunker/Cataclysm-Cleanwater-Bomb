@@ -91,11 +91,10 @@ int quality_for_crafter( const item &it, const quality_id &qual, const Character
     if( qit != it.type->qualities.end() ) {
         result = qit->second.level;
     }
-    if( !it.type->charged_qualities.empty() && it.ammo_sufficient( who ) ) {
-        const auto cit = it.type->charged_qualities.find( qual );
-        if( cit != it.type->charged_qualities.end() ) {
-            result = std::max( result, cit->second.level );
-        }
+    const auto cit = it.type->charged_qualities.find( qual );
+    if( cit != it.type->charged_qualities.end() && cit->second.level > result &&
+        it.ammo_sufficient( who ) ) {
+        result = cit->second.level;
     }
     return result;
 }

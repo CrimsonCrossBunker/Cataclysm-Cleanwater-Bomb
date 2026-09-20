@@ -70,6 +70,7 @@
 #include "uilist.h"
 #include "uistate.h"
 #include "vitamin.h"
+#include "visitable.h"
 
 static const efftype_id effect_contacts( "contacts" );
 static const json_character_flag json_flag_HYPEROPIC( "HYPEROPIC" );
@@ -535,6 +536,12 @@ class crafting_ui_impl : public cataimgui::window
         std::map<character_id, std::map<const recipe *, availability>> guy_availability_cache;
         std::map<const recipe *, availability> *availability_cache;
         std::unique_ptr<recipe_result_info_cache> result_info;
+        std::unique_ptr<scoped_provider_quality_cache> quality_cache;
+        void reset_quality_cache() {
+            quality_cache.reset();
+            quality_cache = std::make_unique<scoped_provider_quality_cache>(
+                                inventory_override ? *inventory_override : crafter->crafting_inventory() );
+        }
         // Like availability_cache, valid for this paused crafting session.
         std::map<std::pair<const recipe *, int>, crafting_component_groups> component_cache;
         std::map<std::pair<const recipe *, int>, int64_t> expected_time_cache;
@@ -607,6 +614,7 @@ crafting_ui_impl::crafting_ui_impl( Character *crafter, const recipe_id &goto_re
       highlight_unread( get_option<bool>( "HIGHLIGHT_UNREAD_RECIPES" ) ),
       recalc_unread( highlight_unread )
 {
+    reset_quality_cache();
     crafting_group = crafter->get_crafting_group();
     crafter_i = std::find( crafting_group.begin(), crafting_group.end(),
                            crafter ) - crafting_group.begin();
@@ -1940,7 +1948,7 @@ void crafting_ui_impl::draw_components( const recipe &rec,
     auto found = component_cache.find( key );
     if( found == component_cache.end() ) {
         found = component_cache.emplace( key, build_component_display( rec, *crafter,
-            crafting_inv, batch_size ) ).first;
+                                         crafting_inv, batch_size ) ).first;
     }
     const crafting_component_groups &comp_groups = found->second;
     if( comp_groups.empty() ) {
@@ -2779,6 +2787,7 @@ void crafting_ui_impl::process_action( const std::string &action_in,
         if( new_crafter_i >= 0 && new_crafter_i != crafter_i ) {
             crafter_i = new_crafter_i;
             crafter = crafting_group[crafter_i];
+            reset_quality_cache();
             available_recipes = &crafter->get_group_available_recipes( inventory_override );
             availability_cache = &guy_availability_cache[crafter->getID()];
             result_info = std::make_unique<recipe_result_info_cache>( *crafter );

@@ -5,6 +5,8 @@
 #include <climits>
 #include <functional>
 #include <list>
+#include <map>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -18,6 +20,26 @@ enum class VisitResponse : int {
     ABORT, // Stop processing after this node
     NEXT,  // Descend vertically to any child nodes and then horizontally to next sibling
     SKIP   // Skip any child nodes and move directly to the next sibling
+};
+
+class read_only_visitable;
+
+/** Cache quality checks only while this inventory and its actors are unchanged.
+ * Intended for a paused crafting menu; never retain across gameplay turns.
+ */
+class scoped_provider_quality_cache
+{
+    public:
+        explicit scoped_provider_quality_cache( const read_only_visitable &source );
+        ~scoped_provider_quality_cache();
+        scoped_provider_quality_cache( const scoped_provider_quality_cache & ) = delete;
+        scoped_provider_quality_cache &operator=( const scoped_provider_quality_cache & ) = delete;
+    private:
+        friend class read_only_visitable;
+        const read_only_visitable &source;
+        scoped_provider_quality_cache *previous;
+        static thread_local scoped_provider_quality_cache *active;
+        std::map<const Character *, std::map<std::tuple<quality_id, int, int>, bool>> results;
 };
 
 /**
