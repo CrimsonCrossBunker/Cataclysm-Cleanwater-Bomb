@@ -60,7 +60,7 @@ inline const T &translation_argument_identity( const T &t )
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define _( msg ) \
     ( ( []( const auto & arg ) { \
-        static auto cache = detail::get_local_translation_cache( arg ); \
+        static auto cache = ::detail::get_local_translation_cache( arg ); \
         return cache( arg ); \
     } )( translation_argument_identity( msg ) ) )
 

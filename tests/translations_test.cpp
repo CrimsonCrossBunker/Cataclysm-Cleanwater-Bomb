@@ -15,6 +15,31 @@
     #define TRANSLATE_TRANSLATION(msg) to_translation( msg ).translated()
 #endif
 
+namespace translation_macro_test
+{
+// A caller may have its own detail namespace, as the Lua platform does.
+namespace detail
+{
+}
+
+static std::string translate_string( const std::string &text )
+{
+    return TRANSLATE_MACRO( text );
+}
+
+static const char *translate_c_string( const char *text )
+{
+    return TRANSLATE_MACRO( text );
+}
+} // namespace translation_macro_test
+
+TEST_CASE( "translations_macro_nested_detail_namespace", "[translations]" )
+{
+    const std::string text = "__nested_detail_translation__";
+    CHECK( translation_macro_test::translate_string( text ) == text );
+    CHECK( translation_macro_test::translate_c_string( text.c_str() ) == text.c_str() );
+}
+
 TEST_CASE( "translations_sanity_test", "[translations]" )
 {
     const std::string test_string = "__untranslated_test_string__";
