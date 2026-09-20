@@ -201,8 +201,8 @@ TEST_CASE( "lua_platform_allowance_item_rollback_restores_mixed_content_owners",
     request.item_handle = cata::lua_platform::game_handle::from_item(
                               source, { "npc_inventory", bag_uid, 0, 0, 0, {} }, fixture.runtime,
                               fixture.active_world_generation );
-    request.source_holder = { fixture.buyer_handle, "inventory" };
-    request.destination_holder = { fixture.seller_handle, "inventory" };
+    request.source_holder = { fixture.buyer_handle, "inventory", {}, -1 };
+    request.destination_holder = { fixture.seller_handle, "inventory", {}, -1 };
     request.quantity = 1;
     request.transfer_ownership = true;
     std::vector<cata::lua_platform::platform_trade_item_result> transferred;
@@ -273,13 +273,13 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
                               *selected, { "container_pocket", selected_uid, 0, 0, 0, {} },
                               fixture.runtime, fixture.active_world_generation );
     request.source_holder = { fixture.buyer_handle, "contained", container_handle, pocket_index };
-    request.destination_holder = { fixture.seller_handle, "inventory" };
+    request.destination_holder = { fixture.seller_handle, "inventory", {}, -1 };
     request.quantity = 1;
     request.transfer_ownership = true;
     std::vector<cata::lua_platform::platform_trade_item_request> requests = { request };
     if( mode == 2 ) {
         request.item_handle = container_handle;
-        request.source_holder = { fixture.buyer_handle, "inventory" };
+        request.source_holder = { fixture.buyer_handle, "inventory", {}, -1 };
         requests.push_back( request );
     } else if( mode == 3 ) {
         requests.front().source_holder.pocket_index = static_cast<int>( pockets.size() );

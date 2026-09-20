@@ -30,6 +30,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "lua_platform_activities.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_effects.h"
@@ -781,7 +782,7 @@ TEST_CASE( "lua_platform_seminar_checks_avatar_before_opening_selection",
         return fixture.world;
     }, []() {}, []() {} );
     sol::protected_function start = npcs["training"]["start_selected"];
-    for( const std::string mode : {
+    for( const std::string &mode : {
              std::string( "player" ), std::string( "seminar" ), std::string( "npc" )
          } ) {
         sol::protected_function_result call = start(

@@ -28,7 +28,7 @@ TEST_CASE( "lua_platform_item_group_native_order", "[lua][items]" )
     sorted.erase( std::unique( sorted.begin(), sorted.end() ), sorted.end() );
     sol::protected_function list = services["items"]["possible_from_group"];
     const cata::lua_platform::script_game_id id( "item_group", group.str() );
-    for( const std::string order : {
+    for( const std::string &order : {
              std::string( "native" ), std::string(),
              std::string( "id" )
          } ) {
