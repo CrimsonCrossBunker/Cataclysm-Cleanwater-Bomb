@@ -9,7 +9,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
 {
     cata::lua_platform::clear_active_runtimes();
     sol::state lua;
-    lua.open_libraries( sol::lib::base );
+    lua.open_libraries( sol::lib::base, sol::lib::table );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> runtime =
         cata::lua_platform::make_runtime( "lua_platform_translation_test", 1901, lua );
@@ -57,6 +57,8 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         assert(format("%d %.2f", {3, 1.25}) == "3 1.25")
         assert(format("%d", {true}) == "1")
         assert(format("100%%", {}) == "100%")
+        assert(format("", {}) == "")
+        assert(format(table.concat({"%2$s", "%1$s"}, " -> "), {"NPC", "book"}) == "book -> NPC")
         assert(not pcall(format, "%s", {}))
         assert(not pcall(format, "%d", {"not a number"}))
         assert(not pcall(format, "%s", {{}}))
