@@ -73,6 +73,9 @@
   {
     "id": "incendiary",
     "type": "ITEM",
+    "stackable": true,
+    "stack_size": 200,
+    "//": "The 500 ml volume is for 200 portions, matching the original ammunition count.",
     "category": "chems",
     "name": { "str_sp": "incendiary" },
     "description": "Material from an incendiary round, useful in constructing incendiary ammunition.",
