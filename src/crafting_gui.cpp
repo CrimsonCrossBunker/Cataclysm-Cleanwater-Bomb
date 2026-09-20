@@ -1948,7 +1948,7 @@ void crafting_ui_impl::draw_components( const recipe &rec,
     auto found = component_cache.find( key );
     if( found == component_cache.end() ) {
         found = component_cache.emplace( key, build_component_display( rec, *crafter,
-            crafting_inv, batch_size ) ).first;
+                                         crafting_inv, batch_size ) ).first;
     }
     const crafting_component_groups &comp_groups = found->second;
     if( comp_groups.empty() ) {
