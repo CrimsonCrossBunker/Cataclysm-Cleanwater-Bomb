@@ -209,6 +209,30 @@
     "extend": {
       "variants": [
         {
+          "id": "pin_pronoun_nb",
+          "name": { "str": "pronoun pin (they/them)", "str_pl": "pronoun pins (they/them)" },
+          "description": "This one has the pronouns \"they/them\" on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pronoun_fem",
+          "name": { "str": "pronoun pin (she/her)", "str_pl": "pronoun pins (she/her)" },
+          "description": "This one has the pronouns \"she/her\" on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pronoun_masc",
+          "name": { "str": "pronoun pin (he/him)", "str_pl": "pronoun pins (he/him)" },
+          "description": "This one has the pronouns \"he/him\" on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pronoun_it",
+          "name": { "str": "pronoun pin (it/its)", "str_pl": "pronoun pins (it/its)" },
+          "description": "This one has the pronouns \"it/its\" on it.",
+          "append": true
+        },
+        {
           "id": "pin_pride",
           "name": { "str": "pride pin" },
           "description": "This one has the pride flag on it.",
