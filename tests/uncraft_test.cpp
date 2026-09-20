@@ -16,6 +16,7 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "type_id.h"
+#include "units.h"
 
 // Tests for disassembling items from an "uncraft" recipe.
 //
@@ -26,6 +27,8 @@
 
 static const itype_id itype_cotton_patchwork( "cotton_patchwork" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_handflare( "handflare" );
+static const itype_id itype_incendiary( "incendiary" );
 static const itype_id itype_string_6( "string_6" );
 static const itype_id itype_test_knotted_string_ball( "test_knotted_string_ball" );
 static const itype_id itype_test_multitool( "test_multitool" );
@@ -84,6 +87,26 @@ static std::map<itype_id, int> repeat_uncraft( Character &they, const itype_id &
     }
 
     return yield_items;
+}
+
+TEST_CASE( "flare_disassembly_preserves_incendiary_portions_and_bulk_volume",
+           "[uncraft][items][stacking]" )
+{
+    Character &they = setup_uncraft_character();
+    recipe dis = recipe_dictionary::get_uncraft( itype_handflare );
+    // Remove the skill roll so this test checks quantity and volume deterministically.
+    dis.difficulty = 0;
+    const std::map<itype_id, int> recovered = repeat_uncraft( they, itype_handflare, dis, 20 );
+    REQUIRE( recovered.count( itype_incendiary ) == 1 );
+    CHECK( recovered.at( itype_incendiary ) == 1500 );
+
+    item powder( itype_incendiary, calendar::turn, recovered.at( itype_incendiary ) );
+    REQUIRE( powder.count_by_charges() );
+    CHECK( powder.count() == 1500 );
+    CHECK( powder.volume() == 3750_ml );
+    powder.charges = 200;
+    CHECK( powder.volume() == 500_ml );
+    CHECK( powder.weight() == 400_gram );
 }
 
 // Return the number of part_itype items yielded by character with the given skill level
