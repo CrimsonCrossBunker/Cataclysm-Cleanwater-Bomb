@@ -22,6 +22,9 @@ enum class VisitResponse : int {
     SKIP   // Skip any child nodes and move directly to the next sibling
 };
 
+// Providers are separate tools, which is what a reservation binds, so a stack of charges is
+// one.  Units are the items themselves, so that stack is its charge count.
+enum class quality_count : int { providers, units };
 class read_only_visitable;
 
 /** Cache quality checks only while this inventory and its actors are unchanged.
@@ -39,7 +42,8 @@ class scoped_provider_quality_cache
         const read_only_visitable &source;
         scoped_provider_quality_cache *previous;
         static thread_local scoped_provider_quality_cache *active;
-        std::map<const Character *, std::map<std::tuple<quality_id, int, int>, bool>> results;
+        std::map<const Character *, std::map<std::tuple<quality_id, int, int, quality_count>, bool>>
+        results;
 };
 
 /**
@@ -85,11 +89,12 @@ class read_only_visitable
         /** Returns true if instance has amount (or more) items of at least quality level */
         virtual bool has_quality( const quality_id &qual, int level = 1, int qty = 1 ) const;
 
-        // Counts distinct providers: a container is not credited for a tool inside it and
-        // a charge stack counts once.  `who` decides charged qualities and may be null,
-        // which drops character-owned power.
+        // non-recursive. container doesn't get credit for tool inside it. `mode`: charge
+        // stack answers once or once per charge. `who`: charged qualities (can be null,
+        // drops character-owned power).
         bool has_provider_quality( const quality_id &qual, int level, int qty,
-                                   const Character *who ) const;
+                                   const Character *who,
+                                   quality_count mode = quality_count::providers ) const;
 
         /** Return maximum tool quality level provided by instance or INT_MIN if not found */
         virtual int max_quality( const quality_id &qual ) const;
