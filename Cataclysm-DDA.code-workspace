@@ -77,6 +77,11 @@
                 "type": "shell",
                 "command": "${workspaceFolder}\\.vscode\\msbuild.ps1",
                 "args": ["-SolutionPath", "${workspaceFolder}\\msvc-full-features\\Cataclysm-vcpkg-static.sln", "-Configuration", "Release", "-EnableTracy"],
+                "options": {
+                    "shell": {
+                        "executable": "powershell.exe"
+                    }
+                },
                 "group": "build",
                 "problemMatcher": "$msCompile"
             },
