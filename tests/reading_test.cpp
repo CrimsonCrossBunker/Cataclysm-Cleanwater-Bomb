@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "bodypart.h"
@@ -11,6 +12,8 @@
 #include "cata_catch.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
 #include "flag.h"
 #include "game_inventory.h"
