@@ -164,16 +164,44 @@ bool read_only_visitable::has_quality( const quality_id &qual, int level, int qt
     return has_quality_internal( *this, qual, level, qty ) == qty;
 }
 
+thread_local scoped_provider_quality_cache *scoped_provider_quality_cache::active = nullptr;
+
+scoped_provider_quality_cache::scoped_provider_quality_cache( const read_only_visitable &source )
+    : source( source ), previous( active )
+{
+    active = this;
+}
+
+scoped_provider_quality_cache::~scoped_provider_quality_cache()
+{
+    active = previous;
+}
+
 bool read_only_visitable::has_provider_quality( const quality_id &qual, int level, int qty,
         const Character *who ) const
 {
-    const std::function<int( const item & )> measure = [&qual, who]( const item & it ) {
-        return provider_quality_level( it, qual, who, true );
+    const auto check = [&]() {
+        const std::function<int( const item & )> measure = [&qual, who]( const item & it ) {
+            return provider_quality_level( it, qual, who, true );
+        };
+        const std::function<int( const item & )> tally = []( const item & ) {
+            return 1;
+        };
+        return has_quality_internal( *this, qual, level, qty, measure, tally ) == qty;
     };
-    const std::function<int( const item & )> tally = []( const item & ) {
-        return 1;
-    };
-    return has_quality_internal( *this, qual, level, qty, measure, tally ) == qty;
+    for( auto *scope = scoped_provider_quality_cache::active; scope != nullptr;
+         scope = scope->previous ) {
+        if( &scope->source == this ) {
+            auto &results = scope->results[who];
+            const auto key = std::make_tuple( qual, level, qty );
+            const auto found = results.find( key );
+            if( found != results.end() ) {
+                return found->second;
+            }
+            return results.emplace( key, check() ).first->second;
+        }
+    }
+    return check();
 }
 
 /** @relates visitable */
