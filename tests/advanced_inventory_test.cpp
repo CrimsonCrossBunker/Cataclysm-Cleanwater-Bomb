@@ -62,7 +62,13 @@ TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_i
         CHECK( stored.display_name( 1, true, false ).find( "5000" ) == std::string::npos );
         inventory_selector_preset preset;
         inventory_entry entry( std::vector<item_location> {loc} );
-        CHECK( preset.get_cell_text( entry, 0 ).find( stored.type->item_measure_prefix( expected ) ) == 0 );
+        CHECK( preset.get_cell_text( entry, 0 ) == stored.display_name_with_count( expected, true ) );
+        CHECK( stored.display_name().find( "(5000)" ) != std::string::npos );
+        CHECK( stored.display_name_with_count( 300000 ).find( "(300000)" ) != std::string::npos );
+        item &extra = here.add_item( pos, item( type, calendar::turn, 7 ) );
+        const item_location extra_loc( map_cursor( pos ), &extra );
+        inventory_entry multiple( std::vector<item_location> {loc, extra_loc} );
+        CHECK( preset.get_cell_text( multiple, 0 ) == stored.display_name_with_count( 5007, true ) );
     }
 }
 
@@ -73,6 +79,29 @@ TEST_CASE( "quantity_format_preserves_loaded_ammunition", "[items][advanced_inv]
     REQUIRE_FALSE( magazine.count_by_charges() );
     CHECK( magazine.display_name( 1, true, false ) == magazine.display_name( 1, true ) );
     CHECK( magazine.count() == 1 );
+}
+
+TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
+           "[items][advanced_inv][stacking]" )
+{
+    for( const itype_id &id : { itype_id( "salt" ), itype_id( "water_clean" ),
+                              itype_id( "steel_chunk" ), itype_test_9mm_ammo } ) {
+        item resource( id, calendar::turn, 123 );
+        REQUIRE( resource.count_by_charges() );
+        CHECK( resource.display_name_with_count( 123 ) ==
+               resource.display_name( 123, false, false ) + " (123)" );
+        CHECK( resource.display_name_with_count( 1 ) ==
+               resource.display_name( 1, false, false ) + " (1)" );
+    }
+    item knife( itype_knife_combat );
+    REQUIRE_FALSE( knife.count_by_charges() );
+    CHECK( knife.display_name_with_count( 123 ) ==
+           "123 " + knife.display_name( 123 ) );
+    CHECK( knife.display_name_with_count( 1 ) == knife.display_name() );
+
+    item magazine( itype_id( "glockmag" ) );
+    magazine.ammo_set( itype_id( "9mm" ), 10 );
+    CHECK( magazine.display_name_with_count( 2 ) == "2 " + magazine.display_name( 2 ) );
 }
 
 /*

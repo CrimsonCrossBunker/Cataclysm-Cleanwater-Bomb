@@ -58,12 +58,12 @@ static const zone_type_id zone_type_NO_AUTO_PICKUP( "NO_AUTO_PICKUP" );
 static void show_pickup_message( const PickupMap &mapPickup )
 {
     for( const auto &entry : mapPickup ) {
-        const std::string name = entry.second.first.display_name( entry.second.second, false, false );
+        const std::string name = entry.second.first.display_name_with_count( entry.second.second );
         if( entry.second.first.invlet != 0 ) {
-            add_msg( _( "You pick up: %d %s [%c]" ), entry.second.second,
+            add_msg( _( "You pick up: %s [%c]" ),
                      name, entry.second.first.invlet );
         } else {
-            add_msg( _( "You pick up: %d %s" ), entry.second.second, name );
+            add_msg( _( "You pick up: %s" ), name );
         }
     }
 }

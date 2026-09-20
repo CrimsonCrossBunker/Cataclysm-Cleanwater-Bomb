@@ -488,9 +488,12 @@ void advanced_inventory::print_items( side p, bool active )
             }
         } else {
             if( stolen ) {
-                item_name = string_format( "%s %s", stolen_string, it.display_name( 1, true, false ) );
+                item_name = string_format( "%s %s", stolen_string,
+                                           ( it.count_by_charges() ? it.display_name_with_count( sitem.amount, true ) :
+                                             it.display_name( sitem.stacks, true ) ) );
             } else {
-                item_name = it.display_name( 1, true, false );
+                item_name = ( it.count_by_charges() ? it.display_name_with_count( sitem.amount, true ) :
+                              it.display_name( sitem.stacks, true ) );
             }
         }
         if( get_option<bool>( "ITEM_SYMBOLS" ) ) {
@@ -508,15 +511,10 @@ void advanced_inventory::print_items( side p, bool active )
         }
 
         //print "amount" column
-        const int it_amt = sitem.amount;
+        const int it_amt = sitem.stacks;
         if( it_amt >= 1 ) {
             print_color = thiscolor;
-            if( it_amt > 9999 ) {
-                print_color = selected ? hilite( c_red ) : c_red;
-                mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "9999+" );
-            } else {
-                mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "%4d", it_amt );
-            }
+            mvwprintz( window, point( amt_startpos, 6 + item_line ), print_color, "%4d", it_amt );
         }
 
         //print weight column

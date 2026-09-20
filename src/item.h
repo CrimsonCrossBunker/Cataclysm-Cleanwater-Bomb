@@ -478,6 +478,9 @@ class item : public visitable
         std::string display_name( unsigned int quantity = 1, bool color_faults = false,
                                   bool show_stack_count = true ) const;
 
+        /** Format a total quantity: merged units in parentheses, separate items as a prefix. */
+        std::string display_name_with_count( unsigned int quantity, bool color_faults = false ) const;
+
         std::vector<iteminfo> get_info( bool showtext ) const;
         std::vector<iteminfo> get_info( bool showtext, int batch ) const;
         std::vector<iteminfo> get_info( const iteminfo_query *parts, int batch ) const;

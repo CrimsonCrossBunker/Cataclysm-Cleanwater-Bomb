@@ -47,13 +47,13 @@ class advanced_inv_listitem
         bool autopickup = false;
         /**
          * The number of item stacks represented by this entry (>= 1).
-         * Used for volume/weight totals.  For display quantity, see @ref amount.
+         * Used for volume/weight totals and the quantity column.
          */
         int stacks = 0;
         /**
-         * The quantity shown in the amount column. Equals @ref stacks for
-         * discrete items; resources, loose ammo and liquids show the summed
-         * charges. Loaded gun/tool charges are not the number of items.
+         * Total units represented by this entry: charges for merged resources,
+         * item count otherwise. Merged units appear in the name suffix, while
+         * the quantity column shows the separate entries in @ref stacks.
          */
         int amount = 0;
         /**

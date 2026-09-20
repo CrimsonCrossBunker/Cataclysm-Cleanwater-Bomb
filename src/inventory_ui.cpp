@@ -286,11 +286,12 @@ class selection_column_preset : public inventory_selector_preset
             const size_t available_count = entry.get_available_count();
             const item_location &item = entry.any_item();
 
-            if( entry.chosen_count > 0 && entry.chosen_count < available_count ) {
+            if( !item->count_by_charges() && entry.chosen_count > 0 &&
+                entry.chosen_count < available_count ) {
                 //~ %1$d: chosen count, %2$d: available count
                 res += string_format( pgettext( "count", "%1$d of %2$d" ), entry.chosen_count,
                                       available_count ) + " ";
-            } else if( available_count != 1 ) {
+            } else if( available_count != 1 && !item->count_by_charges() ) {
                 res += string_format( "%d ", available_count );
             }
             if( item->is_money() ) {
@@ -300,6 +301,16 @@ class selection_column_preset : public inventory_selector_preset
                                                 entry.get_selected_charges() );
                 } else {
                     res += item->display_money( available_count, item->ammo_remaining( ) );
+                }
+            } else if( item->count_by_charges() ) {
+                const size_t total = entry.get_total_charges();
+                if( entry.chosen_count > 0 && entry.chosen_count < available_count ) {
+                    const size_t selected = entry.get_stack_size() > 1 ?
+                                            entry.get_selected_charges() : entry.chosen_count;
+                    res += string_format( "%s (%s)", item->display_name( total, false, false ),
+                                          string_format( pgettext( "count", "%1$d of %2$d" ), selected, total ) );
+                } else {
+                    res += item->display_name_with_count( total );
                 }
             } else {
                 res += item->display_name( available_count );
@@ -803,11 +814,9 @@ std::string inventory_selector_preset::get_caption( const inventory_entry &entry
     std::string disp_name;
     if( entry.any_item()->is_money() ) {
         disp_name = entry.any_item()->display_money( count, entry.any_item()->ammo_remaining( ) );
-    } else if( entry.any_item()->count_by_charges() ) {
-        count = entry.get_total_charges();
-        disp_name = entry.any_item()->display_name( count, true, false );
     } else {
-        disp_name = entry.any_item()->display_name( count, true );
+        count = entry.any_item()->count_by_charges() ? entry.get_total_charges() : count;
+        return entry.any_item()->display_name_with_count( count, true );
     }
 
     return ( count > 1 ) ? string_format( "%s %s",
