@@ -3727,8 +3727,10 @@ class Character : public Creature, public visitable
          * for the time taken to perform tasks that require detail vision,
          * above 4.0 means these activities cannot be performed.
          * takes pos as a parameter so that remote spots can be judged
-         * if they will potentially have enough light when player gets there */
-        float fine_detail_vision_mod( const tripoint_bub_ms &p = tripoint_bub_ms::invalid ) const;
+         * if they will potentially have enough light when player gets there.
+         * ignore_light skips lighting penalties, but not impaired vision. */
+        float fine_detail_vision_mod( const tripoint_bub_ms &p = tripoint_bub_ms::invalid,
+                                      bool ignore_light = false ) const;
 
         // ---- CRAFTING ----
         void make_craft_with_command( const recipe_id &id_to_make, int batch_size, bool is_long,

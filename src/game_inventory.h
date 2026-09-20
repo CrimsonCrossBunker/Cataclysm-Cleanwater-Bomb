@@ -146,6 +146,8 @@ item_location gun_to_modify( Character &you, const item &gunmod );
 item_location gunmod_to_remove( Character &you, item &gun );
 /** Book reading menu. */
 item_location read( Character &you );
+/** Chapter time at the activity owner's current speed, with reading-penalty coloring. */
+std::string read_chapter_time( const Character &you, const item &book, const Character &reader );
 /** E-Book reading menu. */
 item_location ereader_to_use( Character &you );
 /** eBook reading menu. */
