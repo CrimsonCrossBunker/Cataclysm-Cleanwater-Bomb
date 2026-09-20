@@ -2095,7 +2095,7 @@
     "symbol": "/",
     "material": [ "ch_steel", "ceramic" ],
     "repairs_with": [ "lc_steel" ],
-    "flags": [ "DURABLE_MELEE", "DIG_TOOL", "USES_BIONIC_POWER" ],
+    "flags": [ "DURABLE_MELEE", "DIG_TOOL", "MULTI_DRILL", "USES_BIONIC_POWER" ],
     "faults": [ { "fault_group": "electronic_general" } ],
     "//0": "This should have some unique faults that circular saws and other saws should also have too.",
     "weight": "6880 g",
