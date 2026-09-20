@@ -19,10 +19,10 @@
 #include "coordinates.h"
 #include "item.h"
 #include "inventory_ui.h"
-#include "itype.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
@@ -31,12 +31,17 @@
 #include "units.h"
 
 
+static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bag_plastic( "bag_plastic" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_glockmag( "glockmag" );
 static const itype_id itype_knife_combat( "knife_combat" );
+static const itype_id itype_salt( "salt" );
+static const itype_id itype_steel_chunk( "steel_chunk" );
 static const itype_id itype_test_9mm_ammo( "test_9mm_ammo" );
 static const itype_id itype_test_heavy_debug_backpack( "test_heavy_debug_backpack" );
+static const itype_id itype_water_clean( "water_clean" );
 
 TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_inv][stacking]" )
 {
@@ -45,7 +50,7 @@ TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_i
     avatar &you = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms pos = you.pos_bub();
-    const itype_id type = GENERATE( itype_test_9mm_ammo, itype_id( "steel_chunk" ),
+    const itype_id type = GENERATE( itype_test_9mm_ammo, itype_steel_chunk,
                                     itype_knife_combat );
     item specimen( type, calendar::turn, 5000 );
     item &stored = here.add_item( pos, specimen );
@@ -62,17 +67,48 @@ TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_i
         CHECK( stored.display_name( 1, true, false ).find( "5000" ) == std::string::npos );
         inventory_selector_preset preset;
         inventory_entry entry( std::vector<item_location> {loc} );
-        CHECK( preset.get_cell_text( entry, 0 ).find( stored.type->item_measure_prefix( expected ) ) == 0 );
+        CHECK( preset.get_cell_text( entry, 0 ) == stored.display_name_with_count( expected, true ) );
+        CHECK( stored.display_name().find( "(5000)" ) != std::string::npos );
+        CHECK( stored.display_name_with_count( 300000 ).find( "(300000)" ) != std::string::npos );
+        item &extra = here.add_item( pos, item( type, calendar::turn, 7 ) );
+        const item_location extra_loc( map_cursor( pos ), &extra );
+        inventory_entry multiple( std::vector<item_location> {loc, extra_loc} );
+        CHECK( preset.get_cell_text( multiple, 0 ) == stored.display_name_with_count( 5007, true ) );
     }
 }
 
 TEST_CASE( "quantity_format_preserves_loaded_ammunition", "[items][advanced_inv][stacking]" )
 {
-    item magazine( itype_id( "glockmag" ) );
-    magazine.ammo_set( itype_id( "9mm" ), 10 );
+    item magazine( itype_glockmag );
+    magazine.ammo_set( itype_9mm, 10 );
     REQUIRE_FALSE( magazine.count_by_charges() );
     CHECK( magazine.display_name( 1, true, false ) == magazine.display_name( 1, true ) );
     CHECK( magazine.count() == 1 );
+}
+
+TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
+           "[items][advanced_inv][stacking]" )
+{
+    for( const itype_id &id : {
+             itype_salt, itype_water_clean,
+             itype_steel_chunk, itype_test_9mm_ammo
+         } ) {
+        item resource( id, calendar::turn, 123 );
+        REQUIRE( resource.count_by_charges() );
+        CHECK( resource.display_name_with_count( 123 ) ==
+               resource.display_name( 123, false, false ) + " (123)" );
+        CHECK( resource.display_name_with_count( 1 ) ==
+               resource.display_name( 1, false, false ) + " (1)" );
+    }
+    item knife( itype_knife_combat );
+    REQUIRE_FALSE( knife.count_by_charges() );
+    CHECK( knife.display_name_with_count( 123 ) ==
+           "123 " + knife.display_name( 123 ) );
+    CHECK( knife.display_name_with_count( 1 ) == knife.display_name() );
+
+    item magazine( itype_glockmag );
+    magazine.ammo_set( itype_9mm, 10 );
+    CHECK( magazine.display_name_with_count( 2 ) == "2 " + magazine.display_name( 2 ) );
 }
 
 /*

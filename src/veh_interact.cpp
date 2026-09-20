@@ -2272,19 +2272,13 @@ bool veh_interact::can_remove_part( map &here, int idx, const Character &you )
 
         std::map<itype_id, int> unique_salvageable_items;
         for( const item &it : sel_vehicle_part->get_salvageable() ) {
-            unique_salvageable_items[ it.typeId() ] += 1;
+            unique_salvageable_items[ it.typeId() ] += it.count();
         }
 
         std::map<itype_id, int>::iterator it;
         for( it = unique_salvageable_items.begin(); it != unique_salvageable_items.end(); it++ ) {
-            const itype *type = item::find_type( it->first );
-            nmsg += "> ";
-
-            if( it->second > 1 ) {
-                nmsg += type->item_measure_prefix( it->second ) + " ";
-            }
-
-            nmsg += type->nname( it->second ) + "\n";
+            const item salvage( it->first );
+            nmsg += "> " + salvage.display_name_with_count( it->second ) + "\n";
         }
     }
 

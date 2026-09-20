@@ -1667,6 +1667,17 @@ std::string item::display_money( unsigned int quantity, unsigned int total,
     }
 }
 
+std::string item::display_name_with_count( unsigned int quantity, bool color_faults ) const
+{
+    const std::string name = display_name( quantity, color_faults, false );
+    if( count_by_charges() ) {
+        return has_infinite_charges() ? name :
+               string_format( "%s (%s)", name, type->item_measure_prefix( quantity ) );
+    }
+    return quantity > 1 ?
+           string_format( "%s %s", type->item_measure_prefix( quantity ), name ) : name;
+}
+
 std::string item::display_name( unsigned int quantity, bool color_faults,
                                 bool show_stack_count ) const
 {
@@ -1861,8 +1872,7 @@ std::string item::display_name( unsigned int quantity, bool color_faults,
             }
         }
         show_amt = !has_flag( flag_RELOAD_AND_SHOOT );
-    } else if( show_stack_count && count_by_charges() && !has_infinite_charges() &&
-               !type->is_stackable() ) {
+    } else if( show_stack_count && count_by_charges() && !has_infinite_charges() ) {
         // A chargeable item
         amount = charges;
         const itype *adata = ammo_data();
