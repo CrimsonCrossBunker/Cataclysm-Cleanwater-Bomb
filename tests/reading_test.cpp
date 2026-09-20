@@ -13,12 +13,15 @@
 #include "character_attire.h"
 #include "coordinates.h"
 #include "flag.h"
+#include "game_inventory.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "npc.h"
+#include "output.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -30,6 +33,8 @@ class SkillLevel;
 
 static const activity_id ACT_READ( "ACT_READ" );
 
+static const efftype_id effect_blind( "blind" );
+static const efftype_id effect_boomered( "boomered" );
 static const efftype_id effect_darkness( "darkness" );
 
 static const flag_id json_flag_INSPIRATIONAL( "INSPIRATIONAL" );
@@ -505,19 +510,61 @@ TEST_CASE( "reading_a_book_for_skill", "[reading][book][skill]" )
 static void test_ebook_is_reading( avatar &dummy, item_location ereader, item_location booklc )
 {
     THEN( "player can read the book" ) {
-        read_activity_actor actor( dummy.time_to_read( *booklc, dummy ), booklc, ereader, true );
+        dummy.identify( *booklc );
+        REQUIRE( dummy.get_int() >= booklc->type->book->intel );
+        const time_duration chapter_time = booklc->type->book->time * dummy.read_speed() / 100;
+        CHECK( dummy.time_to_read( *booklc, dummy ) == chapter_time );
+        read_activity_actor actor( dummy.time_to_read( *booklc, dummy ), booklc, ereader, true,
+                                   dummy.getID().get_value() );
         dummy.activity = player_activity( actor );
 
         REQUIRE( ereader->ammo_remaining( ) == 100 );
 
         dummy.activity.start_or_resume( dummy, false );
         REQUIRE( dummy.activity.id() == ACT_READ );
+        CHECK( dummy.activity.moves_total == to_moves<int>( chapter_time ) );
+        CHECK( dummy.activity.moves_left == to_moves<int>( chapter_time ) );
 
         CHECK( ereader->ammo_remaining( ) == 99 );
 
         dummy.activity.do_turn( dummy );
 
         CHECK( dummy.activity.id() == ACT_READ );
+
+        AND_THEN( "the displayed chapter time matches a complete reading activity" ) {
+            const int speed = GENERATE( 80, 100, 125, 150 );
+            dummy.set_int_base( speed < 125 ? 8 : 12 );
+            const time_duration work = dummy.time_to_read( *booklc, dummy );
+            dummy.set_speed_base( speed );
+            dummy.set_speed_bonus( 0 );
+            dummy.set_moves( 0 );
+            dummy.set_thirst( 0 );
+            REQUIRE( dummy.get_speed() == speed );
+            REQUIRE( dummy.get_kcal_percent() >= 0.95f );
+            CAPTURE( speed, dummy.get_int(), dummy.read_speed() );
+            CHECK( dummy.time_to_read( *booklc, dummy ) == work );
+
+            const std::string displayed = game_menus::inv::read_chapter_time( dummy, *booklc, dummy );
+            CHECK( displayed.find( "<color_light_red>" ) == std::string::npos );
+            dummy.activity = player_activity( read_activity_actor( work, booklc, ereader, false ) );
+            dummy.activity.start_or_resume( dummy, false );
+            REQUIRE( dummy.activity.moves_total == to_moves<int>( work ) );
+            REQUIRE( dummy.activity.moves_left == to_moves<int>( work ) );
+
+            const time_point start = calendar::turn;
+            process_activity( dummy, true );
+            const time_duration elapsed = calendar::turn - start;
+            REQUIRE_FALSE( dummy.activity );
+            CHECK( displayed == to_string_approx( elapsed, false ) );
+        }
+
+        AND_THEN( "the next chapter takes the same amount of time" ) {
+            dummy.activity.moves_left = 0;
+            dummy.activity.actor->finish( dummy.activity, dummy );
+            REQUIRE( dummy.activity.id() == ACT_READ );
+            CHECK( dummy.activity.moves_total == to_moves<int>( chapter_time ) );
+            CHECK( dummy.activity.moves_left == to_moves<int>( chapter_time ) );
+        }
 
         AND_THEN( "ereader has spent a charge while reading" ) {
             CHECK( ereader->ammo_remaining( ) == 98 );
@@ -534,10 +581,96 @@ static void test_ebook_is_reading( avatar &dummy, item_location ereader, item_lo
     }
 }
 
+TEST_CASE( "reading_chapter_time_uses_the_activity_owner_speed", "[reading][book][ereader]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &dummy = get_avatar();
+    dummy.i_add( item( itype_test_lamp ) );
+    REQUIRE( dummy.fine_detail_vision_mod() == 1 );
+
+    SECTION( "the reader's movement speed does not change the estimate" ) {
+        item book( itype_test_textbook_fabrication );
+        dummy.identify( book );
+        dummy.set_speed_base( 80 );
+        npc reader;
+        reader.set_body();
+        reader.set_int_base( 8 );
+        reader.setpos( get_map(), dummy.pos_bub() );
+        reader.set_speed_base( 150 );
+
+        const time_duration work = dummy.time_to_read( book, reader );
+        REQUIRE( work == 30_minutes );
+        const std::string displayed = game_menus::inv::read_chapter_time( dummy, book, reader );
+        CHECK( displayed == to_string_approx( 37_minutes + 30_seconds, false ) );
+        reader.set_speed_base( 40 );
+        CHECK( game_menus::inv::read_chapter_time( dummy, book, reader ) == displayed );
+        dummy.set_speed_base( 150 );
+        CHECK( dummy.time_to_read( book, reader ) == work );
+        CHECK( game_menus::inv::read_chapter_time( dummy, book, reader ) ==
+               to_string_approx( 20_minutes, false ) );
+    }
+
+    SECTION( "a complex book remains red even when movement speed is high" ) {
+        item book( itype_recipe_alpha );
+        dummy.identify( book );
+        dummy.set_knowledge_level( skill_chemistry, 6 );
+        dummy.set_speed_base( 150 );
+        const time_duration work = dummy.time_to_read( book, dummy );
+        REQUIRE( work > book.type->book->time * dummy.read_speed() / 100 );
+
+        const std::string displayed = game_menus::inv::read_chapter_time( dummy, book, dummy );
+        CHECK( displayed.find( "<color_light_red>" ) != std::string::npos );
+        CHECK( remove_color_tags( displayed ) == to_string_approx( work * 2 / 3, false ) );
+    }
+}
+
+TEST_CASE( "ebook_reading_ignores_only_ambient_darkness", "[reading][book][ereader]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &dummy = get_avatar();
+    dummy.set_int_base( 8 );
+    item book( itype_test_textbook_fabrication );
+    dummy.identify( book );
+
+    item_location lamp = dummy.i_add( item( itype_test_lamp ) );
+    REQUIRE( dummy.fine_detail_vision_mod() == 1 );
+    const time_duration bright_time = dummy.time_to_read( book, dummy );
+    lamp.remove_item();
+    set_time( calendar::turn - time_past_midnight( calendar::turn ) + 1_days );
+    REQUIRE( dummy.fine_detail_vision_mod() > 4 );
+
+    npc npc_reader;
+    npc_reader.set_body();
+    npc_reader.set_int_base( 8 );
+    npc_reader.setpos( get_map(), dummy.pos_bub() );
+    REQUIRE( npc_reader.read_speed() == dummy.read_speed() );
+    REQUIRE( npc_reader.fine_detail_vision_mod() > 4 );
+
+    REQUIRE_FALSE( book.has_flag( flag_CAN_USE_IN_DARK ) );
+    CHECK( dummy.time_to_read( book, dummy ) > bright_time );
+    CHECK( npc_reader.time_to_read( book, npc_reader ) > bright_time );
+    book.set_flag( flag_CAN_USE_IN_DARK );
+    CHECK( dummy.time_to_read( book, dummy ) == bright_time );
+    CHECK( npc_reader.time_to_read( book, npc_reader ) == bright_time );
+
+    const efftype_id impairment = GENERATE( effect_blind, effect_boomered, effect_darkness );
+    CAPTURE( impairment.str() );
+    dummy.add_effect( impairment, 1_hours );
+    npc_reader.add_effect( impairment, 1_hours );
+    REQUIRE( dummy.fine_detail_vision_mod() == 11 );
+    REQUIRE( npc_reader.fine_detail_vision_mod() == 11 );
+    CHECK( dummy.time_to_read( book, dummy ) == bright_time * 11 );
+    CHECK( npc_reader.time_to_read( book, npc_reader ) == bright_time * 11 );
+}
+
 TEST_CASE( "reading_a_book_with_an_ebook_reader", "[reading][book][ereader]" )
 {
     avatar &dummy = get_avatar();
     clear_avatar();
+    clear_map_without_vision();
+    set_time( calendar::turn_zero + 1_days );
     item book( itype_test_textbook_fabrication );
 
     WHEN( "having a book in the inventory" ) {

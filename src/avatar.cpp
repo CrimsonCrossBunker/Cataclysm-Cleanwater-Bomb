@@ -44,6 +44,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -749,7 +750,9 @@ bool avatar::read( item_location &book, item_location ereader )
         add_msg( m_info, _( "%s read with you for fun." ), them );
     }
 
-    if( std::min( fine_detail_vision_mod(), reader->fine_detail_vision_mod() ) > 1.0 ) {
+    const bool ignore_light = book->has_flag( flag_CAN_USE_IN_DARK );
+    if( std::min( fine_detail_vision_mod( tripoint_bub_ms::invalid, ignore_light ),
+                  reader->fine_detail_vision_mod( tripoint_bub_ms::invalid, ignore_light ) ) > 1.0 ) {
         add_msg( m_warning,
                  _( "It's difficult for %s to see fine details right now.  Reading will take longer than usual." ),
                  reader->disp_name() );

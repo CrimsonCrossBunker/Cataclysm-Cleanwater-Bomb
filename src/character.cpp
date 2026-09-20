@@ -2729,7 +2729,7 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
 //  6.0 is LIGHT_AMBIENT_DIM
 //  7.3 is LIGHT_AMBIENT_MINIMAL, a dark cloudy night, unlit indoors
 // 11.0 is zero light or blindness
-float Character::fine_detail_vision_mod( const tripoint_bub_ms &p ) const
+float Character::fine_detail_vision_mod( const tripoint_bub_ms &p, bool ignore_light ) const
 {
     // PER_SLIME_OK implies you can get enough eyes around the bile
     // that you can generally see.  There still will be the haze, but
@@ -2738,6 +2738,9 @@ float Character::fine_detail_vision_mod( const tripoint_bub_ms &p ) const
         ( ( has_effect( effect_boomered ) || has_effect( effect_darkness ) ) &&
           !has_trait( trait_PER_SLIME_OK ) ) ) {
         return 11.0;
+    }
+    if( ignore_light ) {
+        return 1.0;
     }
     // Scale linearly as light level approaches LIGHT_AMBIENT_LIT.
     // If we're actually a source of light, assume we can direct it where we need it.

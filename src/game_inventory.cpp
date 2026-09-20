@@ -1453,6 +1453,22 @@ item_location game_menus::inv::ereader_to_use( Character &you )
     return inv_internal( you, ereader_inventory_preset( you ), _( "Select e-reader." ), 1, msg );
 }
 
+std::string game_menus::inv::read_chapter_time( const Character &you, const item &book,
+        const Character &reader )
+{
+    const time_duration reading_work = you.time_to_read( book, reader );
+    const time_duration normal_work = book.type->book->time * reader.read_speed() / 100;
+    // ACT_READ consumes the activity owner's moves, even when someone else reads aloud.
+    const time_duration estimate = time_duration::from_turns( divide_round_up(
+                                       to_moves<int>( reading_work ), std::max( 1, you.get_speed() ) ) );
+    const std::string duration = to_string_approx( estimate, false );
+
+    if( reading_work > normal_work ) {
+        return string_format( "<color_light_red>%s</color>", duration );
+    }
+    return duration;
+}
+
 namespace
 {
 class read_inventory_preset: public pickup_inventory_preset
@@ -1507,17 +1523,7 @@ class read_inventory_preset: public pickup_inventory_preset
                 if( reader == nullptr ) {
                     return std::string();  // Just to make sure
                 }
-                // Actual reading time (in turns). Can be penalized.
-                const int actual_turns = to_turns<int>( you.time_to_read( *loc, *reader ) );
-                // Theoretical reading time (in turns) based on the reader speed. Free of penalties.
-                const int normal_turns = to_turns<int>( get_book( loc ).time ) * reader->read_speed() / 100 ;
-                std::string duration = to_string_approx( time_duration::from_turns( actual_turns ), false );
-
-                if( actual_turns > normal_turns ) { // Longer - complicated stuff.
-                    return string_format( "<color_light_red>%s</color>", duration );
-                }
-
-                return duration; // Normal speed.
+                return game_menus::inv::read_chapter_time( you, *loc, *reader );
             }, _( "CHAPTER IN" ), unknown );
         }
 

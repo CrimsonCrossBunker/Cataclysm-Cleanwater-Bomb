@@ -1497,7 +1497,9 @@ time_duration npc::time_to_read( const item &book, const Character &reader ) con
     int reading_speed = try_understand ? std::max( reader.read_speed(), read_speed() ) : read_speed();
 
     time_duration retval = type->time * reading_speed / 100;
-    retval *= std::min( fine_detail_vision_mod(), reader.fine_detail_vision_mod() );
+    const bool ignore_light = book.has_flag( flag_CAN_USE_IN_DARK );
+    retval *= std::min( fine_detail_vision_mod( tripoint_bub_ms::invalid, ignore_light ),
+                        reader.fine_detail_vision_mod( tripoint_bub_ms::invalid, ignore_light ) );
 
     if( type->intel > reader.get_int() && !reader.has_trait( trait_PROF_DICEMASTER ) ) {
         retval += type->time * ( time_duration::from_seconds( type->intel - reader.get_int() ) /
