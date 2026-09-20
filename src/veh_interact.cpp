@@ -419,13 +419,13 @@ std::vector<point_rel_ms> veh_interact::service_installation_mounts( map &here, 
     if( service_installation_area_size( first, second ) == 0 ) {
         return result;
     }
-    const int min_x = std::min( first.x(), second.x() );
-    const int min_y = std::min( first.y(), second.y() );
-    const int width = std::max( first.x(), second.x() ) - min_x + 1;
-    const int height = std::max( first.y(), second.y() ) - min_y + 1;
+    const point_rel_ms minimum( std::min( first.x(), second.x() ),
+                                std::min( first.y(), second.y() ) );
+    const int width = std::max( first.x(), second.x() ) - minimum.x() + 1;
+    const int height = std::max( first.y(), second.y() ) - minimum.y() + 1;
     for( int x = 0; x < width; ++x ) {
         for( int y = 0; y < height; ++y ) {
-            const point_rel_ms mount( min_x + x, min_y + y );
+            const point_rel_ms mount( minimum.x() + x, minimum.y() + y );
             if( !service_installation_position_denial( here, veh, mount, vpart ) &&
                 !service_installation_denial( veh, mount, vpart ) ) {
                 result.push_back( mount );

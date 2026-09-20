@@ -119,33 +119,6 @@ enum class direction : unsigned int;
 
 static const activity_id ACT_TRY_SLEEP( "ACT_TRY_SLEEP" );
 
-static std::atomic<std::uint64_t> next_platform_npc_identity_generation { 1 };
-
-static std::uint64_t allocate_platform_npc_identity_generation()
-{
-    const std::uint64_t result = next_platform_npc_identity_generation.fetch_add(
-                                     1, std::memory_order_relaxed );
-    if( result == 0 || result == std::numeric_limits<std::uint64_t>::max() ) {
-        std::terminate();
-    }
-    return result;
-}
-
-void reserve_platform_npc_identity_generation( const std::uint64_t id )
-{
-    if( id == 0 ) {
-        return;
-    }
-    if( id == std::numeric_limits<std::uint64_t>::max() ) {
-        std::terminate();
-    }
-    std::uint64_t next = next_platform_npc_identity_generation.load(
-                             std::memory_order_relaxed );
-    while( next <= id && !next_platform_npc_identity_generation.compare_exchange_weak(
-               next, id + 1, std::memory_order_relaxed ) ) {
-    }
-}
-
 static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_controlled( "controlled" );
 static const efftype_id effect_drunk( "drunk" );
@@ -226,6 +199,33 @@ static const trait_id trait_NO_BASH( "NO_BASH" );
 static const trait_id trait_PROF_DICEMASTER( "PROF_DICEMASTER" );
 static const trait_id trait_TERRIFYING( "TERRIFYING" );
 static const trait_id trait_TRADE_BACKEND( "TRADE_BACKEND" );
+
+static std::atomic<std::uint64_t> next_platform_npc_identity_generation { 1 };
+
+static std::uint64_t allocate_platform_npc_identity_generation()
+{
+    const std::uint64_t result = next_platform_npc_identity_generation.fetch_add(
+                                     1, std::memory_order_relaxed );
+    if( result == 0 || result == std::numeric_limits<std::uint64_t>::max() ) {
+        std::terminate();
+    }
+    return result;
+}
+
+void reserve_platform_npc_identity_generation( const std::uint64_t id )
+{
+    if( id == 0 ) {
+        return;
+    }
+    if( id == std::numeric_limits<std::uint64_t>::max() ) {
+        std::terminate();
+    }
+    std::uint64_t next = next_platform_npc_identity_generation.load(
+                             std::memory_order_relaxed );
+    while( next <= id && !next_platform_npc_identity_generation.compare_exchange_weak(
+               next, id + 1, std::memory_order_relaxed ) ) {
+    }
+}
 
 static void starting_clothes( npc &who, const npc_class_id &type, bool male );
 static void starting_inv( npc &who, const npc_class_id &type );
