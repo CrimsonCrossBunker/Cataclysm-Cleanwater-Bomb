@@ -1638,7 +1638,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         // Use the native printf parser, including positional translation arguments.
         // Let format errors become recoverable Lua errors rather than debug popups.
-        return fmt::vsprintf( text, values );
+        return fmt::vsprintf( fmt::string_view( text ), values );
     } );
     services.set_function( "translate", [weak]( const std::string & text,
     const sol::optional<std::string> &context ) -> std::string {
