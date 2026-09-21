@@ -1,5 +1,8 @@
 #include <cstddef>
+#include <functional>
+#include <map>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -15,9 +18,12 @@
 #include "imgui/imgui.h"
 #include "mapbuffer.h"
 #include "player_activity.h"
+#include "point.h"
 #include "submap.h"
 #include "type_id.h"
 #include "ui_manager.h"
+
+struct ImGuiContext;
 
 static const activity_id ACT_WAIT( "ACT_WAIT" );
 static const efftype_id effect_sleep( "sleep" );
