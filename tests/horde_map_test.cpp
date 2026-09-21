@@ -155,8 +155,9 @@ TEST_CASE( "horde_map_clears_signalled_idle_submaps", "[hordes][horde_signal_emp
     REQUIRE( hordes.spawn_entity( p, mon_zombie ).inserted );
     hordes.signal_entities( p + point::east, 1 );
     CHECK( hordes.entity_group_at( sm, horde_map_flavors::idle ).empty() );
-    auto active = hordes.get_view( horde_map_flavors::active );
-    REQUIRE( active.begin() != active.end() );
+    horde_map::view_proxy active = hordes.get_view( horde_map_flavors::active );
+    const horde_map::iterator active_begin = active.begin();
+    REQUIRE( active_begin != active.end() );
     CHECK( active.begin()->first == p );
     CHECK( active.begin()->second.destination == p + point::east );
     SECTION( "erase_active_entity" ) {
@@ -168,7 +169,8 @@ TEST_CASE( "horde_map_clears_signalled_idle_submaps", "[hordes][horde_signal_emp
     }
     // A safe assertion before using the same coordinate serialization as overmap saves.
     REQUIRE( hordes.begin() == hordes.end() );
-    REQUIRE( hordes.get_view( horde_map_flavors::idle ).begin() == hordes.end() );
+    const horde_map::iterator idle_begin = hordes.get_view( horde_map_flavors::idle ).begin();
+    REQUIRE( idle_begin == hordes.end() );
     std::ostringstream saved;
     JsonOut json( saved );
     json.start_array();
@@ -193,7 +195,8 @@ TEST_CASE( "horde_map_iterator_skips_empty_submaps", "[hordes][horde_empty_itera
         groups.front()->clear();
         for( int filter = 0; filter != 16; ++filter ) {
             CAPTURE( filter );
-            CHECK( hordes.get_view( filter ).begin() == hordes.end() );
+            const horde_map::iterator first_entity = hordes.get_view( filter ).begin();
+            CHECK( first_entity == hordes.end() );
         }
         CHECK( hordes.begin() == hordes.end() );
     }
@@ -217,7 +220,7 @@ TEST_CASE( "horde_map_iterator_skips_empty_submaps", "[hordes][horde_empty_itera
         REQUIRE( hordes.spawn_entity( second, mon_pseudo_dormant_zombie ).inserted );
         for( int filter = 0; filter != 16; ++filter ) {
             CAPTURE( filter );
-            auto view = hordes.get_view( filter );
+            horde_map::view_proxy view = hordes.get_view( filter );
             auto iter = view.begin();
             if( filter & horde_map_flavors::dormant ) {
                 REQUIRE( iter != view.end() );
@@ -261,7 +264,8 @@ TEST_CASE( "horde_map_signals_multiple_submaps", "[hordes][horde_signal_submaps]
     CHECK( hordes.entity_group_at( tripoint_om_sm( 2, 1, 0 ), horde_map_flavors::idle ).empty() );
     CHECK( count_entities( hordes, horde_map_flavors::active ) == 2 );
     CHECK( count_entities( hordes, horde_map_flavors::idle ) == 1 );
-    auto idle = hordes.get_view( horde_map_flavors::idle );
-    REQUIRE( idle.begin() != idle.end() );
+    horde_map::view_proxy idle = hordes.get_view( horde_map_flavors::idle );
+    const horde_map::iterator idle_begin = idle.begin();
+    REQUIRE( idle_begin != idle.end() );
     CHECK( idle.begin()->first == far );
 }
