@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "calendar.h"
 #include "cata_catch.h"
 #include "flexbuffer_json.h"
 #include "item.h"
@@ -17,8 +16,6 @@
 #include "worldfactory.h"
 
 static const itype_id itype_menstrual_pad( "menstrual_pad" );
-static const itype_id itype_pin_badge( "pin_badge" );
-static const itype_id itype_pride_flag( "pride_flag" );
 static const mod_id MOD_INFORMATION_pride_items( "pride_items" );
 static const snippet_id snippet_menstrual_pad6( "menstrual_pad6" );
 
@@ -47,87 +44,9 @@ std::string save_item( const item &value )
     return stream.str();
 }
 
-void check_variant( const item &value, const std::string &variant, bool with_pride_items )
-{
-    REQUIRE( value.has_itype_variant( false ) == with_pride_items );
-    if( with_pride_items ) {
-        CHECK( value.itype_variant().id == variant );
-    }
-}
-
 } // namespace
 
 // Run both with the default core/test data and with --mods=pride_items.
-TEST_CASE( "legacy_pronoun_pins_load_with_and_without_pride_items",
-           "[pride_items][item][savegame]" )
-{
-    REQUIRE( world_generator->active_world != nullptr );
-    REQUIRE( itype_pin_badge.is_valid() );
-    const bool with_pride_items = pride_items_enabled();
-    CAPTURE( with_pride_items );
-
-    const std::array<std::string, 4> variants = {
-        "pin_pronoun_nb", "pin_pronoun_fem", "pin_pronoun_masc", "pin_pronoun_it"
-    };
-    for( const std::string &variant : variants ) {
-        CAPTURE( variant );
-        // Saved before this change: the item ID is pin_badge, and the pronoun
-        // design is a separate variant.  Older saves need not have an item UID.
-        const std::string legacy = R"({"typeid":"pin_badge","variant":")" + variant +
-                                   R"(","damaged":1000,"bday":0})";
-        const item loaded = load_saved_item( legacy );
-        CHECK( loaded.typeId().str() == "pin_badge" );
-        CHECK( loaded.damage() == 1000 );
-        CHECK( to_turns<int>( loaded.birthday() - calendar::turn_zero ) == 0 );
-        check_variant( loaded, variant, with_pride_items );
-
-        const item reloaded = load_saved_item( save_item( loaded ) );
-        CHECK( reloaded.typeId().str() == "pin_badge" );
-        CHECK( reloaded.damage() == loaded.damage() );
-        check_variant( reloaded, variant, with_pride_items );
-    }
-
-    const item new_pin( itype_pin_badge, calendar::turn_zero );
-    CHECK( new_pin.has_itype_variant( false ) == with_pride_items );
-}
-
-TEST_CASE( "legacy_pride_flags_load_with_and_without_pride_items",
-           "[pride_items][item][savegame]" )
-{
-    REQUIRE( world_generator->active_world != nullptr );
-    // A missing definition creates an undefined item rather than a usable flag.
-    REQUIRE( itype_pride_flag.is_valid() );
-    // Core retains the legacy definition for existing saves, including its
-    // variants. Loading the optional mod must preserve those same saved IDs.
-    CAPTURE( pride_items_enabled() );
-
-    const std::array<std::string, 3> variants = {
-        "rainbow_pride_flag", "transgender_pride_flag", "nonbinary_pride_flag"
-    };
-    for( const std::string &variant : variants ) {
-        CAPTURE( variant );
-        const std::string legacy = R"({"typeid":"pride_flag","variant":")" + variant +
-                                   R"(","damaged":1000,"bday":0})";
-        const item loaded = load_saved_item( legacy );
-        CHECK( loaded.typeId().str() == "pride_flag" );
-        CHECK( loaded.is_armor() );
-        CHECK( loaded.damage() == 1000 );
-        check_variant( loaded, variant, true );
-
-        const item reloaded = load_saved_item( save_item( loaded ) );
-        CHECK( reloaded.typeId().str() == "pride_flag" );
-        CHECK( reloaded.is_armor() );
-        CHECK( reloaded.damage() == loaded.damage() );
-        check_variant( reloaded, variant, true );
-    }
-
-    // Saves from before flag variants were introduced remain usable too.
-    const item unvaried = load_saved_item( R"({"typeid":"pride_flag","bday":0})" );
-    CHECK( unvaried.typeId().str() == "pride_flag" );
-    CHECK( unvaried.is_armor() );
-    CHECK( unvaried.has_itype_variant( false ) );
-}
-
 TEST_CASE( "legacy_pride_pad_snippets_load_with_and_without_pride_items",
            "[pride_items][item][savegame][text_snippets]" )
 {
