@@ -324,9 +324,9 @@ void process_avatar_activity( avatar &u )
     // Poll between actor calls, never inside one: cancellation may destroy
     // the currently running actor.  Some zone stages do not consume moves,
     // so waiting until the whole move budget is spent can starve input.
-    static auto last_poll = std::chrono::steady_clock::now();
+    static std::chrono::steady_clock::time_point last_poll = std::chrono::steady_clock::now();
     while( u.get_moves() > 0 && u.activity ) {
-        const auto now = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         if( now - last_poll >= std::chrono::milliseconds( 100 ) ) {
             last_poll = now;
             handle_key_blocking_activity( 0 );
