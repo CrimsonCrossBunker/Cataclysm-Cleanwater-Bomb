@@ -15,10 +15,12 @@
 #include "ret_val.h"
 #include "stomach.h"
 #include "type_id.h"
+#include "units.h"
 
 // *INDENT-OFF*
 static const itype_id itype_test_liquid_1ml( "test_liquid_1ml" );
 static const itype_id itype_test_watertight_open_sealed_container_250ml( "test_watertight_open_sealed_container_250ml" );
+static const itype_id itype_water_clean( "water_clean" );
 // *INDENT-ON*
 
 TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
@@ -27,7 +29,7 @@ TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
     clear_map_without_vision();
     avatar &you = get_avatar();
     you.set_thirst( 500 );
-    item water{ itype_id( "water_clean" ) };
+    item water{ itype_water_clean };
     water.charges = 3;
     for( int remaining = 2; remaining >= 0; --remaining ) {
         liquid_dest_opt target;
