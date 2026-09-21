@@ -1,3 +1,4 @@
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -15,21 +16,6 @@
 #include "uistate.h"
 #include "value_ptr.h"
 
-TEST_CASE( "toxic_food_warning_can_be_disabled", "[will_eat][edible_rating]" )
-{
-    clear_avatar();
-    avatar &you = get_avatar();
-    item food{ itype_id( "mutant_tallow" ) };
-    const bool old_warning = uistate.distraction_toxin_food;
-    on_out_of_scope restore( [&]() {
-        uistate.distraction_toxin_food = old_warning;
-    } );
-    uistate.distraction_toxin_food = true;
-    CHECK_FALSE( you.will_eat( food, false ).success() );
-    uistate.distraction_toxin_food = false;
-    CHECK( you.will_eat( food, false ).success() );
-}
-
 // Character "edible rating" tests, covering the `can_eat` and `will_eat` functions
 static const efftype_id effect_nausea( "nausea" );
 
@@ -43,6 +29,7 @@ static const itype_id itype_human_cooked( "human_cooked" );
 static const itype_id itype_marloss_berry( "marloss_berry" );
 static const itype_id itype_meat_cooked( "meat_cooked" );
 static const itype_id itype_milkshake( "milkshake" );
+static const itype_id itype_mutant_tallow( "mutant_tallow" );
 static const itype_id itype_neccowafers( "neccowafers" );
 static const itype_id itype_pine_nuts( "pine_nuts" );
 static const itype_id itype_scrambled_eggs( "scrambled_eggs" );
@@ -67,6 +54,21 @@ static const trait_id trait_THRESH_CATTLE( "THRESH_CATTLE" );
 static const trait_id trait_WATERSLEEP( "WATERSLEEP" );
 
 static const vitamin_id vitamin_human_flesh_vitamin( "human_flesh_vitamin" );
+
+TEST_CASE( "toxic_food_warning_can_be_disabled", "[will_eat][edible_rating]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    item food{ itype_mutant_tallow };
+    const bool old_warning = uistate.distraction_toxin_food;
+    on_out_of_scope restore( [&]() {
+        uistate.distraction_toxin_food = old_warning;
+    } );
+    uistate.distraction_toxin_food = true;
+    CHECK_FALSE( you.will_eat( food, false ).success() );
+    uistate.distraction_toxin_food = false;
+    CHECK( you.will_eat( food, false ).success() );
+}
 
 static void expect_can_eat( avatar &dummy, item &food )
 {
