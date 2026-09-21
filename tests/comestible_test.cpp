@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <initializer_list>
 #include <list>
 #include <map>
 #include <memory>
@@ -28,19 +29,19 @@
 #include "units.h"
 #include "value_ptr.h"
 
-static const flag_id json_flag_NUTRIENT_OVERRIDE( "NUTRIENT_OVERRIDE" );
 static const flag_id json_flag_COOKED( "COOKED" );
+static const flag_id json_flag_NUTRIENT_OVERRIDE( "NUTRIENT_OVERRIDE" );
 
 static const item_category_id item_category_drugs( "drugs" );
 static const item_category_id item_category_mutagen( "mutagen" );
 
-static const itype_id itype_marloss_berry( "marloss_berry" );
-static const itype_id itype_marloss_gel( "marloss_gel" );
-static const itype_id itype_marloss_seed( "marloss_seed" );
 static const itype_id itype_cooked_cured_meat( "cooked_cured_meat" );
 static const itype_id itype_dehydrated_cured_meat( "dehydrated_cured_meat" );
 static const itype_id itype_dry_meat( "dry_meat" );
 static const itype_id itype_dry_poultry( "dry_poultry" );
+static const itype_id itype_marloss_berry( "marloss_berry" );
+static const itype_id itype_marloss_gel( "marloss_gel" );
+static const itype_id itype_marloss_seed( "marloss_seed" );
 static const itype_id itype_meat( "meat" );
 static const itype_id itype_meat_mutant_tainted_smoked( "meat_mutant_tainted_smoked" );
 static const itype_id itype_meat_salted( "meat_salted" );
@@ -58,6 +59,8 @@ static const recipe_id recipe_veggy_wild_cooked( "veggy_wild_cooked" );
 
 static const trait_id trait_GOURMAND( "GOURMAND" );
 
+static const vitamin_id vitamin_human_flesh_vitamin( "human_flesh_vitamin" );
+static const vitamin_id vitamin_meat_allergen( "meat_allergen" );
 static const vitamin_id vitamin_mutagen( "mutagen" );
 static const vitamin_id vitamin_mutagen_alpha( "mutagen_alpha" );
 static const vitamin_id vitamin_mutagen_batrachian( "mutagen_batrachian" );
@@ -85,6 +88,7 @@ static const vitamin_id vitamin_mutagen_spider( "mutagen_spider" );
 static const vitamin_id vitamin_mutagen_troglobite( "mutagen_troglobite" );
 static const vitamin_id vitamin_mutagen_ursine( "mutagen_ursine" );
 static const vitamin_id vitamin_mutagenic_slurry( "mutagenic_slurry" );
+static const vitamin_id vitamin_mutant_toxin( "mutant_toxin" );
 
 static const std::vector<vitamin_id> mutagen_vit_list{ vitamin_mutagen, vitamin_mutagen_alpha, vitamin_mutagen_batrachian, vitamin_mutagen_beast, vitamin_mutagen_bird, vitamin_mutagen_cattle, vitamin_mutagen_cephalopod, vitamin_mutagen_chimera, vitamin_mutagen_elfa, vitamin_mutagen_feline, vitamin_mutagen_fish, vitamin_mutagen_gastropod, vitamin_mutagen_human, vitamin_mutagen_insect, vitamin_mutagen_lizard, vitamin_mutagen_lupine, vitamin_mutagen_medical, vitamin_mutagen_mouse, vitamin_mutagen_plant, vitamin_mutagen_rabbit, vitamin_mutagen_raptor, vitamin_mutagen_rat, vitamin_mutagen_slime, vitamin_mutagen_spider, vitamin_mutagen_troglobite, vitamin_mutagen_ursine, vitamin_mutagenic_slurry };
 
@@ -169,6 +173,27 @@ static int byproduct_calories( const recipe &recipe_obj )
         }
     }
     return kcal;
+}
+
+TEST_CASE( "mutant_fat_portion_toxins", "[comestible][vitamins]" )
+{
+    for( const std::string id : {
+             "mutant_fat", "mutant_human_fat",
+             "mutant_tallow", "mutant_human_tallow"
+         } ) {
+        CAPTURE( id );
+        const item food{ itype_id( id ) };
+        REQUIRE( food.type->comestible );
+        const auto &vitamins = food.type->comestible->default_nutrition_read_only().vitamins();
+        REQUIRE( vitamins.count( vitamin_mutant_toxin ) == 1 );
+        CHECK( vitamins.at( vitamin_mutant_toxin ) ==
+               ( id.find( "tallow" ) == std::string::npos ? 36 : 18 ) );
+        CHECK( vitamins.at( vitamin_meat_allergen ) == 1 );
+        if( id.find( "human" ) != std::string::npos ) {
+            CHECK( vitamins.at( vitamin_human_flesh_vitamin ) == 1 );
+        }
+        CHECK( food.volume() == 25_ml );
+    }
 }
 
 static bool has_mutagen_vit( const islot_comestible &comest )

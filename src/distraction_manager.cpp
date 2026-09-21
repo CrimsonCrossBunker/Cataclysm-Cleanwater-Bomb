@@ -47,6 +47,7 @@ static const std::vector<configurable_distraction> &get_configurable_distraction
         {&uistate.distraction_withdrawal,      translate_marker( "Withdrawal" ),                  translate_marker( "This distraction will interrupt your activity when you have withdrawals." )},
         {&uistate.distraction_craft_step_complete, translate_marker( "Craft step complete" ),      translate_marker( "This distraction will interrupt your activity when an unattended crafting step completes." )},
         {&uistate.distraction_non_hostile_melee, translate_marker( "Non-hostile melee confirmation" ), translate_marker( "This prompt asks for confirmation when moving into a non-hostile monster would attack it." )},
+        {&uistate.distraction_toxin_food, translate_marker( "Toxic food confirmation" ), translate_marker( "Warn before consuming food containing toxins. Disabling this warning does not remove the toxins or their effects." )},
         {&uistate.distraction_all,             translate_marker( "Toggle all" ),                   translate_marker( "Toggle all distractions" ), true }
     };
     return configurable_distractions;
@@ -164,6 +165,7 @@ void distraction_manager_gui::show()
                 uistate.distraction_withdrawal = toggle_state;
                 uistate.distraction_craft_step_complete = toggle_state;
                 uistate.distraction_non_hostile_melee = toggle_state;
+                uistate.distraction_toxin_food = toggle_state;
             }
         }
     }

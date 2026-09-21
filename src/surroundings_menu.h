@@ -15,13 +15,13 @@
 #include "coordinates.h"
 #include "enums.h"
 #include "input_context.h"
+#include "item.h"
 #include "map_entity_stack.h"
 #include "translations.h"
 
 class avatar;
 class Character;
 class Creature;
-class item;
 class map;
 struct map_data_common_t;
 
@@ -180,6 +180,8 @@ class surroundings_menu : public cataimgui::window
 
     private:
         void draw_item_tab();
+        // The modal list pauses the world; item details stay valid until it closes.
+        std::map<const item *, std::vector<iteminfo>> item_info_cache;
         void draw_monster_tab();
         void draw_terfurn_tab();
         void draw_examine_info();
