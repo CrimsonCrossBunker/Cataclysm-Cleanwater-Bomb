@@ -1,7 +1,10 @@
 #include "horde_map.h"
 
+#include <sstream>
+
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "json.h"
 #include "monster.h"
 #include "rng.h"
 
@@ -134,4 +137,124 @@ TEST_CASE( "horde_map_corner_cases", "[hordes]" )
         FAIL( "Unreachable loop entered, should not happen with empty horde_map." );
     }
 
+}
+
+TEST_CASE( "horde_map_clears_signalled_idle_submaps", "[hordes][horde_signal_empty]" )
+{
+    horde_map hordes;
+    hordes.set_location( point_abs_om( 0, 0 ) );
+    const tripoint_abs_ms p( 12, 12, 0 );
+    const tripoint_om_sm sm( 1, 1, 0 );
+    REQUIRE( hordes.spawn_entity( p, mon_zombie ).inserted );
+    hordes.signal_entities( p + point::east, 1 );
+    CHECK( hordes.entity_group_at( sm, horde_map_flavors::idle ).empty() );
+    auto active = hordes.get_view( horde_map_flavors::active );
+    REQUIRE( active.begin() != active.end() );
+    CHECK( active.begin()->first == p );
+    CHECK( active.begin()->second.destination == p + point::east );
+    SECTION( "erase_active_entity" ) {
+        hordes.erase( active.begin() );
+    }
+    SECTION( "extract_active_entity" ) {
+        auto node = hordes.extract( active.begin() );
+        REQUIRE_FALSE( node.empty() );
+    }
+    // A safe assertion before using the same coordinate serialization as overmap saves.
+    REQUIRE( hordes.begin() == hordes.end() );
+    REQUIRE( hordes.get_view( horde_map_flavors::idle ).begin() == hordes.end() );
+    std::ostringstream saved;
+    JsonOut json( saved );
+    json.start_array();
+    for( const auto &entry : hordes ) {
+        entry.first.serialize( json );
+    }
+    json.end_array();
+    CHECK( saved.str() == "[]" );
+}
+
+TEST_CASE( "horde_map_iterator_skips_empty_submaps", "[hordes][horde_empty_iteration]" )
+{
+    horde_map hordes;
+    hordes.set_location( point_abs_om( 0, 0 ) );
+    const tripoint_abs_ms first( 12, 12, 0 );
+    const tripoint_abs_ms second( 36, 36, 0 );
+    REQUIRE( hordes.spawn_entity( first, mon_zombie ).inserted );
+    auto groups = hordes.entity_group_at( tripoint_om_sm( 1, 1, 0 ), horde_map_flavors::idle );
+    REQUIRE( groups.size() == 1 );
+
+    SECTION( "all_flavor_filters_skip_an_empty_submap" ) {
+        groups.front()->clear();
+        for( int filter = 0; filter != 16; ++filter ) {
+            CAPTURE( filter );
+            CHECK( hordes.get_view( filter ).begin() == hordes.end() );
+        }
+        CHECK( hordes.begin() == hordes.end() );
+    }
+    SECTION( "skip_first_empty_submap_in_same_flavor" ) {
+        REQUIRE( hordes.spawn_entity( second, mon_zombie ).inserted );
+        const tripoint_abs_ms removed = hordes.begin()->first;
+        const tripoint_abs_ms remaining = removed == first ? second : first;
+        const tripoint_om_sm removed_sm = removed == first ? tripoint_om_sm( 1, 1, 0 ) :
+                                          tripoint_om_sm( 3, 3, 0 );
+        auto removed_group = hordes.entity_group_at( removed_sm, horde_map_flavors::idle );
+        REQUIRE( removed_group.size() == 1 );
+        removed_group.front()->clear();
+        auto iter = hordes.begin();
+        REQUIRE( iter != hordes.end() );
+        CHECK( iter->first == remaining );
+        ++iter;
+        CHECK( iter == hordes.end() );
+    }
+    SECTION( "skip_empty_idle_before_dormant" ) {
+        groups.front()->clear();
+        REQUIRE( hordes.spawn_entity( second, mon_pseudo_dormant_zombie ).inserted );
+        for( int filter = 0; filter != 16; ++filter ) {
+            CAPTURE( filter );
+            auto view = hordes.get_view( filter );
+            auto iter = view.begin();
+            if( filter & horde_map_flavors::dormant ) {
+                REQUIRE( iter != view.end() );
+                CHECK( iter->first == second );
+                ++iter;
+            }
+            CHECK( iter == view.end() );
+        }
+    }
+    SECTION( "increment_across_empty_idle_to_dormant" ) {
+        hordes.signal_entities( first + point::east, 1 );
+        REQUIRE( hordes.spawn_entity( second, mon_zombie ).inserted );
+        auto empty_group = hordes.entity_group_at( tripoint_om_sm( 3, 3, 0 ),
+                           horde_map_flavors::idle );
+        REQUIRE( empty_group.size() == 1 );
+        empty_group.front()->clear();
+        REQUIRE( hordes.spawn_entity( second, mon_pseudo_dormant_zombie ).inserted );
+        auto iter = hordes.begin();
+        REQUIRE( iter != hordes.end() );
+        CHECK( iter->first == first );
+        ++iter;
+        REQUIRE( iter != hordes.end() );
+        CHECK( iter->first == second );
+        ++iter;
+        CHECK( iter == hordes.end() );
+    }
+}
+
+TEST_CASE( "horde_map_signals_multiple_submaps", "[hordes][horde_signal_submaps]" )
+{
+    horde_map hordes;
+    hordes.set_location( point_abs_om( 0, 0 ) );
+    const tripoint_abs_ms near( 12, 12, 0 );
+    const tripoint_abs_ms nearby( 24, 12, 0 );
+    const tripoint_abs_ms far( 120, 120, 0 );
+    REQUIRE( hordes.spawn_entity( near, mon_zombie ).inserted );
+    REQUIRE( hordes.spawn_entity( nearby, mon_zombie ).inserted );
+    REQUIRE( hordes.spawn_entity( far, mon_zombie ).inserted );
+    hordes.signal_entities( near + point::east, 3 );
+    CHECK( hordes.entity_group_at( tripoint_om_sm( 1, 1, 0 ), horde_map_flavors::idle ).empty() );
+    CHECK( hordes.entity_group_at( tripoint_om_sm( 2, 1, 0 ), horde_map_flavors::idle ).empty() );
+    CHECK( count_entities( hordes, horde_map_flavors::active ) == 2 );
+    CHECK( count_entities( hordes, horde_map_flavors::idle ) == 1 );
+    auto idle = hordes.get_view( horde_map_flavors::idle );
+    REQUIRE( idle.begin() != idle.end() );
+    CHECK( idle.begin()->first == far );
 }
