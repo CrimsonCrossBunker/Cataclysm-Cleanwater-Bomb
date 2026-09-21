@@ -232,6 +232,7 @@ class uistatedata
         bool distraction_withdrawal = true;
         bool distraction_craft_step_complete = true;
         bool distraction_non_hostile_melee = true;
+        bool distraction_toxin_food = true;
         bool distraction_all = true; // NOLINT(cata-serialize)
         bool numpad_navigation = false;
 
