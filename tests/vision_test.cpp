@@ -40,6 +40,7 @@ static const field_type_str_id field_fd_smoke( "fd_smoke" );
 static const move_mode_id move_mode_crouch( "crouch" );
 static const move_mode_id move_mode_walk( "walk" );
 
+static const mtype_id mon_kreck( "mon_kreck" );
 static const mtype_id mon_test_camera( "mon_test_camera" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_electric( "mon_zombie_electric" );
@@ -56,6 +57,30 @@ static const trait_id trait_MYOPIC( "MYOPIC" );
 static const vpart_id vpart_inboard_mirror( "inboard_mirror" );
 static const vproto_id vehicle_prototype_meth_lab( "meth_lab" );
 static const vproto_id vehicle_prototype_vehicle_camera_test( "vehicle_camera_test" );
+
+TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
+{
+    clear_avatar();
+    clear_map();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms origin{ 60, 60, 0 };
+    you.setpos( here, tripoint_bub_ms{ 62, 60, 0 } );
+    monster *observer = g->place_critter_at( mon_kreck, origin );
+    REQUIRE( observer );
+    here.build_map_cache( 0 );
+    REQUIRE( observer->sees( here, you ) );
+    here.ter_set( tripoint_bub_ms{ 61, 60, 0 }, ter_t_brick_wall );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0 );
+    CHECK_FALSE( observer->sees( here, you ) );
+    const tripoint_bub_ms upstairs{ 60, 60, 1 };
+    you.setpos( here, upstairs );
+    here.ter_set( upstairs, ter_t_floor );
+    here.invalidate_map_cache( 1 );
+    here.build_map_cache( 1 );
+    CHECK_FALSE( observer->sees( here, you ) );
+}
 
 static int get_actual_light_level( const map_test_case::tile &t )
 {

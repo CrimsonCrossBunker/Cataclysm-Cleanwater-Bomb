@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
@@ -13,6 +14,7 @@
 #include "creature.h"
 #include "item.h"
 #include "item_location.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
@@ -21,6 +23,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
+#include "player_helpers.h"
 #include "point.h"
 #include "skill.h"
 #include "type_id.h"
@@ -54,9 +57,30 @@ static const mtype_id pseudo_debug_mon( "pseudo_debug_mon" );
 static const skill_id skill_melee( "melee" );
 static const skill_id skill_unarmed( "unarmed" );
 
+static const ter_str_id ter_t_floor( "t_floor" );
+
 static const trait_id trait_ARM_TENTACLES( "ARM_TENTACLES" );
 static const trait_id trait_CLAWS_TENTACLE( "CLAWS_TENTACLE" );
 static const trait_id trait_POISONOUS2( "POISONOUS2" );
+
+TEST_CASE( "reach_attack_cannot_cross_a_solid_floor", "[melee][reach]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms source{ 60, 60, 0 };
+    const tripoint_bub_ms target{ 60, 60, -1 };
+    you.setpos( here, source );
+    here.ter_set( source, ter_t_floor );
+    you.set_moves( 1000 );
+    const int before = you.get_moves();
+    you.reach_attack( target );
+    CHECK( you.get_moves() == before );
+    // An empty, unseen same-level tile remains a valid blind attack.
+    you.reach_attack( tripoint_bub_ms{ 62, 60, 0 } );
+    CHECK( you.get_moves() < before );
+}
 
 static float brute_probability( Creature &attacker, Creature &target, const size_t iters )
 {

@@ -566,7 +566,8 @@ bool Creature::sees( const map &here, const Creature &critter ) const
 
     if( this->has_flag( mon_flag_ALL_SEEING ) ) {
         const monster *m = this->as_monster();
-        return target_range <= std::max( m->type->vision_day, m->type->vision_night );
+        return target_range <= std::max( m->type->vision_day, m->type->vision_night ) &&
+               here.sees( pos, critter_pos, target_range );
     }
 
     if( this->has_flag( mon_flag_MIND_SEEING ) ) {

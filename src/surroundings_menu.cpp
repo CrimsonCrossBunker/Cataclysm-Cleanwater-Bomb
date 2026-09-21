@@ -14,23 +14,28 @@
 
 #include "avatar.h"
 #include "avatar_action.h"
+#include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "color.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "debug.h"
-#include "enums.h"
 #include "enum_traits.h"
+#include "enums.h"
 #include "game.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "game_ui.h"
+#include "input_context.h"
 #include "input_popup.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
 #include "item_search.h"
 #include "map.h"
+#include "map_entity_stack.h"
 #include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
@@ -43,11 +48,12 @@
 #include "string_formatter.h"
 #include "text.h"
 #include "translation.h"
+#include "translations.h"
 #include "type_id.h"
-#include "uistate.h"
 #include "ui_extended_description.h"
 #include "ui_iteminfo.h"
 #include "ui_manager.h"
+#include "uistate.h"
 
 static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
 
@@ -937,9 +943,12 @@ void surroundings_menu::draw_item_tab()
                         ImGui::TableHeadersRow();
                         ImGui::TableNextColumn();
                         // embedded info for selected item
-                        std::vector<iteminfo> selected_info;
+                        auto cached = item_info_cache.try_emplace( selected_it );
+                        if( cached.second ) {
+                            selected_it->info( true, cached.first->second );
+                        }
+                        const std::vector<iteminfo> &selected_info = cached.first->second;
                         std::vector<iteminfo> dummy_info;
-                        selected_it->info( true, selected_info );
                         item_info_data dummy( "", "", selected_info, dummy_info );
                         dummy.without_getch = true;
                         dummy.without_border = true;

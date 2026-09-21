@@ -451,6 +451,7 @@ void uistatedata::serialize( JsonOut &json ) const
     json.member( "distraction_withdrawal", distraction_withdrawal );
     json.member( "distraction_craft_step_complete", distraction_craft_step_complete );
     json.member( "distraction_non_hostile_melee", distraction_non_hostile_melee );
+    json.member( "distraction_toxin_food", distraction_toxin_food );
     json.member( "numpad_navigation", numpad_navigation );
 
     json.member( "overmap_sidebar_uistate" );
@@ -552,6 +553,7 @@ void uistatedata::deserialize( const JsonObject &jo )
     jo.read( "distraction_withdrawal", distraction_withdrawal );
     jo.read( "distraction_craft_step_complete", distraction_craft_step_complete );
     jo.read( "distraction_non_hostile_melee", distraction_non_hostile_melee );
+    jo.read( "distraction_toxin_food", distraction_toxin_food );
     jo.read( "numpad_navigation", numpad_navigation );
     jo.read( "vmenu_tab", vmenu_tab );
     jo.read( "vmenu_item_sort", vmenu_item_sort );
@@ -5229,7 +5231,7 @@ bool pickup_selector::wield( int &count )
         u.assign_activity( wield_activity_actor( it, charges ) );
         return true;
     } else {
-        popup_getkey( u.can_wield( *it ).c_str() );
+        popup_getkey( "%s", u.can_wield( *it ).c_str() );
     }
 
     return false;

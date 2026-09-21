@@ -516,6 +516,9 @@ const std::string &input_context::handle_input()
 
 const std::string &input_context::handle_input( const int timeout )
 {
+    // Persistent contexts may have been constructed before another page's context.
+    // Publish the context actually receiving input while SDL pumps and redraws.
+    scoped_activation active_context( *this );
     const int old_timeout = inp_mngr.get_timeout();
     if( timeout >= 0 ) {
         inp_mngr.set_timeout( timeout );
