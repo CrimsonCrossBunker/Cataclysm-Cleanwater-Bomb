@@ -171,6 +171,27 @@ static int byproduct_calories( const recipe &recipe_obj )
     return kcal;
 }
 
+TEST_CASE( "mutant_fat_portion_toxins", "[comestible][vitamins]" )
+{
+    for( const std::string id : {
+             "mutant_fat", "mutant_human_fat",
+             "mutant_tallow", "mutant_human_tallow"
+         } ) {
+        CAPTURE( id );
+        const item food{ itype_id( id ) };
+        REQUIRE( food.type->comestible );
+        const auto &vitamins = food.type->comestible->default_nutrition_read_only().vitamins();
+        REQUIRE( vitamins.count( vitamin_id( "mutant_toxin" ) ) == 1 );
+        CHECK( vitamins.at( vitamin_id( "mutant_toxin" ) ) ==
+               ( id.find( "tallow" ) == std::string::npos ? 36 : 18 ) );
+        CHECK( vitamins.at( vitamin_id( "meat_allergen" ) ) == 1 );
+        if( id.find( "human" ) != std::string::npos ) {
+            CHECK( vitamins.at( vitamin_id( "human_flesh_vitamin" ) ) == 1 );
+        }
+        CHECK( food.volume() == 25_ml );
+    }
+}
+
 static bool has_mutagen_vit( const islot_comestible &comest )
 {
     const std::map<vitamin_id, int> &vits = comest.default_nutrition_read_only().vitamins();
