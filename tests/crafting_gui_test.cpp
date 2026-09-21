@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <climits>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <set>
@@ -20,6 +21,8 @@
 #include "recipe_dictionary.h"
 #include "game.h"
 #include "item.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "options_helpers.h"
@@ -1170,6 +1173,41 @@ TEST_CASE( "build_recipe_list_expands_nested", "[crafting][gui][recipe_list]" )
     CHECK( result.entries[0]->ident() == recipe_test_nested_weapons );
     CHECK( result.entries[1]->ident() == recipe_cudgel_test_no_tools );
     CHECK( result.indent[0] < result.indent[1] );
+}
+
+TEST_CASE( "recipe_subset_rejects_missing_saved_recipes", "[crafting][recipe_list][save]" )
+{
+    recipe_subset available;
+    const JsonArray saved = json_loader::from_string(
+                                R"(["null", "removed_recipe_for_regression_test", "cudgel_test_no_tools"])" );
+    deserialize( available, saved );
+    CHECK_FALSE( available.contains( &recipe_id::NULL_ID().obj() ) );
+    CHECK( available.contains( &recipe_cudgel_test_no_tools.obj() ) );
+    CHECK( available.size() == 1 );
+
+    recipe obsolete = recipe_cudgel_test_no_tools.obj();
+    obsolete.obsolete = true;
+    available.include( &obsolete );
+    available.include( nullptr );
+    CHECK( available.size() == 1 );
+}
+
+TEST_CASE( "nested_recipe_expansion_excludes_null_children", "[crafting][gui][recipe_list]" )
+{
+    clear_recipe_ui_state();
+    Character &guy = setup_character();
+    recipe nested = recipe_test_nested_weapons.obj();
+    nested.nested_category_data = { recipe_cudgel_test_no_tools, recipe_id::NULL_ID() };
+    const recipe *cudgel = &recipe_cudgel_test_no_tools.obj();
+    recipe_subset available = make_subset( { &nested, cudgel, &recipe_id::NULL_ID().obj() } );
+    uistate.expanded_recipes.insert( nested.ident() );
+    std::map<const recipe *, availability> cache;
+    const recipe_list_data result = build_recipe_list( { &nested }, false, false,
+                                    guy, false, nullptr, false, false, cache, available );
+    REQUIRE( result.entries.size() == 2 );
+    CHECK( result.entries[0] == &nested );
+    CHECK( result.entries[1] == cudgel );
+    CHECK( result.entries.size() == result.indent.size() );
 }
 
 TEST_CASE( "list_nested_generates_tree", "[crafting][gui][recipe_list]" )
