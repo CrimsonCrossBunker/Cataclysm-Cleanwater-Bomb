@@ -634,10 +634,17 @@ bool perform_liquid_transfer( item &liquid, const tripoint_bub_ms *const source_
     };
 
     switch( target.dest_opt ) {
-        case LD_CONSUME:
-            player_character.assign_activity( consume_activity_actor( liquid ) );
-            liquid.charges--;
+        case LD_CONSUME: {
+            // This liquid is a temporary crafting result, not an item_location.
+            // The caller keeps asking about the remainder synchronously.  Queuing
+            // an activity here would overwrite every preceding drink activity.
+            const int moves = to_moves<int>( player_character.get_consume_time( liquid ) );
+            if( player_character.consume( liquid ) == trinary::NONE ) {
+                return false;
+            }
+            player_character.mod_moves( -moves );
             return true;
+        }
         case LD_ITEM: {
             return handle_item_target( player_character, liquid, target, create_activity, silent );
         }
