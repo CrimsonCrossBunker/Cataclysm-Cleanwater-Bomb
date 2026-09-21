@@ -123,6 +123,10 @@ namespace turn_handler
 {
 bool cleanup_at_end()
 {
+    // The game instance survives returning to the main menu.
+    g->wait_popup_reset();
+    g->first_redraw_since_waiting_started = true;
+
     avatar &u = get_avatar();
     if( g->uquit == QUIT_DIED || g->uquit == QUIT_SUICIDE ) {
         // Put (non-hallucinations) into the overmap so they are not lost.
