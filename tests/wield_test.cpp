@@ -73,6 +73,27 @@ static void wield_check_from_ground( avatar &guy, const itype_id &item_name,
     CHECK( item_loc.obtain_cost( guy ) == Approx( expected_moves ).epsilon( 0.1f ) );
 }
 
+TEST_CASE( "wool_gloves_preserve_two_handed_wielding", "[wield]" )
+{
+    clear_avatar();
+    avatar &guy = get_avatar();
+    const item tool{ itype_id( "sledgehammer" ) };
+    // Wounded but usable hands must not become a missing arm just from gloves.
+    for( const bodypart_id hand : {
+             bodypart_id( "hand_l" ), bodypart_id( "hand_r" )
+         } ) {
+        guy.set_part_hp_cur( hand, guy.get_part_hp_max( hand ) / 2 );
+    }
+    REQUIRE( guy.has_two_arms_lifting() );
+    REQUIRE( guy.can_wield( tool ).success() );
+    guy.wear_item( item( itype_id( "gloves_wool" ) ) );
+    CHECK( guy.has_two_arms_lifting() );
+    CHECK( guy.can_wield( tool ).success() );
+    guy.set_part_hp_cur( bodypart_id( "arm_l" ), 0 );
+    CHECK_FALSE( guy.has_two_arms_lifting() );
+    CHECK_FALSE( guy.can_wield( tool ).success() );
+}
+
 TEST_CASE( "Wield_test", "[wield]" )
 {
     clear_map_without_vision();
