@@ -1,12 +1,19 @@
 #include "horde_map.h"
 
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "horde_entity.h"
 #include "json.h"
 #include "monster.h"
+#include "point.h"
 #include "rng.h"
+#include "type_id.h"
 
 static const mtype_id mon_pseudo_dormant_zombie( "mon_pseudo_dormant_zombie" );
 static const mtype_id mon_zombie( "mon_zombie" );
