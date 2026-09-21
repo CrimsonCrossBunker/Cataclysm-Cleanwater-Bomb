@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -12,6 +14,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "text_snippets.h"
+#include "translation.h"
 #include "type_id.h"
 #include "worldfactory.h"
 
