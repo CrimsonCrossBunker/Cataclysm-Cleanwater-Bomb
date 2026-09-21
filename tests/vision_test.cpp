@@ -40,6 +40,7 @@ static const field_type_str_id field_fd_smoke( "fd_smoke" );
 static const move_mode_id move_mode_crouch( "crouch" );
 static const move_mode_id move_mode_walk( "walk" );
 
+static const mtype_id mon_kreck( "mon_kreck" );
 static const mtype_id mon_test_camera( "mon_test_camera" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_electric( "mon_zombie_electric" );
@@ -65,7 +66,7 @@ TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
     avatar &you = get_avatar();
     const tripoint_bub_ms origin{ 60, 60, 0 };
     you.setpos( here, tripoint_bub_ms{ 62, 60, 0 } );
-    monster *observer = g->place_critter_at( mtype_id( "mon_kreck" ), origin );
+    monster *observer = g->place_critter_at( mon_kreck, origin );
     REQUIRE( observer );
     here.build_map_cache( 0 );
     REQUIRE( observer->sees( here, you ) );
