@@ -4190,8 +4190,9 @@ std::optional<bool> route( Character &you, player_activity &act, const tripoint_
         }
         if( !check_only ) {
             if( you.get_moves() <= 0 ) {
-                // Restart activity and break from cycle.
-                you.assign_activity( act );
+                // Keep the current activity for the next turn. Reassigning it
+                // would push another copy into the backlog for non-resumable
+                // multi-activities such as crafting and disassembly.
                 return true;
             }
             // set the destination and restart activity after player arrives there
