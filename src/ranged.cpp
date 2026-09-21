@@ -1,8 +1,8 @@
 #include "ranged.h"
 
-#include <coordinates.h>
 #include <algorithm>
 #include <cmath>
+#include <coordinates.h>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -49,7 +49,6 @@
 #include "input_context.h"
 #include "input_enums.h"
 #include "item.h"
-#include "item_contents.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_tname.h"
@@ -173,6 +172,28 @@ static const flag_id json_flag_LEVER_ACTION( "LEVER_ACTION" );
 static const flag_id json_flag_PUMP_ACTION( "PUMP_ACTION" );
 static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
 
+static const material_id material_glass( "glass" );
+
+static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
+
+static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
+static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
+static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
+
+static const skill_id skill_archery( "archery" );
+static const skill_id skill_dodge( "dodge" );
+static const skill_id skill_driving( "driving" );
+static const skill_id skill_gun( "gun" );
+static const skill_id skill_launcher( "launcher" );
+static const skill_id skill_swimming( "swimming" );
+static const skill_id skill_throw( "throw" );
+
+static const trait_id trait_BRAWLER( "BRAWLER" );
+static const trait_id trait_GUNSHY( "GUNSHY" );
+
+static const trap_str_id tr_practice_target( "tr_practice_target" );
+static const trap_str_id tr_target_spinner( "tr_target_spinner" );
+
 // Returns whether the target is currently ignoring the attacker.
 static bool target_ignores_projectile_attacker( const Creature &target, const Creature &attacker )
 {
@@ -240,43 +261,6 @@ double projectile_target_mobility_weight( const Creature &target, const map &her
 
     return std::clamp( 1.0 + target_weight, 1.0, 2.5 );
 }
-
-static const material_id material_budget_steel( "budget_steel" );
-static const material_id material_budget_steel_chain( "budget_steel_chain" );
-static const material_id material_ch_steel( "ch_steel" );
-static const material_id material_ch_steel_chain( "ch_steel_chain" );
-static const material_id material_copper_nickel( "copper_nickel" );
-static const material_id material_glass( "glass" );
-static const material_id material_hc_steel( "hc_steel" );
-static const material_id material_hc_steel_chain( "hc_steel_chain" );
-static const material_id material_iron( "iron" );
-static const material_id material_lc_steel( "lc_steel" );
-static const material_id material_lc_steel_chain( "lc_steel_chain" );
-static const material_id material_mc_steel( "mc_steel" );
-static const material_id material_mc_steel_chain( "mc_steel_chain" );
-static const material_id material_qt_steel( "qt_steel" );
-static const material_id material_qt_steel_chain( "qt_steel_chain" );
-static const material_id material_steel( "steel" );
-
-static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
-
-static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
-static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
-static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
-
-static const skill_id skill_archery( "archery" );
-static const skill_id skill_dodge( "dodge" );
-static const skill_id skill_driving( "driving" );
-static const skill_id skill_gun( "gun" );
-static const skill_id skill_launcher( "launcher" );
-static const skill_id skill_swimming( "swimming" );
-static const skill_id skill_throw( "throw" );
-
-static const trait_id trait_BRAWLER( "BRAWLER" );
-static const trait_id trait_GUNSHY( "GUNSHY" );
-
-static const trap_str_id tr_practice_target( "tr_practice_target" );
-static const trap_str_id tr_target_spinner( "tr_target_spinner" );
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
@@ -850,7 +834,6 @@ bool Character::handle_gun_damage( item &it )
         }
         return false;
     }
-
 
     // i am bad at math, so we will use vibes instead
     double gun_jam_chance = 0;
@@ -1565,7 +1548,6 @@ static double calculate_aim_cap_without_target( const Character &you,
     // Convert from radians to arcmin.
     return 60 * 180 * angle / M_PI;
 }
-
 
 // Handle capping aim level when the player cannot see the target tile or there is nothing to aim at.
 double calculate_aim_cap( const Character &you, const tripoint_bub_ms &target )
@@ -2750,7 +2732,6 @@ static void cycle_action( item &weap, const itype_id &ammo, map *here, const tri
         return !here->passable( e );
     } ), tiles.end() );
     tripoint_bub_ms eject{ tiles.empty() ? pos : random_entry( tiles ) };
-
 
     // for turrets try and drop casings or linkages directly to any CARGO part on the same tile
     const std::optional<vpart_reference> ovp_cargo = weap.has_flag( flag_VEHICLE )
@@ -4112,7 +4093,7 @@ void target_ui::recalc_aim_turning_penalty()
         const double displacement = last_aim_pos ? rl_dist_exact( *last_aim_pos, dst ) : 0.0;
         const double old_range = last_aim_pos ? rl_dist_exact( src, *last_aim_pos ) : 0.0;
         const double new_range = rl_dist_exact( src, dst );
-        const double max_range = std::max( 1.0, std::max( old_range, new_range ) );
+        const double max_range = std::max( { 1.0, old_range, new_range } );
         const double displacement_ratio = clamp( displacement / max_range, 0.0, 1.0 );
 
         const point_rel_ms aim_vec = curr_recoil_pos.xy() - src.xy();
