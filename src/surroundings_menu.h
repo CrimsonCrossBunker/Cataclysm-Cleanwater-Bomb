@@ -22,7 +22,6 @@
 class avatar;
 class Character;
 class Creature;
-class item;
 class map;
 struct map_data_common_t;
 
