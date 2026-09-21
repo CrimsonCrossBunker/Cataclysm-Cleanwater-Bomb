@@ -1071,6 +1071,23 @@ bool Character::can_reach_attack( const Creature &target ) const
 
 void Character::reach_attack( const tripoint_bub_ms &p, int forced_movecost )
 {
+    // Blind attacks are allowed, but a weapon cannot cross a solid floor.
+    // Validate the actual path, independently of whether the target is visible.
+    const tripoint_bub_ms source = pos_bub();
+    if( source == p ) {
+        return;
+    }
+    if( source.z() != p.z() ) {
+        tripoint_bub_ms previous = source;
+        for( const tripoint_bub_ms &step : line_to( source, p ) ) {
+            if( previous.z() != step.z() &&
+                !get_map().valid_move( previous, step, false, true ) ) {
+                add_msg_if_player( _( "Something blocks your attack." ) );
+                return;
+            }
+            previous = step;
+        }
+    }
     static const matec_id no_technique_id( "" );
     matec_id force_technique = no_technique_id;
     /** @EFFECT_MELEE >5 allows WHIP_DISARM technique */

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "bodypart.h"
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
@@ -13,6 +14,7 @@
 #include "creature.h"
 #include "item.h"
 #include "item_location.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
@@ -22,8 +24,28 @@
 #include "mtype.h"
 #include "npc.h"
 #include "point.h"
+#include "player_helpers.h"
 #include "skill.h"
 #include "type_id.h"
+
+TEST_CASE( "reach_attack_cannot_cross_a_solid_floor", "[melee][reach]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms source{ 60, 60, 0 };
+    const tripoint_bub_ms target{ 60, 60, -1 };
+    you.setpos( here, source );
+    here.ter_set( source, ter_str_id( "t_floor" ) );
+    you.set_moves( 1000 );
+    const int before = you.get_moves();
+    you.reach_attack( target );
+    CHECK( you.get_moves() == before );
+    // An empty, unseen same-level tile remains a valid blind attack.
+    you.reach_attack( tripoint_bub_ms{ 62, 60, 0 } );
+    CHECK( you.get_moves() < before );
+}
 
 static const damage_type_id damage_test_fire( "test_fire" );
 
