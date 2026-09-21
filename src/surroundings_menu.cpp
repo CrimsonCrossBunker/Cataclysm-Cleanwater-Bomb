@@ -937,9 +937,12 @@ void surroundings_menu::draw_item_tab()
                         ImGui::TableHeadersRow();
                         ImGui::TableNextColumn();
                         // embedded info for selected item
-                        std::vector<iteminfo> selected_info;
+                        auto cached = item_info_cache.try_emplace( selected_it );
+                        if( cached.second ) {
+                            selected_it->info( true, cached.first->second );
+                        }
+                        const std::vector<iteminfo> &selected_info = cached.first->second;
                         std::vector<iteminfo> dummy_info;
-                        selected_it->info( true, selected_info );
                         item_info_data dummy( "", "", selected_info, dummy_info );
                         dummy.without_getch = true;
                         dummy.without_border = true;
