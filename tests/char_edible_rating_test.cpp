@@ -4,13 +4,31 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "flag.h"
 #include "item.h"
 #include "itype.h"
+#include "player_helpers.h"
 #include "ret_val.h"
 #include "type_id.h"
+#include "uistate.h"
 #include "value_ptr.h"
+
+TEST_CASE( "toxic_food_warning_can_be_disabled", "[will_eat][edible_rating]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    item food{ itype_id( "mutant_tallow" ) };
+    const bool old_warning = uistate.distraction_toxin_food;
+    on_out_of_scope restore( [&]() {
+        uistate.distraction_toxin_food = old_warning;
+    } );
+    uistate.distraction_toxin_food = true;
+    CHECK_FALSE( you.will_eat( food, false ).success() );
+    uistate.distraction_toxin_food = false;
+    CHECK( you.will_eat( food, false ).success() );
+}
 
 // Character "edible rating" tests, covering the `can_eat` and `will_eat` functions
 static const efftype_id effect_nausea( "nausea" );
@@ -549,4 +567,3 @@ TEST_CASE( "who_will_eat_cooked_human_flesh", "[will_eat][edible_rating][canniba
         }
     }
 }
-

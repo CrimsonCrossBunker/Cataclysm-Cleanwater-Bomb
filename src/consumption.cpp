@@ -72,6 +72,7 @@
 #include "value_ptr.h"
 #include "visitable.h"
 #include "vitamin.h"
+#include "uistate.h"
 
 static const std::string comesttype_DRINK( "DRINK" );
 static const std::string comesttype_FOOD( "FOOD" );
@@ -1044,7 +1045,7 @@ ret_val<edible_rating> Character::will_eat( const item &food, bool interactive )
     // Break this out into its own function?
     for( const vitamin &v : vitamin::all() ) {
         if( v.type() == vitamin_type::TOXIN ) {
-            if( food.has_vitamin( v.id ) ) {
+            if( food.has_vitamin( v.id ) && ( !is_avatar() || uistate.distraction_toxin_food ) ) {
                 // NOTE: Purely visual information. Nausea is not actually a symptom of consuming mutant toxin.
                 add_consequence( _( "This is disgusting!" ), NAUSEA );
             }
