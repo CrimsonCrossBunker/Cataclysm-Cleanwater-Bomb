@@ -260,37 +260,16 @@ def game_start_sender_sites() -> tuple[tuple[str, str], ...]:
         kind: re.compile(rf"\b{kind}\s*<\s*event_type::game_start\s*>")
         for kind in ("send", "make")
     }
-    # The canonical sender currently lives in ``game.cpp``.  Probe that file
-    # first; only fall back to the complete shallow source scan for a fork or
-    # focused test fixture that relocates the sender.  This keeps the normal
-    # migration pass from regex-scanning more than two thousand unrelated
-    # headers/translation units on every invocation.
-    candidate_paths = [source_root / "game.cpp"] if (source_root / "game.cpp").exists() else []
-    if not candidate_paths:
-        candidate_paths = [
-            path for suffix in ("*.cpp", "*.h")
-            for path in sorted(source_root.glob(suffix))
-        ]
-    for path in candidate_paths:
-        text = path.read_text(encoding="utf-8")
-        relative = path.relative_to(REPOSITORY_ROOT).as_posix()
-        for kind, pattern in patterns.items():
-            count = len(pattern.findall(text))
-            sites.extend((relative, kind) for _ in range(count))
-    if sites:
-        return tuple(sorted(sites))
-    # A synthetic fixture may provide a game.cpp without the sender and place
-    # it elsewhere; preserve the old fail-closed discovery behaviour there.
-    if candidate_paths and candidate_paths == [source_root / "game.cpp"]:
-        for suffix in ("*.cpp", "*.h"):
-            for path in sorted(source_root.glob(suffix)):
-                if path == source_root / "game.cpp":
-                    continue
-                text = path.read_text(encoding="utf-8")
-                relative = path.relative_to(REPOSITORY_ROOT).as_posix()
-                for kind, pattern in patterns.items():
-                    count = len(pattern.findall(text))
-                    sites.extend((relative, kind) for _ in range(count))
+    # Proof requires the whole sender set, even when game.cpp still contains
+    # the canonical sender.  Scan the flat engine sources once per process;
+    # the cache above avoids repeating this work for every migrated EOC.
+    for suffix in ("*.cpp", "*.h"):
+        for path in sorted(source_root.glob(suffix)):
+            text = path.read_text(encoding="utf-8")
+            relative = path.relative_to(REPOSITORY_ROOT).as_posix()
+            for kind, pattern in patterns.items():
+                count = len(pattern.findall(text))
+                sites.extend((relative, kind) for _ in range(count))
     return tuple(sorted(sites))
 
 
