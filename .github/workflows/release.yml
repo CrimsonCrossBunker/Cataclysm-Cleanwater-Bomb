@@ -8,6 +8,7 @@ on:
       - master
     paths:
       - '.github/workflows/build-translations.yml'
+      - '.github/workflows/compose-tilesets.yml'
       - '.github/workflows/release.yml'
       - 'android/**'
       - 'build-data/**'
