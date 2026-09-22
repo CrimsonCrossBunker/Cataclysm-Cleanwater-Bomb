@@ -8,6 +8,8 @@ extern "C" {
 }
 #endif
 #include <lua_platform_state.h>
+#include <coordinates.h>
+#include <point.h>
 #include <cmath>
 #include <cstdint>
 #include <map>
@@ -15,6 +17,7 @@ extern "C" {
 #include <utility>
 #include <variant>
 #include <type_traits>
+#include <vector>
 
 namespace cata::lua_platform
 {

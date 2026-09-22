@@ -2,10 +2,7 @@
 
 #include "lua_platform_variables.h"
 
-#include "lua_platform_state.h"
 #include "lua_platform_values.h"
-#include <coordinates.h>
-#include <point.h>
 #include <talker.h>
 #include <algorithm>
 #include <cstddef>
@@ -21,13 +18,14 @@
 #include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "item.h"
-#include "lua_platform_bindings_coords.h"
 #include "lua_platform_handle.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 
 namespace cata::lua_platform
 {
+
+struct script_null_value;
 
 namespace
 {

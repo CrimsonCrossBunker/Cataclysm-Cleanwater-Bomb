@@ -1,5 +1,4 @@
 #include "lua_platform_runtime.h"
-#include "lua_platform_state.h"
 #include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
@@ -135,6 +134,8 @@ static const efftype_id effect_sleep( "sleep" );
 
 namespace cata::lua_platform
 {
+
+struct script_null_value;
 
 using detail::callback_scope;
 using detail::dispatch_lifecycle;

@@ -1,9 +1,11 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
@@ -12,6 +14,12 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "math_parser_diag_value.h"
+#include "point.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+} // namespace cata::lua_platform
 
 namespace
 {
