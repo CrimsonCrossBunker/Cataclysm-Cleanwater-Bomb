@@ -4630,14 +4630,14 @@ local BionicDefinition = {}
 ---@field security any
 local ComputerAccessContext = {}
 ---@param key string
----@return any
+---@return any Detached snapshot; nested empty slots use services.types.null; top-level empty or missing values return nil.
 function ComputerAccessContext.get_value(key) end
 ---@param key string
 ---@return any
 function ComputerAccessContext.remove_value(key) end
 ---@param key string
----@param value any
----@return any
+---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
+---@return any Invalid values fail before mutation; existing value, array, nesting, string, key, and store limits apply.
 function ComputerAccessContext.set_value(key, value) end
 ---@class EnchantmentDefinition
 ---@field active_when any

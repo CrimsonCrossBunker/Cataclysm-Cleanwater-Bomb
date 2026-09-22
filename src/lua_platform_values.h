@@ -8,8 +8,21 @@
 #include "lua_platform_sol.h"
 #include "lua_platform_state.h"
 
+struct diag_value;
+
 namespace cata::lua_platform
 {
+
+// Native dialogue/computer values share 512-node, 8-level and 8192-byte string
+// bounds. A caller may impose a smaller per-array limit (computers use 256).
+// Empty array slots use NullValue; a top-level empty value reads as nil.
+// Nil deletion and key/store limits remain the caller's responsibility.
+diag_value script_diag_value_from_lua(
+    const sol::object &value, const std::string &description,
+    std::size_t maximum_array_entries = 512 );
+sol::object script_diag_value_to_lua(
+    sol::state_view lua, const diag_value &value, const std::string &description,
+    std::size_t maximum_array_entries = 512 );
 
 struct script_value_map_limits {
     std::size_t entries = 32;

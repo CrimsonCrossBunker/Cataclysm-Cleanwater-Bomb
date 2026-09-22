@@ -5,6 +5,7 @@
 #include <functional>
 #include <initializer_list>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -111,6 +112,14 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             local unchanged = services.variables.get(array_owner, "array_output").value.value
             assert(#unchanged == 4 and unchanged[3][1] == "nested")
         end
+        -- Variables retain their larger array bound: 511 values plus the root node.
+        local wide = {}
+        for i = 1, 511 do wide[i] = i end
+        assert(services.variables.set(array_owner, "wide_array", wide).ok)
+        assert(#services.variables.get(array_owner, "wide_array").value.value == 511)
+        wide[512] = 512
+        assert(not pcall(services.variables.set, array_owner, "wide_array", wide))
+        assert(#services.variables.get(array_owner, "wide_array").value.value == 511)
     )", sol::script_pass_on_error );
     REQUIRE( array_read.valid() );
     sol::table data = lua.create_table();
@@ -299,8 +308,10 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     // when consumed as dynamic strings by environment conditions.
     lua["services"] = services;
     lua["key"] = key;
+    // Global resolution does not use the context.  An explicit table keeps
+    // this value test independent of optional-table argument consumption.
     sol::protected_function query = lua.load( R"(
-        local result = services.variables.resolve(nil, nil, "global", key)
+        local result = services.variables.resolve({}, nil, "global", key)
         assert(result.ok)
         local value = result.value
         if value.exists == false then return current == fallback end
@@ -327,10 +338,15 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
             } else if( state == 3 ) {
                 get_globals().set_global_value( key, diag_value{} );
             }
-            const std::string condition_json = R"({")" + selector + R"(":{")" +
-                                               ( indirect ? "var_val" : "global_val" ) + R"(":")" +
-                                               ( indirect ? "environment_global_ref" : key ) +
-                                               R"(","default":")" + current + R"("}})";
+            std::string condition_json = R"({")";
+            condition_json += selector;
+            condition_json += R"(":{")";
+            condition_json += indirect ? "var_val" : "global_val";
+            condition_json += R"(":")";
+            condition_json += indirect ? "environment_global_ref" : key;
+            condition_json += R"(","default":")";
+            condition_json += current;
+            condition_json += R"("}})";
             conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
             const sol::protected_function_result actual = query();
             REQUIRE( actual.valid() );
