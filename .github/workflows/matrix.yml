@@ -406,6 +406,9 @@ jobs:
     - name: Build CDDA
       if: ${{ env.SKIP == 'false' }}
       run: bash ./build-scripts/gha_compile_only.sh
+    - name: run horde map regression
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'horde_map_*' --rng-seed 20260921 --order lex --error-format=github-action
     - name: post-build ccache manipulation
       if: ${{ env.SKIP == 'false' && !failure() && (runner.os == 'Linux' || runner.os == 'macOS') && matrix.ccache_key != '' }}
       run: |
@@ -425,6 +428,10 @@ jobs:
     - name: run tests
       if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'false' }}
       run: bash ./build-scripts/gha_test_only.sh
+    # This hidden test clears global session state; keep its process isolated.
+    - name: run isolated wait popup cleanup regression
+      if: ${{ env.SKIP == 'false' && matrix.compiler == 'clang++-18' }}
+      run: ./tests/cata_test '[.wait_popup_cleanup]' --rng-seed 20260921 --order lex --user-dir=test_user_dir_wait_popup --error-format=github-action
     # Reuse the Lua binary when broad suites are disabled; never count a
     # successful build as semantic execution evidence.
     - name: run Lua semantic acceptance
