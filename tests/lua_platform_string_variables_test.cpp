@@ -111,6 +111,14 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             local unchanged = services.variables.get(array_owner, "array_output").value.value
             assert(#unchanged == 4 and unchanged[3][1] == "nested")
         end
+        -- Variables retain their larger array bound: 511 values plus the root node.
+        local wide = {}
+        for i = 1, 511 do wide[i] = i end
+        assert(services.variables.set(array_owner, "wide_array", wide).ok)
+        assert(#services.variables.get(array_owner, "wide_array").value.value == 511)
+        wide[512] = 512
+        assert(not pcall(services.variables.set, array_owner, "wide_array", wide))
+        assert(#services.variables.get(array_owner, "wide_array").value.value == 511)
     )", sol::script_pass_on_error );
     REQUIRE( array_read.valid() );
     sol::table data = lua.create_table();

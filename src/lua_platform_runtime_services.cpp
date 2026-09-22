@@ -3,6 +3,7 @@
 #include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "lua_platform_values.h"
 
 #include <character_id.h>
 #include <enums.h>
@@ -253,9 +254,6 @@ struct use_context_data {
 };
 
 constexpr std::size_t maximum_computer_value_entries = 256;
-constexpr std::size_t maximum_computer_value_nodes = 512;
-constexpr std::size_t maximum_computer_value_bytes = 8192;
-constexpr int maximum_computer_value_depth = 8;
 
 void require_computer_value_key( std::string_view key )
 {
@@ -266,109 +264,6 @@ void require_computer_value_key( std::string_view key )
         throw std::invalid_argument(
             "computer value keys must contain 1 to 128 printable bytes" );
     }
-}
-
-diag_value computer_value_from_lua(
-    const sol::object &value, const std::string &key,
-    const int depth, std::size_t &nodes )
-{
-    if( ++nodes > maximum_computer_value_nodes ||
-        depth > maximum_computer_value_depth ) {
-        throw std::invalid_argument(
-            "computer value exceeds its structural limits" );
-    }
-    if( value.get_type() == sol::type::boolean ) {
-        return diag_value( value.as<bool>() ? 1.0 : 0.0 );
-    }
-    if( value.get_type() == sol::type::number ) {
-        const double number = value.as<double>();
-        if( !std::isfinite( number ) ) {
-            throw std::invalid_argument(
-                "computer value '" + key + "' must be finite" );
-        }
-        return diag_value( number );
-    }
-    if( value.get_type() == sol::type::string ) {
-        const std::string text = value.as<std::string>();
-        if( text.size() > maximum_computer_value_bytes ) {
-            throw std::invalid_argument(
-                "computer value '" + key + "' exceeds 8192 bytes" );
-        }
-        return diag_value( text );
-    }
-    if( value.is<cata::lua_platform::script_tripoint_coord>() ) {
-        const cata::lua_platform::script_tripoint_coord position =
-            value.as<cata::lua_platform::script_tripoint_coord>();
-        if( position.native_origin() != coords::origin::abs ||
-            position.native_scale() != coords::scale::map_square ) {
-            throw std::invalid_argument(
-                "computer coordinates must be absolute map-square coordinates" );
-        }
-        return diag_value( tripoint_abs_ms( position.to_native() ) );
-    }
-    if( value.get_type() == sol::type::table ) {
-        const sol::table entries = value.as<sol::table>();
-        const std::size_t count = require_dense_array(
-                                      entries, "computer value array", 0,
-                                      maximum_computer_value_entries );
-        diag_array result;
-        result.reserve( count );
-        for( std::size_t index = 1; index <= count; ++index ) {
-            result.push_back( computer_value_from_lua(
-                                  entries.raw_get<sol::object>( index ), key,
-                                  depth + 1, nodes ) );
-        }
-        return diag_value( std::move( result ) );
-    }
-    throw std::invalid_argument(
-        "computer value '" + key +
-        "' must be boolean, number, string, TripointCoord, or a dense array" );
-}
-
-sol::object computer_value_to_lua(
-    sol::state_view lua, const diag_value &value,
-    const int depth, std::size_t &nodes )
-{
-    if( ++nodes > maximum_computer_value_nodes ||
-        depth > maximum_computer_value_depth ) {
-        throw std::runtime_error(
-            "computer value exceeds its structural limits" );
-    }
-    if( value.is_empty() ) {
-        return sol::make_object( lua, sol::nil );
-    }
-    if( value.is_dbl() ) {
-        return sol::make_object( lua, value.dbl() );
-    }
-    if( value.is_str() ) {
-        const std::string &text = value.str();
-        if( text.size() > maximum_computer_value_bytes ) {
-            throw std::runtime_error(
-                "computer value string exceeds 8192 bytes" );
-        }
-        return sol::make_object( lua, text );
-    }
-    if( value.is_tripoint() ) {
-        return sol::make_object(
-                   lua, cata::lua_platform::script_tripoint_coord::from_native(
-                       coords::origin::abs, coords::scale::map_square,
-                       value.tripoint().raw() ) );
-    }
-    if( value.is_array() ) {
-        const diag_array &entries = value.array();
-        if( entries.size() > maximum_computer_value_entries ) {
-            throw std::runtime_error(
-                "computer value array exceeds 256 entries" );
-        }
-        sol::table result = lua.create_table(
-                                static_cast<int>( entries.size() ), 0 );
-        for( std::size_t index = 0; index < entries.size(); ++index ) {
-            result[index + 1] = computer_value_to_lua(
-                                    lua, entries[index], depth + 1, nodes );
-        }
-        return sol::make_object( lua, std::move( result ) );
-    }
-    return sol::make_object( lua, value.to_string() );
 }
 
 struct computer_access_context {
@@ -489,8 +384,9 @@ struct computer_access_context {
         if( stored == nullptr ) {
             return sol::make_object( state, sol::lua_nil );
         }
-        std::size_t nodes = 0;
-        return computer_value_to_lua( sol::state_view( state ), *stored, 0, nodes );
+        return cata::lua_platform::script_diag_value_to_lua(
+                   sol::state_view( state ), *stored, "computer value",
+                   maximum_computer_value_entries );
     }
 
     void set_value( const std::string &key, const sol::object &value ) const {
@@ -505,9 +401,8 @@ struct computer_access_context {
             throw std::runtime_error(
                 "computer value store exceeds 256 entries" );
         }
-        std::size_t nodes = 0;
-        terminal->set_value(
-            key, computer_value_from_lua( value, key, 0, nodes ) );
+        terminal->set_value( key, cata::lua_platform::script_diag_value_from_lua(
+                                 value, "computer value '" + key + "'", maximum_computer_value_entries ) );
     }
 
     bool remove_value( const std::string &key ) const {
