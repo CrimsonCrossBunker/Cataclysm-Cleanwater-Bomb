@@ -350,9 +350,11 @@ int main( int argc, const char *argv[] )
                                : json_error_output_colors_t::no_colors;
 
     reset_floating_point_mode();
-    on_out_of_scope json_member_reporting_guard{ [] {
+    on_out_of_scope test_shutdown_guard{ [] {
             // Disable reporting unvisited members if stack unwinding leaves main early.
             Json::globally_report_unvisited_members( false );
+            // Destroy the game before function-local Lua registries are torn down.
+            g.reset();
         } };
     Catch::Session session;
 
