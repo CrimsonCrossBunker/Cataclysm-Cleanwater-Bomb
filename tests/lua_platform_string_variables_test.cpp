@@ -308,8 +308,10 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     // when consumed as dynamic strings by environment conditions.
     lua["services"] = services;
     lua["key"] = key;
+    // Global resolution does not use the context.  An explicit table keeps
+    // this value test independent of optional-table argument consumption.
     sol::protected_function query = lua.load( R"(
-        local result = services.variables.resolve(nil, nil, "global", key)
+        local result = services.variables.resolve({}, nil, "global", key)
         assert(result.ok)
         local value = result.value
         if value.exists == false then return current == fallback end
@@ -336,10 +338,15 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
             } else if( state == 3 ) {
                 get_globals().set_global_value( key, diag_value{} );
             }
-            const std::string condition_json = R"({")" + selector + R"(":{")" +
-                                               ( indirect ? "var_val" : "global_val" ) + R"(":")" +
-                                               ( indirect ? "environment_global_ref" : key ) +
-                                               R"(","default":")" + current + R"("}})";
+            std::string condition_json = R"({")";
+            condition_json += selector;
+            condition_json += R"(":{")";
+            condition_json += indirect ? "var_val" : "global_val";
+            condition_json += R"(":")";
+            condition_json += indirect ? "environment_global_ref" : key;
+            condition_json += R"(","default":")";
+            condition_json += current;
+            condition_json += R"("}})";
             conditional_t predicate( json_loader::from_string( condition_json ).get_object() );
             const sol::protected_function_result actual = query();
             REQUIRE( actual.valid() );

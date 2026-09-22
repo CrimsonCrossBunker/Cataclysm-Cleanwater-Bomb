@@ -166,7 +166,7 @@ sol::object script_diag_value_to_lua(
     const std::size_t maximum_array_entries )
 {
     std::size_t nodes = 0;
-    return write_diag_value( lua, value, description, maximum_array_entries, 0, nodes );
+    return write_diag_value( std::move( lua ), value, description, maximum_array_entries, 0, nodes );
 }
 
 static script_persistent_value read_value( const sol::object &value, const std::string &api_name,
@@ -179,7 +179,7 @@ static script_persistent_value read_value( const sol::object &value, const std::
         return script_null_value{};
     }
     if( value.is<script_tripoint_coord>() ) {
-        const auto coordinate = value.as<script_tripoint_coord>();
+        const script_tripoint_coord coordinate = value.as<script_tripoint_coord>();
         if( coordinate.origin() != "abs" || coordinate.scale() != "ms" ) {
             throw std::invalid_argument( api_name + " persistent coordinates must be absolute map squares" );
         }

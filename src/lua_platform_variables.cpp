@@ -61,7 +61,7 @@ diag_value context_value_from_lua( const sol::object &value, const std::string &
 
 sol::object context_value_to_lua( sol::state_view lua, const diag_value &value )
 {
-    return script_diag_value_to_lua( lua, value, "services.variables returned context" );
+    return script_diag_value_to_lua( std::move( lua ), value, "services.variables returned context" );
 }
 
 struct resolved_variable_talker {
