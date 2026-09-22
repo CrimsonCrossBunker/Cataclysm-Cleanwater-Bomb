@@ -241,7 +241,7 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
     CHECK( second.get<sol::table>( 2 ).get<std::int64_t>( 1 ) == 2 );
     const sol::table empty = script_persistent_value_to_lua( lua,
-        script_array_value( script_persistent_array{} ) );
+                             script_array_value( script_persistent_array{} ) );
     CHECK( empty.size() == 0 );
 }
 
@@ -252,6 +252,7 @@ TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
                                         "[]", "[1,2]", "[1,2,3,4]", "[1.5,2,3]", "[true,2,3]",
                                         "[2147483648,0,0]", "[-2147483649,0,0]", "[18446744073709551615,0,0]" );
     const std::string input = R"({"type":"tripoint_abs_ms","value":)" + coordinates + "}";
+    CAPTURE( coordinates );
     CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
                       json_loader::from_string( input ).get_object() ) );
 }

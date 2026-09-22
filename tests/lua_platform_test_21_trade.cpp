@@ -241,7 +241,8 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
     REQUIRE( fixture.ready() );
     item bag( itype_id( "backpack" ), calendar::turn );
     for( int i = 0; i < 3; ++i ) {
-        bag.force_insert_item( item( itype_id( "rock" ), calendar::turn ), pocket_type::CONTAINER );
+        // Keep three distinct items so the middle item's UID and order are observable.
+        bag.force_insert_item( item( itype_id( "hammer" ), calendar::turn ), pocket_type::CONTAINER );
     }
     bag.set_owner( *fixture.buyer );
     item &container = fixture.buyer->inv->add_item( std::move( bag ), false, false, false );

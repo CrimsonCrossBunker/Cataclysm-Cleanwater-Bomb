@@ -748,11 +748,16 @@ void install_variable_api(
     variables.set_function(
         "resolve",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const sol::optional<sol::table> &context,
+            sol::this_state lua_state, const sol::object & context,
             const sol::optional<game_handle> &actor, const std::string & scope,
     const std::string & key, const sol::optional<sol::table> &participants ) {
         require_read();
-        return resolve_variable( lua_state, context, actor, scope, key,
+        if( context.get_type() != sol::type::nil && context.get_type() != sol::type::table ) {
+            throw std::invalid_argument( "services.variables.resolve context must be a table or nil" );
+        }
+        // Consume an explicit nil before converting: sol's optional table getter
+        // otherwise leaves the next argument at the same stack position.
+        return resolve_variable( lua_state, context.as<sol::optional<sol::table>>(), actor, scope, key,
                                  current_runtime_generation(),
                                  current_world_generation(), participants );
     } );
@@ -760,14 +765,17 @@ void install_variable_api(
         "set_resolved",
         [current_runtime_generation, current_world_generation,
                                      require_write, has_active_callback](
-            sol::this_state lua_state, const sol::optional<sol::table> &context,
+            sol::this_state lua_state, const sol::object & context,
             const sol::optional<game_handle> &actor, const std::string & scope,
             const std::string & key, const sol::object & value,
     const sol::optional<sol::table> &participants ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_resolved" );
+        if( context.get_type() != sol::type::nil && context.get_type() != sol::type::table ) {
+            throw std::invalid_argument( "services.variables.set_resolved context must be a table or nil" );
+        }
         return set_resolved_variable(
-                   lua_state, context, actor, scope, key, value,
+                   lua_state, context.as<sol::optional<sol::table>>(), actor, scope, key, value,
                    current_runtime_generation(), current_world_generation(), participants );
     } );
     services["variables"] = std::move( variables );

@@ -299,6 +299,19 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     // when consumed as dynamic strings by environment conditions.
     lua["services"] = services;
     lua["key"] = key;
+    const sol::protected_function_result resolved_write = lua.safe_script( R"(
+        assert(services.variables.set_resolved(nil, nil, "global", key, "resolved").ok)
+        local stored = services.variables.resolve(nil, nil, "global", key)
+        assert(stored.ok and stored.value.exists and stored.value.value == "resolved")
+        for _, invalid in ipairs({false, 0, "not a table"}) do
+            assert(not pcall(services.variables.resolve, invalid, nil, "global", key))
+            assert(not pcall(services.variables.set_resolved, invalid, nil, "global", key, "unexpected"))
+        end
+        assert(services.variables.set_resolved(nil, nil, "global", key, nil).ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( resolved_write.valid() );
+    REQUIRE( get_globals().maybe_get_global_value( key ) != nullptr );
+    CHECK( get_globals().get_global_value( key ).is_empty() );
     sol::protected_function query = lua.load( R"(
         local result = services.variables.resolve(nil, nil, "global", key)
         assert(result.ok)
