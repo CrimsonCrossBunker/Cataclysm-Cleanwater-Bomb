@@ -2,12 +2,9 @@
 
 #include "lua_platform_variables.h"
 
-#include "lua_platform_state.h"
-#include <coordinates.h>
-#include <point.h>
+#include "lua_platform_values.h"
 #include <talker.h>
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -21,7 +18,6 @@
 #include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "item.h"
-#include "lua_platform_bindings_coords.h"
 #include "lua_platform_handle.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
@@ -29,13 +25,12 @@
 namespace cata::lua_platform
 {
 
+struct script_null_value;
+
 namespace
 {
 
 constexpr std::size_t maximum_context_key_bytes = 128;
-constexpr std::size_t maximum_context_string_bytes = 8192;
-constexpr std::size_t maximum_context_nodes = 512;
-constexpr int maximum_context_depth = 8;
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -59,123 +54,14 @@ void validate_context_key( const std::string_view key )
     }
 }
 
-diag_value context_value_from_lua_impl(
-    const sol::object &value, const std::string &key, const int depth, std::size_t &nodes )
-{
-    if( ++nodes > maximum_context_nodes || depth > maximum_context_depth ) {
-        throw std::invalid_argument( "services.variables input exceeds its structural limits" );
-    }
-    if( value.get_type() == sol::type::table ) {
-        const sol::table table = value.as<sol::table>();
-        std::size_t count = 0;
-        for( const auto &entry : table ) {
-            if( ++count > maximum_context_nodes || entry.first.get_type() != sol::type::number ) {
-                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
-            }
-            const double index = entry.first.as<double>();
-            if( index < 1 || index > maximum_context_nodes || std::floor( index ) != index ) {
-                throw std::invalid_argument( "services.variables arrays require dense integer keys" );
-            }
-        }
-        diag_array result;
-        result.reserve( count );
-        for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::object element = table.raw_get<sol::object>( index );
-            if( !element.valid() || element.get_type() == sol::type::nil ) {
-                throw std::invalid_argument( "services.variables arrays require explicit NullValue slots" );
-            }
-            result.push_back( context_value_from_lua_impl( element, key, depth + 1, nodes ) );
-        }
-        return diag_value( std::move( result ) );
-    }
-    if( value.get_type() == sol::type::nil || value.is<script_null_value>() ) {
-        return diag_value();
-    }
-    if( value.get_type() == sol::type::boolean ) {
-        return diag_value( value.as<bool>() ? 1.0 : 0.0 );
-    }
-    if( value.get_type() == sol::type::number ) {
-        const double number = value.as<double>();
-        if( !std::isfinite( number ) ) {
-            throw std::invalid_argument(
-                "services.variables context value '" + key +
-                "' must be finite" );
-        }
-        return diag_value( number );
-    }
-    if( value.get_type() == sol::type::string ) {
-        const std::string text = value.as<std::string>();
-        if( text.size() > maximum_context_string_bytes ) {
-            throw std::invalid_argument(
-                "services.variables context value '" + key +
-                "' exceeds 8192 bytes" );
-        }
-        return diag_value( text );
-    }
-    if( value.is<script_tripoint_coord>() ) {
-        const script_tripoint_coord position =
-            value.as<script_tripoint_coord>();
-        if( position.native_origin() != coords::origin::abs ||
-            position.native_scale() != coords::scale::map_square ) {
-            throw std::invalid_argument(
-                "services.variables context coordinates must be absolute "
-                "map-square coordinates" );
-        }
-        return diag_value( tripoint_abs_ms( position.to_native() ) );
-    }
-    throw std::invalid_argument(
-        "services.variables context value '" + key +
-        "' must be nil, NullValue, boolean, number, string, TripointCoord, or a dense array" );
-}
-
 diag_value context_value_from_lua( const sol::object &value, const std::string &key )
 {
-    std::size_t nodes = 0;
-    return context_value_from_lua_impl( value, key, 0, nodes );
+    return script_diag_value_from_lua( value, "services.variables context value '" + key + "'" );
 }
 
-sol::object context_value_to_lua(
-    sol::state_view lua, const diag_value &value,
-    const int depth, std::size_t &nodes )
+sol::object context_value_to_lua( sol::state_view lua, const diag_value &value )
 {
-    if( ++nodes > maximum_context_nodes ||
-        depth > maximum_context_depth ) {
-        throw std::runtime_error(
-            "services.variables returned context exceeds its structural limits" );
-    }
-    if( value.is_empty() ) {
-        // nil would remove an array slot, including a trailing empty element.
-        return depth == 0 ? sol::make_object( lua, sol::nil ) :
-               sol::make_object( lua, script_null_value{} );
-    }
-    if( value.is_dbl() ) {
-        return sol::make_object( lua, value.dbl() );
-    }
-    if( value.is_str() ) {
-        const std::string &text = value.str();
-        if( text.size() > maximum_context_string_bytes ) {
-            throw std::runtime_error(
-                "services.variables returned context string exceeds 8192 bytes" );
-        }
-        return sol::make_object( lua, text );
-    }
-    if( value.is_tripoint() ) {
-        return sol::make_object(
-                   lua, script_tripoint_coord::from_native(
-                       coords::origin::abs, coords::scale::map_square,
-                       value.tripoint().raw() ) );
-    }
-    if( value.is_array() ) {
-        const diag_array &values = value.array();
-        sol::table result = lua.create_table(
-                                static_cast<int>( values.size() ), 0 );
-        for( std::size_t index = 0; index < values.size(); ++index ) {
-            result[index + 1] = context_value_to_lua(
-                                    lua, values[index], depth + 1, nodes );
-        }
-        return sol::make_object( lua, std::move( result ) );
-    }
-    return sol::make_object( lua, value.to_string() );
+    return script_diag_value_to_lua( std::move( lua ), value, "services.variables returned context" );
 }
 
 struct resolved_variable_talker {
@@ -279,9 +165,8 @@ sol::table get_variable(
     const diag_value *stored = resolved_variable_get( resolved, key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        std::size_t nodes = 0;
         value["value"] = context_value_to_lua(
-                             state, *stored, 0, nodes );
+                             state, *stored );
     } else {
         value["value"] = sol::nil;
     }
@@ -309,16 +194,14 @@ sol::table set_variable(
     const diag_value *before = resolved_variable_get( resolved, key );
     value["existed"] = before != nullptr;
     if( before != nullptr ) {
-        std::size_t nodes = 0;
         value["before"] = context_value_to_lua(
-                              state, *before, 0, nodes );
+                              state, *before );
     } else {
         value["before"] = sol::nil;
     }
     resolved_variable_set( resolved, key, replacement );
-    std::size_t nodes = 0;
     value["after"] = context_value_to_lua(
-                         state, replacement, 0, nodes );
+                         state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -341,9 +224,8 @@ sol::table remove_variable(
     const diag_value *before = resolved_variable_get( resolved, key );
     value["removed"] = before != nullptr;
     if( before != nullptr ) {
-        std::size_t nodes = 0;
         value["before"] = context_value_to_lua(
-                              state, *before, 0, nodes );
+                              state, *before );
         resolved_variable_remove( resolved, key );
     } else {
         value["before"] = sol::nil;
@@ -361,8 +243,7 @@ sol::table get_global_variable(
     const diag_value *stored = get_globals().maybe_get_global_value( key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        std::size_t nodes = 0;
-        value["value"] = context_value_to_lua( state, *stored, 0, nodes );
+        value["value"] = context_value_to_lua( state, *stored );
     } else {
         value["value"] = sol::nil;
     }
@@ -380,14 +261,12 @@ sol::table set_global_variable(
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["existed"] = before != nullptr;
     if( before != nullptr ) {
-        std::size_t nodes = 0;
-        value["before"] = context_value_to_lua( state, *before, 0, nodes );
+        value["before"] = context_value_to_lua( state, *before );
     } else {
         value["before"] = sol::nil;
     }
     get_globals().set_global_value( key, replacement );
-    std::size_t nodes = 0;
-    value["after"] = context_value_to_lua( state, replacement, 0, nodes );
+    value["after"] = context_value_to_lua( state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -401,8 +280,7 @@ sol::table remove_global_variable(
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["removed"] = before != nullptr;
     if( before != nullptr ) {
-        std::size_t nodes = 0;
-        value["before"] = context_value_to_lua( state, *before, 0, nodes );
+        value["before"] = context_value_to_lua( state, *before );
         get_globals().remove_global_value( key );
     } else {
         value["before"] = sol::nil;
@@ -483,8 +361,7 @@ sol::table resolve_variable(
             sol::table result = state.create_table();
             result["exists"] = stored != nullptr;
             if( stored != nullptr ) {
-                std::size_t nodes = 0;
-                result["value"] = context_value_to_lua( state, *stored, 0, nodes );
+                result["value"] = context_value_to_lua( state, *stored );
             } else {
                 result["value"] = sol::nil;
             }
@@ -512,8 +389,7 @@ sol::table resolve_variable(
         sol::table result = state.create_table();
         result["exists"] = stored != nullptr;
         if( stored != nullptr ) {
-            std::size_t nodes = 0;
-            result["value"] = context_value_to_lua( state, *stored, 0, nodes );
+            result["value"] = context_value_to_lua( state, *stored );
         } else {
             result["value"] = sol::nil;
         }
@@ -575,8 +451,7 @@ sol::table set_resolved_variable(
             value["before"] = sol::nil;
         }
         context->raw_set( key, requested );
-        std::size_t nodes = 0;
-        value["after"] = context_value_to_lua( state, replacement, 0, nodes );
+        value["after"] = context_value_to_lua( state, replacement );
         return make_game_value_result(
                    state, sol::make_object( state, std::move( value ) ) );
     }
