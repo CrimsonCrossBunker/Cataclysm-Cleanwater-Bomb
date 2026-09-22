@@ -3889,7 +3889,7 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
                            t->throw_dispersion_multiplier );
     }
     if( t->throw_speed_multiplier != 1.0f ) {
-        info.emplace_back( "BASE", _( "Throwing speed: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing time: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
                            t->throw_speed_multiplier );
     }
@@ -3938,12 +3938,12 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
                                mod.throw_dispersion_add );
         }
         if( mod.throw_speed_multiplier != 1.0f ) {
-            info.emplace_back( "BASE", _( "Throwing speed: " ), "x<num>",
+            info.emplace_back( "BASE", _( "Throwing time: " ), "x<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better,
                                mod.throw_speed_multiplier );
         }
         if( mod.throw_speed_add != 0.0f ) {
-            info.emplace_back( "BASE", _( "Throwing speed: " ), "<num>",
+            info.emplace_back( "BASE", _( "Throwing time: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
                                mod.throw_speed_add );
         }
