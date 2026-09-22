@@ -691,7 +691,7 @@ void recipe_dictionary::finalize_internal( std::map<recipe_id, recipe> &obj )
 {
     for( auto &elem : obj ) {
         erase_if( elem.second.nested_category_data, [&]( const recipe_id & nest ) {
-            return !nest.is_valid() || nest->will_be_blacklisted();
+            return !nest.is_valid() || !nest.obj() || nest->will_be_blacklisted();
         } );
         elem.second.finalize();
         inp_mngr.pump_events();
@@ -920,6 +920,11 @@ void recipe_dictionary::delete_if( const std::function<bool( const recipe & )> &
 
 void recipe_subset::include( const recipe *r, int custom_difficulty )
 {
+    // Removed and obsolete saved recipe IDs resolve to the shared null recipe.
+    // Admitting it makes every such child of a nested group appear available.
+    if( r == nullptr || !*r || r->obsolete ) {
+        return;
+    }
     if( custom_difficulty < 0 ) {
         custom_difficulty = r->difficulty;
     }

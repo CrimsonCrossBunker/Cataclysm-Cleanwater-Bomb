@@ -18,7 +18,7 @@ TEST_CASE( "lua_platform_registry_native_order_pages", "[lua][registry]" )
     sol::table services = lua.create_table();
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_registry_api( lua, services, []() {}, []() {} );
-    for( const std::string kind : {
+    for( const std::string &kind : {
              std::string( "body_part" ), std::string( "json_flag" )
          } ) {
         std::vector<std::string> native;
@@ -41,7 +41,7 @@ TEST_CASE( "lua_platform_registry_native_order_pages", "[lua][registry]" )
                              services["registry"].get<sol::table>();
             sol::protected_function list = api["list"];
             // Alternate orders against the same catalog to exercise cached indexes.
-            for( const std::string order : {
+            for( const std::string &order : {
                      std::string( "native" ), std::string(), std::string( "id" ), std::string( "native" )
                  } ) {
                 const auto &expected = order == "native" ? native : sorted;
