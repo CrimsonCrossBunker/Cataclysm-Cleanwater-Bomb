@@ -42,6 +42,13 @@ jobs:
       - name: Install pinned metadata dependencies
         run: python3 -m pip install --disable-pip-version-check -r tools/agent/requirements.txt
 
+      - name: Validate game-start actor provenance
+        working-directory: tools
+        run: |
+          python3 -m unittest -v \
+            test_migrate_lua_first.LuaFirstMigrationTest.test_game_start_avatar_proof_tracks_the_canonical_sender_set \
+            test_migrate_lua_first.LuaFirstMigrationTest.test_game_start_avatar_proof_rejects_additional_senders
+
       - name: Validate metadata and migration inventory
         run: |
           python3 tools/agent/generate_markdown_inventory.py --check
