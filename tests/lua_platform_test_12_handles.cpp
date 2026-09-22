@@ -1,5 +1,35 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
+#include <avatar.h>
+#include <character_id.h>
+#include <inventory.h>
+#include <item.h>
+#include <item_uid.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_items.h>
+#include <lua_platform_vehicles.h>
+#include <math_parser_diag_value.h>
+#include <monster.h>
+#include <npc.h>
+#include <pimpl.h>
+#include <pocket_type.h>
+#include <ret_val.h>
+#include <type_id.h>
+#include <veh_type.h>
+#include <vehicle.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
+class Character;
 
 TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][platform]" )
 {

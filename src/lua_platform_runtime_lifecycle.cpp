@@ -17,9 +17,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "calendar.h"
@@ -50,9 +48,6 @@
 #include <enums.h>
 #include <item_location.h>
 #include <item_uid.h>
-extern "C" {
-#include <lua.h>
-}
 #include <lua_platform_handle.h>
 #include <lua_platform_runtime.h>
 #include <lua_platform_state.h>

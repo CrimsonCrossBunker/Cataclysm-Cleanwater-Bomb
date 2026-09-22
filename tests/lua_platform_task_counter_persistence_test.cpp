@@ -1,5 +1,9 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <avatar.h>
+#include <character_id.h>
+#include <lua_platform_handle.h>
+#include <initializer_list>
 #include "cata_path.h"
 #include "calendar.h"
 #include "lua_platform_state.h"

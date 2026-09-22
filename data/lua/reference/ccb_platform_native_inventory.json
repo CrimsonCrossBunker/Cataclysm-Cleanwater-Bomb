@@ -739,7 +739,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_runtime_lifecycle.cpp",
-          "line": 855
+          "line": 850
         },
         "direct_roots": []
       },

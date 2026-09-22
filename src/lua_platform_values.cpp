@@ -1,4 +1,6 @@
 #include "lua_platform_values.h"
+#include <optional>
+#include <vector>
 #include "lua_platform_bindings_coords.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM

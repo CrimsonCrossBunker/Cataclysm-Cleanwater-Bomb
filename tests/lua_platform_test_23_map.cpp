@@ -1,5 +1,38 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <coordinates.h>
+#include <creature_tracker.h>
+#include <field_type.h>
+#include <item.h>
+extern "C" {
+#include <lua.h>
+}
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_items.h>
+#include <lua_platform_trade.h>
+#include <lua_platform_world.h>
+#include <map.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster.h>
+#include <point.h>
+#include <type_id.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <limits>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
+#include "lua_platform_test_support.h"
 #include "lua_platform_creatures.h"
 
 TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
