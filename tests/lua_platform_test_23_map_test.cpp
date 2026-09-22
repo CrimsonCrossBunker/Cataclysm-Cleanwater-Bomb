@@ -37,7 +37,7 @@ extern "C" {
 
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_rock( "rock" );
-static const mtype_id mtype_mon_zombie( "mon_zombie" );
+static const mtype_id mon_zombie( "mon_zombie" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
 
@@ -69,7 +69,7 @@ TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
              1, 2, 4
          } ) {
         const shared_ptr_fast<monster> entry = make_shared_fast<monster>(
-                mtype_mon_zombie, fixture.local + tripoint( offset, 0, 0 ) );
+                mon_zombie, fixture.local + tripoint( offset, 0, 0 ) );
         entry->friendly = offset == 2 ? 0 : -1;
         REQUIRE( get_creature_tracker().add( entry ) );
     }

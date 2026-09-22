@@ -34,7 +34,7 @@ class Character;
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_rock( "rock" );
-static const vproto_id vproto_car( "car" );
+static const vproto_id vehicle_prototype_car( "car" );
 
 TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][platform]" )
 {
@@ -139,8 +139,8 @@ TEST_CASE( "lua_platform_vehicle_part_handles_fail_closed_on_remove_and_replace"
     const cata::lua_platform::game_handle_runtime_owner_ptr owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 44 );
-    vehicle first{ vproto_car };
-    vehicle second{ vproto_car };
+    vehicle first{ vehicle_prototype_car };
+    vehicle second{ vehicle_prototype_car };
     REQUIRE( first.part_count() > 0 );
     REQUIRE( second.part_count() > 0 );
 

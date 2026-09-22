@@ -70,7 +70,7 @@ extern "C" {
 #include "visitable.h"
 #include "vpart_position.h"
 
-static const flag_id flag_PRESERVE_SPAWN_LOC( "PRESERVE_SPAWN_LOC" );
+static const flag_id json_flag_PRESERVE_SPAWN_LOC( "PRESERVE_SPAWN_LOC" );
 
 namespace cata::lua_platform
 {
@@ -2372,7 +2372,7 @@ void configure_world_spawn_item(
         entry.set_flag( flag );
     }
     if( entry.has_flag(
-            flag_PRESERVE_SPAWN_LOC ) ) {
+            json_flag_PRESERVE_SPAWN_LOC ) ) {
         entry.preserve_location( position );
     }
 }
