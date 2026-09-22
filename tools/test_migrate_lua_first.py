@@ -2217,6 +2217,31 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 )
         migrate_lua_first.game_start_sender_sites.cache_clear()
 
+    def test_game_start_avatar_proof_rejects_additional_senders(self) -> None:
+        self.addCleanup(migrate_lua_first.game_start_sender_sites.cache_clear)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "src").mkdir()
+            (root / "src/game.cpp").write_text(
+                "events.send<event_type::game_start>();\n", encoding="utf-8"
+            )
+            for constructor in ("send", "make"):
+                with self.subTest(constructor=constructor):
+                    (root / "src/other.cpp").write_text(
+                        f"events.{constructor}<event_type::game_start>();\n",
+                        encoding="utf-8",
+                    )
+                    with patch.object(migrate_lua_first, "REPOSITORY_ROOT", root):
+                        migrate_lua_first.game_start_sender_sites.cache_clear()
+                        self.assertEqual(
+                            migrate_lua_first.game_start_sender_sites(),
+                            (("src/game.cpp", "send"),
+                             ("src/other.cpp", constructor)),
+                        )
+                        self.assertFalse(
+                            migrate_lua_first.game_start_avatar_actor_is_proven()
+                        )
+
     def test_directory_discovery_prunes_build_caches(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
