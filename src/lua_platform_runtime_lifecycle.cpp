@@ -188,7 +188,8 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
         const std::string persistent_key = key;
-        result[persistent_key] = script_persistent_value_to_lua( lua, value );
+        result[persistent_key] = script_persistent_value_to_lua(
+                                     sol::state_view( lua.lua_state() ), value );
     }
     return result;
 }

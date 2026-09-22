@@ -739,7 +739,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_runtime_lifecycle.cpp",
-          "line": 850
+          "line": 851
         },
         "direct_roots": []
       },
@@ -1107,7 +1107,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_world.cpp",
-          "line": 3569
+          "line": 3573
         },
         "direct_roots": [
           "MapTileToken"
@@ -12366,7 +12366,7 @@
       "registration_name": "MapTileToken",
       "registration": {
         "path": "src/lua_platform_world.cpp",
-        "line": 3577,
+        "line": 3581,
         "installer": "shared.install_map_api",
         "namespace": "global"
       },
@@ -12404,7 +12404,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3603
+                "line": 3607
               }
             ]
           },
@@ -12421,7 +12421,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3601
+                "line": 3605
               }
             ]
           },
@@ -12436,7 +12436,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3592
+                "line": 3596
               }
             ]
           },
@@ -12453,7 +12453,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3590
+                "line": 3594
               }
             ]
           },
@@ -12468,7 +12468,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3579
+                "line": 3583
               }
             ]
           },
@@ -12485,7 +12485,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3586
+                "line": 3590
               }
             ]
           },
@@ -12502,7 +12502,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world.cpp",
-                "line": 3588
+                "line": 3592
               }
             ]
           }

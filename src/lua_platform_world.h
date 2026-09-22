@@ -71,19 +71,19 @@ std::optional<game_handle_error> validate_map_tile_token(
 // GameHandle values and all coordinates are explicitly typed.
 void install_world_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 // Install the generation-bound MapTileToken and token-gated map snapshot/edit
 // APIs under services.map.
 void install_map_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 } // namespace cata::lua_platform
 

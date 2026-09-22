@@ -31,10 +31,17 @@
 #include "lua_platform_sol.h"
 class Character;
 
+static const itype_id itype_2x4( "2x4" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_rock( "rock" );
+static const vproto_id vproto_car( "car" );
+
 TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 7 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 7 );
     const cata::lua_platform::game_handle_runtime newer_runtime( owner, 8 );
@@ -60,8 +67,10 @@ TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][plat
 TEST_CASE( "lua_platform_vehicle_handles_bind_owner_world_and_lifetime",
            "[lua][platform][vehicles]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 41 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 41 );
     vehicle value{ vproto_id() };
@@ -100,7 +109,8 @@ TEST_CASE( "lua_platform_vehicle_handles_bind_owner_world_and_lifetime",
 TEST_CASE( "lua_platform_vehicle_part_handles_require_exact_owner_and_identity",
            "[lua][platform][vehicles]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 42 );
     vehicle first{ vproto_id() };
     vehicle second{ vproto_id() };
@@ -126,10 +136,11 @@ TEST_CASE( "lua_platform_vehicle_part_handles_require_exact_owner_and_identity",
 TEST_CASE( "lua_platform_vehicle_part_handles_fail_closed_on_remove_and_replace",
            "[lua][platform][vehicles]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 44 );
-    vehicle first{ vproto_id( "car" ) };
-    vehicle second{ vproto_id( "car" ) };
+    vehicle first{ vproto_car };
+    vehicle second{ vproto_car };
     REQUIRE( first.part_count() > 0 );
     REQUIRE( second.part_count() > 0 );
 
@@ -180,7 +191,8 @@ TEST_CASE( "lua_platform_vehicle_part_handles_fail_closed_on_remove_and_replace"
 TEST_CASE( "lua_platform_vehicle_handles_fail_closed_after_unload",
            "[lua][platform][vehicles]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 45 );
     std::optional<cata::lua_platform::game_handle> stale;
     {
@@ -224,7 +236,8 @@ TEST_CASE( "lua_platform_vehicle_api_has_no_implicit_vehicle_selector",
 TEST_CASE( "lua_platform_vehicle_mutations_use_the_platform_write_gate",
            "[lua][platform][vehicles]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 46 );
     vehicle value{ vproto_id() };
     const cata::lua_platform::game_handle handle =
@@ -259,7 +272,8 @@ TEST_CASE( "lua_platform_vehicle_mutations_use_the_platform_write_gate",
 TEST_CASE( "lua_platform_vehicle_part_service_rejects_invalid_requests_before_ui",
            "[lua][platform][vehicles][vehicle_service]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 47 );
     std::size_t active_world = 11;
     vehicle target{ vproto_id() };
@@ -361,7 +375,8 @@ TEST_CASE( "lua_platform_vehicle_part_service_rejects_invalid_requests_before_ui
 TEST_CASE( "lua_platform_vehicle_cargo_requires_part_handle_not_index",
            "[lua][platform][vehicles][items]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 43 );
     vehicle value{ vproto_id() };
     const cata::lua_platform::game_handle vehicle_handle =
@@ -409,7 +424,8 @@ TEST_CASE( "lua_platform_vehicle_cargo_requires_part_handle_not_index",
 
 TEST_CASE( "lua_platform_game_handles_fail_closed_after_owner_retirement", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 3 );
     item value;
     const cata::lua_platform::game_handle handle =
@@ -429,7 +445,8 @@ TEST_CASE( "lua_platform_game_handles_fail_closed_after_owner_retirement", "[lua
 
 TEST_CASE( "lua_platform_game_handles_reject_destroyed_items", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 5 );
     std::optional<cata::lua_platform::game_handle> handle;
     {
@@ -451,7 +468,8 @@ TEST_CASE( "lua_platform_game_handles_reject_destroyed_items", "[lua][platform]"
 
 TEST_CASE( "lua_platform_item_handles_reject_null_item_instances", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 12 );
     item value;
     const cata::lua_platform::game_handle handle =
@@ -468,9 +486,10 @@ TEST_CASE( "lua_platform_item_handles_reject_null_item_instances", "[lua][platfo
 TEST_CASE( "lua_platform_item_transform_retires_old_handle_and_reissues_identity",
            "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 13 );
-    item value( itype_id( "rock" ) );
+    item value( itype_rock );
     const cata::lua_platform::game_handle old_handle =
         cata::lua_platform::game_handle::from_item(
             value, { "character_carried", value.uid().get_value(), 0, 0, 0, {} },
@@ -494,12 +513,13 @@ TEST_CASE( "lua_platform_item_transform_retires_old_handle_and_reissues_identity
 TEST_CASE( "lua_platform_item_holder_resolution_rejects_wrong_character",
            "[lua][platform][items]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 14 );
     avatar character;
     character.normalize();
     character.setID( character_id( 6400 ), true );
-    item value( itype_id( "rock" ) );
+    item value( itype_rock );
     const cata::lua_platform::game_handle character_handle =
         cata::lua_platform::game_handle::from_creature(
             character, { "character_inventory", 0, 0, 0, 0, {} },
@@ -553,8 +573,10 @@ TEST_CASE( "lua_platform_item_page_is_the_only_public_traversal_entry",
 TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
            "[lua][platform][items][pagination][semantic]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     cata::lua_platform::game_handle_runtime active_runtime( owner, 31 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 31 );
     std::size_t active_world = 1;
@@ -563,12 +585,12 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
     character.normalize();
     character.setID( character_id( 6401 ), true );
     character.inv->add_item(
-        item( itype_id( "rock" ) ), false, false, false );
+        item( itype_rock ), false, false, false );
     character.inv->add_item(
-        item( itype_id( "2x4" ) ), false, false, false );
-    item nested_container( itype_id( "debug_backpack" ) );
+        item( itype_2x4 ), false, false, false );
+    item nested_container( itype_debug_backpack );
     REQUIRE( nested_container.put_in(
-                 item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
+                 item( itype_rock ), pocket_type::CONTAINER ).success() );
     character.inv->add_item(
         std::move( nested_container ), false, false, false );
 
@@ -695,7 +717,7 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
 
     character.inv->clear();
     for( int index = 0; index < 65; ++index ) {
-        item entry( itype_id( "rock" ) );
+        item entry( itype_rock );
         entry.set_var( "page_entry", index );
         character.inv->add_item( std::move( entry ), false, false, false );
     }

@@ -62,7 +62,7 @@ static script_persistent_value read_value( const sol::object &value, const std::
         return script_null_value{};
     }
     if( value.is<script_tripoint_coord>() ) {
-        const auto coordinate = value.as<script_tripoint_coord>();
+        const script_tripoint_coord coordinate = value.as<script_tripoint_coord>();
         if( coordinate.origin() != "abs" || coordinate.scale() != "ms" ) {
             throw std::invalid_argument( api_name + " persistent coordinates must be absolute map squares" );
         }

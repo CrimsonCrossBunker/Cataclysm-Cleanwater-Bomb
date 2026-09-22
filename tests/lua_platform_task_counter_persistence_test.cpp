@@ -197,7 +197,8 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
             CHECK( array.size() == 2 );
             CHECK( array.get<sol::object>( 1 ).is<platform::script_null_value>() );
             CHECK( array.get<std::int64_t>( 2 ) == 42 );
-            const auto position = payload.get<platform::script_tripoint_coord>( "position" );
+            const platform::script_tripoint_coord position =
+                payload.get<platform::script_tripoint_coord>( "position" );
             CHECK( position.x() == -17 );
             CHECK( position.y() == 42 );
             CHECK( position.z() == -3 );
