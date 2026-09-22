@@ -1,6 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_creatures.h"
+#include "lua_platform_values.h"
 
 #include <character_attire.h>
 #include <character_id.h>
@@ -4303,11 +4304,11 @@ void install_creature_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &ids,
+            const sol::object & ids,
     const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
-                   lua_state, origin, ids, options,
+                   lua_state, origin, read_optional_table( ids, "services.monsters.count_nearby ids" ), options,
                    nearby_monster_filter_kind::type );
     } );
     monsters.set_function(
@@ -4315,11 +4316,12 @@ void install_creature_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &species,
+            const sol::object & species,
     const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
-                   lua_state, origin, species, options,
+                   lua_state, origin, read_optional_table( species, "services.monsters.count_species_nearby species" ),
+                   options,
                    nearby_monster_filter_kind::species );
     } );
     monsters.set_function(
@@ -4327,11 +4329,12 @@ void install_creature_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &groups,
+            const sol::object & groups,
     const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
-                   lua_state, origin, groups, options,
+                   lua_state, origin, read_optional_table( groups, "services.monsters.count_groups_nearby groups" ),
+                   options,
                    nearby_monster_filter_kind::group );
     } );
     services["monsters"] = std::move( monsters );

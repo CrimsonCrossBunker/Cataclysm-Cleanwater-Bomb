@@ -1,6 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_world.h"
+#include "lua_platform_values.h"
 
 #include <enums.h>
 #include <item_uid.h>
@@ -12,7 +13,7 @@ extern "C" {
 #include <mapdata.h>
 #include <memory_fast.h>
 #include <pocket_type.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <veh_type.h>
 #include <algorithm>
 #include <array>
@@ -68,6 +69,8 @@ extern "C" {
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"
+
+static const flag_id json_flag_PRESERVE_SPAWN_LOC( "PRESERVE_SPAWN_LOC" );
 
 namespace cata::lua_platform
 {
@@ -334,9 +337,7 @@ struct location_search_options {
     int target_min_radius = 0;
     int target_max_radius = 0;
     int random_attempts = 25;
-    int x_adjust = 0;
-    int y_adjust = 0;
-    int z_adjust = 0;
+    tripoint adjustment = tripoint::zero;
     bool z_override = false;
     bool outdoor_only = false;
     bool passable_only = false;
@@ -690,8 +691,11 @@ void require_map_tile_change_keys(
         }
         const std::string key = entry.first.as<std::string>();
         if( allowed.count( key ) == 0 ) {
-            throw std::invalid_argument(
-                api_name + " received unknown field '" + key + "'" );
+            std::string message = api_name;
+            message += " received unknown field '";
+            message += key;
+            message += '\'';
+            throw std::invalid_argument( message );
         }
     }
 }
@@ -1222,7 +1226,7 @@ location_selector read_location_selector(
             throw std::invalid_argument(
                 "services.world.find_location selector 'id' must be a GameId" );
         }
-        const script_game_id id = id_value.as<script_game_id>();
+        const script_game_id &id = id_value.as<script_game_id>();
         require_id_kind(
             id, id_kind,
             "services.world.find_location selector 'id'" );
@@ -1266,19 +1270,19 @@ location_search_options read_location_search_options(
                                          value, key, 1,
                                          maximum_location_random_attempts );
         } else if( key == "x_adjust" ) {
-            result.x_adjust = read_location_integer(
-                                  value, key,
-                                  -maximum_location_adjustment,
-                                  maximum_location_adjustment );
+            result.adjustment.x = read_location_integer(
+                                      value, key,
+                                      -maximum_location_adjustment,
+                                      maximum_location_adjustment );
         } else if( key == "y_adjust" ) {
-            result.y_adjust = read_location_integer(
-                                  value, key,
-                                  -maximum_location_adjustment,
-                                  maximum_location_adjustment );
+            result.adjustment.y = read_location_integer(
+                                      value, key,
+                                      -maximum_location_adjustment,
+                                      maximum_location_adjustment );
         } else if( key == "z_adjust" ) {
-            result.z_adjust = read_location_integer(
-                                  value, key, -OVERMAP_DEPTH,
-                                  OVERMAP_HEIGHT );
+            result.adjustment.z = read_location_integer(
+                                      value, key, -OVERMAP_DEPTH,
+                                      OVERMAP_HEIGHT );
         } else if( key == "z_override" ) {
             result.z_override = read_location_bool( value, key );
         } else if( key == "outdoor_only" ) {
@@ -1345,8 +1349,9 @@ sol::table snapshot_fields(
     std::sort(
         ordered.begin(), ordered.end(),
     []( const field_entry * lhs, const field_entry * rhs ) {
-        return lhs->get_field_type().id().str() <
-               rhs->get_field_type().id().str();
+        // Technical IDs use a stable, language-independent order.
+        return field_type_str_id::LexCmp{}(
+                   lhs->get_field_type().id(), rhs->get_field_type().id() );
     } );
 
     const std::size_t returned = std::min(
@@ -1678,14 +1683,14 @@ sol::table find_world_location(
     }
 
     selected = selected + tripoint_rel_ms(
-                   options.x_adjust,
-                   options.y_adjust, 0 );
+                   options.adjustment.x,
+                   options.adjustment.y, 0 );
     if( options.z_override ) {
         selected = tripoint_abs_ms(
-                       selected.xy(), options.z_adjust );
+                       selected.xy(), options.adjustment.z );
     } else {
         selected = selected + tripoint_rel_ms(
-                       0, 0, options.z_adjust );
+                       0, 0, options.adjustment.z );
     }
     if( selected.z() < -OVERMAP_DEPTH ||
         selected.z() > OVERMAP_HEIGHT ) {
@@ -2367,7 +2372,7 @@ void configure_world_spawn_item(
         entry.set_flag( flag );
     }
     if( entry.has_flag(
-            flag_id( "PRESERVE_SPAWN_LOC" ) ) ) {
+            json_flag_PRESERVE_SPAWN_LOC ) ) {
         entry.preserve_location( position );
     }
 }
@@ -2593,7 +2598,7 @@ tripoint_abs_omt require_absolute_omt(
 }
 
 void require_world_event_key(
-    const std::string &key, const std::string_view api_name )
+    const std::string_view key, const std::string_view api_name )
 {
     if( key.size() > maximum_world_event_key_bytes ) {
         throw std::invalid_argument(
@@ -3567,10 +3572,10 @@ void reset_map_tile_tokens() noexcept
 
 void install_map_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<map_tile_token>(
@@ -3651,10 +3656,10 @@ void install_map_api(
 
 void install_world_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table world = lua.create_table();
@@ -3723,11 +3728,12 @@ void install_world_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &selector,
+            const sol::object & selector,
     const sol::optional<sol::table> &options ) {
         require_read();
         return find_world_location(
-                   lua_state, origin, selector, options );
+                   lua_state, origin, read_optional_table( selector, "services.world.find_location selector" ),
+                   options );
     } );
     world.set_function(
         "region",

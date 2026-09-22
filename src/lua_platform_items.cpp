@@ -1,6 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_items.h"
+#include "lua_platform_values.h"
 
 #include <character_attire.h>
 #include <character_id.h>
@@ -6954,11 +6955,11 @@ void install_item_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
             const sol::table & holder,
-            const sol::optional<sol::table> &options,
+            const sol::object & options,
     const sol::optional<sol::table> &continuation ) {
         require_read();
         return item_page(
-                   lua_state, holder, options, continuation,
+                   lua_state, holder, read_optional_table( options, "services.items.page options" ), continuation,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
