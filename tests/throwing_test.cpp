@@ -342,3 +342,17 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
         thrown.charges--;
     }
 }
+
+TEST_CASE( "slings_reduce_throwing_time", "[throwing][sling]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    item projectile( itype_rock );
+    const int unassisted_cost = throw_cost( you, projectile );
+    const std::string sling_id = GENERATE( "sling", "staff_sling", "sling_long" );
+    CAPTURE( sling_id );
+    item sling( itype_id{ sling_id } );
+    REQUIRE( you.wield( sling ) );
+    CHECK( throw_cost( you, projectile ) < unassisted_cost );
+    CHECK( throw_cost( you, projectile ) >= 25 );
+}
