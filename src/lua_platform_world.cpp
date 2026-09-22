@@ -1,6 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_world.h"
+#include "lua_platform_values.h"
 
 #include <enums.h>
 #include <item_uid.h>
@@ -3723,11 +3724,12 @@ void install_world_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &selector,
+            const sol::object & selector,
     const sol::optional<sol::table> &options ) {
         require_read();
         return find_world_location(
-                   lua_state, origin, selector, options );
+                   lua_state, origin, read_optional_table( selector, "services.world.find_location selector" ),
+                   options );
     } );
     world.set_function(
         "region",

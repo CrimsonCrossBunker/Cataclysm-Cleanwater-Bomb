@@ -18,6 +18,18 @@ extern "C" {
 namespace cata::lua_platform
 {
 
+sol::optional<sol::table> read_optional_table(
+    const sol::object &value, const std::string &description )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return sol::nullopt;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::invalid_argument( description + " must be a table or nil" );
+    }
+    return value.as<sol::table>();
+}
+
 namespace
 {
 

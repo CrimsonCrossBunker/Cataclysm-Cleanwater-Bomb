@@ -1,5 +1,71 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
+#include "lua_platform_creatures.h"
+
+TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
+           "[lua][platform][map][creatures][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 709, 9 );
+    fixture.local = tripoint_bub_ms( 60, 60, 0 );
+    fixture.absolute = fixture.get_map().get_abs( fixture.local );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+    fixture.services, current_runtime, current_world, []() {}, [&]() {
+        fixture.write_called = true;
+    } );
+    cata::lua_platform::install_world_api(
+    fixture.services, current_runtime, current_world, []() {}, [&]() {
+        fixture.write_called = true;
+    } );
+    get_creature_tracker().clear();
+    const on_out_of_scope cleanup( []() {
+        get_creature_tracker().clear();
+    } );
+    for( const int offset : {
+             1, 2, 4
+         } ) {
+        const shared_ptr_fast<monster> entry = make_shared_fast<monster>(
+                mtype_id( "mon_zombie" ), fixture.local + tripoint( offset, 0, 0 ) );
+        entry->friendly = offset == 2 ? 0 : -1;
+        REQUIRE( get_creature_tracker().add( entry ) );
+    }
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["origin"] = fixture.position();
+    const sol::protected_function_result queried = fixture.lua.safe_script( R"(
+        for _, method in ipairs({"count_nearby", "count_species_nearby", "count_groups_nearby"}) do
+            local count = services.monsters[method]
+            local options = {radius=3, attitude="friendly"}
+            assert(count(origin, nil, options).value == 1)
+            assert(count(origin, {}, options).value == 1)
+            assert(count(origin, nil, {radius=4, attitude="friendly"}).value == 2)
+            assert(count(origin, nil, {radius=3, attitude="both"}).value == 2)
+            assert(count(origin).value == 1)
+            assert(not pcall(count, origin, nil, {radius=-1}))
+            for _, invalid in ipairs({false, 7, "bad", function() end}) do
+                assert(not pcall(count, origin, invalid, options))
+            end
+        end
+        local find = services.world.find_location
+        local shifted = find(origin, nil, {x_adjust=2})
+        assert(shifted.found and shifted.position.x == origin.x + 2)
+        assert(shifted.position.y == origin.y and shifted.position.z == origin.z)
+        assert(find(origin).position.x == origin.x)
+        assert(not pcall(find, origin, nil, {x_adjust="bad"}))
+        for _, invalid in ipairs({false, 7, "bad", function() end}) do
+            assert(not pcall(find, origin, invalid, {x_adjust=2}))
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( queried.valid() );
+    CHECK_FALSE( fixture.write_called );
+    CHECK( get_creature_tracker().size() == 3 );
+    CHECK( fixture.get_map().get_abs( fixture.local ) == fixture.absolute );
+}
 
 TEST_CASE( "lua_platform_map_tile_rejects_mixed_coordinate_frames",
            "[lua][platform][map]" )

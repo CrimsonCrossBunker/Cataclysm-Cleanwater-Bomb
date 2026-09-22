@@ -521,7 +521,7 @@ TEST_CASE( "lua_platform_item_page_is_the_only_public_traversal_entry",
 }
 
 TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
-           "[lua][platform][items][pagination]" )
+           "[lua][platform][items][pagination][semantic]" )
 {
     const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
     const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
@@ -662,6 +662,38 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
     CHECK_FALSE( depth_page["complete"].get<bool>() );
     CHECK( depth_page["truncated"].get<bool>() );
     CHECK( depth_page["stop_reason"].get<std::string>() == "max_depth" );
+
+    character.inv->clear();
+    for( int index = 0; index < 65; ++index ) {
+        item entry( itype_id( "rock" ) );
+        entry.set_var( "page_entry", index );
+        character.inv->add_item( std::move( entry ), false, false, false );
+    }
+    cata::lua_platform::bump_item_query_mutation_epoch();
+    lua.open_libraries( sol::lib::base );
+    lua["services"] = services;
+    lua["holder"] = holder;
+    const sol::protected_function_result default_pages = lua.safe_script( R"(
+        local page = services.items.page
+        local first = page(holder).value
+        assert(first.returned == 64 and not first.complete)
+        local cursor = first.continuation
+        for _, invalid in ipairs({false, 7, "bad", function() end}) do
+            assert(not pcall(page, holder, invalid, cursor))
+        end
+        local resumed = page(holder, nil, cursor)
+        assert(resumed.ok)
+        local last = resumed.value
+        assert(last.returned == 1 and last.complete and last.continuation == nil)
+        local seen = {}
+        for _, entry in ipairs(first.items) do seen[entry.uid] = true end
+        assert(not seen[last.items[1].uid])
+        local reused = page(holder, nil, cursor)
+        assert(not reused.ok and reused.error.code == "stale_continuation")
+        local unknown = page(holder, nil, {continuation_id=0})
+        assert(not unknown.ok and unknown.error.code == "stale_continuation")
+    )", sol::script_pass_on_error );
+    REQUIRE( default_pages.valid() );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

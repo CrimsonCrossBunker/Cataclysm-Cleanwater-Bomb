@@ -11,6 +11,11 @@
 namespace cata::lua_platform
 {
 
+// Bind optional tables as objects when later arguments must keep their slots:
+// the bundled sol optional<table> does not consume an explicit nil argument.
+sol::optional<sol::table> read_optional_table(
+    const sol::object &value, const std::string &description );
+
 struct script_value_map_limits {
     std::size_t entries = 32;
     std::size_t key_bytes = 64;

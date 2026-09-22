@@ -244,4 +244,95 @@ TEST_CASE( "lua_platform_null_payload_and_world_state_survive_runtime_reload",
     CHECK( after->tasks.empty() );
 }
 
+TEST_CASE( "lua_platform_nil_task_payload_preserves_metadata_and_save_scope",
+           "[lua][platform][tasks][persistence][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    REQUIRE( world_generator != nullptr );
+    const platform_lua_test_directory temporary;
+    const std::string old_savedir = PATH_INFO::savedir();
+    WORLD *old_world = world_generator->active_world;
+    WORLD isolated_world( "nil_task_payload" );
+    sol::state lua;
+    const on_out_of_scope cleanup( [&]() {
+        platform::clear_active_runtimes();
+        world_generator->active_world = old_world;
+        PATH_INFO::set_savedir( old_savedir );
+    } );
+    PATH_INFO::set_savedir( temporary.root.string() + "/" );
+    world_generator->active_world = &isolated_world;
+    REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
+    lua.open_libraries( sol::lib::base );
+    const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
+                "optional-task-owner", 4911, lua );
+    sol::table ccb = lua.create_table();
+    platform::install_runtime_api( owner, lua, ccb );
+    lua["ccb"] = ccb;
+    const sol::protected_function_result registered = lua.safe_script(
+                "ccb.runtime.handler('tick', function() end)", sol::script_pass_on_error );
+    REQUIRE( registered.valid() );
+    platform::set_active_runtimes( { owner } );
+    platform::runtime_world_ready( true );
+    lua["actor"] = platform::game_handle::from_creature(
+                       get_avatar(), { "avatar", get_avatar().getID().get_value(), 0, 0, 0, {} },
+                       owner->handle_runtime(), platform::runtime_world_generation() );
+    lua["actor_id"] = get_avatar().getID().get_value();
+    const std::uint64_t next_id = owner->next_task_id;
+    const sol::protected_function_result rejected = lua.safe_script( R"(
+        for _, method in ipairs({"after", "every"}) do
+            local create = ccb.tasks[method]
+            for _, invalid in ipairs({false, 7, "bad", function() end}) do
+                assert(not pcall(create, 5, "tick", invalid, 1, "character"))
+            end
+            assert(not pcall(create, 5, "tick", nil, 99, "character"))
+            assert(not pcall(create, 5, "tick", nil, 1, "invalid"))
+            assert(ccb.tasks.list().total == 0)
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( rejected.valid() );
+    CHECK( owner->tasks.empty() );
+    CHECK( owner->next_task_id == next_id );
+    const sol::protected_function_result scheduled = lua.safe_script( R"(
+        for _, method in ipairs({"after", "every"}) do
+            local create = ccb.tasks[method]
+            local id = create(5, "tick", nil, 1, "character", actor, {target=actor})
+            local task = ccb.tasks.get(id)
+            assert(task.owner == "character" and task.payload_version == 1)
+            assert(next(task.payload) == nil)
+            assert(task.actor_character_id == actor_id)
+            assert(task.participants.target.character_id == actor_id)
+            assert(task.recurring == (method == "every"))
+            local default = ccb.tasks.get(create(5, "tick"))
+            assert(default.owner == "world" and default.payload_version == 1)
+            assert(next(default.payload) == nil)
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( scheduled.valid() );
+    REQUIRE( owner->tasks.size() == 4 );
+    std::string error;
+    REQUIRE( platform::runtime_save( error ) );
+    const cata_path character_path = PATH_INFO::player_base_save_path() + ".lua_platform.json";
+    const cata_path world_path = isolated_world.folder_path() / "lua_platform_world.json";
+    for( const cata_path &path : {
+             character_path, world_path
+         } ) {
+        const JsonObject root = json_loader::from_path( path ).get_object();
+        root.allow_omitted_members();
+        CHECK( root.get_string( "scope" ) == ( path == character_path ? "character" : "world" ) );
+        const JsonObject mods = root.get_object( "mods" );
+        mods.allow_omitted_members();
+        const JsonObject record = mods.get_object( "optional-task-owner" );
+        record.allow_omitted_members();
+        const JsonArray tasks = record.get_array( "tasks" );
+        REQUIRE( tasks.size() == 2 );
+        for( const JsonObject task : tasks ) {
+            task.allow_omitted_members();
+            CHECK( task.get_int( "payload_version" ) == 1 );
+            CHECK( task.get_object( "payload" ).size() == 0 );
+            CHECK( task.has_member( "actor_character_id" ) == ( path == character_path ) );
+        }
+    }
+}
+
 #endif
