@@ -17,9 +17,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "calendar.h"
@@ -50,9 +48,6 @@
 #include <enums.h>
 #include <item_location.h>
 #include <item_uid.h>
-extern "C" {
-#include <lua.h>
-}
 #include <lua_platform_handle.h>
 #include <lua_platform_runtime.h>
 #include <lua_platform_state.h>
@@ -193,7 +188,8 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
         const std::string persistent_key = key;
-        result[persistent_key] = script_persistent_value_to_lua( lua, value );
+        result[persistent_key] = script_persistent_value_to_lua(
+                                     sol::state_view( lua.lua_state() ), value );
     }
     return result;
 }
@@ -1303,19 +1299,19 @@ void detail::install_runtime_state_task_api(
     tasks.set_function( "after", [schedule_persistent_task](
                             const std::int64_t turns,
                             const std::string & handler_id,
-                            const sol::optional<sol::table> &payload,
+                            const sol::object & payload,
                             const sol::optional<std::int64_t> &payload_version,
                             const sol::optional<std::string> &scope,
                             const sol::optional<cata::lua_platform::game_handle> &actor,
     const sol::optional<sol::table> &participants ) {
         return schedule_persistent_task(
-                   turns, 0, handler_id, payload,
+                   turns, 0, handler_id, read_optional_table( payload, "tasks.after payload" ),
                    payload_version, scope, actor, participants, "tasks.after" );
     } );
     tasks.set_function( "every", [schedule_persistent_task](
                             const std::int64_t interval_turns,
                             const std::string & handler_id,
-                            const sol::optional<sol::table> &payload,
+                            const sol::object & payload,
                             const sol::optional<std::int64_t> &payload_version,
                             const sol::optional<std::string> &scope,
                             const sol::optional<cata::lua_platform::game_handle> &actor,
@@ -1325,7 +1321,7 @@ void detail::install_runtime_state_task_api(
         }
         return schedule_persistent_task(
                    interval_turns, interval_turns,
-                   handler_id, payload, payload_version,
+                   handler_id, read_optional_table( payload, "tasks.every payload" ), payload_version,
                    scope, actor, participants, "tasks.every" );
     } );
     tasks.set_function( "cancel", [weak]( std::int64_t id ) {
