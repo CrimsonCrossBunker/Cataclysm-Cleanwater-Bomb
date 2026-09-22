@@ -29,9 +29,9 @@ void install_camp_api(
 // Keep the disabled route in sync with the enabled installer surface without
 // creating a public services.map table in a build with no Lua Platform.
 void install_map_api(
-    sol::table &, std::function<game_handle_runtime()>,
-    std::function<std::size_t()>, std::function<void()>,
-    std::function<void()> )
+    sol::table &, const std::function<game_handle_runtime()> &,
+    const std::function<std::size_t()> &, const std::function<void()> &,
+    const std::function<void()> & )
 {
 }
 

@@ -24,6 +24,11 @@ sol::object script_diag_value_to_lua(
     sol::state_view lua, const diag_value &value, const std::string &description,
     std::size_t maximum_array_entries = 512 );
 
+// Bind optional tables as objects when later arguments must keep their slots:
+// the bundled sol optional<table> does not consume an explicit nil argument.
+sol::optional<sol::table> read_optional_table(
+    const sol::object &value, const std::string &description );
+
 struct script_value_map_limits {
     std::size_t entries = 32;
     std::size_t key_bytes = 64;
