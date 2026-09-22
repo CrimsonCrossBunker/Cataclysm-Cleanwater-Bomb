@@ -123,6 +123,10 @@ namespace turn_handler
 {
 bool cleanup_at_end()
 {
+    // The game instance survives returning to the main menu.
+    g->wait_popup_reset();
+    g->first_redraw_since_waiting_started = true;
+
     avatar &u = get_avatar();
     if( g->uquit == QUIT_DIED || g->uquit == QUIT_SUICIDE ) {
         // Put (non-hallucinations) into the overmap so they are not lost.
@@ -324,9 +328,9 @@ void process_avatar_activity( avatar &u )
     // Poll between actor calls, never inside one: cancellation may destroy
     // the currently running actor.  Some zone stages do not consume moves,
     // so waiting until the whole move budget is spent can starve input.
-    static auto last_poll = std::chrono::steady_clock::now();
+    static std::chrono::steady_clock::time_point last_poll = std::chrono::steady_clock::now();
     while( u.get_moves() > 0 && u.activity ) {
-        const auto now = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         if( now - last_poll >= std::chrono::milliseconds( 100 ) ) {
             last_poll = now;
             handle_key_blocking_activity( 0 );
