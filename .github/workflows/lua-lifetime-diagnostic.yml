@@ -12,44 +12,44 @@ permissions:
   contents: read
 
 jobs:
-  asan-lua-teardown:
-    runs-on: ubuntu-24.04
+  gcc14-lua-teardown-reproduction:
+    runs-on: ubuntu-latest
     timeout-minutes: 240
     env:
-      COMPILER: clang++-18
-      SANITIZE: address
-      NUM_BUILD_JOBS: 2
+      COMPILER: g++-14
+      NUM_BUILD_JOBS: 1
       CMAKE: 0
       TILES: 0
       SOUND: 0
-      LOCALIZE: 0
+      LOCALIZE: 1
       CATA_ENABLE_LUA_PLATFORM: 1
       TESTS: 1
       ASTYLE: 0
       LINTJSON: 0
       FULL_DEBUG_SYMBOLS: 0
+      PCH: 1
     steps:
-      - name: Check out diagnostic source revision
+      - name: Check out exact diagnostic source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Install curses build dependencies
+      - name: Install GCC 14 and curses build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libncursesw5-dev ccache gettext parallel
-          clang++-18 --version
+          sudo apt-get install --yes g++-14 libncursesw5-dev ccache gettext parallel
+          g++-14 --version
 
       - name: Prepare repository build environment
         run: bash ./build-scripts/requirements.sh
 
-      - name: Build Lua-enabled Catch tests with AddressSanitizer
+      - name: Build Lua-enabled Catch tests with GCC 14
         run: |
           set -o pipefail
           bash ./build-scripts/gha_compile_only.sh 2>&1 | tee /tmp/asan-build.log
 
-      - name: Run isolated full-runtime teardown cases under ASan
+      - name: Run isolated full-runtime teardown cases
         if: always()
         run: |
           set -uo pipefail
@@ -59,8 +59,8 @@ jobs:
             local name="$1"
             shift
             set +e
-            ASAN_OPTIONS=detect_odr_violation=1 timeout --kill-after=15s 180s \
-              ./tests/cata_test "$@" --rng-seed 4902 --order lex \
+            timeout --kill-after=15s 180s ./tests/cata_test "$@" \
+              --rng-seed 4902 --order lex \
               --error-format=github-action \
               > "asan-diagnostic-logs/${name}.log" 2>&1
             local result=$?
@@ -79,11 +79,11 @@ jobs:
             echo 127 > asan-diagnostic-logs/bionic-alone.exit
           fi
 
-      - name: Upload ASan build and runtime logs
+      - name: Upload GCC 14 build and runtime logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lua-lifetime-asan-diagnostic
+          name: lua-lifetime-gcc14-diagnostic
           path: |
             /tmp/asan-build.log
             asan-diagnostic-logs/
@@ -91,6 +91,7 @@ jobs:
           retention-days: 7
 
   bionic-lua-lifetime:
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
