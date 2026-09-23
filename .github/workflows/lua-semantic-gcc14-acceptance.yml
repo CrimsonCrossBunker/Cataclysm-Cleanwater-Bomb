@@ -1,0 +1,127 @@
+name: Lua semantic batch GCC 14 Release gate
+
+on:
+  push:
+    branches:
+      - codex/luna-native-gate-lifetime-fix
+    paths:
+      - .github/workflows/lua-semantic-gcc14-acceptance.yml
+
+permissions:
+  contents: read
+
+jobs:
+  gcc14-release-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      NUM_BUILD_JOBS: 2
+
+    steps:
+      - name: Prepare diagnostic log directory
+        run: mkdir -p diagnostic-logs
+
+      - name: Check out the approved semantic integration source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 2acf1993a38f06a5f6da24e54640e269faa9efd0
+          path: source
+          persist-credentials: false
+
+      - name: Install curses, localization, and GCC 14 build dependencies
+        working-directory: source
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes g++-14 libncursesw5-dev gettext locales
+          sudo locale-gen en_US.UTF-8 de_DE.UTF-8
+          bash ./build-scripts/requirements.sh
+          {
+            printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'compiler=%s\n' "$(g++-14 --version | head -n 1)"
+            printf 'native=linux64\nrelease=1\nlocalize=1\npch=1\nlua_platform=1\nnum_build_jobs=%s\n' \
+              "$NUM_BUILD_JOBS"
+            lsb_release -ds
+          } > "$GITHUB_WORKSPACE/diagnostic-logs/build-inputs.txt"
+          test "$(git rev-parse HEAD)" = '2acf1993a38f06a5f6da24e54640e269faa9efd0'
+
+      - name: Build only the native Catch test binary
+        id: build-tests
+        working-directory: source
+        run: |
+          set -uo pipefail
+          printf '%s\n' \
+            'make -j2 COMPILER=g++-14 NATIVE=linux64 TILES=0 SOUND=0 SDL3=0 RELEASE=1 LOCALIZE=1 PCH=1 CATA_ENABLE_LUA_PLATFORM=1 TESTS=1 RUNTESTS=0 tests' \
+            > "$GITHUB_WORKSPACE/diagnostic-logs/make-tests.command"
+          set +e
+          make -j"$NUM_BUILD_JOBS" \
+            COMPILER=g++-14 NATIVE=linux64 \
+            TILES=0 SOUND=0 SDL3=0 \
+            RELEASE=1 LOCALIZE=1 PCH=1 \
+            CATA_ENABLE_LUA_PLATFORM=1 TESTS=1 RUNTESTS=0 \
+            tests 2>&1 | tee "$GITHUB_WORKSPACE/diagnostic-logs/make-tests.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          printf 'build_exit=%s\n' "$result" \
+            > "$GITHUB_WORKSPACE/diagnostic-logs/make-tests.exit"
+          exit "$result"
+
+      - name: Record test binary identity and shared-library dependencies
+        id: inspect-binary
+        if: always()
+        working-directory: source
+        run: |
+          set -uo pipefail
+          logdir="$GITHUB_WORKSPACE/diagnostic-logs"
+          if [[ ! -x tests/cata_test ]]; then
+            printf 'binary=missing\ninspect_exit=1\n' > "$logdir/cata_test.inspect.exit"
+            exit 1
+          fi
+          file tests/cata_test | tee "$logdir/cata_test.file"
+          sha256sum tests/cata_test | tee "$logdir/cata_test.sha256"
+          set +e
+          ldd tests/cata_test > "$logdir/cata_test.ldd" 2>&1
+          result=$?
+          set -e
+          if grep -q 'not found' "$logdir/cata_test.ldd"; then
+            result=1
+          fi
+          printf 'inspect_exit=%s\n' "$result" > "$logdir/cata_test.inspect.exit"
+          cat "$logdir/cata_test.ldd"
+          exit "$result"
+
+      - name: Run the semantic batch union in one Catch process
+        id: run-semantic-union
+        if: ${{ steps.build-tests.outcome == 'success' && steps.inspect-binary.outcome == 'success' }}
+        working-directory: source
+        run: |
+          set -uo pipefail
+          selector=$(printf '%s' \
+            '[lua][platform][mutations][semantic],[lua][platform][strings][semantic],' \
+            '[lua][platform][environment_predicate][semantic],[lua][platform][named_predicates][semantic],' \
+            '[lua][platform][semantic][variables],[lua][platform][native_events][semantic],' \
+            '[lua][lifetime],EOC_activation_topic_item_uses_copied_dialogue_value'
+          )
+          logdir="$GITHUB_WORKSPACE/diagnostic-logs"
+          printf 'selector=%s\nrng_seed=4902\norder=lex\n' "$selector" \
+            > "$logdir/cata_test.semantic.command"
+          set +e
+          ./tests/cata_test "$selector" \
+            --rng-seed 4902 --order lex --error-format=github-action \
+            2>&1 | tee "$logdir/cata_test.semantic.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          printf 'test_exit=%s\n' "$result" > "$logdir/cata_test.semantic.exit"
+          exit "$result"
+
+      - name: Upload exact binary and acceptance logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lua-semantic-gcc14-release-${{ github.run_id }}
+          path: |
+            diagnostic-logs/
+            source/tests/cata_test
+          if-no-files-found: warn
+          compression-level: 0
+          retention-days: 14
