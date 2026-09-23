@@ -1,4 +1,4 @@
-name: Lua lifetime archived-binary Memcheck
+name: Lua sol callback teardown microprobe
 
 on:
   push:
@@ -8,191 +8,118 @@ on:
       - .github/workflows/lua-lifetime-diagnostic.yml
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
-  archived-binary-memcheck:
+  gcc14-sol-teardown:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
-      - name: Check out the archived binary source revision
+      - name: Check out the wrapper fix
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: bcb85682f3d28ab0f0123b05e45651bb9888b61b
-          path: source
           persist-credentials: false
 
-      - name: Download and verify archived release test binary
-        env:
-          ARTIFACT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install GCC 14 and record source/compiler
         run: |
           set -euo pipefail
-          mkdir -p source/diagnostic-logs
-          curl --fail --silent --show-error --location --retry 3 \
-            -H "Authorization: Bearer ${ARTIFACT_TOKEN}" \
-            -H 'Accept: application/vnd.github+json' \
-            https://api.github.com/repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/artifacts/10722504175/zip \
-            --output /tmp/cata_test_10722504175.zip
-          echo 'dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1  /tmp/cata_test_10722504175.zip' \
-            | sha256sum --check
-          unzip -q /tmp/cata_test_10722504175.zip -d source/tests
-          chmod +x source/tests/cata_test
-          cp /tmp/cata_test_10722504175.zip source/diagnostic-logs/
-          file source/tests/cata_test | tee source/diagnostic-logs/binary.file
-          actual_sha="$(sha256sum source/tests/cata_test | cut -d' ' -f1)"
-          printf '%s\n' "$actual_sha" | tee source/diagnostic-logs/binary.sha256
-          test "$actual_sha" = '24f2e766dbc88b1879183e3b2c0eb78102f845b8a49080af13733a44e11e6737'
-          test "$(git -C source rev-parse HEAD)" = 'bcb85682f3d28ab0f0123b05e45651bb9888b61b'
-          printf 'source_sha=%s\nartifact_id=10722504175\nartifact_zip_sha256=dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1\nbinary_sha256=%s\n' \
-            "$(git -C source rev-parse HEAD)" "$actual_sha" \
-            > source/diagnostic-logs/input-summary.txt
-          touch source/diagnostic-logs/binary-verified
-
-      - name: Install Valgrind and record runtime dependencies
-        if: always()
-        run: |
-          set -euo pipefail
-          mkdir -p source/diagnostic-logs
           sudo apt-get update
-          sudo apt-get install --yes g++-14 valgrind
-          g++-14 --version | tee source/diagnostic-logs/gcc14-version.txt
-          lsb_release -ds | tee source/diagnostic-logs/runner.txt
-          valgrind --version | tee source/diagnostic-logs/valgrind-version.txt
-          if [[ -x source/tests/cata_test && -f source/diagnostic-logs/binary-verified ]]; then
-            ldd source/tests/cata_test | tee source/diagnostic-logs/ldd.txt
-            if grep -q 'not found' source/diagnostic-logs/ldd.txt; then
-              echo 'Archived test binary has unresolved shared-library dependencies.' >&2
-              exit 1
-            fi
-            touch source/diagnostic-logs/dependencies-verified
-          else
-            echo 'Verified archived test binary is unavailable.' > source/diagnostic-logs/binary-unverified.txt
-          fi
+          sudo apt-get install --yes g++-14
+          mkdir -p diagnostic-logs
+          git rev-parse HEAD | tee diagnostic-logs/source.sha
+          gcc-14 --version | tee diagnostic-logs/gcc14-c.version
+          g++-14 --version | tee diagnostic-logs/gcc14-cxx.version
+          printf 'runner=%s\n' "$(lsb_release -ds)" > diagnostic-logs/runner.txt
 
-      - name: Probe GCC 14 sol2 closure keys without a game build
+      - name: Syntax-check the actual Catch regression source
         if: always()
-        working-directory: source
         run: |
           set -uo pipefail
           mkdir -p diagnostic-logs
-          cat > diagnostic-logs/sol-lambda-key-probe.cpp <<'CPP'
-          #include "lua_platform_sol.h"
-          #include <cstddef>
-          #include <functional>
-          #include <iostream>
-          #include <type_traits>
-
-          void install_npc_api_probe() {
-              std::function<int()> current_runtime_generation = [] { return 0; };
-              std::function<std::size_t()> current_world_generation = [] { return 0; };
-              std::function<void()> require_read = [] {};
-              auto visible_allies = [current_runtime_generation, current_world_generation, require_read]
-              ( sol::this_state state ) -> std::size_t {
-                  ( void )state;
-                  return 0;
-              };
-              auto ai_rule_catalog = [require_read]( sol::this_state state ) -> std::size_t {
-                  ( void )state;
-                  return 0;
-              };
-              using visible_type = sol::function_detail::functor_function<decltype( visible_allies ), false, true>;
-              using catalog_type = sol::function_detail::functor_function<decltype( ai_rule_catalog ), false, true>;
-              const auto &visible_name = sol::detail::demangle<visible_type>();
-              const auto &catalog_name = sol::detail::demangle<catalog_type>();
-              const auto &visible_key = sol::usertype_traits<visible_type>::user_metatable();
-              const auto &catalog_key = sol::usertype_traits<catalog_type>::user_metatable();
-              const auto &visible_gc_key = sol::usertype_traits<visible_type>::user_gc_metatable();
-              const auto &catalog_gc_key = sol::usertype_traits<catalog_type>::user_gc_metatable();
-              std::cout << "gcc pretty-derived visible type: " << visible_name << '\n'
-                        << "gcc pretty-derived catalog type: " << catalog_name << '\n'
-                        << "visible sol key: " << visible_key << '\n'
-                        << "catalog sol key: " << catalog_key << '\n'
-                        << "visible sol user-gc key: " << visible_gc_key << '\n'
-                        << "catalog sol user-gc key: " << catalog_gc_key << '\n'
-                        << "distinct C++ callable types: "
-                        << !std::is_same_v<visible_type, catalog_type> << '\n'
-                        << "same sol key: " << ( visible_key == catalog_key ) << '\n'
-                        << "same sol user-gc key: " << ( visible_gc_key == catalog_gc_key ) << '\n'
-                        << "userdata object sizes: " << sizeof( visible_type ) << ' '
-                        << sizeof( catalog_type ) << '\n';
-          }
-          int main() { install_npc_api_probe(); }
-          CPP
+          command='g++-14 -std=c++17 -DCATA_ENABLE_LUA_PLATFORM=1 -DCATCH_CONFIG_ENABLE_BENCHMARKING -Isrc -Isrc/lua -Itests -fsyntax-only tests/lua_platform_sol_teardown_test.cpp'
+          printf '%s\n' "$command" > diagnostic-logs/catch-syntax.command
+          if ! command -v g++-14 >/dev/null 2>&1; then
+            printf 'syntax_exit=127\nGCC 14 is unavailable.\n' > diagnostic-logs/catch-syntax.exit
+            exit 127
+          fi
           set +e
-          g++-14 -std=c++17 -Isrc -Isrc/lua \
-            diagnostic-logs/sol-lambda-key-probe.cpp \
-            -o diagnostic-logs/sol-lambda-key-probe \
-            > diagnostic-logs/sol-lambda-key-probe-build.log 2>&1
-          build_result=$?
-          set -e
-          printf 'compile_exit=%s\n' "$build_result" > diagnostic-logs/sol-lambda-key-probe.exit
-          cat diagnostic-logs/sol-lambda-key-probe-build.log
-          if [[ "$build_result" -eq 0 ]]; then
-            set +e
-            ./diagnostic-logs/sol-lambda-key-probe \
-              > diagnostic-logs/sol-lambda-key-probe.log 2>&1
-            probe_result=$?
-            set -e
-            printf 'run_exit=%s\n' "$probe_result" >> diagnostic-logs/sol-lambda-key-probe.exit
-            cat diagnostic-logs/sol-lambda-key-probe.log
-          fi
-
-      - name: Run only the environment predicate under Memcheck
-        if: always()
-        working-directory: source
-        run: |
-          set -uo pipefail
-          mkdir -p diagnostic-logs
-          ulimit -c 0
-          selector=lua_platform_environment_strings_match_native_predicates
-          if [[ ! -x tests/cata_test || ! -f diagnostic-logs/binary-verified ]]; then
-            echo 'Skipped: verified archived test binary is unavailable.' > diagnostic-logs/memcheck.exit
-            exit 0
-          fi
-          if [[ ! -f diagnostic-logs/dependencies-verified ]]; then
-            echo 'Skipped: archived test binary dependencies were not verified.' > diagnostic-logs/memcheck.exit
-            exit 0
-          fi
-          if ! command -v valgrind >/dev/null 2>&1; then
-            echo 'Skipped: Valgrind installation failed.' > diagnostic-logs/memcheck.exit
-            exit 0
-          fi
-          printf 'selector=%s\ntimeout_seconds=900\nvalgrind=memcheck leak-check=no track-origins=yes error-limit=no num-callers=40 error-exitcode=99\n' \
-            "$selector" > diagnostic-logs/command-summary.txt
-          set +e
-          timeout --signal=TERM --kill-after=30s 900s valgrind \
-            --tool=memcheck \
-            --leak-check=no \
-            --track-origins=yes \
-            --error-limit=no \
-            --num-callers=40 \
-            --error-exitcode=99 \
-            --log-file=diagnostic-logs/environment-predicate.memcheck.log \
-            tests/cata_test "$selector" \
-            --rng-seed 4902 --order lex --error-format=github-action \
-            > diagnostic-logs/environment-predicate.catch.log 2>&1
+          g++-14 -std=c++17 \
+            -DCATA_ENABLE_LUA_PLATFORM=1 \
+            -DCATCH_CONFIG_ENABLE_BENCHMARKING \
+            -Isrc -Isrc/lua -Itests \
+            -fsyntax-only tests/lua_platform_sol_teardown_test.cpp \
+            > diagnostic-logs/catch-syntax.log 2>&1
           result=$?
           set -e
-          printf '%s\n' "$result" | tee diagnostic-logs/memcheck.exit
-          printf 'memcheck_exit=%s\n' "$result" >> diagnostic-logs/command-summary.txt
-          if [[ -f diagnostic-logs/environment-predicate.memcheck.log ]]; then
-            awk '
-              !started && /^==[0-9]+== (Invalid (read|write)|Invalid free|Mismatched free)/ { started=1 }
-              started { print }
-              started && /^==[0-9]+==$/ { exit }
-              END { if (!started) print "No invalid read/write/free headline found." }
-            ' diagnostic-logs/environment-predicate.memcheck.log \
-              > diagnostic-logs/first-invalid-summary.txt
-            cat diagnostic-logs/first-invalid-summary.txt
+          printf 'syntax_exit=%s\n' "$result" > diagnostic-logs/catch-syntax.exit
+          cat diagnostic-logs/catch-syntax.log
+          exit "$result"
+
+      - name: Build bundled Lua and run the actual teardown Catch cases
+        if: always()
+        run: |
+          set -uo pipefail
+          mkdir -p diagnostic-logs
+          work="${RUNNER_TEMP}/lua-sol-teardown"
+          mkdir -p "$work/lua-objects"
+          selector='lua_platform_sol_functor_*'
+          printf 'selector=%s\ntimeout_seconds=90\nsource=tests/lua_platform_sol_teardown_test.cpp\n' \
+            "$selector" > diagnostic-logs/catch-runtime.command
+          if ! command -v gcc-14 >/dev/null 2>&1 || ! command -v g++-14 >/dev/null 2>&1; then
+            printf 'build_exit=127\nrun_exit=not-run\nGCC 14 is unavailable.\n' > diagnostic-logs/catch-runtime.exit
+            exit 127
           fi
 
-      - name: Upload archived binary and complete Memcheck logs
+          set +e
+          for source in src/lua/*.c; do
+            object="$work/lua-objects/$(basename "${source%.c}").o"
+            gcc-14 -std=c99 -DLUA_USE_DLOPEN -Isrc/lua -c "$source" -o "$object"
+            result=$?
+            if [[ "$result" -ne 0 ]]; then
+              printf 'build_exit=%s\nrun_exit=not-run\nfailed_source=%s\n' \
+                "$result" "$source" > diagnostic-logs/catch-runtime.exit
+              exit "$result"
+            fi
+          done
+
+          cat > "$work/catch-main.cpp" <<'CPP'
+          #define CATCH_CONFIG_MAIN
+          #include "cata_catch.h"
+          CPP
+
+          g++-14 -std=c++17 \
+            -DCATA_ENABLE_LUA_PLATFORM=1 \
+            -DCATCH_CONFIG_ENABLE_BENCHMARKING \
+            -Isrc -Isrc/lua -Itests \
+            tests/lua_platform_sol_teardown_test.cpp "$work/catch-main.cpp" \
+            "$work"/lua-objects/*.o -ldl -lm \
+            -o "$work/lua-sol-teardown-tests" \
+            > diagnostic-logs/catch-runtime-build.log 2>&1
+          build_result=$?
+          set -e
+          cat diagnostic-logs/catch-runtime-build.log
+          if [[ "$build_result" -ne 0 ]]; then
+            printf 'build_exit=%s\nrun_exit=not-run\n' "$build_result" > diagnostic-logs/catch-runtime.exit
+            exit "$build_result"
+          fi
+          printf 'build_exit=0\n' > diagnostic-logs/catch-runtime.exit
+
+          set +e
+          timeout --signal=TERM --kill-after=5s 90s \
+            "$work/lua-sol-teardown-tests" "$selector" \
+            --rng-seed 4902 --order lex \
+            > diagnostic-logs/catch-runtime.log 2>&1
+          run_result=$?
+          set -e
+          printf 'run_exit=%s\n' "$run_result" >> diagnostic-logs/catch-runtime.exit
+          cat diagnostic-logs/catch-runtime.log
+          exit "$run_result"
+
+      - name: Upload compiler and teardown probe evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lua-lifetime-valgrind-archive-10722504175
-          path: source/diagnostic-logs/
+          name: lua-sol-teardown-gcc14-${{ github.run_id }}
+          path: diagnostic-logs/
           if-no-files-found: warn
-          compression-level: 0
           retention-days: 14
