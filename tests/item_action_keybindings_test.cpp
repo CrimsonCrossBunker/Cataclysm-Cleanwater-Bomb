@@ -1,3 +1,4 @@
+#include <set>
 #include <string>
 
 #include "cata_catch.h"
