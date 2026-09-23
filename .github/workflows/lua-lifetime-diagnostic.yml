@@ -36,7 +36,7 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p diagnostic-logs
-          command='g++-14 -std=c++17 -DCATA_ENABLE_LUA_PLATFORM=1 -DCATCH_CONFIG_ENABLE_BENCHMARKING -Isrc -Isrc/lua -Itests -fsyntax-only tests/lua_platform_sol_teardown_test.cpp'
+          command='g++-14 -std=c++17 -DCATA_ENABLE_LUA_PLATFORM=1 -DCATCH_CONFIG_ENABLE_BENCHMARKING -Isrc -Isrc/lua -Isrc/third-party -Itests -fsyntax-only tests/lua_platform_sol_teardown_test.cpp'
           printf '%s\n' "$command" > diagnostic-logs/catch-syntax.command
           if ! command -v g++-14 >/dev/null 2>&1; then
             printf 'syntax_exit=127\nGCC 14 is unavailable.\n' > diagnostic-logs/catch-syntax.exit
@@ -46,7 +46,7 @@ jobs:
           g++-14 -std=c++17 \
             -DCATA_ENABLE_LUA_PLATFORM=1 \
             -DCATCH_CONFIG_ENABLE_BENCHMARKING \
-            -Isrc -Isrc/lua -Itests \
+            -Isrc -Isrc/lua -Isrc/third-party -Itests \
             -fsyntax-only tests/lua_platform_sol_teardown_test.cpp \
             > diagnostic-logs/catch-syntax.log 2>&1
           result=$?
@@ -90,7 +90,7 @@ jobs:
           g++-14 -std=c++17 \
             -DCATA_ENABLE_LUA_PLATFORM=1 \
             -DCATCH_CONFIG_ENABLE_BENCHMARKING \
-            -Isrc -Isrc/lua -Itests \
+            -Isrc -Isrc/lua -Isrc/third-party -Itests \
             tests/lua_platform_sol_teardown_test.cpp "$work/catch-main.cpp" \
             "$work"/lua-objects/*.o -ldl -lm \
             -o "$work/lua-sol-teardown-tests" \
