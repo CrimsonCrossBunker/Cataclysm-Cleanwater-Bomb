@@ -500,6 +500,44 @@ TEST_CASE( "magazine_restack_merges_adjacent_runs_and_preserves_order",
     }
 }
 
+TEST_CASE( "pocket_restack_handles_empty_singleton_and_legacy_entries", "[pocket][stacking]" )
+{
+    const pocket_type type = GENERATE( pocket_type::CONTAINER, pocket_type::MAGAZINE );
+    const int stacks = GENERATE( 0, 1, 3 );
+    const bool legacy_entry = GENERATE( false, true );
+    const bool track_item = GENERATE( false, true );
+    pocket_data data( type );
+    item_pocket pocket( &data );
+    std::list<item> &contents = pocket.edit_contents();
+    // Old saves can contain non-ammunition entries in a magazine.
+    if( legacy_entry ) {
+        contents.emplace_back( itype_test_screwdriver );
+        REQUIRE_FALSE( contents.back().count_by_charges() );
+    }
+    item *last = nullptr;
+    for( int i = 1; i <= stacks; ++i ) {
+        contents.emplace_back( itype_test_9mm_ammo, calendar::turn_zero, i );
+        last = &contents.back();
+    }
+    if( track_item ) {
+        last = pocket.restack( last );
+    } else {
+        pocket.restack();
+    }
+    CHECK( pocket.size() == static_cast<std::size_t>( legacy_entry + ( stacks > 0 ) ) );
+    if( legacy_entry ) {
+        CHECK( contents.front().typeId() == itype_test_screwdriver );
+    }
+    if( stacks > 0 ) {
+        CHECK( contents.back().charges == stacks * ( stacks + 1 ) / 2 );
+        if( track_item ) {
+            CHECK( last == &contents.back() );
+        }
+    } else {
+        CHECK( last == nullptr );
+    }
+}
+
 TEST_CASE( "magazine_with_ammo_restriction", "[pocket][magazine][ammo_restriction]" )
 {
     pocket_data data_mag( pocket_type::MAGAZINE );

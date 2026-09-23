@@ -272,47 +272,7 @@ bool item_pocket::same_contents( const item_pocket &rhs ) const
 
 void item_pocket::restack()
 {
-    if( contents.size() <= 1 ) {
-        return;
-    }
-    if( is_type( pocket_type::MAGAZINE ) ) {
-        // Restack magazine contents in a way that preserves order of items
-        for( auto iter = contents.begin(); iter != contents.end(); ) {
-            if( !iter->count_by_charges() ) {
-                ++iter;
-                continue;
-            }
-
-            auto next = std::next( iter, 1 );
-            if( next == contents.end() ) {
-                break;
-            }
-
-            if( iter->combine( *next ) ) {
-                contents.erase( next );
-            } else {
-                ++iter;
-            }
-        }
-        return;
-    }
-    for( auto outer_iter = contents.begin(); outer_iter != contents.end(); ++outer_iter ) {
-        if( !outer_iter->count_by_charges() ) {
-            continue;
-        }
-        for( auto inner_iter = contents.begin(); inner_iter != contents.end(); ) {
-            if( outer_iter == inner_iter || !inner_iter->count_by_charges() ) {
-                ++inner_iter;
-                continue;
-            }
-            if( outer_iter->combine( *inner_iter ) ) {
-                inner_iter = contents.erase( inner_iter );
-                outer_iter = contents.begin();
-            } else {
-                ++inner_iter;
-            }
-        }
-    }
+    restack( nullptr );
 }
 
 item *item_pocket::restack( /*const*/ item *it )
