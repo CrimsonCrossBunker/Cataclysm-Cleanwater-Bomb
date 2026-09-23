@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
@@ -13,6 +15,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "type_id.h"
 
 static const damage_type_id damage_bash( "bash" );
