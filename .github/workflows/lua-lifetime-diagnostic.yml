@@ -1,0 +1,122 @@
+name: Lua lifetime diagnostic
+
+on:
+  push:
+    branches:
+      - codex/luna-native-gate-lifetime-fix
+    paths:
+      - .github/workflows/lua-lifetime-diagnostic.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  bionic-lua-lifetime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the artifact source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: bcb85682f3d28ab0f0123b05e45651bb9888b61b
+          path: source
+          persist-credentials: false
+
+      - name: Download and verify failed-run test artifact
+        env:
+          ARTIFACT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            -H "Authorization: Bearer ${ARTIFACT_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/artifacts/10722504175/zip \
+            --output /tmp/cata_test.zip
+          echo 'dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1  /tmp/cata_test.zip' | sha256sum --check
+          unzip -q /tmp/cata_test.zip -d source/tests
+          chmod +x source/tests/cata_test
+          rm /tmp/cata_test.zip
+          file source/tests/cata_test
+          sha256sum source/tests/cata_test
+
+      - name: Record runner and binary dependencies
+        run: |
+          set -euo pipefail
+          lsb_release -ds | tee /tmp/runner.txt
+          ldd source/tests/cata_test | tee /tmp/ldd.txt
+          if grep -q 'not found' /tmp/ldd.txt; then
+            echo 'The archived test binary has unresolved shared-library dependencies.' >&2
+            exit 1
+          fi
+
+      - name: Run isolated bionic case, lexical prefix plus bionic, and full semantic selector
+        working-directory: source
+        run: |
+          set -uo pipefail
+          mkdir -p diagnostic-logs
+          ulimit -c 0
+
+          run_case() {
+            local name="$1"
+            shift
+            set +e
+            timeout --kill-after=15s 180s "$@" > "diagnostic-logs/${name}.log" 2>&1
+            local result=$?
+            set -e
+            printf '%s\n' "$result" > "diagnostic-logs/${name}.exit"
+            printf '%s exit=%s\n' "$name" "$result"
+          }
+
+          target=lua_platform_bionic_semantics_match_legacy_character_operations
+          python3 - "$target" > diagnostic-logs/semantic-prefix.spec <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          target = sys.argv[1]
+          root = pathlib.Path("tests")
+          found = set()
+          pattern = re.compile(r'TEST_CASE\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"', re.S)
+          for path in root.rglob("*.cpp"):
+              source = path.read_text(encoding="utf-8")
+              for name, tags in pattern.findall(source):
+                  if "[lua]" in tags and "[platform]" in tags and "[semantic]" in tags:
+                      found.add(name)
+          if target not in found:
+              raise SystemExit(f"semantic test not found in source: {target}")
+          prefix = sorted(name for name in found if name < target)
+          print(",".join(prefix + [target]))
+          print(f"lexical prefix cases before target: {len(prefix)}", file=sys.stderr)
+          PY
+          cat diagnostic-logs/semantic-prefix.spec
+
+          run_case bionic-alone ./tests/cata_test "$target" \
+            --rng-seed 4902 --order lex --error-format=github-action
+          run_case lexical-prefix-plus-bionic ./tests/cata_test \
+            "$(head -n 1 diagnostic-logs/semantic-prefix.spec)" \
+            --rng-seed 4902 --order lex --error-format=github-action
+          run_case full-semantic ./tests/cata_test \
+            '[lua][platform][semantic]' --rng-seed 4902 --order lex \
+            --error-format=github-action
+
+          {
+            echo "test binary SHA256: $(sha256sum tests/cata_test | cut -d' ' -f1)"
+            echo "source SHA: $(git rev-parse HEAD)"
+            echo "selector: [lua][platform][semantic]"
+            for name in bionic-alone lexical-prefix-plus-bionic full-semantic; do
+              printf '%s exit=%s\n' "$name" "$(cat "diagnostic-logs/${name}.exit")"
+            done
+          } > diagnostic-logs/summary.txt
+
+      - name: Upload isolated diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lua-lifetime-diagnostic
+          path: |
+            /tmp/runner.txt
+            /tmp/ldd.txt
+            source/diagnostic-logs/
+          if-no-files-found: warn
+          retention-days: 7
