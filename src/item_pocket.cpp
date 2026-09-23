@@ -1,5 +1,12 @@
 #include "item_pocket.h"
 
+#include <flat_set.h>
+#include <item_uid.h>
+#include <pocket_type.h>
+#include <ret_val.h>
+#include <translation.h>
+#include <type_id.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>

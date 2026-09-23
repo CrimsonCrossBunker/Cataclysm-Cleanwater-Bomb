@@ -1407,7 +1407,7 @@ TEST_CASE( "pocket_exact_escrow_does_not_extract_nested_or_foreign_items",
 {
     pocket_data data( pocket_type::CONTAINER );
     item_pocket pocket( &data );
-    item bag( itype_id( "backpack" ) );
+    item bag( itype_backpack );
     bag.force_insert_item( item( itype_test_rock ), pocket_type::CONTAINER );
     pocket.add( bag );
     const auto original = pocket.all_items_top();
