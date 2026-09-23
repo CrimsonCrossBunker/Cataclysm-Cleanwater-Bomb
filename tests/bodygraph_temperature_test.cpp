@@ -1,3 +1,6 @@
+#include <color.h>
+#include <utility>
+
 #include "bodygraph.h"
 #include "cata_catch.h"
 #include "units.h"
