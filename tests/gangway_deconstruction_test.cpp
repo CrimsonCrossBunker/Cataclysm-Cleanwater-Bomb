@@ -1,5 +1,5 @@
 #include <map>
-#include <string>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
@@ -11,8 +11,10 @@
 #include "map_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "requirements.h"
 #include "type_id.h"
+#include "units.h"
 
 static const construction_str_id construction_constr_metal_gangway( "constr_metal_gangway" );
 static const itype_id itype_2x4( "2x4" );
