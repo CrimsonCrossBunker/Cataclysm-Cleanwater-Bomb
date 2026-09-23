@@ -39,7 +39,7 @@ extern "C" {
 #include "player_activity.h"
 #include "type_id.h"
 
-static const trait_id trait_none( "NONE" );
+static const trait_id trait_NONE( "NONE" );
 
 namespace cata::lua_platform
 {
@@ -832,7 +832,7 @@ sol::table learn_spell(
         } );
     }
     const trait_id spell_class = id->spell_class;
-    if( !options.force && spell_class != trait_none &&
+    if( !options.force && spell_class != trait_NONE &&
         !character->has_trait( spell_class ) ) {
         return make_game_error_result(
         state, game_handle_error{
