@@ -18,18 +18,16 @@ jobs:
       NUM_BUILD_JOBS: 2
 
     steps:
-      - name: Prepare diagnostic log directory
-        run: mkdir -p diagnostic-logs
-
       - name: Check out the approved semantic integration source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: 2acf1993a38f06a5f6da24e54640e269faa9efd0
-          path: source
           persist-credentials: false
 
+      - name: Prepare diagnostic log directory
+        run: mkdir -p diagnostic-logs
+
       - name: Install curses, localization, and GCC 14 build dependencies
-        working-directory: source
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -47,7 +45,6 @@ jobs:
 
       - name: Build only the native Catch test binary
         id: build-tests
-        working-directory: source
         run: |
           set -uo pipefail
           printf '%s\n' \
@@ -69,7 +66,6 @@ jobs:
       - name: Record test binary identity and shared-library dependencies
         id: inspect-binary
         if: always()
-        working-directory: source
         run: |
           set -uo pipefail
           logdir="$GITHUB_WORKSPACE/diagnostic-logs"
@@ -93,7 +89,6 @@ jobs:
       - name: Run the semantic batch union in one Catch process
         id: run-semantic-union
         if: ${{ steps.build-tests.outcome == 'success' && steps.inspect-binary.outcome == 'success' }}
-        working-directory: source
         run: |
           set -uo pipefail
           selector=$(printf '%s' \
@@ -121,7 +116,7 @@ jobs:
           name: lua-semantic-gcc14-release-${{ github.run_id }}
           path: |
             diagnostic-logs/
-            source/tests/cata_test
+            tests/cata_test
           if-no-files-found: warn
           compression-level: 0
           retention-days: 14
