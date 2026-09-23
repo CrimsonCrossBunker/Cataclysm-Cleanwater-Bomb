@@ -10381,6 +10381,8 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // so i'm using 'default' as empty/main dimension
     dimension_id previous_dimension = dimension_prefix;
     dimension_prefix = dimension_destination;
+    // Clear the previous dimension before loading the destination's global state.
+    overmap_buffer.clear();
     // Load in data specific to the dimension (like weather)
     load_dimension_data();
 
@@ -10389,8 +10391,6 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // hack to prevent crashes from temperature checks
     // This returns to false in 'on_turn()' so it should be fine?
     swapping_dimensions = true;
-    // Clear the overmap
-    overmap_buffer.clear();
     overmap_buffer.init_region_layout();
     // load/create new overmap
     overmap &new_om = overmap_buffer.get( project_to<coords::om>( player.pos_abs().xy() ) );
