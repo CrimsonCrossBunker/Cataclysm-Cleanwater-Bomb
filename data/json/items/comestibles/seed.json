@@ -914,7 +914,6 @@
     "weight": "177 g",
     "color": "cyan",
     "addiction_type": "marloss_b",
-    "use_action": [ "MARLOSS_SEED" ],
     "comestible_type": "FOOD",
     "symbol": ".",
     "quench": 5,
@@ -926,7 +925,7 @@
     "material": [ { "type": "dried_vegetable", "portion": 10 }, { "type": "fruit", "portion": 1 } ],
     "volume": "10 ml",
     "fun": 30,
-    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE" ],
+    "flags": [ "PLANTABLE_SEED", "NUTRIENT_OVERRIDE", "MARLOSS" ],
     "vitamins": [ [ "fruit_allergen", 1 ] ],
     "fruit": "null",
     "//": "dummy entry, results are hardcoded",
@@ -937,7 +936,8 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "consumption_effect_on_conditions": [ "EOC_MARLOSS_SEED_CONSUME" ]
   },
   {
     "type": "ITEM",

@@ -14,6 +14,7 @@
 #include "enums.h"
 #include "explosion.h"
 #include "game.h"
+#include "flag.h"
 #include "item.h"
 #include "itype.h"
 #include "map.h"
@@ -236,7 +237,7 @@ TEST_CASE( "vehicle_turret", "[vehicle][gun][magazine]" )
             // 3 attempts to fire, to account for possible misfires
             for( int attempt = 0; shots_fired == 0 && attempt < 3; attempt++ ) {
                 shots_fired += qry.fire( player_character, &here, player_character.pos_bub() + point( qry.range(),
-                                         0 ) );
+                    0 ) );
                 clear_faults_from_vp( vp );
             }
             CHECK( shots_fired > 0 );
@@ -539,6 +540,8 @@ TEST_CASE( "vehicle_turret_multimag", "[vehicle][turret][multimag]" )
         item mag( itype_glockmag );
         mag.put_in( item( itype_9mm, calendar::turn, 15 ), pocket_type::MAGAZINE );
         item base_copy( vp.get_base() );
+        // This test should stop firing because the battery is empty, not because the gun jams.
+        base_copy.set_flag( flag_NEVER_JAMS );
         REQUIRE( base_copy.put_in( mag, pocket_type::MAGAZINE_WELL ).success() );
         vp.set_base( std::move( base_copy ) );
 
@@ -606,7 +609,7 @@ TEST_CASE( "automatic_vehicle_turret_targets_across_z_levels",
     veh->refresh();
 
     const int turret_index = veh->install_part( here, point_rel_ms::zero,
-                             vpart_turret_test_multimag_turret_gun );
+        vpart_turret_test_multimag_turret_gun );
     REQUIRE( turret_index >= 0 );
     vehicle_part &turret = veh->part( turret_index );
 

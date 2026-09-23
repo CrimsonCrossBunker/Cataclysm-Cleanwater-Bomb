@@ -3213,5 +3213,9 @@
     "type": "json_flag",
     "//": "Furniture with this flag prevents plants growing on it from becoming overgrown.",
     "info": "This planting facility can prevent crops from over-ripening and wilting."
+  },
+  {
+    "id": "MARLOSS",
+    "type": "json_flag"
   }
 ]
