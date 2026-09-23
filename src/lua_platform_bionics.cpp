@@ -33,6 +33,12 @@ extern "C" {
 #include "type_id.h"
 #include "units.h"
 
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
+static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
+    "PARTIAL_BIONIC_LIMB" );
+
 namespace cata::lua_platform
 {
 
@@ -49,12 +55,6 @@ constexpr std::size_t maximum_protection_values = 128;
 constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::int64_t maximum_power_millijoule =
     1000000000000000LL;
-
-static const efftype_id effect_bite( "bite" );
-static const efftype_id effect_bleed( "bleed" );
-static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
-static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
-    "PARTIAL_BIONIC_LIMB" );
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )

@@ -39,6 +39,8 @@ extern "C" {
 #include "player_activity.h"
 #include "type_id.h"
 
+static const trait_id trait_none( "NONE" );
+
 namespace cata::lua_platform
 {
 
@@ -56,8 +58,6 @@ constexpr int maximum_spell_level = 10000;
 constexpr int maximum_spell_gain = 1000000;
 constexpr int maximum_mana_value = 1000000000;
 constexpr double maximum_spell_adjustment = 1000000000.0;
-static const trait_id trait_none( "NONE" );
-
 void require_spell_id(
     const script_game_id &id, const std::string &api_name )
 {
@@ -215,11 +215,11 @@ sol::table valid_target_page(
         }
     }
     return detail::make_string_page(
-               lua, maximum_relation_values, values );
+               std::move( lua ), maximum_relation_values, values );
 }
 
 sol::table source_page(
-    const sol::state_view &lua,
+    sol::state_view lua,
     const std::vector<std::pair<spell_id, mod_id>> &sources )
 {
     return detail::make_bounded_relation_page( lua, sources, maximum_relation_values,
