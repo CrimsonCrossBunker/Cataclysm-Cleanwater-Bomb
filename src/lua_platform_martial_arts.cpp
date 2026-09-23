@@ -18,7 +18,6 @@
 
 #include "character.h"
 #include "character_martial_arts.h"
-#include "creature.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_relation_page.h"
