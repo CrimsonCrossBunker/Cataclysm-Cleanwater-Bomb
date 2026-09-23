@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "cata_catch.h"
