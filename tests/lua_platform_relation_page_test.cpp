@@ -113,12 +113,13 @@ TEST_CASE( "lua_platform_relation_pages_preserve_boundaries_order_and_value_type
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    sol::state_view view( lua.lua_state() );
     const sol::table typed = cata::lua_platform::detail::make_typed_id_page(
-                                 lua, maximum, ids, "mutation" );
+                                 view, maximum, ids, "mutation" );
     const sol::table string_ids = cata::lua_platform::detail::make_string_id_page(
-                                      lua, maximum, ids );
+                                      view, maximum, ids );
     const sol::table strings = cata::lua_platform::detail::make_string_page(
-                                   lua, maximum, values );
+                                   view, maximum, values );
     check_native_ids( typed, ids, maximum, "mutation" );
     check_native_ids( string_ids, ids, maximum );
     check_native_strings( strings, values, maximum );

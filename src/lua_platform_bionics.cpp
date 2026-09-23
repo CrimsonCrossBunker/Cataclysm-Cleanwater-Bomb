@@ -50,10 +50,10 @@ constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::int64_t maximum_power_millijoule =
     1000000000000000LL;
 
-const efftype_id effect_bite( "bite" );
-const efftype_id effect_bleed( "bleed" );
-const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
-const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
+static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
     "PARTIAL_BIONIC_LIMB" );
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
@@ -379,6 +379,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const bionic_data * lhs, const bionic_data * rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -957,10 +959,10 @@ sol::table repair_bionic_limbs(
 
 void install_bionic_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table bionics = lua.create_table();

@@ -42,7 +42,7 @@ template<typename Range>
 sol::table make_typed_id_page( sol::state_view lua, std::size_t maximum,
                                const Range &ids, std::string_view kind )
 {
-    return make_bounded_relation_page( lua, ids, maximum, [kind]( const auto & id ) {
+    return make_bounded_relation_page( std::move( lua ), ids, maximum, [kind]( const auto & id ) {
         return script_game_id( std::string( kind ), id.str() );
     } );
 }
@@ -50,7 +50,7 @@ sol::table make_typed_id_page( sol::state_view lua, std::size_t maximum,
 template<typename Range>
 sol::table make_string_id_page( sol::state_view lua, std::size_t maximum, const Range &ids )
 {
-    return make_bounded_relation_page( lua, ids, maximum, []( const auto & id ) -> decltype( auto ) {
+    return make_bounded_relation_page( std::move( lua ), ids, maximum, []( const auto & id ) -> decltype( auto ) {
         return id.str();
     } );
 }
@@ -58,7 +58,7 @@ sol::table make_string_id_page( sol::state_view lua, std::size_t maximum, const 
 template<typename Range>
 sol::table make_string_page( sol::state_view lua, std::size_t maximum, const Range &values )
 {
-    return make_bounded_relation_page( lua, values,
+    return make_bounded_relation_page( std::move( lua ), values,
     maximum, []( const auto & value ) -> decltype( auto ) {
         return value;
     } );

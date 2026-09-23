@@ -56,7 +56,7 @@ constexpr int maximum_spell_level = 10000;
 constexpr int maximum_spell_gain = 1000000;
 constexpr int maximum_mana_value = 1000000000;
 constexpr double maximum_spell_adjustment = 1000000000.0;
-const trait_id trait_none( "NONE" );
+static const trait_id trait_none( "NONE" );
 
 void require_spell_id(
     const script_game_id &id, const std::string &api_name )
@@ -219,7 +219,7 @@ sol::table valid_target_page(
 }
 
 sol::table source_page(
-    sol::state_view lua,
+    const sol::state_view &lua,
     const std::vector<std::pair<spell_id, mod_id>> &sources )
 {
     return detail::make_bounded_relation_page( lua, sources, maximum_relation_values,
@@ -472,9 +472,11 @@ page_options read_page_options(
                                std::min<lua_Integer>(
                                    number, maximum_limit ) );
         } else {
-            throw std::invalid_argument(
-                api_name + " received unknown option '" +
-                key + "'" );
+            std::string message = api_name;
+            message += " received unknown option '";
+            message += key;
+            message += "'";
+            throw std::invalid_argument( message );
         }
     }
     return result;
@@ -499,6 +501,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const spell_type * lhs, const spell_type * rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -620,6 +624,8 @@ sol::table list_known(
     std::sort(
         spells.begin(), spells.end(),
     []( const spell_id & lhs, const spell_id & rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs.str() < rhs.str();
     } );
     const std::size_t offset = std::min(
@@ -1294,7 +1300,7 @@ spellcasting_adjustment_options read_spellcasting_adjustment_options(
                 throw std::invalid_argument(
                     "services.spells.adjust_casting filters must be typed GameIds" );
             }
-            const script_game_id id = value.as<script_game_id>();
+            const script_game_id &id = value.as<script_game_id>();
             if( key == "spell" ) {
                 require_spell_id( id, "services.spells.adjust_casting" );
                 result.scope = spell_filter_scope::spell;
@@ -1674,10 +1680,10 @@ sol::table queue_cast(
 
 void install_magic_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table spells = lua.create_table();
