@@ -1,5 +1,9 @@
+#include <functional>
+#include <map>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "cata_catch.h"
 #include "coordinates.h"
@@ -9,6 +13,7 @@
 #include "mapgen.h"
 #include "mapgendata.h"
 #include "map_helpers.h"
+#include "point.h"
 #include "type_id.h"
 #include "weighted_list.h"
 
