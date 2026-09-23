@@ -124,6 +124,36 @@ class BuiltinModManifestTest(unittest.TestCase):
             with patch.object(sys, "argv", arguments):
                 self.assertEqual(main(), 0)
 
+    def test_invalid_source_fails_without_replacing_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "mods"
+            source.mkdir()
+            output = root / "builtin_mods_generated.h"
+            for contents in (
+                "[broken-json",
+                '[{"type":"MOD_INFO","id":7}]',
+            ):
+                (source / "modinfo.json").write_text(
+                    contents, encoding="utf-8"
+                )
+                for check in (False, True):
+                    with self.subTest(contents=contents, check=check):
+                        output.write_text(
+                            "last valid manifest", encoding="utf-8"
+                        )
+                        arguments = [
+                            "generate_builtin_mods.py",
+                            "--source", str(source),
+                            "--output", str(output),
+                        ] + (["--check"] if check else [])
+                        with patch.object(sys, "argv", arguments):
+                            self.assertEqual(main(), 1)
+                        self.assertEqual(
+                            output.read_text(encoding="utf-8"),
+                            "last valid manifest",
+                        )
+
 
 if __name__ == "__main__":
     unittest.main()

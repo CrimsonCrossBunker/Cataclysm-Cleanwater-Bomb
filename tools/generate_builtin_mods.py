@@ -204,14 +204,12 @@ def main() -> int:
             sorted(find_mod_roots(args.source)),
             check=args.check,
         )
-    except (OSError, ValueError, json.JSONDecodeError) as error:
+    except (OSError, ValueError) as error:
         print(
             f"Unable to generate built-in mod manifest: {error}",
             file=sys.stderr,
         )
-        current = write_header(
-            args.output, False, [], [], check=args.check
-        )
+        return 1
     if args.check and not current:
         print(
             f"Built-in Mod manifest is stale: {args.output}",
