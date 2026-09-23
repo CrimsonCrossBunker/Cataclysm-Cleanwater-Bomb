@@ -1,4 +1,10 @@
+#include <item_location.h>
+#include <point.h>
+#include <memory>
 #include <optional>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
