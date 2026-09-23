@@ -30726,6 +30726,7 @@
       "src/lua_platform_proficiencies.h",
       "src/lua_platform_registry.cpp",
       "src/lua_platform_registry.h",
+      "src/lua_platform_relation_page.h",
       "src/lua_platform_runtime.cpp",
       "src/lua_platform_runtime.h",
       "src/lua_platform_runtime_dialogue.cpp",

@@ -31,6 +31,7 @@ extern "C" {
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -106,58 +107,6 @@ void require_finite_spell_adjustment(
     }
 }
 
-template<typename Range>
-sol::table typed_id_page(
-    sol::state_view lua, const Range &ids,
-    const std::string &kind )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = script_game_id(
-                               kind, id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_page(
-    sol::state_view lua, const Range &values )
-{
-    const std::size_t total = values.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &value : values ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = value;
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
 template<typename Id>
 void set_optional_typed_id(
     sol::table &table, const std::string &field,
@@ -218,13 +167,8 @@ sol::table additional_spell_page(
     sol::state_view lua,
     const std::vector<fake_spell> &spells )
 {
-    const std::size_t total = spells.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    for( std::size_t index = 0; index < returned; ++index ) {
-        const fake_spell &entry = spells[index];
+    return detail::make_bounded_relation_page( lua, spells, maximum_relation_values,
+    [&lua]( const fake_spell & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "spell", entry.id.str() );
@@ -237,43 +181,22 @@ sol::table additional_spell_page(
         } else {
             item["maximum_level"] = sol::nil;
         }
-        items[index + 1] = std::move( item );
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table learned_spell_page(
     sol::state_view lua,
     const std::map<std::string, int> &spells )
 {
-    const std::size_t total = spells.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : spells ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, spells, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "spell", entry.first );
         item["level"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table valid_target_page(
@@ -291,34 +214,25 @@ sol::table valid_target_page(
                 io::enum_to_string( target ) );
         }
     }
-    return string_page( lua, values );
+    return detail::make_string_page(
+               lua, maximum_relation_values, values );
 }
 
 sol::table source_page(
     sol::state_view lua,
     const std::vector<std::pair<spell_id, mod_id>> &sources )
 {
-    const std::size_t total = sources.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    for( std::size_t index = 0; index < returned; ++index ) {
+    return detail::make_bounded_relation_page( lua, sources, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["spell"] = script_game_id(
                             "spell",
-                            sources[index].first.str() );
+                            entry.first.str() );
         item["mod"] = script_game_id(
                           "mod",
-                          sources[index].second.str() );
-        items[index + 1] = std::move( item );
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+                          entry.second.str() );
+        return item;
+    } );
 }
 
 sol::table snapshot_definition(
@@ -495,19 +409,16 @@ sol::table snapshot_definition(
     result["valid_targets"] = valid_target_page(
                                   lua,
                                   definition.valid_targets );
-    result["flags"] = string_page(
-                          lua, definition.flags );
-    result["targeted_monsters"] = typed_id_page(
-                                      lua,
-                                      definition.targeted_monster_ids,
+    result["flags"] = detail::make_string_page(
+                          lua, maximum_relation_values, definition.flags );
+    result["targeted_monsters"] = detail::make_typed_id_page(
+                                      lua, maximum_relation_values, definition.targeted_monster_ids,
                                       "monster" );
-    result["targeted_species"] = typed_id_page(
-                                     lua,
-                                     definition.targeted_species_ids,
+    result["targeted_species"] = detail::make_typed_id_page(
+                                     lua, maximum_relation_values, definition.targeted_species_ids,
                                      "species" );
-    result["ignored_species"] = typed_id_page(
-                                    lua,
-                                    definition.ignored_species_ids,
+    result["ignored_species"] = detail::make_typed_id_page(
+                                    lua, maximum_relation_values, definition.ignored_species_ids,
                                     "species" );
     result["additional_spells"] = additional_spell_page(
                                       lua,
