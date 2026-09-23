@@ -1,11 +1,16 @@
+#include <string>
+#include <vector>
+
 #include "avatar.h"
 #include "bodypart.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
