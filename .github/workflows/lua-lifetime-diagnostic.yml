@@ -1,4 +1,4 @@
-name: Lua lifetime diagnostic
+name: Lua lifetime archived-binary Memcheck
 
 on:
   push:
@@ -12,196 +12,187 @@ permissions:
   contents: read
 
 jobs:
-  gcc14-lua-teardown-reproduction:
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    env:
-      COMPILER: g++-14
-      NUM_BUILD_JOBS: 1
-      CMAKE: 0
-      TILES: 0
-      SOUND: 0
-      LOCALIZE: 1
-      CATA_ENABLE_LUA_PLATFORM: 1
-      TESTS: 1
-      ASTYLE: 0
-      LINTJSON: 0
-      FULL_DEBUG_SYMBOLS: 0
-      PCH: 1
-    steps:
-      - name: Check out exact diagnostic source revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
-      - name: Install GCC 14 and curses build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes g++-14 libncursesw5-dev ccache gettext parallel
-          g++-14 --version
-
-      - name: Prepare repository build environment
-        run: bash ./build-scripts/requirements.sh
-
-      - name: Build Lua-enabled Catch tests with GCC 14
-        run: |
-          set -o pipefail
-          bash ./build-scripts/gha_compile_only.sh 2>&1 | tee /tmp/asan-build.log
-
-      - name: Run isolated full-runtime teardown cases
-        if: always()
-        run: |
-          set -uo pipefail
-          mkdir -p asan-diagnostic-logs
-          ulimit -c 0
-          run_case() {
-            local name="$1"
-            shift
-            set +e
-            timeout --kill-after=15s 180s ./tests/cata_test "$@" \
-              --rng-seed 4902 --order lex \
-              --error-format=github-action \
-              > "asan-diagnostic-logs/${name}.log" 2>&1
-            local result=$?
-            set -e
-            printf '%s\n' "$result" > "asan-diagnostic-logs/${name}.exit"
-            printf '%s exit=%s\n' "$name" "$result"
-          }
-          if [[ -x ./tests/cata_test ]]; then
-            run_case environment-predicate-alone \
-              lua_platform_environment_strings_match_native_predicates
-            run_case bionic-alone \
-              lua_platform_bionic_semantics_match_legacy_character_operations
-          else
-            echo 'ASan test binary was not produced.' > asan-diagnostic-logs/build-missing.log
-            echo 127 > asan-diagnostic-logs/environment-predicate-alone.exit
-            echo 127 > asan-diagnostic-logs/bionic-alone.exit
-          fi
-
-      - name: Upload GCC 14 build and runtime logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: lua-lifetime-gcc14-diagnostic
-          path: |
-            /tmp/asan-build.log
-            asan-diagnostic-logs/
-          if-no-files-found: warn
-          retention-days: 7
-
-  bionic-lua-lifetime:
-    if: false
+  archived-binary-memcheck:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - name: Check out the artifact source revision
+      - name: Check out the archived binary source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: bcb85682f3d28ab0f0123b05e45651bb9888b61b
           path: source
           persist-credentials: false
 
-      - name: Download and verify failed-run test artifact
+      - name: Download and verify archived release test binary
         env:
           ARTIFACT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          mkdir -p source/diagnostic-logs
           curl --fail --silent --show-error --location --retry 3 \
             -H "Authorization: Bearer ${ARTIFACT_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
             https://api.github.com/repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/artifacts/10722504175/zip \
-            --output /tmp/cata_test.zip
-          echo 'dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1  /tmp/cata_test.zip' | sha256sum --check
-          unzip -q /tmp/cata_test.zip -d source/tests
+            --output /tmp/cata_test_10722504175.zip
+          echo 'dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1  /tmp/cata_test_10722504175.zip' \
+            | sha256sum --check
+          unzip -q /tmp/cata_test_10722504175.zip -d source/tests
           chmod +x source/tests/cata_test
-          rm /tmp/cata_test.zip
-          file source/tests/cata_test
-          sha256sum source/tests/cata_test
+          cp /tmp/cata_test_10722504175.zip source/diagnostic-logs/
+          file source/tests/cata_test | tee source/diagnostic-logs/binary.file
+          actual_sha="$(sha256sum source/tests/cata_test | cut -d' ' -f1)"
+          printf '%s\n' "$actual_sha" | tee source/diagnostic-logs/binary.sha256
+          test "$actual_sha" = '24f2e766dbc88b1879183e3b2c0eb78102f845b8a49080af13733a44e11e6737'
+          test "$(git -C source rev-parse HEAD)" = 'bcb85682f3d28ab0f0123b05e45651bb9888b61b'
+          printf 'source_sha=%s\nartifact_id=10722504175\nartifact_zip_sha256=dab17d24be1fb6111fa129ab4da0a08b25d66dbd7a150e6910d25a8f432bbbf1\nbinary_sha256=%s\n' \
+            "$(git -C source rev-parse HEAD)" "$actual_sha" \
+            > source/diagnostic-logs/input-summary.txt
+          touch source/diagnostic-logs/binary-verified
 
-      - name: Record runner and binary dependencies
+      - name: Install Valgrind and record runtime dependencies
+        if: always()
         run: |
           set -euo pipefail
-          lsb_release -ds | tee /tmp/runner.txt
-          ldd source/tests/cata_test | tee /tmp/ldd.txt
-          if grep -q 'not found' /tmp/ldd.txt; then
-            echo 'The archived test binary has unresolved shared-library dependencies.' >&2
-            exit 1
+          mkdir -p source/diagnostic-logs
+          sudo apt-get update
+          sudo apt-get install --yes g++-14 valgrind
+          g++-14 --version | tee source/diagnostic-logs/gcc14-version.txt
+          lsb_release -ds | tee source/diagnostic-logs/runner.txt
+          valgrind --version | tee source/diagnostic-logs/valgrind-version.txt
+          if [[ -x source/tests/cata_test && -f source/diagnostic-logs/binary-verified ]]; then
+            ldd source/tests/cata_test | tee source/diagnostic-logs/ldd.txt
+            if grep -q 'not found' source/diagnostic-logs/ldd.txt; then
+              echo 'Archived test binary has unresolved shared-library dependencies.' >&2
+              exit 1
+            fi
+            touch source/diagnostic-logs/dependencies-verified
+          else
+            echo 'Verified archived test binary is unavailable.' > source/diagnostic-logs/binary-unverified.txt
           fi
 
-      - name: Run isolated bionic case, lexical prefix plus bionic, and full semantic selector
+      - name: Probe GCC 14 sol2 closure keys without a game build
+        if: always()
+        working-directory: source
+        run: |
+          set -uo pipefail
+          mkdir -p diagnostic-logs
+          cat > diagnostic-logs/sol-lambda-key-probe.cpp <<'CPP'
+          #include "lua_platform_sol.h"
+          #include <cstddef>
+          #include <functional>
+          #include <iostream>
+          #include <type_traits>
+
+          void install_npc_api_probe() {
+              std::function<int()> current_runtime_generation = [] { return 0; };
+              std::function<std::size_t()> current_world_generation = [] { return 0; };
+              std::function<void()> require_read = [] {};
+              auto visible_allies = [current_runtime_generation, current_world_generation, require_read]
+              ( sol::this_state state ) -> std::size_t {
+                  ( void )state;
+                  return 0;
+              };
+              auto ai_rule_catalog = [require_read]( sol::this_state state ) -> std::size_t {
+                  ( void )state;
+                  return 0;
+              };
+              using visible_type = sol::function_detail::functor_function<decltype( visible_allies ), false, true>;
+              using catalog_type = sol::function_detail::functor_function<decltype( ai_rule_catalog ), false, true>;
+              const auto &visible_name = sol::detail::demangle<visible_type>();
+              const auto &catalog_name = sol::detail::demangle<catalog_type>();
+              const auto &visible_key = sol::usertype_traits<visible_type>::user_metatable();
+              const auto &catalog_key = sol::usertype_traits<catalog_type>::user_metatable();
+              const auto &visible_gc_key = sol::usertype_traits<visible_type>::user_gc_metatable();
+              const auto &catalog_gc_key = sol::usertype_traits<catalog_type>::user_gc_metatable();
+              std::cout << "gcc pretty-derived visible type: " << visible_name << '\n'
+                        << "gcc pretty-derived catalog type: " << catalog_name << '\n'
+                        << "visible sol key: " << visible_key << '\n'
+                        << "catalog sol key: " << catalog_key << '\n'
+                        << "visible sol user-gc key: " << visible_gc_key << '\n'
+                        << "catalog sol user-gc key: " << catalog_gc_key << '\n'
+                        << "distinct C++ callable types: "
+                        << !std::is_same_v<visible_type, catalog_type> << '\n'
+                        << "same sol key: " << ( visible_key == catalog_key ) << '\n'
+                        << "same sol user-gc key: " << ( visible_gc_key == catalog_gc_key ) << '\n'
+                        << "userdata object sizes: " << sizeof( visible_type ) << ' '
+                        << sizeof( catalog_type ) << '\n';
+          }
+          int main() { install_npc_api_probe(); }
+          CPP
+          set +e
+          g++-14 -std=c++17 -Isrc -Isrc/lua \
+            diagnostic-logs/sol-lambda-key-probe.cpp \
+            -o diagnostic-logs/sol-lambda-key-probe \
+            > diagnostic-logs/sol-lambda-key-probe-build.log 2>&1
+          build_result=$?
+          set -e
+          printf 'compile_exit=%s\n' "$build_result" > diagnostic-logs/sol-lambda-key-probe.exit
+          cat diagnostic-logs/sol-lambda-key-probe-build.log
+          if [[ "$build_result" -eq 0 ]]; then
+            set +e
+            ./diagnostic-logs/sol-lambda-key-probe \
+              > diagnostic-logs/sol-lambda-key-probe.log 2>&1
+            probe_result=$?
+            set -e
+            printf 'run_exit=%s\n' "$probe_result" >> diagnostic-logs/sol-lambda-key-probe.exit
+            cat diagnostic-logs/sol-lambda-key-probe.log
+          fi
+
+      - name: Run only the environment predicate under Memcheck
+        if: always()
         working-directory: source
         run: |
           set -uo pipefail
           mkdir -p diagnostic-logs
           ulimit -c 0
+          selector=lua_platform_environment_strings_match_native_predicates
+          if [[ ! -x tests/cata_test || ! -f diagnostic-logs/binary-verified ]]; then
+            echo 'Skipped: verified archived test binary is unavailable.' > diagnostic-logs/memcheck.exit
+            exit 0
+          fi
+          if [[ ! -f diagnostic-logs/dependencies-verified ]]; then
+            echo 'Skipped: archived test binary dependencies were not verified.' > diagnostic-logs/memcheck.exit
+            exit 0
+          fi
+          if ! command -v valgrind >/dev/null 2>&1; then
+            echo 'Skipped: Valgrind installation failed.' > diagnostic-logs/memcheck.exit
+            exit 0
+          fi
+          printf 'selector=%s\ntimeout_seconds=900\nvalgrind=memcheck leak-check=no track-origins=yes error-limit=no num-callers=40 error-exitcode=99\n' \
+            "$selector" > diagnostic-logs/command-summary.txt
+          set +e
+          timeout --signal=TERM --kill-after=30s 900s valgrind \
+            --tool=memcheck \
+            --leak-check=no \
+            --track-origins=yes \
+            --error-limit=no \
+            --num-callers=40 \
+            --error-exitcode=99 \
+            --log-file=diagnostic-logs/environment-predicate.memcheck.log \
+            tests/cata_test "$selector" \
+            --rng-seed 4902 --order lex --error-format=github-action \
+            > diagnostic-logs/environment-predicate.catch.log 2>&1
+          result=$?
+          set -e
+          printf '%s\n' "$result" | tee diagnostic-logs/memcheck.exit
+          printf 'memcheck_exit=%s\n' "$result" >> diagnostic-logs/command-summary.txt
+          if [[ -f diagnostic-logs/environment-predicate.memcheck.log ]]; then
+            awk '
+              !started && /^==[0-9]+== (Invalid (read|write)|Invalid free|Mismatched free)/ { started=1 }
+              started { print }
+              started && /^==[0-9]+==$/ { exit }
+              END { if (!started) print "No invalid read/write/free headline found." }
+            ' diagnostic-logs/environment-predicate.memcheck.log \
+              > diagnostic-logs/first-invalid-summary.txt
+            cat diagnostic-logs/first-invalid-summary.txt
+          fi
 
-          run_case() {
-            local name="$1"
-            shift
-            set +e
-            timeout --kill-after=15s 180s "$@" > "diagnostic-logs/${name}.log" 2>&1
-            local result=$?
-            set -e
-            printf '%s\n' "$result" > "diagnostic-logs/${name}.exit"
-            printf '%s exit=%s\n' "$name" "$result"
-          }
-
-          target=lua_platform_bionic_semantics_match_legacy_character_operations
-          python3 - "$target" > diagnostic-logs/semantic-prefix.spec <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          target = sys.argv[1]
-          root = pathlib.Path("tests")
-          found = set()
-          pattern = re.compile(r'TEST_CASE\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"', re.S)
-          for path in root.rglob("*.cpp"):
-              source = path.read_text(encoding="utf-8")
-              for name, tags in pattern.findall(source):
-                  if "[lua]" in tags and "[platform]" in tags and "[semantic]" in tags:
-                      found.add(name)
-          if target not in found:
-              raise SystemExit(f"semantic test not found in source: {target}")
-          prefix = sorted(name for name in found if name < target)
-          print(",".join(prefix + [target]))
-          print(f"lexical prefix cases before target: {len(prefix)}", file=sys.stderr)
-          PY
-          cat diagnostic-logs/semantic-prefix.spec
-
-          run_case bionic-alone ./tests/cata_test "$target" \
-            --rng-seed 4902 --order lex --error-format=github-action
-          run_case lexical-prefix-plus-bionic ./tests/cata_test \
-            "$(head -n 1 diagnostic-logs/semantic-prefix.spec)" \
-            --rng-seed 4902 --order lex --error-format=github-action
-          run_case full-semantic ./tests/cata_test \
-            '[lua][platform][semantic]' --rng-seed 4902 --order lex \
-            --error-format=github-action
-          run_case environment-predicate-alone ./tests/cata_test \
-            lua_platform_environment_strings_match_native_predicates \
-            --rng-seed 4902 --order lex --error-format=github-action
-          run_case mutation-semantic-alone ./tests/cata_test \
-            lua_platform_mutations_seeded_category_matches_legacy_effect \
-            --rng-seed 4902 --order lex --error-format=github-action
-
-          {
-            echo "test binary SHA256: $(sha256sum tests/cata_test | cut -d' ' -f1)"
-            echo "source SHA: $(git rev-parse HEAD)"
-            echo "selector: [lua][platform][semantic]"
-            for name in bionic-alone lexical-prefix-plus-bionic full-semantic environment-predicate-alone mutation-semantic-alone; do
-              printf '%s exit=%s\n' "$name" "$(cat "diagnostic-logs/${name}.exit")"
-            done
-          } > diagnostic-logs/summary.txt
-
-      - name: Upload isolated diagnostic logs
+      - name: Upload archived binary and complete Memcheck logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lua-lifetime-diagnostic
-          path: |
-            /tmp/runner.txt
-            /tmp/ldd.txt
-            source/diagnostic-logs/
+          name: lua-lifetime-valgrind-archive-10722504175
+          path: source/diagnostic-logs/
           if-no-files-found: warn
-          retention-days: 7
+          compression-level: 0
+          retention-days: 14
