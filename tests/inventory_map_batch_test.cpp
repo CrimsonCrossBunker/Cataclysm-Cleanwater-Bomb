@@ -1,3 +1,5 @@
+#include <point.h>
+#include <string>
 #include <vector>
 
 #include "calendar.h"
