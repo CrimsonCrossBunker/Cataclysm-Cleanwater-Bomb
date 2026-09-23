@@ -99,12 +99,18 @@ jobs:
           run_case full-semantic ./tests/cata_test \
             '[lua][platform][semantic]' --rng-seed 4902 --order lex \
             --error-format=github-action
+          run_case environment-predicate-alone ./tests/cata_test \
+            lua_platform_environment_strings_match_native_predicates \
+            --rng-seed 4902 --order lex --error-format=github-action
+          run_case mutation-semantic-alone ./tests/cata_test \
+            lua_platform_mutations_seeded_category_matches_legacy_effect \
+            --rng-seed 4902 --order lex --error-format=github-action
 
           {
             echo "test binary SHA256: $(sha256sum tests/cata_test | cut -d' ' -f1)"
             echo "source SHA: $(git rev-parse HEAD)"
             echo "selector: [lua][platform][semantic]"
-            for name in bionic-alone lexical-prefix-plus-bionic full-semantic; do
+            for name in bionic-alone lexical-prefix-plus-bionic full-semantic environment-predicate-alone mutation-semantic-alone; do
               printf '%s exit=%s\n' "$name" "$(cat "diagnostic-logs/${name}.exit")"
             done
           } > diagnostic-logs/summary.txt
