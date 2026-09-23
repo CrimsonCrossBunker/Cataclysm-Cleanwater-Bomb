@@ -2,6 +2,9 @@
 #ifndef CATA_SRC_LUA_PLATFORM_SOL_H
 #define CATA_SRC_LUA_PLATFORM_SOL_H
 
+#include <cstdint>
+#include <string>
+
 #ifdef __clang__
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wmissing-noreturn"
@@ -16,6 +19,22 @@
 #define LUA_PLATFORM_SOL_WRAPPED
 #include "sol/sol.hpp"
 #undef LUA_PLATFORM_SOL_WRAPPED
+
+namespace sol
+{
+// GCC can give distinct captured lambdas the same pretty-printed type name.
+// These opaque callback userdata need a per-type GC key so each capture is
+// destroyed with its own layout.  Keep this adaptation outside vendored Sol.
+template<typename Func, bool IsYielding, bool NoTrampoline>
+struct usertype_traits<function_detail::functor_function<Func, IsYielding, NoTrampoline>> {
+    static const std::string &user_gc_metatable() {
+        static char type_key;
+        static const std::string key = "ccb.sol.functor." +
+                                       std::to_string( reinterpret_cast<std::uintptr_t>( &type_key ) );
+        return key;
+    }
+};
+} // namespace sol
 
 #ifdef __clang__
     #pragma clang diagnostic pop
