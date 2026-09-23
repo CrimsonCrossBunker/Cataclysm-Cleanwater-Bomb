@@ -29,8 +29,15 @@ extern "C" {
 #include "damage.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "type_id.h"
 #include "units.h"
+
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
+static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
+    "PARTIAL_BIONIC_LIMB" );
 
 namespace cata::lua_platform
 {
@@ -48,12 +55,6 @@ constexpr std::size_t maximum_protection_values = 128;
 constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::int64_t maximum_power_millijoule =
     1000000000000000LL;
-
-const efftype_id effect_bite( "bite" );
-const efftype_id effect_bleed( "bleed" );
-const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
-const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
-    "PARTIAL_BIONIC_LIMB" );
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )
@@ -91,86 +92,19 @@ units::energy native_energy(
                millijoule, units::energy::unit_type{} );
 }
 
-template<typename Range>
-sol::table typed_id_page(
-    sol::state_view lua, const Range &ids,
-    const std::string &kind )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] =
-            script_game_id( kind, id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_id_page(
-    sol::state_view lua, const Range &ids )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = id.str();
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
 template<typename Value>
 sol::table body_part_value_page(
     sol::state_view lua,
     const std::map<bodypart_str_id, Value> &values )
 {
-    const std::size_t returned = std::min(
-                                     values.size(),
-                                     maximum_body_part_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : values ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, values, maximum_body_part_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["body_part"] = script_game_id(
                                 "body_part", entry.first.str() );
         item["value"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = values.size();
-    result["returned"] = returned;
-    result["truncated"] = returned < values.size();
-    return result;
+        return item;
+    } );
 }
 
 sol::table protection_page(
@@ -274,61 +208,54 @@ sol::table snapshot_definition(
         result["coverage_power_generation_penalty"] = sol::nil;
     }
 
-    result["flags"] = typed_id_page(
-                          lua, definition.flags, "json_flag" );
-    result["active_flags"] = typed_id_page(
-                                 lua, definition.active_flags,
+    result["flags"] = detail::make_typed_id_page(
+                          lua, maximum_relation_values, definition.flags, "json_flag" );
+    result["active_flags"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.active_flags,
                                  "json_flag" );
-    result["inactive_flags"] = typed_id_page(
-                                   lua, definition.inactive_flags,
+    result["inactive_flags"] = detail::make_typed_id_page(
+                                   lua, maximum_relation_values, definition.inactive_flags,
                                    "json_flag" );
-    result["fuel_options"] = typed_id_page(
-                                 lua, definition.fuel_opts,
+    result["fuel_options"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.fuel_opts,
                                  "material" );
-    result["included_bionics"] = typed_id_page(
-                                     lua,
-                                     definition.included_bionics,
+    result["included_bionics"] = detail::make_typed_id_page(
+                                     lua, maximum_relation_values, definition.included_bionics,
                                      "bionic" );
-    result["auto_deactivated_bionics"] = typed_id_page(
-            lua, definition.autodeactivated_bionics,
+    result["auto_deactivated_bionics"] = detail::make_typed_id_page(
+            lua, maximum_relation_values, definition.autodeactivated_bionics,
             "bionic" );
-    result["available_upgrades"] = typed_id_page(
-                                       lua,
-                                       definition.available_upgrades,
+    result["available_upgrades"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.available_upgrades,
                                        "bionic" );
-    result["canceled_mutations"] = typed_id_page(
-                                       lua,
-                                       definition.canceled_mutations,
+    result["canceled_mutations"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.canceled_mutations,
                                        "mutation" );
-    result["mutation_conflicts"] = typed_id_page(
-                                       lua,
-                                       definition.mutation_conflicts,
+    result["mutation_conflicts"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.mutation_conflicts,
                                        "mutation" );
-    result["mutations_on_removal"] = typed_id_page(
-                                         lua,
-                                         definition.give_mut_on_removal,
+    result["mutations_on_removal"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.give_mut_on_removal,
                                          "mutation" );
-    result["martial_arts"] = typed_id_page(
-                                 lua, definition.ma_styles,
+    result["martial_arts"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.ma_styles,
                                  "martial_art" );
-    result["passive_pseudo_items"] = typed_id_page(
-                                         lua,
-                                         definition.passive_pseudo_items,
+    result["passive_pseudo_items"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.passive_pseudo_items,
                                          "item" );
-    result["toggled_pseudo_items"] = typed_id_page(
-                                         lua,
-                                         definition.toggled_pseudo_items,
+    result["toggled_pseudo_items"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.toggled_pseudo_items,
                                          "item" );
-    result["enchantments"] = string_id_page(
-                                 lua, definition.enchantments );
-    result["proficiencies"] = string_id_page(
-                                  lua, definition.proficiencies );
-    result["activation_eocs"] = string_id_page(
-                                    lua, definition.activated_eocs );
-    result["processing_eocs"] = string_id_page(
-                                    lua, definition.processed_eocs );
-    result["deactivation_eocs"] = string_id_page(
-                                      lua, definition.deactivated_eocs );
+    result["enchantments"] = detail::make_string_id_page(
+                                 lua, maximum_relation_values, definition.enchantments );
+    result["proficiencies"] = detail::make_string_id_page(
+                                  lua, maximum_relation_values, definition.proficiencies );
+    result["activation_eocs"] = detail::make_string_id_page(
+                                    lua, maximum_relation_values, definition.activated_eocs );
+    result["processing_eocs"] = detail::make_string_id_page(
+                                    lua, maximum_relation_values, definition.processed_eocs );
+    result["deactivation_eocs"] = detail::make_string_id_page(
+                                      lua, maximum_relation_values, definition.deactivated_eocs );
 
     set_optional_id(
         result, "upgraded_bionic",
@@ -452,6 +379,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const bionic_data * lhs, const bionic_data * rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -1030,10 +959,10 @@ sol::table repair_bionic_limbs(
 
 void install_bionic_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table bionics = lua.create_table();
