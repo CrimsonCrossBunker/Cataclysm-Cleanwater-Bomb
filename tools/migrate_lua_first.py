@@ -33076,6 +33076,252 @@ def classify_non_actionable_boundaries(result: MigrationResult) -> None:
     result.todos = actionable
 
 
+@dataclass(frozen=True)
+class CatalogSpec:
+    label: str
+    renderer: Callable[[SourceObject, MigrationResult], str | None] | None = None
+
+
+# Registration order is the dependency order of emitted content.  None marks
+# catalogs handled below with inheritance, mod context, or aggregation.
+CATALOGS: dict[str, CatalogSpec] = {
+    "ascii_art": CatalogSpec("Native ASCII-art definitions", render_ascii_art),
+    "json_flag": CatalogSpec("Native JSON-flag definitions", render_json_flag),
+    "tool_quality": CatalogSpec("Native tool-quality definitions", render_tool_quality),
+    "skill_display_type": CatalogSpec("Native skill display categories", render_skill_display),
+    "skill": CatalogSpec("Native skill definitions", render_skill),
+    "vitamin": CatalogSpec("Native vitamin definitions", render_vitamin),
+    "damage_type": CatalogSpec("Native damage-type definitions", render_damage_type),
+    "bash_damage_profile": CatalogSpec("Native bash-damage profiles", render_bash_damage_profile),
+    "damage_info_order": CatalogSpec("Native damage-info presentation order", render_damage_info_order),
+    "material": CatalogSpec("Native material definitions", render_material),
+    "proficiency_category": CatalogSpec("Native proficiency categories", render_proficiency_category),
+    "proficiency": CatalogSpec("Native proficiency definitions", render_proficiency),
+    "weapon_category": CatalogSpec("Native weapon categories", render_weapon_category),
+    "ITEM_CATEGORY": CatalogSpec("Native item categories", render_item_category),
+    "recipe_category": CatalogSpec("Native recipe categories", render_recipe_category),
+    "ammunition_type": CatalogSpec("Native ammunition types", render_ammunition_type),
+    "scent_type": CatalogSpec("Native scent types", render_scent_type),
+    "butchery_requirement": CatalogSpec("Native butchery-requirement definitions", render_butchery_requirement),
+    "item_action": CatalogSpec("Native item-action definitions", render_item_action),
+    "scenario": CatalogSpec("Native scenario definitions", render_scenario),
+    "vehicle_color_palette": CatalogSpec("Native vehicle color palettes", render_vehicle_color_palette),
+    "monstergroup": CatalogSpec("Native monster groups", render_monster_group),
+    "overmap_connection": CatalogSpec("Native overmap connections", render_overmap_connection),
+    "speed_description": CatalogSpec("Native speed descriptions", render_speed_description),
+    "sound_effect": CatalogSpec("Native ambient sound-effect definitions", render_sound_effect),
+    "sound_effect_preload": CatalogSpec("Native ambient sound-effect preloads", render_sound_effect_preload),
+    "harvest_drop_type": CatalogSpec("Native harvest-drop types", render_harvest_drop_type),
+    "harvest": CatalogSpec("Native harvest lists", render_harvest),
+    "behavior": CatalogSpec("Native behavior trees and named Lua policies", render_behavior),
+    "effect_type": CatalogSpec("Native effect types", render_effect_type),
+    "item_group": CatalogSpec("Native composable item groups", render_item_group),
+    "sub_body_part": CatalogSpec("Native sub-body-part definitions"),
+    "wound": CatalogSpec("Native wound definitions", render_wound),
+    "body_part": CatalogSpec("Native body-part definitions", render_body_part),
+    "wound_fix": CatalogSpec("Native wound-fix definitions", render_wound_fix),
+    "anatomy": CatalogSpec("Native anatomy definitions", render_anatomy),
+    "body_graph": CatalogSpec("Native body-graph definitions", render_body_graph),
+    "field_type": CatalogSpec("Native field types", render_field_type),
+    "monster_attack": CatalogSpec("Native monster attacks and named Lua policies", render_monster_attack),
+    "weakpoint_set": CatalogSpec("Native weakpoint sets", render_weakpoint_set),
+    "MONSTER": CatalogSpec("Native monster definitions", render_monster),
+    "hit_range": CatalogSpec("Native global hit-range configuration", render_hit_range),
+    "morale_type": CatalogSpec("Native morale types", render_morale_type),
+    "disease_type": CatalogSpec("Native disease types", render_disease_type),
+    "mood_face": CatalogSpec("Native mood-face tables"),
+    "limb_score": CatalogSpec("Native limb-score definitions", render_limb_score),
+    "clothing_mod": CatalogSpec("Native clothing modifications", render_clothing_mod),
+    "monster_flag": CatalogSpec(
+        "Native monster flags",
+        functools.partial(
+            render_marker_catalog,
+            builder="MonsterFlag",
+            label="monster flag",
+        ),
+    ),
+    "SPECIES": CatalogSpec("Native monster species", render_species),
+    "emit": CatalogSpec("Native field emissions and named Lua profiles", render_emission),
+    "MONSTER_FACTION": CatalogSpec("Native monster factions", render_monster_faction),
+    "mutation_type": CatalogSpec(
+        "Native mutation types",
+        functools.partial(
+            render_marker_catalog,
+            builder="MutationType",
+            label="mutation type",
+        ),
+    ),
+    "connect_group": CatalogSpec(
+        "Native terrain and furniture connection groups",
+        functools.partial(
+            render_marker_catalog,
+            builder="ConnectGroup",
+            label="connect group",
+        ),
+    ),
+    "mutation_category": CatalogSpec("Native mutation categories", render_mutation_category),
+    "construction_category": CatalogSpec(
+        "Native construction categories",
+        functools.partial(
+            render_named_catalog,
+            builder="ConstructionCategory",
+            label="construction category",
+        ),
+    ),
+    "construction_group": CatalogSpec(
+        "Native construction groups",
+        functools.partial(
+            render_named_catalog,
+            builder="ConstructionGroup",
+            label="construction group",
+        ),
+    ),
+    "vehicle_part_category": CatalogSpec("Native vehicle-part categories", render_vehicle_part_category),
+    "vehicle_part_location": CatalogSpec("Native vehicle-part locations", render_vehicle_part_location),
+    "overmap_land_use_code": CatalogSpec("Native overmap land-use codes", render_overmap_land_use_code),
+    "oter_vision": CatalogSpec("Native composable overmap-vision profiles", render_overmap_vision),
+    "overmap_location": CatalogSpec("Native composable overmap locations", render_overmap_location),
+    "profession_group": CatalogSpec("Native profession groups", render_profession_group),
+    "map_extra_collection": CatalogSpec(
+        "Native weighted map-extra collections",
+        functools.partial(
+            render_weighted_catalog,
+            builder="MapExtraCollection",
+            label="map-extra collection",
+            source_field="extras",
+            method="extra",
+            chance=True,
+        ),
+    ),
+    "vehicle_group": CatalogSpec(
+        "Native weighted vehicle groups",
+        functools.partial(
+            render_weighted_catalog,
+            builder="VehicleGroup",
+            label="vehicle group",
+            source_field="vehicles",
+            method="vehicle",
+            allow_duplicates=True,
+        ),
+    ),
+    "fault_group": CatalogSpec(
+        "Native weighted fault groups",
+        functools.partial(
+            render_weighted_catalog,
+            builder="FaultGroup",
+            label="fault group",
+            source_field="group",
+            method="fault",
+            object_style=True,
+            allow_duplicates=True,
+        ),
+    ),
+    "explosion_light": CatalogSpec("Native composable explosion-light recipes", render_explosion_light),
+    "ammo_effect": CatalogSpec("Native composable ammunition effects and named Lua impact policies", render_ammo_effect),
+    "addiction_type": CatalogSpec("Native addiction types and named Lua tick policies", render_addiction_type),
+    "character_mod": CatalogSpec("Native character modifiers and named Lua evaluators", render_character_modifier),
+    "start_location": CatalogSpec("Native composable start locations"),
+    "climbing_aid": CatalogSpec("Native composable climbing aids", render_climbing_aid),
+    "weather_type": CatalogSpec("Native weather types and named Lua condition policies", render_weather_type),
+    "score": CatalogSpec("Native score definitions", render_score),
+    "overlay_order": CatalogSpec("Native global mutation-overlay ordering", render_overlay_order),
+    "LOOT_ZONE": CatalogSpec("Native zone-type definitions", render_zone_type),
+    "speech": CatalogSpec("Native speaker-labelled speech pools"),
+    "end_screen": CatalogSpec("Native end screens and named Lua selection policies", render_end_screen),
+    "activity_type": CatalogSpec("Native activity types and named Lua turn/completion policies", render_activity_type),
+    "help": CatalogSpec("Native stable-id help topics"),
+    "snippet": CatalogSpec("Native composable snippet categories and named Lua examine policies"),
+    "playlist": CatalogSpec("Native soundpack playlists", render_playlists),
+    "nested_category": CatalogSpec("Native composable nested recipe categories", render_nested_recipe_category),
+    "attack_vector": CatalogSpec("Native attack vectors", render_attack_vector),
+    "technique": CatalogSpec("Native martial-arts techniques", render_technique),
+    "martial_art": CatalogSpec("Native martial-art styles", render_martial_art),
+    "trap": CatalogSpec("Native trap definitions", render_trap),
+    "construction": CatalogSpec("Native construction definitions", render_construction),
+    "furniture": CatalogSpec("Native furniture definitions", render_furniture),
+    "terrain": CatalogSpec("Native terrain definitions", render_terrain),
+    "gate": CatalogSpec("Native gate definitions"),
+    "fault": CatalogSpec("Native fault definitions", render_fault),
+    "fault_fix": CatalogSpec("Native fault-fix definitions", render_fault_fix),
+    "dream": CatalogSpec("Native dream definitions", render_dream),
+    "achievement": CatalogSpec("Native achievement definitions", render_achievement),
+    "conduct": CatalogSpec("Native conduct definitions", render_achievement),
+    "ITEM_BLACKLIST": CatalogSpec("Native item blacklists", render_blacklist),
+    "TRAIT_BLACKLIST": CatalogSpec("Native trait blacklists", render_blacklist),
+    "MONSTER_BLACKLIST": CatalogSpec("Native monster blacklists", render_blacklist),
+    "MONSTER_WHITELIST": CatalogSpec("Native monster whitelists", render_blacklist),
+    "SCENARIO_BLACKLIST": CatalogSpec("Native scenario blacklists", render_blacklist),
+    "profession_blacklist": CatalogSpec("Native profession blacklists", render_blacklist),
+    "charge_removal_blacklist": CatalogSpec("Native charge-removal blacklists", render_blacklist),
+    "temperature_removal_blacklist": CatalogSpec("Native temperature-removal blacklists", render_blacklist),
+    "map_extra": CatalogSpec("Native map extras", render_map_extra),
+    "weather_generator": CatalogSpec("Native weather generators", render_weather_generator),
+    "event_transformation": CatalogSpec("Native event transformations", render_event_transformation),
+    "event_statistic": CatalogSpec("Native event statistics", render_event_statistic),
+    "mapgen": CatalogSpec("Native declarative mapgen services", render_mapgen),
+    "palette": CatalogSpec("Native mapgen palettes", render_palette),
+    "mod_tileset": CatalogSpec("Native Mod tilesets", render_mod_tileset),
+    "talk_topic": CatalogSpec("Native dialogue topics", render_talk_topic),
+    "bionic_migration": CatalogSpec("Native bionic migrations", render_migration),
+    "effect_migration": CatalogSpec("Native effect migrations", render_migration),
+    "field_type_migration": CatalogSpec("Native field-type migrations", render_migration),
+    "oter_id_migration": CatalogSpec("Native overmap-terrain migrations", render_migration),
+    "overmap_special_migration": CatalogSpec("Native overmap-special migrations", render_migration),
+    "proficiency_migration": CatalogSpec("Native proficiency migrations", render_migration),
+    "ter_furn_migration": CatalogSpec("Native terrain and furniture migrations", render_migration),
+    "trap_migration": CatalogSpec("Native trap migrations", render_migration),
+    "var_migration": CatalogSpec("Native variable migrations", render_migration),
+    "vehicle_part_migration": CatalogSpec("Native vehicle-part migrations", render_migration),
+    "MIGRATION": CatalogSpec("Native item migrations", render_migration),
+    "TRAIT_MIGRATION": CatalogSpec("Native trait and mutation migrations", render_migration),
+    "spell_migration": CatalogSpec("Native spell migrations", render_migration),
+    "camp_migration": CatalogSpec("Native camp migrations", render_migration),
+    "mod_migration": CatalogSpec("Native mod migrations", render_migration),
+    "trait_group": CatalogSpec(
+        "Native trait groups",
+        functools.partial(
+            render_weighted_catalog,
+            builder="TraitGroup",
+            label="trait group",
+            source_field="traits",
+            method="trait",
+        ),
+    ),
+    "monster_adjustment": CatalogSpec("Native monster adjustments", render_monster_adjustment),
+    "shopkeeper_blacklist": CatalogSpec("Native shopkeeper blacklists", render_shopkeeper),
+    "shopkeeper_whitelist": CatalogSpec("Native shopkeeper whitelists", render_shopkeeper),
+    "shopkeeper_consumption_rates": CatalogSpec("Native shopkeeper consumption rates", render_shopkeeper),
+    "magic_type": CatalogSpec("Native magic types and named Lua policies", render_magic_type),
+    "movement_mode": CatalogSpec("Native composable movement modes", render_movement_mode),
+    "region_settings_ravine": CatalogSpec("Native region settings ravines", render_region_settings_ravine),
+    "region_settings_lake": CatalogSpec("Native region settings lakes", render_region_settings_lake),
+    "region_settings_ocean": CatalogSpec("Native region settings oceans", render_region_settings_ocean),
+    "region_settings_forest": CatalogSpec("Native region settings forests", render_region_settings_forest),
+    "region_settings_river": CatalogSpec("Native region settings rivers", render_region_settings_river),
+    "region_settings_forest_mapgen": CatalogSpec("Native region settings forest mapgens", render_region_settings_forest_mapgen),
+    "region_settings_map_extras": CatalogSpec("Native region settings map extras", render_region_settings_map_extras),
+    "region_settings_terrain_furniture": CatalogSpec("Native region settings terrain furnitures", render_region_settings_terrain_furniture),
+    "region_settings_forest_trail": CatalogSpec("Native region settings forest trails", render_region_settings_forest_trail),
+    "region_settings_highway": CatalogSpec("Native region settings highways", render_region_settings_highway),
+    "region_settings": CatalogSpec("Native region settings", render_region_settings),
+    "option_slider": CatalogSpec("Native option sliders", render_option_slider),
+    "dimension_region_layout": CatalogSpec("Native dimension region layouts", render_dimension_region_layout),
+    "dimension": CatalogSpec("Native dimensions", render_dimension),
+    "omt_placeholder": CatalogSpec("Native overmap terrain placeholders", render_omt_placeholder),
+    "region_terrain_furniture": CatalogSpec("Native region terrain furnitures", render_region_terrain_furniture),
+    "forest_biome_component": CatalogSpec("Native forest biome components", render_forest_biome_component),
+    "city": CatalogSpec("Native city definitions", render_city),
+    "faction_mission": CatalogSpec("Native faction missions", render_faction_mission),
+    "region_settings_city": CatalogSpec("Native region settings cities", render_region_settings_city),
+    "forest_biome_mapgen": CatalogSpec("Native forest biome mapgens", render_forest_biome_mapgen),
+    "named_color": CatalogSpec("Native named colors", render_named_color),
+    "rotatable_symbol": CatalogSpec("Native rotatable-symbol groups", render_rotatable_symbol),
+    "requirement": CatalogSpec("Native reusable requirements", render_requirement),
+    "recipe_group": CatalogSpec("Native recipe groups", render_recipe_group),
+    "generic_platform_content": CatalogSpec("Typed Platform world/content descriptors"),
+}
+
+
 def migrate(objects: list[SourceObject], mod_id: str,
             exclude_types: frozenset[str] = frozenset()) -> MigrationResult:
     result = MigrationResult()
@@ -33152,166 +33398,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         source.value.get("type") not in exclude_types and
         source.value.get("global") is True
     )
-    catalog_chunks: dict[str, list[str]] = {
-        "ascii_art": [],
-        "json_flag": [],
-        "tool_quality": [],
-        "skill_display_type": [],
-        "skill": [],
-        "vitamin": [],
-        "damage_type": [],
-        "bash_damage_profile": [],
-        "damage_info_order": [],
-        "material": [],
-        "proficiency_category": [],
-        "proficiency": [],
-        "weapon_category": [],
-        "ITEM_CATEGORY": [],
-        "recipe_category": [],
-        "ammunition_type": [],
-        "scent_type": [],
-        "butchery_requirement": [],
-        "item_action": [],
-        "scenario": [],
-        "vehicle_color_palette": [],
-        "monstergroup": [],
-        "overmap_connection": [],
-        "speed_description": [],
-        "sound_effect": [],
-        "sound_effect_preload": [],
-        "harvest_drop_type": [],
-        "harvest": [],
-        "behavior": [],
-        "effect_type": [],
-        "item_group": [],
-        "sub_body_part": [],
-        "wound": [],
-        "body_part": [],
-        "wound_fix": [],
-        "anatomy": [],
-        "body_graph": [],
-        "field_type": [],
-        "monster_attack": [],
-        "weakpoint_set": [],
-        "MONSTER": [],
-        "hit_range": [],
-        "morale_type": [],
-        "disease_type": [],
-        "mood_face": [],
-        "limb_score": [],
-        "clothing_mod": [],
-        "monster_flag": [],
-        "SPECIES": [],
-        "emit": [],
-        "MONSTER_FACTION": [],
-        "mutation_type": [],
-        "connect_group": [],
-        "mutation_category": [],
-        "construction_category": [],
-        "construction_group": [],
-        "vehicle_part_category": [],
-        "vehicle_part_location": [],
-        "overmap_land_use_code": [],
-        "oter_vision": [],
-        "overmap_location": [],
-        "profession_group": [],
-        "map_extra_collection": [],
-        "vehicle_group": [],
-        "fault_group": [],
-        "explosion_light": [],
-        "ammo_effect": [],
-        "addiction_type": [],
-        "character_mod": [],
-        "start_location": [],
-        "climbing_aid": [],
-        "weather_type": [],
-        "score": [],
-        "overlay_order": [],
-        "LOOT_ZONE": [],
-        "speech": [],
-        "end_screen": [],
-        "activity_type": [],
-        "help": [],
-        "snippet": [],
-        "playlist": [],
-        "nested_category": [],
-        "attack_vector": [],
-        "technique": [],
-        "martial_art": [],
-        "trap": [],
-        "construction": [],
-        "furniture": [],
-        "terrain": [],
-        "gate": [],
-        "fault": [],
-        "fault_fix": [],
-        "dream": [],
-        "achievement": [],
-        "conduct": [],
-        "ITEM_BLACKLIST": [],
-        "TRAIT_BLACKLIST": [],
-        "MONSTER_BLACKLIST": [],
-        "MONSTER_WHITELIST": [],
-        "SCENARIO_BLACKLIST": [],
-        "profession_blacklist": [],
-        "charge_removal_blacklist": [],
-        "temperature_removal_blacklist": [],
-        "map_extra": [],
-        "weather_generator": [],
-        "event_transformation": [],
-        "event_statistic": [],
-        "mapgen": [],
-        "palette": [],
-        "mod_tileset": [],
-        "talk_topic": [],
-        "bionic_migration": [],
-        "effect_migration": [],
-        "field_type_migration": [],
-        "oter_id_migration": [],
-        "overmap_special_migration": [],
-        "proficiency_migration": [],
-        "ter_furn_migration": [],
-        "trap_migration": [],
-        "var_migration": [],
-        "vehicle_part_migration": [],
-        "MIGRATION": [],
-        "TRAIT_MIGRATION": [],
-        "spell_migration": [],
-        "camp_migration": [],
-        "mod_migration": [],
-        "trait_group": [],
-        "monster_adjustment": [],
-        "shopkeeper_blacklist": [],
-        "shopkeeper_whitelist": [],
-        "shopkeeper_consumption_rates": [],
-        "magic_type": [],
-        "movement_mode": [],
-        "region_settings_ravine": [],
-        "region_settings_lake": [],
-        "region_settings_ocean": [],
-        "region_settings_forest": [],
-        "region_settings_river": [],
-        "region_settings_forest_mapgen": [],
-        "region_settings_map_extras": [],
-        "region_settings_terrain_furniture": [],
-        "region_settings_forest_trail": [],
-        "region_settings_highway": [],
-        "region_settings": [],
-        "option_slider": [],
-        "dimension_region_layout": [],
-        "dimension": [],
-        "omt_placeholder": [],
-        "region_terrain_furniture": [],
-        "forest_biome_component": [],
-        "city": [],
-        "faction_mission": [],
-        "region_settings_city": [],
-        "forest_biome_mapgen": [],
-        "named_color": [],
-        "rotatable_symbol": [],
-        "requirement": [],
-        "recipe_group": [],
-    }
+    catalog_chunks: dict[str, list[str]] = {kind: [] for kind in CATALOGS}
     item_chunks: list[str] = []
     recipe_chunks: list[str] = []
     behaviour_chunks: list[str] = []
@@ -33407,128 +33494,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     content_primary_actor_ids,
                 )
             )
-        elif kind == "tool_quality":
-            rendered = render_tool_quality(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "ascii_art":
-            rendered = render_ascii_art(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "skill_display_type":
-            rendered = render_skill_display(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "skill":
-            rendered = render_skill(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "vitamin":
-            rendered = render_vitamin(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "json_flag":
-            rendered = render_json_flag(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "damage_type":
-            rendered = render_damage_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "bash_damage_profile":
-            rendered = render_bash_damage_profile(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "damage_info_order":
-            rendered = render_damage_info_order(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "material":
-            rendered = render_material(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "proficiency_category":
-            rendered = render_proficiency_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "proficiency":
-            rendered = render_proficiency(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "weapon_category":
-            rendered = render_weapon_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "ITEM_CATEGORY":
-            rendered = render_item_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "recipe_category":
-            rendered = render_recipe_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "ammunition_type":
-            rendered = render_ammunition_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "scent_type":
-            rendered = render_scent_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "butchery_requirement":
-            rendered = render_butchery_requirement(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "item_action":
-            rendered = render_item_action(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "scenario":
-            rendered = render_scenario(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "vehicle_color_palette":
-            rendered = render_vehicle_color_palette(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "monstergroup":
-            rendered = render_monster_group(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "overmap_connection":
-            rendered = render_overmap_connection(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "speed_description":
-            rendered = render_speed_description(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "sound_effect":
-            rendered = render_sound_effect(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "sound_effect_preload":
-            rendered = render_sound_effect_preload(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "harvest_drop_type":
-            rendered = render_harvest_drop_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "harvest":
-            rendered = render_harvest(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "behavior":
-            rendered = render_behavior(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "effect_type":
-            rendered = render_effect_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "item_group":
-            rendered = render_item_group(source, result)
+        elif kind in CATALOGS and CATALOGS[kind].renderer is not None:
+            rendered = CATALOGS[kind].renderer(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "sub_body_part":
@@ -33538,54 +33505,6 @@ def migrate(objects: list[SourceObject], mod_id: str,
             )
             if rendered:
                 catalog_chunks[kind].append(rendered)
-        elif kind == "wound":
-            rendered = render_wound(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "body_part":
-            rendered = render_body_part(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "wound_fix":
-            rendered = render_wound_fix(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "anatomy":
-            rendered = render_anatomy(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "body_graph":
-            rendered = render_body_graph(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "field_type":
-            rendered = render_field_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "monster_attack":
-            rendered = render_monster_attack(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "weakpoint_set":
-            rendered = render_weakpoint_set(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "MONSTER":
-            rendered = render_monster(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "hit_range":
-            rendered = render_hit_range(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "morale_type":
-            rendered = render_morale_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "disease_type":
-            rendered = render_disease_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
         elif kind == "mood_face":
             rendered = render_mood_face(
                 source, result,
@@ -33593,168 +33512,11 @@ def migrate(objects: list[SourceObject], mod_id: str,
             )
             if rendered:
                 catalog_chunks[kind].append(rendered)
-        elif kind == "limb_score":
-            rendered = render_limb_score(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "clothing_mod":
-            rendered = render_clothing_mod(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "monster_flag":
-            rendered = render_marker_catalog(
-                source, result, builder="MonsterFlag", label="monster flag"
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "SPECIES":
-            rendered = render_species(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "emit":
-            rendered = render_emission(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "MONSTER_FACTION":
-            rendered = render_monster_faction(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "mutation_type":
-            rendered = render_marker_catalog(
-                source, result, builder="MutationType", label="mutation type"
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "connect_group":
-            rendered = render_marker_catalog(
-                source, result, builder="ConnectGroup", label="connect group"
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "mutation_category":
-            rendered = render_mutation_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "construction_category":
-            rendered = render_named_catalog(
-                source,
-                result,
-                builder="ConstructionCategory",
-                label="construction category",
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "construction_group":
-            rendered = render_named_catalog(
-                source,
-                result,
-                builder="ConstructionGroup",
-                label="construction group",
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "vehicle_part_category":
-            rendered = render_vehicle_part_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "vehicle_part_location":
-            rendered = render_vehicle_part_location(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "overmap_land_use_code":
-            rendered = render_overmap_land_use_code(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "oter_vision":
-            rendered = render_overmap_vision(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "overmap_location":
-            rendered = render_overmap_location(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "profession_group":
-            rendered = render_profession_group(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "map_extra_collection":
-            rendered = render_weighted_catalog(
-                source,
-                result,
-                builder="MapExtraCollection",
-                label="map-extra collection",
-                source_field="extras",
-                method="extra",
-                chance=True,
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "vehicle_group":
-            rendered = render_weighted_catalog(
-                source,
-                result,
-                builder="VehicleGroup",
-                label="vehicle group",
-                source_field="vehicles",
-                method="vehicle",
-                allow_duplicates=True,
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "fault_group":
-            rendered = render_weighted_catalog(
-                source,
-                result,
-                builder="FaultGroup",
-                label="fault group",
-                source_field="group",
-                method="fault",
-                object_style=True,
-                allow_duplicates=True,
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "explosion_light":
-            rendered = render_explosion_light(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "ammo_effect":
-            rendered = render_ammo_effect(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "addiction_type":
-            rendered = render_addiction_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "character_mod":
-            rendered = render_character_modifier(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
         elif kind == "start_location":
             rendered = render_start_location(
                 source, result,
                 inheritance_corpus=inheritance_corpora.get("start_location"),
             )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "climbing_aid":
-            rendered = render_climbing_aid(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "weather_type":
-            rendered = render_weather_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "score":
-            rendered = render_score(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "overlay_order":
-            rendered = render_overlay_order(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "LOOT_ZONE":
-            rendered = render_zone_type(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "speech":
@@ -33797,146 +33559,17 @@ def migrate(objects: list[SourceObject], mod_id: str,
                         "semantic_choice",
                         f"{source.location}: speech speakers, text, or volume need review"
                     )
-        elif kind == "end_screen":
-            rendered = render_end_screen(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "activity_type":
-            rendered = render_activity_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
         elif kind == "help":
             rendered = render_help_topic(source, result, mod_id)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "snippet":
             collect_snippet_category(source, result, snippet_categories)
-        elif kind == "playlist":
-            rendered = render_playlists(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "nested_category":
-            rendered = render_nested_recipe_category(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "attack_vector":
-            rendered = render_attack_vector(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "technique":
-            rendered = render_technique(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "martial_art":
-            rendered = render_martial_art(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "trap":
-            rendered = render_trap(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "construction":
-            rendered = render_construction(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "furniture":
-            rendered = render_furniture(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "terrain":
-            rendered = render_terrain(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
         elif kind == "gate":
             rendered = render_gate(
                 source, result,
                 inheritance_corpus=inheritance_corpora.get("gate"),
             )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "fault":
-            rendered = render_fault(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "fault_fix":
-            rendered = render_fault_fix(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "dream":
-            rendered = render_dream(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind in ("achievement", "conduct"):
-            rendered = render_achievement(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind in ("ITEM_BLACKLIST", "TRAIT_BLACKLIST", "MONSTER_BLACKLIST",
-                      "MONSTER_WHITELIST", "SCENARIO_BLACKLIST",
-                      "profession_blacklist", "charge_removal_blacklist",
-                      "temperature_removal_blacklist"):
-            rendered = render_blacklist(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "map_extra":
-            rendered = render_map_extra(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "weather_generator":
-            rendered = render_weather_generator(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "monster_adjustment":
-            rendered = render_monster_adjustment(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "trait_group":
-            rendered = render_weighted_catalog(
-                source,
-                result,
-                builder="TraitGroup",
-                label="trait group",
-                source_field="traits",
-                method="trait",
-            )
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind in ("shopkeeper_blacklist", "shopkeeper_whitelist",
-                      "shopkeeper_consumption_rates"):
-            rendered = render_shopkeeper(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind in ("bionic_migration", "effect_migration",
-                      "field_type_migration", "oter_id_migration",
-                      "overmap_special_migration", "proficiency_migration",
-                      "ter_furn_migration", "trap_migration",
-                      "var_migration", "vehicle_part_migration",
-                      "MIGRATION", "TRAIT_MIGRATION", "spell_migration",
-                      "camp_migration", "mod_migration"):
-            rendered = render_migration(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "event_transformation":
-            rendered = render_event_transformation(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "event_statistic":
-            rendered = render_event_statistic(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "mapgen":
-            rendered = render_mapgen(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "palette":
-            rendered = render_palette(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "mod_tileset":
-            rendered = render_mod_tileset(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "talk_topic":
-            rendered = render_talk_topic(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind in UNREGISTERED_CONTENT_TYPES:
@@ -33955,114 +33588,6 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     catalog_chunks.setdefault("generic_platform_content", []).append(
                         rendered
                     )
-        elif kind == "magic_type":
-            rendered = render_magic_type(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "movement_mode":
-            rendered = render_movement_mode(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_ravine":
-            rendered = render_region_settings_ravine(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_lake":
-            rendered = render_region_settings_lake(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_ocean":
-            rendered = render_region_settings_ocean(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_forest":
-            rendered = render_region_settings_forest(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_river":
-            rendered = render_region_settings_river(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_forest_mapgen":
-            rendered = render_region_settings_forest_mapgen(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_map_extras":
-            rendered = render_region_settings_map_extras(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_terrain_furniture":
-            rendered = render_region_settings_terrain_furniture(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_forest_trail":
-            rendered = render_region_settings_forest_trail(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_highway":
-            rendered = render_region_settings_highway(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings":
-            rendered = render_region_settings(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "option_slider":
-            rendered = render_option_slider(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "dimension_region_layout":
-            rendered = render_dimension_region_layout(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "dimension":
-            rendered = render_dimension(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "omt_placeholder":
-            rendered = render_omt_placeholder(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_terrain_furniture":
-            rendered = render_region_terrain_furniture(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "forest_biome_component":
-            rendered = render_forest_biome_component(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "city":
-            rendered = render_city(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "faction_mission":
-            rendered = render_faction_mission(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "region_settings_city":
-            rendered = render_region_settings_city(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "forest_biome_mapgen":
-            rendered = render_forest_biome_mapgen(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "named_color":
-            rendered = render_named_color(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "rotatable_symbol":
-            rendered = render_rotatable_symbol(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "requirement":
-            rendered = render_requirement(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
-        elif kind == "recipe_group":
-            rendered = render_recipe_group(source, result)
-            if rendered:
-                catalog_chunks[kind].append(rendered)
         else:
             report_missing_content_registrar(source, result)
 
@@ -34267,173 +33792,12 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 "end",
             )
         )
-    catalog_labels = {
-        "ascii_art": "Native ASCII-art definitions",
-        "json_flag": "Native JSON-flag definitions",
-        "tool_quality": "Native tool-quality definitions",
-        "butchery_requirement": "Native butchery-requirement definitions",
-        "item_action": "Native item-action definitions",
-        "scenario": "Native scenario definitions",
-        "vehicle_color_palette": "Native vehicle color palettes",
-        "monstergroup": "Native monster groups",
-        "overmap_connection": "Native overmap connections",
-        "skill_display_type": "Native skill display categories",
-        "skill": "Native skill definitions",
-        "sound_effect": "Native ambient sound-effect definitions",
-        "sound_effect_preload": "Native ambient sound-effect preloads",
-        "vitamin": "Native vitamin definitions",
-        "damage_type": "Native damage-type definitions",
-        "bash_damage_profile": "Native bash-damage profiles",
-        "damage_info_order": "Native damage-info presentation order",
-        "material": "Native material definitions",
-        "proficiency_category": "Native proficiency categories",
-        "proficiency": "Native proficiency definitions",
-        "weapon_category": "Native weapon categories",
-        "ITEM_CATEGORY": "Native item categories",
-        "recipe_category": "Native recipe categories",
-        "ammunition_type": "Native ammunition types",
-        "scent_type": "Native scent types",
-        "speed_description": "Native speed descriptions",
-        "harvest_drop_type": "Native harvest-drop types",
-        "harvest": "Native harvest lists",
-        "behavior": "Native behavior trees and named Lua policies",
-        "effect_type": "Native effect types",
-        "item_group": "Native composable item groups",
-        "sub_body_part": "Native sub-body-part definitions",
-        "wound": "Native wound definitions",
-        "body_part": "Native body-part definitions",
-        "wound_fix": "Native wound-fix definitions",
-        "anatomy": "Native anatomy definitions",
-        "body_graph": "Native body-graph definitions",
-        "field_type": "Native field types",
-        "monster_attack": "Native monster attacks and named Lua policies",
-        "weakpoint_set": "Native weakpoint sets",
-        "MONSTER": "Native monster definitions",
-        "hit_range": "Native global hit-range configuration",
-        "morale_type": "Native morale types",
-        "disease_type": "Native disease types",
-        "mood_face": "Native mood-face tables",
-        "limb_score": "Native limb-score definitions",
-        "clothing_mod": "Native clothing modifications",
-        "monster_flag": "Native monster flags",
-        "SPECIES": "Native monster species",
-        "emit": "Native field emissions and named Lua profiles",
-        "MONSTER_FACTION": "Native monster factions",
-        "mutation_type": "Native mutation types",
-        "connect_group": "Native terrain and furniture connection groups",
-        "mutation_category": "Native mutation categories",
-        "construction_category": "Native construction categories",
-        "construction_group": "Native construction groups",
-        "vehicle_part_category": "Native vehicle-part categories",
-        "vehicle_part_location": "Native vehicle-part locations",
-        "overmap_land_use_code": "Native overmap land-use codes",
-        "oter_vision": "Native composable overmap-vision profiles",
-        "overmap_location": "Native composable overmap locations",
-        "profession_group": "Native profession groups",
-        "map_extra_collection": "Native weighted map-extra collections",
-        "vehicle_group": "Native weighted vehicle groups",
-        "fault_group": "Native weighted fault groups",
-        "explosion_light": "Native composable explosion-light recipes",
-        "ammo_effect": "Native composable ammunition effects and named Lua impact policies",
-        "addiction_type": "Native addiction types and named Lua tick policies",
-        "character_mod": "Native character modifiers and named Lua evaluators",
-        "start_location": "Native composable start locations",
-        "climbing_aid": "Native composable climbing aids",
-        "weather_type": "Native weather types and named Lua condition policies",
-        "score": "Native score definitions",
-        "overlay_order": "Native global mutation-overlay ordering",
-        "LOOT_ZONE": "Native zone-type definitions",
-        "speech": "Native speaker-labelled speech pools",
-        "end_screen": "Native end screens and named Lua selection policies",
-        "activity_type": "Native activity types and named Lua turn/completion policies",
-        "help": "Native stable-id help topics",
-        "snippet": "Native composable snippet categories and named Lua examine policies",
-        "playlist": "Native soundpack playlists",
-        "nested_category": "Native composable nested recipe categories",
-        "attack_vector": "Native attack vectors",
-        "technique": "Native martial-arts techniques",
-        "martial_art": "Native martial-art styles",
-        "trap": "Native trap definitions",
-        "construction": "Native construction definitions",
-        "furniture": "Native furniture definitions",
-        "terrain": "Native terrain definitions",
-        "gate": "Native gate definitions",
-        "fault": "Native fault definitions",
-        "fault_fix": "Native fault-fix definitions",
-        "dream": "Native dream definitions",
-        "achievement": "Native achievement definitions",
-        "conduct": "Native conduct definitions",
-        "ITEM_BLACKLIST": "Native item blacklists",
-        "TRAIT_BLACKLIST": "Native trait blacklists",
-        "MONSTER_BLACKLIST": "Native monster blacklists",
-        "MONSTER_WHITELIST": "Native monster whitelists",
-        "SCENARIO_BLACKLIST": "Native scenario blacklists",
-        "profession_blacklist": "Native profession blacklists",
-        "charge_removal_blacklist": "Native charge-removal blacklists",
-        "temperature_removal_blacklist": "Native temperature-removal blacklists",
-        "map_extra": "Native map extras",
-        "weather_generator": "Native weather generators",
-        "event_transformation": "Native event transformations",
-        "event_statistic": "Native event statistics",
-        "mapgen": "Native declarative mapgen services",
-        "palette": "Native mapgen palettes",
-        "mod_tileset": "Native Mod tilesets",
-        "talk_topic": "Native dialogue topics",
-        "bionic_migration": "Native bionic migrations",
-        "effect_migration": "Native effect migrations",
-        "field_type_migration": "Native field-type migrations",
-        "oter_id_migration": "Native overmap-terrain migrations",
-        "overmap_special_migration": "Native overmap-special migrations",
-        "proficiency_migration": "Native proficiency migrations",
-        "ter_furn_migration": "Native terrain and furniture migrations",
-        "trap_migration": "Native trap migrations",
-        "var_migration": "Native variable migrations",
-        "vehicle_part_migration": "Native vehicle-part migrations",
-        "MIGRATION": "Native item migrations",
-        "TRAIT_MIGRATION": "Native trait and mutation migrations",
-        "spell_migration": "Native spell migrations",
-        "camp_migration": "Native camp migrations",
-        "mod_migration": "Native mod migrations",
-        "trait_group": "Native trait groups",
-        "monster_adjustment": "Native monster adjustments",
-        "shopkeeper_blacklist": "Native shopkeeper blacklists",
-        "shopkeeper_whitelist": "Native shopkeeper whitelists",
-        "shopkeeper_consumption_rates": "Native shopkeeper consumption rates",
-        "magic_type": "Native magic types and named Lua policies",
-        "movement_mode": "Native composable movement modes",
-        "region_settings_ravine": "Native region settings ravines",
-        "region_settings_lake": "Native region settings lakes",
-        "region_settings_ocean": "Native region settings oceans",
-        "region_settings_forest": "Native region settings forests",
-        "region_settings_river": "Native region settings rivers",
-        "region_settings_forest_mapgen": "Native region settings forest mapgens",
-        "region_settings_map_extras": "Native region settings map extras",
-        "region_settings_terrain_furniture": "Native region settings terrain furnitures",
-        "region_settings_forest_trail": "Native region settings forest trails",
-        "region_settings_highway": "Native region settings highways",
-        "region_settings": "Native region settings",
-        "option_slider": "Native option sliders",
-        "dimension_region_layout": "Native dimension region layouts",
-        "dimension": "Native dimensions",
-        "omt_placeholder": "Native overmap terrain placeholders",
-        "region_terrain_furniture": "Native region terrain furnitures",
-        "forest_biome_component": "Native forest biome components",
-        "city": "Native city definitions",
-        "faction_mission": "Native faction missions",
-        "region_settings_city": "Native region settings cities",
-        "forest_biome_mapgen": "Native forest biome mapgens",
-        "named_color": "Native named colors",
-        "rotatable_symbol": "Native rotatable-symbol groups",
-        "requirement": "Native reusable requirements",
-        "recipe_group": "Native recipe groups",
-        "generic_platform_content": "Typed Platform world/content descriptors",
-    }
     for kind, chunks in catalog_chunks.items():
         if chunks:
             wrapped = []
             for chunk in chunks:
                 wrapped.extend(("do", chunk.rstrip(), "end"))
-            main.extend(("", f"-- {catalog_labels[kind]}", *wrapped))
+            main.extend(("", f"-- {CATALOGS[kind].label}", *wrapped))
     if item_chunks:
         main.extend(("", '-- Native item definitions', *item_chunks))
     if recipe_chunks:
