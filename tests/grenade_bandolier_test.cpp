@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <string>
 
 #include "cata_catch.h"
