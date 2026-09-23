@@ -1,6 +1,5 @@
 #include <array>
 #include <functional>
-#include <string>
 
 #include "calendar.h"
 #include "cata_catch.h"
