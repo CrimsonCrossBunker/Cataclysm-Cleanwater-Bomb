@@ -83,7 +83,7 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
     std::ostringstream output;
     write_persistent_state( output, state );
     const script_persistent_state restored = read_persistent_state(
-            json_loader::from_string( output.str() ) );
+                json_loader::from_string( output.str() ) );
     REQUIRE( restored == state );
     const script_value_map restored_values( restored.begin(), restored.end() );
     const sol::table restored_table = script_value_map_to_lua( lua, restored_values );
@@ -197,7 +197,7 @@ TEST_CASE( "lua_platform_null_storage_rejects_mismatched_types",
     const std::string invalid_value = GENERATE( "0", "false", "\"null\"", "[]", "{}" );
     const std::string entry = R"({"type":"null","value":)" + invalid_value + "}";
     CHECK_THROWS( cata::lua_platform::detail::read_persistent_value( json_loader::from_string(
-                entry ).get_object() ) );
+                      entry ).get_object() ) );
     const std::string document = R"({"version":1,"values":{"empty":)" + entry + "}}";
     CHECK_THROWS( read_persistent_state( json_loader::from_string( document ) ) );
     const auto valid = cata::lua_platform::detail::read_persistent_value(
@@ -230,7 +230,7 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     REQUIRE( result.valid() );
     CHECK( std::get<std::string>( state.at( "kept" ) ) == "original" );
     const sol::protected_function_result valid = lua.safe_script(
-            "store({1, {2, 3}})", sol::script_pass_on_error );
+                "store({1, {2, 3}})", sol::script_pass_on_error );
     REQUIRE( valid.valid() );
     REQUIRE( std::holds_alternative<script_array_value>( state.at( "kept" ) ) );
     sol::table first = script_persistent_value_to_lua( lua, state.at( "kept" ) );
@@ -241,7 +241,7 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
     CHECK( second.get<sol::table>( 2 ).get<std::int64_t>( 1 ) == 2 );
     const sol::table empty = script_persistent_value_to_lua( lua,
-        script_array_value( script_persistent_array{} ) );
+                             script_array_value( script_persistent_array{} ) );
     CHECK( empty.size() == 0 );
 }
 
