@@ -14,6 +14,7 @@
 #include "damage.h"
 #include "effect.h"
 #include "type_id.h"
+#include "units_fwd.h"
 
 class Character;
 class JsonObject;
@@ -40,6 +41,8 @@ struct bodygraph_info {
     std::string parent_bp_name;
     std::vector<effect> effects;
     std::pair<int, nc_color> temperature;
+    // Decode the legacy body-part temperature supplied by prepare_bodymap_info.
+    units::temperature body_temperature() const;
     std::string temp_approx;
     int avg_coverage = 0;
     int total_encumbrance = 0;
