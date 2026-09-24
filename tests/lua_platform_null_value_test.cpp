@@ -256,4 +256,16 @@ TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
                       json_loader::from_string( input ).get_object() ) );
 }
 
+TEST_CASE( "lua_platform_persistent_coordinates_accept_integer_bounds",
+           "[lua][platform][semantic][state]" )
+{
+    const auto value = cata::lua_platform::detail::read_persistent_value(
+                           json_loader::from_string(
+                               R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" ).get_object() );
+    const auto &coordinate = std::get<cata::lua_platform::script_persistent_tripoint>( value );
+    CHECK( coordinate.x == 2147483647 );
+    CHECK( coordinate.y == -2147483647 - 1 );
+    CHECK( coordinate.z == 0 );
+}
+
 #endif

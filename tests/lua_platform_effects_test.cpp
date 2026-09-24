@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "activity_actor.h"
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
@@ -50,6 +51,7 @@
 #include "npctrade.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "viewer.h"
 #include "rng.h"
 #include "type_id.h"
@@ -738,7 +740,7 @@ TEST_CASE( "lua_platform_find_mount_no_match_restores_active_npc",
             worker.set_mission( NPC_MISSION_GUARD );
             worker.set_attitude( NPCATT_FOLLOW );
             if( active ) {
-                worker.assign_activity( activity_id( "ACT_WAIT" ), 100 );
+                worker.assign_activity( wait_activity_actor( 100_turns ) );
                 worker.set_mission( NPC_MISSION_ACTIVITY );
                 worker.set_attitude( NPCATT_ACTIVITY );
             }
@@ -1261,6 +1263,7 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
 {
     const int mode = GENERATE( 0, 1, 2 ); // omitted, explicit true, explicit false
     clear_map();
+    g->clear_zombies();
     override_option evolution( "EVOLUTION_INVERSE_MULTIPLIER", "4.0" );
     effect_fixture fixture;
     cata::lua_platform::install_game_world_service_api(
@@ -1273,7 +1276,7 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
     } );
     const auto position = cata::lua_platform::script_tripoint_coord::from_native(
                               coords::origin::abs, coords::scale::map_square,
-                              get_map().get_abs( tripoint_bub_ms( 60, 60, 0 ) ).raw() );
+                              get_map().get_abs( get_avatar().pos_bub() + point::east ).raw() );
     sol::protected_function spawn = fixture.services["spawns"]["monster"];
     const cata::lua_platform::script_game_id type( "monster", "mon_test_zombie" );
     rng_set_engine_seed( 58163 );
@@ -1580,7 +1583,7 @@ TEST_CASE( "lua_platform_copy_rules_does_not_re_equip_or_spend_moves",
     effect_fixture target;
     effect_fixture source( 3200 );
     target.other.remove_weapon();
-    target.other.i_add( item( itype_id( "katana" ), calendar::turn ) );
+    target.other.inv->add_item( item( itype_id( "katana" ), calendar::turn ), false, false, false );
     REQUIRE_FALSE( target.other.get_wielded_item() );
     // The old wrapper called wield_better_weapon after copying, even on self-copy.
     REQUIRE( target.other.evaluate_best_weapon() != &null_item_reference() );

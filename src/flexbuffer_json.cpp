@@ -137,6 +137,24 @@ std::string Json::str() const
     return ret;
 }
 
+int JsonValue::get_int_exact() const
+{
+    if( !test_int() ) {
+        throw_error( "Expected an integer" );
+    }
+    std::unique_ptr<std::istream> source = root_->get_source_stream();
+    if( !source ) {
+        throw_error( "Original JSON source unavailable for integer range check" );
+    }
+    TextJsonIn jsin( *source, get_root_source_path() );
+    JsonPath path;
+    if( parent_path_ ) {
+        path = *parent_path_ + path_index_;
+    }
+    advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path );
+    return jsin.get_int();
+}
+
 bool JsonValue::read( bool &b, bool throw_on_error ) const
 {
     if( !test_bool() ) {
