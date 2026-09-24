@@ -240,8 +240,11 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
     platform_trade_quote_fixture fixture( 981, 982, 983001, 983002 );
     REQUIRE( fixture.ready() );
     item bag( itype_id( "backpack" ), calendar::turn );
+    // Keep three distinct, tradeable children so quote validation reaches the holder checks.
     for( int i = 0; i < 3; ++i ) {
-        bag.force_insert_item( item( itype_id( "rock" ), calendar::turn ), pocket_type::CONTAINER );
+        item flashlight( itype_id( "flashlight" ), calendar::turn );
+        flashlight.set_var( "test_child", i );
+        bag.force_insert_item( std::move( flashlight ), pocket_type::CONTAINER );
     }
     bag.set_owner( *fixture.buyer );
     item &container = fixture.buyer->inv->add_item( std::move( bag ), false, false, false );
@@ -313,6 +316,9 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
                             lines, options );
         REQUIRE( quoted.valid() );
         const sol::table quote_result = quoted.get<sol::table>();
+        const std::string quote_error_code = quote_result["ok"].get<bool>() ? "" :
+                                             quote_result["error"].get<sol::table>()["code"].get<std::string>();
+        INFO( "Quote error: " << quote_error_code );
         REQUIRE( quote_result["ok"].get<bool>() );
         const sol::table value = quote_result["value"];
         const auto token = value["token"].get<cata::lua_platform::trade_quote_token>();

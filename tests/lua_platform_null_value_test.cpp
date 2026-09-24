@@ -241,7 +241,7 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
     CHECK( second.get<sol::table>( 2 ).get<std::int64_t>( 1 ) == 2 );
     const sol::table empty = script_persistent_value_to_lua( lua,
-        script_array_value( script_persistent_array{} ) );
+                             script_array_value( script_persistent_array{} ) );
     CHECK( empty.size() == 0 );
 }
 
@@ -254,6 +254,18 @@ TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
     const std::string input = R"({"type":"tripoint_abs_ms","value":)" + coordinates + "}";
     CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
                       json_loader::from_string( input ).get_object() ) );
+}
+
+TEST_CASE( "lua_platform_persistent_coordinates_accept_integer_bounds",
+           "[lua][platform][semantic][state]" )
+{
+    const auto value = cata::lua_platform::detail::read_persistent_value(
+                           json_loader::from_string(
+                               R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" ).get_object() );
+    const auto &coordinate = std::get<cata::lua_platform::script_persistent_tripoint>( value );
+    CHECK( coordinate.x == 2147483647 );
+    CHECK( coordinate.y == -2147483647 - 1 );
+    CHECK( coordinate.z == 0 );
 }
 
 #endif
