@@ -216,6 +216,18 @@ void sensitive_mod_ass( double val, dialogue &d, char scope,
     d.actor( is_beta( scope ) )->set_sensitive_mod( val );
 }
 
+double hunger_eval( const_dialogue const &d, char scope,
+                    std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    return d.const_actor( is_beta( scope ) )->get_hunger();
+}
+
+void hunger_ass( double val, dialogue &d, char scope,
+                 std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    d.actor( is_beta( scope ) )->set_hunger( val );
+}
+
 double armor_eval( const_dialogue const &d, char scope, std::vector<diag_value> const &params,
                    diag_kwargs const & /* kwargs */ )
 {
@@ -2149,6 +2161,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "has_proficiency", { "un", 1, knows_proficiency_eval } },
     { "has_wielded_with_flag", { "un", 1, has_wielded_with_flag_eval } },
     { "has_var", { "g", 1, has_var_eval } },
+    { "hunger", { "un", 0, hunger_eval, hunger_ass } },
     { "hp", { "un", 1, hp_eval, hp_ass } },
     { "hp_max", { "un", 1, hp_max_eval } },
     { "item_count", { "un", 1, item_count_eval } },
