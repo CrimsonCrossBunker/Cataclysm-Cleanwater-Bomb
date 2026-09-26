@@ -20677,6 +20677,94 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn('services.variables.get_global("choice")', main)
             self.assertNotIn("switch_default", main)
 
+    def test_switch_defaults_are_not_emitted_as_unmatched_fallbacks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "switch_action_default",
+                        "required_event": "game_start",
+                        "effect": {
+                            "switch": {
+                                "global_val": "choice",
+                                "default": 17,
+                            },
+                            "cases": [
+                                {
+                                    "case": 100,
+                                    "effect": {"u_message": "matched"},
+                                }
+                            ],
+                            "default": {"u_message": "unmatched fallback"},
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "switch_nested_default",
+                        "required_event": "game_start",
+                        "effect": {
+                            "switch": {
+                                "global_val": "nested_choice",
+                                "cases": [
+                                    {
+                                        "case": 100,
+                                        "effect": {"u_message": "nested matched"},
+                                    }
+                                ],
+                                "default": {"u_message": "nested fallback"},
+                            },
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "switch_selector_default",
+                        "required_event": "game_start",
+                        "effect": {
+                            "switch": {
+                                "global_val": "selector_choice",
+                                "default": 17,
+                            },
+                            "cases": [
+                                {
+                                    "case": 17,
+                                    "effect": {"u_message": "selector fallback"},
+                                }
+                            ],
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "switch_default_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(
+                any("switch_action_default" in item for item in result.partial)
+            )
+            self.assertTrue(
+                any("switch_nested_default" in item for item in result.partial)
+            )
+            self.assertTrue(result.todos)
+            self.assertIn("switch-control-flow conversion", report)
+            self.assertNotIn('services.message("unmatched fallback")', main)
+            self.assertNotIn('services.message("matched")', main)
+            self.assertNotIn('services.message("nested fallback")', main)
+            self.assertNotIn('services.message("nested matched")', main)
+            self.assertNotIn("switch_action_default__switch_default", main)
+            self.assertNotIn("switch_nested_default__switch_default", main)
+            self.assertIn(
+                'services.variables.get_global("selector_choice")', main
+            )
+            self.assertIn(".value or 17", main)
+            self.assertIn('services.message("selector fallback")', main)
+
     def test_false_effect_switch_reuses_switch_renderer(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
