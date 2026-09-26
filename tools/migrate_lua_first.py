@@ -3648,14 +3648,17 @@ def render_static_set_condition(
     predicate = render_eoc_condition_expression(
         effect["condition"], avatar_actor_proven, weapon_actor_proven,
         npc_actor_proven, creature_actor_proven, eoc_conditions,
-        npc_actor_expression=npc_actor_expression,
+        npc_actor_expression=(
+            "stored_condition_beta"
+            if npc_actor_expression is not None or npc_actor_proven else None
+        ),
     )
     if name is None or predicate is None:
         return None
     return [
         "    context.conditions = context.conditions or {}",
         f"    local stored_condition_name = tostring(({name}) or \"\")",
-        "    context.conditions[stored_condition_name] = function(context, actor)",
+        "    context.conditions[stored_condition_name] = function(context, actor, stored_condition_beta)",
         f"        return {predicate}",
         "    end",
     ]
@@ -26915,7 +26918,8 @@ def render_eoc_condition_expression(
                 "(function() local stored_condition_name = tostring((" + name +
                 ") or \"\"); local stored_condition = context.conditions and "
                 "context.conditions[stored_condition_name]; return stored_condition "
-                "~= nil and stored_condition(context, " + actor + ") or false end)()"
+                "~= nil and stored_condition(context, " + actor + ", " +
+                (npc_query_actor or "nil") + ") or false end)()"
             )
 
     if npc_query_actor is not None:
