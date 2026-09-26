@@ -678,6 +678,17 @@ assert(calls==1)
             result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_string_comparisons_keep_native_string_variable_types(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"compare_string": [
+                {"context_val": "first"}, {"context_val": "second"},
+            ]}
+        )
+
+        self.assertIsNotNone(expression)
+        self.assertEqual(expression.count('type(result.value) == "string"'), 2)
+        self.assertNotIn('tostring(result.value or "")', expression)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_comparisons_preserve_owners_and_short_circuit(self) -> None:
         for key, beta, expected in (("compare_string", "alpha", True),

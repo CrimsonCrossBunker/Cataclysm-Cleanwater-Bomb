@@ -27381,7 +27381,8 @@ def render_eoc_condition_expression(
             if not isinstance(values, list) or all_equal and not values:
                 return None
             rendered = [render_participant_string_expression(
-                value, "actor", "actor" if character_actor_proven else None, npc_query_actor)
+                value, "actor", "actor" if character_actor_proven else None,
+                npc_query_actor, native_string_values=True)
                 for value in values]
             if any(value is None for value in rendered):
                 return None
