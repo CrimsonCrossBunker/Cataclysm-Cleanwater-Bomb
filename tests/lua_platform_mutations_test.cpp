@@ -406,6 +406,44 @@ TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
     }
 }
 
+TEST_CASE( "lua_platform_mutation_erase_matches_dynamic_u_val_effect",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3500 );
+    mutation_fixture platform( 3600 );
+    const std::string key = "chronomancer_menu_learn_id";
+    const std::string effect =
+        R"({"u_lose_trait":{"u_val":"chronomancer_menu_learn_id"}})";
+    legacy.other.set_mutation( trait_QUICK );
+    platform.other.set_mutation( trait_QUICK );
+    legacy.other.set_value( key, trait_QUICK.str() );
+    platform.other.set_value( key, trait_QUICK.str() );
+    legacy.player.set_mutation( trait_QUICK );
+    platform.player.set_mutation( trait_QUICK );
+
+    // This is the live Xedra_Evolved u_val shape; place the NPC in the alpha
+    // position to verify that u_ selects the talker, not a fixed avatar type.
+    legacy.legacy_effect( effect, true );
+
+    sol::protected_function resolve = platform.services["variables"]["resolve"];
+    const sol::table context = platform.lua.create_table();
+    sol::protected_function_result resolved = resolve( context, platform.handle( true ),
+            "u", key );
+    REQUIRE( resolved.valid() );
+    sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["erase"](
+                platform.handle( true ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK_FALSE( legacy.other.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.other.has_trait( trait_QUICK ) );
+    CHECK( legacy.player.has_trait( trait_QUICK ) );
+    CHECK( platform.player.has_trait( trait_QUICK ) );
+}
+
 TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alpha_npc",
            "[lua][platform][mutations][semantic]" )
 {
