@@ -3865,7 +3865,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('weather.value == ""', main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                3,
+                2,
             )
 
     def test_translates_proven_avatar_activity_cancellation(self) -> None:
