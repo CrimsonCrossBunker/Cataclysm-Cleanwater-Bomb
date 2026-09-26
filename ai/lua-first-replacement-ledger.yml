@@ -48,11 +48,11 @@ summary:
   implemented_verified: 1
   implemented_unverified: 89
   bounded_implemented_verified: 0
-  bounded_implemented_unverified: 669
+  bounded_implemented_unverified: 672
   primitive_available_unverified: 4
   planned: 0
   private_adapter: 0
-  reviewed_not_applicable: 13
+  reviewed_not_applicable: 10
 entries:
 - inventory: eoc-conditions
   selector: and
@@ -151,13 +151,18 @@ entries:
   verification: source_only
 - inventory: eoc-conditions
   selector: get_condition
-  target_kind: not_applicable
-  target: native-lua-control-flow
-  status: reviewed_not_applicable
+  target_kind: shared_service
+  target: native-lua-predicate-context
+  status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
-  verification: not_run
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-conditions
   selector: has_alpha
   target_kind: shared_service
@@ -2278,13 +2283,18 @@ entries:
   verification: source_only
 - inventory: eoc-conditions
   selector: test_eoc
-  target_kind: not_applicable
-  target: native-lua-control-flow
-  status: reviewed_not_applicable
+  target_kind: shared_service
+  target: native-lua-predicate-context
+  status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
-  verification: not_run
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-conditions
   selector: u_aim_rule
   target_kind: shared_service
@@ -6682,13 +6692,18 @@ entries:
   verification: source_only
 - inventory: eoc-effects
   selector: set_condition
-  target_kind: not_applicable
-  target: native-lua-control-flow
-  status: reviewed_not_applicable
+  target_kind: shared_service
+  target: native-lua-predicate-context
+  status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  verification: not_run
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-effects
   selector: set_furniture
   target_kind: shared_service
