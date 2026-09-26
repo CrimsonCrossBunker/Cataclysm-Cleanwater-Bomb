@@ -4219,107 +4219,9 @@ def render_static_eoc_selector(
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    """Lower ``run_eoc_selector`` to a bounded Platform choice menu."""
-    if "run_eoc_selector" not in effect:
-        return None
-    if set(effect) - {
-        "run_eoc_selector", "allow_cancel", "names", "title", "descriptions",
-        "keys", "variables", "hide_failing", "hilight_disabled",
-    }:
-        return None
-    references = _validated_eoc_references(
-        effect.get("run_eoc_selector"), eoc_function_names
-    )
-    if references is None or not references or len(references) > 128:
-        return None
-    names = effect.get("names")
-    if names is None:
-        names = references
-    if (
-        not isinstance(names, list) or len(names) != len(references) or
-        not all(isinstance(name, str) and bounded_utf8_string(name, 512, allow_empty=False) for name in names)
-    ):
-        return None
-    descriptions = effect.get("descriptions", [""] * len(references))
-    if (
-        not isinstance(descriptions, list) or len(descriptions) != len(references) or
-        not all(isinstance(description, str) and bounded_utf8_string(description, 2048, allow_empty=True) for description in descriptions)
-    ):
-        return None
-    title = effect.get("title", "Select an action")
-    if not isinstance(title, str) or not bounded_utf8_string(title, 512, allow_empty=False):
-        return None
-    allow_cancel = effect.get("allow_cancel", True)
-    if not isinstance(allow_cancel, bool):
-        return None
-    for option in ("hide_failing", "hilight_disabled"):
-        if option in effect and not isinstance(effect[option], bool):
-            return None
-    keys = effect.get("keys")
-    if keys is not None and (
-        not isinstance(keys, list) or len(keys) != len(references) or
-        not all(isinstance(key, str) and len(key) == 1 for key in keys)
-    ):
-        return None
-    variable_contexts = effect.get("variables", [])
-    if variable_contexts is None:
-        variable_contexts = []
-    if (
-        not isinstance(variable_contexts, list) or
-        len(variable_contexts) not in {0, 1, len(references)}
-    ):
-        return None
-    for variable_context in variable_contexts:
-        if not isinstance(variable_context, dict) or len(variable_context) > 64:
-            return None
-        if any(
-            not isinstance(name, str) or not bounded_utf8_string(name, 256) or
-            lua_scalar_literal(value) is None and render_eoc_value_expression(value, "nil", actor_expression or "actor") is None
-            for name, value in variable_context.items()
-        ):
-            return None
-    lines = [
-        "    local selector_choices = {",
-    ]
-    for index, (name, description) in enumerate(zip(names, descriptions), 1):
-        lines.append(
-            f"        {{ id = {lua_quote(str(index))}, label = {lua_quote(name)}, "
-            f"description = {lua_quote(description)} }},"
-        )
-    lines.extend([
-        "    }",
-        f"    local selected_id = ccb.presentation.choose({lua_quote(title)}, selector_choices)",
-    ])
-    for index, reference in enumerate(references, 1):
-        prefix = "    if" if index == 1 else "    elseif"
-        lines.append(f"{prefix} selected_id == {lua_quote(str(index))} then")
-        if variable_contexts:
-            context_index = 0 if len(variable_contexts) == 1 else index - 1
-            variable_context = variable_contexts[context_index]
-            for name, value in variable_context.items():
-                rendered_value = lua_scalar_literal(value)
-                if rendered_value is None:
-                    rendered_value = render_eoc_value_expression(
-                        value, "nil", actor_expression or "actor"
-                    )
-                if rendered_value is None:
-                    return None
-                lines.append(
-                    f"        context.data[{lua_quote(name)}] = {rendered_value}"
-                )
-                # Native EOC math variables use the underscored context
-                # spelling while selector JSON uses the compact key (e.g.
-                # `{\"val\": 8}` is read as `_val`).  Publish both aliases
-                # so the typed callback preserves that established contract.
-                if not name.startswith("_"):
-                    lines.append(
-                        f"        context.data[{lua_quote('_' + name)}] = context.data[{lua_quote(name)}]"
-                    )
-        lines.append(
-            f"        {eoc_function_names[reference]}(context, {actor_expression or 'nil'})"
-        )
-    lines.append("    end")
-    return lines
+    """Keep selectors fail-closed until all native menu state can be lowered."""
+    del effect, eoc_function_names, actor_expression
+    return None
 
 
 def render_static_weighted_list_eocs(
@@ -5201,9 +5103,13 @@ def render_static_false_effect(
         ):
             return None
         return [
-            "        services.achievements.complete(",
-            "            services.types.id(\"achievement\", "
-            f"{lua_quote(effect['give_achievement'])}))",
+            "        do",
+            "            local achievement_id = services.types.id(\"achievement\", "
+            f"{lua_quote(effect['give_achievement'])})",
+            "            if achievement_id:is_valid() then",
+            "                services.achievements.complete(achievement_id)",
+            "            end",
+            "        end",
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
@@ -19651,45 +19557,9 @@ def render_static_mirror_coordinates(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Mirror two stored typed coordinates around a third Character variable."""
-    if set(effect) != {"mirror_coordinates", "center_var", "relative_var"}:
-        return None
-    output = _coordinate_variable_descriptor(effect["mirror_coordinates"])
-    center = _coordinate_variable_descriptor(effect["center_var"])
-    relative = _coordinate_variable_descriptor(effect["relative_var"])
-    if output is None or center is None or relative is None:
-        return None
-    if not (output[0] == center[0] == relative[0]):
-        return None
-    if output[0] == "context":
-        return [
-            f"    local center = context.data[{lua_quote(center[1])}]",
-            f"    local relative = context.data[{lua_quote(relative[1])}]",
-            "    if center ~= nil and relative ~= nil then",
-            f"        context.data[{lua_quote(output[1])}] = "
-            "center:scale_by(2):subtract(relative)",
-            "    end",
-        ]
-    if output[0] not in {"u", "npc"}:
-        return None
-    if output[0] == "u":
-        if not avatar_actor_proven:
-            return None
-    elif not npc_actor_proven:
-        return None
-    return [
-        "    local center_result = services.variables.get(",
-        f"        actor, {lua_quote(center[1])})",
-        "    local relative_result = services.variables.get(",
-        f"        actor, {lua_quote(relative[1])})",
-        "    if center_result.exists and relative_result.exists then",
-        "        local center = service_value(center_result)",
-        "        local relative = service_value(relative_result)",
-        "        services.variables.set(",
-        f"            actor, {lua_quote(output[1])}, "
-        "center:scale_by(2):subtract(relative))",
-        "    end",
-    ]
+    """Fail closed: Platform lacks safe absolute-ms reflection semantics."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_closest_city_effect(
@@ -24009,6 +23879,11 @@ def _render_static_map_state_edit(
     )
     present = [key for key in mutation_keys if key in effect]
     if not present:
+        return None
+    # Native trap placement is a no-op for unloaded/out-of-bounds tiles and
+    # for terrain with a built-in trap.  map.tile/map.edit cannot currently
+    # express both cases without turning those inputs into errors.
+    if "set_trap" in present:
         return None
     comment_keys = {
         name for name in effect
@@ -29004,13 +28879,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate run_eoc_selector through the "
-                        "typed presentation service."
+                        "    -- TODO: run_eoc_selector needs equivalent EOC "
+                        "condition, menu, and translated-text behavior."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs typed selector presentation conversion"
+                        "needs full native selector condition and menu semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "foreach" in effect:
@@ -29237,11 +29112,17 @@ def render_eoc(
                 set(effect) == {"give_achievement"} and
                 safe_platform_id(effect.get("give_achievement"))
             ):
-                lines.append("    services.achievements.complete(")
+                lines.append("    do")
                 lines.append(
-                    "        services.types.id(\"achievement\", "
-                    f"{lua_quote(effect['give_achievement'])}))"
+                    "        local achievement_id = services.types.id(\"achievement\", "
+                    f"{lua_quote(effect['give_achievement'])})"
                 )
+                lines.append("        if achievement_id:is_valid() then")
+                lines.append(
+                    "            services.achievements.complete(achievement_id)"
+                )
+                lines.append("        end")
+                lines.append("    end")
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -30526,13 +30407,14 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: " + _map_mutation_todo() + "."
+                    trap_gap = (
+                        "set_trap needs the native loaded-area and built-in-trap "
+                        "no-op behavior, which map.edit cannot express"
                     )
+                    lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
-                        _map_mutation_todo()
+                        "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
@@ -32365,13 +32247,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mirror_coordinates through "
-                        "typed coordinate and variable services."
+                        "    -- TODO: mirror_coordinates needs a typed "
+                        "absolute-ms reflection operation and exact beta proof."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs safe absolute-ms reflection and variable-scope semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:

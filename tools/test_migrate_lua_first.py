@@ -4713,7 +4713,7 @@ assert(#events == 11)
                         "id": "award",
                         "required_event": "game_start",
                         "effect": {
-                            "give_achievement": "achievement_reach_string_dimension"
+                            "give_achievement": "achievement_not_registered"
                         },
                     }
                 ),
@@ -4729,10 +4729,42 @@ assert(#events == 11)
             self.assertIn("services.achievements.complete", main)
             self.assertIn(
                 'services.types.id("achievement", '
-                '"achievement_reach_string_dimension")',
+                '"achievement_not_registered")',
                 main,
             )
+            self.assertIn("if achievement_id:is_valid() then", main)
+            self.assertIn("services.achievements.complete(achievement_id)", main)
             self.assertNotIn("run_eoc", main)
+
+    def test_run_eoc_selector_remains_platform_gap_until_full_menu_parity(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "selector",
+            "required_event": "game_start",
+            "effect": {
+                "run_eoc_selector": ["selector_option"],
+                "hide_failing": True,
+                "allow_cancel": False,
+                "keys": ["x"],
+            },
+        })
+
+        rendered = migrate_lua_first.render_eoc(
+            source, result,
+            eoc_function_names={"selector_option": "selector_option"},
+        )
+
+        self.assertIn(
+            "TODO: run_eoc_selector needs equivalent EOC condition, menu, "
+            "and translated-text behavior.", rendered,
+        )
+        self.assertNotIn("ccb.presentation.choose", rendered)
+        selector_todo = next(
+            todo for todo in result.todos
+            if "full native selector condition and menu semantics" in todo.message
+        )
+        self.assertEqual(selector_todo.category, "platform_gap")
 
     def test_translates_avatar_bionic_install_without_a_dialogue_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15104,6 +15136,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("exact NPC/avatar handles and topic", report)
             self.assertIn("services.achievements.complete(", main)
+            self.assertIn("if achievement_id:is_valid() then", main)
             self.assertIn('context.data["branch_value"]', main)
             self.assertIn('services.characters.damage(\n        actor', main)
 
@@ -15656,16 +15689,33 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                'local center_result = services.variables.get(\n'
-                '        actor, "center")',
+                "absolute-ms reflection operation and exact beta proof",
                 main,
             )
-            self.assertIn(
-                'actor, "output", center:scale_by(2):subtract(relative))',
-                main,
-            )
-            self.assertEqual(main.count("TODO: translate mirror_coordinates"), 2)
-            self.assertIn("needs domain-service conversion", report)
+            self.assertNotIn("services.variables.get(", main)
+            self.assertNotIn("scale_by(2)", main)
+            self.assertEqual(main.count("TODO: mirror_coordinates needs"), 3)
+            self.assertIn("safe absolute-ms reflection and variable-scope semantics", report)
+            self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
+
+    def test_mirror_coordinates_does_not_treat_hostile_event_actor_as_beta(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "hostile_npc_mirror",
+            "required_event": "npc_becomes_hostile",
+            "effect": [{
+                "mirror_coordinates": {"npc_val": "output"},
+                "center_var": {"npc_val": "center"},
+                "relative_var": {"npc_val": "relative"},
+            }],
+        })
+
+        rendered = migrate_lua_first.render_eoc(source, result)
+
+        self.assertIn("exact beta proof", rendered)
+        self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
+        self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
     def test_translates_literal_line_of_sight_condition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -24290,7 +24340,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
         mutation = {
             "set_terrain": "t_floor",
             "set_furniture": "f_null",
-            "set_trap": "tr_beartrap",
             "u_set_field": "fd_fire",
             "location": coordinate,
             "target_var": coordinate,
@@ -24309,8 +24358,34 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertIn("map_tile_snapshot.revision", main)
         self.assertIn('services.types.id("terrain", "t_floor")', main)
         self.assertIn('services.types.id("furniture", "f_null")', main)
-        self.assertIn('services.types.id("trap", "tr_beartrap")', main)
         self.assertIn('services.types.id("field", "fd_fire")', main)
+
+        for trap_effect in (
+            {"set_trap": "tr_beartrap", "location": coordinate},
+            {"set_trap": "tr_beartrap", "location": coordinate, "radius": 0},
+        ):
+            self.assertIsNone(
+                migrate_lua_first._render_static_map_state_edit(
+                    trap_effect, True, False
+                )
+            )
+
+        trap_result = migrate_lua_first.MigrationResult()
+        trap_source = migrate_lua_first.SourceObject(Path("trap.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "trap_gap",
+            "required_event": "game_start",
+            "effect": {
+                "set_trap": "tr_beartrap",
+                "location": coordinate,
+                "radius": 0,
+            },
+        })
+        trap_main = migrate_lua_first.render_eoc(trap_source, trap_result)
+        self.assertNotIn("services.map.edit(", trap_main)
+        self.assertIn("set_trap needs the native loaded-area and built-in-trap", trap_main)
+        trap_todo = next(todo for todo in trap_result.todos if "set_trap needs" in todo.message)
+        self.assertEqual(trap_todo.category, "platform_gap")
 
         terrain = migrate_lua_first.render_static_set_terrain_or_furniture(
             {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
@@ -24472,11 +24547,17 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "map mutation requires one explicitly typed abs_ms coordinate; "
                 "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
             )
-            self.assertEqual(main.count(todo), len(bad_coordinates))
+            trap_gap = "set_trap needs the native loaded-area and built-in-trap"
+            self.assertEqual(main.count(todo), len(bad_coordinates) - 1)
+            self.assertEqual(main.count(trap_gap), 1)
             self.assertNotIn("services.map.tile(", main)
             self.assertNotIn("services.map.edit(", main)
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
+            self.assertTrue(any(
+                item.category == "platform_gap" and "set_trap needs" in item.message
+                for item in result.todos
+            ))
             for legacy_map_write in (
                 "services.world.tile(",
                 "services.world.set_terrain(",
