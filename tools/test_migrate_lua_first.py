@@ -3624,10 +3624,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             "u_add_var", "u_owner",
         ))
         self.assertIsNone(migrate_lua_first.render_static_character_variable(
-            {"u_add_var": "large", "value": "x" * 1025}, "u_add_var", "u_owner",
+            {"u_add_var": "bad\ud800key", "value": "ok"}, "u_add_var", "u_owner",
         ))
         self.assertIsNone(migrate_lua_first.render_static_character_variable(
-            {"u_add_var": "large", "possible_values": ["x" * 1025]},
+            {"u_add_var": "invalid_value", "value": "bad\ud800value"},
+            "u_add_var", "u_owner",
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "invalid_candidate", "possible_values": ["bad\ud800value"]},
             "u_add_var", "u_owner",
         ))
         script = r"""
@@ -3727,13 +3731,33 @@ assert(u_owner.values.wide == "wide-64")
 assert(random_calls == 5)
 assert(random_bounds[5][1] == 0 and random_bounds[5][2] == 64)
 assert(#events == 8 and events[8].var == "wide" and events[8].value == "wide-64")
+do
+WIDE_LITERAL_BODY
+end
+assert(u_owner.values[WIDE_LITERAL_KEY] == WIDE_LITERAL_VALUE)
+assert(#events == 9 and events[9].var == WIDE_LITERAL_KEY and
+    events[9].value == WIDE_LITERAL_VALUE)
+random_index = 1
+do
+WIDE_CANDIDATE_BODY
+end
+assert(u_owner.values.wide_candidate == WIDE_CANDIDATE_VALUE)
+assert(random_calls == 6)
+assert(random_bounds[6][1] == 0 and random_bounds[6][2] == 1)
+assert(#events == 10 and events[10].var == "wide_candidate" and
+    events[10].value == WIDE_CANDIDATE_VALUE)
+do
+EMPTY_BODY
+end
+assert(u_owner.values[""] == "")
+assert(#events == 11 and events[11].var == "" and events[11].value == "")
 u_owner.values.u_val = "kept"
 write_allowed = false
 do
 BODY_U
 end
 assert(u_owner.values.u_val == "kept")
-assert(#events == 8)
+assert(#events == 11)
 """.replace("BODY_U", rendered["u_add_var"])
         script = script.replace("BODY_NPC", rendered["npc_add_var"])
         script = script.replace("REPEATED_CHOICE_BODY", "\n".join(repeated_choice_lines))
@@ -3746,6 +3770,14 @@ assert(#events == 8)
             "TIME_EMPTY_CANDIDATES_BODY", "\n".join(time_empty_candidates_lines)
         )
         script = script.replace("WIDE_BODY", "\n".join(wide_lines))
+        script = script.replace("WIDE_LITERAL_BODY", "\n".join(wide_literal_lines))
+        script = script.replace("WIDE_CANDIDATE_BODY", "\n".join(wide_candidate_lines))
+        script = script.replace("EMPTY_BODY", "\n".join(empty_lines))
+        script = script.replace("WIDE_LITERAL_KEY", migrate_lua_first.lua_quote(wide_key))
+        script = script.replace("WIDE_LITERAL_VALUE", migrate_lua_first.lua_quote(wide_value))
+        script = script.replace(
+            "WIDE_CANDIDATE_VALUE", migrate_lua_first.lua_quote(wide_candidate_value)
+        )
         executed = subprocess.run(["lua", "-"], input=script, text=True,
                                   capture_output=True, timeout=10)
         self.assertEqual(executed.returncode, 0, executed.stderr)
