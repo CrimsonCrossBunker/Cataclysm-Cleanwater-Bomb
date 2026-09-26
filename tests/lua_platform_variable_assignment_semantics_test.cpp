@@ -61,8 +61,8 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
 
-    // This batch checks stored values and event payloads; it does not claim
-    // downstream RNG-stream parity for literal assignments.
+    // Platform randomness uses a runtime-local stream.  This batch checks
+    // values and events without requiring parity with the legacy global RNG.
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
     const on_out_of_scope restore_rng( [saved_rng]() {
         rng_get_engine() = saved_rng;
@@ -93,8 +93,8 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     get_event_bus().subscribe( &observer );
 
     // Legacy u_add_var stores on the avatar and emits the two string payload
-    // fields.  Even a one-value choice passes through rng(); restore its state
-    // after this test instead of relying on a distribution implementation.
+    // fields.  Its literal-value path still calls global rng(0, 0); restore
+    // that engine so this native behavior check stays isolated.
     apply_talk_effect( context,
                        R"({"u_add_var":"u_val","value":"assignment-ready"})",
                        "lua_platform_u_add_var_semantics" );
