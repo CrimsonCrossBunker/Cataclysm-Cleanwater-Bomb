@@ -3914,20 +3914,24 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 'services.weather.current().weather.value == '
-                'tostring((context.data["context_weather"]) or "")',
+                '(function(result) if result.exists == false then return "" end; '
+                'return type(result.value) == "string" and result.value or "" end)('
+                'service_value(services.variables.resolve(context.data, nil, "context", "context_weather")))',
                 main,
             )
             self.assertIn('services.weather.current().weather.value == ""', main)
             self.assertIn(
                 'services.weather.current().weather.value == '
-                'tostring(((service_value(services.variables.resolve('
-                'context.data, actor, "u", "remembered_weather")).value or "")) or "")',
+                '(function(result) if result.exists == false then return "" end; '
+                'return type(result.value) == "string" and result.value or "" end)('
+                'service_value(services.variables.resolve(context.data, actor, "u", "remembered_weather")))',
                 main,
             )
             self.assertIn(
                 'services.weather.current().weather.value == '
-                'tostring(((service_value(services.variables.get_global('
-                '"global_weather")).value or "")) or "")',
+                '(function(result) if result.exists == false then return "" end; '
+                'return type(result.value) == "string" and result.value or "" end)('
+                'service_value(services.variables.resolve(context.data, nil, "global", "global_weather")))',
                 main,
             )
             self.assertNotIn('weather.value == 5', main)
