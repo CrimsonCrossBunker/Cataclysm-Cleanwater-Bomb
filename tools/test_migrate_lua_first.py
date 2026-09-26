@@ -24104,6 +24104,9 @@ assert(context.conditions.check==original and context.conditions.check() and con
             )
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
+            self.assertEqual(
+                [todo.category for todo in result.todos], ["platform_gap"]
+            )
             self.assertIn(todo, main)
             self.assertIn(todo, report)
             self.assertNotIn("services.items.page(", main)

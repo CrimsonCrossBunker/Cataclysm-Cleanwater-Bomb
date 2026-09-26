@@ -30573,7 +30573,7 @@ def render_eoc(
                         "constraints; unsupported location frames remain TODO."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "pickup needs explicit map candidates and a Platform API preserving "
                         "native selection and movement/volume/mass constraints; unsupported "
