@@ -26094,7 +26094,7 @@ def render_static_line_of_sight_condition(
 
 def render_static_perception_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
-    npc_actor_proven: bool,
+    npc_actor_proven: bool, npc_actor_expression: str | None = None,
 ) -> str | None:
     """Render the finite, non-interactive perception condition shapes.
 
@@ -26119,21 +26119,21 @@ def render_static_perception_condition(
         )
     if (
         avatar_actor_proven and
-        npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"u_see_npc_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "services.characters.avatar(), actor))"
+            "actor, " + npc_actor_expression + "))"
         )
     if (
         avatar_actor_proven and
-        npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"npc_see_u_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "actor, services.characters.avatar()))"
+            npc_actor_expression + ", actor))"
         )
     if (
         npc_actor_proven and
@@ -26619,17 +26619,43 @@ def render_eoc_condition_expression(
                     "service_value(services.creatures.snapshot(" +
                     npc_query_actor + ")).position)"
                 )
-            if condition in {"player_see_npc", "u_see_npc"}:
+            if condition == "player_see_npc":
                 return (
                     "service_value(services.creatures.can_see("
                     "services.characters.avatar(), " +
                     npc_query_actor + "))"
                 )
-            if condition == "npc_see_u":
+            if (
+                avatar_actor_proven and npc_actor_expression is not None and
+                condition == "u_see_npc"
+            ):
                 return (
                     "service_value(services.creatures.can_see(" +
-                    npc_query_actor +
-                    ", services.characters.avatar()))"
+                    "actor, " + npc_actor_expression + "))"
+                )
+            if (
+                avatar_actor_proven and npc_actor_expression is not None and
+                condition == "npc_see_u"
+            ):
+                return (
+                    "service_value(services.creatures.can_see(" +
+                    npc_actor_expression + ", actor))"
+                )
+            if (
+                avatar_actor_proven and npc_actor_expression is not None and
+                condition == "u_see_npc_loc"
+            ):
+                return (
+                    "service_value(services.creatures.has_line_of_sight("
+                    "actor, " + npc_actor_expression + "))"
+                )
+            if (
+                avatar_actor_proven and npc_actor_expression is not None and
+                condition == "npc_see_u_loc"
+            ):
+                return (
+                    "service_value(services.creatures.has_line_of_sight("
+                    npc_actor_expression + ", actor))"
                 )
         if weapon_actor_proven and condition == "has_ammo":
             return (
@@ -26679,22 +26705,6 @@ def render_eoc_condition_expression(
         if npc_actor_proven and condition == "player_see_npc":
             return ("service_value(services.creatures.can_see("
                     "services.creatures.avatar(), actor))")
-        if npc_actor_proven and condition == "npc_see_u":
-            return ("service_value(services.creatures.can_see("
-                    "actor, services.characters.avatar()))")
-        if npc_actor_proven and condition == "u_see_npc":
-            return ("service_value(services.creatures.can_see("
-                    "services.characters.avatar(), actor))")
-        if npc_actor_proven and condition == "u_see_npc_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                "services.characters.avatar(), actor))"
-            )
-        if npc_actor_proven and condition == "npc_see_u_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                "actor, services.characters.avatar()))"
-            )
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_warm"
@@ -27003,7 +27013,8 @@ def render_eoc_condition_expression(
     if rendered_line_of_sight is not None:
         return rendered_line_of_sight
     rendered_perception = render_static_perception_condition(
-        condition, avatar_actor_proven, npc_actor_proven
+        condition, avatar_actor_proven, npc_actor_proven,
+        npc_actor_expression,
     )
     if rendered_perception is not None:
         return rendered_perception

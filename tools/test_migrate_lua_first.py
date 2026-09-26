@@ -37,6 +37,28 @@ class LuaFirstMigrationTest(unittest.TestCase):
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"npc_role_nearby": "scout"}, generic_character_actor_proven=True))
 
+    def test_opposite_actor_visibility_requires_exact_alpha_and_beta(self) -> None:
+        cases = {
+            "npc_see_u": "service_value(services.creatures.can_see(partner, actor))",
+            "u_see_npc": "service_value(services.creatures.can_see(actor, partner))",
+            "npc_see_u_loc": (
+                "service_value(services.creatures.has_line_of_sight(partner, actor))"
+            ),
+            "u_see_npc_loc": (
+                "service_value(services.creatures.has_line_of_sight(actor, partner))"
+            ),
+        }
+        for condition, expected in cases.items():
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, avatar_actor_proven=True,
+                        npc_actor_proven=True, npc_actor_expression="partner"),
+                    expected,
+                )
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    condition, npc_actor_proven=True))
+
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
             for operator in ("and", "or", "not"):
@@ -11521,21 +11543,16 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn(
                 'services.creatures.visible_monsters(actor, "NE").present', main
             )
+            self.assertNotIn("services.creatures.has_line_of_sight(", main)
             self.assertIn(
-                "services.creatures.has_line_of_sight(services.characters.avatar(), actor)",
-                main,
+                "EOC npc_perception condition TODO: translate the legacy condition into a Lua predicate",
+                report,
             )
-            self.assertIn(
-                "services.creatures.has_line_of_sight(actor, services.characters.avatar())",
-                main,
-            )
-            self.assertIn("and (false)", main)
-            self.assertNotIn("needs domain-service conversion", report)
 
     def test_translates_literal_avatar_query_condition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15183,7 +15200,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn('ccb.presentation.notice_top("on top")', main)
 
-    def test_opposite_actor_visibility_conditions_require_npc_event_proof(self) -> None:
+    def test_opposite_actor_visibility_requires_exact_alpha_and_beta_proof(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -15213,10 +15230,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn("services.creatures.can_see(actor", main)
-            self.assertIn("services.characters.avatar(), actor", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.creatures.can_see(", main)
+            self.assertIn(
+                "EOC visibility_npc condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertIn("EOC visibility_unproven condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_overmap_location_conditions_use_typed_overmap_matching(self) -> None:
