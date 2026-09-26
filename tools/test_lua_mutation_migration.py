@@ -508,7 +508,9 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 self.assertIn(relative, report)
                 self.assertIn(identifier, report)
                 self.assertIn("needs an explicit Platform trigger", report)
-                self.assertIn("resolve an exact Character target", report)
+                self.assertIn("local actor = actor_override", result.files[Path("main.lua")])
+                self.assertIn("services.mutations.invoke_activation(", result.files[Path("main.lua")])
+                self.assertNotIn("resolve an exact Character target", report)
                 self.assertNotIn(
                     "choose mutation conflict replacement", report)
                 for method in ("grant", "remove", "set_active"):
