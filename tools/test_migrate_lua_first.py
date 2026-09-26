@@ -6709,6 +6709,72 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
+    def test_guards_npc_ai_rule_effects_with_the_native_rule_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_rule_effects",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": [
+                            {"clear_npc_rule": "allow_sleep"},
+                            {"set_npc_rule": "allow_bash"},
+                            {"toggle_npc_rule": "allow_pick_up"},
+                            {"set_npc_rule": "UNKNOWN_ALLY_RULE"},
+                            {"set_npc_aim_rule": "AIM_PRECISE"},
+                            {"set_npc_aim_rule": "UNKNOWN_AIM_RULE"},
+                            {"set_npc_engagement_rule": "ENGAGE_ALL"},
+                            {"set_npc_engagement_rule": "UNKNOWN_RULE\r\nservices.npcs.die(actor)"},
+                            {"set_npc_cbm_recharge_rule": "CBM_RECHARGE_ALL"},
+                            {"set_npc_cbm_reserve_rule": "CBM_RESERVE_ALL"},
+                            {"set_npc_engagement_rule": {"npc_val": "rule"}},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_rule_effects_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn(
+                'services.npcs.set_ally_rule(actor, "allow_sleep", false)', main
+            )
+            self.assertIn(
+                'services.npcs.set_ally_rule(actor, "allow_bash", true)', main
+            )
+            self.assertIn(
+                'services.npcs.set_ally_rule(actor, "allow_pick_up", nil)', main
+            )
+            self.assertIn("Unknown native NPC rule preserves the EOC no-op", main)
+            self.assertIn(
+                'services.npcs.set_ai_policy(actor, "aim", "AIM_PRECISE")', main
+            )
+            self.assertEqual(
+                main.count("Unknown native NPC rule preserves the EOC no-op"), 3
+            )
+            self.assertNotIn("services.npcs.die(actor)", main)
+            self.assertEqual(
+                main.count(
+                    'services.npcs.set_ai_policy(actor, "engagement", "ENGAGE_ALL")'
+                ),
+                1,
+            )
+            self.assertIn(
+                'services.npcs.set_ai_policy(actor, "cbm_recharge", "CBM_RECHARGE_ALL")',
+                main,
+            )
+            self.assertIn(
+                'services.npcs.set_ai_policy(actor, "cbm_reserve", "CBM_RESERVE_ALL")',
+                main,
+            )
+            self.assertIn("needs domain-service conversion", report)
+
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -14738,6 +14804,40 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.spawns.monster_configured(", main)
             self.assertIn("services.spawns.npc(", main)
 
+    def test_die_migration_preserves_native_legacy_suppress_message_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "die_message_keys",
+                        "required_event": "game_start",
+                        "effect": [
+                            {"u_die": {"suppress_message": True}},
+                            {
+                                "u_die": {
+                                    "supress_message": True,
+                                    "suppress_message": False,
+                                }
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "die_message_keys_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(main.count("services.characters.die(actor)"), 1)
+            self.assertIn(
+                "services.characters.die(actor, { suppress_message = true })", main
+            )
+
     def test_lowers_variable_backed_combat_attack_and_knockback_options(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -14995,6 +15095,38 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('services.variables.resolve(context.data, actor, "u", "recovery")', main)
             self.assertIn('context.data["radius"]', main)
             self.assertNotIn("combat effect", report)
+
+    def test_preserves_native_explosion_shrapnel_shapes_and_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "explosion_shrapnel_shapes",
+                        "required_event": "game_start",
+                        "effect": [
+                            {"u_explosion": {"shrapnel": 1, "casing_mass": 2}},
+                            {"u_explosion": {"shrapnel": {"casing_mass": 3}}},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "explosion_shrapnel_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn(
+                "shrapnel = { casing_mass = 2 }", main
+            )
+            self.assertIn(
+                "shrapnel = { casing_mass = 3, fragment_mass = 0.08 }", main
+            )
 
     def test_lowers_variable_backed_non_popup_messages(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

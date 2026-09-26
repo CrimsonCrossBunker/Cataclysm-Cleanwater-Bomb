@@ -21933,6 +21933,62 @@ def _combat_number_expression(
     return bounded
 
 
+@functools.lru_cache(maxsize=1)
+def _native_npc_ai_rule_catalog() -> dict[str, frozenset[str]] | None:
+    """Read the authoritative NPC rule names used by native talker setters."""
+    try:
+        source = (REPOSITORY_ROOT / "src" / "npc.h").read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    symbols = {
+        "allies": "ally_rule_strs",
+        "aim": "aim_rule_strs",
+        "engagement": "combat_engagement_strs",
+        "cbm_recharge": "cbm_recharge_strs",
+        "cbm_reserve": "cbm_reserve_strs",
+    }
+    catalog: dict[str, frozenset[str]] = {}
+    for family, symbol in symbols.items():
+        declaration = re.search(
+            rf"const\s+std::unordered_map\s*<\s*std::string\s*,"
+            rf"[^;]*?>\s*{symbol}\s*=\s*\{{\s*\{{(.*?)\n\s*\}}\s*\}};",
+            source,
+            re.DOTALL,
+        )
+        if declaration is None:
+            return None
+        names = frozenset(re.findall(r'\{\s*"([^"]+)"\s*,', declaration.group(1)))
+        if not names:
+            return None
+        catalog[family] = names
+    return catalog
+
+
+def render_static_npc_ai_rule_update(
+    family: str, rule: str, enabled: str | None = None
+) -> list[str] | None:
+    """Render only rule setters proven against the native NPC rule catalog."""
+    catalog = _native_npc_ai_rule_catalog()
+    if catalog is None or family not in catalog:
+        return None
+    if rule not in catalog[family]:
+        return [
+            "    -- Unknown native NPC rule preserves the EOC no-op."
+        ]
+    if family == "allies":
+        if enabled is None:
+            return None
+        return [
+            "    services.npcs.set_ally_rule(actor, "
+            f"{lua_quote(rule)}, {enabled})"
+        ]
+    return [
+        "    services.npcs.set_ai_policy(actor, "
+        f"{lua_quote(family)}, {lua_quote(rule)})"
+    ]
+
+
 def render_static_combat_attack(
     effect: dict[str, Any],
     key: str,
@@ -22144,7 +22200,8 @@ def render_static_combat_explosion(
         return None
     explosion = effect[key]
     allowed_inner = {
-        "power", "distance_factor", "max_noise", "fire", "shrapnel"
+        "power", "distance_factor", "max_noise", "fire", "shrapnel",
+        "casing_mass",
     }
     if set(explosion) - allowed_inner:
         return None
@@ -22180,9 +22237,9 @@ def render_static_combat_explosion(
         options.append(f"target = {target}")
     if "shrapnel" in explosion:
         shrapnel = explosion["shrapnel"]
-        if isinstance(shrapnel, (int, float)) and not isinstance(shrapnel, bool):
+        if isinstance(shrapnel, int) and not isinstance(shrapnel, bool):
             casing_mass = _combat_number_expression(
-                shrapnel, actor, 0, 1000000000, integer=True
+                explosion.get("casing_mass"), actor, 0, 1000000000, integer=True
             )
             if casing_mass is None:
                 return None
@@ -22194,7 +22251,7 @@ def render_static_combat_explosion(
                 shrapnel.get("casing_mass"), actor, 0, 1000000000, integer=True
             )
             fragment_mass = _combat_number_expression(
-                shrapnel.get("fragment_mass", 0.005), actor, 0, 1000
+                shrapnel.get("fragment_mass", 0.08), actor, 0, 1000
             )
             recovery = _combat_number_expression(
                 shrapnel.get("recovery", 0), actor, 0, 100, integer=True
@@ -22396,19 +22453,16 @@ def render_static_combat_die(
         return None
     remove_corpse = _combat_literal_bool(options_value.get("remove_corpse"), False)
     suppress_legacy = _combat_literal_bool(options_value.get("supress_message"), False)
-    suppress_modern = _combat_literal_bool(options_value.get("suppress_message"), False)
-    suppress = suppress_modern if "suppress_message" in options_value else suppress_legacy
     if (
         ("remove_corpse" in options_value and remove_corpse is None) or
-        ("supress_message" in options_value and suppress_legacy is None) or
-        ("suppress_message" in options_value and suppress_modern is None)
+        ("supress_message" in options_value and suppress_legacy is None)
     ):
         return None
     options: list[str] = []
     if "remove_corpse" in options_value:
         options.append(f"remove_corpse = {lua_boolean(remove_corpse)}")
-    if "supress_message" in options_value or "suppress_message" in options_value:
-        options.append(f"suppress_message = {lua_boolean(suppress)}")
+    if "supress_message" in options_value:
+        options.append(f"suppress_message = {lua_boolean(suppress_legacy)}")
     if not options:
         return [f"    services.characters.die({actor})"]
     return [
@@ -30202,11 +30256,23 @@ def render_eoc(
                     "clear_npc_rule": "false",
                     "toggle_npc_rule": "nil",
                 }[key]
-                lines.append(
-                    "    services.npcs.set_ally_rule(actor, "
-                    f"{lua_quote(effect[key])}, {enabled})"
+                rendered = render_static_npc_ai_rule_update(
+                    "allies", effect[key], enabled
                 )
-                converted_effect = True
+                if rendered is None:
+                    lines.append(
+                        "    -- TODO: NPC ally-rule catalog is unavailable for "
+                        "safe migration."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "cannot verify the native NPC ally-rule catalog"
+                    )
+                    all_effects_converted = False
+                else:
+                    lines.extend(rendered)
+                    converted_effect = True
             elif (
                 npc_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
@@ -30223,11 +30289,23 @@ def render_eoc(
                     "set_npc_cbm_recharge_rule": "cbm_recharge",
                     "set_npc_cbm_reserve_rule": "cbm_reserve",
                 }[key]
-                lines.append(
-                    "    services.npcs.set_ai_policy(actor, "
-                    f"{lua_quote(family)}, {lua_quote(effect[key])})"
+                rendered = render_static_npc_ai_rule_update(
+                    family, effect[key]
                 )
-                converted_effect = True
+                if rendered is None:
+                    lines.append(
+                        "    -- TODO: NPC AI-policy catalog is unavailable for "
+                        "safe migration."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"cannot verify the native {family} rule catalog"
+                    )
+                    all_effects_converted = False
+                else:
+                    lines.extend(rendered)
+                    converted_effect = True
             elif (
                 isinstance(effect, dict) and len(effect) == 1 and
                 next(iter(effect)) in {
