@@ -30,6 +30,9 @@ namespace
 const std::string SNAPSHOTS_DIR = "snapshots";
 // Per-snapshot metadata file name.
 const std::string SNAPSHOT_META = "snapshot_meta.json";
+// A stable slot name is needed because the game may restart or change language
+// between the first dimension trip and the player's next quickload.
+const std::string DIMENSION_ROLLBACK_SLOT = "ccb-dimension-rollback";
 // Temp folder used to stage a rollback during restore.
 const std::string RESTORE_BACKUP_DIR = ".snapshot_restore_backup";
 
@@ -241,6 +244,9 @@ std::vector<snapshot_info> list_snapshots( const cata_path &world_dir )
             jo.read( "turn", info.turn, false );
             jo.read( "real_time", info.real_time, false );
         } );
+        if( info.dir_name == DIMENSION_ROLLBACK_SLOT ) {
+            info.name = _( "Before dimension travel (automatic)" );
+        }
         result.push_back( info );
     }
 
@@ -309,6 +315,11 @@ bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name )
 
     // Success: discard the backup.
     std::filesystem::remove_all( backup_fs, ec );
+    // A manually selected snapshot becomes the new baseline; a rollback from
+    // the previous timeline must not override it on a later quickload.
+    if( dir_name != DIMENSION_ROLLBACK_SLOT && dimension_rollback_exists( world_dir ) ) {
+        delete_dimension_rollback( world_dir );
+    }
     return true;
 }
 
@@ -326,6 +337,27 @@ bool delete_snapshot( const cata_path &world_dir, const std::string &dir_name )
         debugmsg( "snapshot: failed to delete '%s': %s", snap_fs.u8string(), ec.message() );
     }
     return ok;
+}
+
+bool dimension_rollback_exists( const cata_path &world_dir )
+{
+    return snapshot_exists( world_dir, DIMENSION_ROLLBACK_SLOT );
+}
+
+bool make_dimension_rollback( const cata_path &world_dir,
+                              const std::string &character_name, int turn )
+{
+    return make_snapshot( world_dir, DIMENSION_ROLLBACK_SLOT, character_name, turn );
+}
+
+bool restore_dimension_rollback( const cata_path &world_dir )
+{
+    return restore_snapshot( world_dir, DIMENSION_ROLLBACK_SLOT );
+}
+
+bool delete_dimension_rollback( const cata_path &world_dir )
+{
+    return delete_snapshot( world_dir, DIMENSION_ROLLBACK_SLOT );
 }
 
 std::string snapshot_info::display_label() const

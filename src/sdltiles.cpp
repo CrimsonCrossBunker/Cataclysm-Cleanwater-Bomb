@@ -6602,7 +6602,7 @@ static void CheckMessages()
                         g && g->uquit == QUIT_NO &&
                         get_option<bool>( "ANDROID_QUICKSAVE" ) &&
                         !std::uncaught_exception() ) {
-                        g->quicksave();
+                        g->quicksave( true );
                     }
                     break;
                     // Window resize (including android screen rotation) is handled by
