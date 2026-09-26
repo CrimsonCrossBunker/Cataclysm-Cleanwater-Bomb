@@ -302,7 +302,12 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     const std::string time_value = std::to_string( to_turn<int>( calendar::turn ) );
     const std::size_t events_before_time = observer.changes.size();
     apply_talk_effect( context,
-                       R"({"u_add_var":"lua_semantic_time_assignment","time":true})",
+                       R"({
+                           "u_add_var":"lua_semantic_time_assignment",
+                           "time":true,
+                           "value":17,
+                           "possible_values":["ignored"]
+                       })",
                        "lua_platform_u_add_var_time_semantics" );
     CHECK( player.get_value( time_key ).str() == time_value );
     CHECK( observer.changes.size() == events_before_time );
