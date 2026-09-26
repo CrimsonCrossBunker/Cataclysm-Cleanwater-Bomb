@@ -218,9 +218,9 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     lua["current"] = numeric_text;
     lua["fallback"] = "";
     const std::string nonstring_condition = R"({"is_weather":{")" +
-            ( indirect ? "var_val" : source_key ) + R"(":")" +
-            ( indirect ? "environment_ref" : "environment_input" ) +
-            R"(","default":""}})";
+                                            ( indirect ? "var_val" : source_key ) + R"(":")" +
+                                            ( indirect ? "environment_ref" : "environment_input" ) +
+                                            R"(","default":""}})";
     const conditional_t nonstring_predicate(
         json_loader::from_string( nonstring_condition ).get_object() );
     const sol::protected_function_result nonstring_actual = environment_query();
@@ -403,6 +403,62 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     sol::protected_function_result erased = remove( key );
     REQUIRE( erased.valid() );
     CHECK( get_globals().maybe_get_global_value( key ) == nullptr );
+}
+
+TEST_CASE( "lua_context_string_lookup_matches_native_unrestricted_keys",
+           "[lua][platform][strings][semantic]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    sol::table data = lua.create_table();
+    lua["data"] = data;
+    sol::protected_function read = lua.load( R"(
+        local value = data[key]
+        if value == nil then return "fallback" end
+        if type(value) == "string" then return value end
+        return ""
+    )" );
+    for( const std::string &key : std::vector<std::string> {
+    "", std::string( "nul\0key", 7 ), "control\nkey", std::string( 129, 'k' ), "中文键"
+    } ) {
+        CAPTURE( key.size() );
+        std::ostringstream input;
+        JsonOut writer( input );
+        writer.start_object();
+        writer.member( "value" );
+        writer.start_object();
+        writer.member( "context_val", key );
+        writer.member( "default", "fallback" );
+        writer.end_object();
+        writer.end_object();
+        const JsonObject object = json_loader::from_string( input.str() ).get_object();
+        const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        dialogue context;
+        lua["key"] = key;
+        const auto compare = [&]( const std::string & expected ) {
+            const sol::protected_function_result actual = read();
+            REQUIRE( actual.valid() );
+            CHECK( actual.get<std::string>() == expected );
+            CHECK( native.evaluate( context ) == expected );
+        };
+        compare( "fallback" );
+        const std::string long_value( 9000, 'v' );
+        context.set_value( key, long_value );
+        data.raw_set( key, long_value );
+        compare( long_value );
+        context.set_value( key, diag_value{} );
+        data.raw_set( key, services["types"]["null"].get<sol::object>() );
+        compare( "" );
+        context.set_value( key, diag_value( 42.0 ) );
+        data.raw_set( key, 42.0 );
+        const std::string diagnostic = capture_debugmsg_during( [&]() {
+            compare( "" );
+        } );
+        CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+        data.raw_set( key, sol::nil );
+    }
 }
 
 #endif
