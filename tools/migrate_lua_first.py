@@ -5626,6 +5626,15 @@ def render_message_effect(
         return None
     if (same_snippet or store_in_lore) and not snippet:
         return None
+    # Native f_message runs parse_tags on the evaluated text.  No typed
+    # Platform parser exists, so dynamic text and literal tag delimiters must
+    # remain manual instead of being displayed verbatim.
+    if (sound and outdoor_only) or snippet:
+        return None
+    raw_literal = effect[key]
+    # A variable or localized translation may resolve to a native tag.
+    if not isinstance(raw_literal, str) or "<" in raw_literal or ">" in raw_literal:
+        return None
     message_type = effect.get("type")
     if message_type is not None and not isinstance(message_type, str):
         return None
@@ -27481,12 +27490,14 @@ def render_eoc_condition_expression(
         check = finite_number_literal(condition["roll_contested"])
         difficulty = finite_number_literal(condition["difficulty"])
         raw_die_size = condition.get("die_size", 10)
-        die_size = (
-            raw_die_size
-            if isinstance(raw_die_size, int) and
-            not isinstance(raw_die_size, bool)
-            else None
-        )
+        die_size = None
+        if isinstance(raw_die_size, int) and not isinstance(raw_die_size, bool):
+            die_size = raw_die_size
+        elif (
+            isinstance(raw_die_size, float) and math.isfinite(raw_die_size) and
+            raw_die_size.is_integer()
+        ):
+            die_size = int(raw_die_size)
         check_expression = (
             lua_number(check) if check is not None else
             render_eoc_numeric_expression(condition["roll_contested"], "0", "actor")
@@ -27495,19 +27506,11 @@ def render_eoc_condition_expression(
             lua_number(difficulty) if difficulty is not None else
             render_eoc_numeric_expression(condition["difficulty"], "0", "actor")
         )
-        die_expression = (
-            str(die_size) if die_size is not None else
-            render_eoc_numeric_expression(raw_die_size, "10", "actor")
-        )
-        if check_expression is None or difficulty_expression is None or die_expression is None:
+        if check_expression is None or difficulty_expression is None or die_size is None:
             return None
-        if die_size is not None and (die_size <= 0 or die_size > 1000000000):
+        if die_size <= 0 or die_size > 1000000000:
             return None
-        if die_size is None:
-            die_expression = (
-                "math.max(1, math.min(1000000000, math.floor((" +
-                die_expression + ") + 0.5)))"
-            )
+        die_expression = str(die_size)
         return (
             "services.random.contested("
             f"{check_expression}, {difficulty_expression}, {die_expression})"
@@ -29329,12 +29332,12 @@ def render_eoc(
                         )
                         all_effects_converted = False
             elif (
-                npc_actor_proven and
+                exact_npc_actor_proven and
                 isinstance(effect, dict) and
                 "npc_message" in effect
             ):
-                # The legacy handler returns early for an NPC target, so the
-                # effect is a deliberate no-op under npc_becomes_hostile.
+                # The native handler returns early for an exact NPC target.
+                # Selector shape alone does not prove that role.
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and
@@ -29552,17 +29555,25 @@ def render_eoc(
                 ) if key in effect)
                 target = (
                     "actor" if key.startswith("npc_") and npc_event_character_actor_proven
-                    else "actor" if key.startswith("u_") and avatar_actor_proven
-                    else "services.characters.avatar()"
-                    if key.startswith("u_") and npc_event_character_actor_proven else None
+                    else "actor" if key.startswith("u_") and (
+                        avatar_actor_proven or exact_npc_actor_proven
+                    ) else None
                 )
-                rendered = render_dynamic_simple_character_effect(
-                    effect, key, target,
-                    avatar_expression=(
-                        "actor" if avatar_actor_proven else
-                        "services.characters.avatar()" if npc_event_character_actor_proven else None
-                    ),
-                    npc_expression="actor" if npc_event_character_actor_proven else None,
+                unresolved_beta_variable = (
+                    key.startswith("u_") and exact_npc_actor_proven and
+                    _node_has_key(effect.get(key), "npc_val")
+                )
+                rendered = None if unresolved_beta_variable else (
+                    render_dynamic_simple_character_effect(
+                        effect, key, target,
+                        avatar_expression=(
+                            "actor" if avatar_actor_proven or exact_npc_actor_proven
+                            else None
+                        ),
+                        npc_expression=(
+                            "actor" if npc_event_character_actor_proven else None
+                        ),
+                    )
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29835,60 +29846,47 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_add_wet"} and
-                isinstance(effect.get("u_add_wet"), int) and
-                not isinstance(effect.get("u_add_wet"), bool) and
-                -1000000 <= effect["u_add_wet"] <= 1000000
-            ):
-                lines.append(
-                    f"    services.characters.add_wet(actor, "
-                    f"{effect['u_add_wet']})"
-                )
-                converted_effect = True
-            elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_add_wet"} and
-                isinstance(effect.get("npc_add_wet"), int) and
-                not isinstance(effect.get("npc_add_wet"), bool) and
-                -1000000 <= effect["npc_add_wet"] <= 1000000
-            ):
-                lines.append(
-                    f"    services.characters.add_wet(actor, "
-                    f"{effect['npc_add_wet']})"
-                )
-                converted_effect = True
-            elif (
                 isinstance(effect, dict) and
                 ("u_add_wet" in effect or "npc_add_wet" in effect)
             ):
                 key = "u_add_wet" if "u_add_wet" in effect else "npc_add_wet"
-                target = (
-                    "actor" if key == "npc_add_wet" and npc_event_character_actor_proven
-                    else "actor" if key == "u_add_wet" and avatar_actor_proven
-                    else "services.characters.avatar()"
-                    if key == "u_add_wet" and npc_event_character_actor_proven else None
+                amount = effect.get(key)
+                exact_integer_amount = (
+                    isinstance(amount, int) and not isinstance(amount, bool) and
+                    -1000000 <= amount <= 1000000
                 )
-                amount = render_eoc_numeric_expression(effect.get(key), "0", target or "actor")
-                raw_amount = effect.get(key)
                 if (
-                    isinstance(raw_amount, (int, float)) and
-                    not isinstance(raw_amount, bool) and
-                    (not math.isfinite(float(raw_amount)) or
-                     int(raw_amount) != raw_amount or
-                     not -1000000 <= int(raw_amount) <= 1000000)
-                ):
-                    amount = None
-                if target is not None and set(effect) == {key} and amount is not None:
-                    lines.append(
-                        f"    services.characters.add_wet({target}, math.floor(({amount}) + 0.5))"
+                    set(effect) == {key} and exact_integer_amount and
+                    key == "u_add_wet" and (
+                        avatar_actor_proven or exact_npc_actor_proven or
+                        training_pair_proven
                     )
+                ):
+                    # Native u_* effects target dialogue alpha. In the exact
+                    # NPC event, alpha is that NPC, not the ambient avatar.
+                    lines.append(
+                        f"    services.characters.add_wet(actor, {amount})"
+                    )
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and exact_integer_amount and
+                    key == "npc_add_wet" and training_pair_proven
+                ):
+                    lines.extend([
+                        "    if context ~= nil and context.actors ~= nil and "
+                        "context.actors.beta ~= nil and "
+                        'context.actors.beta.kind == "creature" and '
+                        '(context.actors.beta.subtype == "avatar" or '
+                        'context.actors.beta.subtype == "character" or '
+                        'context.actors.beta.subtype == "npc") then',
+                        f"        services.characters.add_wet(context.actors.beta, {amount})",
+                        "    end",
+                    ])
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate wetness amount through typed character services."
+                        "    -- TODO: preserve the native wetness target and "
+                        "double-to-int truncation through typed character services."
                     )
                     result.add_todo(
                         "manual_rewrite",

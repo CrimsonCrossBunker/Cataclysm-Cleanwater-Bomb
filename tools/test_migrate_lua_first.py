@@ -4357,6 +4357,7 @@ assert(#events == 11)
                     "die_size": {"context_val": "die_size"},
                 },
                 {"roll_contested": 2, "difficulty": 5, "die_size": 0},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 10 ** 400},
             ]
             source.write_text(
                 json.dumps(
@@ -4380,14 +4381,14 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 4)
             self.assertIn("services.random.one_in", main)
             self.assertIn("services.random.probability", main)
-            self.assertIn("services.random.contested", main)
+            self.assertNotIn("services.random.contested", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                2,
+                4,
             )
 
     def test_translates_bionic_any_and_literal_recipe_knowledge(self) -> None:
@@ -5019,6 +5020,44 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
+    def test_u_martial_art_uses_npc_event_alpha(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_alpha_martial_art",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": [
+                        {"u_learn_martial_art": "style_karate"},
+                        {"u_forget_martial_art": "style_karate"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_alpha_martial_art_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+        self.assertEqual(result.converted, ["npc_alpha_martial_art"])
+        self.assertEqual(result.partial, [])
+        self.assertIn(
+            'services.martial_arts.learn(actor, services.types.id("martial_art", "style_karate"))',
+            main,
+        )
+        self.assertIn(
+            'services.martial_arts.forget(actor, services.types.id("martial_art", "style_karate"))',
+            main,
+        )
+        self.assertNotIn(
+            "services.martial_arts.learn(services.characters.avatar()", main
+        )
+        self.assertNotIn(
+            "services.martial_arts.forget(services.characters.avatar()", main
+        )
+
     def test_translates_bounded_avatar_morale_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -5108,13 +5147,14 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("context.actors.npc", main)
             self.assertIn("character_travel_has_path(actor)", main)
             self.assertIn("character_at_safe_space(actor)", main)
             self.assertIn("services.creatures.can_see", main)
-            self.assertIn("services.characters.add_wet(actor, 30)", main)
+            self.assertNotIn("services.characters.add_wet(actor, 30)", main)
+            self.assertIn("wetness target and double-to-int truncation", main)
             self.assertIn("services.activities.cancel(actor)", main)
             self.assertNotIn("needs a native Lua predicate", report)
             self.assertNotIn("run_eoc", main)
@@ -5158,10 +5198,66 @@ assert(#events == 11)
             self.assertIn("services.characters.add_wet(actor, 42)", main)
             self.assertEqual(main.count("services.characters.add_wet(actor, 42)"), 1)
             self.assertIn(
+                "EOC add_wet_npc effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
                 "EOC add_wet_huge effect #0 needs domain-service conversion",
                 report,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_wetness_keeps_alpha_beta_roles_and_integer_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_u_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": 12},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_fractional_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": 2.5},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_dynamic_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": {"context_val": "amount"}},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_beta_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_add_wet": 12},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "wet_role_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn("services.characters.add_wet(actor, 12)", main)
+        self.assertNotIn("services.characters.add_wet(services.characters.avatar()", main)
+        for eoc_id in (
+            "npc_event_fractional_wet",
+            "npc_event_dynamic_wet",
+            "npc_event_beta_wet",
+        ):
+            self.assertIn(
+                f"EOC {eoc_id} effect #0 needs domain-service conversion",
+                report,
+            )
+        self.assertNotIn("math.floor((", main)
 
     def test_static_timed_morale_emits_native_duration_service_call(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11234,37 +11330,37 @@ assert(#events == 11)
                                 "foreach": "array",
                                 "var": {"context_val": "id"},
                                 "target": ["a", "b"],
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "bodypart",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "trait",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "vitamin",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "item_group",
                                 "var": {"context_val": "id"},
                                 "target": "forest",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "monstergroup",
                                 "var": {"context_val": "id"},
                                 "target": "GROUP_ANIMALPOUND_DOGS",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                         ],
                     }
@@ -15492,7 +15588,83 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('context.data["radius"]', main)
             self.assertNotIn("combat effect", report)
 
-    def test_lowers_variable_backed_non_popup_messages(self) -> None:
+    def test_message_tags_and_outdoor_sound_stay_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "tagged_message",
+                        "required_event": "game_start",
+                        "effect": {"message": "Hello <u_name>"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "outdoor_sound_message",
+                        "required_event": "game_start",
+                        "effect": {
+                            "message": "footsteps",
+                            "sound": True,
+                            "outdoor_only": True,
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "message_parity_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(result.converted, [])
+        self.assertEqual(len(result.partial), 2)
+        self.assertIn("EOC tagged_message effect #0 needs domain-service conversion", report)
+        self.assertIn("EOC outdoor_sound_message effect #0 needs domain-service conversion", report)
+        self.assertNotIn('services.message("Hello <u_name>")', main)
+        self.assertNotIn("services.messages.add_from_outdoors", main)
+        self.assertNotIn("services.messages.add_if_audible", main)
+
+    def test_npc_message_noop_requires_exact_npc_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "exact_npc_message",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_message": "ignored by native"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unbound_npc_message",
+                        "effect": {"npc_message": "role unknown"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_message_provenance_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertFalse(any(
+            "EOC exact_npc_message effect #0" in entry
+            for entry in result.todos
+        ))
+        self.assertTrue(any(
+            "EOC unbound_npc_message effect #0" in entry
+            for entry in result.todos
+        ))
+        self.assertIn("needs domain-service conversion", report)
+        self.assertNotIn('services.message("role unknown")', main)
+
+    def test_variable_backed_messages_stay_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -15515,12 +15687,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('services.message(tostring((context.data["message_text"])', main)
-            self.assertIn('services.variables.get_global("avatar_message")', main)
-            self.assertNotIn("message presentation options", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(result.partial, ["dynamic_messages"])
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.message(", main)
+            self.assertNotIn('services.variables.get_global("avatar_message")', main)
+            self.assertIn("needs domain-service conversion", report)
 
     def test_u_message_without_event_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -19252,7 +19424,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps([
                 {"type": "effect_on_condition", "id": "target", "required_event": "game_start",
-                 "effect": {"message": {"context_val": "text"}}},
+                 "effect": {"message": "target"}},
                 {"type": "effect_on_condition", "id": "owner", "required_event": "game_start",
                  "effect": {"run_eocs": "target", "time_in_future": 2}},
             ]), encoding="utf-8")
@@ -19279,11 +19451,13 @@ local data={text="before", data="user field", __ccb_task=true}
 handlers["migrated.owner"]({data=data})
 assert(scheduled and scheduled.payload.data=="user field")
 assert(scheduled.payload.__ccb_task==true)
+assert(scheduled.payload.text=="before")
 data.text="after"
+assert(scheduled.payload.text=="before")
 handlers[scheduled.handler]({payload=scheduled.payload, participants={}})
-assert(#messages==1 and messages[1]=="before")
+assert(#messages==1 and messages[1]=="target")
 handlers["migrated.target"]({data=data})
-assert(#messages==2 and messages[2]=="after")
+assert(#messages==2 and messages[2]=="target")
 """
         completed = subprocess.run(["lua", "-"], input=script, text=True,
                                    capture_output=True, timeout=10)
@@ -20444,8 +20618,12 @@ end
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(result.converted, ["translation_owner"])
+            self.assertEqual(result.partial, ["translation_target"])
+            self.assertTrue(any(
+                "EOC translation_target effect #0" in entry
+                for entry in result.todos
+            ))
             self.assertIn('child_data["message"] = "translated"', main)
 
     def test_run_eocs_variables_accept_coordinate_and_math_scalars(self) -> None:
@@ -20538,7 +20716,7 @@ end
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps([{
                 "type": "effect_on_condition", "id": "repeat", "global": True,
-                "recurrence": 2, "effect": {"message": {"context_val": "text"}},
+                "recurrence": 2, "effect": {"message": "tick"},
             }]), encoding="utf-8")
             result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "recurrence")
         main = result.files[Path("main.lua")]
