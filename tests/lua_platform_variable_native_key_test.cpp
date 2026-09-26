@@ -175,7 +175,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
     const sol::protected_function copy = fixture.variables["copy"];
     const sol::protected_function resolve = fixture.variables["resolve"];
     const sol::protected_function set_resolved = fixture.variables["set_resolved"];
-    const sol::table context = fixture.lua.create_table();
+    sol::table context = fixture.lua.create_table();
 
     const std::vector<std::string> keys = native_boundary_keys();
     REQUIRE( keys[1].size() == 129 );
@@ -237,7 +237,7 @@ TEST_CASE( "lua_platform_native_variable_long_keys_survive_var_indirection",
     const game_handle player_handle = cata::lua_platform::game_handle::from_creature(
                                           player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
     const std::string long_key( 129, 'v' );
-    const sol::table context = fixture.lua.create_table();
+    sol::table context = fixture.lua.create_table();
     context["actor_reference"] = std::string( "u_" ) + long_key;
     context["global_reference"] = long_key;
     player.set_value( long_key, "actor-before" );
@@ -267,7 +267,7 @@ TEST_CASE( "lua_platform_callback_context_variable_keys_remain_bounded",
            "[lua][platform][semantic][variables]" )
 {
     variable_api_fixture fixture;
-    const sol::table context = fixture.lua.create_table();
+    sol::table context = fixture.lua.create_table();
     const sol::protected_function resolve = fixture.variables["resolve"];
     const sol::protected_function set_resolved = fixture.variables["set_resolved"];
 
@@ -307,9 +307,7 @@ TEST_CASE( "lua_platform_native_non_nul_variable_keys_round_trip_in_save_json",
     std::ostringstream creature_json;
     {
         JsonOut json( creature_json );
-        json.start_object();
-        creature.Creature::store( json );
-        json.end_object();
+        creature.serialize( json );
     }
     const JsonObject creature_record = json_loader::from_string( creature_json.str() ).get_object();
     global_variables::impl_t restored_creature_values;

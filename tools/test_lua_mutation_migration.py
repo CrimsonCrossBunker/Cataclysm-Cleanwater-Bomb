@@ -219,7 +219,9 @@ end
         shutil.which("lua"),
         "Lua interpreter required for generated mutation execution",
     )
-    def test_character_mutation_callback_uses_proven_alpha_and_empty_topic_item(self):
+    def test_mutation_callback_uses_proven_alpha_and_empty_topic_item(
+        self,
+    ):
         eoc_id = "non_avatar_alpha_mutation"
         source = migration.SourceObject(
             Path("mutation_fixture.json"),
@@ -269,7 +271,8 @@ end
 local migrated_eoc_functions = {}
 BODY
 migrated_eoc_functions.non_avatar_alpha_mutation(
-  {data={trait_id='QUICK', topic_item='LIVE_ITEM'}, item='LIVE_ITEM'}, selected)
+  {data={trait_id='QUICK', topic_item='LIVE_ITEM'},
+   item='LIVE_ITEM'}, selected)
 assert(calls == 1)
 """.replace("BODY", rendered)
         completed = subprocess.run(
@@ -289,7 +292,10 @@ assert(calls == 1)
         rendered_functions = []
         for eoc_id, mutation_id, variant in (
             ("topic_item_mutation_id", {"mutator": "topic_item"}, "red"),
-            ("topic_item_mutation_variant", "QUICK", {"mutator": "topic_item"}),
+            (
+                "topic_item_mutation_variant", "QUICK",
+                {"mutator": "topic_item"},
+            ),
         ):
             source = migration.SourceObject(
                 Path("mutation_fixture.json"),
@@ -310,10 +316,13 @@ assert(calls == 1)
                 eoc_referenced_ids=frozenset({eoc_id}),
             )
             self.assertNotIn(
-                "TODO", rendered.replace("review every TODO before enabling", "")
+                "TODO",
+                rendered.replace("review every TODO before enabling", ""),
             )
             rendered_functions.append(rendered)
-        self.assertIn('services.types.id("mutation", "")', rendered_functions[0])
+        self.assertIn(
+            'services.types.id("mutation", "")', rendered_functions[0]
+        )
 
         script = r"""
 local selected = {is_avatar=false}
@@ -359,9 +368,14 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
         shutil.which("lua"),
         "Lua interpreter required for generated mutation execution",
     )
-    def test_mutation_alpha_proof_uses_character_fields_and_keeps_npc_as_beta(self):
+    def test_mutation_alpha_proof_uses_character_fields_and_keeps_npc_as_beta(
+        self,
+    ):
         sources = (
-            ("character_event_mutation", "character_takes_damage", "u_add_trait"),
+            (
+                "character_event_mutation", "character_takes_damage",
+                "u_add_trait",
+            ),
             ("item_event_mutation", "character_wields_item", "u_add_trait"),
             ("npc_event_mutation", "npc_becomes_hostile", "npc_add_trait"),
         )
@@ -377,9 +391,12 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
                     "effect": {selector: "QUICK"},
                 },
             )
-            rendered = migration.render_eoc(source, migration.MigrationResult())
+            rendered = migration.render_eoc(
+                source, migration.MigrationResult()
+            )
             self.assertNotIn(
-                "TODO", rendered.replace("review every TODO before enabling", "")
+                "TODO",
+                rendered.replace("review every TODO before enabling", ""),
             )
             rendered_functions.append(rendered)
 
@@ -508,8 +525,14 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 self.assertIn(relative, report)
                 self.assertIn(identifier, report)
                 self.assertIn("needs an explicit Platform trigger", report)
-                self.assertIn("local actor = actor_override", result.files[Path("main.lua")])
-                self.assertIn("services.mutations.invoke_activation(", result.files[Path("main.lua")])
+                self.assertIn(
+                    "local actor = actor_override",
+                    result.files[Path("main.lua")],
+                )
+                self.assertIn(
+                    "services.mutations.invoke_activation(",
+                    result.files[Path("main.lua")],
+                )
                 self.assertNotIn("resolve an exact Character target", report)
                 self.assertNotIn(
                     "choose mutation conflict replacement", report)

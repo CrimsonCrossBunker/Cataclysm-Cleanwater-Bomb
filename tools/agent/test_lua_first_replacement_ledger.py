@@ -21,13 +21,20 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
     def test_engine_backed_control_flow_is_not_exempt_from_acceptance(self):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}
-        for selector in ("foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"):
+        for selector in (
+            "foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"
+        ):
             with self.subTest(selector=selector):
                 entry = entries[("eoc-effects", selector)]
-                self.assertEqual(entry["status"], "primitive_available_unverified")
+                self.assertEqual(
+                    entry["status"], "primitive_available_unverified"
+                )
                 self.assertEqual(entry["verification"], "source_only")
                 self.assertEqual(entry["target_kind"], "shared_service")
-                self.assertIn("data/reference/json/ccb_eoc_effects.json", entry["evidence"])
+                self.assertIn(
+                    "data/reference/json/ccb_eoc_effects.json",
+                    entry["evidence"],
+                )
                 self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
         for selector in ("and", "or", "not"):
             self.assertEqual(entries[("eoc-conditions", selector)]["status"],
@@ -43,9 +50,13 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         ):
             with self.subTest(selector=selector):
                 entry = entries[(inventory, selector)]
-                self.assertEqual(entry["status"], "bounded_implemented_unverified")
+                self.assertEqual(
+                    entry["status"], "bounded_implemented_unverified"
+                )
                 self.assertEqual(entry["verification"], "source_only")
-                self.assertEqual(entry["target"], "native-lua-predicate-context")
+                self.assertEqual(
+                    entry["target"], "native-lua-predicate-context"
+                )
                 self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
 
     def test_mutation_actions_remain_source_only_bounded(self):

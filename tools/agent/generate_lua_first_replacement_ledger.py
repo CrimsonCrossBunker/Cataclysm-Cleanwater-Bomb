@@ -4146,8 +4146,8 @@ for _inventory, _selector in (
     ]
 
 EXPLICIT_PRIMITIVE_EOC = {
-    # These also require engine behavior: persisted scheduling and actor context,
-    # player presentation, or weighted random selection.  Lua control flow alone
+    # These also require engine behavior: persisted scheduling and actor
+    # context, player presentation, or weighted random selection.
     # is not evidence that their complete native semantics have been accepted.
     ("eoc-effects", "foreach"): "services.registry-and-variables",
     ("eoc-effects", "run_eocs"): "ccb.tasks-and-actor-context",
@@ -4187,7 +4187,9 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
         ]
-        for selector in ("foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs")
+        for selector in (
+            "foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"
+        )
     },
     ("eoc-effects", "u_add_trait"): [
         "src/lua_platform_mutations.cpp",

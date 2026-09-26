@@ -1,4 +1,7 @@
-"""Execute generated named predicates; native integration is a separate gate."""
+"""Execute generated named predicates.
+
+Native integration is a separate gate.
+"""
 
 import shutil
 import subprocess
@@ -11,7 +14,10 @@ import migrate_lua_first as migration
 class NamedPredicateMigrationTest(unittest.TestCase):
     def test_stored_predicate_uses_evaluating_dialogue_beta(self):
         lines = migration.render_static_set_condition(
-            {"set_condition": "beta_test", "condition": {"npc_has_trait": "QUICK"}},
+            {
+                "set_condition": "beta_test",
+                "condition": {"npc_has_trait": "QUICK"},
+            },
             True, False, True, False, None, "actor", "actor",
         )
         self.assertIsNotNone(lines)
@@ -23,17 +29,25 @@ class NamedPredicateMigrationTest(unittest.TestCase):
         script = "\n".join([
             "local actor, new_partner = {}, {}",
             "local context = { actors = { alpha = actor, beta = actor } }",
-            "local function service_value(result) assert(result.ok); return result.value end",
-            "local services = { types = { id = function(kind, id) return id end },",
+            "local function service_value(result)",
+            "  assert(result.ok); return result.value",
+            "end",
+            "local services = {",
+            "types = { id = function(kind, id) return id end },",
             "mutations = { has = function(owner, id)",
-            "assert(id == 'QUICK'); return {ok=true, value=owner == new_partner} end } }",
+            "assert(id == 'QUICK')",
+            "return {ok=true, value=owner == new_partner}",
+            "end } }",
             "\n".join(lines),
             "assert(not (" + query + "))",
             "local parent = context",
-            "local child = {actors={alpha=actor, beta=new_partner}, conditions={}}",
-            "for name, predicate in pairs(context.conditions) do child.conditions[name]=predicate end",
+            "local child = {",
+            "actors={alpha=actor, beta=new_partner}, conditions={}}",
+            "for name, predicate in pairs(context.conditions) do",
+            "child.conditions[name]=predicate end",
             "context = child",
-            "assert(" + query + ", 'stored predicate reused the defining participant mapping')",
+            "assert(" + query + ",",
+            "'stored predicate reused the defining participant mapping')",
             "context = parent",
             "assert(not (" + query + "))",
         ])
