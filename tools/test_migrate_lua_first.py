@@ -15,6 +15,15 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_u_are_owed_keeps_beta_actor_semantics(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_are_owed", avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_are_owed": 10}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner"))
+
     def test_npc_role_nearby_rejects_non_native_range_override(self) -> None:
         expected = (
             "service_value(services.npcs.has_role_nearby(actor, \"scout\", 48))"

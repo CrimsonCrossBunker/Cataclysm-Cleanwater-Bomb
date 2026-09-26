@@ -26895,7 +26895,7 @@ def render_eoc_condition_expression(
         if npc_actor_proven and condition == "npc_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
         if avatar_actor_proven and condition in (
-            "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
+            "u_has_stolen_item", "u_can_stow_weapon",
             "u_train_spells", "u_train_styles",
         ):
             return "false"
