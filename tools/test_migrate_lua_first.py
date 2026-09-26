@@ -3802,6 +3802,106 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             for name in invalid_names:
                 self.assertNotIn(migrate_lua_first.lua_quote(name), main)
 
+    def test_trigger_event_lowers_only_registered_types_and_proven_variables(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trigger_event_static_value",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "u_var_changed",
+                                "args": ["numeric", 42.5],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trigger_event_global_value",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "u_var_changed",
+                                "args": ["global", {"global_val": "payload"}],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trigger_event_alpha_value",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "u_var_changed",
+                                "args": ["alpha", {"u_val": "payload"}],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trigger_event_unproven_beta",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {
+                                "trigger_event": "u_var_changed",
+                                "args": ["beta", {"npc_val": "payload"}],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trigger_event_unknown_type",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "custom_event",
+                                "args": ["unknown", 1],
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "trigger_event_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 2)
+            self.assertIn(
+                'services.native_events.emit("u_var_changed", { "numeric", 42.5 })',
+                main,
+            )
+            self.assertIn(
+                'services.variables.resolve(context.data, nil, "global", "payload")',
+                main,
+            )
+            self.assertIn(
+                'services.variables.resolve(context.data, actor, "u", "payload")',
+                main,
+            )
+            self.assertIn("source-proven alpha/beta variable owner", report)
+            self.assertIn("not present in the native event registry", report)
+            self.assertNotIn("runtime.trigger", main)
+
+    def test_portal_storm_trigger_event_keeps_its_proven_alpha_callback(self) -> None:
+        source = (
+            REPOSITORY_ROOT / "data" / "json" / "effects_on_condition" /
+            "nether_eocs" / "portal_storm_effect_on_condition.json"
+        )
+        result = migrate_lua_first.migrate(
+            migrate_lua_first.load_objects([source]), "portal_storm_mod"
+        )
+        main = result.files[Path("main.lua")]
+
+        self.assertIn(
+            'services.native_events.emit("u_var_changed", { "portal_storm_counter",',
+            main,
+        )
+        self.assertIn(
+            'services.variables.resolve(context.data, actor, "u", '
+            '"counter_portal_storm_counter")',
+            main,
+        )
+        self.assertNotIn("runtime.trigger", main)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_character_variable_add_preserves_changed_events(self) -> None:
         cases = (

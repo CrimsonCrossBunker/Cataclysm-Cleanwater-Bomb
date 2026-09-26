@@ -78,9 +78,36 @@ TEST_CASE( "lua_platform_native_event_preserves_long_string_payloads",
         REQUIRE( result.valid() );
     }
 
-    REQUIRE( observer.changes.size() == 1 );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    R"(
+                        assert(ccb.services.native_events.emit(
+                            "u_var_changed", { "number", 42.5 }))
+                        assert(ccb.services.native_events.emit(
+                            "u_var_changed", { "array", { "entry", 2 } }))
+                        assert(ccb.services.native_events.emit(
+                            "u_var_changed", { "boolean", true }))
+                        assert(not ccb.services.native_events.emit(
+                            "u_var_changed", { "wrong-arity" }))
+                    )",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+
+    REQUIRE( observer.changes.size() == 4 );
     CHECK( observer.changes.front().first == expected_key );
     CHECK( observer.changes.front().second == expected_value );
+    CHECK( observer.changes[1] == std::make_pair( std::string( "number" ),
+            std::string( "42.5" ) ) );
+    CHECK( observer.changes[2] == std::make_pair( std::string( "array" ),
+            std::string( "[entry,2,]" ) ) );
+    CHECK( observer.changes[3] == std::make_pair( std::string( "boolean" ),
+            std::string( "1" ) ) );
 }
 
 #endif
