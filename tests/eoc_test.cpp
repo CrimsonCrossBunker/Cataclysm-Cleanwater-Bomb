@@ -53,6 +53,8 @@
 #include "talker.h"
 #include "timed_event.h"
 #include "type_id.h"
+#include "weather.h"
+#include "weather_type.h"
 
 #if defined(LOCALIZE)
     #include "translation_manager.h"
@@ -281,6 +283,42 @@ TEST_CASE( "EOC_beta_elevate", "[eoc]" )
     effect_on_condition_EOC_try_kill->activate( newDialog );
 
     CHECK( n.hp_percentage() == 0 );
+}
+
+TEST_CASE( "EOC_activation_topic_item_uses_copied_dialogue_value", "[eoc][condition]" )
+{
+    clear_avatar();
+    const std::string topic_item = "topic_item_copy_semantics_test";
+    dialogue d( get_talker_for( get_avatar() ), nullptr );
+    d.cur_item = itype_id( topic_item );
+
+    const weather_type_id old_weather = get_weather().weather_id;
+    on_out_of_scope restore_weather( [old_weather]() {
+        get_weather().weather_id = old_weather;
+    } );
+    get_weather().weather_id = weather_type_id( topic_item );
+
+    const conditional_t legacy_condition( json_loader::from_string(
+            R"({"is_weather":{"mutator":"topic_item"}})" ).get_object() );
+    effect_on_condition eoc;
+    eoc.has_condition = true;
+    std::string evaluated_topic_item;
+    int condition_evaluations = 0;
+    eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations](
+                        const const_dialogue &condition_dialogue ) {
+        ++condition_evaluations;
+        evaluated_topic_item = condition_dialogue.cur_item.str();
+        return legacy_condition( condition_dialogue );
+    };
+
+    CHECK( eoc.test_condition( d ) );
+    CHECK( evaluated_topic_item == topic_item );
+    condition_evaluations = 0;
+    evaluated_topic_item.clear();
+
+    CHECK_FALSE( eoc.activate( d, false ) );
+    REQUIRE( condition_evaluations == 1 );
+    CHECK( evaluated_topic_item.empty() );
 }
 
 TEST_CASE( "EOC_run_unique_npc_skips_removed_target", "[eoc][npc]" )
