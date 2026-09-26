@@ -24903,10 +24903,14 @@ def render_static_character_variable(
     time_value = effect.get("time", False)
     if not isinstance(time_value, bool):
         return None
-    options = [name for name in ("value", "possible_values") if name in effect]
+    # The native handler still loads possible_values when time will ignore them.
+    values = effect.get("possible_values", [])
+    if (
+        not isinstance(values, list) or
+        not all(isinstance(value, str) for value in values)
+    ):
+        return None
     if time_value:
-        if options:
-            return None
         value_expression = "tostring(services.turn())"
         lines = [
             "    services.variables.set(",
@@ -24920,8 +24924,34 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
-    if len(options) != 1:
-        return None
+    # Only selected strings reach the bounded event and random services.
+    if values:
+        if (
+            len(values) > NATIVE_INT_MAX + 1 or
+            not all(
+                bounded_utf8_string(value, 1024, allow_empty=True)
+                for value in values
+            )
+        ):
+            return None
+        rendered_values = ", ".join(lua_quote(value) for value in values)
+        lines = [
+            f"    local values = {{ {rendered_values} }}",
+            "    local selected_value = values[services.random.int(0, #values - 1) + 1]",
+            "    local write_result = services.variables.set(",
+            f"        {target_expression}, {lua_quote(effect[key])}, selected_value)",
+            "    if write_result.ok then",
+            "        services.native_events.emit(",
+            f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, selected_value }})",
+            "    end",
+        ]
+        if target_expression == "context.actors.item":
+            return [
+                "    if context.actors.item ~= nil then",
+                *[line.replace("    ", "        ", 1) for line in lines],
+                "    end",
+            ]
+        return lines
     if "value" in effect:
         value = effect["value"]
         if not bounded_utf8_string(value, 1024, allow_empty=True):
@@ -24944,32 +24974,7 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
-    values = effect["possible_values"]
-    if (
-        not isinstance(values, list) or not values or len(values) > 64 or
-        not all(
-            bounded_utf8_string(value, 1024, allow_empty=True) for value in values
-        )
-    ):
-        return None
-    rendered_values = ", ".join(lua_quote(value) for value in values)
-    lines = [
-        f"    local values = {{ {rendered_values} }}",
-        "    local selected_value = values[services.random.int(1, #values)]",
-        "    local write_result = services.variables.set(",
-        f"        {target_expression}, {lua_quote(effect[key])}, selected_value)",
-        "    if write_result.ok then",
-        "        services.native_events.emit(",
-        f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, selected_value }})",
-        "    end",
-    ]
-    if target_expression == "context.actors.item":
-        return [
-            "    if context.actors.item ~= nil then",
-            *[line.replace("    ", "        ", 1) for line in lines],
-            "    end",
-        ]
-    return lines
+    return None
 
 
 def render_static_character_wound(
