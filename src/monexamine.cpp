@@ -471,8 +471,8 @@ void untie_pet( monster &z )
         return;
     }
     z.remove_effect( effect_tied );
-    if( !z.has_effect( effect_leashed ) ) {
-        // migration code dealing with animals tied before leashing was introduced
+    if( !z.has_effect( effect_leashed ) && z.tied_item ) {
+        // Restore a leash only when there is an actual rope to represent it.
         z.add_effect( effect_leashed, 1_turns, true );
     }
     add_msg( _( "You untie your %s." ), z.get_name() );
@@ -526,9 +526,6 @@ void milk_source( monster &source_mon )
         coords = source_mon.pos_abs();
         // pin the cow in place if it isn't already
         bool temp_tie = !source_mon.has_effect( effect_tied );
-        if( temp_tie ) {
-            source_mon.add_effect( effect_tied, 1_turns, true );
-        }
 
         item milk( milked_item, calendar::turn, milkable_ammo->second );
         liquid_dest_opt liquid_target = liquid_handler::select_liquid_target( milk, 1 );
@@ -569,6 +566,9 @@ void milk_source( monster &source_mon )
                 break;
         }
 
+        if( temp_tie ) {
+            source_mon.add_effect( effect_tied, 1_turns, true );
+        }
         player_character.assign_activity( milk_activity_actor( moves, moves_per_unit, coords, liquid_target,
                                           temp_tie ) );
 
