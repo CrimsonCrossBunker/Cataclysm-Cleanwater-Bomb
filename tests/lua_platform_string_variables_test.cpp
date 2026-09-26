@@ -168,7 +168,7 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
         assert(result.ok)
         local value = result.value
         if value.exists == false then return current == fallback end
-        return current == tostring(value.value or "")
+        return current == (type(value.value) == "string" and value.value or "")
     )" );
     for( const std::string selector : {
              "is_season", "is_weather"
@@ -205,6 +205,25 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             CHECK( actual.get<bool>() == predicate( context ) );
         }
     }
+    // Native str_or_var calls diag_value::str(): a number yields an empty
+    // string (with a native debug diagnostic), never its formatted digits.
+    environment_source.set_value( "environment_input", diag_value( 1.0 ) );
+    sol::protected_function numeric_string = lua.load( "return tostring(1.0)" );
+    const sol::protected_function_result numeric_result = numeric_string();
+    REQUIRE( numeric_result.valid() );
+    const std::string numeric_text = numeric_result.get<std::string>();
+    get_weather().weather_id = weather_type_id( numeric_text );
+    lua["current"] = numeric_text;
+    lua["fallback"] = "";
+    const std::string nonstring_condition = R"({"is_weather":{")" +
+            ( indirect ? "var_val" : source_key ) + R"(":")" +
+            ( indirect ? "environment_ref" : "environment_input" ) +
+            R"(","default":""}})";
+    const conditional_t nonstring_predicate(
+        json_loader::from_string( nonstring_condition ).get_object() );
+    const sol::protected_function_result nonstring_actual = environment_query();
+    REQUIRE( nonstring_actual.valid() );
+    CHECK( nonstring_actual.get<bool>() == nonstring_predicate( context ) );
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
             data, target_npc ? partner_handle : player_handle,
