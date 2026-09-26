@@ -73,6 +73,8 @@ static const furn_str_id furn_test_f_oxytorch2( "test_f_oxytorch2" );
 static const furn_str_id furn_test_f_oxytorch3( "test_f_oxytorch3" );
 static const furn_str_id furn_test_f_prying1( "test_f_prying1" );
 
+static const ter_str_id ter_t_trunk( "t_trunk" );
+
 static const item_group_id Item_spawn_data_test_edevices_compat( "test_edevices_compat" );
 static const item_group_id Item_spawn_data_test_edevices_incompat( "test_edevices_incompat" );
 static const item_group_id Item_spawn_data_test_edevices_power( "test_edevices_power" );
@@ -608,6 +610,27 @@ TEST_CASE( "shearing", "[activity][shearing][animals]" )
                 }
             }
         }
+    }
+}
+
+TEST_CASE( "chopped_wood_is_not_reserved_as_an_activity_tool", "[activity][chop_logs]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+
+    map &here = get_map();
+    avatar &player = get_avatar();
+    const tripoint_bub_ms trunk_pos = player.pos_bub() + tripoint::north;
+    here.ter_set( trunk_pos, ter_t_trunk );
+
+    player_activity activity;
+    activity.placement = here.get_abs( trunk_pos );
+    chop_logs_activity_actor actor( 1, item_location() );
+    actor.finish( activity, player );
+
+    REQUIRE_FALSE( here.i_at( trunk_pos ).empty() );
+    for( const item &wood : here.i_at( trunk_pos ) ) {
+        CHECK_FALSE( wood.has_var( "activity_var" ) );
     }
 }
 
