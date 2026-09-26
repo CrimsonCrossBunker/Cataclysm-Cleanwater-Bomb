@@ -54,6 +54,13 @@ void validate_context_key( const std::string_view key )
     }
 }
 
+void validate_scope_key( const std::string_view scope, const std::string_view key )
+{
+    if( scope == "context" || scope == "var" ) {
+        validate_context_key( key );
+    }
+}
+
 diag_value context_value_from_lua( const sol::object &value, const std::string &key )
 {
     return script_diag_value_from_lua( value, "services.variables context value '" + key + "'" );
@@ -153,7 +160,6 @@ sol::table get_variable(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -180,7 +186,6 @@ sol::table set_variable(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( key );
     const diag_value replacement =
         context_value_from_lua( requested, key );
     sol::state_view state( lua );
@@ -212,7 +217,6 @@ sol::table remove_variable(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -237,7 +241,6 @@ sol::table remove_variable(
 sol::table get_global_variable(
     sol::this_state lua, const std::string &key )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *stored = get_globals().maybe_get_global_value( key );
@@ -254,7 +257,6 @@ sol::table get_global_variable(
 sol::table set_global_variable(
     sol::this_state lua, const std::string &key, const sol::object &requested )
 {
-    validate_context_key( key );
     const diag_value replacement = context_value_from_lua( requested, key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
@@ -274,7 +276,6 @@ sol::table set_global_variable(
 sol::table remove_global_variable(
     sol::this_state lua, const std::string &key )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *before = get_globals().maybe_get_global_value( key );
@@ -296,7 +297,7 @@ sol::table resolve_variable(
     const std::size_t world_generation,
     const sol::optional<sol::table> &participants )
 {
-    validate_context_key( key );
+    validate_scope_key( scope, key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.resolve received an unknown scope" );
@@ -353,7 +354,7 @@ sol::table resolve_variable(
                     break;
             }
             current_key = nested.name;
-            validate_context_key( current_key );
+            validate_scope_key( current_scope, current_key );
             continue;
         }
         if( current_scope == "global" ) {
@@ -407,7 +408,7 @@ sol::table set_resolved_variable(
     const std::size_t world_generation,
     const sol::optional<sol::table> &participants )
 {
-    validate_context_key( key );
+    validate_scope_key( scope, key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.set_resolved received an unknown scope" );
@@ -498,8 +499,6 @@ sol::table copy_variable(
     const std::string &target_key, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( source_key );
-    validate_context_key( target_key );
     sol::state_view state( lua );
     resolved_variable_talker source;
     resolved_variable_talker target;
