@@ -24921,13 +24921,18 @@ def render_static_character_variable(
         return None
     if "value" in effect:
         value = effect["value"]
-        if not bounded_utf8_string(value, 8192, allow_empty=True):
+        if not bounded_utf8_string(value, 1024, allow_empty=True):
             return None
         value_expression = lua_quote(value)
         lines = [
-            "    services.variables.set(",
+            "    local write_result = services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
             f"{value_expression})",
+            "    if write_result.ok then",
+            "        services.native_events.emit(",
+            f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, "
+            f"{value_expression} }})",
+            "    end",
         ]
         if target_expression == "context.actors.item":
             return [
@@ -24940,16 +24945,20 @@ def render_static_character_variable(
     if (
         not isinstance(values, list) or not values or len(values) > 64 or
         not all(
-            bounded_utf8_string(value, 8192, allow_empty=True) for value in values
+            bounded_utf8_string(value, 1024, allow_empty=True) for value in values
         )
     ):
         return None
     rendered_values = ", ".join(lua_quote(value) for value in values)
     lines = [
         f"    local values = {{ {rendered_values} }}",
-        "    services.variables.set(",
-        f"        {target_expression}, {lua_quote(effect[key])}, "
-        "values[services.random.int(1, #values)])",
+        "    local selected_value = values[services.random.int(1, #values)]",
+        "    local write_result = services.variables.set(",
+        f"        {target_expression}, {lua_quote(effect[key])}, selected_value)",
+        "    if write_result.ok then",
+        "        services.native_events.emit(",
+        f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, selected_value }})",
+        "    end",
     ]
     if target_expression == "context.actors.item":
         return [
