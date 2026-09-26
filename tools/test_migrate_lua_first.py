@@ -6876,11 +6876,6 @@ assert(#events == 11)
                 ".movement.driving",
             ),
             (
-                "u_is_in_vehicle", {"avatar_actor_proven": True},
-                "service_value(services.characters.snapshot(actor))"
-                ".movement.in_vehicle",
-            ),
-            (
                 "u_is_riding", {"avatar_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
                 ".movement.mounted",
@@ -6896,11 +6891,6 @@ assert(#events == 11)
                 ".movement.driving",
             ),
             (
-                "npc_is_in_vehicle", {"npc_actor_proven": True},
-                "service_value(services.characters.snapshot(actor))"
-                ".movement.in_vehicle",
-            ),
-            (
                 "npc_is_riding", {"npc_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
                 ".movement.mounted",
@@ -6913,6 +6903,16 @@ assert(#events == 11)
                         condition, **provenance
                     ),
                     expected,
+                )
+        for condition, provenance in (
+            ("u_is_in_vehicle", {"avatar_actor_proven": True}),
+            ("npc_is_in_vehicle", {"npc_actor_proven": True}),
+        ):
+            with self.subTest(condition=condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **provenance
+                    )
                 )
 
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:
@@ -6996,8 +6996,8 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn("services.bionics.grant(", main)
             self.assertIn("services.bionics.remove_type(", main)
             self.assertIn("services.recipes.learn(", main)
@@ -7008,6 +7008,10 @@ assert(#events == 11)
             self.assertIn("services.morale.remove(", main)
             self.assertIn(
                 "EOC unproven_presence condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC avatar_entity_predicates condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("needs a native Lua effect", report)
@@ -7086,10 +7090,15 @@ assert(#events == 11)
                 migrate_lua_first.load_objects([source]), "dialogue_mission_predicates_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn('services.gameplay.environment.is_outside(context.data["loc"])', main)
+            self.assertIn(
+                "EOC npc_movement_vehicle_and_missions condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertNotIn("run_eoc", main)
 
     def test_dynamic_or_unproven_u_has_profession_shapes_stay_partial(self) -> None:

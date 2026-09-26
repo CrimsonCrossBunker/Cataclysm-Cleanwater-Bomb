@@ -26854,14 +26854,16 @@ def render_eoc_condition_expression(
             return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
         if npc_actor_proven and condition == "npc_can_see":
             return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+        # The *_is_in_vehicle predicates are intentionally absent: native
+        # checks whether a vehicle occupies the actor's tile, while this
+        # snapshot field only reports the Character passenger flag.
         if avatar_actor_proven and condition in {
-            "u_driving", "u_is_driving", "u_is_in_vehicle",
+            "u_driving", "u_is_driving",
             "u_controlling_vehicle", "u_is_riding", "u_mounted",
         }:
             field = {
                 "u_driving": "driving",
                 "u_is_driving": "driving",
-                "u_is_in_vehicle": "in_vehicle",
                 "u_controlling_vehicle": "controlling_vehicle",
                 "u_is_riding": "mounted",
                 "u_mounted": "mounted",
@@ -26871,13 +26873,12 @@ def render_eoc_condition_expression(
                 f".movement.{field}"
             )
         if npc_actor_proven and condition in {
-            "npc_driving", "npc_is_driving", "npc_is_in_vehicle",
+            "npc_driving", "npc_is_driving",
             "npc_controlling_vehicle", "npc_is_riding", "npc_mounted",
         }:
             field = {
                 "npc_driving": "driving",
                 "npc_is_driving": "driving",
-                "npc_is_in_vehicle": "in_vehicle",
                 "npc_controlling_vehicle": "controlling_vehicle",
                 "npc_is_riding": "mounted",
                 "npc_mounted": "mounted",
