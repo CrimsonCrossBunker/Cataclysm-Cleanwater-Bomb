@@ -14193,7 +14193,18 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("services.overmap.reveal(", main)
             self.assertIn("services.world.schedule_location_revert(", main)
+            self.assertIn(
+                'services.world.schedule_location_revert(\n'
+                '        (context.data["loc"]):project_to("omt"),',
+                main,
+            )
             self.assertIn("services.world.schedule_location_copy(", main)
+            self.assertIn(
+                'services.world.schedule_location_copy(\n'
+                '        (context.data["loc"]):project_to("omt"), '
+                '(context.data["destination"]):project_to("omt"),',
+                main,
+            )
             self.assertIn("services.world.transform_radius(", main)
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
@@ -16370,7 +16381,117 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('services.variables.get_global("dy")', main)
             self.assertIn('services.variables.resolve(context.data, actor, "u", "dz")', main)
             self.assertIn("tripoint_abs_ms(location.x, location.y", main)
+            self.assertIn("math.modf(", main)
+            self.assertNotIn("math.floor(", main)
             self.assertNotIn("needs domain-service conversion", report)
+
+    def test_location_variable_adjust_uses_relative_overmap_offsets_and_native_truncation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "relative_omt_location_adjust",
+                        "required_event": "game_start",
+                        "effect": [
+                            {
+                                "location_variable_adjust": {"context_val": "origin"},
+                                "output_var": {"context_val": "destination"},
+                                "x_adjust": -1.7,
+                                "y_adjust": 2.7,
+                                "z_adjust": -0.7,
+                            },
+                            {
+                                "location_variable_adjust": {"context_val": "omt_origin"},
+                                "output_var": {"context_val": "omt_destination"},
+                                "x_adjust": -1,
+                                "y_adjust": 2,
+                                "overmap_tile": True,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "relative_omt_adjust_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.coords.tripoint_rel_omt(", main)
+            self.assertIn(':to("ms")', main)
+            self.assertIn("math.modf(", main)
+            self.assertNotIn("tripoint_omt_ms(", main)
+            self.assertNotIn("math.floor(", main)
+
+    def test_fractional_overmap_tile_location_adjustment_stays_todo(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "fractional_omt_location_adjust",
+                        "required_event": "game_start",
+                        "effect": {
+                            "location_variable_adjust": {"context_val": "origin"},
+                            "x_adjust": -1.7,
+                            "overmap_tile": True,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "fractional_omt_adjust_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.coords.tripoint_rel_omt(", main)
+
+    def test_location_variable_search_applies_coordinate_adjustment_once(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "single_location_adjustment",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_location_variable": {"context_val": "picked"},
+                            "terrain": "t_grass",
+                            "max_radius": 3,
+                            "x_adjust": -1.7,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "single_location_adjustment_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.world.find_location(", main)
+            self.assertEqual(main.count("math.modf("), 1)
+            self.assertNotIn("x_adjust =", main)
 
     def test_lowers_var_indirected_coordinate_writes_with_resolved_variable_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

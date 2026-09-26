@@ -19559,6 +19559,7 @@ def _coordinate_numeric_expression(
     value: Any,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    require_integer: bool = False,
 ) -> str | None:
     """Render a bounded numeric coordinate adjustment with actor-correct vars."""
     actor_expression = "actor" if (avatar_actor_proven or npc_actor_proven) else "nil"
@@ -19566,7 +19567,7 @@ def _coordinate_numeric_expression(
         if len(value) != 2:
             return None
         bounds = [
-            _literal_integer_or_none(entry, -1000000, 1000000)
+            _literal_integer_or_none(entry, -2147483648, 2147483647)
             for entry in value
         ]
         if any(bound is None for bound in bounds):
@@ -19590,16 +19591,16 @@ def _coordinate_numeric_expression(
             if not (avatar_actor_proven or npc_actor_proven):
                 return None
             actor_expression = "actor"
+    if require_integer:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        return None if literal is None else str(literal)
     rendered = render_eoc_numeric_expression(value, "0", actor_expression)
     if rendered is None:
         return None
-    # Native dbl_or_var is converted to an integer Tripoint.  Clamp the
-    # dynamic form before conversion so malformed Mod state cannot overflow a
-    # native coordinate while still preserving ordinary values exactly.
-    return (
-        "math.max(-1000000, math.min(1000000, "
-        f"math.floor(({rendered}) + 0.5)))"
-    )
+    # Native dbl_or_var converts to int by truncating toward zero.  The
+    # parentheses keep Lua from forwarding math.modf's fractional result;
+    # the registered tripoint constructor rejects values outside native int.
+    return f"(math.modf(({rendered})))"
 
 
 def render_static_dimension_name(
@@ -22555,28 +22556,31 @@ def render_static_location_variable_adjust(
     source = _coordinate_variable_descriptor(effect[key])
     if source is None:
         return None
+    z_override = effect.get("z_override", False)
+    overmap_tile = effect.get("overmap_tile", False)
+    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
+        return None
     output = source
     if "output_var" in effect:
         output = _coordinate_variable_descriptor(effect["output_var"])
         if output is None or output[0] != source[0]:
             return None
     x_adjust = _coordinate_numeric_expression(
-        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven
+        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven,
+        require_integer=overmap_tile,
     )
     y_adjust = _coordinate_numeric_expression(
-        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven
+        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven,
+        require_integer=overmap_tile,
     )
     z_adjust = _coordinate_numeric_expression(
         effect.get("z_adjust", 0), avatar_actor_proven, npc_actor_proven
     )
     if x_adjust is None or y_adjust is None or z_adjust is None:
         return None
-    z_override = effect.get("z_override", False)
-    overmap_tile = effect.get("overmap_tile", False)
-    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
-        return None
     offset = (
-        f"services.coords.tripoint_omt_ms({x_adjust}, {y_adjust}, 0)"
+        "services.coords.tripoint_rel_omt("
+        f"{x_adjust}, {y_adjust}, 0):to(\"ms\")"
         if overmap_tile else
         f"services.coords.tripoint_rel_ms({x_adjust}, {y_adjust}, 0)"
     )
@@ -22842,6 +22846,20 @@ def render_dynamic_location_variable_search(
             f"math.floor(({dynamic}) + 0.5)))"
         )
 
+    def coordinate_integer_expression(
+        value: Any, minimum: int, maximum: int
+    ) -> str | None:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        if literal is not None:
+            return str(literal)
+        dynamic = render_eoc_numeric_expression(value, str(minimum), actor)
+        if dynamic is None:
+            return None
+        # Native coordinate construction converts dbl_or_var to int, which
+        # truncates toward zero.  Typed coordinate operations reject values
+        # outside the native int range instead of silently clamping them.
+        return f"(math.modf(({dynamic})))"
+
     origin = (
         "service_value(services.characters.snapshot(" + actor + ")).creature.position"
     )
@@ -22852,9 +22870,15 @@ def render_dynamic_location_variable_search(
         )
         if source_position is None:
             return None
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+        x_adjust = coordinate_integer_expression(
+            effect.get("x_adjust", 0), -1000, 1000
+        )
+        y_adjust = coordinate_integer_expression(
+            effect.get("y_adjust", 0), -1000, 1000
+        )
+        z_adjust = coordinate_integer_expression(
+            effect.get("z_adjust", 0), -20, 20
+        )
         if x_adjust is None or y_adjust is None or z_adjust is None:
             return None
         lines.append(
@@ -22864,8 +22888,7 @@ def render_dynamic_location_variable_search(
         if x_adjust != "0" or y_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"math.floor(({x_adjust}) + 0.5), "
-                f"math.floor(({y_adjust}) + 0.5), 0))"
+                f"{x_adjust}, {y_adjust}, 0))"
             )
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
@@ -22873,12 +22896,12 @@ def render_dynamic_location_variable_search(
         if z_override:
             lines.append(
                 "    location = services.coords.tripoint_abs_ms("
-                f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+                f"location.x, location.y, {z_adjust})"
             )
         elif z_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+                f"0, 0, {z_adjust}))"
             )
         output_lines = _coordinate_output_lines(
             effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23118,22 +23141,9 @@ def render_dynamic_location_variable_search(
                 return None
             if value:
                 options.append(f"{name} = true")
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
-        if x_adjust is None or y_adjust is None or z_adjust is None:
-            return None
-        if x_adjust != "0":
-            options.append(f"x_adjust = {x_adjust}")
-        if y_adjust != "0":
-            options.append(f"y_adjust = {y_adjust}")
-        if z_adjust != "0":
-            options.append(f"z_adjust = {z_adjust}")
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
             return None
-        if z_override:
-            options.append("z_override = true")
         lines.extend([
             f"    local selected = services.world.find_location({origin}, {selector_expression}, "
             f"{{ {', '.join(options)} }})",
@@ -23142,9 +23152,15 @@ def render_dynamic_location_variable_search(
         ])
 
     adjustment_indent = "        "
-    x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-    y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-    z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+    x_adjust = coordinate_integer_expression(
+        effect.get("x_adjust", 0), -1000, 1000
+    )
+    y_adjust = coordinate_integer_expression(
+        effect.get("y_adjust", 0), -1000, 1000
+    )
+    z_adjust = coordinate_integer_expression(
+        effect.get("z_adjust", 0), -20, 20
+    )
     if x_adjust is None or y_adjust is None or z_adjust is None:
         return None
     z_override = effect.get("z_override", False)
@@ -23153,17 +23169,17 @@ def render_dynamic_location_variable_search(
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"{x_adjust}, {y_adjust}, 0))"
         )
     if z_override:
         lines.append(
             f"{adjustment_indent}location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, {z_adjust})"
         )
     elif z_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, {z_adjust}))"
         )
     output_lines = _coordinate_output_lines(
         effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23263,17 +23279,17 @@ def render_static_location_variable(
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"(math.modf(({x_adjust}))), (math.modf(({y_adjust}))), 0))"
         )
     if z_override:
         lines.append(
             "    location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, (math.modf(({z_adjust}))))"
         )
     elif z_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, (math.modf(({z_adjust}))))"
         )
     if output_context is not None:
         lines.append(f"    context.data[{lua_quote(effect[key]['context_val'])}] = location")
@@ -24245,19 +24261,23 @@ def render_static_location_revert_or_copy(
         )
     if target is None or delay is None or event_key_expression is None:
         return None
+    target_omt = f"({target}):project_to(\"omt\")"
     if key == "revert_location":
         return [
             "    services.world.schedule_location_revert(",
-            f"        {target}, {delay}, {event_key_expression})",
+            f"        {target_omt}, {delay}, {event_key_expression})",
         ]
     source = _coordinate_source_expression(
         effect.get("new_loc"), avatar_actor_proven, npc_actor_proven
     )
     if source is None:
         return None
+    # In the legacy effect, the member value is the snapshot source and
+    # ``new_loc`` is the destination.  Keep that order for the Platform API.
     return [
         "    services.world.schedule_location_copy(",
-        f"        {source}, {target}, {delay}, {event_key_expression})",
+        f"        {target_omt}, ({source}):project_to(\"omt\"), "
+        f"{delay}, {event_key_expression})",
     ]
 
 

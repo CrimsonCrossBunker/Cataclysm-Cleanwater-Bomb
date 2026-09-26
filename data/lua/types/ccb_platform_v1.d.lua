@@ -42,7 +42,7 @@
 ---@field project_to fun(self: PointCoord, scale: string): PointCoord
 ---@field project_remain fun(self: PointCoord, scale: string): PointCoord
 ---@field project_combine fun(self: PointCoord, remainder: PointCoord): PointCoord
----@field to fun(self: PointCoord, origin: string, scale: string): PointCoord
+---@field to fun(self: PointCoord, scale: string): PointCoord
 ---@operator add(PointCoord): PointCoord
 ---@operator sub(PointCoord): PointCoord
 ---@operator mul(integer): PointCoord
@@ -58,7 +58,34 @@
 ---@field project_to fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_remain fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_combine fun(self: TripointCoord, remainder: TripointCoord): TripointCoord
----@field to fun(self: TripointCoord, origin: string, scale: string): TripointCoord
+---@field to fun(self: TripointCoord, scale: string): TripointCoord
+
+---@class CcbCoordsApi
+local CcbCoordsApi = {}
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute map-square coordinate.
+function CcbCoordsApi.tripoint_abs_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative map-square offset.
+function CcbCoordsApi.tripoint_rel_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute overmap-terrain coordinate.
+function CcbCoordsApi.tripoint_abs_omt(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative overmap-terrain offset.
+function CcbCoordsApi.tripoint_rel_omt(x, y, z) end
 
 ---@class TimeDuration
 ---@field turns integer
@@ -244,6 +271,89 @@ function CcbMapApi.snapshot(tile, options) end
 ---@return CcbResult result `value` is the committed CcbMapTileSnapshot.
 function CcbMapApi.edit(tile, expected_revision, changes) end
 
+---@class CcbWorldPointsNearbyOptions
+---@field min_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field offset? integer Nonnegative page offset; native maximum is 1,000,000.
+---@field limit? integer Nonnegative page size; native maximum is 1024.
+
+---@class CcbWorldNearbyPoint
+---@field position TripointCoord Absolute map-square position.
+---@field distance integer Chebyshev distance from the requested origin.
+
+---@class CcbWorldNearbyPointsPage
+---@field items CcbWorldNearbyPoint[] Dense one-based page of points.
+---@field origin TripointCoord Absolute map-square origin.
+---@field min_radius integer Effective minimum radius.
+---@field max_radius integer Effective maximum radius.
+---@field offset integer Effective page offset.
+---@field limit integer Effective page size.
+---@field total integer Total matching points before paging.
+---@field returned integer Number of points in this page.
+---@field has_more boolean Whether another page is available.
+
+---@class CcbWorldLocationRevertResult
+---@field position TripointCoord Absolute overmap-terrain position whose four submaps were snapshotted.
+---@field when TimePoint Scheduled event time.
+---@field key string Event key.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldLocationCopyResult
+---@field source TripointCoord Absolute overmap-terrain snapshot source.
+---@field destination TripointCoord Absolute overmap-terrain copy destination.
+---@field when TimePoint Scheduled event time.
+---@field key string Event key.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldApi
+local CcbWorldApi = {}
+
+---@param origin TripointCoord Explicit absolute map-square coordinate.
+---@param options? CcbWorldPointsNearbyOptions Bounded result page options.
+---@return CcbWorldNearbyPointsPage
+function CcbWorldApi.points_nearby(origin, options) end
+
+---@class CcbWorldLocationSelector
+---@field kind string Native selector kind: terrain, furniture, field, trap, monster, species, npc, or zone.
+---@field id? GameId Optional id whose kind must match `kind`.
+
+---@class CcbWorldFindLocationOptions
+---@field min_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field target_min_radius? integer Nonnegative minimum selector distance; native maximum is 1000.
+---@field target_max_radius? integer Nonnegative maximum selector distance; native maximum is 1000.
+---@field outdoor_only? boolean Require an outdoor random-placement result.
+---@field passable_only? boolean Require a passable random-placement result.
+
+---@class CcbWorldFindLocationResult
+---@field found boolean Whether a location was found.
+---@field selector string Effective selector kind.
+---@field distant_map boolean Whether the lookup loaded a detached map.
+---@field origin TripointCoord Requested absolute map-square origin.
+---@field reason? string Failure reason when found is false.
+---@field anchor? TripointCoord Selected selector anchor before random placement.
+---@field position? TripointCoord Final absolute map-square position; present when found is true.
+---@field distance_from_origin? integer Chebyshev distance from the requested origin.
+
+---@param origin TripointCoord Explicit absolute map-square origin.
+---@param selector CcbWorldLocationSelector Typed selector and optional matching GameId.
+---@param options? CcbWorldFindLocationOptions Bounded search and random-placement options.
+---@return CcbWorldFindLocationResult
+function CcbWorldApi.find_location(origin, selector, options) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
+---@param delay TimeDuration Delay before the scheduled revert.
+---@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@return CcbResult result `value` is a CcbWorldLocationRevertResult.
+function CcbWorldApi.schedule_location_revert(position, delay, key) end
+
+---@param source TripointCoord Explicit absolute overmap-terrain snapshot source.
+---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
+---@param delay TimeDuration Delay before the scheduled copy.
+---@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
+function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
+
 ---@class CcbOvermapTileSnapshot
 ---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.
 ---@field exists boolean Whether the overmap tile currently exists in the loaded buffer.
@@ -314,6 +424,19 @@ function CcbOvermapApi.snapshot(token) end
 ---@param changes CcbOvermapTileChanges Bounded overmap-tile changes.
 ---@return CcbResult result `value` is a CcbOvermapEditResult.
 function CcbOvermapApi.edit(token, expected_revision, changes) end
+
+---@class CcbOvermapRevealResult
+---@field scanned integer Number of positions inspected inside the square radius.
+---@field existing integer Number of existing overmap tiles found.
+---@field changed integer Number of tiles whose vision level changed.
+---@field radius integer Accepted radius in the native 0..30 range.
+---@field vision GameEnum GameEnum<OmVisionLevel> set on existing tiles.
+---@field existing_only boolean True; missing overmap tiles are not generated.
+
+---@param center TripointCoord Explicit absolute overmap-terrain center.
+---@param radius integer Nonnegative square reveal radius from 0 through 30.
+---@return CcbResult result `value` is a CcbOvermapRevealResult.
+function CcbOvermapApi.reveal(center, radius) end
 
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}
