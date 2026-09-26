@@ -3201,6 +3201,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertNotIn("context.alpha", main)
             self.assertNotIn("context.beta", main)
+            declaration_path = (
+                Path(__file__).parents[1] / "data/lua/types/ccb_platform_v1.d.lua"
+            )
+            declarations = declaration_path.read_text(encoding="utf-8")
+            self.assertIn(
+                "function CcbMartialArtsApi.current(character) end", declarations
+            )
+            self.assertIn("value.force_unarmed", declarations)
 
     def test_weapon_predicates_without_exact_shape_or_actor_proof_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

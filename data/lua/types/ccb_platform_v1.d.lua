@@ -10671,6 +10671,14 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
 ---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
 
+---@class CcbMartialArtsApi
+local CcbMartialArtsApi = {}
+
+---Read the selected native style, including the force-unarmed rule used by weapon predicates.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value.force_unarmed` is the selected style's native value.
+function CcbMartialArtsApi.current(character) end
+
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
 
