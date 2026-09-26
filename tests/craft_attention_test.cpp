@@ -19,6 +19,7 @@
 #include "craft_command.h"
 #include "crafting.h"
 #include "crafting_enums.h"
+#include "field_type.h"
 #include "flexbuffer_json.h"
 #include "inventory.h"
 #include "item.h"
@@ -31,6 +32,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "messages.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -47,6 +49,7 @@ static const bionic_id test_bio_reserve_weapon( "test_bio_reserve_weapon" );
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_cudgel( "cudgel" );
+static const itype_id itype_fire( "fire" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_microwave( "microwave" );
 static const itype_id itype_pot( "pot" );
@@ -2080,6 +2083,64 @@ TEST_CASE( "craft_env_check_dispatch_pauses_when_quality_missing",
     CHECK( on_map.get_saved_ready_at() == t0 + 10_minutes );
     CHECK( on_map.get_ready_at() == fire_time + 1_minutes );
     CHECK( on_map.get_env_check_at() == calendar::before_time_starts );
+}
+
+TEST_CASE( "unattended_craft_missing_fire_warns_only_when_first_paused",
+           "[craft][attention][env_check][regression]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &u = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms craft_pos( 75, 75, 0 );
+    u.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+
+    item ingredient( itype_2x4, calendar::turn );
+    item placed( &recipe_cudgel_test_unattended_simple.obj(), 1, ingredient );
+    item &on_map = here.add_item( craft_pos, placed );
+    on_map.set_current_step( 1 );
+    on_map.set_crafter_id( u.getID() );
+    on_map.set_step_plans( std::vector<attention_plan>( 2 ) );
+    const time_point start = calendar::turn;
+    on_map.set_passive_started_at( start );
+    on_map.set_ready_at( start + 1_minutes );
+
+    step_tool_alloc fire;
+    fire.sel.use_from = usage_from::map;
+    fire.sel.comp.type = itype_fire;
+    fire.sel.comp.count = -1;
+    on_map.set_step_tool_allocs( { {}, { fire } } );
+    item_location loc( map_cursor( here.get_abs( craft_pos ) ), &on_map );
+
+    Messages::clear_messages();
+    const auto warning_count = []() {
+        const auto messages = Messages::recent_messages( 0 );
+        return std::count_if( messages.begin(), messages.end(),
+        []( const std::pair<std::string, std::string> &msg ) {
+            return msg.second.find( "continue crafting" ) != std::string::npos;
+        } );
+    };
+    craft_actualize_scheduled( on_map, item_wakeup_kind::ready_check,
+                               start + 1_minutes, loc );
+    REQUIRE( on_map.get_pause_started_at() == start + 1_minutes );
+    const auto first_warning_count = warning_count();
+    REQUIRE( first_warning_count == 1 );
+
+    // The paused craft keeps polling at its original location while the
+    // player works elsewhere; another poll must not repeat the same warning.
+    craft_actualize_scheduled( on_map, item_wakeup_kind::ready_check,
+                               start + 2_minutes, loc );
+    CHECK( on_map.get_pause_started_at() != calendar::before_time_starts );
+    CHECK( warning_count() == first_warning_count );
+
+    REQUIRE( here.add_field( craft_pos, fd_fire, 1 ) );
+    craft_actualize_scheduled( on_map, item_wakeup_kind::ready_check,
+                               start + 3_minutes, loc );
+    CHECK( warning_count() == first_warning_count );
+    if( item *remaining = loc.get_item() ) {
+        CHECK( remaining->get_pause_started_at() == calendar::before_time_starts );
+    }
+    Messages::clear_messages();
 }
 
 TEST_CASE( "craft_env_check_dispatch_restores_when_quality_returns",

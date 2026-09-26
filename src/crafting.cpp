@@ -1572,13 +1572,16 @@ static void craft_actualize_env( item &craft, time_point now, const item_locatio
         now >= craft.get_fail_at() ) {
         return;
     }
+    // The environment check can clear a tool pause before tools are rechecked.
+    // Warn only when the shortage first pauses this craft.
+    const bool was_paused = craft.get_pause_started_at() != calendar::before_time_starts;
     if( craft_check_env_step( craft, now, loc ) == env_check_result::paused ) {
         return;
     }
     // Drain the step's charged tools to match wall-clock progress; a shortfall
     // pauses the step until the tools are recharged.
     if( Character *consumer = resolve_consume_crafter( craft, loc ) ) {
-        if( !consumer->craft_consume_passive_step_tools( craft, now, loc ) ) {
+        if( !consumer->craft_consume_passive_step_tools( craft, now, loc, !was_paused ) ) {
             craft_enter_env_pause( craft, now, loc );
         }
     }
@@ -1624,6 +1627,8 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
         return;
     }
 
+    // The environment check can clear a tool pause before tools are rechecked.
+    const bool was_paused = craft.get_pause_started_at() != calendar::before_time_starts;
     const env_check_result env_result = craft_check_env_step( craft, now, loc );
     if( env_result == env_check_result::paused ) {
         return;
@@ -1634,7 +1639,7 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
     if( consumer != nullptr ) {
         const step_source_context src = resolve_step_source( craft, loc );
         if( !consumer->verify_step_tools( craft, step_idx, src.origin, src.radius,
-                                          /*pin_to_map=*/src.present_char == nullptr ) ) {
+                                          /*pin_to_map=*/src.present_char == nullptr, !was_paused ) ) {
             craft_enter_env_pause( craft, now, loc );
             return;
         }
@@ -1645,7 +1650,7 @@ static void craft_actualize_ready( item &craft, time_point now, const item_locat
     // return below, since craft_check_env_step only restores on qualities: a pause
     // for missing charges must not clear while the charges are still short.
     if( consumer != nullptr ) {
-        if( !consumer->craft_consume_passive_step_tools( craft, now, loc ) ) {
+        if( !consumer->craft_consume_passive_step_tools( craft, now, loc, !was_paused ) ) {
             craft_enter_env_pause( craft, now, loc );
             return;
         }
@@ -3904,7 +3909,7 @@ static int step_buckets_for_fraction( double f )
 }
 
 bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &targets,
-        const tripoint_bub_ms &origin, int radius, bool pin_to_map )
+        const tripoint_bub_ms &origin, int radius, bool pin_to_map, bool report_shortfall )
 {
     std::vector<std::vector<step_tool_alloc>> allocs = craft.get_step_tool_allocs();
 
@@ -4009,10 +4014,12 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
             : which == 1 ? get_map_inv().has_charges( n.first, n.second )
             : crafting_inventory().has_charges( n.first, n.second );
             if( !ok ) {
-                add_msg_player_or_npc(
-                    _( "You have insufficient %s charges and can't continue crafting." ),
-                    _( "<npcname> has insufficient %s charges and can't continue crafting." ),
-                    item::nname( n.first ) );
+                if( report_shortfall ) {
+                    add_msg_player_or_npc(
+                        _( "You have insufficient %s charges and can't continue crafting." ),
+                        _( "<npcname> has insufficient %s charges and can't continue crafting." ),
+                        item::nname( n.first ) );
+                }
                 return true;
             }
         }
@@ -4025,10 +4032,12 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
         const bool present = pin_to_map ? get_map_inv().has_tools( p.type, 1 )
                              : crafting_inventory().has_tools( p.type, 1 );
         if( !present ) {
-            add_msg_player_or_npc(
-                _( "You no longer have the %s and can't continue crafting." ),
-                _( "<npcname> no longer has the %s and can't continue crafting." ),
-                item::nname( p.type ) );
+            if( report_shortfall ) {
+                add_msg_player_or_npc(
+                    _( "You no longer have the %s and can't continue crafting." ),
+                    _( "<npcname> no longer has the %s and can't continue crafting." ),
+                    item::nname( p.type ) );
+            }
             presence_short = true;
             break;
         }
@@ -4055,7 +4064,8 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
 }
 
 bool Character::verify_step_tools( item &craft, int step_idx,
-                                   const tripoint_bub_ms &origin, int radius, bool pin_to_map )
+                                   const tripoint_bub_ms &origin, int radius, bool pin_to_map,
+                                   bool report_shortfall )
 {
     if( has_trait( trait_DEBUG_HS ) ) {
         return true;
@@ -4080,10 +4090,12 @@ bool Character::verify_step_tools( item &craft, int step_idx,
         const bool present = pin_to_map ? get_map_inv().has_tools( alloc.sel.comp.type, 1 )
                              : crafting_inventory().has_tools( alloc.sel.comp.type, 1 );
         if( !present ) {
-            add_msg_player_or_npc(
-                _( "You no longer have the %s and can't continue crafting." ),
-                _( "<npcname> no longer has the %s and can't continue crafting." ),
-                item::nname( alloc.sel.comp.type ) );
+            if( report_shortfall ) {
+                add_msg_player_or_npc(
+                    _( "You no longer have the %s and can't continue crafting." ),
+                    _( "<npcname> no longer has the %s and can't continue crafting." ),
+                    item::nname( alloc.sel.comp.type ) );
+            }
             // Resume must reselect; otherwise an OR alternative is unreachable.
             craft.set_tools_to_continue( false );
             return false;
@@ -4250,7 +4262,7 @@ bool Character::craft_consume_step_tools( item &craft, const crafting_cost_conte
 }
 
 bool Character::craft_consume_passive_step_tools( item &craft, time_point now,
-        const item_location &loc )
+        const item_location &loc, bool report_shortfall )
 {
     if( has_trait( trait_DEBUG_HS ) ) {
         return true;
@@ -4290,7 +4302,7 @@ bool Character::craft_consume_passive_step_tools( item &craft, time_point now,
     }
     const step_source_context src = resolve_step_source( craft, loc );
     return consume_step_tool_targets( craft, targets, src.origin, src.radius,
-                                      /*pin_to_map=*/src.present_char == nullptr );
+                                      /*pin_to_map=*/src.present_char == nullptr, report_shortfall );
 }
 
 void Character::consume_tools( const comp_selection<tool_comp> &tool, int batch )
