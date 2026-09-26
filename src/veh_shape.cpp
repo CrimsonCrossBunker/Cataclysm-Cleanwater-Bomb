@@ -44,6 +44,9 @@ player_activity veh_shape::start( const tripoint_bub_ms &pos )
         cursor_allowed.insert( part.pos_bub( here ) );
     }
 
+    // The shape editor does not allow changing z-levels.  Initialise its plane
+    // from the selected part, rather than the default z=0 cursor position.
+    cursor_pos = pos;
     if( !set_cursor_pos( pos ) ) {
         debugmsg( "failed to set cursor at given part" );
         set_cursor_pos( veh.bub_part_pos( here, 0 ) );
