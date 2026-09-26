@@ -3524,11 +3524,85 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         time_lines = migrate_lua_first.render_static_character_variable(
             {"u_add_var": "turn", "time": True}, "u_add_var", "u_owner",
         )
+        priority_lines = migrate_lua_first.render_static_character_variable(
+            {
+                "u_add_var": "priority",
+                "value": 17,
+                "possible_values": ["candidate-a", "candidate-b"],
+            },
+            "u_add_var", "u_owner",
+        )
+        fallback_lines = migrate_lua_first.render_static_character_variable(
+            {
+                "npc_add_var": "fallback",
+                "value": "fallback-ready",
+                "possible_values": [],
+            },
+            "npc_add_var", "npc_owner",
+        )
+        ignored_time_candidate = "x" * 1025
+        ignored_time_value = "v" * 1025
+        time_override_lines = migrate_lua_first.render_static_character_variable(
+            {
+                "u_add_var": "turn_override",
+                "time": True,
+                "value": ignored_time_value,
+                "possible_values": [ignored_time_candidate],
+            },
+            "u_add_var", "u_owner",
+        )
+        time_empty_candidates_lines = migrate_lua_first.render_static_character_variable(
+            {
+                "u_add_var": "turn_empty_candidates",
+                "time": True,
+                "value": ignored_time_value,
+                "possible_values": [],
+            },
+            "u_add_var", "u_owner",
+        )
+        wide_values = [f"wide-{index}" for index in range(65)]
+        wide_lines = migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "wide", "possible_values": wide_values},
+            "u_add_var", "u_owner",
+        )
         self.assertIsNotNone(choice_lines)
         self.assertIsNotNone(repeated_choice_lines)
         self.assertIsNotNone(time_lines)
-        self.assertIn("services.random.int(1, #values)", "\n".join(choice_lines))
+        self.assertIsNotNone(priority_lines)
+        self.assertIsNotNone(fallback_lines)
+        self.assertIsNotNone(time_override_lines)
+        self.assertIsNotNone(time_empty_candidates_lines)
+        self.assertIsNotNone(wide_lines)
+        self.assertIn("services.random.int(0, #values - 1) + 1", "\n".join(choice_lines))
+        self.assertIn("services.random.int(0, #values - 1) + 1", "\n".join(wide_lines))
+        self.assertIn('"candidate-a", "candidate-b"', "\n".join(priority_lines))
+        self.assertNotIn("17", "\n".join(priority_lines))
+        self.assertIn('"fallback-ready"', "\n".join(fallback_lines))
+        self.assertNotIn("services.random.int", "\n".join(fallback_lines))
+        self.assertIn("tostring(services.turn())", "\n".join(time_override_lines))
+        self.assertNotIn(ignored_time_candidate, "\n".join(time_override_lines))
+        self.assertNotIn(ignored_time_value, "\n".join(time_override_lines))
+        self.assertIn("tostring(services.turn())", "\n".join(time_empty_candidates_lines))
+        self.assertNotIn("services.random.int", "\n".join(time_empty_candidates_lines))
         self.assertNotIn("native_events.emit", "\n".join(time_lines))
+        for invalid_effect in (
+            {"u_add_var": "bad_time", "time": "true", "value": "x"},
+            {"u_add_var": "bad_candidates", "possible_values": "left"},
+            {"u_add_var": "bad_candidate", "possible_values": ["left", 7]},
+            {"u_add_var": "bad_fallback", "possible_values": [], "value": 7},
+            {"u_add_var": "missing_value"},
+        ):
+            self.assertIsNone(migrate_lua_first.render_static_character_variable(
+                invalid_effect, "u_add_var", "u_owner",
+            ))
+        self.assertIsNone(migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "bad_candidates", "time": True, "possible_values": "left"},
+            "u_add_var", "u_owner",
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "bad_candidate", "time": True, "possible_values": [17]},
+            "u_add_var", "u_owner",
+        ))
         self.assertIsNone(migrate_lua_first.render_static_character_variable(
             {"u_add_var": "large", "value": "x" * 1025}, "u_add_var", "u_owner",
         ))
@@ -3538,7 +3612,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         ))
         script = r"""
 local u_owner, npc_owner = {values={}}, {values={}}
-local events, random_calls, write_allowed, random_index = {}, 0, true, 1
+local events, random_calls, write_allowed, random_index = {}, 0, true, 0
 local random_bounds = {}
 local services = {
     variables = {set=function(owner, key, value)
@@ -3553,10 +3627,10 @@ local services = {
     end},
     random = {int=function(first, last)
         random_calls = random_calls + 1
-        assert(first == 1 and last >= 1 and last <= 2)
+        assert(first == 0 and last >= 0 and last <= 64)
         random_bounds[#random_bounds + 1] = {first, last}
         local result = random_index
-        random_index = random_index % last + 1
+        random_index = (random_index + 1) % (last + 1)
         return result
     end},
     turn = function() return 1440 end,
