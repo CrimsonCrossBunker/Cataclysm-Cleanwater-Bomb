@@ -21,7 +21,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
     def test_engine_backed_control_flow_is_not_exempt_from_acceptance(self):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}
-        for selector in ("run_eocs", "run_eoc_selector", "weighted_list_eocs"):
+        for selector in ("foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"):
             with self.subTest(selector=selector):
                 entry = entries[("eoc-effects", selector)]
                 self.assertEqual(entry["status"], "primitive_available_unverified")
