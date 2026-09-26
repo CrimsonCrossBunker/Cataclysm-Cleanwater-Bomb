@@ -514,23 +514,41 @@ TEST_CASE( "lua_platform_mutation_replace_matches_native_u_val_effect_for_alpha_
     CHECK_FALSE( platform.player.has_trait( trait_QUICK ) );
 }
 
-TEST_CASE( "lua_platform_mutation_activation_matches_live_tree_communion_selector",
+TEST_CASE( "lua_platform_mutation_activation_rejects_non_wooded_tree_communion_like_native",
            "[lua][platform][mutations][semantic]" )
 {
     mutation_fixture legacy( 3900 );
     mutation_fixture platform( 4000 );
     const trait_id trait( "TREE_COMMUNION" );
     REQUIRE( trait.is_valid() );
+    const tripoint_abs_omt omt = legacy.player.pos_abs_omt();
+    REQUIRE( platform.player.pos_abs_omt() == omt );
+    const oter_id field( "field" );
+    REQUIRE( field.is_valid() );
+    const oter_id previous_terrain = overmap_buffer.ter( omt );
+    on_out_of_scope restore_terrain( [omt, previous_terrain]() {
+        overmap_buffer.ter_set( omt, previous_terrain );
+    } );
+    overmap_buffer.ter_set( omt, field );
+    REQUIRE_FALSE( overmap_buffer.ter( omt ).obj().is_wooded() );
     legacy.player.set_mutation( trait );
     platform.player.set_mutation( trait );
+    REQUIRE_FALSE( legacy.player.has_active_mutation( trait ) );
+    REQUIRE_FALSE( platform.player.has_active_mutation( trait ) );
 
     legacy.legacy_effect( R"({"u_activate_trait":"TREE_COMMUNION"})" );
     const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
                 platform.handle( false ), cata::lua_platform::script_game_id( "mutation", trait.str() ), true );
     REQUIRE( call.valid() );
     REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
-    CHECK( legacy.player.has_active_mutation( trait ) );
-    CHECK( platform.player.has_active_mutation( trait ) );
+    CHECK_FALSE( legacy.player.has_active_mutation( trait ) );
+    CHECK_FALSE( platform.player.has_active_mutation( trait ) );
+    CHECK( legacy.player.has_active_mutation( trait ) ==
+           platform.player.has_active_mutation( trait ) );
+    const activity_id tree_communion_activity( "ACT_TREE_COMMUNION" );
+    CHECK( legacy.player.activity.id() != tree_communion_activity );
+    CHECK( platform.player.activity.id() != tree_communion_activity );
+    CHECK( legacy.player.activity.id() == platform.player.activity.id() );
     CHECK_FALSE( legacy.other.has_trait( trait ) );
     CHECK_FALSE( platform.other.has_trait( trait ) );
 }
