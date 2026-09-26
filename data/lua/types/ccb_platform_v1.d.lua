@@ -5084,18 +5084,44 @@ function CcbPlatformMessagesApi.add_from_outdoors(message, type) end
 ---@return any
 function CcbPlatformMessagesApi.add_if_audible(message, type) end
 
+---@alias CcbPlatformSoundCategory
+---| 'background'
+---| 'weather'
+---| 'sensory'
+---| 'music'
+---| 'movement'
+---| 'speech'
+---| 'electronic_speech'
+---| 'activity'
+---| 'destructive_activity'
+---| 'alarm'
+---| 'combat'
+---| 'alert'
+---| 'order'
 ---@class CcbPlatformSoundApi
 local CcbPlatformSoundApi = {}
----@param id string
----@param variant string
----@param volume? integer
----@return any
+---@param id string Native sound-effect id, 1..128 bytes.
+---@param variant string Native variant id, 1..128 bytes.
+---@param volume? integer Playback volume, 0..128; omission uses 80.
+---Below-surface playback uses the Platform positive-depth probability gate.
+---The audio-only random direction uses this Platform runtime's RNG and does not preserve the native RNG sequence.
+---@return boolean Whether playback passed the service gates; this does not confirm backend audio output.
 function CcbPlatformSoundApi.play_from_outdoors(id, variant, volume) end
----@param id string
----@param variant string
----@param volume? integer
----@return any
+---@param id string Native sound-effect id, 1..128 bytes.
+---@param variant string Native variant id, 1..128 bytes.
+---@param volume? integer Playback volume, 0..128; omission uses 80.
+---The audio-only random direction uses this Platform runtime's RNG and does not preserve the native RNG sequence.
+---@return boolean Whether playback passed the player's hearing gate; this does not confirm backend audio output.
 function CcbPlatformSoundApi.play_if_audible(id, variant, volume) end
+---@param position TripointCoord Loaded absolute map-square position.
+---@param volume integer Native gameplay sound volume, 0..1000.
+---@param category CcbPlatformSoundCategory Native gameplay sound category.
+---@param description string Non-NUL sound caption/description, at most 4096 bytes.
+---@param ambient? boolean Whether the sound is ambient; defaults to false.
+---@param id? string Optional native sound-effect id, 1..128 bytes.
+---@param variant? string Optional native variant id, 1..128 bytes.
+---@return nil
+function CcbPlatformSoundApi.emit(position, volume, category, description, ambient, id, variant) end
 ---@class CcbPlatformSnippetsApi
 local CcbPlatformSnippetsApi = {}
 ---@param text string

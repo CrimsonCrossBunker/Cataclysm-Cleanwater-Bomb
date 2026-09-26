@@ -11582,6 +11582,9 @@ assert(#events == 11)
             self.assertNotIn("needs review", report)
 
     def test_translates_sound_effects(self) -> None:
+        # This bounded shape preserves sound selection, volume, and hearing
+        # behavior. Its random audio direction uses Platform RNG, so this test
+        # does not claim exact native RNG-sequence parity.
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11601,6 +11604,11 @@ assert(#events == 11)
                                     "id": "chainsaw_cord",
                                     "sound_effect": "chainsaw_on",
                                 },
+                                {
+                                    "id": "bionics",
+                                    "sound_effect": "elec_crackle_low",
+                                    "volume": -1,
+                                },
                                 "nothing",
                             ],
                         },
@@ -11616,6 +11624,29 @@ assert(#events == 11)
                                 }
                             ],
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "outdoor_sound_effect",
+                            "required_event": "character_wields_item",
+                            "effect": [
+                                {
+                                    "id": "bionics",
+                                    "sound_effect": "elec_crackle_low",
+                                    "outdoor_event": True,
+                                }
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "oversized_sound_id",
+                            "required_event": "character_wields_item",
+                            "effect": [
+                                {
+                                    "id": "x" * 129,
+                                    "sound_effect": "elec_crackle_low",
+                                }
+                            ],
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -11627,11 +11658,21 @@ assert(#events == 11)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.partial), 3)
             self.assertIn('services.sound.play_if_audible("bionics", "elec_crackle_low", 100)', main)
             self.assertIn('services.sound.play_if_audible("chainsaw_cord", "chainsaw_on", 80)', main)
+            self.assertIn('services.sound.play_if_audible("bionics", "elec_crackle_low", 80)', main)
+            self.assertNotIn("services.sound.play_from_outdoors", main)
             self.assertIn(
                 "EOC invalid_sound_volume effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC outdoor_sound_effect effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC oversized_sound_id effect #0 needs domain-service conversion",
                 report,
             )
 
