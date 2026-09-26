@@ -95,6 +95,34 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
             CHECK( actual.get<bool>() == legacy( context ) );
         }
     }
+
+    // Exercise the native str_or_var translation object accepted by these
+    // selectors, and compare it with the migration's services.translate path.
+    const std::string translated_season_source =
+        seasons[season_of_year( calendar::turn )];
+    lua["wanted"] = translated_season_source;
+    conditional_t translated_season( json_loader::from_string(
+                                         R"({"is_season":{"str":")" +
+                                         translated_season_source + R"(","i18n":true}})"
+                                     ).get_object() );
+    sol::protected_function translated_season_query = lua.load(
+                "return services.time_snapshot().season_id == services.translate(wanted)" );
+    const sol::protected_function_result translated_season_result = translated_season_query();
+    REQUIRE( translated_season_result.valid() );
+    CHECK( translated_season_result.get<bool>() == translated_season( context ) );
+
+    const std::string translated_weather_source = weather_ids.front();
+    get_weather().weather_id = weather_type_id( translated_weather_source );
+    lua["wanted"] = translated_weather_source;
+    conditional_t translated_weather( json_loader::from_string(
+                                          R"({"is_weather":{"str":")" +
+                                          translated_weather_source + R"(","i18n":true}})"
+                                      ).get_object() );
+    sol::protected_function translated_weather_query = lua.load(
+                "return services.weather.current().weather.value == services.translate(wanted)" );
+    const sol::protected_function_result translated_weather_result = translated_weather_query();
+    REQUIRE( translated_weather_result.valid() );
+    CHECK( translated_weather_result.get<bool>() == translated_weather( context ) );
 }
 
 #endif
