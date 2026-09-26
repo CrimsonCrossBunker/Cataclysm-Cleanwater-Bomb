@@ -10050,58 +10050,10 @@ function CcbMoraleApi.add(character, morale, bonus, max_bonus, options) end
 ---@return CcbResult result `value` contains before, after and changed.
 function CcbMoraleApi.remove(character, morale) end
 
----@class CcbBionicPowerDefinition
----@field activation UnitValue
----@field deactivation UnitValue
----@field over_time UnitValue
----@field trigger UnitValue
----@field capacity UnitValue
----@field charge_time TimeDuration
-
+---Bionic definition field shape confirmed by current migration sources.
+---Other snapshot fields are not declared here until their Lua contract is audited.
 ---@class CcbBionicDefinition
----@field id GameId GameId<bionic>.
 ---@field name string Localized display name.
----@field description string Localized description.
----@field power CcbBionicPowerDefinition
----@field activated boolean
----@field activated_on_install boolean
----@field included boolean
----@field duplicates_allowed boolean
----@field removes_on_activation boolean
----@field remote_fueled boolean
----@field exothermic_power_generation boolean
----@field fuel_efficiency number
----@field passive_fuel_efficiency number
----@field coverage_power_generation_penalty number|nil
----@field flags GameId[] GameId<json_flag>[]
----@field active_flags GameId[] GameId<json_flag>[]
----@field inactive_flags GameId[] GameId<json_flag>[]
----@field fuel_options GameId[] GameId<material>[]
----@field included_bionics GameId[] GameId<bionic>[]
----@field auto_deactivated_bionics GameId[] GameId<bionic>[]
----@field available_upgrades GameId[] GameId<bionic>[]
----@field canceled_mutations GameId[] GameId<mutation>[]
----@field mutation_conflicts GameId[] GameId<mutation>[]
----@field mutations_on_removal GameId[] GameId<mutation>[]
----@field martial_arts GameId[] GameId<martial_art>[]
----@field passive_pseudo_items GameId[] GameId<item>[]
----@field toggled_pseudo_items GameId[] GameId<item>[]
----@field enchantments string[]
----@field proficiencies string[]
----@field activation_eocs string[]
----@field processing_eocs string[]
----@field deactivation_eocs string[]
----@field upgraded_bionic GameId|nil GameId<bionic>, if any.
----@field required_bionic GameId|nil GameId<bionic>, if any.
----@field fake_weapon GameId|nil GameId<item>, if any.
----@field power_generation_emission GameId|nil GameId<emit>, if any.
----@field installation_requirement string
----@field cannot_remove_reason string|nil
----@field environmental_protection table
----@field occupied_body_parts table
----@field encumbrance table
----@field damage_protection table
----@field learned_spells table
 
 ---@class CcbBionicsApi
 local CcbBionicsApi = {}
