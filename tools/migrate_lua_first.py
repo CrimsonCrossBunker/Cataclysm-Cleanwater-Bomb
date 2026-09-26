@@ -25041,6 +25041,7 @@ def render_direct_variable_snapshot(value: Any, owner: str) -> str | None:
 def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
+    native_string_values: bool = False,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
     if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
@@ -25048,11 +25049,15 @@ def render_participant_string_expression(
             return None
         return render_participant_translation_expression(
             value, target_expression, avatar_expression, npc_expression)
+    if native_string_values and isinstance(value, dict) and "str" in value:
+        # Native str_or_var only accepts translation objects when i18n is true.
+        return None
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
         option = render_participant_string_expression(
-            value["option"], target_expression, avatar_expression, npc_expression)
+            value["option"], target_expression, avatar_expression, npc_expression,
+            native_string_values)
         if option is None:
             return None
         # Native get_option<string> reads the stored string, not the formatted
@@ -25071,7 +25076,8 @@ def render_participant_string_expression(
         if set(value) != {"mutator", id_key}:
             return None
         identifier = render_participant_string_expression(
-            value[id_key], target_expression, avatar_expression, npc_expression)
+            value[id_key], target_expression, avatar_expression, npc_expression,
+            native_string_values)
         if identifier is None:
             return None
         if monster:
@@ -25100,7 +25106,8 @@ def render_participant_string_expression(
         if not isinstance(blacklist, list):
             return None
         entries = [render_participant_string_expression(
-            entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
+            entry, target_expression, avatar_expression, npc_expression,
+            native_string_values) for entry in blacklist]
         if any(entry is None for entry in entries):
             return None
         if entries:
@@ -25132,9 +25139,15 @@ def render_participant_string_expression(
             # process_variable interprets u_, n_, _, and an unprefixed global
             # name. Resolve the resulting owner before calling the single-
             # character service; passing var scope would lose that distinction.
-            return (
+            expression = (
                 '(function() local name = context.data[' + lua_quote(value["var_val"]) + ']; '
                 'if name == nil then return ' + fallback + ' end; '
+            )
+            if native_string_values:
+                expression += (
+                    'if type(name) ~= "string" or name == "" then return ' + fallback + ' end; '
+                )
+            expression += (
                 'local scope, owner = "global", nil; '
                 'if name:sub(1, 2) == "u_" then scope, owner, name = "u", ' +
                 avatar_expression + ', name:sub(3) '
@@ -25144,16 +25157,49 @@ def render_participant_string_expression(
                 'local result = service_value(services.variables.resolve('
                 'context.data, owner, scope, name)); '
                 'if result.exists == false then return ' + fallback + ' end; '
-                'return tostring(result.value or "") end)()'
             )
+            expression += (
+                'return type(result.value) == "string" and result.value or "" end)()'
+                if native_string_values else 'return tostring(result.value or "") end)()'
+            )
+            return expression
         if "default" in value:
             variable = {key: item for key, item in value.items() if key != "default"}
             snapshot = render_direct_variable_snapshot(variable, owner)
             fallback = value["default"]
             if snapshot is None or not bounded_utf8_string(fallback, 8192, allow_empty=True):
                 return None
+            if native_string_values:
+                return ('(function(result) if result.exists == false then return '
+                        f'{lua_quote(fallback)} end; return type(result.value) == "string" '
+                        f'and result.value or "" end)({snapshot})')
             return ('(function(result) if result.exists == false then return '
                     f'{lua_quote(fallback)} end; return tostring(result.value or "") end)({snapshot})')
+    if native_string_values and isinstance(value, dict):
+        variable_keys = {"context_val", "u_val", "npc_val", "global_val"}
+        keys = variable_keys & set(value)
+        if keys:
+            if len(keys) != 1 or set(value) != keys:
+                return None
+            key = next(iter(keys))
+            if key == "u_val":
+                if avatar_expression is None:
+                    return None
+                variable_owner = avatar_expression
+            elif key == "npc_val":
+                if npc_expression is None:
+                    return None
+                variable_owner = npc_expression
+            else:
+                variable_owner = owner
+            snapshot = render_direct_variable_snapshot(value, variable_owner)
+            if snapshot is None:
+                return None
+            return (
+                '(function(result) if result.exists == false then return "" end; '
+                'return type(result.value) == "string" and result.value or "" end)('
+                f'{snapshot})'
+            )
     return render_eoc_string_expression(value, owner)
 
 
@@ -27409,7 +27455,7 @@ def render_eoc_condition_expression(
                 return None
             requested = render_participant_string_expression(
                 value, "actor", "actor" if avatar_actor_proven else None,
-                npc_query_actor)
+                npc_query_actor, native_string_values=True)
         return None if requested is None else f"{current} == {requested}"
     if (
         set(condition) == {"map_furniture_with_flag", "loc"} and
