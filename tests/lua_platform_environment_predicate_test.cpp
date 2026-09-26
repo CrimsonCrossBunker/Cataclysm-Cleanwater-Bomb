@@ -16,6 +16,10 @@
 #include "json_loader.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#if defined(LOCALIZE)
+#include "translation_manager.h"
+#include "translations.h"
+#endif
 #include "type_id.h"
 #include "weather.h"
 #include "weather_type.h"
