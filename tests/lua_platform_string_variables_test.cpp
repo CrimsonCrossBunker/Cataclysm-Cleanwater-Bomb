@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -11,6 +12,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "condition.h"
 #include "character.h"
 #include "character_id.h"
@@ -18,6 +20,7 @@
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "global_vars.h"
+#include "json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -30,6 +33,7 @@
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
            "[lua][platform][strings][semantic]" )
 {
+    restore_on_out_of_scope restore_weather( get_weather().weather_id );
     avatar player;
     npc partner;
     player.normalize();
@@ -166,7 +170,7 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
         assert(result.ok)
         local value = result.value
         if value.exists == false then return current == fallback end
-        return current == tostring(value.value or "")
+        return current == (type(value.value) == "string" and value.value or "")
     )" );
     for( const std::string selector : {
              "is_season", "is_weather"
@@ -203,6 +207,31 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
             CHECK( actual.get<bool>() == predicate( context ) );
         }
     }
+    // Native str_or_var calls diag_value::str(): a number yields an empty
+    // string (with a native debug diagnostic), never its formatted digits.
+    environment_source.set_value( "environment_input", diag_value( 1.0 ) );
+    sol::protected_function numeric_string = lua.load( "return tostring(1.0)" );
+    const sol::protected_function_result numeric_result = numeric_string();
+    REQUIRE( numeric_result.valid() );
+    const std::string numeric_text = numeric_result.get<std::string>();
+    get_weather().weather_id = weather_type_id( numeric_text );
+    lua["current"] = numeric_text;
+    lua["fallback"] = "";
+    const std::string nonstring_condition = R"({"is_weather":{")" +
+                                            ( indirect ? "var_val" : source_key ) + R"(":")" +
+                                            ( indirect ? "environment_ref" : "environment_input" ) +
+                                            R"(","default":""}})";
+    const conditional_t nonstring_predicate(
+        json_loader::from_string( nonstring_condition ).get_object() );
+    const sol::protected_function_result nonstring_actual = environment_query();
+    REQUIRE( nonstring_actual.valid() );
+    bool native_nonstring_result = false;
+    const std::string native_nonstring_diagnostic = capture_debugmsg_during( [&]() {
+        native_nonstring_result = nonstring_predicate( context );
+    } );
+    CHECK( native_nonstring_diagnostic.find(
+               "Type mismatch in diag_value: requested string, got double" ) != std::string::npos );
+    CHECK( nonstring_actual.get<bool>() == native_nonstring_result );
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
             data, target_npc ? partner_handle : player_handle,
@@ -374,6 +403,129 @@ TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
     sol::protected_function_result erased = remove( key );
     REQUIRE( erased.valid() );
     CHECK( get_globals().maybe_get_global_value( key ) == nullptr );
+}
+
+TEST_CASE( "lua_context_string_lookup_matches_native_unrestricted_keys",
+           "[lua][platform][strings][semantic]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    sol::table data = lua.create_table();
+    lua["data"] = data;
+    sol::protected_function read = lua.load( R"(
+        local value = data[key]
+        if value == nil then return "fallback" end
+        if type(value) == "string" then return value end
+        return ""
+    )" );
+    for( const std::string &key : std::vector<std::string> {
+    "", std::string( "nul\0key", 7 ), "control\nkey", std::string( 129, 'k' ), "中文键"
+    } ) {
+        CAPTURE( key.size() );
+        std::ostringstream input;
+        JsonOut writer( input );
+        writer.start_object();
+        writer.member( "value" );
+        writer.start_object();
+        writer.member( "context_val", key );
+        writer.member( "default", "fallback" );
+        writer.end_object();
+        writer.end_object();
+        const JsonObject object = json_loader::from_string( input.str() ).get_object();
+        const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        dialogue context;
+        lua["key"] = key;
+        const auto compare = [&]( const std::string & expected ) {
+            const sol::protected_function_result actual = read();
+            REQUIRE( actual.valid() );
+            CHECK( actual.get<std::string>() == expected );
+            CHECK( native.evaluate( context ) == expected );
+        };
+        compare( "fallback" );
+        const std::string long_value( 9000, 'v' );
+        context.set_value( key, long_value );
+        data.raw_set( key, long_value );
+        compare( long_value );
+        context.set_value( key, diag_value{} );
+        data.raw_set( key, services["types"]["null"].get<sol::object>() );
+        compare( "" );
+        context.set_value( key, diag_value( 42.0 ) );
+        data.raw_set( key, 42.0 );
+        const std::string diagnostic = capture_debugmsg_during( [&]() {
+            compare( "" );
+        } );
+        CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+        data.raw_set( key, sol::nil );
+    }
+}
+
+
+TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
+           "[lua][platform][strings][semantic]" )
+{
+    restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
+    get_globals().set_global_value( "", "empty-global" );
+    for( const std::string &key : std::vector<std::string> {
+    "", std::string( "pointer\0key", 11 ), "pointer\nkey", std::string( 9000, 'p' )
+    } ) {
+        CAPTURE( key.size() );
+        std::ostringstream input;
+        JsonOut writer( input );
+        writer.start_object();
+        writer.member( "value" );
+        writer.start_object();
+        writer.member( "var_val", key );
+        writer.member( "default", "fallback" );
+        writer.end_object();
+        writer.end_object();
+        const JsonObject object = json_loader::from_string( input.str() ).get_object();
+        const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        dialogue context;
+        CHECK( native.evaluate( context ) == "fallback" );
+        context.set_value( key, diag_value{} );
+        CHECK( native.evaluate( context ) == "empty-global" );
+        context.set_value( key, "" );
+        CHECK( native.evaluate( context ) == "empty-global" );
+        for( const diag_value &pointer : {
+                 diag_value( 42.0 ), diag_value( diag_array{ diag_value( "u_key" ) } )
+             } ) {
+            context.set_value( key, pointer );
+            const std::string diagnostic = capture_debugmsg_during( [&]() {
+                CHECK( native.evaluate( context ) == "empty-global" );
+            } );
+            CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+        }
+        // Prefixes select a scope once; a missing participant is a missing value.
+        for( const std::string pointer : {
+                 "u_key", "n_key"
+             } ) {
+            context.set_value( key, pointer );
+            CHECK( native.evaluate( context ) == "fallback" );
+        }
+        // A referenced string that itself looks like a pointer is not followed.
+        const std::string target = "native_indirect_target";
+        context.set_value( target, "u_not_followed" );
+        context.set_value( key, "_" + target );
+        CHECK( native.evaluate( context ) == "u_not_followed" );
+        context.set_value( target, diag_value{} );
+        CHECK( native.evaluate( context ).empty() );
+        context.remove_value( target );
+        CHECK( native.evaluate( context ) == "fallback" );
+        avatar alpha;
+        npc beta;
+        alpha.set_value( key, "alpha-value" );
+        beta.set_value( key, "beta-value" );
+        dialogue participants( get_talker_for( alpha ), get_talker_for( beta ) );
+        participants.set_value( key, "u_" + key );
+        CHECK( native.evaluate( participants ) == "alpha-value" );
+        participants.set_value( key, "n_" + key );
+        CHECK( native.evaluate( participants ) == "beta-value" );
+        get_globals().set_global_value( target, "global-value" );
+        participants.set_value( key, target );
+        CHECK( native.evaluate( participants ) == "global-value" );
+    }
 }
 
 #endif

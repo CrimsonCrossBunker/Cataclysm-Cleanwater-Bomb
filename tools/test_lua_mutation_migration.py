@@ -215,6 +215,249 @@ end
                             )
                         )
 
+    @unittest.skipUnless(
+        shutil.which("lua"),
+        "Lua interpreter required for generated mutation execution",
+    )
+    def test_mutation_callback_uses_proven_alpha_and_empty_topic_item(
+        self,
+    ):
+        eoc_id = "non_avatar_alpha_mutation"
+        source = migration.SourceObject(
+            Path("mutation_fixture.json"),
+            0,
+            {
+                "type": "effect_on_condition",
+                "id": eoc_id,
+                "effect": {
+                    "u_add_trait": {"u_val": "trait_id"},
+                    "variant": {"mutator": "topic_item"},
+                },
+            },
+        )
+        rendered = migration.render_eoc(
+            source,
+            migration.MigrationResult(),
+            eoc_actor_requirements={eoc_id: "character"},
+            eoc_referenced_ids=frozenset({eoc_id}),
+        )
+        self.assertNotIn(
+            "TODO", rendered.replace("review every TODO before enabling", "")
+        )
+        script = r"""
+local selected = {is_avatar=false}
+local calls = 0
+local services = {
+  variables = {resolve=function(data, owner, scope, key, participants)
+    assert(owner == nil and scope == 'u' and key == 'trait_id')
+    assert(participants.alpha == selected)
+    return {ok=true, value={exists=true, value=data[key]}}
+  end},
+  types = {id=function(kind, id)
+    assert(kind == 'mutation' and id == 'QUICK')
+    return id
+  end},
+  mutations = {replace=function(target, id, variant)
+    assert(target == selected and id == 'QUICK' and variant == '')
+    calls = calls + 1
+    return {ok=true, value={present=true}}
+  end},
+  characters = {avatar=function() error('must not select the avatar') end},
+}
+local function service_value(result)
+  if not result.ok then error(result.error.message) end
+  return result.value
+end
+local migrated_eoc_functions = {}
+BODY
+migrated_eoc_functions.non_avatar_alpha_mutation(
+  {data={trait_id='QUICK', topic_item='LIVE_ITEM'},
+   item='LIVE_ITEM'}, selected)
+assert(calls == 1)
+""".replace("BODY", rendered)
+        completed = subprocess.run(
+            [shutil.which("lua"), "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(
+        shutil.which("lua"),
+        "Lua interpreter required for generated mutation execution",
+    )
+    def test_topic_item_id_lowers_to_empty_but_empty_variant_executes(self):
+        rendered_functions = []
+        for eoc_id, mutation_id, variant in (
+            ("topic_item_mutation_id", {"mutator": "topic_item"}, "red"),
+            (
+                "topic_item_mutation_variant", "QUICK",
+                {"mutator": "topic_item"},
+            ),
+        ):
+            source = migration.SourceObject(
+                Path("mutation_fixture.json"),
+                0,
+                {
+                    "type": "effect_on_condition",
+                    "id": eoc_id,
+                    "effect": {
+                        "u_add_trait": mutation_id,
+                        "variant": variant,
+                    },
+                },
+            )
+            rendered = migration.render_eoc(
+                source,
+                migration.MigrationResult(),
+                eoc_actor_requirements={eoc_id: "character"},
+                eoc_referenced_ids=frozenset({eoc_id}),
+            )
+            self.assertNotIn(
+                "TODO",
+                rendered.replace("review every TODO before enabling", ""),
+            )
+            rendered_functions.append(rendered)
+        self.assertIn(
+            'services.types.id("mutation", "")', rendered_functions[0]
+        )
+
+        script = r"""
+local selected = {is_avatar=false}
+local calls = {}
+local services = {
+  types = {id=function(kind, id)
+    assert(kind == 'mutation')
+    if id == '' then error('invalid empty mutation ID') end
+    return id
+  end},
+  mutations = {replace=function(target, id, variant)
+    assert(target == selected)
+    calls[#calls + 1] = {id=id, variant=variant}
+    return {ok=true, value={present=id ~= ''}}
+  end},
+}
+local function service_value(result)
+  if not result.ok then error(result.error.message) end
+  return result.value
+end
+local migrated_eoc_functions = {}
+BODY
+local copied_context = {data={topic_item='LIVE_ITEM'}, item='LIVE_ITEM'}
+local ok, message = pcall(function()
+  migrated_eoc_functions.topic_item_mutation_id(copied_context, selected)
+end)
+assert(not ok and string.find(message, 'invalid empty mutation ID', 1, true))
+assert(#calls == 0)
+migrated_eoc_functions.topic_item_mutation_variant(copied_context, selected)
+assert(#calls == 1)
+assert(calls[1].id == 'QUICK' and calls[1].variant == '')
+""".replace("BODY", "\n".join(rendered_functions))
+        completed = subprocess.run(
+            [shutil.which("lua"), "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(
+        shutil.which("lua"),
+        "Lua interpreter required for generated mutation execution",
+    )
+    def test_mutation_alpha_proof_uses_character_fields_and_keeps_npc_as_beta(
+        self,
+    ):
+        sources = (
+            (
+                "character_event_mutation", "character_takes_damage",
+                "u_add_trait",
+            ),
+            ("item_event_mutation", "character_wields_item", "u_add_trait"),
+            ("npc_event_mutation", "npc_becomes_hostile", "npc_add_trait"),
+        )
+        rendered_functions = []
+        for eoc_id, event, selector in sources:
+            source = migration.SourceObject(
+                Path("mutation_fixture.json"),
+                0,
+                {
+                    "type": "effect_on_condition",
+                    "id": eoc_id,
+                    "required_event": event,
+                    "effect": {selector: "QUICK"},
+                },
+            )
+            rendered = migration.render_eoc(
+                source, migration.MigrationResult()
+            )
+            self.assertNotIn(
+                "TODO",
+                rendered.replace("review every TODO before enabling", ""),
+            )
+            rendered_functions.append(rendered)
+
+        unproven_source = migration.SourceObject(
+            Path("mutation_fixture.json"),
+            0,
+            {
+                "type": "effect_on_condition",
+                "id": "npc_event_does_not_prove_u_alpha",
+                "required_event": "npc_becomes_hostile",
+                "effect": {"u_add_trait": "QUICK"},
+            },
+        )
+        unproven = migration.render_eoc(
+            unproven_source, migration.MigrationResult()
+        )
+        self.assertIn(
+            "TODO: resolve an exact Character target", unproven
+        )
+        self.assertNotIn("services.mutations.replace(", unproven)
+
+        script = r"""
+local primary = {role='primary'}
+local beta = {role='beta'}
+local calls = {}
+local services = {
+  types = {id=function(kind, id)
+    assert(kind == 'mutation' and id == 'QUICK'); return id
+  end},
+  mutations = {replace=function(target, id, variant)
+    calls[#calls + 1] = {target=target, id=id, variant=variant}
+    return {ok=true, value={present=true}}
+  end},
+}
+local function service_value(result)
+  if not result.ok then error(result.error.message) end
+  return result.value
+end
+local runtime = {handler=function() end, on=function() end}
+local migrated_eoc_functions = {}
+BODY
+migrated_eoc_functions.character_event_mutation(
+  {actors={character=primary, beta=beta}}, nil)
+migrated_eoc_functions.item_event_mutation(
+  {actors={character=primary}}, nil)
+migrated_eoc_functions.npc_event_mutation(
+  {actors={npc=beta}}, nil)
+assert(#calls == 3)
+assert(calls[1].target == primary and calls[1].id == 'QUICK')
+assert(calls[2].target == primary and calls[2].id == 'QUICK')
+assert(calls[3].target == beta and calls[3].id == 'QUICK')
+""".replace("BODY", "\n".join(rendered_functions))
+        completed = subprocess.run(
+            [shutil.which("lua"), "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_false_branch_uses_native_mutation_replacement(self):
         for prefix, event in (
             ("u_", "game_start"),
@@ -282,7 +525,15 @@ end
                 self.assertIn(relative, report)
                 self.assertIn(identifier, report)
                 self.assertIn("needs an explicit Platform trigger", report)
-                self.assertIn("resolve an exact Character target", report)
+                self.assertIn(
+                    "local actor = actor_override",
+                    result.files[Path("main.lua")],
+                )
+                self.assertIn(
+                    "services.mutations.invoke_activation(",
+                    result.files[Path("main.lua")],
+                )
+                self.assertNotIn("resolve an exact Character target", report)
                 self.assertNotIn(
                     "choose mutation conflict replacement", report)
                 for method in ("grant", "remove", "set_active"):

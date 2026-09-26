@@ -778,6 +778,25 @@ def bounded_utf8_string(
     return (allow_empty or length > 0) and length <= maximum
 
 
+def lua_quotable_native_variable_string(value: Any) -> bool:
+    """Accept any native variable string that can be embedded in generated Lua."""
+    if not isinstance(value, str):
+        return False
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def bounded_platform_context_variable_key(value: Any) -> bool:
+    """Match the context/var key contract used by the Platform variable service."""
+    return (
+        bounded_utf8_string(value, 128) and
+        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
+    )
+
+
 def bounded_platform_id(value: Any) -> bool:
     return (
         safe_platform_id(value) and
@@ -957,36 +976,29 @@ def normalize_inline_eocs(
         # Effect nodes carry the selector/branches as sibling members (the
         # ``switch`` member is only the selector expression).  Normalize those
         # nodes before walking their children so each branch becomes a private
-        # callback rather than an opaque legacy object.
+        # callback rather than an opaque legacy object.  Native ``f_switch``
+        # has no action-level default branch, so leave that whole switch intact
+        # for the renderer to report as a manual rewrite.
         if "switch" in result and isinstance(result.get("cases"), list):
-            switch_cases = result.get("cases")
-            actor_kind = (
-                inherited_actor_kind
-                if inherited_actor_kind != "inherit"
-                else actor_kind_for(result)
-            )
-            for case_index, case in enumerate(switch_cases):
-                if not isinstance(case, dict) or "effect" not in case:
-                    continue
-                descriptor = {
-                    "type": "effect_on_condition",
-                    "effect": case.get("effect"),
-                }
-                child_id = lower_descriptor(
-                    descriptor, parent, "switch", case_index,
-                    source, actor_kind,
+            if "default" not in result:
+                switch_cases = result.get("cases")
+                actor_kind = (
+                    inherited_actor_kind
+                    if inherited_actor_kind != "inherit"
+                    else actor_kind_for(result)
                 )
-                case["effect"] = {"run_eocs": child_id}
-            if "default" in result:
-                descriptor = {
-                    "type": "effect_on_condition",
-                    "effect": result.get("default"),
-                }
-                child_id = lower_descriptor(
-                    descriptor, parent, "switch_default", 0,
-                    source, actor_kind,
-                )
-                result["default"] = {"run_eocs": child_id}
+                for case_index, case in enumerate(switch_cases):
+                    if not isinstance(case, dict) or "effect" not in case:
+                        continue
+                    descriptor = {
+                        "type": "effect_on_condition",
+                        "effect": case.get("effect"),
+                    }
+                    child_id = lower_descriptor(
+                        descriptor, parent, "switch", case_index,
+                        source, actor_kind,
+                    )
+                    case["effect"] = {"run_eocs": child_id}
 
         if "if" in result and "then" in result:
             actor_kind = (
@@ -1021,7 +1033,10 @@ def normalize_inline_eocs(
                     if inherited_actor_kind != "inherit"
                     else actor_kind_for(switch)
                 )
-                if isinstance(switch_cases, list):
+                # This non-canonical nested form is not a native switch
+                # branch container.  In particular, never reinterpret its
+                # ``default`` member as an executable fallback callback.
+                if isinstance(switch_cases, list) and "default" not in switch:
                     for case_index, case in enumerate(switch_cases):
                         if not isinstance(case, dict) or "effect" not in case:
                             continue
@@ -1036,17 +1051,6 @@ def normalize_inline_eocs(
                         )
                         case["effect"] = {"run_eocs": child_id}
                     switch["cases"] = switch_cases
-                    if "default" in switch:
-                        branch = switch.get("default")
-                        descriptor = {
-                            "type": "effect_on_condition",
-                            "effect": branch,
-                        }
-                        child_id = lower_descriptor(
-                            descriptor, parent, "switch_default", 0,
-                            source, actor_kind,
-                        )
-                        switch["default"] = {"run_eocs": child_id}
                 result[member] = switch
                 continue
             if member == "if" and isinstance(raw, dict) and "then" in raw:
@@ -3644,17 +3648,18 @@ def render_static_set_condition(
     predicate = render_eoc_condition_expression(
         effect["condition"], avatar_actor_proven, weapon_actor_proven,
         npc_actor_proven, creature_actor_proven, eoc_conditions,
-        npc_actor_expression=npc_actor_expression,
+        npc_actor_expression=(
+            "stored_condition_beta"
+            if npc_actor_expression is not None or npc_actor_proven else None
+        ),
     )
     if name is None or predicate is None:
         return None
     return [
         "    context.conditions = context.conditions or {}",
         f"    local stored_condition_name = tostring(({name}) or \"\")",
-        "    if stored_condition_name ~= \"\" then",
-        "        context.conditions[stored_condition_name] = function(context, actor)",
-        f"            return {predicate}",
-        "        end",
+        "    context.conditions[stored_condition_name] = function(context, actor, stored_condition_beta)",
+        f"        return {predicate}",
         "    end",
     ]
 
@@ -4501,6 +4506,14 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
             return None
         return render_participant_translation_expression(value, target, alpha, beta)
+    if isinstance(value, dict) and value.get("mutator") == "topic_item":
+        if (set(value) - {"mutator", "//~"} or
+                "//~" in value and not isinstance(value["//~"], str)):
+            return None
+        # EOC actions run from copied dialogue state, which has no current
+        # topic item.  Preserve native ``d.cur_item.str()`` semantics instead
+        # of reading a live dialogue or an unrelated Platform context field.
+        return lua_quote("")
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -4574,18 +4587,30 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
                 "u_val", "npc_val", "context_val", "global_val", "var_val"}:
             descriptor = next(iter(descriptors))
             name = value[descriptor]
-            if not bounded_utf8_string(name, 128) or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+            valid_name = (
+                bounded_platform_context_variable_key(name)
+                if descriptor == "var_val" else
+                lua_quotable_native_variable_string(name)
+            )
+            if not valid_name:
                 return None
             fallback = value.get("default", "")
             if not isinstance(fallback, str):
                 return None
-            scope = descriptor.removesuffix("_val")
-            mutation = (
-                '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
-                ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
-                '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
-                ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
-            )
+            if descriptor == "context_val":
+                mutation = (
+                    '(function(stored) if stored == nil then return ' + lua_quote(fallback) +
+                    ' end; if type(stored) == "string" then return stored end; return "" end)'
+                    '(context and context.data and context.data[' + lua_quote(name) + '])'
+                )
+            else:
+                scope = descriptor.removesuffix("_val")
+                mutation = (
+                    '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
+                    ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
+                    '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
+                    ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
+                )
     return mutation
 
 
@@ -5250,9 +5275,9 @@ def render_static_false_effect(
         key = next(iter(effect))
         target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
         name = effect[key]
-        if target is not None and bounded_utf8_string(name, 256):
+        if target is not None and lua_quotable_native_variable_string(name):
             return [
-                f"        services.variables.remove({target}, {lua_quote(name)})"
+                f"        services.variables.remove({target}, {lua_quote(name)}, {{ include_before = false }})"
             ]
     if isinstance(effect, dict):
         key: str | None = next(
@@ -5944,9 +5969,12 @@ def render_static_switch_effect(
         key for key in effect
         if isinstance(key, str) and key.startswith("//")
     }
+    # Legacy f_switch ignores an unmatched switch and has no top-level
+    # ``default`` branch.  Only numeric defaults inside selector descriptors
+    # (handled below) are supported here.
     if (
         "switch" not in effect or
-        set(effect) - {"switch", "cases", "default"} - comment_keys
+        set(effect) - {"switch", "cases"} - comment_keys
     ):
         return None
     raw_switch = effect.get("switch")
@@ -6039,23 +6067,6 @@ def render_static_switch_effect(
         lines.append(
             f"    {'if' if index == 1 else 'elseif'} switch_case == {index} then"
         )
-        lines.extend(rendered)
-    if "default" in effect:
-        default_effect = effect.get("default")
-        default_values = (
-            default_effect if isinstance(default_effect, list) else [default_effect]
-        )
-        rendered = []
-        for default_value in default_values:
-            chunk = render_static_false_effect(
-                default_value, avatar_actor_proven, npc_actor_proven,
-                eoc_function_names, eoc_actor_requirements,
-                actor_expression, eoc_conditions, creature_actor_proven,
-            )
-            if chunk is None:
-                return None
-            rendered.extend(chunk)
-        lines.append("    else")
         lines.extend(rendered)
     if case_data:
         lines.append("    end")
@@ -18972,11 +18983,17 @@ def render_eoc_value_expression(
     if not isinstance(value, dict) or len(value) != 1:
         return None
     key, name = next(iter(value.items()))
-    if (
-        key not in {"context_val", "u_val", "npc_val", "global_val", "var_val"} or
-        not isinstance(name, str) or
-        not name or len(name) > 1024 or "\0" in name
-    ):
+    if key not in {"context_val", "u_val", "npc_val", "global_val", "var_val"}:
+        return None
+    if key == "context_val":
+        # This path indexes the callback's Lua table directly and does not
+        # call the bounded context-variable service.
+        valid_name = lua_quotable_native_variable_string(name)
+    elif key in {"u_val", "npc_val", "global_val"}:
+        valid_name = lua_quotable_native_variable_string(name)
+    else:
+        valid_name = bounded_platform_context_variable_key(name)
+    if not valid_name:
         return None
     quoted = lua_quote(name)
     if key == "context_val":
@@ -24887,12 +24904,7 @@ def render_static_character_variable(
     target_expression: str | None,
 ) -> list[str] | None:
     """Render a literal u_/npc_add_var with native string semantics."""
-    if target_expression is None or not bounded_utf8_string(effect.get(key), 256):
-        return None
-    if any(
-        ord(character) < 0x20 or ord(character) == 0x7F
-        for character in effect[key]
-    ):
+    if target_expression is None or not lua_quotable_native_variable_string(effect.get(key)):
         return None
     allowed = {key, "value", "possible_values", "time"}
     if set(effect) - allowed:
@@ -24900,15 +24912,19 @@ def render_static_character_variable(
     time_value = effect.get("time", False)
     if not isinstance(time_value, bool):
         return None
-    options = [name for name in ("value", "possible_values") if name in effect]
+    # The native handler still loads possible_values when time will ignore them.
+    values = effect.get("possible_values", [])
+    if (
+        not isinstance(values, list) or
+        not all(isinstance(value, str) for value in values)
+    ):
+        return None
     if time_value:
-        if options:
-            return None
         value_expression = "tostring(services.turn())"
         lines = [
             "    services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
-            f"{value_expression})",
+            f"{value_expression}, {{ include_before = false }})",
         ]
         if target_expression == "context.actors.item":
             return [
@@ -24917,17 +24933,45 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
-    if len(options) != 1:
-        return None
+    # Native variable storage and its event preserve the complete Lua string.
+    if values:
+        if (
+            len(values) > NATIVE_INT_MAX + 1 or
+            not all(lua_quotable_native_variable_string(value) for value in values)
+        ):
+            return None
+        rendered_values = ", ".join(lua_quote(value) for value in values)
+        lines = [
+            f"    local values = {{ {rendered_values} }}",
+            "    local selected_value = values[services.random.int(0, #values - 1) + 1]",
+            "    local write_result = services.variables.set(",
+            f"        {target_expression}, {lua_quote(effect[key])}, selected_value, {{ include_before = false }})",
+            "    if write_result.ok then",
+            "        services.native_events.emit(",
+            f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, selected_value }})",
+            "    end",
+        ]
+        if target_expression == "context.actors.item":
+            return [
+                "    if context.actors.item ~= nil then",
+                *[line.replace("    ", "        ", 1) for line in lines],
+                "    end",
+            ]
+        return lines
     if "value" in effect:
         value = effect["value"]
-        if not bounded_utf8_string(value, 8192, allow_empty=True):
+        if not lua_quotable_native_variable_string(value):
             return None
         value_expression = lua_quote(value)
         lines = [
-            "    services.variables.set(",
+            "    local write_result = services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
-            f"{value_expression})",
+            f"{value_expression}, {{ include_before = false }})",
+            "    if write_result.ok then",
+            "        services.native_events.emit(",
+            f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, "
+            f"{value_expression} }})",
+            "    end",
         ]
         if target_expression == "context.actors.item":
             return [
@@ -24936,28 +24980,7 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
-    values = effect["possible_values"]
-    if (
-        not isinstance(values, list) or not values or len(values) > 64 or
-        not all(
-            bounded_utf8_string(value, 8192, allow_empty=True) for value in values
-        )
-    ):
-        return None
-    rendered_values = ", ".join(lua_quote(value) for value in values)
-    lines = [
-        f"    local values = {{ {rendered_values} }}",
-        "    services.variables.set(",
-        f"        {target_expression}, {lua_quote(effect[key])}, "
-        "values[services.random.int(1, #values)])",
-    ]
-    if target_expression == "context.actors.item":
-        return [
-            "    if context.actors.item ~= nil then",
-            *[line.replace("    ", "        ", 1) for line in lines],
-            "    end",
-        ]
-    return lines
+    return None
 
 
 def render_static_character_wound(
@@ -25041,6 +25064,7 @@ def render_direct_variable_snapshot(value: Any, owner: str) -> str | None:
 def render_participant_string_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
+    native_string_values: bool = False,
 ) -> str | None:
     """Resolve a string independently of the character being queried or changed."""
     if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
@@ -25048,11 +25072,15 @@ def render_participant_string_expression(
             return None
         return render_participant_translation_expression(
             value, target_expression, avatar_expression, npc_expression)
+    if native_string_values and isinstance(value, dict) and "str" in value:
+        # Native str_or_var only accepts translation objects when i18n is true.
+        return None
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
         option = render_participant_string_expression(
-            value["option"], target_expression, avatar_expression, npc_expression)
+            value["option"], target_expression, avatar_expression, npc_expression,
+            native_string_values)
         if option is None:
             return None
         # Native get_option<string> reads the stored string, not the formatted
@@ -25071,7 +25099,8 @@ def render_participant_string_expression(
         if set(value) != {"mutator", id_key}:
             return None
         identifier = render_participant_string_expression(
-            value[id_key], target_expression, avatar_expression, npc_expression)
+            value[id_key], target_expression, avatar_expression, npc_expression,
+            native_string_values)
         if identifier is None:
             return None
         if monster:
@@ -25100,7 +25129,8 @@ def render_participant_string_expression(
         if not isinstance(blacklist, list):
             return None
         entries = [render_participant_string_expression(
-            entry, target_expression, avatar_expression, npc_expression) for entry in blacklist]
+            entry, target_expression, avatar_expression, npc_expression,
+            native_string_values) for entry in blacklist]
         if any(entry is None for entry in entries):
             return None
         if entries:
@@ -25132,28 +25162,74 @@ def render_participant_string_expression(
             # process_variable interprets u_, n_, _, and an unprefixed global
             # name. Resolve the resulting owner before calling the single-
             # character service; passing var scope would lose that distinction.
-            return (
+            expression = (
                 '(function() local name = context.data[' + lua_quote(value["var_val"]) + ']; '
                 'if name == nil then return ' + fallback + ' end; '
+            )
+            if native_string_values:
+                expression += (
+                    'if type(name) ~= "string" or name == "" then return ' + fallback + ' end; '
+                )
+            expression += (
                 'local scope, owner = "global", nil; '
                 'if name:sub(1, 2) == "u_" then scope, owner, name = "u", ' +
                 avatar_expression + ', name:sub(3) '
                 'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
                 npc_expression + ', name:sub(3) '
                 'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
+            )
+            if native_string_values:
+                # Platform variable scopes require non-empty names.  Preserve
+                # native's default/empty result for a missing empty reference;
+                # a separately stored native empty key is outside this scope.
+                expression += 'if name == "" then return ' + fallback + ' end; '
+            expression += (
                 'local result = service_value(services.variables.resolve('
                 'context.data, owner, scope, name)); '
                 'if result.exists == false then return ' + fallback + ' end; '
-                'return tostring(result.value or "") end)()'
             )
+            expression += (
+                'return type(result.value) == "string" and result.value or "" end)()'
+                if native_string_values else 'return tostring(result.value or "") end)()'
+            )
+            return expression
         if "default" in value:
             variable = {key: item for key, item in value.items() if key != "default"}
             snapshot = render_direct_variable_snapshot(variable, owner)
             fallback = value["default"]
             if snapshot is None or not bounded_utf8_string(fallback, 8192, allow_empty=True):
                 return None
+            if native_string_values:
+                return ('(function(result) if result.exists == false then return '
+                        f'{lua_quote(fallback)} end; return type(result.value) == "string" '
+                        f'and result.value or "" end)({snapshot})')
             return ('(function(result) if result.exists == false then return '
                     f'{lua_quote(fallback)} end; return tostring(result.value or "") end)({snapshot})')
+    if native_string_values and isinstance(value, dict):
+        variable_keys = {"context_val", "u_val", "npc_val", "global_val"}
+        keys = variable_keys & set(value)
+        if keys:
+            if len(keys) != 1 or set(value) != keys:
+                return None
+            key = next(iter(keys))
+            if key == "u_val":
+                if avatar_expression is None:
+                    return None
+                variable_owner = avatar_expression
+            elif key == "npc_val":
+                if npc_expression is None:
+                    return None
+                variable_owner = npc_expression
+            else:
+                variable_owner = owner
+            snapshot = render_direct_variable_snapshot(value, variable_owner)
+            if snapshot is None:
+                return None
+            return (
+                '(function(result) if result.exists == false then return "" end; '
+                'return type(result.value) == "string" and result.value or "" end)('
+                f'{snapshot})'
+            )
     return render_eoc_string_expression(value, owner)
 
 
@@ -26857,7 +26933,8 @@ def render_eoc_condition_expression(
                 "(function() local stored_condition_name = tostring((" + name +
                 ") or \"\"); local stored_condition = context.conditions and "
                 "context.conditions[stored_condition_name]; return stored_condition "
-                "~= nil and stored_condition(context, " + actor + ") or false end)()"
+                "~= nil and stored_condition(context, " + actor + ", " +
+                (npc_query_actor or "nil") + ") or false end)()"
             )
 
     if npc_query_actor is not None:
@@ -27393,6 +27470,15 @@ def render_eoc_condition_expression(
             requested = render_participant_translation_expression(
                 value, "actor", "actor" if avatar_actor_proven else None,
                 npc_query_actor)
+        elif isinstance(value, dict) and value.get("mutator") == "topic_item":
+            if set(value) != {"mutator"}:
+                return None
+            # This renderer is only used for migrated EOC predicates, which
+            # evaluate on activate's copied dialogue (including nested EOC
+            # predicates). That copy drops cur_item, so the native mutator
+            # observes "". Standalone native test_condition calls are outside
+            # this renderer's runtime path.
+            requested = lua_quote("")
         else:
             if isinstance(value, dict) and not set(value).intersection({
                 "u_val", "npc_val", "global_val", "context_val", "var_val", "mutator",
@@ -27400,7 +27486,7 @@ def render_eoc_condition_expression(
                 return None
             requested = render_participant_string_expression(
                 value, "actor", "actor" if avatar_actor_proven else None,
-                npc_query_actor)
+                npc_query_actor, native_string_values=True)
         return None if requested is None else f"{current} == {requested}"
     if (
         set(condition) == {"map_furniture_with_flag", "loc"} and
@@ -28376,6 +28462,14 @@ def render_eoc(
     actor_expression = (
         "actor" if (character_actor_proven or creature_actor_proven) else None
     )
+    # Mutation ``u_`` selectors consume alpha, not any Character from the
+    # event.  The NPC event field is beta; only promote event fields that the
+    # native event bridge defines as alpha's primary Character.
+    mutation_alpha_actor_proven = (
+        avatar_actor_proven or item_event_character_actor_proven or
+        (not has_event_trigger and callback_character_actor_proven) or
+        event_actor_field in {"character", "attacker", "killer"}
+    )
     if nested_character_override and shape_has_u_actor and shape_has_npc_actor:
         # A named callback may be invoked with explicit alpha/beta talkers by
         # ``run_eocs``.  Use the beta handle when that scoped context exists,
@@ -28657,7 +28751,10 @@ def render_eoc(
         for effect_index, effect in enumerate(effects):
             semantic_choice = mutation_migration_gap(effect)
             activation = render_mutation_action(
-                effect, "actor" if avatar_actor_proven else None, npc_actor_expression)
+                effect,
+                "actor" if mutation_alpha_actor_proven else None,
+                npc_actor_expression,
+            )
             if activation is not None:
                 lines.extend(activation)
                 converted_effect = True
@@ -28938,22 +29035,22 @@ def render_eoc(
                 avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_lose_var"} and
-                bounded_utf8_string(effect.get("u_lose_var"), 256)
+                lua_quotable_native_variable_string(effect.get("u_lose_var"))
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
-                    f"{lua_quote(effect['u_lose_var'])})"
+                    f"{lua_quote(effect['u_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
             elif (
                 npc_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"npc_lose_var"} and
-                bounded_utf8_string(effect.get("npc_lose_var"), 256)
+                lua_quotable_native_variable_string(effect.get("npc_lose_var"))
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
-                    f"{lua_quote(effect['npc_lose_var'])})"
+                    f"{lua_quote(effect['npc_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
             elif (
