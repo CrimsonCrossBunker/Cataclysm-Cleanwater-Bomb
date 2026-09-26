@@ -4506,6 +4506,14 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
             return None
         return render_participant_translation_expression(value, target, alpha, beta)
+    if isinstance(value, dict) and value.get("mutator") == "topic_item":
+        if (set(value) - {"mutator", "//~"} or
+                "//~" in value and not isinstance(value["//~"], str)):
+            return None
+        # EOC actions run from copied dialogue state, which has no current
+        # topic item.  Preserve native ``d.cur_item.str()`` semantics instead
+        # of reading a live dialogue or an unrelated Platform context field.
+        return lua_quote("")
     if isinstance(value, dict) and value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -28447,6 +28455,14 @@ def render_eoc(
     actor_expression = (
         "actor" if (character_actor_proven or creature_actor_proven) else None
     )
+    # Mutation ``u_`` selectors consume alpha, not any Character from the
+    # event.  The NPC event field is beta; only promote event fields that the
+    # native event bridge defines as alpha's primary Character.
+    mutation_alpha_actor_proven = (
+        avatar_actor_proven or item_event_character_actor_proven or
+        (not has_event_trigger and callback_character_actor_proven) or
+        event_actor_field in {"character", "attacker", "killer"}
+    )
     if nested_character_override and shape_has_u_actor and shape_has_npc_actor:
         # A named callback may be invoked with explicit alpha/beta talkers by
         # ``run_eocs``.  Use the beta handle when that scoped context exists,
@@ -28728,7 +28744,10 @@ def render_eoc(
         for effect_index, effect in enumerate(effects):
             semantic_choice = mutation_migration_gap(effect)
             activation = render_mutation_action(
-                effect, "actor" if avatar_actor_proven else None, npc_actor_expression)
+                effect,
+                "actor" if mutation_alpha_actor_proven else None,
+                npc_actor_expression,
+            )
             if activation is not None:
                 lines.extend(activation)
                 converted_effect = True
