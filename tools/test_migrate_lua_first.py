@@ -15,6 +15,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_u_friend_preserves_character_talker_semantics(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_friend", avatar_actor_proven=True),
+            "false",
+        )
+
     def test_u_are_owed_keeps_beta_actor_semantics(self) -> None:
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(

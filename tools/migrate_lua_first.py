@@ -26811,6 +26811,7 @@ def render_eoc_condition_expression(
             "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
             "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
             "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
+            "u_friend",
             "u_following", "u_vehicle_owned_by_avatar", "has_beta",
             "is_by_radio", "has_reason", "has_assigned_mission",
             "has_many_assigned_missions", "has_available_mission",
@@ -26821,7 +26822,7 @@ def render_eoc_condition_expression(
         ):
             return "false"
         if avatar_actor_proven and condition in (
-            "u_exists", "has_alpha", "u_friend",
+            "u_exists", "has_alpha",
             "has_no_assigned_mission", "has_no_available_mission",
             "u_has_no_available_mission",
         ):
