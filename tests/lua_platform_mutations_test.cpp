@@ -12,6 +12,7 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
@@ -27,6 +28,8 @@
 #include "lua_platform_variables.h"
 #include "mutation.h"
 #include "npc.h"
+#include "omdata.h"
+#include "overmapbuffer.h"
 #include "options_helpers.h"
 #include "rng.h"
 #include "type_id.h"
