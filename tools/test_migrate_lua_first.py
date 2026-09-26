@@ -141,6 +141,75 @@ assert(EXPRESSION)
                 )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_environment_dynamic_strings_do_not_coerce_nonstring_diag_values(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"is_weather": {"context_val": "weather_value"}})
+        self.assertIsNotNone(expression)
+        self.assertIn('type(result.value) == "string"', expression)
+        script = r"""
+local function service_value(result) assert(result.ok);return result.value end
+local context={data={weather_value=1}}
+local services={weather={current=function() return {weather={value=current}} end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(data==context.data and owner==nil and scope=='context' and key=='weather_value')
+  return {ok=true,value={exists=true,value=data[key]}}
+ end}}
+current='1'
+assert(not (EXPRESSION))
+current=''
+assert(EXPRESSION)
+""".replace("EXPRESSION", expression)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        indirect = migrate_lua_first.render_eoc_condition_expression(
+            {"is_weather": {"var_val": "weather_reference", "default": "fallback"}},
+            avatar_actor_proven=True, npc_actor_proven=True,
+            npc_actor_expression="partner")
+        self.assertIsNotNone(indirect)
+        indirect_script = r"""
+local context={data={weather_reference=1}}
+local services={weather={current=function() return {weather={value='fallback'}} end},
+ variables={resolve=function() error('non-string var_val must not be resolved') end}}
+local function service_value(result) assert(result.ok);return result.value end
+assert(EXPRESSION)
+""".replace("EXPRESSION", indirect)
+        indirect_result = subprocess.run(["lua", "-"], input=indirect_script, text=True,
+                                         capture_output=True, timeout=10)
+        self.assertEqual(indirect_result.returncode, 0, indirect_result.stderr)
+
+    def test_environment_string_renderer_covers_native_string_mutators(self) -> None:
+        mutators = (
+            {"mutator": "mon_faction", "mtype_id": "mon_zombie"},
+            {"mutator": "game_option", "option": "TEST_OPTION"},
+            {"mutator": "ma_technique_name", "matec_id": "tec"},
+            {"mutator": "ma_technique_description", "matec_id": "tec"},
+            {"mutator": "valid_technique"},
+        )
+        for selector in ("is_season", "is_weather"):
+            for value in mutators:
+                with self.subTest(selector=selector, value=value):
+                    self.assertIsNotNone(migrate_lua_first.render_eoc_condition_expression(
+                        {selector: value}, avatar_actor_proven=True,
+                        npc_actor_proven=True, npc_actor_expression="partner"))
+        nested_mutators = (
+            {"mutator": "mon_faction", "mtype_id": {"context_val": "monster_id"}},
+            {"mutator": "game_option", "option": {"context_val": "option_id"}},
+            {"mutator": "ma_technique_name", "matec_id": {"context_val": "technique_id"}},
+            {"mutator": "valid_technique", "blacklist": [{"context_val": "technique_id"}]},
+        )
+        for value in nested_mutators:
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {"is_weather": value}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner")
+            self.assertIsNotNone(expression)
+            self.assertIn('type(result.value) == "string"', expression)
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"is_weather": {
+                "mutator": "mon_faction", "mtype_id": {"str": "mon_zombie"},
+            }}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_environment_explicit_translation_is_not_a_plain_string(self) -> None:
         for selector in ("is_season", "is_weather"):
             expression = migrate_lua_first.render_eoc_condition_expression(
