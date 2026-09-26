@@ -19873,6 +19873,11 @@ def render_static_npc_goal_effect(
         if not isinstance(value, int) or isinstance(value, bool) or not -60 <= value <= 60:
             return None
         offsets.append(value)
+    if key == "u_set_goal":
+        # Native f_npc_goal resolves the alpha talker with get_npc().  In this
+        # proven-avatar context that returns null, so the bounded effect is a
+        # no-op.  Do not pass the avatar Character handle to an NPC service.
+        return []
     actor = "actor"
     visibility = ""
     if "must_see" in target:
@@ -19923,6 +19928,25 @@ def render_static_npc_guard_position_effect(
         return None
     if actor_scope == "npc" and not npc_actor_proven:
         return None
+    if actor_scope == "u":
+        # Native f_guard_pos resolves the alpha talker with get_npc().  In this
+        # proven-avatar context the native effect is a no-op; retain that
+        # behavior instead of passing a Character handle to an NPC service.
+        if unique_id:
+            descriptor = _coordinate_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "global":
+                return None
+        elif (
+            isinstance(target, dict) and
+            set(target) == {"context_val"} and
+            bounded_utf8_string(target.get("context_val"), 256)
+        ):
+            pass
+        else:
+            descriptor = _static_character_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "u":
+                return None
+        return []
     if unique_id:
         descriptor = _coordinate_variable_descriptor(target)
         if descriptor is None or descriptor[0] != "global":

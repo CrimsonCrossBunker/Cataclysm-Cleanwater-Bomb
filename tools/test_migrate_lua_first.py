@@ -11339,7 +11339,7 @@ assert(#events == 11)
             )
             self.assertNotIn("needs review", report)
 
-    def test_translates_bounded_npc_goal_and_guard_variable_shapes(self) -> None:
+    def test_avatar_goal_and_guard_effects_keep_native_noop_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11372,13 +11372,9 @@ assert(#events == 11)
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
-            self.assertIn("services.overmap.search(origin", main)
-            self.assertIn('terrain = "road"', main)
-            self.assertIn('special = "special_road"', main)
-            self.assertIn("minimum_radius = 1", main)
-            self.assertIn("services.npcs.set_goal(", main)
-            self.assertIn('services.variables.get(\n        actor, "guard_position")', main)
-            self.assertIn("services.npcs.set_guard_position(", main)
+            self.assertNotIn("services.overmap.search(", main)
+            self.assertNotIn("services.npcs.set_goal(", main)
+            self.assertNotIn("services.npcs.set_guard_position(", main)
             self.assertNotIn("TODO: translate the NPC goal", main)
             self.assertNotIn("TODO: translate the NPC guard position", main)
             self.assertNotIn("domain-service conversion", report)
