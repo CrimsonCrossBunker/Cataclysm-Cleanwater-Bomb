@@ -789,6 +789,14 @@ def lua_quotable_native_variable_string(value: Any) -> bool:
     return True
 
 
+def bounded_platform_context_variable_key(value: Any) -> bool:
+    """Match the context/var key contract used by the Platform variable service."""
+    return (
+        bounded_utf8_string(value, 128) and
+        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
+    )
+
+
 def bounded_platform_id(value: Any) -> bool:
     return (
         safe_platform_id(value) and
@@ -4570,7 +4578,12 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
                 "u_val", "npc_val", "context_val", "global_val", "var_val"}:
             descriptor = next(iter(descriptors))
             name = value[descriptor]
-            if not bounded_utf8_string(name, 128) or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+            valid_name = (
+                lua_quotable_native_variable_string(name)
+                if descriptor in {"u_val", "npc_val", "global_val"} else
+                bounded_platform_context_variable_key(name)
+            )
+            if not valid_name:
                 return None
             fallback = value.get("default", "")
             if not isinstance(fallback, str):
@@ -18954,11 +18967,17 @@ def render_eoc_value_expression(
     if not isinstance(value, dict) or len(value) != 1:
         return None
     key, name = next(iter(value.items()))
-    if (
-        key not in {"context_val", "u_val", "npc_val", "global_val", "var_val"} or
-        not isinstance(name, str) or
-        not name or len(name) > 1024 or "\0" in name
-    ):
+    if key not in {"context_val", "u_val", "npc_val", "global_val", "var_val"}:
+        return None
+    if key == "context_val":
+        # This path indexes the callback's Lua table directly and does not
+        # call the bounded context-variable service.
+        valid_name = lua_quotable_native_variable_string(name)
+    elif key in {"u_val", "npc_val", "global_val"}:
+        valid_name = lua_quotable_native_variable_string(name)
+    else:
+        valid_name = bounded_platform_context_variable_key(name)
+    if not valid_name:
         return None
     quoted = lua_quote(name)
     if key == "context_val":
