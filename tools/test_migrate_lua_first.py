@@ -24275,6 +24275,8 @@ def load_tests(loader, tests, pattern):
     # Keep domain regressions on the same migration gate without growing this file.
     from test_lua_mutation_migration import MutationMigrationTest
     tests.addTests(loader.loadTestsFromTestCase(MutationMigrationTest))
+    from test_lua_named_predicate_migration import NamedPredicateMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(NamedPredicateMigrationTest))
     return tests
 
 
