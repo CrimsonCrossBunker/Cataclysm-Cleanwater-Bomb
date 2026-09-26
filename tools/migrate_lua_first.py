@@ -26573,6 +26573,7 @@ def render_eoc_condition_expression(
     _test_eoc_stack: frozenset[str] = frozenset(),
     npc_actor_expression: str | None = None,
     generic_character_actor_proven: bool = False,
+    training_pair_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     character_actor_proven = avatar_actor_proven or weapon_actor_proven or \
@@ -26580,6 +26581,34 @@ def render_eoc_condition_expression(
     npc_query_actor = npc_actor_expression or (
         "actor" if npc_actor_proven else None
     )
+    if condition in ("u_train_spells", "npc_train_spells"):
+        if (
+            not training_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        if condition == "u_train_spells":
+            teacher, student = "actor", "context.actors.beta"
+        else:
+            teacher, student = "context.actors.beta", "actor"
+        alpha_is_character = (
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc")'
+        )
+        beta_is_character = (
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
+            'context.actors.beta.kind == "creature" and '
+            '(context.actors.beta.subtype == "avatar" or '
+            'context.actors.beta.subtype == "character" or '
+            'context.actors.beta.subtype == "npc")'
+        )
+        return (
+            f"({alpha_is_character}) and ({beta_is_character}) and "
+            "service_value(services.characters.training_offers("
+            f"{teacher}, {student})).spell_count > 0"
+        )
     if condition in ("u_train_skills", "npc_train_skills"):
         if not avatar_actor_proven or npc_actor_expression is None:
             return None
@@ -26951,13 +26980,9 @@ def render_eoc_condition_expression(
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
         if npc_actor_proven and condition == "npc_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
-        if avatar_actor_proven and condition in (
-            "u_train_spells", "u_train_styles",
-        ):
+        if avatar_actor_proven and condition == "u_train_styles":
             return "false"
-        if npc_actor_proven and condition in (
-            "npc_train_spells", "npc_train_styles",
-        ):
+        if npc_actor_proven and condition == "npc_train_styles":
             return "false"
         return None
     if not isinstance(condition, dict):
@@ -26991,6 +27016,7 @@ def render_eoc_condition_expression(
                     _test_eoc_stack | {referenced},
                     npc_actor_expression,
                     generic_character_actor_proven,
+                    training_pair_proven,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -27105,6 +27131,7 @@ def render_eoc_condition_expression(
                 _test_eoc_stack,
                 npc_actor_expression,
                 generic_character_actor_proven,
+                training_pair_proven,
             )
             for entry in entries
         ]
@@ -27120,6 +27147,7 @@ def render_eoc_condition_expression(
             _test_eoc_stack,
             npc_actor_expression,
             generic_character_actor_proven,
+            training_pair_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -28530,6 +28558,14 @@ def render_eoc(
         # while retaining the selected actor as the safe fallback for ordinary
         # NPC traversal callbacks that have no talker pair.
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
+    # Training-offer selectors require both native dialogue Characters.
+    # Prove the second talker only for content callbacks whose source supplies
+    # the alpha/beta pair, never from a single-role event or selector spelling.
+    training_pair_proven = (
+        not has_event_trigger and talker_pair_override and
+        character_actor_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
     exact_alpha_effect_kind: str | None = None
     alpha_effect_kinds: set[str] = set()
     if (
@@ -28705,6 +28741,7 @@ def render_eoc(
             npc_event_character_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
+            training_pair_proven=training_pair_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -28746,6 +28783,7 @@ def render_eoc(
             npc_event_character_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
+            training_pair_proven=training_pair_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True

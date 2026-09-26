@@ -7439,6 +7439,20 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbTechniqueChoiceResult: CcbResult
 ---@field value CcbTechniqueChoice|nil Present on success.
 
+---@class CcbCharacterTrainingOffers
+---@field skills GameId[] Up to 256 offered skill IDs in native order.
+---@field proficiencies GameId[] Up to 256 offered proficiency IDs in native order.
+---@field styles GameId[] Up to 256 offered martial-art style IDs in native order.
+---@field spells GameId[] Up to 256 offered spell IDs in native order.
+---@field skill_count integer Complete number of offered skills.
+---@field proficiency_count integer Complete number of offered proficiencies.
+---@field style_count integer Complete number of offered styles.
+---@field spell_count integer Complete number of offered spells; remains exact when the returned list is truncated.
+---@field truncated boolean True if any returned list exceeded its 256-entry cap.
+
+---@class CcbCharacterTrainingOffersResult: CcbResult
+---@field value? CcbCharacterTrainingOffers Present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
@@ -7453,6 +7467,12 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+
+---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
+---@param trainer GameHandle Exact live trainer Character handle.
+---@param student GameHandle Exact live student Character handle.
+---@return CcbCharacterTrainingOffersResult
+function CcbCharactersApi.training_offers(trainer, student) end
 
 --- Return a detached complete list without sorting or truncation; the unqualified part is not included.
 ---@param character GameHandle Exact live Character handle.

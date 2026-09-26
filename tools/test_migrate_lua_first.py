@@ -11304,6 +11304,88 @@ assert(#events == 11)
                 main,
             )
 
+    def test_spell_training_requires_a_proven_talker_pair(self) -> None:
+        avatar_train = migrate_lua_first.render_eoc_condition_expression(
+            "u_train_spells",
+            npc_actor_expression="context.actors.beta",
+            generic_character_actor_proven=True,
+            training_pair_proven=True,
+        )
+        npc_train = migrate_lua_first.render_eoc_condition_expression(
+            "npc_train_spells",
+            npc_actor_expression="context.actors.beta",
+            generic_character_actor_proven=True,
+            training_pair_proven=True,
+        )
+
+        self.assertIsNotNone(avatar_train)
+        self.assertIn(
+            "services.characters.training_offers(actor, context.actors.beta)",
+            avatar_train,
+        )
+        self.assertIsNotNone(npc_train)
+        self.assertIn(
+            "services.characters.training_offers(context.actors.beta, actor)",
+            npc_train,
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_train_spells",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+                training_pair_proven=False,
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "talk_topic",
+                        "id": "TALK_SPELL_TRAINING",
+                        "responses": [{
+                            "text": "train",
+                            "topic": "TALK_DONE",
+                            "effect": {"run_eocs": "paired_spell_training"},
+                        }],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "paired_spell_training",
+                        "condition": {
+                            "and": [
+                                "u_train_spells",
+                                {"not": "npc_train_spells"},
+                            ],
+                        },
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "single_actor_spell_training",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": "npc_train_spells",
+                        "effect": [],
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "spell_training_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(main.count("services.characters.training_offers("), 2)
+        self.assertIn("spell_count > 0", main)
+        self.assertTrue(any(
+            "EOC single_actor_spell_training condition TODO" in entry
+            for entry in result.todos
+        ))
+        self.assertIn("condition TODO", report)
+
     def test_translates_senses_species_and_turn_cost(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
