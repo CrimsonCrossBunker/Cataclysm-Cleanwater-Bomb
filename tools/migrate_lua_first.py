@@ -23912,36 +23912,16 @@ def render_static_pickup_items(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Lower one fully explicit map-square pickup through map/item services.
+    """Keep pickup as a TODO until the native picker can be represented.
 
-    The only accepted coordinate shape is ``{"abs_ms": [x, y, z]}`` (or its
-    keyed equivalent).  A token is created once and the same holder descriptor
-    is used for both the page and every transfer.  The page is deliberately
-    bounded and must be complete before mutation starts: a continuation is
-    invalidated by the first successful transfer, so retrying a partial page
-    would not be an atomic or deterministic migration.
+    The legacy effect presents an interactive selection and applies
+    ``extra_moves_per_item``, ``max_volume`` and ``max_mass`` through
+    ``Pickup::pick_info``.  Paging a tile and transferring every item silently
+    changes the user's selection and ignores those constraints, even when the
+    location is a static absolute map square.
     """
-    if (
-        key not in effect or set(effect) != {key} or
-        (key == "u_pickup_items" and not avatar_actor_proven) or
-        (key == "npc_pickup_items" and not npc_event_character_actor_proven)
-    ):
-        return None
-    holder_lines = render_explicit_map_tile_holder(effect[key])
-    if holder_lines is None:
-        return None
-    return holder_lines + [
-        "    local destination_holder = { kind = \"character\", character = actor, slot = \"inventory\" }",
-        "    local map_page = service_value(services.items.page(map_holder, {",
-        "        page_size = 256, max_depth = 0, recursive = false,",
-        "    }))",
-        "    if map_page.complete then",
-        "        for _, map_entry in ipairs(map_page.items) do",
-        "            service_value(services.items.transfer(",
-        "                map_entry.handle, map_holder, destination_holder))",
-        "        end",
-        "    end",
-    ]
+    del effect, key, avatar_actor_proven, npc_event_character_actor_proven
+    return None
 
 
 def render_static_inventory_consume_sum(
@@ -30588,15 +30568,16 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: map holder requires one explicitly typed "
-                        "abs_ms coordinate; current/u/alpha/local/omt/mixed-frame "
-                        "pickup locations remain TODO."
+                        "    -- TODO: pickup needs explicit map candidates and a "
+                        "Platform API preserving native selection and movement/volume/mass "
+                        "constraints; unsupported location frames remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "map holder requires an explicitly typed abs_ms coordinate; "
-                        "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO"
+                        "pickup needs explicit map candidates and a Platform API preserving "
+                        "native selection and movement/volume/mass constraints; unsupported "
+                        "location frames remain TODO"
                     )
                     all_effects_converted = False
             elif (

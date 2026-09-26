@@ -12375,11 +12375,11 @@ assert(#events == 11)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn(
-                "map holder requires one explicitly typed abs_ms coordinate; "
-                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints",
                 main,
             )
-            self.assertEqual(report.count("map holder requires"), 2)
+            self.assertEqual(report.count("pickup needs explicit map candidates"), 2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_follower_services_keep_scene_order_cancel_and_copy_direction(self) -> None:
@@ -14639,11 +14639,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn(
-                "map holder requires one explicitly typed abs_ms coordinate; "
-                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints",
                 main,
             )
-            self.assertIn("map holder requires", report)
+            self.assertIn("pickup needs explicit map candidates", report)
 
     def test_character_action_effects_lower_for_proven_avatar_and_npc_actors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -24065,15 +24065,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
             True,
             False,
         )
-        self.assertIsNotNone(pickup)
-        pickup_main = "\n".join(pickup or [])
-        self.assertIn("services.items.page(map_holder", pickup_main)
-        self.assertIn(
-            "services.items.transfer(\n                map_entry.handle, map_holder",
-            pickup_main,
-        )
-        self.assertEqual(pickup_main.count("services.map.tile("), 1)
-        self.assertNotIn("position", pickup_main)
+        self.assertIsNone(pickup)
         for legacy_map_write in (
             "services.world.tile(",
             "services.world.set_terrain(",
@@ -24082,7 +24074,40 @@ assert(context.conditions.check==original and context.conditions.check() and con
             "services.world.put_field(",
             "services.world.remove_field(",
         ):
-            self.assertNotIn(legacy_map_write, main + holder_main + pickup_main)
+            self.assertNotIn(legacy_map_write, main + holder_main)
+
+    def test_pickup_migration_preserves_manual_todo_until_selection_is_supported(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "explicit_pickup_requires_native_selection",
+                    "required_event": "game_start",
+                    "effect": {
+                        "u_pickup_items": {"abs_ms": [12, -7, 0]},
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "pickup_selection_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            todo = (
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints"
+            )
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn(todo, main)
+            self.assertIn(todo, report)
+            self.assertNotIn("services.items.page(", main)
+            self.assertNotIn("services.items.transfer(", main)
 
     def test_map_migration_rejects_unproven_frames_with_precise_todos(self) -> None:
         bad_coordinates = (
