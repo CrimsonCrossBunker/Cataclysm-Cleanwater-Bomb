@@ -6241,7 +6241,13 @@ assert(#events == 11)
                             "type": "effect_on_condition",
                             "id": "trait",
                             "required_event": "npc_becomes_hostile",
-                            "condition": {"npc_has_trait": "ELFAEYES"},
+                            "condition": {
+                                "and": [
+                                    {"npc_has_trait": "ELFAEYES"},
+                                    "npc_hostile",
+                                    "npc_friend",
+                                ]
+                            },
                             "effect": {"message": "trait"},
                         },
                         {
@@ -6380,6 +6386,14 @@ assert(#events == 11)
             )
             self.assertIn(
                 "services.npcs.get(actor)", main
+            )
+            self.assertIn(
+                'actor.subtype == "npc" and service_value(services.npcs.get(actor)).enemy',
+                main,
+            )
+            self.assertIn(
+                'actor.subtype == "npc" and service_value(services.npcs.get(actor)).friendly',
+                main,
             )
             self.assertIn(
                 'services.mutations.has(', main
@@ -6934,6 +6948,7 @@ assert(#events == 11)
                                     {"not": {"npc_mission_goal": "MGOAL_ASSASSINATE"}},
                                     {"not": {"npc_rule": "RULE"}},
                                     {"not": {"npc_override": "OVERRIDE"}},
+                                    {"npc_rule": {"npc_val": "rule_name"}},
                                 ]
                             },
                             "effect": {"message": "npc states ok"},
@@ -6950,7 +6965,56 @@ assert(#events == 11)
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 0)
             self.assertIn('services.gameplay.environment.is_outside(context.data["loc"])', main)
+            self.assertIn(
+                'actor.subtype == "npc" and service_value(services.npcs.ai_rules(actor)).overrides["OVERRIDE"] ~= nil',
+                main,
+            )
+            self.assertIn(
+                'ipairs(service_value(services.npcs.ai_rules(actor)).allies)',
+                main,
+            )
+            self.assertIn(
+                'services.variables.resolve(context.data, actor, "npc", "rule_name")',
+                main,
+            )
             self.assertNotIn("run_eoc", main)
+
+    def test_train_styles_requires_explicit_native_talker_pair(self) -> None:
+        for condition, teacher, student in (
+            ("u_train_styles", "actor", "context.actors.beta"),
+            ("npc_train_styles", "context.actors.beta", "actor"),
+        ):
+            with self.subTest(condition=condition):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition,
+                    generic_character_actor_proven=True,
+                    npc_actor_expression="context.actors.beta",
+                )
+                self.assertEqual(
+                    expression,
+                    "context.actors ~= nil and context.actors.beta ~= nil and "
+                    'actor ~= nil and (actor.subtype == "avatar" or '
+                    'actor.subtype == "character" or actor.subtype == "npc") and '
+                    '(context.actors.beta.subtype == "avatar" or '
+                    'context.actors.beta.subtype == "character" or '
+                    'context.actors.beta.subtype == "npc") and '
+                    f"service_value(services.npcs.training.offerings({teacher}, "
+                    f"{student})).style_count > 0",
+                )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_train_styles",
+                avatar_actor_proven=True,
+                npc_actor_expression=None,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_train_styles",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+            )
+        )
 
     def test_dynamic_or_unproven_u_has_profession_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11080,8 +11144,8 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
             self.assertIn("condition TODO", report)
 

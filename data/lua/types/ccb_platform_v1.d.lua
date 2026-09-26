@@ -9261,6 +9261,16 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field owed integer
 ---@field sold integer
 
+---@class CcbNpcAiRulesSnapshot
+---@field aim string Current native aim policy name.
+---@field engagement string Current native engagement policy name.
+---@field cbm_recharge string Current native CBM recharge policy name.
+---@field cbm_reserve string Current native CBM reserve policy name.
+---@field allies string[] Effective enabled native ally rules in native catalog order.
+---@field base_allies string[] Base enabled native ally rules, before overrides.
+---@field overrides table<string, boolean> Values for ally rules with an enabled override.
+---@field pickup_whitelist boolean Whether the native pickup whitelist is nonempty.
+
 ---@class CcbNpcSnapshot
 ---@field handle GameHandle Exact live NPC handle.
 ---@field id integer Native character identity; display-only.
@@ -9275,10 +9285,14 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field attitude GameId
 ---@field attitude_name string
 ---@field dead boolean
+---@field enemy boolean Native NPC enemy state (KILL or FLEE attitude).
+---@field friendly boolean Native is_friendly result against the global avatar.
+---@field following boolean Native FOLLOW or WAIT attitude.
+---@field leader boolean Native LEAD attitude.
 ---@field player_ally boolean
 ---@field first_topic string
 ---@field opinion CcbNpcOpinion Stored opinion; no avatar lookup is performed.
----@field ai_rules table<string, any>
+---@field ai_rules CcbNpcAiRulesSnapshot
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
 
@@ -9424,11 +9438,14 @@ function CcbNpcGroomingApi.open_style(provider, client, area) end
 ---@return CcbResult
 function CcbNpcGroomingApi.provide(provider, client, service) end
 
+---@class CcbNpcTrainingOfferings
+---@field style_count integer Native count of teachable martial-art styles offered to this student.
+
 ---@class CcbNpcTrainingApi
 local CcbNpcTrainingApi = {}
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param student GameHandle Exact Character student handle.
----@return CcbResult
+---@return CcbResult result `value` is a detached CcbNpcTrainingOfferings snapshot.
 function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param students GameHandle[] Exact student handles.
@@ -9630,7 +9647,7 @@ function CcbNpcsApi.open_control_menu(avatar) end
 ---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
 function CcbNpcsApi.take_control(handle, avatar) end
 ---@param handle GameHandle Exact NPC handle.
----@return CcbResult
+---@return CcbResult result `value` is a CcbNpcAiRulesSnapshot.
 function CcbNpcsApi.ai_rules(handle) end
 ---@field medical CcbNpcMedicalApi
 ---@field grooming CcbNpcGroomingApi

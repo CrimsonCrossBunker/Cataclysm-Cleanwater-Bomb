@@ -26520,6 +26520,37 @@ def render_eoc_condition_expression(
     npc_query_actor = npc_actor_expression or (
         "actor" if npc_actor_proven else None
     )
+    npc_query_actor_ref = (
+        f"({npc_query_actor})"
+        if npc_query_actor is not None and
+        (" or " in npc_query_actor or " and " in npc_query_actor) else
+        npc_query_actor
+    )
+    if condition in ("u_train_styles", "npc_train_styles"):
+        # Native style-offer checks compare alpha and beta talkers.  Keep the
+        # mapping only when both are explicit Characters and beta is present;
+        # an NPC event's primary actor alone does not prove that pair.
+        if (
+            not generic_character_actor_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        character_subtype = (
+            '({actor}.subtype == "avatar" or {actor}.subtype == "character" '
+            'or {actor}.subtype == "npc")'
+        )
+        teacher, student = (
+            ("actor", npc_actor_expression)
+            if condition == "u_train_styles" else
+            (npc_actor_expression, "actor")
+        )
+        return (
+            "context.actors ~= nil and context.actors.beta ~= nil and "
+            f"actor ~= nil and {character_subtype.format(actor='actor')} and "
+            f"{character_subtype.format(actor=npc_actor_expression)} and "
+            f"service_value(services.npcs.training.offerings({teacher}, "
+            f"{student})).style_count > 0"
+        )
     if condition in ("u_train_skills", "npc_train_skills"):
         if not avatar_actor_proven or npc_actor_expression is None:
             return None
@@ -26611,6 +26642,20 @@ def render_eoc_condition_expression(
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
         if npc_query_actor is not None:
+            if condition == "npc_friend":
+                return (
+                    f"{npc_query_actor_ref} ~= nil and "
+                    f"{npc_query_actor_ref}.subtype == \"npc\" and "
+                    "service_value(services.npcs.get(" +
+                    npc_query_actor + ")).friendly"
+                )
+            if condition == "npc_hostile":
+                return (
+                    f"{npc_query_actor_ref} ~= nil and "
+                    f"{npc_query_actor_ref}.subtype == \"npc\" and "
+                    "service_value(services.npcs.get(" +
+                    npc_query_actor + ")).enemy"
+                )
             if condition == "npc_is_alive":
                 return (
                     "not service_value(services.creatures.snapshot(" +
@@ -26827,7 +26872,7 @@ def render_eoc_condition_expression(
             return "true"
         if npc_actor_proven and condition in (
             "npc_is_avatar", "npc_is_monster", "npc_is_item",
-            "npc_is_furniture", "npc_is_vehicle", "npc_friend",
+            "npc_is_furniture", "npc_is_vehicle",
             "npc_is_falling", "npc_is_floating", "npc_is_flying",
             "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
             "npc_is_in_vehicle", "npc_controlling_vehicle", "npc_driving",
@@ -26840,7 +26885,7 @@ def render_eoc_condition_expression(
         ):
             return "false"
         if npc_actor_proven and condition in (
-            "npc_exists", "npc_hostile", "npc_available",
+            "npc_exists", "npc_available",
             "npc_has_no_available_mission",
         ):
             return "true"
@@ -26886,12 +26931,11 @@ def render_eoc_condition_expression(
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
         if avatar_actor_proven and condition in (
             "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
-            "u_train_spells", "u_train_styles",
+            "u_train_spells",
         ):
             return "false"
         if npc_actor_proven and condition in (
-            "npc_train_spells", "npc_train_styles",
-            "npc_has_stolen_item", "npc_can_stow_weapon",
+            "npc_train_spells", "npc_has_stolen_item", "npc_can_stow_weapon",
         ):
             return "false"
         return None
@@ -27812,9 +27856,32 @@ def render_eoc_condition_expression(
         if (
             npc_actor_proven and
             set(condition) == {rule_key} and
-            isinstance(condition.get(rule_key), str)
+            npc_query_actor is not None
         ):
-            return "false"
+            requested_rule = render_eoc_string_expression(
+                condition[rule_key], npc_query_actor
+            )
+            if requested_rule is None:
+                return None
+            ai_rules = (
+                "service_value(services.npcs.ai_rules(" +
+                npc_query_actor + "))"
+            )
+            npc_guard = (
+                f"{npc_query_actor_ref} ~= nil and "
+                f"{npc_query_actor_ref}.subtype == \"npc\" and "
+            )
+            if rule_key == "npc_rule":
+                return (
+                    f"({npc_guard}(function(requested_rule) "
+                    "for _, active_rule in "
+                    f"ipairs({ai_rules}.allies) do "
+                    "if active_rule == requested_rule then return true end "
+                    f"end return false end)({requested_rule}))"
+                )
+            return (
+                f"({npc_guard}{ai_rules}.overrides[{requested_rule}] ~= nil)"
+            )
     for bodytype_key, actor_proven in (
         ("u_bodytype", avatar_actor_proven),
         ("npc_bodytype", npc_actor_proven),
