@@ -30955,7 +30955,7 @@ def render_eoc(
             elif npc_actor_proven and effect == "follow_only":
                 lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif exact_npc_actor_proven and isinstance(effect, str) and effect in {
                 "deny_follow", "deny_lead", "deny_equipment", "deny_train", "deny_personal_info",
             }:
                 request = "training" if effect == "deny_train" else effect.removeprefix("deny_")

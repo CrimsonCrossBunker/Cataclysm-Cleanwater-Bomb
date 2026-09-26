@@ -11299,6 +11299,38 @@ assert(#events == 11)
             )
             self.assertIn("condition TODO", report)
 
+    def test_npc_refusal_effects_require_an_exact_npc_actor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "exact_npc_refusal",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": "deny_equipment",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_only_refusal",
+                            "condition": "npc_is_character",
+                            "effect": "deny_equipment",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "refusal_actor_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.npcs.record_refusal("), 1)
+            self.assertIn("exact_npc_refusal", main)
+            self.assertIn("character_only_refusal", main)
+            self.assertTrue(result.todos)
+
     def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
