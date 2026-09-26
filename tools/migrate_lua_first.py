@@ -26536,12 +26536,13 @@ def render_eoc_condition_expression(
     npc_query_actor = npc_actor_expression or (
         "actor" if npc_actor_proven else None
     )
-    # ``const_dialogue::const_actor(true)`` does not fall back to alpha when
-    # beta is absent.  Nested NPC traversal can use the selected actor as a
-    # fallback for other legacy selectors, but that would invent a beta for
-    # this native predicate.  Keep only the explicitly supplied beta here.
-    npc_assigned_camp_actor = npc_query_actor
-    if npc_actor_expression == "(context.actors and context.actors.beta) or actor":
+    # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
+    # Native const_actor(true) does not fall back to alpha when beta is absent,
+    # so only an expression that explicitly names the beta can be queried.
+    npc_assigned_camp_actor = None
+    if npc_actor_expression == "context.actors.beta":
+        npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
+    elif npc_actor_expression == "(context.actors and context.actors.beta) or actor":
         npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
     if condition in ("u_train_skills", "npc_train_skills"):
         if not avatar_actor_proven or npc_actor_expression is None:
@@ -26671,10 +26672,9 @@ def render_eoc_condition_expression(
                 "context.actors.item ~= nil and "
                 "service_value(services.items.snapshot(context.actors.item)).relative_rot > 1"
             )
-        if (
-            npc_assigned_camp_actor is not None and
-            condition == "npc_has_assigned_camp"
-        ):
+        if condition == "npc_has_assigned_camp":
+            if npc_assigned_camp_actor is None:
+                return None
             return (
                 "(function(candidate) "
                 'if candidate == nil or candidate.kind ~= "creature" then return false end; '
@@ -26865,7 +26865,7 @@ def render_eoc_condition_expression(
             "npc_is_riding", "npc_is_avatar_passenger", "npc_is_driven",
             "npc_is_remote_controlled", "npc_is_on_rails",
             "npc_vehicle_owned_by_avatar", "npc_following",
-            "npc_has_assigned_camp", "has_beta",
+            "has_beta",
             "npc_has_available_mission", "npc_has_many_available_missions",
             "npc_mission_complete", "npc_mission_failed", "npc_mission_incomplete",
         ):

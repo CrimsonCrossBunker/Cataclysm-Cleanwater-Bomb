@@ -7458,7 +7458,7 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
-    def test_npc_has_assigned_camp_uses_exact_npc_snapshot(self) -> None:
+    def test_npc_has_assigned_camp_without_beta_stays_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -7480,24 +7480,13 @@ assert(#events == 11)
                 REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
             ).read_text(encoding="utf-8")
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn(
-                'candidate.kind ~= "creature" then return false end;',
-                main,
-            )
-            self.assertIn(
-                'snapshot(candidate)).kind ~= "npc" then return false end;',
-                main,
-            )
-            self.assertIn(
-                "services.npcs.get(candidate)).has_assigned_camp",
-                main,
-            )
-            self.assertNotIn("condition TODO: translate", report)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn("services.npcs.get(", main)
+            self.assertIn("condition TODO: translate", report)
             self.assertIn("---@field has_assigned_camp boolean", declarations)
 
-    def test_npc_assigned_camp_does_not_fallback_to_alpha_or_selected_actor(self) -> None:
+    def test_npc_assigned_camp_uses_only_explicit_beta_and_preserves_not(self) -> None:
         predicate = migrate_lua_first.render_eoc_condition_expression(
             {"not": "npc_has_assigned_camp"},
             npc_actor_proven=True,
@@ -7513,6 +7502,13 @@ assert(#events == 11)
         self.assertNotIn("or actor", predicate)
         self.assertIn("candidate == nil", predicate)
         self.assertIn('kind ~= "npc"', predicate)
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_has_assigned_camp",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+            )
+        )
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 "npc_has_assigned_camp"
