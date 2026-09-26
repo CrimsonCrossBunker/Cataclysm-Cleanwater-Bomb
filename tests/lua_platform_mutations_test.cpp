@@ -675,23 +675,31 @@ TEST_CASE( "lua_platform_mutation_action_matches_native_without_permanent_trait"
     const bool present = GENERATE( false, true );
     Character &old_target = legacy.target( npc_target );
     Character &new_target = platform.target( npc_target );
+    const trait_id &trait = trait_SNAIL_TRAIL;
+    old_target.set_thirst( 0 );
+    new_target.set_thirst( 0 );
+    old_target.set_stored_kcal( old_target.get_healthy_kcal() );
+    new_target.set_stored_kcal( new_target.get_healthy_kcal() );
     if( present ) {
-        old_target.set_mutation( trait_QUICK );
-        new_target.set_mutation( trait_QUICK );
+        old_target.set_mutation( trait );
+        new_target.set_mutation( trait );
+        if( !active ) {
+            old_target.activate_mutation( trait );
+            new_target.activate_mutation( trait );
+        }
     }
     const std::string effect = std::string( R"({")" ) + ( npc_target ? "npc_" : "u_" ) +
-                               ( active ? "activate_trait" : "deactivate_trait" ) + R"(":"QUICK"})";
+                               ( active ? "activate_trait" : "deactivate_trait" ) + R"(":"SNAIL_TRAIL"})";
     for( int attempt = 0; attempt < 2; ++attempt ) {
         legacy.legacy_effect( effect );
         const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
                     platform.handle( npc_target ),
-                    cata::lua_platform::script_game_id( "mutation", "QUICK" ), active );
+                    cata::lua_platform::script_game_id( "mutation", trait.str() ), active );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
-        CHECK( old_target.has_active_mutation( trait_QUICK ) == new_target.has_active_mutation(
-                   trait_QUICK ) );
-        CHECK( old_target.has_permanent_trait( trait_QUICK ) == new_target.has_permanent_trait(
-                   trait_QUICK ) );
+        CHECK( old_target.has_active_mutation( trait ) == new_target.has_active_mutation( trait ) );
+        CHECK( new_target.has_active_mutation( trait ) == ( active && present ) );
+        CHECK( old_target.has_permanent_trait( trait ) == new_target.has_permanent_trait( trait ) );
     }
 }
 
