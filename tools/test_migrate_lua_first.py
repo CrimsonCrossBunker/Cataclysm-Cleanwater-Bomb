@@ -3434,6 +3434,68 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("services.state.", main)
 
+    def test_character_variable_keys_match_platform_byte_limit(self) -> None:
+        valid_names = ("a" * 128, "é" * 64)
+        invalid_names = ("a" * 129, "é" * 64 + "a", "", "bad\x1fkey")
+        for selector, target in (
+            ("u_add_var", "u_owner"),
+            ("npc_add_var", "npc_owner"),
+        ):
+            for name in valid_names:
+                self.assertIsNotNone(
+                    migrate_lua_first.render_static_character_variable(
+                        {selector: name, "value": "ok"}, selector, target
+                    )
+                )
+            for name in invalid_names:
+                self.assertIsNone(
+                    migrate_lua_first.render_static_character_variable(
+                        {selector: name, "value": "ok"}, selector, target
+                    )
+                )
+
+        valid_ascii, valid_utf8 = valid_names
+        invalid_ascii, invalid_utf8, _, _ = invalid_names
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {
+                    "type": "effect_on_condition", "id": "u_remove_128",
+                    "required_event": "game_start",
+                    "effect": {"u_lose_var": valid_ascii},
+                },
+                {
+                    "type": "effect_on_condition", "id": "npc_remove_utf8_128",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"npc_lose_var": valid_utf8},
+                },
+                {
+                    "type": "effect_on_condition", "id": "u_remove_129",
+                    "required_event": "game_start",
+                    "effect": {"u_lose_var": invalid_ascii},
+                },
+                {
+                    "type": "effect_on_condition", "id": "npc_remove_utf8_129",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"npc_lose_var": invalid_utf8},
+                },
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "variable_key_limit_mod"
+            )
+            main = result.files[Path("main.lua")]
+            self.assertEqual(len(result.partial), 2)
+            self.assertIn(
+                f'services.variables.remove(actor, {migrate_lua_first.lua_quote(valid_ascii)})',
+                main,
+            )
+            self.assertIn(
+                f'services.variables.remove(actor, {migrate_lua_first.lua_quote(valid_utf8)})',
+                main,
+            )
+            self.assertNotIn(migrate_lua_first.lua_quote(invalid_ascii), main)
+            self.assertNotIn(migrate_lua_first.lua_quote(invalid_utf8), main)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_character_variable_add_preserves_changed_events(self) -> None:
         cases = (
