@@ -77,12 +77,9 @@ CONTROL_FLOW = {
     "if",
     "foreach",
     "nothing",
-    "run_eoc_selector",
-    "run_eocs",
     "set_condition",
     "switch",
     "test_eoc",
-    "weighted_list_eocs",
 }
 
 # JSON object types remain unverified. Promote exact selectors only after
@@ -4135,6 +4132,12 @@ for _prefix in ("u_", "npc_"):
         ]
 
 EXPLICIT_PRIMITIVE_EOC = {
+    # These also require engine behavior: persisted scheduling and actor context,
+    # player presentation, or weighted random selection.  Lua control flow alone
+    # is not evidence that their complete native semantics have been accepted.
+    ("eoc-effects", "run_eocs"): "ccb.tasks-and-actor-context",
+    ("eoc-effects", "run_eoc_selector"): "ccb.presentation.choose",
+    ("eoc-effects", "weighted_list_eocs"): "services.random",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -4162,6 +4165,15 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    **{
+        ("eoc-effects", selector): [
+            "src/npctalk.cpp",
+            "src/lua_platform_runtime_services.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+        ]
+        for selector in ("run_eocs", "run_eoc_selector", "weighted_list_eocs")
+    },
     ("eoc-effects", "u_add_trait"): [
         "src/lua_platform_mutations.cpp",
         "tests/lua_platform_mutations_test.cpp",
