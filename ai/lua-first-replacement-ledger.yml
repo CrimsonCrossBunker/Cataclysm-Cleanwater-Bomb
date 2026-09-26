@@ -49,10 +49,10 @@ summary:
   implemented_unverified: 89
   bounded_implemented_verified: 0
   bounded_implemented_unverified: 669
-  primitive_available_unverified: 3
+  primitive_available_unverified: 4
   planned: 0
   private_adapter: 0
-  reviewed_not_applicable: 14
+  reviewed_not_applicable: 13
 entries:
 - inventory: eoc-conditions
   selector: and
@@ -4816,13 +4816,20 @@ entries:
   verification: source_only
 - inventory: eoc-effects
   selector: foreach
-  target_kind: not_applicable
-  target: native-lua-control-flow
-  status: reviewed_not_applicable
+  target_kind: shared_service
+  target: services.registry-and-variables
+  status: primitive_available_unverified
   legacy_dependency: none
   evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  verification: not_run
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - src/lua_platform_runtime_services.cpp
+  - tests/lua_platform_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  verification: source_only
 - inventory: eoc-effects
   selector: give_achievement
   target_kind: shared_service
