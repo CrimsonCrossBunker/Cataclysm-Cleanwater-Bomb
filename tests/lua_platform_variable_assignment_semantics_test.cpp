@@ -200,7 +200,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-            "lua_variable_assignment_semantics", 9053, lua );
+                "lua_variable_assignment_semantics", 9053, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {
@@ -219,7 +219,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
 
     const auto run_platform_write = [&lua]( const std::string & script ) {
         const sol::protected_function_result result = lua.safe_script(
-                script, sol::script_pass_on_error );
+                    script, sol::script_pass_on_error );
         if( !result.valid() ) {
             const sol::error error = result;
             INFO( error.what() );
