@@ -4130,6 +4130,21 @@ for _prefix in ("u_", "npc_"):
             "tools/test_lua_mutation_migration.py",
         ]
 
+# Named predicates carry dialogue-local state and dynamic lookup semantics.
+# Existing Lua lowering is bounded (for example, test_eoc only inlines static
+# known IDs); ordinary Lua control flow does not exempt these from acceptance.
+for _inventory, _selector in (
+    ("eoc-effects", "set_condition"),
+    ("eoc-conditions", "get_condition"),
+    ("eoc-conditions", "test_eoc"),
+):
+    _key = (_inventory, _selector)
+    BOUNDED_IMPLEMENTED_EOC[_key] = "native-lua-predicate-context"
+    BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE[_key] = [
+        "src/condition.cpp", "src/npctalk.cpp", "src/dialogue.h",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ]
+
 EXPLICIT_PRIMITIVE_EOC = {
     # These also require engine behavior: persisted scheduling and actor context,
     # player presentation, or weighted random selection.  Lua control flow alone
