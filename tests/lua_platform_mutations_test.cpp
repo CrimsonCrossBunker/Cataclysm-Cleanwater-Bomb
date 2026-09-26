@@ -445,6 +445,63 @@ TEST_CASE( "lua_platform_mutation_erase_matches_dynamic_u_val_effect",
     CHECK( platform.player.has_trait( trait_QUICK ) );
 }
 
+TEST_CASE( "lua_platform_mutation_replace_matches_native_global_val_effect",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3700 );
+    mutation_fixture platform( 3800 );
+    const std::string key = "lua_mutation_acceptance_global_trait";
+    struct global_cleanup {
+        const std::string &key;
+        ~global_cleanup() {
+            get_globals().remove_global_value( key );
+        }
+    } cleanup{ key };
+    get_globals().set_global_value( key, trait_QUICK.str() );
+
+    const std::string effect =
+        R"({"u_add_trait":{"global_val":"lua_mutation_acceptance_global_trait"}})";
+    legacy.legacy_effect( effect );
+
+    const sol::table context = platform.lua.create_table();
+    const sol::protected_function_result resolved = platform.services["variables"]["resolve"](
+                context, platform.handle( false ), "global", key );
+    REQUIRE( resolved.valid() );
+    const sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( legacy.player.has_permanent_trait( trait_QUICK ) );
+    CHECK( platform.player.has_permanent_trait( trait_QUICK ) );
+    CHECK_FALSE( legacy.other.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.other.has_trait( trait_QUICK ) );
+}
+
+TEST_CASE( "lua_platform_mutation_activation_matches_live_tree_communion_selector",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3900 );
+    mutation_fixture platform( 4000 );
+    const trait_id trait( "TREE_COMMUNION" );
+    REQUIRE( trait.is_valid() );
+    legacy.player.set_mutation( trait );
+    platform.player.set_mutation( trait );
+
+    legacy.legacy_effect( R"({"u_activate_trait":"TREE_COMMUNION"})" );
+    const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", trait.str() ), true );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( legacy.player.has_active_mutation( trait ) );
+    CHECK( platform.player.has_active_mutation( trait ) );
+    CHECK_FALSE( legacy.other.has_trait( trait ) );
+    CHECK_FALSE( platform.other.has_trait( trait ) );
+}
+
 TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alpha_npc",
            "[lua][platform][mutations][semantic]" )
 {
