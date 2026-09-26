@@ -25154,6 +25154,13 @@ def render_participant_string_expression(
                 'elseif name:sub(1, 2) == "n_" then scope, owner, name = "npc", ' +
                 npc_expression + ', name:sub(3) '
                 'elseif name:sub(1, 1) == "_" then scope, name = "context", name:sub(2) end; '
+            )
+            if native_string_values:
+                # Platform variable scopes require non-empty names.  Preserve
+                # native's default/empty result for a missing empty reference;
+                # a separately stored native empty key is outside this scope.
+                expression += 'if name == "" then return ' + fallback + ' end; '
+            expression += (
                 'local result = service_value(services.variables.resolve('
                 'context.data, owner, scope, name)); '
                 'if result.exists == false then return ' + fallback + ' end; '
