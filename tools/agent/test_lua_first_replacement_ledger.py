@@ -33,6 +33,21 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(entries[("eoc-conditions", selector)]["status"],
                              "reviewed_not_applicable")
 
+    def test_named_predicates_require_semantic_acceptance(self):
+        entries = {(entry["inventory"], entry["selector"]): entry
+                   for entry in build_ledger()["entries"]}
+        for inventory, selector in (
+            ("eoc-effects", "set_condition"),
+            ("eoc-conditions", "get_condition"),
+            ("eoc-conditions", "test_eoc"),
+        ):
+            with self.subTest(selector=selector):
+                entry = entries[(inventory, selector)]
+                self.assertEqual(entry["status"], "bounded_implemented_unverified")
+                self.assertEqual(entry["verification"], "source_only")
+                self.assertEqual(entry["target"], "native-lua-predicate-context")
+                self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
+
     def test_mutation_actions_remain_source_only_bounded(self):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}
