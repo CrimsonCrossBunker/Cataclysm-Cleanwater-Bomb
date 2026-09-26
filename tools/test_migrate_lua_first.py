@@ -110,13 +110,19 @@ assert(EXPRESSION)
         result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_environment_topic_item_mutator_stays_partial_without_dialogue_context(self) -> None:
-        # EOC migration callbacks receive a plain context table. topic_item() is
-        # only exposed by PlatformDialogueContext, so emitting it here would
-        # generate a runtime method call that the EOC context does not provide.
+    def test_environment_topic_item_mutator_matches_native_eoc_copy_semantics(self) -> None:
         for selector in ("is_season", "is_weather"):
+            current = (
+                "services.time_snapshot().season_id" if selector == "is_season"
+                else "services.weather.current().weather.value"
+            )
+            self.assertEqual(
+                migrate_lua_first.render_eoc_condition_expression(
+                    {selector: {"mutator": "topic_item"}}),
+                f'{current} == ""',
+            )
             self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-                {selector: {"mutator": "topic_item"}}))
+                {selector: {"mutator": "topic_item", "extra": "unsupported"}}))
 
     def test_environment_string_predicates_keep_empty_literal_and_reject_bad_i18n(self) -> None:
         for selector in ("is_season", "is_weather"):
@@ -3835,15 +3841,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 4)
-            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.converted), 5)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring((context.data["context_weather"]) or "")',
                 main,
             )
-            self.assertNotIn("context:topic_item()", main)
-            self.assertIn("topic_item_is_weather", report)
+            self.assertIn('services.weather.current().weather.value == ""', main)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring(((service_value(services.variables.resolve('
