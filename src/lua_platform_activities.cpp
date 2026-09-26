@@ -1073,10 +1073,11 @@ void install_activity_api(
         if( character == nullptr ) {
             return make_game_error_result( state, *error );
         }
-        const bool changed = static_cast<bool>( character->activity );
-        if( changed ) {
-            character->cancel_activity();
-        }
+        const bool had_activity = static_cast<bool>( character->activity );
+        const std::size_t backlog_size_before = character->backlog.size();
+        character->cancel_activity();
+        const bool changed = had_activity ||
+                             backlog_size_before != character->backlog.size();
         sol::table value = state.create_table();
         value["changed"] = changed;
         value["activity"] = character_activity_snapshot(
