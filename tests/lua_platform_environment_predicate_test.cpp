@@ -129,6 +129,44 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
     const sol::protected_function_result translated_weather_result = translated_weather_query();
     REQUIRE( translated_weather_result.valid() );
     CHECK( translated_weather_result.get<bool>() == translated_weather( context ) );
+
+#if defined(LOCALIZE)
+    // The TEST_DATA Russian MO has a deliberate non-identity mapping to a
+    // canonical season ID, so matching predicates prove both paths translate.
+    TranslationManager &translation_manager = TranslationManager::GetInstance();
+    const std::string old_language = translation_manager.GetCurrentLanguage();
+    const std::string intermediate_language = old_language == "en" ? "ru" : "en";
+    on_out_of_scope restore_language( [old_language, intermediate_language]() {
+        set_language( intermediate_language );
+        set_language( old_language );
+    } );
+    set_language( "ru" );
+    translation_manager.LoadDocuments( {
+        "./data/mods/TEST_DATA/lang/mo/ru/LC_MESSAGES/TEST_DATA.mo"
+    } );
+
+    calendar::set_eternal_season( false );
+    restore_on_out_of_scope restore_initial_season( calendar::initial_season );
+    calendar::initial_season = SPRING;
+    calendar::turn = calendar::turn_zero;
+    const std::string localized_spring_source = "__ccb_test_environment_spring__";
+    lua["wanted"] = localized_spring_source;
+    conditional_t localized_spring( json_loader::from_string(
+                                        R"({"is_season":{"str":")" +
+                                        localized_spring_source + R"(","i18n":true}})"
+                                    ).get_object() );
+    const sol::protected_function_result translated_spring = translated_season_query();
+    REQUIRE( translated_spring.valid() );
+    sol::protected_function translate_query = lua.load( "return services.translate(wanted)" );
+    const sol::protected_function_result translated_spring_text = translate_query();
+    REQUIRE( translated_spring_text.valid() );
+    const std::string translated_spring_value = translated_spring_text.get<std::string>();
+    CHECK( translated_spring_value == "spring" );
+    CHECK( translated_spring_value != localized_spring_source );
+    CHECK( localized_spring( context ) );
+    CHECK( translated_spring.get<bool>() == localized_spring( context ) );
+    CHECK( translated_spring.get<bool>() );
+#endif
 }
 
 #endif
