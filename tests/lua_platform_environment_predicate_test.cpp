@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <array>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -98,8 +99,9 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
 
     // Exercise the native str_or_var translation object accepted by these
     // selectors, and compare it with the migration's services.translate path.
+    const std::array<std::string, 4> season_ids = { "spring", "summer", "autumn", "winter" };
     const std::string translated_season_source =
-        seasons[season_of_year( calendar::turn )];
+        season_ids[season_of_year( calendar::turn )];
     lua["wanted"] = translated_season_source;
     conditional_t translated_season( json_loader::from_string(
                                          R"({"is_season":{"str":")" +
