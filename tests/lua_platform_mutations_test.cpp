@@ -627,6 +627,38 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
     }
 }
 
+TEST_CASE( "lua_platform_mutation_replace_matches_empty_eoc_topic_item_variant",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 4300 );
+    mutation_fixture platform( 4400 );
+    const trait_id hair( "artificial_hair_buzzcut" );
+    REQUIRE( hair.is_valid() );
+    const std::string effect =
+        R"({"u_add_trait":"artificial_hair_buzzcut","variant":{"mutator":"topic_item"}})";
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } restore;
+
+    // The copied EOC has no current topic item, so native topic_item resolves
+    // to an empty variant ID and lets set_mutation choose a weighted variant.
+    rng_set_engine_seed( 4903 );
+    legacy.legacy_effect( effect );
+    const auto native_variants = legacy.player.get_mutations_variants();
+
+    rng_set_engine_seed( 4903 );
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", hair.str() ), "" );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( platform.player.get_mutations_variants() == native_variants );
+    REQUIRE( native_variants.size() == 1 );
+    CHECK( native_variants.front().trait == hair );
+}
+
 TEST_CASE( "lua_platform_mutation_replace_matches_native_conflicts_and_repeat",
            "[lua][platform][mutations][semantic]" )
 {
