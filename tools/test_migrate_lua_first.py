@@ -15,6 +15,62 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_effect_and_worn_flag_predicates_require_explicit_bodyparts(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed"}, avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed"}, creature_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_any_effect": ["bleed"]},
+                creature_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_effect": "bleed"}, npc_actor_proven=True,
+                npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_any_effect": ["bleed"]}, npc_actor_proven=True,
+                npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": {"u_val": "part"}},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": "NULL"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "NULL"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_worn_with_flag": "WATERPROOF"},
+                npc_actor_proven=True, npc_actor_expression="partner"))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": "arm_l"},
+                avatar_actor_proven=True),
+            'service_value(services.effects.has(actor, '
+            'services.types.id("effect", "bleed"), '
+            'services.types.id("body_part", "arm_l"), -1))',
+        )
+        self.assertIn(
+            'services.inventory.has_worn_flag(actor, '
+            'services.types.id("json_flag", "WATERPROOF"), '
+            'services.types.id("body_part", "torso"))',
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
+                avatar_actor_proven=True),
+        )
+
     def test_u_friend_preserves_character_talker_semantics(self) -> None:
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
@@ -1331,7 +1387,8 @@ assert(called)
             for value, lower, upper in ranges:
                 with self.subTest(prefix=prefix, value=value):
                     expression = migrate_lua_first.render_effect_condition(
-                        {prefix + "has_any_effect": ["absent", "bleed"], "intensity": value}, "actor", "partner")
+                        {prefix + "has_any_effect": ["absent", "bleed"],
+                         "bodypart": "torso", "intensity": value}, "actor", "partner")
                     self.assertIsNotNone(expression)
                     added = migrate_lua_first.render_dynamic_character_effect(
                         {prefix + "add_effect": "bleed", "duration": 10, "intensity": value},
@@ -1377,7 +1434,8 @@ assert(adds==1 and random_calls==2 and reads==READS)
     def test_effect_intensity_rejects_malformed_ranges(self) -> None:
         for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 2147483648], [-2147483649, 0]):
             self.assertIsNone(migrate_lua_first.render_effect_condition(
-                {"u_has_effect": "bleed", "intensity": value}, "actor", None))
+                {"u_has_effect": "bleed", "bodypart": "torso",
+                 "intensity": value}, "actor", None))
             self.assertIsNone(migrate_lua_first.render_dynamic_character_effect(
                 {"u_add_effect": "bleed", "duration": 10, "intensity": value}, "u_add_effect", "actor"))
 
@@ -1891,7 +1949,7 @@ assert(calls == COUNT)
             if key.endswith("any_effect"):
                 value = [value]
             expression = migrate_lua_first.render_eoc_condition_expression(
-                {key: value, "bodypart": {"npc_val": "part"}, "intensity": {"u_val": "minimum"}},
+                {key: value, "bodypart": "arm_l", "intensity": {"u_val": "minimum"}},
                 avatar_actor_proven=True, npc_actor_expression="partner")
             self.assertIsNotNone(expression)
             script = """
@@ -2437,7 +2495,7 @@ assert(read() == 'bio_batteries')
         self.assertEqual(len(checked), 4)
         self.assertEqual(len(set(checked)), 4)
 
-    def test_any_effect_query_preserves_explicit_npc_target(self) -> None:
+    def test_any_effect_query_requires_explicit_bodypart_and_npc_target(self) -> None:
         for bodypart in (None, "arm_l"):
             condition = {"npc_has_any_effect": ["poison", "bleed"]}
             if bodypart is not None:
@@ -2445,6 +2503,9 @@ assert(read() == 'bio_batteries')
             with self.subTest(bodypart=bodypart):
                 expression = migrate_lua_first.render_eoc_condition_expression(
                     condition, npc_actor_expression="partner")
+                if bodypart is None:
+                    self.assertIsNone(expression)
+                    continue
                 self.assertIsNotNone(expression)
                 self.assertEqual(expression.count("services.effects.has(partner,"), 2)
                 self.assertNotIn("services.effects.has(actor,", expression)
@@ -2926,7 +2987,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("not (services.gameplay.mods.is_loaded", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
-    def test_translates_proven_actor_effect_predicates(self) -> None:
+    def test_effect_predicates_require_explicit_bodypart(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -2992,28 +3053,24 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 5)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn(
-                'services.effects.has(actor, services.types.id("effect", "downed"))',
-                main,
-            )
-            self.assertIn(
-                'services.types.id("effect", "blind")',
-                main,
-            )
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 5)
             self.assertIn(
                 'services.effects.has(actor, services.types.id("effect", "downed"), services.types.id("body_part", "torso"), 1)',
                 main,
             )
             self.assertNotIn(
-                "EOC dynamic_effect condition TODO: translate the legacy condition into a Lua predicate",
-                report,
+                'services.effects.has(actor, services.types.id("effect", "downed")))',
+                main,
             )
-            self.assertIn(
-                "EOC unproven_npc_effect condition TODO: translate the legacy condition into a Lua predicate",
-                report,
-            )
+            for eoc_id in (
+                "avatar_effect", "avatar_any_effect", "npc_effect",
+                "dynamic_effect", "unproven_npc_effect",
+            ):
+                self.assertIn(
+                    f"EOC {eoc_id} condition TODO: translate the legacy condition into a Lua predicate",
+                    report,
+                )
             self.assertNotIn("run_eoc", main)
 
     def test_keeps_faction_trust_without_beta_and_uses_exact_beta(self) -> None:
@@ -14171,7 +14228,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {"u_has_item_category": "food", "count": 2},
                 {"u_has_items_sum": [{"item": "scrap", "amount": 2}]},
                 {"u_has_software": {"item": "software_calculator", "charges": 1}},
-                {"u_has_worn_with_flag": "WATERPROOF"},
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
                 {"u_has_wielded_with_flag": "DURABLE_MELEE"},
                 {"u_has_wielded_with_weapon_category": "WEAPON"},
                 {"u_has_wielded_with_skill": "survival"},
@@ -16078,13 +16135,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "game_start",
                             "condition": {
                                 "and": [
-                                    {"u_has_any_effect": ["eff1"]},
-                                    {"u_has_effect": "eff2"},
+                                    {"u_has_any_effect": ["eff1"], "bodypart": "torso"},
+                                    {"u_has_effect": "eff2", "bodypart": "torso"},
                                     {"u_has_faction_trust": 5},
                                     {"u_has_part_temp": "arm_l"},
                                     {"u_has_software": "soft1"},
                                     {"u_has_visible_trait": "trait1"},
-                                    {"u_has_worn_with_flag": "FLAG1"},
+                                    {"u_has_worn_with_flag": "FLAG1", "bodypart": "torso"},
                                     {"u_monsters_in_direction": "north"},
                                     {"u_query": "query1"},
                                     "u_see_npc",
@@ -16137,13 +16194,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "and": [
                                     "npc_allies",
                                     "npc_allies_global",
-                                    {"npc_has_any_effect": ["eff1"]},
-                                    {"npc_has_effect": "eff2"},
+                                    {"npc_has_any_effect": ["eff1"], "bodypart": "torso"},
+                                    {"npc_has_effect": "eff2", "bodypart": "torso"},
                                     {"npc_has_move_mode": "crouch"},
                                     {"npc_has_part_temp": "arm_r"},
                                     {"npc_has_software": "soft2"},
                                     {"npc_has_visible_trait": "trait2"},
-                                    {"npc_has_worn_with_flag": "FLAG2"},
+                                    {"npc_has_worn_with_flag": "FLAG2", "bodypart": "torso"},
                                     {"npc_query": "q2"},
                                     "npc_role_nearby",
                                     "npc_see_u",
@@ -19629,7 +19686,7 @@ assert(#messages==2 and messages[2]=="after")
                             "required_event": "character_melee_attacks_monster",
                             "condition": {
                                 "and": [
-                                    {"npc_has_effect": "stunned"},
+                                    {"npc_has_effect": "stunned", "bodypart": "torso"},
                                     {"npc_has_species": "MAMMAL"},
                                     {"npc_has_flag": "SEES"},
                                     {"npc_is_on_terrain_with_flag": "DIGGABLE"},
@@ -20580,7 +20637,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "effect": {
                             "if": {
                                 "and": [
-                                    {"u_has_effect": "attention"},
+                                    {"u_has_effect": "attention", "bodypart": "torso"},
                                     {
                                         "overmap_at_point": "field",
                                         "point": {"global_val": "destination"},

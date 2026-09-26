@@ -804,6 +804,13 @@ def bounded_platform_id(value: Any) -> bool:
     )
 
 
+def bounded_platform_body_part_id(value: Any) -> bool:
+    # `NULL` is not a body-part ID (the registered null ID is `bp_null`).
+    # Platform typed IDs reject it while native bodypart conversion falls
+    # back to the null part, so do not emit a service call for this shape.
+    return bounded_platform_id(value) and value != "NULL"
+
+
 def lua_function_name(identifier: str) -> str:
     """Return a deterministic private Lua function name for a legacy id."""
     pieces: list[str] = []
@@ -26199,6 +26206,11 @@ def render_effect_condition(
     key = next(iter(keys))
     if set(condition) - {key, "bodypart", "intensity"}:
         return None
+    # Native EOC conditions inherit an omitted part from dialogue reason.
+    # The migration has no proven reason channel, so require a non-empty
+    # literal part; a dynamic part can still evaluate empty and inherit reason.
+    if not bounded_platform_body_part_id(condition.get("bodypart")):
+        return None
     target = beta if key.startswith("npc_") else alpha
     if target is None:
         return None
@@ -26209,11 +26221,7 @@ def render_effect_condition(
             return None if raw is None else f'services.types.id("{kind}", {raw})'
         return _dynamic_id_expression(value, kind, target)
 
-    bodypart = "nil"
-    if "bodypart" in condition:
-        bodypart = identifier(condition["bodypart"], "body_part")
-        if bodypart is None:
-            return None
+    bodypart = f'services.types.id("body_part", {lua_quote(condition["bodypart"])})'
     values = condition[key] if key.endswith("any_effect") else [condition[key]]
     if not isinstance(values, list):
         return None
@@ -26561,13 +26569,8 @@ def render_eoc_condition_expression(
                     "context.data ~= nil and "
                     "context.data[\"__ccb_talker_kind\"] == \"furniture\""
                 )
-        if isinstance(condition, dict) and set(condition) == {"u_has_effect"}:
-            effect_id = condition.get("u_has_effect")
-            if safe_platform_id(effect_id):
-                return (
-                    "service_value(services.effects.has(actor, services.types.id(\"effect\", "
-                    f"{lua_quote(effect_id)})))"
-                )
+        if isinstance(condition, dict) and "u_has_effect" in condition:
+            return render_effect_condition(condition, "actor", None)
         if isinstance(condition, dict) and set(condition) == {"u_has_species"}:
             species = _dynamic_id_expression(
                 condition["u_has_species"], "species", "actor"
@@ -26577,16 +26580,8 @@ def render_eoc_condition_expression(
                     "service_value(services.creatures.has_species(actor, " +
                     species + "))"
                 )
-        if isinstance(condition, dict) and set(condition) == {"u_has_any_effect"}:
-            effect_ids = condition.get("u_has_any_effect")
-            if isinstance(effect_ids, list) and effect_ids and len(effect_ids) <= 64 and all(
-                safe_platform_id(value) for value in effect_ids
-            ):
-                return " or ".join(
-                    "service_value(services.effects.has(actor, services.types.id(\"effect\", "
-                    f"{lua_quote(value)})))"
-                    for value in effect_ids
-                )
+        if isinstance(condition, dict) and "u_has_any_effect" in condition:
+            return render_effect_condition(condition, "actor", None)
         if condition == "has_beta":
             return (
                 "context.actors ~= nil and context.actors.beta ~= nil"
@@ -27337,10 +27332,13 @@ def render_eoc_condition_expression(
         ("u_has_worn_with_flag", avatar_actor_proven),
         ("npc_has_worn_with_flag", npc_actor_proven),
     ):
-        if actor_proven and set(condition) <= {item_key, "bodypart"} and bounded_platform_id(condition.get(item_key)):
+        if (
+            actor_proven and "bodypart" in condition and
+            set(condition) <= {item_key, "bodypart"} and
+            bounded_platform_id(condition.get(item_key)) and
+            bounded_platform_body_part_id(condition.get("bodypart"))
+        ):
             bodypart = condition.get("bodypart")
-            if "bodypart" in condition and not bounded_platform_id(bodypart):
-                continue
             bodypart_expr = (
                 ", services.types.id(\"body_part\", " + lua_quote(bodypart) + ")"
                 if "bodypart" in condition else ""
@@ -27752,13 +27750,16 @@ def render_eoc_condition_expression(
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key} and
+            set(condition) == {effect_key, "bodypart"} and
+            bounded_platform_body_part_id(condition.get("bodypart")) and
             safe_platform_id(condition.get(effect_key))
         ):
             return (
                 "service_value(services.effects.has(actor, "
                 "services.types.id(\"effect\", "
-                f"{lua_quote(condition[effect_key])})))"
+                f"{lua_quote(condition[effect_key])}), "
+                "services.types.id(\"body_part\", "
+                f"{lua_quote(condition['bodypart'])}), -1))"
             )
     for effect_key, actor_proven in (
         (
@@ -27769,7 +27770,8 @@ def render_eoc_condition_expression(
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key} and
+            set(condition) == {effect_key, "bodypart"} and
+            bounded_platform_body_part_id(condition.get("bodypart")) and
             isinstance(condition.get(effect_key), list) and
             0 < len(condition[effect_key]) <= 64 and
             all(safe_platform_id(value) for value in condition[effect_key])
@@ -27777,7 +27779,9 @@ def render_eoc_condition_expression(
             queries = [
                 "service_value(services.effects.has(actor, "
                 "services.types.id(\"effect\", "
-                f"{lua_quote(value)})))"
+                f"{lua_quote(value)}), "
+                "services.types.id(\"body_part\", "
+                f"{lua_quote(condition['bodypart'])}), -1))"
                 for value in condition[effect_key]
             ]
             return " or ".join(f"({query})" for query in queries)
