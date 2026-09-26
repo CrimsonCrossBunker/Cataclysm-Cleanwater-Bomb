@@ -71,6 +71,22 @@ sol::object context_value_to_lua( sol::state_view lua, const diag_value &value )
     return script_diag_value_to_lua( std::move( lua ), value, "services.variables returned context" );
 }
 
+diag_value native_variable_value_from_lua( const sol::object &value, const std::string &key )
+{
+    if( value.get_type() == sol::type::string ) {
+        return diag_value( value.as<std::string>() );
+    }
+    return context_value_from_lua( value, key );
+}
+
+sol::object native_variable_value_to_lua( sol::state_view lua, const diag_value &value )
+{
+    if( value.is_str() ) {
+        return sol::make_object( lua, value.str() );
+    }
+    return context_value_to_lua( std::move( lua ), value );
+}
+
 struct resolved_variable_talker {
     std::unique_ptr<talker> value;
     item *item_value = nullptr;
@@ -171,7 +187,7 @@ sol::table get_variable(
     const diag_value *stored = resolved_variable_get( resolved, key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        value["value"] = context_value_to_lua(
+        value["value"] = native_variable_value_to_lua(
                              state, *stored );
     } else {
         value["value"] = sol::nil;
@@ -187,7 +203,7 @@ sol::table set_variable(
     const std::size_t world_generation )
 {
     const diag_value replacement =
-        context_value_from_lua( requested, key );
+        native_variable_value_from_lua( requested, key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -199,13 +215,13 @@ sol::table set_variable(
     const diag_value *before = resolved_variable_get( resolved, key );
     value["existed"] = before != nullptr;
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua(
+        value["before"] = native_variable_value_to_lua(
                               state, *before );
     } else {
         value["before"] = sol::nil;
     }
     resolved_variable_set( resolved, key, replacement );
-    value["after"] = context_value_to_lua(
+    value["after"] = native_variable_value_to_lua(
                          state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -228,7 +244,7 @@ sol::table remove_variable(
     const diag_value *before = resolved_variable_get( resolved, key );
     value["removed"] = before != nullptr;
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua(
+        value["before"] = native_variable_value_to_lua(
                               state, *before );
         resolved_variable_remove( resolved, key );
     } else {
@@ -246,7 +262,7 @@ sol::table get_global_variable(
     const diag_value *stored = get_globals().maybe_get_global_value( key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        value["value"] = context_value_to_lua( state, *stored );
+        value["value"] = native_variable_value_to_lua( state, *stored );
     } else {
         value["value"] = sol::nil;
     }
@@ -257,18 +273,18 @@ sol::table get_global_variable(
 sol::table set_global_variable(
     sol::this_state lua, const std::string &key, const sol::object &requested )
 {
-    const diag_value replacement = context_value_from_lua( requested, key );
+    const diag_value replacement = native_variable_value_from_lua( requested, key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["existed"] = before != nullptr;
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua( state, *before );
+        value["before"] = native_variable_value_to_lua( state, *before );
     } else {
         value["before"] = sol::nil;
     }
     get_globals().set_global_value( key, replacement );
-    value["after"] = context_value_to_lua( state, replacement );
+    value["after"] = native_variable_value_to_lua( state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -281,7 +297,7 @@ sol::table remove_global_variable(
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["removed"] = before != nullptr;
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua( state, *before );
+        value["before"] = native_variable_value_to_lua( state, *before );
         get_globals().remove_global_value( key );
     } else {
         value["before"] = sol::nil;
@@ -362,7 +378,7 @@ sol::table resolve_variable(
             sol::table result = state.create_table();
             result["exists"] = stored != nullptr;
             if( stored != nullptr ) {
-                result["value"] = context_value_to_lua( state, *stored );
+                result["value"] = native_variable_value_to_lua( state, *stored );
             } else {
                 result["value"] = sol::nil;
             }
@@ -390,7 +406,7 @@ sol::table resolve_variable(
         sol::table result = state.create_table();
         result["exists"] = stored != nullptr;
         if( stored != nullptr ) {
-            result["value"] = context_value_to_lua( state, *stored );
+            result["value"] = native_variable_value_to_lua( state, *stored );
         } else {
             result["value"] = sol::nil;
         }
