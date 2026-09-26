@@ -4588,22 +4588,29 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
             descriptor = next(iter(descriptors))
             name = value[descriptor]
             valid_name = (
-                lua_quotable_native_variable_string(name)
-                if descriptor in {"u_val", "npc_val", "global_val"} else
                 bounded_platform_context_variable_key(name)
+                if descriptor == "var_val" else
+                lua_quotable_native_variable_string(name)
             )
             if not valid_name:
                 return None
             fallback = value.get("default", "")
             if not isinstance(fallback, str):
                 return None
-            scope = descriptor.removesuffix("_val")
-            mutation = (
-                '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
-                ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
-                '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
-                ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
-            )
+            if descriptor == "context_val":
+                mutation = (
+                    '(function(stored) if stored == nil then return ' + lua_quote(fallback) +
+                    ' end; if type(stored) == "string" then return stored end; return "" end)'
+                    '(context and context.data and context.data[' + lua_quote(name) + '])'
+                )
+            else:
+                scope = descriptor.removesuffix("_val")
+                mutation = (
+                    '(function(snapshot) if not snapshot.exists then return ' + lua_quote(fallback) +
+                    ' end; if type(snapshot.value) == "string" then return snapshot.value end; return "" end)'
+                    '(service_value(services.variables.resolve(context.data, nil, ' + lua_quote(scope) +
+                    ', ' + lua_quote(name) + ', {alpha=' + (alpha or "nil") + ', beta=' + (beta or "nil") + '})))'
+                )
     return mutation
 
 
