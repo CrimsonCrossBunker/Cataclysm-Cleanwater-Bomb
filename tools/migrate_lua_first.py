@@ -3655,10 +3655,8 @@ def render_static_set_condition(
     return [
         "    context.conditions = context.conditions or {}",
         f"    local stored_condition_name = tostring(({name}) or \"\")",
-        "    if stored_condition_name ~= \"\" then",
-        "        context.conditions[stored_condition_name] = function(context, actor)",
-        f"            return {predicate}",
-        "        end",
+        "    context.conditions[stored_condition_name] = function(context, actor)",
+        f"        return {predicate}",
         "    end",
     ]
 
