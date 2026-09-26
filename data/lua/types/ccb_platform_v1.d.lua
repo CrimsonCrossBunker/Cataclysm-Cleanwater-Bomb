@@ -10098,60 +10098,66 @@ local CcbVariablesApi = {}
 ---Both owners are validated before mutation; missing sources write a stored empty value.
 ---An active write callback is required. Use nil owners for the global variable store.
 ---@param source_owner GameHandle|nil
----@param source_key string Variable key, 1..128 bytes without ASCII controls or NUL.
+---@param source_key string Native GameHandle/global storage key; callback-context key limits do not apply.
 ---@param destination_owner GameHandle|nil
----@param destination_key string
+---@param destination_key string Native GameHandle/global storage key; callback-context key limits do not apply.
 ---@return CcbVariableCopyResult
 function CcbVariablesApi.copy(source_owner, source_key, destination_owner, destination_key) end
 
 ---@param character GameHandle Explicit live variable-owning actor.
----@param key string Variable name containing 1..128 bytes, without ASCII controls or NUL.
+---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get(character, key) end
 
 ---Write phases and an active callback are required for variable mutations.
 ---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
----@param key string
+---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set(character, key, value) end
 
 ---@param character GameHandle
----@param key string
+---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@return CcbResult result `value` contains existed and before.
 function CcbVariablesApi.remove(character, key) end
 
----@param key string
+---@param key string Native global storage key; callback-context key limits do not apply.
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get_global(key) end
 
----@param key string
+---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set_global(key, value) end
 
----@param key string
+---@param key string Native global storage key; callback-context key limits do not apply.
 ---@return CcbResult result `value` contains existed and before.
 function CcbVariablesApi.remove_global(key) end
 
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
 ---Optional participants select alpha for u and beta for npc, including indirect references.
 ---When supplied, an absent participant means missing; otherwise actor remains the explicit owner.
+---Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
+---including targets reached through var indirection, use native storage key semantics. A var target that
+---resolves to callback context remains subject to the context-key limit.
 ---@param context table<string, any>|nil Callback data for context/var references.
 ---@param actor GameHandle|nil Explicit owner for actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string
+---@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
 ---@return CcbVariableReadResult
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}?
 function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 
 ---For context scope, nil clears the entry; services.types.null retains an empty value.
 ---resolve returns exists=true,value=nil for that explicit empty value.
+---Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
+---including targets reached through var indirection, use native storage key semantics. A var target that
+---resolves to callback context remains subject to the context-key limit.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string
+---@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed, before and after.
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
