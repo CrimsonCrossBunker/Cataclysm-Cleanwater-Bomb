@@ -15,6 +15,122 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_effect_and_worn_flag_predicates_require_explicit_bodyparts(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed"}, avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed"}, creature_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_any_effect": ["bleed"]},
+                creature_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_effect": "bleed"}, npc_actor_proven=True,
+                npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_any_effect": ["bleed"]}, npc_actor_proven=True,
+                npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": {"u_val": "part"}},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": "NULL"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "NULL"},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_worn_with_flag": "WATERPROOF"},
+                npc_actor_proven=True, npc_actor_expression="partner"))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_effect": "bleed", "bodypart": "arm_l"},
+                avatar_actor_proven=True),
+            'service_value(services.effects.has(actor, '
+            'services.types.id("effect", "bleed"), '
+            'services.types.id("body_part", "arm_l"), -1))',
+        )
+        self.assertIn(
+            'services.inventory.has_worn_flag(actor, '
+            'services.types.id("json_flag", "WATERPROOF"), '
+            'services.types.id("body_part", "torso"))',
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
+                avatar_actor_proven=True),
+        )
+
+    def test_u_friend_preserves_character_talker_semantics(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_friend", avatar_actor_proven=True),
+            "false",
+        )
+
+    def test_u_are_owed_keeps_beta_actor_semantics(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_are_owed", avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_are_owed": 10}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner"))
+
+    def test_npc_role_nearby_rejects_non_native_range_override(self) -> None:
+        expected = (
+            "service_value(services.npcs.has_role_nearby(actor, \"scout\", 48))"
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_role_nearby": "scout"}, avatar_actor_proven=True),
+            expected,
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_role_nearby": "scout", "range": 48},
+                avatar_actor_proven=True),
+            expected,
+        )
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout"}, npc_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout", "range": 5}, avatar_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout"}, generic_character_actor_proven=True))
+
+    def test_opposite_actor_visibility_requires_exact_alpha_and_beta(self) -> None:
+        cases = {
+            "npc_see_u": "service_value(services.creatures.can_see(partner, actor))",
+            "u_see_npc": "service_value(services.creatures.can_see(actor, partner))",
+            "npc_see_u_loc": (
+                "service_value(services.creatures.has_line_of_sight(partner, actor))"
+            ),
+            "u_see_npc_loc": (
+                "service_value(services.creatures.has_line_of_sight(actor, partner))"
+            ),
+        }
+        for condition, expected in cases.items():
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, avatar_actor_proven=True,
+                        npc_actor_proven=True, npc_actor_expression="partner"),
+                    expected,
+                )
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    condition, npc_actor_proven=True))
+
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
             for operator in ("and", "or", "not"):
@@ -1271,7 +1387,8 @@ assert(called)
             for value, lower, upper in ranges:
                 with self.subTest(prefix=prefix, value=value):
                     expression = migrate_lua_first.render_effect_condition(
-                        {prefix + "has_any_effect": ["absent", "bleed"], "intensity": value}, "actor", "partner")
+                        {prefix + "has_any_effect": ["absent", "bleed"],
+                         "bodypart": "torso", "intensity": value}, "actor", "partner")
                     self.assertIsNotNone(expression)
                     added = migrate_lua_first.render_dynamic_character_effect(
                         {prefix + "add_effect": "bleed", "duration": 10, "intensity": value},
@@ -1317,7 +1434,8 @@ assert(adds==1 and random_calls==2 and reads==READS)
     def test_effect_intensity_rejects_malformed_ranges(self) -> None:
         for value in ([], [1], [1, 2, 3], [[1, 2], 3], [True, 2], [0, 2147483648], [-2147483649, 0]):
             self.assertIsNone(migrate_lua_first.render_effect_condition(
-                {"u_has_effect": "bleed", "intensity": value}, "actor", None))
+                {"u_has_effect": "bleed", "bodypart": "torso",
+                 "intensity": value}, "actor", None))
             self.assertIsNone(migrate_lua_first.render_dynamic_character_effect(
                 {"u_add_effect": "bleed", "duration": 10, "intensity": value}, "u_add_effect", "actor"))
 
@@ -1342,9 +1460,7 @@ assert(adds==1 and random_calls==2 and reads==READS)
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_all_removal_event_beta_uses_actual_creature_kind(self) -> None:
         for event, kind in (("character_melee_attacks_monster", "monster"),
-                            ("character_melee_attacks_character", "npc"),
-                            ("character_takes_damage", "monster"),
-                            ("character_takes_damage", "avatar")):
+                            ("character_melee_attacks_character", "npc")):
             for dynamic in (False, True):
                 with self.subTest(event=event, kind=kind, dynamic=dynamic), tempfile.TemporaryDirectory() as temporary:
                     source = Path(temporary) / "eoc.json"
@@ -1379,7 +1495,7 @@ local services={
 package.preload.ccb=function() return {content={},services=services,runtime={
  handler=function(id,fn) handlers[id]=fn end,on=function() end}} end
 BODY
-handlers['migrated.remove_all']({data={part='ALL'},actors={beta=target,attacker=actor,character=actor}})
+handlers['migrated.remove_all']({data={part='ALL'},actors={interlocutor=target,attacker=actor,character=actor}})
 assert(calls==(kind=='monster' and 1 or 3))
 assert(part_calls==(kind=='monster' and 0 or 1))
 """.replace("KIND", migrate_lua_first.lua_quote(kind)).replace("BODY", main)
@@ -1831,7 +1947,7 @@ assert(calls == COUNT)
             if key.endswith("any_effect"):
                 value = [value]
             expression = migrate_lua_first.render_eoc_condition_expression(
-                {key: value, "bodypart": {"npc_val": "part"}, "intensity": {"u_val": "minimum"}},
+                {key: value, "bodypart": "arm_l", "intensity": {"u_val": "minimum"}},
                 avatar_actor_proven=True, npc_actor_expression="partner")
             self.assertIsNotNone(expression)
             script = """
@@ -2377,7 +2493,7 @@ assert(read() == 'bio_batteries')
         self.assertEqual(len(checked), 4)
         self.assertEqual(len(set(checked)), 4)
 
-    def test_any_effect_query_preserves_explicit_npc_target(self) -> None:
+    def test_any_effect_query_requires_explicit_bodypart_and_npc_target(self) -> None:
         for bodypart in (None, "arm_l"):
             condition = {"npc_has_any_effect": ["poison", "bleed"]}
             if bodypart is not None:
@@ -2385,6 +2501,9 @@ assert(read() == 'bio_batteries')
             with self.subTest(bodypart=bodypart):
                 expression = migrate_lua_first.render_eoc_condition_expression(
                     condition, npc_actor_expression="partner")
+                if bodypart is None:
+                    self.assertIsNone(expression)
+                    continue
                 self.assertIsNotNone(expression)
                 self.assertEqual(expression.count("services.effects.has(partner,"), 2)
                 self.assertNotIn("services.effects.has(actor,", expression)
@@ -2866,7 +2985,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("not (services.gameplay.mods.is_loaded", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
-    def test_translates_proven_actor_effect_predicates(self) -> None:
+    def test_effect_predicates_require_explicit_bodypart(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -2932,31 +3051,39 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 5)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn(
-                'services.effects.has(actor, services.types.id("effect", "downed"))',
-                main,
-            )
-            self.assertIn(
-                'services.types.id("effect", "blind")',
-                main,
-            )
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 5)
             self.assertIn(
                 'services.effects.has(actor, services.types.id("effect", "downed"), services.types.id("body_part", "torso"), 1)',
                 main,
             )
             self.assertNotIn(
-                "EOC dynamic_effect condition TODO: translate the legacy condition into a Lua predicate",
-                report,
+                'services.effects.has(actor, services.types.id("effect", "downed")))',
+                main,
             )
-            self.assertIn(
-                "EOC unproven_npc_effect condition TODO: translate the legacy condition into a Lua predicate",
-                report,
-            )
+            for eoc_id in (
+                "avatar_effect", "avatar_any_effect", "npc_effect",
+                "dynamic_effect", "unproven_npc_effect",
+            ):
+                self.assertIn(
+                    f"EOC {eoc_id} condition TODO: translate the legacy condition into a Lua predicate",
+                    report,
+                )
             self.assertNotIn("run_eoc", main)
 
-    def test_translates_literal_avatar_faction_trust_condition(self) -> None:
+    def test_keeps_faction_trust_without_beta_and_uses_exact_beta(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": 12}, avatar_actor_proven=True))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": 12}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner"),
+            "service_value(services.factions.for_character(partner))"
+            ".reputation.trusts >= 12",
+        )
+
+    def test_keeps_literal_faction_trust_condition_without_beta_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -2977,14 +3104,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.factions.for_character(actor)", main)
             self.assertIn(
-                "service_value(services.factions.for_character(actor)).reputation.trusts >= 12",
-                main,
+                "EOC trust_gate condition TODO: translate the legacy condition into a Lua predicate",
+                report,
             )
-            self.assertNotIn("services.factions.player()", main)
-            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_dialogue_predicate_services_for_proven_avatars(self) -> None:
@@ -4231,6 +4357,7 @@ assert(#events == 11)
                     "die_size": {"context_val": "die_size"},
                 },
                 {"roll_contested": 2, "difficulty": 5, "die_size": 0},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 10 ** 400},
             ]
             source.write_text(
                 json.dumps(
@@ -4254,14 +4381,14 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 4)
             self.assertIn("services.random.one_in", main)
             self.assertIn("services.random.probability", main)
-            self.assertIn("services.random.contested", main)
+            self.assertNotIn("services.random.contested", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                2,
+                4,
             )
 
     def test_translates_bionic_any_and_literal_recipe_knowledge(self) -> None:
@@ -4893,6 +5020,44 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
+    def test_u_martial_art_uses_npc_event_alpha(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_alpha_martial_art",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": [
+                        {"u_learn_martial_art": "style_karate"},
+                        {"u_forget_martial_art": "style_karate"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_alpha_martial_art_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+        self.assertEqual(result.converted, ["npc_alpha_martial_art"])
+        self.assertEqual(result.partial, [])
+        self.assertIn(
+            'services.martial_arts.learn(actor, services.types.id("martial_art", "style_karate"))',
+            main,
+        )
+        self.assertIn(
+            'services.martial_arts.forget(actor, services.types.id("martial_art", "style_karate"))',
+            main,
+        )
+        self.assertNotIn(
+            "services.martial_arts.learn(services.characters.avatar()", main
+        )
+        self.assertNotIn(
+            "services.martial_arts.forget(services.characters.avatar()", main
+        )
+
     def test_translates_bounded_avatar_morale_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -4982,13 +5147,14 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("context.actors.npc", main)
             self.assertIn("character_travel_has_path(actor)", main)
             self.assertIn("character_at_safe_space(actor)", main)
             self.assertIn("services.creatures.can_see", main)
-            self.assertIn("services.characters.add_wet(actor, 30)", main)
+            self.assertNotIn("services.characters.add_wet(actor, 30)", main)
+            self.assertIn("wetness target and double-to-int truncation", main)
             self.assertIn("services.activities.cancel(actor)", main)
             self.assertNotIn("needs a native Lua predicate", report)
             self.assertNotIn("run_eoc", main)
@@ -5032,10 +5198,66 @@ assert(#events == 11)
             self.assertIn("services.characters.add_wet(actor, 42)", main)
             self.assertEqual(main.count("services.characters.add_wet(actor, 42)"), 1)
             self.assertIn(
+                "EOC add_wet_npc effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
                 "EOC add_wet_huge effect #0 needs domain-service conversion",
                 report,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_wetness_keeps_alpha_beta_roles_and_integer_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_u_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": 12},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_fractional_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": 2.5},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_dynamic_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"u_add_wet": {"context_val": "amount"}},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_beta_wet",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_add_wet": 12},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "wet_role_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn("services.characters.add_wet(actor, 12)", main)
+        self.assertNotIn("services.characters.add_wet(services.characters.avatar()", main)
+        for eoc_id in (
+            "npc_event_fractional_wet",
+            "npc_event_dynamic_wet",
+            "npc_event_beta_wet",
+        ):
+            self.assertIn(
+                f"EOC {eoc_id} effect #0 needs domain-service conversion",
+                report,
+            )
+        self.assertNotIn("math.floor((", main)
 
     def test_static_timed_morale_emits_native_duration_service_call(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -5364,6 +5586,135 @@ assert(#events == 11)
             self.assertNotIn("choose mutation conflict replacement and event policy", report)
             self.assertNotIn("choose mutation removal and event policy", report)
             self.assertNotIn("run_eoc", main)
+
+    def test_effect_mutation_requires_a_proven_creature_talker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "known_avatar_effect",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_kill_beta_fallback",
+                            "required_event": "character_kills_character",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_alpha_static",
+                            "required_event": "monster_takes_damage",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_melee_beta",
+                            "required_event": "character_melee_attacks_character",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_beta_static",
+                            "required_event": "character_kills_monster",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_alpha_add",
+                            "condition": "u_is_vehicle",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_beta_add",
+                            "condition": "npc_is_vehicle",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_alpha_remove",
+                            "condition": "u_is_vehicle",
+                            "effect": {"u_lose_effect": "bleed"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_beta_remove",
+                            "condition": "npc_is_vehicle",
+                            "effect": {"npc_lose_effect": "bleed"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_alpha_random_add",
+                            "required_event": "monster_takes_damage",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                                "target_part": "RANDOM",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_beta_random_add",
+                            "required_event": "character_kills_monster",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                                "target_part": "RANDOM",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_false_remove",
+                            "condition": "u_is_vehicle",
+                            "false_effect": {"u_lose_effect": "bleed"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "effect_actor_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.effects.add("), 5)
+            self.assertEqual(main.count("        context.actors.interlocutor,"), 2)
+            self.assertEqual(main.count("        context.actors.speaker,"), 1)
+            self.assertIn("character_kill_beta_fallback", main)
+            self.assertNotIn("services.effects.remove(", main)
+            for eoc_id in (
+                "vehicle_alpha_add", "vehicle_beta_add",
+                "vehicle_alpha_remove", "vehicle_beta_remove",
+                "monster_alpha_random_add", "monster_beta_random_add",
+                "vehicle_false_remove",
+            ):
+                self.assertIn(eoc_id, main)
 
     def test_translates_bounded_mutation_effects_for_avatar_and_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -6709,6 +7060,84 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
+    def test_dynamic_character_availability_and_movement_conditions(self) -> None:
+        busy = (
+            'not service_value(services.effects.has(actor, '
+            'services.types.id("effect", "currently_busy")))'
+        )
+        service = (
+            busy + " and service_value(services.characters.snapshot(actor)).cash >= 0"
+        )
+        npc_busy_service = (
+            'not service_value(services.effects.has(partner, '
+            'services.types.id("effect", "currently_busy"))) '
+            'and service_value(services.characters.snapshot(actor)).cash >= 0'
+        )
+        cases = (
+            ("u_available", {"avatar_actor_proven": True}, busy),
+            ("npc_available", {"npc_actor_proven": True}, busy),
+            ({"u_service": 0}, {"avatar_actor_proven": True}, service),
+            (
+                {"npc_service": 0},
+                {"avatar_actor_proven": True, "npc_actor_proven": True,
+                 "npc_actor_expression": "partner"},
+                npc_busy_service,
+            ),
+            (
+                "npc_following", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".npc_state.following",
+            ),
+            (
+                "u_controlling_vehicle", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.controlling_vehicle",
+            ),
+            (
+                "u_driving", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.driving",
+            ),
+            (
+                "u_is_riding", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.mounted",
+            ),
+            (
+                "npc_controlling_vehicle", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.controlling_vehicle",
+            ),
+            (
+                "npc_driving", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.driving",
+            ),
+            (
+                "npc_is_riding", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.mounted",
+            ),
+        )
+        for condition, provenance, expected in cases:
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **provenance
+                    ),
+                    expected,
+                )
+        for condition, provenance in (
+            ("u_is_in_vehicle", {"avatar_actor_proven": True}),
+            ("npc_is_in_vehicle", {"npc_actor_proven": True}),
+        ):
+            with self.subTest(condition=condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **provenance
+                    )
+                )
+
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -6790,8 +7219,8 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn("services.bionics.grant(", main)
             self.assertIn("services.bionics.remove_type(", main)
             self.assertIn("services.recipes.learn(", main)
@@ -6802,6 +7231,10 @@ assert(#events == 11)
             self.assertIn("services.morale.remove(", main)
             self.assertIn(
                 "EOC unproven_presence condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC avatar_entity_predicates condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("needs a native Lua effect", report)
@@ -6880,10 +7313,15 @@ assert(#events == 11)
                 migrate_lua_first.load_objects([source]), "dialogue_mission_predicates_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn('services.gameplay.environment.is_outside(context.data["loc"])', main)
+            self.assertIn(
+                "EOC npc_movement_vehicle_and_missions condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertNotIn("run_eoc", main)
 
     def test_dynamic_or_unproven_u_has_profession_shapes_stay_partial(self) -> None:
@@ -10892,37 +11330,37 @@ assert(#events == 11)
                                 "foreach": "array",
                                 "var": {"context_val": "id"},
                                 "target": ["a", "b"],
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "bodypart",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "trait",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "ids",
                                 "var": {"context_val": "id"},
                                 "target": "vitamin",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "item_group",
                                 "var": {"context_val": "id"},
                                 "target": "forest",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                             {
                                 "foreach": "monstergroup",
                                 "var": {"context_val": "id"},
                                 "target": "GROUP_ANIMALPOUND_DOGS",
-                                "effect": {"u_message": "<context_val:id>"},
+                                "effect": {"u_message": "visit"},
                             },
                         ],
                     }
@@ -10962,6 +11400,88 @@ assert(#events == 11)
                 main,
             )
 
+    def test_spell_training_requires_a_proven_talker_pair(self) -> None:
+        avatar_train = migrate_lua_first.render_eoc_condition_expression(
+            "u_train_spells",
+            npc_actor_expression="context.actors.beta",
+            generic_character_actor_proven=True,
+            training_pair_proven=True,
+        )
+        npc_train = migrate_lua_first.render_eoc_condition_expression(
+            "npc_train_spells",
+            npc_actor_expression="context.actors.beta",
+            generic_character_actor_proven=True,
+            training_pair_proven=True,
+        )
+
+        self.assertIsNotNone(avatar_train)
+        self.assertIn(
+            "services.characters.training_offers(actor, context.actors.beta)",
+            avatar_train,
+        )
+        self.assertIsNotNone(npc_train)
+        self.assertIn(
+            "services.characters.training_offers(context.actors.beta, actor)",
+            npc_train,
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_train_spells",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+                training_pair_proven=False,
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "talk_topic",
+                        "id": "TALK_SPELL_TRAINING",
+                        "responses": [{
+                            "text": "train",
+                            "topic": "TALK_DONE",
+                            "effect": {"run_eocs": "paired_spell_training"},
+                        }],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "paired_spell_training",
+                        "condition": {
+                            "and": [
+                                "u_train_spells",
+                                {"not": "npc_train_spells"},
+                            ],
+                        },
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "single_actor_spell_training",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": "npc_train_spells",
+                        "effect": [],
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "spell_training_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(main.count("services.characters.training_offers("), 2)
+        self.assertIn("spell_count > 0", main)
+        self.assertTrue(any(
+            "EOC single_actor_spell_training condition TODO" in entry
+            for entry in result.todos
+        ))
+        self.assertIn("condition TODO", report)
+
     def test_translates_senses_species_and_turn_cost(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -10977,8 +11497,6 @@ assert(#events == 11)
                                     "u_can_see",
                                     {"u_has_species": "human"},
                                     {"not": "u_has_activity"},
-                                    {"not": "u_has_stolen_item"},
-                                    {"not": "u_can_stow_weapon"},
                                     {"not": "u_are_owed"},
                                     {"not": "u_train_skills"},
                                     {"not": "u_train_spells"},
@@ -11034,8 +11552,6 @@ assert(#events == 11)
                                     {"not": "npc_train_skills"},
                                     {"not": "npc_train_spells"},
                                     {"not": "npc_train_styles"},
-                                    {"not": "npc_has_stolen_item"},
-                                    {"not": "npc_can_stow_weapon"},
                                 ]
                             },
                             "effect": [
@@ -11087,6 +11603,38 @@ assert(#events == 11)
                 main,
             )
             self.assertIn("condition TODO", report)
+
+    def test_npc_refusal_effects_require_an_exact_npc_actor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "exact_npc_refusal",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": "deny_equipment",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_only_refusal",
+                            "condition": "npc_is_character",
+                            "effect": "deny_equipment",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "refusal_actor_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.npcs.record_refusal("), 1)
+            self.assertIn("exact_npc_refusal", main)
+            self.assertIn("character_only_refusal", main)
+            self.assertTrue(result.todos)
 
     def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11421,21 +11969,16 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn(
                 'services.creatures.visible_monsters(actor, "NE").present', main
             )
+            self.assertNotIn("services.creatures.has_line_of_sight(", main)
             self.assertIn(
-                "services.creatures.has_line_of_sight(services.characters.avatar(), actor)",
-                main,
+                "EOC npc_perception condition TODO: translate the legacy condition into a Lua predicate",
+                report,
             )
-            self.assertIn(
-                "services.creatures.has_line_of_sight(actor, services.characters.avatar())",
-                main,
-            )
-            self.assertIn("and (false)", main)
-            self.assertNotIn("needs domain-service conversion", report)
 
     def test_translates_literal_avatar_query_condition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14025,9 +14568,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {"u_has_items": {"item": "water_clean", "count": 2}},
                 {"u_has_item_with_flag": "EATEN_COLD"},
                 {"u_has_item_category": "food", "count": 2},
-                {"u_has_items_sum": [{"item": "scrap", "amount": 2}]},
                 {"u_has_software": {"item": "software_calculator", "charges": 1}},
-                {"u_has_worn_with_flag": "WATERPROOF"},
+                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
                 {"u_has_wielded_with_flag": "DURABLE_MELEE"},
                 {"u_has_wielded_with_weapon_category": "WEAPON"},
                 {"u_has_wielded_with_skill": "survival"},
@@ -14061,11 +14603,61 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn("services.inventory.resources(actor", main)
             self.assertIn("services.inventory.category_count(actor", main)
-            self.assertIn("services.inventory.has_items_sum(actor", main)
             self.assertIn("services.inventory.wielded_matches(actor", main)
             self.assertIn("services.items.ammo_sufficient(context.actors.item, actor)", main)
             self.assertIn("relative_rot > 1", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+
+    def test_inventory_conditions_with_unrepresented_semantics_stay_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("u_has_items_sum", "game_start", {
+                    "u_has_items_sum": [{"item": "scrap", "amount": 2}]
+                }),
+                ("npc_has_items_sum", "npc_becomes_hostile", {
+                    "npc_has_items_sum": [{"item": "scrap", "amount": 2}]
+                }),
+                ("u_can_stow_weapon", "game_start", "u_can_stow_weapon"),
+                (
+                    "npc_can_stow_weapon",
+                    "npc_becomes_hostile",
+                    "npc_can_stow_weapon",
+                ),
+                ("u_has_stolen_item", "game_start", "u_has_stolen_item"),
+                ("npc_has_stolen_item", "npc_becomes_hostile", "npc_has_stolen_item"),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"inventory_gap_{index}",
+                            "required_event": event,
+                            "condition": condition,
+                            "effect": {"message": "inventory condition"},
+                        }
+                        for index, (_, event, condition) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "inventory_gap_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.inventory.has_items_sum(", main)
+            for index, (selector, _, _) in enumerate(cases):
+                self.assertIn(
+                    f"EOC inventory_gap_{index} condition TODO: translate the "
+                    "legacy condition into a Lua predicate",
+                    report,
+                )
+            self.assertNotIn("has no native Platform registrar", report)
 
     def test_inventory_and_world_effects_lower_only_bounded_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14996,7 +15588,83 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('context.data["radius"]', main)
             self.assertNotIn("combat effect", report)
 
-    def test_lowers_variable_backed_non_popup_messages(self) -> None:
+    def test_message_tags_and_outdoor_sound_stay_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "tagged_message",
+                        "required_event": "game_start",
+                        "effect": {"message": "Hello <u_name>"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "outdoor_sound_message",
+                        "required_event": "game_start",
+                        "effect": {
+                            "message": "footsteps",
+                            "sound": True,
+                            "outdoor_only": True,
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "message_parity_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(result.converted, [])
+        self.assertEqual(len(result.partial), 2)
+        self.assertIn("EOC tagged_message effect #0 needs domain-service conversion", report)
+        self.assertIn("EOC outdoor_sound_message effect #0 needs domain-service conversion", report)
+        self.assertNotIn('services.message("Hello <u_name>")', main)
+        self.assertNotIn("services.messages.add_from_outdoors", main)
+        self.assertNotIn("services.messages.add_if_audible", main)
+
+    def test_npc_message_noop_requires_exact_npc_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "exact_npc_message",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_message": "ignored by native"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unbound_npc_message",
+                        "effect": {"npc_message": "role unknown"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_message_provenance_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertFalse(any(
+            "EOC exact_npc_message effect #0" in entry
+            for entry in result.todos
+        ))
+        self.assertTrue(any(
+            "EOC unbound_npc_message effect #0" in entry
+            for entry in result.todos
+        ))
+        self.assertIn("needs domain-service conversion", report)
+        self.assertNotIn('services.message("role unknown")', main)
+
+    def test_variable_backed_messages_stay_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -15019,12 +15687,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('services.message(tostring((context.data["message_text"])', main)
-            self.assertIn('services.variables.get_global("avatar_message")', main)
-            self.assertNotIn("message presentation options", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(result.partial, ["dynamic_messages"])
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.message(", main)
+            self.assertNotIn('services.variables.get_global("avatar_message")', main)
+            self.assertIn("needs domain-service conversion", report)
 
     def test_u_message_without_event_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15083,7 +15751,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn('ccb.presentation.notice_top("on top")', main)
 
-    def test_opposite_actor_visibility_conditions_require_npc_event_proof(self) -> None:
+    def test_opposite_actor_visibility_requires_exact_alpha_and_beta_proof(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -15113,10 +15781,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn("services.creatures.can_see(actor", main)
-            self.assertIn("services.characters.avatar(), actor", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.creatures.can_see(", main)
+            self.assertIn(
+                "EOC visibility_npc condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertIn("EOC visibility_unproven condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_overmap_location_conditions_use_typed_overmap_matching(self) -> None:
@@ -15233,9 +15904,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
-                                    {"npc_role_nearby": "scout", "range": 5},
-                                    {"npc_service": 0},
-                                    {"npc_has_items_sum": [{"item": "scrap", "amount": 1}]},
                                     {"npc_near_om_location": "forest", "range": 2},
                                 ]
                             },
@@ -15255,9 +15923,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn("services.npcs.count_allies(false)", main)
             self.assertIn("services.npcs.count_allies(true)", main)
-            self.assertIn("services.npcs.has_role_nearby(actor", main)
             self.assertIn("services.overmap.search(", main)
-            self.assertIn(".activity.active", main)
 
     def test_translates_batch_28_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15935,13 +16601,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "game_start",
                             "condition": {
                                 "and": [
-                                    {"u_has_any_effect": ["eff1"]},
-                                    {"u_has_effect": "eff2"},
+                                    {"u_has_any_effect": ["eff1"], "bodypart": "torso"},
+                                    {"u_has_effect": "eff2", "bodypart": "torso"},
                                     {"u_has_faction_trust": 5},
                                     {"u_has_part_temp": "arm_l"},
                                     {"u_has_software": "soft1"},
                                     {"u_has_visible_trait": "trait1"},
-                                    {"u_has_worn_with_flag": "FLAG1"},
+                                    {"u_has_worn_with_flag": "FLAG1", "bodypart": "torso"},
                                     {"u_monsters_in_direction": "north"},
                                     {"u_query": "query1"},
                                     "u_see_npc",
@@ -15994,13 +16660,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "and": [
                                     "npc_allies",
                                     "npc_allies_global",
-                                    {"npc_has_any_effect": ["eff1"]},
-                                    {"npc_has_effect": "eff2"},
+                                    {"npc_has_any_effect": ["eff1"], "bodypart": "torso"},
+                                    {"npc_has_effect": "eff2", "bodypart": "torso"},
                                     {"npc_has_move_mode": "crouch"},
                                     {"npc_has_part_temp": "arm_r"},
                                     {"npc_has_software": "soft2"},
                                     {"npc_has_visible_trait": "trait2"},
-                                    {"npc_has_worn_with_flag": "FLAG2"},
+                                    {"npc_has_worn_with_flag": "FLAG2", "bodypart": "torso"},
                                     {"npc_query": "q2"},
                                     "npc_role_nearby",
                                     "npc_see_u",
@@ -18758,7 +19424,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps([
                 {"type": "effect_on_condition", "id": "target", "required_event": "game_start",
-                 "effect": {"message": {"context_val": "text"}}},
+                 "effect": {"message": "target"}},
                 {"type": "effect_on_condition", "id": "owner", "required_event": "game_start",
                  "effect": {"run_eocs": "target", "time_in_future": 2}},
             ]), encoding="utf-8")
@@ -18785,11 +19451,13 @@ local data={text="before", data="user field", __ccb_task=true}
 handlers["migrated.owner"]({data=data})
 assert(scheduled and scheduled.payload.data=="user field")
 assert(scheduled.payload.__ccb_task==true)
+assert(scheduled.payload.text=="before")
 data.text="after"
+assert(scheduled.payload.text=="before")
 handlers[scheduled.handler]({payload=scheduled.payload, participants={}})
-assert(#messages==1 and messages[1]=="before")
+assert(#messages==1 and messages[1]=="target")
 handlers["migrated.target"]({data=data})
-assert(#messages==2 and messages[2]=="after")
+assert(#messages==2 and messages[2]=="target")
 """
         completed = subprocess.run(["lua", "-"], input=script, text=True,
                                    capture_output=True, timeout=10)
@@ -19486,7 +20154,7 @@ assert(#messages==2 and messages[2]=="after")
                             "required_event": "character_melee_attacks_monster",
                             "condition": {
                                 "and": [
-                                    {"npc_has_effect": "stunned"},
+                                    {"npc_has_effect": "stunned", "bodypart": "torso"},
                                     {"npc_has_species": "MAMMAL"},
                                     {"npc_has_flag": "SEES"},
                                     {"npc_is_on_terrain_with_flag": "DIGGABLE"},
@@ -19950,8 +20618,12 @@ end
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(result.converted, ["translation_owner"])
+            self.assertEqual(result.partial, ["translation_target"])
+            self.assertTrue(any(
+                "EOC translation_target effect #0" in entry
+                for entry in result.todos
+            ))
             self.assertIn('child_data["message"] = "translated"', main)
 
     def test_run_eocs_variables_accept_coordinate_and_math_scalars(self) -> None:
@@ -20044,7 +20716,7 @@ end
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps([{
                 "type": "effect_on_condition", "id": "repeat", "global": True,
-                "recurrence": 2, "effect": {"message": {"context_val": "text"}},
+                "recurrence": 2, "effect": {"message": "tick"},
             }]), encoding="utf-8")
             result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "recurrence")
         main = result.files[Path("main.lua")]
@@ -20437,7 +21109,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "effect": {
                             "if": {
                                 "and": [
-                                    {"u_has_effect": "attention"},
+                                    {"u_has_effect": "attention", "bodypart": "torso"},
                                     {
                                         "overmap_at_point": "field",
                                         "point": {"global_val": "destination"},
@@ -20870,6 +21542,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertNotIn("domain-service conversion", report)
             self.assertIn("context.actors.beta", main)
+            self.assertIn("context.actors.interlocutor", main)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.variables.set", main)
             # Each ID now has ALL per-part/unqualified calls and a normal
