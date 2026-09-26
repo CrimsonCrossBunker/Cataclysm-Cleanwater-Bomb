@@ -75,7 +75,6 @@ CONTROL_FLOW = {
     "or",
     "not",
     "if",
-    "foreach",
     "nothing",
     "set_condition",
     "switch",
@@ -4135,6 +4134,7 @@ EXPLICIT_PRIMITIVE_EOC = {
     # These also require engine behavior: persisted scheduling and actor context,
     # player presentation, or weighted random selection.  Lua control flow alone
     # is not evidence that their complete native semantics have been accepted.
+    ("eoc-effects", "foreach"): "services.registry-and-variables",
     ("eoc-effects", "run_eocs"): "ccb.tasks-and-actor-context",
     ("eoc-effects", "run_eoc_selector"): "ccb.presentation.choose",
     ("eoc-effects", "weighted_list_eocs"): "services.random",
@@ -4172,7 +4172,7 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
         ]
-        for selector in ("run_eocs", "run_eoc_selector", "weighted_list_eocs")
+        for selector in ("foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs")
     },
     ("eoc-effects", "u_add_trait"): [
         "src/lua_platform_mutations.cpp",
