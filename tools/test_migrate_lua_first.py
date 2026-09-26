@@ -3797,6 +3797,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         },
                         {
                             "type": "effect_on_condition",
+                            "id": "topic_item_is_weather",
+                            "required_event": "game_start",
+                            "condition": {"is_weather": {"mutator": "topic_item"}},
+                            "effect": {"message": "topic item weather"},
+                        },
+                        {
+                            "type": "effect_on_condition",
                             "id": "unexpressed_is_weather",
                             "required_event": "game_start",
                             "condition": {
@@ -3829,12 +3836,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 4)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 3)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring((context.data["context_weather"]) or "")',
                 main,
             )
+            self.assertNotIn("context:topic_item()", main)
+            self.assertIn("topic_item_is_weather", report)
             self.assertIn(
                 'services.weather.current().weather.value == '
                 'tostring(((service_value(services.variables.resolve('
@@ -3851,7 +3860,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('weather.value == ""', main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                2,
+                3,
             )
 
     def test_translates_proven_avatar_activity_cancellation(self) -> None:
