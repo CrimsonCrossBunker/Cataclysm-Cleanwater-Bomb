@@ -107,7 +107,6 @@ NATIVE_INT64_MAX = (1 << 63) - 1
 NATIVE_MASS_GRAMS_MAX = NATIVE_INT64_MAX // 1000
 NATIVE_FLOAT_MAX = float.fromhex("0x1.fffffep+127")
 PLATFORM_ID_MAX_BYTES = 256
-PLATFORM_VARIABLE_KEY_MAX_BYTES = 128
 WOUND_NAME_MAX_BYTES = 1024
 WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
@@ -779,11 +778,15 @@ def bounded_utf8_string(
     return (allow_empty or length > 0) and length <= maximum
 
 
-def bounded_platform_variable_key(value: Any) -> bool:
-    return (
-        bounded_utf8_string(value, PLATFORM_VARIABLE_KEY_MAX_BYTES) and
-        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
-    )
+def lua_quotable_native_variable_string(value: Any) -> bool:
+    """Accept any native variable string that can be embedded in generated Lua."""
+    if not isinstance(value, str):
+        return False
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
 
 
 def bounded_platform_id(value: Any) -> bool:
@@ -5243,7 +5246,7 @@ def render_static_false_effect(
         key = next(iter(effect))
         target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
         name = effect[key]
-        if target is not None and bounded_platform_variable_key(name):
+        if target is not None and lua_quotable_native_variable_string(name):
             return [
                 f"        services.variables.remove({target}, {lua_quote(name)})"
             ]
@@ -24866,7 +24869,7 @@ def render_static_character_variable(
     target_expression: str | None,
 ) -> list[str] | None:
     """Render a literal u_/npc_add_var with native string semantics."""
-    if target_expression is None or not bounded_platform_variable_key(effect.get(key)):
+    if target_expression is None or not lua_quotable_native_variable_string(effect.get(key)):
         return None
     allowed = {key, "value", "possible_values", "time"}
     if set(effect) - allowed:
@@ -24895,14 +24898,11 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
-    # Only selected strings reach the bounded event and random services.
+    # Native variable storage and its event preserve the complete Lua string.
     if values:
         if (
             len(values) > NATIVE_INT_MAX + 1 or
-            not all(
-                bounded_utf8_string(value, 1024, allow_empty=True)
-                for value in values
-            )
+            not all(lua_quotable_native_variable_string(value) for value in values)
         ):
             return None
         rendered_values = ", ".join(lua_quote(value) for value in values)
@@ -24925,7 +24925,7 @@ def render_static_character_variable(
         return lines
     if "value" in effect:
         value = effect["value"]
-        if not bounded_utf8_string(value, 1024, allow_empty=True):
+        if not lua_quotable_native_variable_string(value):
             return None
         value_expression = lua_quote(value)
         lines = [
@@ -28988,7 +28988,7 @@ def render_eoc(
                 avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_lose_var"} and
-                bounded_platform_variable_key(effect.get("u_lose_var"))
+                lua_quotable_native_variable_string(effect.get("u_lose_var"))
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
@@ -28999,7 +28999,7 @@ def render_eoc(
                 npc_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"npc_lose_var"} and
-                bounded_platform_variable_key(effect.get("npc_lose_var"))
+                lua_quotable_native_variable_string(effect.get("npc_lose_var"))
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
