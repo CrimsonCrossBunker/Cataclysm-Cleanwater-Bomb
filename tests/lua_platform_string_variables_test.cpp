@@ -223,7 +223,13 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
         json_loader::from_string( nonstring_condition ).get_object() );
     const sol::protected_function_result nonstring_actual = environment_query();
     REQUIRE( nonstring_actual.valid() );
-    CHECK( nonstring_actual.get<bool>() == nonstring_predicate( context ) );
+    bool native_nonstring_result = false;
+    const std::string native_nonstring_diagnostic = capture_debugmsg_during( [&]() {
+        native_nonstring_result = nonstring_predicate( context );
+    } );
+    CHECK( native_nonstring_diagnostic.find(
+               "Type mismatch in diag_value: requested string, got double" ) != std::string::npos );
+    CHECK( nonstring_actual.get<bool>() == native_nonstring_result );
     sol::protected_function set = services["variables"]["set_resolved"];
     sol::protected_function_result write = set(
             data, target_npc ? partner_handle : player_handle,
