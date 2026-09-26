@@ -10315,6 +10315,9 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
                                 vehicle *veh )
 {
+    // Keep the last complete save before this trip writes source maps.  The
+    // later safety checkpoint must not replace the player's quickload target.
+    ensure_dimension_rollback_snapshot();
     map &here = get_map();
     avatar &player = get_avatar();
     std::vector<npc_ptr> moving_npcs;
