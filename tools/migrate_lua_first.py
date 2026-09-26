@@ -27393,6 +27393,12 @@ def render_eoc_condition_expression(
             requested = render_participant_translation_expression(
                 value, "actor", "actor" if avatar_actor_proven else None,
                 npc_query_actor)
+        elif isinstance(value, dict) and value.get("mutator") == "topic_item":
+            if set(value) != {"mutator"}:
+                return None
+            # EOC activation evaluates its predicate on a copied dialogue.
+            # That copy drops cur_item, so the native mutator observes "".
+            requested = lua_quote("")
         else:
             if isinstance(value, dict) and not set(value).intersection({
                 "u_val", "npc_val", "global_val", "context_val", "var_val", "mutator",
