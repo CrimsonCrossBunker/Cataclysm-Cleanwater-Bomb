@@ -4543,17 +4543,31 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
     if (
         set(effect) - {"sound_effect", "id", "volume", "outdoor_event"} or
         not {"sound_effect", "id"} <= set(effect) or
-        not bounded_utf8_string(effect.get("id"), 256) or
-        not bounded_utf8_string(effect.get("sound_effect"), 256)
+        not bounded_utf8_string(effect.get("id"), 128) or
+        not bounded_utf8_string(effect.get("sound_effect"), 128)
     ):
         return None
-    volume = _literal_nonnegative_integer(effect.get("volume", 80), 128)
+    raw_volume = effect.get("volume", -1)
+    # Native f_sound_effect treats -1 (including its default) as the
+    # context-sensitive default: 80 indoors/on the surface and 80 * hearing
+    # underground for outdoor_event.  This bounded migration only covers the
+    # context-independent branch below, so lower the sentinel to 80 there.
+    volume = (
+        80 if raw_volume == -1 else
+        _literal_nonnegative_integer(raw_volume, 128)
+    )
     outdoor = effect.get("outdoor_event", False)
-    if volume is None or not isinstance(outdoor, bool):
+    # The existing generic Platform play_from_outdoors service uses a
+    # positive-depth attenuation policy, while native EOC code computes its
+    # probability from the signed absolute z level.  Keep that shape visible
+    # as a migration TODO until the public service contract is reconciled.
+    # For the supported indoor/default branch, the Platform service's random
+    # angle is audio-only but comes from the runtime RNG rather than native
+    # random_direction(); this is not exact native RNG-sequence parity.
+    if volume is None or not isinstance(outdoor, bool) or outdoor:
         return None
-    method = "play_from_outdoors" if outdoor else "play_if_audible"
     return [
-        f"    services.sound.{method}({lua_quote(effect['id'])}, "
+        f"    services.sound.play_if_audible({lua_quote(effect['id'])}, "
         f"{lua_quote(effect['sound_effect'])}, {volume})"
     ]
 
@@ -30292,35 +30306,21 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, dict) and
-                set(effect) <= {"sound_effect", "id", "volume", "outdoor_event"} and
-                {"sound_effect", "id"} <= set(effect) and
-                isinstance(effect.get("id"), str) and
-                isinstance(effect.get("sound_effect"), str) and
-                bool(effect["id"]) and
-                bool(effect["sound_effect"]) and
-                (
-                    "volume" not in effect or
-                    (
-                        isinstance(effect.get("volume"), int) and
-                        not isinstance(effect.get("volume"), bool) and
-                        0 <= effect["volume"] <= 128
+            elif isinstance(effect, dict) and "sound_effect" in effect:
+                rendered = render_static_sound_effect(effect)
+                if rendered is not None:
+                    lines.extend(rendered)
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: preserve the native sound-effect context and options."
                     )
-                ) and
-                isinstance(effect.get("outdoor_event", False), bool)
-            ):
-                volume = effect.get("volume", 80)
-                sound_method = (
-                    "play_from_outdoors" if effect.get("outdoor_event", False)
-                    else "play_if_audible"
-                )
-                lines.append(
-                    f"    services.sound.{sound_method}("
-                    f"{lua_quote(effect['id'])}, "
-                    f"{lua_quote(effect['sound_effect'])}, {volume})"
-                )
-                converted_effect = True
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "needs domain-service conversion"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_make_sound" in effect or "npc_make_sound" in effect)
