@@ -7447,6 +7447,37 @@ assert(#events == 11)
             )
             self.assertNotIn("run_eoc", main)
 
+    def test_npc_has_assigned_camp_uses_exact_npc_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_assigned_camp",
+                    "required_event": "npc_becomes_hostile",
+                    "condition": "npc_has_assigned_camp",
+                    "effect": {"message": "assigned"},
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_camp_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            declarations = (
+                REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
+            ).read_text(encoding="utf-8")
+
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn(
+                "service_value(services.npcs.get(actor)).has_assigned_camp",
+                main,
+            )
+            self.assertNotIn("condition TODO: translate", report)
+            self.assertIn("---@field has_assigned_camp boolean", declarations)
+
     def test_renders_butchery_requirement_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

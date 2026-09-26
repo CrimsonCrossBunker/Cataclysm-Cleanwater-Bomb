@@ -9382,6 +9382,7 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field faction GameId|nil GameId<faction> when present.
 ---@field attitude GameId
 ---@field attitude_name string
+---@field has_assigned_camp boolean
 ---@field dead boolean
 ---@field player_ally boolean
 ---@field first_topic string

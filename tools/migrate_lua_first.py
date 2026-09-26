@@ -26664,6 +26664,14 @@ def render_eoc_condition_expression(
                 "context.actors.item ~= nil and "
                 "service_value(services.items.snapshot(context.actors.item)).relative_rot > 1"
             )
+        if (
+            npc_query_actor is not None and
+            condition == "npc_has_assigned_camp"
+        ):
+            return (
+                "service_value(services.npcs.get(" + npc_query_actor +
+                ")).has_assigned_camp"
+            )
         # These legacy predicates need a dedicated native query with explicit
         # location/mission/item semantics.  Do not emit a made-up generic
         # service call: returning ``None`` makes render_eoc record a visible
