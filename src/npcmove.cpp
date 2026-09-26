@@ -4196,43 +4196,11 @@ void npc::worker_downtime()
             }
         }
     }
-    // we got here if there are no chairs available.
-    // wander back to near the bulletin board of the camp.
+    // Without a free chair, stay available for camp work instead of pacing
+    // around the bulletin board and repeatedly crossing construction tiles.
     if( wander_pos ) {
-        update_path( here.get_bub( *wander_pos ) );
-        if( pos_abs() == *wander_pos || path.empty() ) {
-            move_pause();
-            path.clear();
-            if( one_in( 30 ) ) {
-                wander_pos = std::nullopt;
-            }
-        } else {
-            move_to_next();
-        }
-        return;
-    }
-    if( assigned_camp ) {
-        std::optional<basecamp *> bcp = overmap_buffer.find_camp( ( *assigned_camp ).xy() );
-        if( !bcp ) {
-            assigned_camp = std::nullopt;
-            move_pause();
-            return;
-        }
-        basecamp *temp_camp = *bcp;
-        std::vector<tripoint_bub_ms> pts;
-        for( const tripoint_bub_ms &elem : here.points_in_radius( here.get_bub(
-                    tripoint_abs_ms( temp_camp->get_bb_pos() ) ), 10 ) ) {
-            if( creatures.creature_at( elem ) || !could_move_onto( elem ) ||
-                here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, elem ) ||
-                !here.has_floor_or_water( elem ) || g->is_dangerous_tile( elem ) ) {
-                continue;
-            }
-            pts.push_back( elem );
-        }
-        if( !pts.empty() ) {
-            wander_pos = here.get_abs( random_entry( pts ) );
-            return;
-        }
+        wander_pos = std::nullopt;
+        path.clear();
     }
     move_pause();
 }
