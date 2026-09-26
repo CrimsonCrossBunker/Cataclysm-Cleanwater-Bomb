@@ -158,6 +158,13 @@ public class CataclysmDDA extends SDLActivity {
             hudOverlay.start();
         }
         requestDisplayRefresh();
+        restoreDisplayAfterLayout();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        restoreDisplayAfterLayout();
     }
 
     @Override
@@ -174,7 +181,17 @@ public class CataclysmDDA extends SDLActivity {
         if (hasFocus) {
             applySystemUiMode();
             requestDisplayRefresh();
+            restoreDisplayAfterLayout();
         }
+    }
+
+    private void restoreDisplayAfterLayout() {
+        // Returning from a portrait editor can resize the landscape window
+        // after onResume/onWindowFocusChanged have already run.
+        getWindow().getDecorView().post(() -> {
+            applySystemUiMode();
+            requestDisplayRefresh();
+        });
     }
 
     private String normalizeSystemUiMode(String mode) {
@@ -313,9 +330,6 @@ public class CataclysmDDA extends SDLActivity {
     private static native void nativeRequestDisplayRefresh();
 
     private void requestDisplayRefresh() {
-        if (!AndroidUiMode.isNewUiBuild()) {
-            return;
-        }
         try {
             nativeRequestDisplayRefresh();
         } catch (UnsatisfiedLinkError ignored) {
