@@ -230,9 +230,11 @@ CREATURE_ACTOR_EVENTS = frozenset({
     "monster_takes_damage",
 })
 
-# These event producers pass a second Creature talker through the event bus;
-# Lua receives it as ``context.actors.beta``.  It is optional at runtime, so
-# predicates guard it with ``has_beta`` instead of inventing an avatar/NPC.
+# These event producers pass two talkers through the event bus.  The Lua
+# bridge names the second handle ``interlocutor``; that does not prove it is a
+# Character/NPC or make it interchangeable with dialogue ``beta``.  Keep this
+# allowlist for event-shape classification only; per-service lowering needs
+# its own exact actor-kind proof.
 TALKER_ACTOR_EVENTS = frozenset({
     "character_kills_character",
     "character_kills_monster",
@@ -26103,6 +26105,7 @@ def render_static_line_of_sight_condition(
 def render_static_perception_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> str | None:
     """Render the finite, non-interactive perception condition shapes.
 
@@ -26128,20 +26131,22 @@ def render_static_perception_condition(
     if (
         avatar_actor_proven and
         npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"u_see_npc_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "services.characters.avatar(), actor))"
+            f"services.characters.avatar(), {npc_actor_expression}))"
         )
     if (
         avatar_actor_proven and
         npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"npc_see_u_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "actor, services.characters.avatar()))"
+            f"{npc_actor_expression}, services.characters.avatar()))"
         )
     if (
         npc_actor_proven and
@@ -26515,10 +26520,13 @@ def render_eoc_condition_expression(
     generic_character_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
+    # The proof bit certifies an exact Character handle.  The expression only
+    # selects which proven handle to query; a non-empty expression alone does
+    # not authorize Character/NPC services.
     character_actor_proven = avatar_actor_proven or weapon_actor_proven or \
         npc_actor_proven or generic_character_actor_proven
-    npc_query_actor = npc_actor_expression or (
-        "actor" if npc_actor_proven else None
+    npc_query_actor = (
+        (npc_actor_expression or "actor") if npc_actor_proven else None
     )
     npc_query_actor_ref = (
         f"({npc_query_actor})"
@@ -26545,18 +26553,19 @@ def render_eoc_condition_expression(
             (npc_actor_expression, "actor")
         )
         return (
-            "context.actors ~= nil and context.actors.beta ~= nil and "
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
             f"actor ~= nil and {character_subtype.format(actor='actor')} and "
             f"{character_subtype.format(actor=npc_actor_expression)} and "
             f"service_value(services.npcs.training.offerings({teacher}, "
             f"{student})).style_count > 0"
         )
     if condition in ("u_train_skills", "npc_train_skills"):
-        if not avatar_actor_proven or npc_actor_expression is None:
+        if not avatar_actor_proven or not npc_actor_proven or npc_query_actor is None:
             return None
         teacher, student = (
-            ("actor", npc_actor_expression) if condition == "u_train_skills"
-            else (npc_actor_expression, "actor")
+            ("actor", npc_query_actor) if condition == "u_train_skills"
+            else (npc_query_actor, "actor")
         )
         return f"service_value(services.skills.offered({teacher}, {student})).total > 0"
     if creature_actor_proven:
@@ -26626,21 +26635,30 @@ def render_eoc_condition_expression(
                     f"{lua_quote(value)})))"
                     for value in effect_ids
                 )
-        if condition == "has_beta":
-            return (
-                "context.actors ~= nil and context.actors.beta ~= nil"
-            )
     if condition is None:
         return "true"
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
-        if condition == "has_beta" and npc_actor_expression is not None:
-            return (
-                "context.actors ~= nil and context.actors.beta ~= nil"
-            )
+        if condition in {"has_beta", "npc_exists"}:
+            # These read dialogue/beta state, which actor provenance alone
+            # does not establish. Event bridges and nested run_eocs expose
+            # different actor keys.
+            return None
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
+        if condition in {
+            "has_assigned_mission", "has_many_assigned_missions",
+            "has_no_assigned_mission", "has_available_mission",
+            "has_many_available_missions", "has_no_available_mission",
+            "mission_complete", "mission_failed", "mission_incomplete",
+            "npc_has_available_mission", "npc_has_many_available_missions",
+            "npc_has_no_available_mission", "npc_mission_complete",
+            "npc_mission_failed", "npc_mission_incomplete",
+        }:
+            # These aliases read beta or dialogue mission state. Actor
+            # provenance alone does not prove either one is empty.
+            return None
         if npc_query_actor is not None:
             if condition == "npc_friend":
                 return (
@@ -26700,53 +26718,58 @@ def render_eoc_condition_expression(
         # TODO and keeps the generated Lua executable against the declared API.
         if condition == "u_has_camp":
             return None
-        if condition in ("u_has_activity", "npc_has_activity"):
+        if avatar_actor_proven and condition == "u_has_activity":
             return "service_value(services.activities.snapshot(actor)).active"
+        if npc_actor_proven and condition == "npc_has_activity":
+            return (
+                "service_value(services.activities.snapshot("
+                f"{npc_query_actor})).active"
+            )
         if weapon_actor_proven and condition == "u_has_weapon":
             return "character_has_weapon(actor)"
-        if npc_actor_proven and condition == "npc_has_weapon":
-            return "character_has_weapon(actor)"
+        if npc_query_actor is not None and condition == "npc_has_weapon":
+            return f"character_has_weapon({npc_query_actor})"
         if weapon_actor_proven and condition == "u_can_drop_weapon":
             return "character_can_drop_weapon(actor)"
-        if npc_actor_proven and condition == "npc_can_drop_weapon":
-            return "character_can_drop_weapon(actor)"
+        if npc_query_actor is not None and condition == "npc_can_drop_weapon":
+            return f"character_can_drop_weapon({npc_query_actor})"
         if character_actor_proven and condition == "u_is_travelling":
             return "character_travel_has_path(actor)"
         if npc_actor_proven and condition == "npc_is_travelling":
-            return "character_travel_has_path(actor)"
+            return f"character_travel_has_path({npc_query_actor})"
         if character_actor_proven and condition == "u_at_safe_space":
             return "character_at_safe_space(actor)"
-        if npc_actor_proven and condition == "at_safe_space":
-            return "character_at_safe_space(actor)"
-        if npc_actor_proven and condition == "npc_at_safe_space":
-            return "character_at_safe_space(actor)"
+        if npc_query_actor is not None and condition == "at_safe_space":
+            return f"character_at_safe_space({npc_query_actor})"
+        if npc_query_actor is not None and condition == "npc_at_safe_space":
+            return f"character_at_safe_space({npc_query_actor})"
         if character_actor_proven and condition == "u_has_pickup_list":
             return "character_has_pickup_whitelist(actor)"
-        if npc_actor_proven and condition == "has_pickup_list":
-            return "character_has_pickup_whitelist(actor)"
-        if npc_actor_proven and condition == "npc_has_pickup_list":
-            return "character_has_pickup_whitelist(actor)"
+        if npc_query_actor is not None and condition == "has_pickup_list":
+            return f"character_has_pickup_whitelist({npc_query_actor})"
+        if npc_query_actor is not None and condition == "npc_has_pickup_list":
+            return f"character_has_pickup_whitelist({npc_query_actor})"
         if weapon_actor_proven and condition == "player_see_u":
             return ("service_value(services.creatures.can_see("
                     "services.creatures.avatar(), actor))")
-        if npc_actor_proven and condition == "player_see_npc":
+        if npc_query_actor is not None and condition == "player_see_npc":
             return ("service_value(services.creatures.can_see("
-                    "services.creatures.avatar(), actor))")
-        if npc_actor_proven and condition == "npc_see_u":
+                    f"services.creatures.avatar(), {npc_query_actor}))")
+        if npc_query_actor is not None and condition == "npc_see_u":
             return ("service_value(services.creatures.can_see("
-                    "actor, services.characters.avatar()))")
-        if npc_actor_proven and condition == "u_see_npc":
+                    f"{npc_query_actor}, services.characters.avatar()))")
+        if npc_query_actor is not None and condition == "u_see_npc":
             return ("service_value(services.creatures.can_see("
-                    "services.characters.avatar(), actor))")
-        if npc_actor_proven and condition == "u_see_npc_loc":
+                    f"services.characters.avatar(), {npc_query_actor}))")
+        if npc_query_actor is not None and condition == "u_see_npc_loc":
             return (
                 "service_value(services.creatures.has_line_of_sight("
-                "services.characters.avatar(), actor))"
+                f"services.characters.avatar(), {npc_query_actor}))"
             )
-        if npc_actor_proven and condition == "npc_see_u_loc":
+        if npc_query_actor is not None and condition == "npc_see_u_loc":
             return (
                 "service_value(services.creatures.has_line_of_sight("
-                "actor, services.characters.avatar()))"
+                f"{npc_query_actor}, services.characters.avatar()))"
             )
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26754,8 +26777,8 @@ def render_eoc_condition_expression(
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".creature.warm")
-        if npc_actor_proven and condition == "npc_is_warm":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_is_warm":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".creature.warm")
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26763,23 +26786,23 @@ def render_eoc_condition_expression(
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".senses.deaf")
-        if npc_actor_proven and condition == "npc_is_deaf":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_is_deaf":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".senses.deaf")
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_underwater"
         ):
             return "service_value(services.characters.is_underwater(actor))"
-        if npc_actor_proven and condition == "npc_is_underwater":
-            return "service_value(services.characters.is_underwater(actor))"
+        if npc_query_actor is not None and condition == "npc_is_underwater":
+            return f"service_value(services.characters.is_underwater({npc_query_actor}))"
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_alive"
         ):
             return "service_value(services.characters.is_alive(actor))"
-        if npc_actor_proven and condition == "npc_is_alive":
-            return "service_value(services.characters.is_alive(actor))"
+        if npc_query_actor is not None and condition == "npc_is_alive":
+            return f"service_value(services.characters.is_alive({npc_query_actor}))"
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_avatar"
@@ -26798,11 +26821,11 @@ def render_eoc_condition_expression(
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".male")
-        if npc_actor_proven and condition == "npc_male":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_male":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".male")
-        if npc_actor_proven and condition == "npc_female":
-            return ("not service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_female":
+            return (f"not service_value(services.characters.snapshot({npc_query_actor}))"
                     ".male")
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26812,14 +26835,10 @@ def render_eoc_condition_expression(
                 "service_value(services.creatures.snapshot(actor)).kind ~= "
                 "\"monster\""
             )
-        if npc_actor_proven and condition == "npc_is_character":
-            return "true"
-        if npc_actor_proven and condition == "npc_is_npc":
-            return "true"
-        if npc_actor_proven and npc_actor_expression is not None and condition == "npc_is_avatar":
+        if npc_query_actor is not None and condition == "npc_is_avatar":
             return (
                 "service_value(services.creatures.snapshot("
-                f"{npc_actor_expression})).kind == \"avatar\""
+                f"{npc_query_actor})).kind == \"avatar\""
             )
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26836,63 +26855,32 @@ def render_eoc_condition_expression(
                 "service_value(services.characters.snapshot(actor))"
                 ".creature.position)"
             )
-        if npc_actor_proven and condition == "npc_is_outside":
+        if npc_query_actor is not None and condition == "npc_is_outside":
             return (
                 "services.gameplay.environment.is_outside("
-                "service_value(services.characters.snapshot(actor))"
+                f"service_value(services.characters.snapshot({npc_query_actor}))"
                 ".creature.position)"
             )
-        if condition == "npc_has_activity":
-            return "(services.characters.snapshot(actor).activity ~= nil)"
         if isinstance(condition, dict) and "expects_vars" in condition:
             return None
         if isinstance(condition, dict) and "math" in condition:
             return None
         if avatar_actor_proven and condition in (
             "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
-            "u_is_vehicle", "u_hostile", "u_is_in_vehicle",
-            "u_controlling_vehicle", "u_driving", "u_is_riding",
-            "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
-            "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
-            "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
-            "u_following", "u_vehicle_owned_by_avatar", "has_beta",
-            "is_by_radio", "has_reason", "has_assigned_mission",
-            "has_many_assigned_missions", "has_available_mission",
-            "has_many_available_missions", "u_mission_complete",
-            "u_mission_failed", "u_mission_incomplete",
-            "mission_complete", "mission_failed", "mission_incomplete",
+            "u_is_vehicle", "u_hostile", "u_friend",
+            "u_vehicle_owned_by_avatar",
+            "u_mission_complete", "u_mission_failed", "u_mission_incomplete",
             "u_has_available_mission", "u_has_many_available_missions",
         ):
             return "false"
         if avatar_actor_proven and condition in (
-            "u_exists", "has_alpha", "u_friend", "u_available",
-            "has_no_assigned_mission", "has_no_available_mission",
-            "u_has_no_available_mission",
-        ):
-            return "true"
-        if npc_actor_proven and condition in (
-            "npc_is_avatar", "npc_is_monster", "npc_is_item",
-            "npc_is_furniture", "npc_is_vehicle",
-            "npc_is_falling", "npc_is_floating", "npc_is_flying",
-            "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
-            "npc_is_in_vehicle", "npc_controlling_vehicle", "npc_driving",
-            "npc_is_riding", "npc_is_avatar_passenger", "npc_is_driven",
-            "npc_is_remote_controlled", "npc_is_on_rails",
-            "npc_vehicle_owned_by_avatar", "npc_following",
-            "npc_has_assigned_camp", "has_beta",
-            "npc_has_available_mission", "npc_has_many_available_missions",
-            "npc_mission_complete", "npc_mission_failed", "npc_mission_incomplete",
-        ):
-            return "false"
-        if npc_actor_proven and condition in (
-            "npc_exists", "npc_available",
-            "npc_has_no_available_mission",
+            "u_exists", "has_alpha", "u_has_no_available_mission",
         ):
             return "true"
         if avatar_actor_proven and condition == "u_can_see":
             return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
-        if npc_actor_proven and condition == "npc_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+        if npc_query_actor is not None and condition == "npc_can_see":
+            return f"not (service_value(services.characters.snapshot({npc_query_actor})).senses.blind)"
         if avatar_actor_proven and condition in {
             "u_driving", "u_is_driving", "u_is_in_vehicle",
             "u_controlling_vehicle", "u_is_riding", "u_mounted",
@@ -26909,7 +26897,7 @@ def render_eoc_condition_expression(
                 "service_value(services.characters.snapshot(actor))"
                 f".movement.{field}"
             )
-        if npc_actor_proven and condition in {
+        if npc_query_actor is not None and condition in {
             "npc_driving", "npc_is_driving", "npc_is_in_vehicle",
             "npc_controlling_vehicle", "npc_is_riding", "npc_mounted",
         }:
@@ -26922,13 +26910,13 @@ def render_eoc_condition_expression(
                 "npc_mounted": "mounted",
             }[condition]
             return (
-                "service_value(services.characters.snapshot(actor))"
+                f"service_value(services.characters.snapshot({npc_query_actor}))"
                 f".movement.{field}"
             )
         if avatar_actor_proven and condition == "u_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
-        if npc_actor_proven and condition == "npc_following":
-            return "service_value(services.characters.snapshot(actor)).npc_state.following"
+        if npc_query_actor is not None and condition == "npc_following":
+            return f"service_value(services.characters.snapshot({npc_query_actor})).npc_state.following"
         if avatar_actor_proven and condition in (
             "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
             "u_train_spells",
@@ -27038,8 +27026,12 @@ def render_eoc_condition_expression(
     rendered_presence = render_static_context_presence_condition(condition)
     if rendered_presence is not None:
         return rendered_presence
-    rendered_math = render_static_condition_math(
-        condition, avatar_actor_proven or weapon_actor_proven or npc_actor_proven
+    rendered_math = (
+        None if npc_actor_expression not in (None, "actor") else
+        render_static_condition_math(
+            condition,
+            avatar_actor_proven or weapon_actor_proven or npc_actor_proven,
+        )
     )
     if rendered_math is not None:
         return rendered_math
@@ -27047,7 +27039,8 @@ def render_eoc_condition_expression(
     if rendered_line_of_sight is not None:
         return rendered_line_of_sight
     rendered_perception = render_static_perception_condition(
-        condition, avatar_actor_proven, npc_actor_proven
+        condition, avatar_actor_proven, npc_actor_proven,
+        npc_actor_expression or ("actor" if npc_actor_proven else None),
     )
     if rendered_perception is not None:
         return rendered_perception
@@ -27127,9 +27120,12 @@ def render_eoc_condition_expression(
             if amount is None or amount < -1000000 or amount > 1000000:
                 continue
             actor = (
-                "actor" if service_key.startswith("npc_") or avatar_actor_proven
+                npc_query_actor if service_key.startswith("npc_") else
+                "actor" if avatar_actor_proven
                 else "services.characters.avatar()"
             )
+            if actor is None:
+                continue
             avatar = "services.characters.avatar()"
             return (
                 "not service_value(services.characters.snapshot(" + actor + ")).activity.active "
@@ -27137,14 +27133,14 @@ def render_eoc_condition_expression(
                 f"{lua_number(amount)}"
             )
     if (
-        npc_actor_proven and
+        npc_query_actor is not None and
         set(condition) <= {"npc_role_nearby", "range"} and
         bounded_utf8_string(condition.get("npc_role_nearby"), 256)
     ):
         radius = _literal_nonnegative_integer(condition.get("range", 48), 1000)
         if radius is not None:
             return (
-                "service_value(services.npcs.has_role_nearby(actor, "
+                f"service_value(services.npcs.has_role_nearby({npc_query_actor}, "
                 f"{lua_quote(condition['npc_role_nearby'])}, {radius}))"
             )
     for location_key, actor_proven in (
@@ -27172,14 +27168,16 @@ def render_eoc_condition_expression(
             location_expression = lua_quote(raw_location)
         else:
             location_expression = render_eoc_string_expression(
-                raw_location, "actor"
+                raw_location,
+                npc_query_actor if location_key.startswith("npc_") else "actor",
             )
             if location_expression is None:
                 continue
         radius = _literal_nonnegative_integer(condition.get("range", 1), 60)
         if radius is None:
             dynamic_radius = render_eoc_numeric_expression(
-                condition.get("range", 1), "1", "actor"
+                condition.get("range", 1), "1",
+                npc_query_actor if location_key.startswith("npc_") else "actor",
             )
             if dynamic_radius is None:
                 continue
@@ -27190,9 +27188,12 @@ def render_eoc_condition_expression(
         else:
             radius_expression = str(radius)
         actor = (
-            "actor" if location_key.startswith("npc_") or avatar_actor_proven
+            npc_query_actor if location_key.startswith("npc_") else
+            "actor" if avatar_actor_proven
             else "services.characters.avatar()"
         )
+        if actor is None:
+            continue
         position = (
             "services.coords.project_to("
             "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
@@ -27212,11 +27213,14 @@ def render_eoc_condition_expression(
         ("npc_has_item", npc_actor_proven),
     ):
         if actor_proven and set(condition) == {item_key} and bounded_platform_id(condition.get(item_key)):
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "(service_value(services.inventory.resources(actor, "
+                f"(service_value(services.inventory.resources({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(condition[item_key])}), 1)).has_amount or "
-                "service_value(services.inventory.resources(actor, "
+                f"service_value(services.inventory.resources({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(condition[item_key])}), 1)).has_charges)"
             )
@@ -27241,7 +27245,14 @@ def render_eoc_condition_expression(
                 ):
                     return None
                 return str(int(literal)), literal
-            rendered = render_eoc_numeric_expression(value, "0", "actor")
+            quantity_actor = (
+                npc_query_actor if item_key.startswith("npc_") else "actor"
+            )
+            if quantity_actor is None:
+                return None
+            rendered = render_eoc_numeric_expression(
+                value, "0", quantity_actor
+            )
             if rendered is None:
                 return None
             return (
@@ -27260,15 +27271,18 @@ def render_eoc_condition_expression(
         item_expr = (
             "services.types.id(\"item\", " + lua_quote(raw["item"]) + ")"
         )
+        actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+        if actor is None:
+            continue
         checks: list[str] = []
         if count_number != 0 or raw.get("count", 0) != 0:
             checks.append(
-                "service_value(services.inventory.resources(actor, "
+                f"service_value(services.inventory.resources({actor}, "
                 f"{item_expr}, {count_expression})).has_amount"
             )
         if charges_number != 0 or raw.get("charges", 0) != 0:
             checks.append(
-                "service_value(services.inventory.resources(actor, "
+                f"service_value(services.inventory.resources({actor}, "
                 f"{item_expr}, {charges_expression})).has_charges"
             )
         if not checks:
@@ -27303,9 +27317,12 @@ def render_eoc_condition_expression(
             )
         if valid:
             actor = (
-                "actor" if item_key.startswith("npc_") or avatar_actor_proven
+                npc_query_actor if item_key.startswith("npc_") else
+                "actor" if avatar_actor_proven
                 else "services.characters.avatar()"
             )
+            if actor is None:
+                continue
             return (
                 f"service_value(services.inventory.has_items_sum({actor}, {{ " +
                 ", ".join(rendered_entries) + " }))"
@@ -27315,8 +27332,11 @@ def render_eoc_condition_expression(
         ("npc_has_item_with_flag", npc_actor_proven),
     ):
         if actor_proven and set(condition) == {item_key} and safe_platform_id(condition.get(item_key)):
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "service_value(services.inventory.has_item_flag(actor, "
+                f"service_value(services.inventory.has_item_flag({actor}, "
                 "services.types.id(\"json_flag\", "
                 f"{lua_quote(condition[item_key])}))"
             )
@@ -27332,8 +27352,11 @@ def render_eoc_condition_expression(
             not isinstance(condition.get("count", 1), bool) and
             1 <= condition.get("count", 1) <= 1000000000
         ):
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "service_value(services.inventory.category_count(actor, "
+                f"service_value(services.inventory.category_count({actor}, "
                 "services.types.id(\"item_category\", "
                 f"{lua_quote(condition[item_key])}))) >= {condition.get('count', 1)}"
             )
@@ -27360,8 +27383,11 @@ def render_eoc_condition_expression(
                 "services.types.id(\"item\", " + lua_quote(device) + ")"
                 if "device" in raw else "nil"
             )
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "service_value(services.inventory.has_software(actor, "
+                f"service_value(services.inventory.has_software({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(raw['item'])}), {lua_number(raw.get('charges', 0))}, {device_expr}))"
             )
@@ -27370,6 +27396,9 @@ def render_eoc_condition_expression(
         ("npc_has_worn_with_flag", npc_actor_proven),
     ):
         if actor_proven and set(condition) <= {item_key, "bodypart"} and bounded_platform_id(condition.get(item_key)):
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             bodypart = condition.get("bodypart")
             if "bodypart" in condition and not bounded_platform_id(bodypart):
                 continue
@@ -27378,7 +27407,7 @@ def render_eoc_condition_expression(
                 if "bodypart" in condition else ""
             )
             return (
-                "service_value(services.inventory.has_worn_flag(actor, "
+                f"service_value(services.inventory.has_worn_flag({actor}, "
                 "services.types.id(\"json_flag\", "
                 f"{lua_quote(condition[item_key])}){bodypart_expr})"
             )
@@ -27392,9 +27421,20 @@ def render_eoc_condition_expression(
         ("u_has_wielded_with_ammotype", avatar_actor_proven, "ammunition"),
         ("npc_has_wielded_with_ammotype", npc_actor_proven, "ammunition"),
     ):
-        if actor_proven and set(condition) == {item_key} and bounded_platform_id(condition.get(item_key)):
+        actor = (
+            npc_actor_expression if item_key.startswith("npc_") else "actor"
+        )
+        actor_available = (
+            actor_proven if not item_key.startswith("npc_") else
+            actor_proven and actor is not None
+        )
+        if (
+            actor_available and actor is not None and
+            set(condition) == {item_key} and
+            bounded_platform_id(condition.get(item_key))
+        ):
             return (
-                "service_value(services.inventory.wielded_matches(actor, "
+                f"service_value(services.inventory.wielded_matches({actor}, "
                 f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])})))"
             )
 
@@ -27635,9 +27675,12 @@ def render_eoc_condition_expression(
             render_eoc_string_expression(condition.get(location_key)) is not None
         ):
             actor = (
-                "actor" if location_key.startswith("npc_") or avatar_actor_proven
+                npc_query_actor if location_key.startswith("npc_") else
+                "actor" if avatar_actor_proven
                 else "services.characters.avatar()"
             )
+            if actor is None:
+                continue
             position = (
                 "services.coords.project_to("
                 "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
@@ -27676,9 +27719,12 @@ def render_eoc_condition_expression(
     ):
         if actor_proven and set(condition) == {location_key}:
             actor = (
-                "actor" if location_key.startswith("npc_") or avatar_actor_proven
+                npc_query_actor if location_key.startswith("npc_") else
+                "actor" if avatar_actor_proven
                 else "services.characters.avatar()"
             )
+            if actor is None:
+                continue
             target = render_eoc_value_expression(
                 condition[location_key], lua_quote(""), actor
             )
@@ -27704,14 +27750,17 @@ def render_eoc_condition_expression(
             avatar_actor_proven if condition_key.startswith("u_") else
             npc_actor_proven
         )
+        actor = (
+            npc_query_actor if condition_key.startswith("npc_") else "actor"
+        )
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {condition_key} and
             bounded_utf8_string(condition.get(condition_key), 256) and
             safe_platform_id(condition.get(condition_key))
         ):
             position = (
-                "service_value(services.characters.snapshot(actor))"
+                f"service_value(services.characters.snapshot({actor}))"
                 ".creature.position"
             )
             return (
@@ -27753,8 +27802,11 @@ def render_eoc_condition_expression(
         ("u_has_part_temp", avatar_actor_proven),
         ("npc_has_part_temp", npc_actor_proven),
     ):
+        actor = (
+            npc_query_actor if temperature_key.startswith("npc_") else "actor"
+        )
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {temperature_key, "bodypart"} and
             safe_platform_id(condition.get("bodypart"))
         ):
@@ -27766,7 +27818,7 @@ def render_eoc_condition_expression(
             ):
                 return (
                     "service_value(services.characters.has_part_temp("
-                    "actor, services.types.id(\"body_part\", "
+                    f"{actor}, services.types.id(\"body_part\", "
                     f"{lua_quote(condition['bodypart'])}), "
                     f"{lua_number(threshold)}))"
                 )
@@ -27781,13 +27833,14 @@ def render_eoc_condition_expression(
         ),
         ("npc_has_effect", npc_actor_proven),
     ):
+        actor = npc_query_actor if effect_key.startswith("npc_") else "actor"
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {effect_key} and
             safe_platform_id(condition.get(effect_key))
         ):
             return (
-                "service_value(services.effects.has(actor, "
+                f"service_value(services.effects.has({actor}, "
                 "services.types.id(\"effect\", "
                 f"{lua_quote(condition[effect_key])})))"
             )
@@ -27798,15 +27851,16 @@ def render_eoc_condition_expression(
         ),
         ("npc_has_any_effect", npc_actor_proven),
     ):
+        actor = npc_query_actor if effect_key.startswith("npc_") else "actor"
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {effect_key} and
             isinstance(condition.get(effect_key), list) and
             0 < len(condition[effect_key]) <= 64 and
             all(safe_platform_id(value) for value in condition[effect_key])
         ):
             queries = [
-                "service_value(services.effects.has(actor, "
+                f"service_value(services.effects.has({actor}, "
                 "services.types.id(\"effect\", "
                 f"{lua_quote(value)})))"
                 for value in condition[effect_key]
@@ -27827,12 +27881,16 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_safe_mode_trigger'])})"
         )
     if (
-        (avatar_actor_proven and set(condition) in ({"u_mission_goal"}, {"mission_goal"})) or
-        (npc_actor_proven and set(condition) == {"npc_mission_goal"})
-    ) and isinstance(list(condition.values())[0], str):
+        avatar_actor_proven and set(condition) == {"u_mission_goal"} and
+        isinstance(condition.get("u_mission_goal"), str)
+    ):
         # The actor talker has no selected mission, so the legacy handler
         # compares a null mission regardless of the goal value.
         return "false"
+    if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
+        # Both legacy spellings query beta's selected mission. A primary
+        # actor proof does not establish beta's mission selection.
+        return None
     if (
         avatar_actor_proven and
         set(condition) == {"follower_present"} and
@@ -27922,12 +27980,12 @@ def render_eoc_condition_expression(
         # talker returns false for the avatar regardless of the class id.
         return "false"
     if (
-        npc_actor_proven and
+        npc_query_actor is not None and
         set(condition) == {"npc_has_class"} and
         safe_platform_id(condition.get("npc_has_class"))
     ):
         return (
-            "service_value(services.npcs.get(actor)).class.value == "
+            f"service_value(services.npcs.get({npc_query_actor})).class.value == "
             f"{lua_quote(condition['npc_has_class'])}"
         )
     sleepiness_levels = {
@@ -27940,8 +27998,9 @@ def render_eoc_condition_expression(
         ("u_need", avatar_actor_proven),
         ("npc_need", npc_actor_proven),
     ):
+        actor = npc_query_actor if need_key.startswith("npc_") else "actor"
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             isinstance(condition, dict) and
             set(condition) <= {need_key, "amount", "level"} and
             condition.get(need_key) in ("hunger", "thirst", "sleepiness")
@@ -27953,7 +28012,7 @@ def render_eoc_condition_expression(
                 NATIVE_INT_MIN <= condition["amount"] <= NATIVE_INT_MAX
             ):
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.{condition[need_key]} > {condition['amount']}"
                 )
             if (
@@ -27962,13 +28021,13 @@ def render_eoc_condition_expression(
                 condition.get("level") in sleepiness_levels
             ):
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.sleepiness > "
                     f"{sleepiness_levels[condition['level']]}"
                 )
             if set(condition) == {need_key}:
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.{condition[need_key]} > 0"
                 )
     if (
@@ -28233,26 +28292,12 @@ def render_eoc_condition_expression(
                 f"service_value(services.npcs.ai_rules(actor)).{field_name} == "
                 f"{lua_quote(condition[rule_key])}"
             )
-    if (
-        avatar_actor_proven and
-        isinstance(condition, dict) and
-        set(condition) == {"u_has_species"} and
-        isinstance(condition.get("u_has_species"), str)
-    ):
-        return "true" if condition["u_has_species"].lower() == "human" else "false"
-    if (
-        npc_actor_proven and
-        isinstance(condition, dict) and
-        set(condition) == {"npc_has_species"} and
-        isinstance(condition.get("npc_has_species"), str)
-    ):
-        return "true" if condition["npc_has_species"].lower() == "human" else "false"
     dynamic_character = render_dynamic_character_condition(
         condition,
         avatar_actor_proven,
-        npc_actor_proven or npc_actor_expression is not None,
+        npc_actor_proven,
         weapon_actor_proven,
-        npc_actor_expression or "actor",
+        npc_query_actor or "",
     )
     if dynamic_character is not None:
         return dynamic_character
@@ -28478,35 +28523,19 @@ def render_eoc(
         callback_character_actor_proven = (
             callback_character_actor_proven or shape_has_u_actor
         )
-        npc_event_character_actor_proven = (
-            npc_event_character_actor_proven or shape_has_npc_actor
-        )
-        npc_actor_proven = npc_event_character_actor_proven
     if unbound_condition_actor_contract:
         callback_character_actor_proven = (
             callback_character_actor_proven or condition_has_u_actor
         )
-        npc_event_character_actor_proven = (
-            npc_event_character_actor_proven or condition_has_npc_actor
-        )
-        npc_actor_proven = npc_event_character_actor_proven
     if unbound_mixed_talker_contract:
         # A named, untriggered mixed u_/npc_ function has no safe ambient
-        # fallback.  Keep it fully translatable as an explicit two-talker
-        # callback: callers must supply alpha through actor_override and beta
-        # through context.actors.beta.  The unattached handler still receives
-        # the ordinary missing-Platform-trigger diagnostic.
+        # fallback.  An actor_override can preserve alpha for a nested caller,
+        # but the source shape does not prove a second beta/NPC handle.
         callback_character_actor_proven = True
-        npc_event_character_actor_proven = True
-        npc_actor_proven = True
     if nested_character_override:
-        # An NPC traversal supplies a generation-safe Character handle.  The
-        # native nested dialogue treats that selected target as its actor for
-        # both legacy prefixes; no ambient avatar or alpha/beta fallback is
-        # inferred when the callback is invoked without an override.
+        # A nested Character callback preserves one exact actor.  It does not
+        # prove that the actor is a distinct beta/NPC talker.
         callback_character_actor_proven = True
-        npc_event_character_actor_proven = True
-        npc_actor_proven = True
     character_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         npc_event_character_actor_proven or event_character_actor_proven or
@@ -28520,37 +28549,27 @@ def render_eoc(
     npc_actor_expression = None
     if talker_pair_override:
         npc_actor_expression = "context.actors.beta"
-    elif unbound_mixed_talker_contract:
-        npc_actor_expression = "context.actors.beta"
     elif isinstance(required_event, str):
         if required_event in PROVEN_ITEM_ACTOR_EVENTS:
             npc_actor_expression = "context.actors.item"
-        elif required_event in VICTIM_CHARACTER_EVENTS:
-            npc_actor_expression = (
-                "(context.actors and "
-                "(context.actors.beta or context.actors.victim))"
-            )
         elif required_event in TALKER_ACTOR_EVENTS:
-            npc_actor_expression = "context.actors.beta"
+            # The second talker is exposed as ``interlocutor``, but the
+            # generic event contract does not prove a Character/NPC handle.
+            # Leave NPC-prefixed service lowering to a separately guarded map.
+            pass
         elif npc_event_character_actor_proven:
             npc_actor_expression = "actor"
     actor_expression = (
         "actor" if (character_actor_proven or creature_actor_proven) else None
     )
     # Mutation ``u_`` selectors consume alpha, not any Character from the
-    # event.  The NPC event field is beta; only promote event fields that the
-    # native event bridge defines as alpha's primary Character.
+    # event.  Only promote event fields that the native event bridge defines
+    # as alpha's primary Character.
     mutation_alpha_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         (not has_event_trigger and callback_character_actor_proven) or
         event_actor_field in {"character", "attacker", "killer"}
     )
-    if nested_character_override and shape_has_u_actor and shape_has_npc_actor:
-        # A named callback may be invoked with explicit alpha/beta talkers by
-        # ``run_eocs``.  Use the beta handle when that scoped context exists,
-        # while retaining the selected actor as the safe fallback for ordinary
-        # NPC traversal callbacks that have no talker pair.
-        npc_actor_expression = "(context.actors and context.actors.beta) or actor"
     lines = [
         f"-- Extracted from {source.location}; review every TODO before enabling.",
         # Function declarations are assigned to a predeclared local in the
@@ -28669,13 +28688,18 @@ def render_eoc(
         lines.append("    local actor = actor_override or services.characters.avatar()")
     if avatar_fatal_hook or npc_fatal_hook:
         lines.append("    local prevent_death = false")
+    # EOC event/fatal actor proof is alpha proof.  Legacy ``npc_*`` conditions
+    # read const_actor(true); current event and fatal payloads do not prove
+    # that beta is the same handle.  Keep those selectors as TODOs until a
+    # separately typed beta participant is available.
+    npc_condition_beta_actor_proven = False
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
         deactivate_expression = render_eoc_condition_expression(
             deactivate_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
-            npc_event_character_actor_proven, creature_actor_proven,
+            npc_condition_beta_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
         )
@@ -28716,7 +28740,7 @@ def render_eoc(
         condition_expression = render_eoc_condition_expression(
             raw_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
-            npc_event_character_actor_proven, creature_actor_proven,
+            npc_condition_beta_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
         )
