@@ -481,6 +481,36 @@ TEST_CASE( "lua_platform_mutation_replace_matches_native_global_val_effect",
     CHECK_FALSE( platform.other.has_trait( trait_QUICK ) );
 }
 
+TEST_CASE( "lua_platform_mutation_replace_matches_native_u_val_effect_for_alpha_npc",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 4100 );
+    mutation_fixture platform( 4200 );
+    const std::string key = "xe_werewolf_power_to_gain";
+    legacy.other.set_value( key, trait_QUICK.str() );
+    platform.other.set_value( key, trait_QUICK.str() );
+
+    const std::string effect = R"({"u_add_trait":{"u_val":"xe_werewolf_power_to_gain"}})";
+    legacy.legacy_effect( effect, true );
+
+    const sol::table context = platform.lua.create_table();
+    const sol::protected_function_result resolved = platform.services["variables"]["resolve"](
+                context, platform.handle( true ), "u", key );
+    REQUIRE( resolved.valid() );
+    const sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( true ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( legacy.other.has_permanent_trait( trait_QUICK ) );
+    CHECK( platform.other.has_permanent_trait( trait_QUICK ) );
+    CHECK_FALSE( legacy.player.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.player.has_trait( trait_QUICK ) );
+}
+
 TEST_CASE( "lua_platform_mutation_activation_matches_live_tree_communion_selector",
            "[lua][platform][mutations][semantic]" )
 {
