@@ -115,6 +115,87 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     CHECK( observer.changes.back().first == npc_key );
     CHECK( observer.changes.back().second == assignment_value );
 
+    const std::string priority_key = "variable_assignment_priority";
+    const std::string fallback_key = "variable_assignment_fallback";
+    const std::string time_override_key = "variable_assignment_time_override";
+    const std::string time_empty_candidates_key =
+        "variable_assignment_time_empty_candidates";
+    apply_talk_effect( context,
+                       R"({
+                           "u_add_var":"variable_assignment_priority",
+                           "value":17,
+                           "possible_values":["candidate-a","candidate-b"]
+                       })",
+                       "lua_platform_u_add_var_possible_values_priority" );
+    REQUIRE( player.maybe_get_value( priority_key ) != nullptr );
+    const std::string native_choice = player.get_value( priority_key ).str();
+    CHECK( native_choice != "17" );
+    CHECK( native_choice == "candidate-a" || native_choice == "candidate-b" );
+    REQUIRE( observer.changes.size() == 3 );
+    CHECK( observer.changes.back().first == priority_key );
+    CHECK( observer.changes.back().second == native_choice );
+
+    apply_talk_effect( context,
+                       R"({
+                           "npc_add_var":"variable_assignment_fallback",
+                           "value":"fallback-ready",
+                           "possible_values":[]
+                       })",
+                       "lua_platform_npc_add_var_empty_candidates_fallback" );
+    REQUIRE( partner.maybe_get_value( fallback_key ) != nullptr );
+    CHECK( partner.get_value( fallback_key ).str() == "fallback-ready" );
+    REQUIRE( observer.changes.size() == 4 );
+    CHECK( observer.changes.back().first == fallback_key );
+    CHECK( observer.changes.back().second == "fallback-ready" );
+
+    // The native parser reads possible_values first, but a true time flag
+    // overrides both it and value; the wrong-typed value is never read.
+    const std::string time_override_value =
+        std::to_string( to_turn<int>( calendar::turn ) );
+    const std::string ignored_time_candidate( 1025, 'x' );
+    const std::string time_override_effect =
+        R"({"u_add_var":"variable_assignment_time_override","time":true,"value":17,"possible_values":[")" +
+        ignored_time_candidate + R"("]})";
+    apply_talk_effect( context, time_override_effect,
+                       "lua_platform_u_add_var_time_priority" );
+    REQUIRE( player.maybe_get_value( time_override_key ) != nullptr );
+    CHECK( player.get_value( time_override_key ).str() == time_override_value );
+    CHECK( observer.changes.size() == 4 );
+    apply_talk_effect( context,
+                       R"({
+                           "u_add_var":"variable_assignment_time_empty_candidates",
+                           "time":true,
+                           "value":17,
+                           "possible_values":[]
+                       })",
+                       "lua_platform_u_add_var_time_with_empty_candidates" );
+    REQUIRE( player.maybe_get_value( time_empty_candidates_key ) != nullptr );
+    CHECK( player.get_value( time_empty_candidates_key ).str() == time_override_value );
+    CHECK( observer.changes.size() == 4 );
+
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({"u_add_var":"bad_time","time":"true","value":"x"})",
+                                     "lua_platform_u_add_var_bad_time_type" ) );
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({"u_add_var":"bad_candidates","possible_values":"left","value":"x"})",
+                                     "lua_platform_u_add_var_bad_candidates_type" ) );
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({"u_add_var":"bad_candidate","possible_values":["left",7]})",
+                                     "lua_platform_u_add_var_bad_candidate_type" ) );
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({
+                                         "u_add_var":"bad_ignored_candidate",
+                                         "time":true,
+                                         "possible_values":["left",7]
+                                     })",
+                                     "lua_platform_u_add_var_bad_ignored_candidate_type" ) );
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({"u_add_var":"missing_fallback","possible_values":[]})",
+                                     "lua_platform_u_add_var_missing_fallback" ) );
+    CHECK_THROWS( apply_talk_effect( context,
+                                     R"({"u_add_var":"bad_fallback","possible_values":[],"value":7})",
+                                     "lua_platform_u_add_var_bad_fallback_type" ) );
+
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
     sol::table ccb = lua.create_table();
@@ -170,11 +251,49 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     }
     CHECK( player.get_value( u_key ).str() == assignment_value );
     CHECK( partner.get_value( npc_key ).str() == assignment_value );
-    REQUIRE( observer.changes.size() == 4 );
-    CHECK( observer.changes[2].first == u_key );
-    CHECK( observer.changes[2].second == assignment_value );
-    CHECK( observer.changes[3].first == npc_key );
-    CHECK( observer.changes[3].second == assignment_value );
+    REQUIRE( observer.changes.size() == 6 );
+    CHECK( observer.changes[4].first == u_key );
+    CHECK( observer.changes[4].second == assignment_value );
+    CHECK( observer.changes[5].first == npc_key );
+    CHECK( observer.changes[5].second == assignment_value );
+
+    player.remove_value( priority_key );
+    partner.remove_value( fallback_key );
+    player.remove_value( time_override_key );
+    CHECK( player.maybe_get_value( priority_key ) == nullptr );
+    CHECK( partner.maybe_get_value( fallback_key ) == nullptr );
+    CHECK( player.maybe_get_value( time_override_key ) == nullptr );
+    lua["time_override_value"] = time_override_value;
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local services = ccb.services
+            local candidates = { "candidate-a", "candidate-b" }
+            local selected = candidates[services.random.int(0, #candidates - 1) + 1]
+            local choice_write = services.variables.set(
+                player_owner, "variable_assignment_priority", selected)
+            assert(choice_write.ok and not choice_write.value.existed)
+            assert(services.native_events.emit("u_var_changed",
+                { "variable_assignment_priority", selected }))
+            local fallback_write = services.variables.set(
+                partner_owner, "variable_assignment_fallback", "fallback-ready")
+            assert(fallback_write.ok and not fallback_write.value.existed)
+            assert(services.native_events.emit("u_var_changed",
+                { "variable_assignment_fallback", "fallback-ready" }))
+            local time_write = services.variables.set(player_owner,
+                "variable_assignment_time_override", time_override_value)
+            assert(time_write.ok and not time_write.value.existed)
+        )" );
+    }
+    const std::string platform_choice = player.get_value( priority_key ).str();
+    CHECK( platform_choice == "candidate-a" || platform_choice == "candidate-b" );
+    CHECK( partner.get_value( fallback_key ).str() == "fallback-ready" );
+    CHECK( player.get_value( time_override_key ).str() == time_override_value );
+    REQUIRE( observer.changes.size() == 8 );
+    CHECK( observer.changes[6].first == priority_key );
+    CHECK( observer.changes[6].second == platform_choice );
+    CHECK( observer.changes[7].first == fallback_key );
+    CHECK( observer.changes[7].second == "fallback-ready" );
 
     // The native time branch stores the current turn but intentionally emits
     // no u_var_changed event.  A Platform assignment for the same value has
