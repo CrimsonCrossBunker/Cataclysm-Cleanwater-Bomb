@@ -416,6 +416,129 @@ assert(EXPRESSION==(PRESENT and '' or 'fallback'))
                 self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_variable_lookup_keys_follow_native_or_context_scope_limits(self) -> None:
+        native_scopes = ("u_val", "npc_val", "global_val")
+        native_keys = ("", "nul\x00control\x01\x7f", "雪" * 65, "k" * 2048)
+        expected = []
+        assertions = []
+        participant_expected = []
+        participant_assertions = []
+        direct_context_keys = ("", "context\x00key\x01", "雪" * 65, "c" * 2048)
+        direct_context_assertions = []
+        for scope in native_scopes:
+            for key in native_keys:
+                with self.subTest(scope=scope, key_length=len(key.encode("utf-8"))):
+                    expression = migrate_lua_first.render_eoc_value_expression(
+                        {scope: key}, "nil", "actor")
+                    self.assertIsNotNone(expression)
+                    self.assertIn(migrate_lua_first.lua_quote(key), expression)
+                    participant_expression = migrate_lua_first.render_participant_string(
+                        {scope: key}, "actor", "actor", "partner")
+                    self.assertIsNotNone(participant_expression)
+                    self.assertIn(
+                        migrate_lua_first.lua_quote(key), participant_expression
+                    )
+                    expected.append((scope.removesuffix("_val"), key))
+                    assertions.append(f"assert({expression} == 'resolved')")
+                    participant_expected.append((scope.removesuffix("_val"), key))
+                    participant_assertions.append(
+                        f"assert({participant_expression} == 'participant-resolved')"
+                    )
+        for key in direct_context_keys:
+            expression = migrate_lua_first.render_eoc_value_expression(
+                {"context_val": key}, "nil", "actor")
+            self.assertIsNotNone(expression)
+            self.assertIn(migrate_lua_first.lua_quote(key), expression)
+            direct_context_assertions.append(
+                f"assert({expression} == 'context-value')"
+            )
+
+        expected_lua = "{ " + ", ".join(
+            "{ scope = " + migrate_lua_first.lua_quote(scope) +
+            ", key = " + migrate_lua_first.lua_quote(key) + " }"
+            for scope, key in expected
+        ) + " }"
+        participant_expected_lua = "{ " + ", ".join(
+            "{ scope = " + migrate_lua_first.lua_quote(scope) +
+            ", key = " + migrate_lua_first.lua_quote(key) + " }"
+            for scope, key in participant_expected
+        ) + " }"
+        context_data_lua = "{ " + ", ".join(
+            "[" + migrate_lua_first.lua_quote(key) + "] = 'context-value'"
+            for key in direct_context_keys
+        ) + " }"
+        script = r"""
+local actor,partner={},{}
+local context={data=CONTEXT_DATA}
+local expected=EXPECTED
+local participant_expected=PARTICIPANT_EXPECTED
+local calls=0
+local participant_calls=0
+local function service_value(result) assert(result.ok);return result.value end
+local function next_expected(scope,key,owner)
+ calls=calls+1
+ local item=expected[calls]
+ assert(item and item.scope==scope and item.key==key)
+ if scope=='global' then assert(owner==nil) else assert(owner==actor) end
+end
+local services={variables={
+ resolve=function(data,owner,scope,key,participants)
+  assert(data==context.data)
+  if participants then
+   participant_calls=participant_calls+1
+   local item=participant_expected[participant_calls]
+   assert(item and item.scope==scope and item.key==key and owner==nil)
+   assert(participants.alpha==actor and participants.beta==partner)
+   return {ok=true,value={exists=true,value='participant-resolved'}}
+  end
+  next_expected(scope,key,owner)
+  return {ok=true,value={exists=true,value='resolved'}}
+ end,
+ get_global=function(key)
+  next_expected('global',key,nil)
+ return {ok=true,value={value='resolved'}}
+ end
+}}
+CONTEXT_ASSERTIONS
+ASSERTIONS
+PARTICIPANT_ASSERTIONS
+assert(calls==#expected)
+assert(participant_calls==#participant_expected)
+""".replace("CONTEXT_DATA", context_data_lua).replace(
+            "PARTICIPANT_EXPECTED", participant_expected_lua).replace(
+            "EXPECTED", expected_lua).replace(
+            "CONTEXT_ASSERTIONS", "\n".join(direct_context_assertions)).replace(
+            "PARTICIPANT_ASSERTIONS", "\n".join(participant_assertions)).replace(
+            "ASSERTIONS", "\n".join(assertions))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        valid_context_keys = ("x" * 128, "雪" * 42 + "xx")
+        invalid_context_keys = (
+            "", "x" * 129, "雪" * 43, "control\x01", "delete\x7f", "nul\x00", "bad\ud800",
+        )
+        for key in valid_context_keys:
+            self.assertIsNotNone(migrate_lua_first.render_eoc_value_expression(
+                {"var_val": key}, "nil", "actor"))
+            for scope in ("context_val", "var_val"):
+                self.assertIsNotNone(migrate_lua_first.render_participant_string(
+                    {scope: key}, "actor", "actor", "partner"))
+        for key in invalid_context_keys:
+            with self.subTest(scope="resolve", key=repr(key)):
+                self.assertIsNone(migrate_lua_first.render_eoc_value_expression(
+                    {"var_val": key}, "nil", "actor"))
+                for scope in ("context_val", "var_val"):
+                    self.assertIsNone(migrate_lua_first.render_participant_string(
+                        {scope: key}, "actor", "actor", "partner"))
+                if key == "bad\ud800":
+                    self.assertIsNone(migrate_lua_first.render_eoc_value_expression(
+                        {"context_val": key}, "nil", "actor"))
+                else:
+                    self.assertIsNotNone(migrate_lua_first.render_eoc_value_expression(
+                        {"context_val": key}, "nil", "actor"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_translated_defaults_do_not_translate_stored_null(self) -> None:
         for key in ("u_val", "npc_val", "global_val"):
             for present in (True, False):
