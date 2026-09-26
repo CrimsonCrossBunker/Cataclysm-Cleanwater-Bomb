@@ -11,6 +11,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "condition.h"
 #include "character.h"
 #include "character_id.h"
@@ -30,6 +31,7 @@
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
            "[lua][platform][strings][semantic]" )
 {
+    restore_on_out_of_scope restore_weather( get_weather().weather_id );
     avatar player;
     npc partner;
     player.normalize();
