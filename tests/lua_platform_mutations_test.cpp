@@ -23,6 +23,7 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_mutations.h"
 #include "lua_platform_sol.h"
+#include "lua_platform_variables.h"
 #include "mutation.h"
 #include "npc.h"
 #include "options_helpers.h"
@@ -64,6 +65,18 @@ struct mutation_fixture {
                 throw std::runtime_error( "test: mutation outside write phase" );
             }
         } );
+        cata::lua_platform::install_variable_api(
+        services, [this]() {
+            return runtime;
+        }, [this]() {
+            return world;
+        }, []() {}, [this]() {
+            if( !writable ) {
+                throw std::runtime_error( "test: variable write outside write phase" );
+            }
+        }, []() {
+            return true;
+        } );
     }
 
     ~mutation_fixture() {
@@ -91,8 +104,16 @@ struct mutation_fixture {
         return condition( context );
     }
 
-    void legacy_effect( const std::string &source ) {
-        dialogue context( get_talker_for( player ), get_talker_for( other ) );
+    void legacy_effect( const std::string &source, const bool alpha_is_npc = false,
+                        const std::string &context_key = {}, const std::string &context_value = {} ) {
+        Character &alpha = alpha_is_npc ? static_cast<Character &>( other ) :
+                           static_cast<Character &>( player );
+        Character &beta = alpha_is_npc ? static_cast<Character &>( player ) :
+                          static_cast<Character &>( other );
+        dialogue context( get_talker_for( alpha ), get_talker_for( beta ) );
+        if( !context_key.empty() ) {
+            context.set_value( context_key, context_value );
+        }
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "mutation_acceptance" );
         for( const talk_effect_fun_t &operation : effect.effects ) {
