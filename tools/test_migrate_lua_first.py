@@ -11146,8 +11146,27 @@ assert(#events == 11)
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 2)
-            self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
+            self.assertIn("services.characters.adjust(actor, { moves = -5000 })", main)
             self.assertIn("condition TODO", report)
+
+    def test_turn_cost_literal_conversion_matches_native_turns_to_moves(self) -> None:
+        for raw, expected in (
+            (50, -5000),
+            ("6 seconds", -600),
+            (-2, 200),
+        ):
+            with self.subTest(raw=raw):
+                self.assertEqual(
+                    migrate_lua_first.parse_turn_cost_adjustment(raw), expected
+                )
+        self.assertIsNone(
+            migrate_lua_first.parse_turn_cost_adjustment(
+                {"math": ["u_strength()"]}
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.parse_turn_cost_adjustment(21474837)
+        )
 
     def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23903,8 +23922,7 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn('context.data["effect_to_remove"]', main)
             self.assertNotIn('services.variables.get_global("trait_to_gain")', main)
             self.assertIn("intensity = 50000", main)
-            self.assertIn("moves = -math.max", main)
-            self.assertIn("math.floor((6)", main)
+            self.assertIn("services.characters.adjust(actor, { moves = -600 })", main)
             self.assertIn("services.activities.target_practice(actor)", main)
             self.assertIn(
                 'local emission_position = context.data["death_loc"]',

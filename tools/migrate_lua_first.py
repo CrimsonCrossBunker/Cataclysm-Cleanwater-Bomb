@@ -729,6 +729,20 @@ def parse_turns(value: Any) -> int | None:
     )
 
 
+def parse_turn_cost_adjustment(value: Any) -> int | None:
+    """Convert a bounded literal duration to the native Character move delta."""
+    turns = parse_turns(value)
+    if turns is None:
+        return None
+    moves = turns * 100
+    if not NATIVE_INT_MIN <= moves <= NATIVE_INT_MAX:
+        return None
+    adjustment = -moves
+    if not NATIVE_INT_MIN <= adjustment <= NATIVE_INT_MAX:
+        return None
+    return adjustment
+
+
 def parse_vitamin_micrograms(value: Any) -> int | None:
     if not isinstance(value, str):
         return None
@@ -5345,15 +5359,11 @@ def render_static_false_effect(
             set(effect) - comment_keys == {"turn_cost"} and
             avatar_actor_proven
         ):
-            parsed_amount = parse_turns(effect["turn_cost"])
-            amount = (
-                str(parsed_amount) if parsed_amount is not None and parsed_amount >= 0
-                else render_eoc_numeric_expression(effect["turn_cost"], "0", "actor")
-            )
-            if amount is not None:
+            adjustment = parse_turn_cost_adjustment(effect["turn_cost"])
+            if adjustment is not None:
                 return [
-                    "        services.characters.adjust(actor, { moves = -math.max(0, "
-                    "math.min(2147483647, math.floor((" + amount + ") + 0.5))) })",
+                    "        services.characters.adjust(actor, "
+                    f"{{ moves = {adjustment} }})",
                 ]
         if "place_override" in effect:
             rendered = render_static_place_override(
@@ -31018,34 +31028,20 @@ def render_eoc(
                 } == {"turn_cost"}
             ):
                 raw_turn_cost = effect.get("turn_cost")
-                if (
-                    isinstance(raw_turn_cost, int) and
-                    not isinstance(raw_turn_cost, bool) and raw_turn_cost >= 0
-                ):
+                adjustment = parse_turn_cost_adjustment(raw_turn_cost)
+                if adjustment is not None:
                     lines.append(
-                        f"    services.characters.adjust(actor, {{ moves = -{raw_turn_cost} }})"
+                        "    services.characters.adjust(actor, "
+                        f"{{ moves = {adjustment} }})"
                     )
                     converted_effect = True
                 else:
-                    parsed_turn_cost = parse_turns(raw_turn_cost)
-                    turn_cost = (
-                        str(parsed_turn_cost)
-                        if parsed_turn_cost is not None and parsed_turn_cost >= 0
-                        else render_eoc_numeric_expression(raw_turn_cost, "0", "actor")
+                    all_effects_converted = False
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "needs domain-service conversion"
                     )
-                    if turn_cost is None:
-                        all_effects_converted = False
-                        result.add_todo(
-                            "manual_rewrite",
-                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs domain-service conversion"
-                        )
-                    else:
-                        lines.append(
-                            "    services.characters.adjust(actor, { moves = -math.max(0, "
-                            "math.min(2147483647, math.floor((" + turn_cost + ") + 0.5))) })"
-                        )
-                        converted_effect = True
             elif npc_actor_proven and isinstance(effect, str) and effect in {
                 "wake_up", "dismount", "clear_overrides", "lead_to_safety"
             }:
