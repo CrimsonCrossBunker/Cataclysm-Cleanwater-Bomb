@@ -169,10 +169,23 @@ assert(EXPRESSION)
         self.assertIsNotNone(indirect)
         indirect_script = r"""
 local context={data={weather_reference=1}}
+local resolved = 0
 local services={weather={current=function() return {weather={value='fallback'}} end},
- variables={resolve=function() error('non-string var_val must not be resolved') end}}
+ variables={resolve=function(data,owner,scope,key)
+  resolved=resolved+1
+  assert(scope=='u' and key=='missing')
+  return {ok=true,value={exists=false,value=nil}}
+ end}}
 local function service_value(result) assert(result.ok);return result.value end
 assert(EXPRESSION)
+context.data.weather_reference='u_missing'
+assert(EXPRESSION)
+assert(resolved==1)
+for _, reference in ipairs({'', 'u_', 'n_', '_'}) do
+ context.data.weather_reference=reference
+ assert(EXPRESSION)
+end
+assert(resolved==1)
 """.replace("EXPRESSION", indirect)
         indirect_result = subprocess.run(["lua", "-"], input=indirect_script, text=True,
                                          capture_output=True, timeout=10)
