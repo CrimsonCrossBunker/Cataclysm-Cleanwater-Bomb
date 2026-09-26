@@ -127,8 +127,12 @@ void create_advanced_inv()
         advinv = std::make_unique<advanced_inventory>();
     }
     advinv->display();
-    // keep the UI and its ui_adaptor running if we're returning
-    if( uistate.transfer_save.exit_code != aim_exit::re_entry || get_avatar().activity.is_null() ) {
+    if( uistate.transfer_save.exit_code == aim_exit::re_entry &&
+        !get_avatar().activity.is_null() ) {
+        // Keep the inventory state for re-entry, but stop drawing it while
+        // the activity runs.  Otherwise eating leaves a stale overlay on the map.
+        advinv->temp_hide();
+    } else {
         advinv.reset();
         cancel_aim_processing();
     }
@@ -1805,6 +1809,13 @@ void advanced_inventory::action_examine( advanced_inv_listitem *sitem,
         ret = g->inventory_item_menu( loc, info_startx, info_width,
                                       src == advanced_inventory::side::left ? game::LEFT_OF_INFO : game::RIGHT_OF_INFO );
         always_recalc = false;
+        // Eating either defers a container choice or starts an activity that
+        // reopens the consume menu when done.  In both cases AIM must close
+        // instead of leaving an orphaned re-entry callback behind.
+        if( ret == 'E' || uistate.open_menu ) {
+            exit = true;
+            return;
+        }
         // If examining the item did create a new activity, we have to add "return to AIM".
         if( last_activity != player_character.activity.id() || !ui ) {
             exit = true;
