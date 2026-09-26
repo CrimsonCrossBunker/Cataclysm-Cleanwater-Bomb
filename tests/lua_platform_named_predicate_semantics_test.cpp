@@ -1,10 +1,14 @@
 #include <string>
 
+#include "avatar.h"
 #include "cata_catch.h"
 #include "condition.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "npc.h"
+#include "type_id.h"
 
 TEST_CASE( "lua_migration_native_named_predicate_accepts_empty_name",
            "[lua][platform][named_predicates][semantic]" )
