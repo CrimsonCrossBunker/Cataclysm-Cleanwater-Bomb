@@ -26827,9 +26827,9 @@ def render_eoc_condition_expression(
         ):
             return "true"
         if avatar_actor_proven and condition == "u_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+            return "service_value(services.characters.snapshot(actor)).senses.can_see"
         if npc_actor_proven and condition == "npc_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+            return "service_value(services.characters.snapshot(actor)).senses.can_see"
         if avatar_actor_proven and condition in {
             "u_driving", "u_is_driving", "u_is_in_vehicle",
             "u_controlling_vehicle", "u_is_riding", "u_mounted",

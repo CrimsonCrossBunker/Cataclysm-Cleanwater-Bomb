@@ -11031,6 +11031,8 @@ assert(#events == 11)
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 1)
             self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
+            self.assertEqual(main.count(".senses.can_see"), 2)
+            self.assertNotIn(".senses.blind", main)
             self.assertIn("condition TODO", report)
 
     def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:

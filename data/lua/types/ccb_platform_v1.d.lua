@@ -7595,7 +7595,7 @@ function CcbCharactersApi.intimidation(character) end
 
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
----@return CcbResult result `value` is a detached Character snapshot.
+---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
 
 ---@param observer GameHandle Exact live Character observer handle.
@@ -10854,7 +10854,9 @@ function CcbPlatformMathApi.evaluate(expression, actor, context) end
 ---@return CcbResult result `value` is the finite numeric result.
 function CcbPlatformMathApi.apply(expression, actor, context) end
 
----@param text string
+---@class CcbCharacterSensesSnapshot
+---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
+
 ---@class CcbCharacterSnapshot
 ---@field name string
 ---@field x integer
@@ -10869,6 +10871,7 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field hunger integer
 ---@field thirst integer
 ---@field sleepiness integer
+---@field senses CcbCharacterSensesSnapshot
 ---@field environment CcbCharacterEnvironmentSnapshot
 
 ---@class CcbCharacterEnvironmentSnapshot
@@ -10903,6 +10906,9 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
 
+---@return GameHandle Exact handle for the active avatar.
+function CcbCreaturesApi.avatar() end
+
 ---@param handle GameHandle Exact live Creature handle.
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
@@ -10912,9 +10918,26 @@ function CcbCreaturesApi.snapshot(handle) end
 ---@return CcbResult result
 function CcbCreaturesApi.nearby(observer, options) end
 
+---@class CcbVisibleMonsterSummary
+---@field direction string Native cardinal direction id.
+---@field count integer Total visible monsters counted in the direction.
+---@field type_count integer Number of distinct visible monster types in the direction.
+---@field present boolean Whether at least one visible monster type exists in the direction.
+---@field dangerous boolean Native safe-mode danger state in the direction.
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean, using Creature::sees.
+function CcbCreaturesApi.can_see(observer, target) end
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean from coordinate-only map::sees at MAX_VIEW_DISTANCE.
+function CcbCreaturesApi.has_line_of_sight(observer, target) end
+
 ---@param observer GameHandle Exact live avatar handle; NPC/monster/other Character handles fail closed.
 ---@param direction string One of N/NE/E/SE/S/SW/W/NW/L.
----@return CcbResult result
+---@return CcbVisibleMonsterSummary
 function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 ---@class CcbTimeSnapshot
