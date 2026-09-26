@@ -26797,8 +26797,7 @@ def render_eoc_condition_expression(
             return None
         if avatar_actor_proven and condition in (
             "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
-            "u_is_vehicle", "u_hostile", "u_is_in_vehicle",
-            "u_controlling_vehicle", "u_driving", "u_is_riding",
+            "u_is_vehicle", "u_hostile",
             "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
             "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
             "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
@@ -26812,7 +26811,7 @@ def render_eoc_condition_expression(
         ):
             return "false"
         if avatar_actor_proven and condition in (
-            "u_exists", "has_alpha", "u_friend", "u_available",
+            "u_exists", "has_alpha", "u_friend",
             "has_no_assigned_mission", "has_no_available_mission",
             "u_has_no_available_mission",
         ):
@@ -26822,20 +26821,29 @@ def render_eoc_condition_expression(
             "npc_is_furniture", "npc_is_vehicle", "npc_friend",
             "npc_is_falling", "npc_is_floating", "npc_is_flying",
             "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
-            "npc_is_in_vehicle", "npc_controlling_vehicle", "npc_driving",
-            "npc_is_riding", "npc_is_avatar_passenger", "npc_is_driven",
+            "npc_is_avatar_passenger", "npc_is_driven",
             "npc_is_remote_controlled", "npc_is_on_rails",
-            "npc_vehicle_owned_by_avatar", "npc_following",
+            "npc_vehicle_owned_by_avatar",
             "npc_has_assigned_camp", "has_beta",
             "npc_has_available_mission", "npc_has_many_available_missions",
             "npc_mission_complete", "npc_mission_failed", "npc_mission_incomplete",
         ):
             return "false"
         if npc_actor_proven and condition in (
-            "npc_exists", "npc_hostile", "npc_available",
+            "npc_exists", "npc_hostile",
             "npc_has_no_available_mission",
         ):
             return "true"
+        if avatar_actor_proven and condition == "u_available":
+            return (
+                "not service_value(services.effects.has(actor, "
+                "services.types.id(\"effect\", \"currently_busy\")))"
+            )
+        if npc_actor_proven and condition == "npc_available":
+            return (
+                "not service_value(services.effects.has(actor, "
+                "services.types.id(\"effect\", \"currently_busy\")))"
+            )
         if avatar_actor_proven and condition == "u_can_see":
             return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
         if npc_actor_proven and condition == "npc_can_see":
@@ -27080,21 +27088,21 @@ def render_eoc_condition_expression(
             )
             avatar = "services.characters.avatar()"
             return (
-                "not service_value(services.characters.snapshot(" + actor + ")).activity.active "
+                "not service_value(services.effects.has(" + actor + ", "
+                "services.types.id(\"effect\", \"currently_busy\"))) "
                 "and service_value(services.characters.snapshot(" + avatar + ")).cash >= "
                 f"{lua_number(amount)}"
             )
     if (
         npc_actor_proven and
         set(condition) <= {"npc_role_nearby", "range"} and
-        bounded_utf8_string(condition.get("npc_role_nearby"), 256)
+        bounded_utf8_string(condition.get("npc_role_nearby"), 256) and
+        ("range" not in condition or condition.get("range") == 48)
     ):
-        radius = _literal_nonnegative_integer(condition.get("range", 48), 1000)
-        if radius is not None:
-            return (
-                "service_value(services.npcs.has_role_nearby(actor, "
-                f"{lua_quote(condition['npc_role_nearby'])}, {radius}))"
-            )
+        return (
+            "service_value(services.npcs.has_role_nearby(services.characters.avatar(), "
+            f"{lua_quote(condition['npc_role_nearby'])}, 48))"
+        )
     for location_key, actor_proven in (
         ("u_near_om_location", avatar_actor_proven or npc_actor_proven),
         ("npc_near_om_location", npc_actor_proven),

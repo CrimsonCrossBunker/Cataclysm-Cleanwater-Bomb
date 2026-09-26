@@ -15,6 +15,24 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_npc_role_nearby_rejects_non_native_range_override(self) -> None:
+        expected = (
+            "service_value(services.npcs.has_role_nearby(services.characters.avatar(), "
+            "\"scout\", 48))"
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_role_nearby": "scout"}, npc_actor_proven=True),
+            expected,
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_role_nearby": "scout", "range": 48}, npc_actor_proven=True),
+            expected,
+        )
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout", "range": 5}, npc_actor_proven=True))
+
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
             for operator in ("and", "or", "not"):
@@ -6708,6 +6726,75 @@ assert(#events == 11)
                 report,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_dynamic_character_availability_and_movement_conditions(self) -> None:
+        busy = (
+            'not service_value(services.effects.has(actor, '
+            'services.types.id("effect", "currently_busy")))'
+        )
+        service = (
+            busy + " and service_value(services.characters.snapshot("
+            "services.characters.avatar())).cash >= 0"
+        )
+        cases = (
+            ("u_available", {"avatar_actor_proven": True}, busy),
+            ("npc_available", {"npc_actor_proven": True}, busy),
+            ({"u_service": 0}, {"avatar_actor_proven": True}, service),
+            ({"npc_service": 0}, {"npc_actor_proven": True}, service),
+            (
+                "npc_following", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".npc_state.following",
+            ),
+            (
+                "u_controlling_vehicle", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.controlling_vehicle",
+            ),
+            (
+                "u_driving", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.driving",
+            ),
+            (
+                "u_is_in_vehicle", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.in_vehicle",
+            ),
+            (
+                "u_is_riding", {"avatar_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.mounted",
+            ),
+            (
+                "npc_controlling_vehicle", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.controlling_vehicle",
+            ),
+            (
+                "npc_driving", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.driving",
+            ),
+            (
+                "npc_is_in_vehicle", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.in_vehicle",
+            ),
+            (
+                "npc_is_riding", {"npc_actor_proven": True},
+                "service_value(services.characters.snapshot(actor))"
+                ".movement.mounted",
+            ),
+        )
+        for condition, provenance, expected in cases:
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **provenance
+                    ),
+                    expected,
+                )
 
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15233,7 +15320,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
-                                    {"npc_role_nearby": "scout", "range": 5},
+                                    {"npc_role_nearby": "scout", "range": 48},
                                     {"npc_service": 0},
                                     {"npc_has_items_sum": [{"item": "scrap", "amount": 1}]},
                                     {"npc_near_om_location": "forest", "range": 2},
