@@ -3539,7 +3539,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 4)
             self.assertEqual(result.partial, [])
             self.assertIn(
-                'services.variables.set(\n        actor, "literal", "ready")',
+                'services.variables.set(\n        actor, "literal", "ready", { include_before = false })',
                 main,
             )
             self.assertIn('values[services.random.int(1, #values)]', main)
@@ -3547,7 +3547,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn('context.data["required"] ~= nil', main)
             self.assertIn("1 == 1", main)
             self.assertIn('copy_source_key = "u", actor, "source"', main)
-            self.assertNotIn('services.variables.remove(actor, "target")', main)
+            self.assertNotIn('services.variables.remove(actor, "target", { include_before = false })', main)
             self.assertIn(
                 'services.variables.set(\n        actor, "label"',
                 main,
@@ -3556,6 +3556,32 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(main.count("local function service_value"), 1)
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("services.state.", main)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_variable_removal_does_not_request_old_value_snapshot(self) -> None:
+        for selector, avatar, npc in (("u_lose_var", True, False),
+                                      ("npc_lose_var", False, True)):
+            with self.subTest(selector=selector):
+                lines = migrate_lua_first.render_static_false_effect(
+                    {selector: "old-array"}, avatar, npc, {},
+                    actor_expression="actor",
+                )
+                self.assertIsNotNone(lines)
+                script = "\n".join([
+                    "local actor = {}",
+                    "local removed = false",
+                    "local services = {variables={remove=function(owner, key, options)",
+                    "assert(owner == actor and key == 'old-array')",
+                    "assert(options and options.include_before == false)",
+                    "removed = true; return {ok=true,value={removed=true}} end}}",
+                    "\n".join(lines),
+                    "assert(removed)",
+                ])
+                result = subprocess.run(
+                    ["lua", "-"], input=script, text=True,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_character_variable_keys_match_native_storage_domain(self) -> None:
         valid_names = (
@@ -3613,7 +3639,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             for name in valid_names:
                 self.assertIn(
                     "services.variables.remove(actor, "
-                    f"{migrate_lua_first.lua_quote(name)})",
+                    f"{migrate_lua_first.lua_quote(name)}, {{ include_before = false }})",
                     main,
                 )
             for name in invalid_names:
@@ -3762,7 +3788,9 @@ local u_owner, npc_owner = {values={}}, {values={}}
 local events, random_calls, write_allowed, random_index = {}, 0, true, 0
 local random_bounds = {}
 local services = {
-    variables = {set=function(owner, key, value)
+    variables = {set=function(owner, key, value, options)
+        -- Native EOC assignment must not convert an existing oversized value.
+        assert(options and options.include_before == false)
         if not write_allowed then return {ok=false} end
         owner.values[key] = value
         return {ok=true}
