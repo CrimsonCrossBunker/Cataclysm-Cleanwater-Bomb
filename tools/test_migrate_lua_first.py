@@ -3016,7 +3016,19 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertNotIn("run_eoc", main)
 
-    def test_translates_literal_avatar_faction_trust_condition(self) -> None:
+    def test_keeps_faction_trust_without_beta_and_uses_exact_beta(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": 12}, avatar_actor_proven=True))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": 12}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner"),
+            "service_value(services.factions.for_character(partner))"
+            ".reputation.trusts >= 12",
+        )
+
+    def test_keeps_literal_faction_trust_condition_without_beta_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -3037,14 +3049,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.factions.for_character(actor)", main)
             self.assertIn(
-                "service_value(services.factions.for_character(actor)).reputation.trusts >= 12",
-                main,
+                "EOC trust_gate condition TODO: translate the legacy condition into a Lua predicate",
+                report,
             )
-            self.assertNotIn("services.factions.player()", main)
-            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_dialogue_predicate_services_for_proven_avatars(self) -> None:

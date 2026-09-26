@@ -27704,12 +27704,13 @@ def render_eoc_condition_expression(
 
     if (
         set(condition) == {"u_has_faction_trust"} and
-        avatar_actor_proven and
+        npc_actor_proven and npc_actor_expression is not None and
         finite_number_literal(condition.get("u_has_faction_trust")) is not None
     ):
         trust = finite_number_literal(condition["u_has_faction_trust"])
         return (
-            "service_value(services.factions.for_character(actor)).reputation.trusts >= "
+            "service_value(services.factions.for_character("
+            f"{npc_actor_expression})).reputation.trusts >= "
             f"{lua_number(trust)}"
         )
 
