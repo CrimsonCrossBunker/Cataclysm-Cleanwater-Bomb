@@ -110,6 +110,30 @@ assert(EXPRESSION)
         result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_environment_topic_item_mutator_stays_partial_without_dialogue_context(self) -> None:
+        # EOC migration callbacks receive a plain context table. topic_item() is
+        # only exposed by PlatformDialogueContext, so emitting it here would
+        # generate a runtime method call that the EOC context does not provide.
+        for selector in ("is_season", "is_weather"):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                {selector: {"mutator": "topic_item"}}))
+
+    def test_environment_string_predicates_keep_empty_literal_and_reject_bad_i18n(self) -> None:
+        for selector in ("is_season", "is_weather"):
+            self.assertEqual(
+                migrate_lua_first.render_eoc_condition_expression({selector: ""}),
+                f'{"services.time_snapshot().season_id" if selector == "is_season" else "services.weather.current().weather.value"} == ""',
+            )
+            for invalid in (
+                {"str": "spring"},
+                {"str": "spring", "i18n": False},
+                {"str": "spring", "i18n": True, "extra": "unsupported"},
+                {"math": ["1"]},
+            ):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression({selector: invalid})
+                )
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_environment_explicit_translation_is_not_a_plain_string(self) -> None:
         for selector in ("is_season", "is_weather"):
@@ -147,6 +171,9 @@ assert(translations==1)
         for relative in (
             "data/json/effects_on_condition/mutation_eocs/mutation_effect_eocs.json",
             "data/json/effects_on_condition/item_eocs.json",
+            "data/mods/aftershock_exoplanet/EOC/world_eocs.json",
+            "data/mods/Defense_Mode/effects_on_condition/random_event_eocs.json",
+            "data/mods/desert_region/weather/weather_eoc.json",
         ):
             collect(json.loads((REPOSITORY_ROOT / relative).read_text()))
         self.assertTrue(any("is_season" in value for value in conditions))
@@ -164,10 +191,16 @@ assert(translations==1)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_environment_string_queries_preserve_participant_and_fallback(self) -> None:
+    def test_environment_string_queries_preserve_participant_missing_and_empty(self) -> None:
         for selector, current in (("is_season", "spring"), ("is_weather", "rain")):
             for key in ("u_val", "npc_val", "global_val", "context_val", "var_val"):
-                for present in (False, True):
+                for exists, resolved, expected in (
+                    (False, "nil", "true"),
+                    (True, "nil", "false"),
+                    (True, "''", "false"),
+                    (True, migrate_lua_first.lua_quote(current), "true"),
+                    (True, migrate_lua_first.lua_quote("other"), "false"),
+                ):
                     value = {key: "reference" if key == "var_val" else "wanted", "default": current}
                     expression = migrate_lua_first.render_eoc_condition_expression(
                         {selector: value}, avatar_actor_proven=True,
@@ -187,14 +220,15 @@ local services={time_snapshot=function() return {season_id=CURRENT} end,
  elseif SCOPE=='global_val' then assert(scope=='global')
  else assert(scope=='context') end
  reads=reads+1
- return {ok=true,value={exists=PRESENT,value=nil}}
+ return {ok=true,value={exists=EXISTS,value=RESOLVED}}
 end}}
 assert((EXPRESSION)==EXPECTED)
 assert(reads==1)
 """.replace("CURRENT", migrate_lua_first.lua_quote(current))
                     script = script.replace("SCOPE", migrate_lua_first.lua_quote(key))
-                    script = script.replace("PRESENT", "true" if present else "false")
-                    script = script.replace("EXPECTED", "false" if present else "true")
+                    script = script.replace("EXISTS", "true" if exists else "false")
+                    script = script.replace("RESOLVED", resolved)
+                    script = script.replace("EXPECTED", expected)
                     script = script.replace("EXPRESSION", expression)
                     result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
                     self.assertEqual(result.returncode, 0, result.stderr)
