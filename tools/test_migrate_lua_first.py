@@ -11192,8 +11192,6 @@ assert(#events == 11)
                                     "u_can_see",
                                     {"u_has_species": "human"},
                                     {"not": "u_has_activity"},
-                                    {"not": "u_has_stolen_item"},
-                                    {"not": "u_can_stow_weapon"},
                                     {"not": "u_are_owed"},
                                     {"not": "u_train_skills"},
                                     {"not": "u_train_spells"},
@@ -11249,8 +11247,6 @@ assert(#events == 11)
                                     {"not": "npc_train_skills"},
                                     {"not": "npc_train_spells"},
                                     {"not": "npc_train_styles"},
-                                    {"not": "npc_has_stolen_item"},
-                                    {"not": "npc_can_stow_weapon"},
                                 ]
                             },
                             "effect": [
@@ -14235,7 +14231,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {"u_has_items": {"item": "water_clean", "count": 2}},
                 {"u_has_item_with_flag": "EATEN_COLD"},
                 {"u_has_item_category": "food", "count": 2},
-                {"u_has_items_sum": [{"item": "scrap", "amount": 2}]},
                 {"u_has_software": {"item": "software_calculator", "charges": 1}},
                 {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
                 {"u_has_wielded_with_flag": "DURABLE_MELEE"},
@@ -14271,11 +14266,61 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn("services.inventory.resources(actor", main)
             self.assertIn("services.inventory.category_count(actor", main)
-            self.assertIn("services.inventory.has_items_sum(actor", main)
             self.assertIn("services.inventory.wielded_matches(actor", main)
             self.assertIn("services.items.ammo_sufficient(context.actors.item, actor)", main)
             self.assertIn("relative_rot > 1", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+
+    def test_inventory_conditions_with_unrepresented_semantics_stay_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("u_has_items_sum", "game_start", {
+                    "u_has_items_sum": [{"item": "scrap", "amount": 2}]
+                }),
+                ("npc_has_items_sum", "npc_becomes_hostile", {
+                    "npc_has_items_sum": [{"item": "scrap", "amount": 2}]
+                }),
+                ("u_can_stow_weapon", "game_start", "u_can_stow_weapon"),
+                (
+                    "npc_can_stow_weapon",
+                    "npc_becomes_hostile",
+                    "npc_can_stow_weapon",
+                ),
+                ("u_has_stolen_item", "game_start", "u_has_stolen_item"),
+                ("npc_has_stolen_item", "npc_becomes_hostile", "npc_has_stolen_item"),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"inventory_gap_{index}",
+                            "required_event": event,
+                            "condition": condition,
+                            "effect": {"message": "inventory condition"},
+                        }
+                        for index, (_, event, condition) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "inventory_gap_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.inventory.has_items_sum(", main)
+            for index, (selector, _, _) in enumerate(cases):
+                self.assertIn(
+                    f"EOC inventory_gap_{index} condition TODO: translate the "
+                    "legacy condition into a Lua predicate",
+                    report,
+                )
+            self.assertNotIn("has no native Platform registrar", report)
 
     def test_inventory_and_world_effects_lower_only_bounded_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15446,7 +15491,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
-                                    {"npc_has_items_sum": [{"item": "scrap", "amount": 1}]},
                                     {"npc_near_om_location": "forest", "range": 2},
                                 ]
                             },

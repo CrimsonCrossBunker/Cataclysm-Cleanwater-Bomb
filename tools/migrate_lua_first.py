@@ -26892,13 +26892,11 @@ def render_eoc_condition_expression(
         if npc_actor_proven and condition == "npc_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
         if avatar_actor_proven and condition in (
-            "u_has_stolen_item", "u_can_stow_weapon",
             "u_train_spells", "u_train_styles",
         ):
             return "false"
         if npc_actor_proven and condition in (
             "npc_train_spells", "npc_train_styles",
-            "npc_has_stolen_item", "npc_can_stow_weapon",
         ):
             return "false"
         return None
@@ -27238,42 +27236,11 @@ def render_eoc_condition_expression(
         if not checks:
             return None
         return " and ".join(f"({check})" for check in checks)
-    for item_key, actor_proven in (
-        ("u_has_items_sum", avatar_actor_proven or npc_actor_proven),
-        ("npc_has_items_sum", npc_actor_proven),
-    ):
-        entries = condition.get(item_key)
-        if (
-            not actor_proven or set(condition) != {item_key} or
-            not isinstance(entries, list) or not entries or len(entries) > 128
-        ):
-            continue
-        rendered_entries: list[str] = []
-        valid = True
-        for entry in entries:
-            if not isinstance(entry, dict) or set(entry) != {"item", "amount"}:
-                valid = False
-                break
-            amount = finite_number_literal(entry["amount"])
-            if (
-                not bounded_platform_id(entry["item"]) or amount is None or
-                amount <= 0 or amount > 1000000000
-            ):
-                valid = False
-                break
-            rendered_entries.append(
-                "{ item = services.types.id(\"item\", " +
-                f"{lua_quote(entry['item'])}), amount = {lua_number(amount)} }}"
-            )
-        if valid:
-            actor = (
-                "actor" if item_key.startswith("npc_") or avatar_actor_proven
-                else "services.characters.avatar()"
-            )
-            return (
-                f"service_value(services.inventory.has_items_sum({actor}, {{ " +
-                ", ".join(rendered_entries) + " }))"
-            )
+    # The native condition adds faction-owned vehicle cargo to the local
+    # crafting inventory. Platform has_items_sum currently sees only the
+    # character crafting inventory, so preserve a TODO until parity exists.
+    if "u_has_items_sum" in condition or "npc_has_items_sum" in condition:
+        return None
     for item_key, actor_proven in (
         ("u_has_item_with_flag", avatar_actor_proven),
         ("npc_has_item_with_flag", npc_actor_proven),
