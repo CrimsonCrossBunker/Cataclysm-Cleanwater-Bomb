@@ -1,0 +1,30 @@
+#include <string>
+
+#include "cata_catch.h"
+#include "condition.h"
+#include "dialogue.h"
+#include "flexbuffer_json.h"
+#include "json_loader.h"
+
+TEST_CASE( "lua_migration_native_named_predicate_accepts_empty_name",
+           "[lua][platform][named_predicates][semantic]" )
+{
+    dialogue context;
+    const conditional_t read( json_loader::from_string(
+                                  R"({"get_condition":""})" ).get_object() );
+    CHECK_FALSE( read( context ) );
+
+    const auto assign = [&context]( const std::string & comparison ) {
+        talk_effect_t effect;
+        effect.parse_sub_effect( json_loader::from_string(
+                                     R"({"set_condition":"","condition":{"math":[")" +
+                                     comparison + R"("]}})" ).get_object(), "named_predicate_acceptance" );
+        for( const talk_effect_fun_t &operation : effect.effects ) {
+            operation( context );
+        }
+    };
+    assign( "1 == 1" );
+    CHECK( read( context ) );
+    assign( "1 == 2" );
+    CHECK_FALSE( read( context ) );
+}
