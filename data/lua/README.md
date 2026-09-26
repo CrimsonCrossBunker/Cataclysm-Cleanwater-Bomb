@@ -6,9 +6,8 @@ from its root `main.lua`; optional metadata is returned by `mod.lua` through
 subdirectory, EOCs, or the former `game.*` API.
 
 The architecture and authoring contract are documented in
-[LUA_FIRST_PLATFORM.md](LUA_FIRST_PLATFORM.md).  EOC capability migration
-follows [LUA_FIRST_EOC_WORKFLOW.md](LUA_FIRST_EOC_WORKFLOW.md); migrated content
-is only accepted after its native Platform domain is complete.
+[LUA_FIRST_PLATFORM.md](LUA_FIRST_PLATFORM.md). The short current goal and
+progress page is [LUA_FIRST_EOC_WORKFLOW.md](LUA_FIRST_EOC_WORKFLOW.md).
 
 LuaLS declarations are in `types/ccb_platform_v1.d.lua`.  Contract and
 inventory checks are documented in

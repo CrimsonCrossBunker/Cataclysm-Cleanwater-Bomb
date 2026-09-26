@@ -502,13 +502,11 @@ with ordinary code over Platform services. A native service can expose a
 bounded operation such as a snapshot query or a typed mutation; it must not
 recreate an EOC key tree, a JSON loader, or an opaque runner.
 
-The active capability workflow is
-`data/lua/LUA_FIRST_EOC_WORKFLOW.md`. Work is grouped into coherent domain
-capability batches, not a promise to migrate the whole inventory. A bounded
-disposition means named real shapes work; it does not mean the selector,
-domain, or corpus is complete. A primitive disposition means native building
-blocks exist; it is not migration parity. Only the final semantic gate may
-promote a disposition to verified.
+The current goal and progress are in
+`data/lua/LUA_FIRST_EOC_WORKFLOW.md`. Build capabilities in response to actual
+Mod and migration needs. Historical ledger entries describe their stated scope;
+they do not make every EOC selector an API requirement or a recurring test gate.
+A complete replacement claim needs evidence for the scope it names.
 
 The legacy C++ JSON parser and EOC runner remain private compatibility paths for
 core and old-Mod definitions during the transition. Platform definitions do
@@ -517,10 +515,9 @@ that deletion is a separate retirement gate and does not require deleting all
 passive, schema-validated JSON.
 
 Lua 使用 Platform 服务表达条件、效果、分支、循环和策略。原生服务可以提供有界 snapshot
-查询或类型化变更，但不能重建 EOC 键树、JSON loader 或不透明 runner。EOC 能力工作遵循
-`data/lua/LUA_FIRST_EOC_WORKFLOW.md`，按完整领域能力批次推进，而不是承诺迁移整个语料。
-bounded 只表示明确的真实形状可用，不表示 selector、领域或语料已完成；primitive 只表示
-原生积木存在；只有最终语义门禁可以提升为 verified。
+查询或类型化变更，但不能重建 EOC 键树、JSON loader 或不透明 runner。当前目标和进度见
+`data/lua/LUA_FIRST_EOC_WORKFLOW.md`。按真实 Mod 和迁移需求补能力；历史账本仅说明
+已记录的范围，不要求每次修改逐条验收 EOC。声称完整替代时须提供对应范围的证据。
 
 过渡期间，现有 C++ JSON parser 和 EOC runner 作为本体及旧 Mod 定义的私有兼容路径保留，
 Platform 定义不会调用它们。最后一个 EOC 引用消失后才进入 runner 删除门禁；这不要求删除
@@ -571,12 +568,11 @@ The source of current Platform references is deliberately small:
   and semantic evidence sources.
 
 Generated references, ledger, documentation registry, and migration reports are
-outputs, never hand-edited evidence. Refresh them only when their declared
-inputs change. Validation cadence, current priorities, and completion reporting
-are defined once in [the EOC capability workflow](LUA_FIRST_EOC_WORKFLOW.md).
+outputs; never hand-edit them. Refresh only those affected by changed inputs.
+Current goals and progress are in [the Lua status page](LUA_FIRST_EOC_WORKFLOW.md).
 
-Platform reference、账本、文档 registry 与迁移报告是生成输出，禁止手改；只在声明的输入
-变化时刷新。当前优先级、验证流程与完成度口径统一见 [EOC 能力流程](LUA_FIRST_EOC_WORKFLOW.md)。
+Platform reference、账本、文档 registry 与迁移报告是生成输出，禁止手改；只在相关输入
+变化时刷新受影响的文件。当前目标和进度见 [Lua 状态页](LUA_FIRST_EOC_WORKFLOW.md)。
 
 PR 664's foundation scope and later capabilities retain their evidence in
 `ai/lua-first-roadmap.yml`. They are not recurring prerequisites for every
