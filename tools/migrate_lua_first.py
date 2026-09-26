@@ -27072,8 +27072,12 @@ def render_eoc_condition_expression(
                     f">= {int(threshold)}"
                 )
     for service_key, actor_proven in (
-        ("u_service", avatar_actor_proven or npc_actor_proven),
-        ("npc_service", npc_actor_proven),
+        ("u_service", avatar_actor_proven),
+        (
+            "npc_service",
+            npc_actor_proven and npc_actor_expression is not None and
+            avatar_actor_proven,
+        ),
     ):
         if (
             actor_proven and set(condition) == {service_key} and
@@ -27082,25 +27086,21 @@ def render_eoc_condition_expression(
             amount = finite_number_literal(condition[service_key])
             if amount is None or amount < -1000000 or amount > 1000000:
                 continue
-            actor = (
-                "actor" if service_key.startswith("npc_") or avatar_actor_proven
-                else "services.characters.avatar()"
-            )
-            avatar = "services.characters.avatar()"
+            actor = npc_actor_expression if service_key == "npc_service" else "actor"
             return (
                 "not service_value(services.effects.has(" + actor + ", "
                 "services.types.id(\"effect\", \"currently_busy\"))) "
-                "and service_value(services.characters.snapshot(" + avatar + ")).cash >= "
+                "and service_value(services.characters.snapshot(actor)).cash >= "
                 f"{lua_number(amount)}"
             )
     if (
-        npc_actor_proven and
+        avatar_actor_proven and
         set(condition) <= {"npc_role_nearby", "range"} and
         bounded_utf8_string(condition.get("npc_role_nearby"), 256) and
         ("range" not in condition or condition.get("range") == 48)
     ):
         return (
-            "service_value(services.npcs.has_role_nearby(services.characters.avatar(), "
+            "service_value(services.npcs.has_role_nearby(actor, "
             f"{lua_quote(condition['npc_role_nearby'])}, 48))"
         )
     for location_key, actor_proven in (

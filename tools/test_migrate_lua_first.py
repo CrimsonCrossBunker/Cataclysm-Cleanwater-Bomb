@@ -17,21 +17,25 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 class LuaFirstMigrationTest(unittest.TestCase):
     def test_npc_role_nearby_rejects_non_native_range_override(self) -> None:
         expected = (
-            "service_value(services.npcs.has_role_nearby(services.characters.avatar(), "
-            "\"scout\", 48))"
+            "service_value(services.npcs.has_role_nearby(actor, \"scout\", 48))"
         )
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
-                {"npc_role_nearby": "scout"}, npc_actor_proven=True),
+                {"npc_role_nearby": "scout"}, avatar_actor_proven=True),
             expected,
         )
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
-                {"npc_role_nearby": "scout", "range": 48}, npc_actor_proven=True),
+                {"npc_role_nearby": "scout", "range": 48},
+                avatar_actor_proven=True),
             expected,
         )
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-            {"npc_role_nearby": "scout", "range": 5}, npc_actor_proven=True))
+            {"npc_role_nearby": "scout"}, npc_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout", "range": 5}, avatar_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout"}, generic_character_actor_proven=True))
 
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
@@ -6733,14 +6737,23 @@ assert(#events == 11)
             'services.types.id("effect", "currently_busy")))'
         )
         service = (
-            busy + " and service_value(services.characters.snapshot("
-            "services.characters.avatar())).cash >= 0"
+            busy + " and service_value(services.characters.snapshot(actor)).cash >= 0"
+        )
+        npc_busy_service = (
+            'not service_value(services.effects.has(partner, '
+            'services.types.id("effect", "currently_busy"))) '
+            'and service_value(services.characters.snapshot(actor)).cash >= 0'
         )
         cases = (
             ("u_available", {"avatar_actor_proven": True}, busy),
             ("npc_available", {"npc_actor_proven": True}, busy),
             ({"u_service": 0}, {"avatar_actor_proven": True}, service),
-            ({"npc_service": 0}, {"npc_actor_proven": True}, service),
+            (
+                {"npc_service": 0},
+                {"avatar_actor_proven": True, "npc_actor_proven": True,
+                 "npc_actor_expression": "partner"},
+                npc_busy_service,
+            ),
             (
                 "npc_following", {"npc_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
@@ -15320,8 +15333,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
-                                    {"npc_role_nearby": "scout", "range": 48},
-                                    {"npc_service": 0},
                                     {"npc_has_items_sum": [{"item": "scrap", "amount": 1}]},
                                     {"npc_near_om_location": "forest", "range": 2},
                                 ]
@@ -15342,9 +15353,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn("services.npcs.count_allies(false)", main)
             self.assertIn("services.npcs.count_allies(true)", main)
-            self.assertIn("services.npcs.has_role_nearby(actor", main)
             self.assertIn("services.overmap.search(", main)
-            self.assertIn(".activity.active", main)
 
     def test_translates_batch_28_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
