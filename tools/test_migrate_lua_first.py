@@ -3455,10 +3455,15 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             {"u_add_var": "choice", "possible_values": ["only"]},
             "u_add_var", "u_owner",
         )
+        repeated_choice_lines = migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "choice", "possible_values": ["left", "right"]},
+            "u_add_var", "u_owner",
+        )
         time_lines = migrate_lua_first.render_static_character_variable(
             {"u_add_var": "turn", "time": True}, "u_add_var", "u_owner",
         )
         self.assertIsNotNone(choice_lines)
+        self.assertIsNotNone(repeated_choice_lines)
         self.assertIsNotNone(time_lines)
         self.assertIn("services.random.int(1, #values)", "\n".join(choice_lines))
         self.assertNotIn("native_events.emit", "\n".join(time_lines))
@@ -3471,7 +3476,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         ))
         script = r"""
 local u_owner, npc_owner = {values={}}, {values={}}
-local events, random_calls, write_allowed = {}, 0, true
+local events, random_calls, write_allowed, random_index = {}, 0, true, 1
+local random_bounds = {}
 local services = {
     variables = {set=function(owner, key, value)
         if not write_allowed then return {ok=false} end
