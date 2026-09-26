@@ -42,7 +42,7 @@
 ---@field project_to fun(self: PointCoord, scale: string): PointCoord
 ---@field project_remain fun(self: PointCoord, scale: string): PointCoord
 ---@field project_combine fun(self: PointCoord, remainder: PointCoord): PointCoord
----@field to fun(self: PointCoord, origin: string, scale: string): PointCoord
+---@field to fun(self: PointCoord, scale: string): PointCoord
 ---@operator add(PointCoord): PointCoord
 ---@operator sub(PointCoord): PointCoord
 ---@operator mul(integer): PointCoord
@@ -58,7 +58,34 @@
 ---@field project_to fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_remain fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_combine fun(self: TripointCoord, remainder: TripointCoord): TripointCoord
----@field to fun(self: TripointCoord, origin: string, scale: string): TripointCoord
+---@field to fun(self: TripointCoord, scale: string): TripointCoord
+
+---@class CcbCoordsApi
+local CcbCoordsApi = {}
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute map-square coordinate.
+function CcbCoordsApi.tripoint_abs_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative map-square offset.
+function CcbCoordsApi.tripoint_rel_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute overmap-terrain coordinate.
+function CcbCoordsApi.tripoint_abs_omt(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative overmap-terrain offset.
+function CcbCoordsApi.tripoint_rel_omt(x, y, z) end
 
 ---@class TimeDuration
 ---@field turns integer
@@ -244,6 +271,89 @@ function CcbMapApi.snapshot(tile, options) end
 ---@return CcbResult result `value` is the committed CcbMapTileSnapshot.
 function CcbMapApi.edit(tile, expected_revision, changes) end
 
+---@class CcbWorldPointsNearbyOptions
+---@field min_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field offset? integer Nonnegative page offset; native maximum is 1,000,000.
+---@field limit? integer Nonnegative page size; native maximum is 1024.
+
+---@class CcbWorldNearbyPoint
+---@field position TripointCoord Absolute map-square position.
+---@field distance integer Chebyshev distance from the requested origin.
+
+---@class CcbWorldNearbyPointsPage
+---@field items CcbWorldNearbyPoint[] Dense one-based page of points.
+---@field origin TripointCoord Absolute map-square origin.
+---@field min_radius integer Effective minimum radius.
+---@field max_radius integer Effective maximum radius.
+---@field offset integer Effective page offset.
+---@field limit integer Effective page size.
+---@field total integer Total matching points before paging.
+---@field returned integer Number of points in this page.
+---@field has_more boolean Whether another page is available.
+
+---@class CcbWorldLocationRevertResult
+---@field position TripointCoord Absolute overmap-terrain position whose four submaps were snapshotted.
+---@field when TimePoint Scheduled event time.
+---@field key string Event key.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldLocationCopyResult
+---@field source TripointCoord Absolute overmap-terrain snapshot source.
+---@field destination TripointCoord Absolute overmap-terrain copy destination.
+---@field when TimePoint Scheduled event time.
+---@field key string Event key.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldApi
+local CcbWorldApi = {}
+
+---@param origin TripointCoord Explicit absolute map-square coordinate.
+---@param options? CcbWorldPointsNearbyOptions Bounded result page options.
+---@return CcbWorldNearbyPointsPage
+function CcbWorldApi.points_nearby(origin, options) end
+
+---@class CcbWorldLocationSelector
+---@field kind string Native selector kind: terrain, furniture, field, trap, monster, species, npc, or zone.
+---@field id? GameId Optional id whose kind must match `kind`.
+
+---@class CcbWorldFindLocationOptions
+---@field min_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field target_min_radius? integer Nonnegative minimum selector distance; native maximum is 1000.
+---@field target_max_radius? integer Nonnegative maximum selector distance; native maximum is 1000.
+---@field outdoor_only? boolean Require an outdoor random-placement result.
+---@field passable_only? boolean Require a passable random-placement result.
+
+---@class CcbWorldFindLocationResult
+---@field found boolean Whether a location was found.
+---@field selector string Effective selector kind.
+---@field distant_map boolean Whether the lookup loaded a detached map.
+---@field origin TripointCoord Requested absolute map-square origin.
+---@field reason? string Failure reason when found is false.
+---@field anchor? TripointCoord Selected selector anchor before random placement.
+---@field position? TripointCoord Final absolute map-square position; present when found is true.
+---@field distance_from_origin? integer Chebyshev distance from the requested origin.
+
+---@param origin TripointCoord Explicit absolute map-square origin.
+---@param selector CcbWorldLocationSelector Typed selector and optional matching GameId.
+---@param options? CcbWorldFindLocationOptions Bounded search and random-placement options.
+---@return CcbWorldFindLocationResult
+function CcbWorldApi.find_location(origin, selector, options) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
+---@param delay TimeDuration Delay before the scheduled revert.
+---@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@return CcbResult result `value` is a CcbWorldLocationRevertResult.
+function CcbWorldApi.schedule_location_revert(position, delay, key) end
+
+---@param source TripointCoord Explicit absolute overmap-terrain snapshot source.
+---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
+---@param delay TimeDuration Delay before the scheduled copy.
+---@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
+function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
+
 ---@class CcbOvermapTileSnapshot
 ---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.
 ---@field exists boolean Whether the overmap tile currently exists in the loaded buffer.
@@ -314,6 +424,19 @@ function CcbOvermapApi.snapshot(token) end
 ---@param changes CcbOvermapTileChanges Bounded overmap-tile changes.
 ---@return CcbResult result `value` is a CcbOvermapEditResult.
 function CcbOvermapApi.edit(token, expected_revision, changes) end
+
+---@class CcbOvermapRevealResult
+---@field scanned integer Number of positions inspected inside the square radius.
+---@field existing integer Number of existing overmap tiles found.
+---@field changed integer Number of tiles whose vision level changed.
+---@field radius integer Accepted radius in the native 0..30 range.
+---@field vision GameEnum GameEnum<OmVisionLevel> set on existing tiles.
+---@field existing_only boolean True; missing overmap tiles are not generated.
+
+---@param center TripointCoord Explicit absolute overmap-terrain center.
+---@param radius integer Nonnegative square reveal radius from 0 through 30.
+---@return CcbResult result `value` is a CcbOvermapRevealResult.
+function CcbOvermapApi.reveal(center, radius) end
 
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}
@@ -7507,7 +7630,7 @@ function CcbCharactersApi.intimidation(character) end
 
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
----@return CcbResult result `value` is a detached Character snapshot.
+---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
 
 ---@param observer GameHandle Exact live Character observer handle.
@@ -9304,6 +9427,7 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field faction GameId|nil GameId<faction> when present.
 ---@field attitude GameId
 ---@field attitude_name string
+---@field has_assigned_camp boolean
 ---@field dead boolean
 ---@field enemy boolean Native NPC enemy state (KILL or FLEE attitude).
 ---@field friendly boolean Native is_friendly result against the global avatar.
@@ -10624,6 +10748,14 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
 ---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
 
+---@class CcbMartialArtsApi
+local CcbMartialArtsApi = {}
+
+---Read the selected native style, including the force-unarmed rule used by weapon predicates.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value.force_unarmed` is the selected style's native value.
+function CcbMartialArtsApi.current(character) end
+
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
 
@@ -10731,7 +10863,7 @@ function CcbPlatformEnvironmentQueries.dimension() end
 --- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
 function CcbPlatformEnvironmentQueries.is_night() end
 
----@param position TripointCoord Absolute map-square coordinate inside the active map.
+---@param position TripointCoord Absolute map-square coordinate; out-of-bounds positions return true, matching map::is_outside.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
 
@@ -10807,7 +10939,9 @@ function CcbPlatformMathApi.evaluate(expression, actor, context) end
 ---@return CcbResult result `value` is the finite numeric result.
 function CcbPlatformMathApi.apply(expression, actor, context) end
 
----@param text string
+---@class CcbCharacterSensesSnapshot
+---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
+
 ---@class CcbCharacterSnapshot
 ---@field name string
 ---@field x integer
@@ -10822,6 +10956,11 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field hunger integer
 ---@field thirst integer
 ---@field sleepiness integer
+---@field senses CcbCharacterSensesSnapshot
+---@field environment CcbCharacterEnvironmentSnapshot
+
+---@class CcbCharacterEnvironmentSnapshot
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
 
 ---@class CcbMovementModesSnapshot
 ---@field items table
@@ -10841,6 +10980,7 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
 ---@field visible? boolean Present only when a separate observer was supplied.
 ---@field distance? integer Present only when a separate observer was supplied.
 ---@field attitude? string Present only when a separate observer was supplied.
@@ -10851,6 +10991,9 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
 
+---@return GameHandle Exact handle for the active avatar.
+function CcbCreaturesApi.avatar() end
+
 ---@param handle GameHandle Exact live Creature handle.
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
@@ -10860,9 +11003,26 @@ function CcbCreaturesApi.snapshot(handle) end
 ---@return CcbResult result
 function CcbCreaturesApi.nearby(observer, options) end
 
+---@class CcbVisibleMonsterSummary
+---@field direction string Native cardinal direction id.
+---@field count integer Total visible monsters counted in the direction.
+---@field type_count integer Number of distinct visible monster types in the direction.
+---@field present boolean Whether at least one visible monster type exists in the direction.
+---@field dangerous boolean Native safe-mode danger state in the direction.
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean, using Creature::sees.
+function CcbCreaturesApi.can_see(observer, target) end
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean from coordinate-only map::sees at MAX_VIEW_DISTANCE.
+function CcbCreaturesApi.has_line_of_sight(observer, target) end
+
 ---@param observer GameHandle Exact live avatar handle; NPC/monster/other Character handles fail closed.
 ---@param direction string One of N/NE/E/SE/S/SW/W/NW/L.
----@return CcbResult result
+---@return CcbVisibleMonsterSummary
 function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 ---@class CcbTimeSnapshot

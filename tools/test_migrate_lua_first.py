@@ -795,6 +795,17 @@ assert(calls==1)
             result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_string_comparisons_keep_native_string_variable_types(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"compare_string": [
+                {"context_val": "first"}, {"context_val": "second"},
+            ]}
+        )
+
+        self.assertIsNotNone(expression)
+        self.assertEqual(expression.count('type(result.value) == "string"'), 2)
+        self.assertNotIn('tostring(result.value or "")', expression)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_string_comparisons_preserve_owners_and_short_circuit(self) -> None:
         for key, beta, expected in (("compare_string", "alpha", True),
@@ -2007,7 +2018,7 @@ local context = {data={selected_ref=REFERENCE}}
 local function service_value(result) assert(result.ok); return result.value end
 local called = false
 local function query(character, id)
- assert(character == TARGET and id == IDENTIFIER)
+ assert(character == TARGET and id.value == IDENTIFIER)
  called = true
  return {ok=true,value=true}
 end
@@ -2015,7 +2026,8 @@ local services = {
  variables={resolve=function(data, owner, scope, key)
    return {ok=true,value={value=owner[key]}}
  end},
- types={id=function(kind,id) assert(kind=='mutation'); return id end},
+  types={id=function(kind,id) assert(kind=='mutation'); return {
+    value=id,is_valid=function(self) return self.value~='' end} end},
  mutations={has=query,is_purifiable=query,is_visible_to=function(character,viewer,id)
    assert(viewer == OBSERVER)
    return query(character,id)
@@ -2040,10 +2052,11 @@ local context = {data={}}
 local function service_value(r) return r.value end
 local calls = 0
 local services = {
- types={id=function(kind,id) assert(id == 'QUICK'); return id end},
- variables={resolve=function() error('short-circuited variable was read') end},
- mutations={has=function(character,id)
-   assert(character == actor and id == 'QUICK')
+  types={id=function(kind,id) assert(id == 'QUICK'); return {
+    value=id,is_valid=function(self) return self.value~='' end} end},
+  variables={resolve=function() error('short-circuited variable was read') end},
+  mutations={has=function(character,id)
+    assert(character == actor and id.value == 'QUICK')
    calls = calls + 1
    return {ok=true,value=true}
  end}
@@ -2056,6 +2069,60 @@ assert(calls == 1)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"u_has_trait": {"var_val": "selected"}}, avatar_actor_proven=True))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_trait_predicates_fail_closed_for_missing_or_unknown_dynamic_ids(self) -> None:
+        for selector, target, method in (
+            ("u_has_trait", "actor", "has"),
+            ("npc_is_trait_purifiable", "partner", "is_purifiable"),
+        ):
+            with self.subTest(selector=selector):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {selector: {"u_val": "selected"}},
+                    avatar_actor_proven=True,
+                    npc_actor_expression="partner",
+                )
+                self.assertIsNotNone(expression)
+                script = """
+local actor, partner = {}, {}
+local selected = nil
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ types={id=function(kind,value)
+  assert(kind=='mutation')
+  assert(#value<=256 and not value:find('%c'))
+  return {value=value,is_valid=function(self)
+   return self.value=='KNOWN' or self.value=='73'
+  end}
+ end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(scope=='u' and key=='selected')
+  return {ok=true,value={value=selected}}
+ end},
+ mutations={has=function(character,id)
+   assert(character==TARGET and id.value=='KNOWN')
+   return {ok=true,value=true}
+  end,
+  is_purifiable=function(character,id)
+   assert(character==TARGET and id.value=='KNOWN')
+   return {ok=true,value=true}
+  end}
+}
+assert(not (EXPRESSION))
+selected='UNKNOWN'
+assert(not (EXPRESSION))
+selected=73
+assert(not (EXPRESSION))
+selected=string.rep('x',257)
+assert(not (EXPRESSION))
+selected=string.char(7)
+assert(not (EXPRESSION))
+services.variables.resolve=function() return {ok=true,value={value='KNOWN'}} end
+assert(EXPRESSION)
+""".replace("TARGET", target).replace("EXPRESSION", expression)
+                result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_skill_teaching_requires_two_proven_participants(self) -> None:
         for selector, expected in (
@@ -3275,6 +3342,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertNotIn("context.alpha", main)
             self.assertNotIn("context.beta", main)
+            declaration_path = (
+                Path(__file__).parents[1] / "data/lua/types/ccb_platform_v1.d.lua"
+            )
+            declarations = declaration_path.read_text(encoding="utf-8")
+            self.assertIn(
+                "function CcbMartialArtsApi.current(character) end", declarations
+            )
+            self.assertIn("value.force_unarmed", declarations)
 
     def test_weapon_predicates_without_exact_shape_or_actor_proof_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -4769,7 +4844,7 @@ assert(#events == 11)
                         "id": "award",
                         "required_event": "game_start",
                         "effect": {
-                            "give_achievement": "achievement_reach_string_dimension"
+                            "give_achievement": "achievement_not_registered"
                         },
                     }
                 ),
@@ -4785,10 +4860,42 @@ assert(#events == 11)
             self.assertIn("services.achievements.complete", main)
             self.assertIn(
                 'services.types.id("achievement", '
-                '"achievement_reach_string_dimension")',
+                '"achievement_not_registered")',
                 main,
             )
+            self.assertIn("if achievement_id:is_valid() then", main)
+            self.assertIn("services.achievements.complete(achievement_id)", main)
             self.assertNotIn("run_eoc", main)
+
+    def test_run_eoc_selector_remains_platform_gap_until_full_menu_parity(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "selector",
+            "required_event": "game_start",
+            "effect": {
+                "run_eoc_selector": ["selector_option"],
+                "hide_failing": True,
+                "allow_cancel": False,
+                "keys": ["x"],
+            },
+        })
+
+        rendered = migrate_lua_first.render_eoc(
+            source, result,
+            eoc_function_names={"selector_option": "selector_option"},
+        )
+
+        self.assertIn(
+            "TODO: run_eoc_selector needs equivalent EOC condition, menu, "
+            "and translated-text behavior.", rendered,
+        )
+        self.assertNotIn("ccb.presentation.choose", rendered)
+        selector_todo = next(
+            todo for todo in result.todos
+            if "full native selector condition and menu semantics" in todo.message
+        )
+        self.assertEqual(selector_todo.category, "platform_gap")
 
     def test_translates_avatar_bionic_install_without_a_dialogue_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -7833,8 +7940,15 @@ assert(#events == 11)
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "npc_outside",
+                            "id": "npc_outside_unproven",
                             "required_event": "game_start",
+                            "condition": "npc_is_outside",
+                            "effect": {"message": "npc outside"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_outside_proven",
+                            "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_outside",
                             "effect": {"message": "npc outside"},
                         },
@@ -7855,22 +7969,29 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.converted), 3)
             self.assertEqual(len(result.partial), 1)
             self.assertIn('runtime.on("game:game_start"', main)
             self.assertIn(
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)",
+                ".environment.outside",
                 main,
             )
             self.assertIn(
-                "EOC npc_outside condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC npc_outside_unproven condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
                 "EOC item_outside condition TODO: translate the legacy condition into a Lua predicate",
                 report,
+            )
+            self.assertEqual(
+                migrate_lua_first.render_eoc_condition_expression(
+                    "npc_is_outside",
+                    npc_actor_expression="context.actors.npc",
+                ),
+                "service_value(services.creatures.snapshot("
+                "context.actors.npc)).outside",
             )
             self.assertNotIn("run_eoc", main)
 
@@ -8085,6 +8206,63 @@ assert(#events == 11)
                 1,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_npc_has_assigned_camp_without_beta_stays_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_assigned_camp",
+                    "required_event": "npc_becomes_hostile",
+                    "condition": "npc_has_assigned_camp",
+                    "effect": {"message": "assigned"},
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_camp_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            declarations = (
+                REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
+            ).read_text(encoding="utf-8")
+
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn("services.npcs.get(", main)
+            self.assertIn("condition TODO: translate", report)
+            self.assertIn("---@field has_assigned_camp boolean", declarations)
+
+    def test_npc_assigned_camp_uses_only_explicit_beta_and_preserves_not(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            {"not": "npc_has_assigned_camp"},
+            npc_actor_proven=True,
+            npc_actor_expression="(context.actors and context.actors.beta) or actor",
+        )
+
+        self.assertIsNotNone(predicate)
+        self.assertIn("not (", predicate)
+        self.assertIn(
+            "end)(context and context.actors and context.actors.beta)",
+            predicate,
+        )
+        self.assertNotIn("or actor", predicate)
+        self.assertIn("candidate == nil", predicate)
+        self.assertIn('kind ~= "npc"', predicate)
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_has_assigned_camp",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_has_assigned_camp"
+            )
+        )
 
     def test_renders_butchery_requirement_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -11814,6 +11992,8 @@ assert(#events == 11)
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 2)
             self.assertIn("services.characters.adjust(actor, { moves = -5000 })", main)
+            self.assertEqual(main.count(".senses.can_see"), 2)
+            self.assertNotIn(".senses.blind", main)
             self.assertIn("condition TODO", report)
 
     def test_turn_cost_literal_conversion_matches_native_turns_to_moves(self) -> None:
@@ -12185,7 +12365,7 @@ assert(#events == 11)
             )
             self.assertNotIn("needs review", report)
 
-    def test_translates_bounded_npc_goal_and_guard_variable_shapes(self) -> None:
+    def test_avatar_goal_and_guard_effects_keep_native_noop_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -12218,13 +12398,9 @@ assert(#events == 11)
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
-            self.assertIn("services.overmap.search(origin", main)
-            self.assertIn('terrain = "road"', main)
-            self.assertIn('special = "special_road"', main)
-            self.assertIn("minimum_radius = 1", main)
-            self.assertIn("services.npcs.set_goal(", main)
-            self.assertIn('services.variables.get(\n        actor, "guard_position")', main)
-            self.assertIn("services.npcs.set_guard_position(", main)
+            self.assertNotIn("services.overmap.search(", main)
+            self.assertNotIn("services.npcs.set_goal(", main)
+            self.assertNotIn("services.npcs.set_guard_position(", main)
             self.assertNotIn("TODO: translate the NPC goal", main)
             self.assertNotIn("TODO: translate the NPC guard position", main)
             self.assertNotIn("domain-service conversion", report)
@@ -13248,11 +13424,11 @@ assert(#events == 11)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn(
-                "map holder requires one explicitly typed abs_ms coordinate; "
-                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints",
                 main,
             )
-            self.assertEqual(report.count("map holder requires"), 2)
+            self.assertEqual(report.count("pickup needs explicit map candidates"), 2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_follower_services_keep_scene_order_cancel_and_copy_direction(self) -> None:
@@ -15162,7 +15338,18 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("services.overmap.reveal(", main)
             self.assertIn("services.world.schedule_location_revert(", main)
+            self.assertIn(
+                'services.world.schedule_location_revert(\n'
+                '        (context.data["loc"]):project_to("omt"),',
+                main,
+            )
             self.assertIn("services.world.schedule_location_copy(", main)
+            self.assertIn(
+                'services.world.schedule_location_copy(\n'
+                '        (context.data["loc"]):project_to("omt"), '
+                '(context.data["destination"]):project_to("omt"),',
+                main,
+            )
             self.assertIn("services.world.transform_radius(", main)
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
@@ -15640,11 +15827,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn(
-                "map holder requires one explicitly typed abs_ms coordinate; "
-                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints",
                 main,
             )
-            self.assertIn("map holder requires", report)
+            self.assertIn("pickup needs explicit map candidates", report)
 
     def test_character_action_effects_lower_for_proven_avatar_and_npc_actors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15984,6 +16171,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("exact NPC/avatar handles and topic", report)
             self.assertIn("services.achievements.complete(", main)
+            self.assertIn("if achievement_id:is_valid() then", main)
             self.assertIn('context.data["branch_value"]', main)
             self.assertIn('services.characters.damage(\n        actor', main)
 
@@ -16646,16 +16834,33 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                'local center_result = services.variables.get(\n'
-                '        actor, "center")',
+                "absolute-ms reflection operation and exact beta proof",
                 main,
             )
-            self.assertIn(
-                'actor, "output", center:scale_by(2):subtract(relative))',
-                main,
-            )
-            self.assertEqual(main.count("TODO: translate mirror_coordinates"), 2)
-            self.assertIn("needs domain-service conversion", report)
+            self.assertNotIn("services.variables.get(", main)
+            self.assertNotIn("scale_by(2)", main)
+            self.assertEqual(main.count("TODO: mirror_coordinates needs"), 3)
+            self.assertIn("safe absolute-ms reflection and variable-scope semantics", report)
+            self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
+
+    def test_mirror_coordinates_does_not_treat_hostile_event_actor_as_beta(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "hostile_npc_mirror",
+            "required_event": "npc_becomes_hostile",
+            "effect": [{
+                "mirror_coordinates": {"npc_val": "output"},
+                "center_var": {"npc_val": "center"},
+                "relative_var": {"npc_val": "relative"},
+            }],
+        })
+
+        rendered = migrate_lua_first.render_eoc(source, result)
+
+        self.assertIn("exact beta proof", rendered)
+        self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
+        self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
     def test_translates_literal_line_of_sight_condition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -16696,14 +16901,19 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn(
-                "services.gameplay.environment.line_of_sight("
-                "context.data[\"origin\"], context.data[\"target\"], 12, false)",
-                main,
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn(
+                "services.gameplay.environment.line_of_sight(", main
             )
-            self.assertIn("EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate", report)
+            self.assertIn(
+                "EOC literal_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertNotIn("run_eoc", main)
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
@@ -17537,7 +17747,117 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('services.variables.get_global("dy")', main)
             self.assertIn('services.variables.resolve(context.data, actor, "u", "dz")', main)
             self.assertIn("tripoint_abs_ms(location.x, location.y", main)
+            self.assertIn("math.modf(", main)
+            self.assertNotIn("math.floor(", main)
             self.assertNotIn("needs domain-service conversion", report)
+
+    def test_location_variable_adjust_uses_relative_overmap_offsets_and_native_truncation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "relative_omt_location_adjust",
+                        "required_event": "game_start",
+                        "effect": [
+                            {
+                                "location_variable_adjust": {"context_val": "origin"},
+                                "output_var": {"context_val": "destination"},
+                                "x_adjust": -1.7,
+                                "y_adjust": 2.7,
+                                "z_adjust": -0.7,
+                            },
+                            {
+                                "location_variable_adjust": {"context_val": "omt_origin"},
+                                "output_var": {"context_val": "omt_destination"},
+                                "x_adjust": -1,
+                                "y_adjust": 2,
+                                "overmap_tile": True,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "relative_omt_adjust_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.coords.tripoint_rel_omt(", main)
+            self.assertIn(':to("ms")', main)
+            self.assertIn("math.modf(", main)
+            self.assertNotIn("tripoint_omt_ms(", main)
+            self.assertNotIn("math.floor(", main)
+
+    def test_fractional_overmap_tile_location_adjustment_stays_todo(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "fractional_omt_location_adjust",
+                        "required_event": "game_start",
+                        "effect": {
+                            "location_variable_adjust": {"context_val": "origin"},
+                            "x_adjust": -1.7,
+                            "overmap_tile": True,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "fractional_omt_adjust_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.coords.tripoint_rel_omt(", main)
+
+    def test_location_variable_search_applies_coordinate_adjustment_once(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "single_location_adjustment",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_location_variable": {"context_val": "picked"},
+                            "terrain": "t_grass",
+                            "max_radius": 3,
+                            "x_adjust": -1.7,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "single_location_adjustment_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.world.find_location(", main)
+            self.assertEqual(main.count("math.modf("), 1)
+            self.assertNotIn("x_adjust =", main)
 
     def test_lowers_var_indirected_coordinate_writes_with_resolved_variable_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -25257,7 +25577,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
         mutation = {
             "set_terrain": "t_floor",
             "set_furniture": "f_null",
-            "set_trap": "tr_beartrap",
             "u_set_field": "fd_fire",
             "location": coordinate,
             "target_var": coordinate,
@@ -25276,8 +25595,34 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertIn("map_tile_snapshot.revision", main)
         self.assertIn('services.types.id("terrain", "t_floor")', main)
         self.assertIn('services.types.id("furniture", "f_null")', main)
-        self.assertIn('services.types.id("trap", "tr_beartrap")', main)
         self.assertIn('services.types.id("field", "fd_fire")', main)
+
+        for trap_effect in (
+            {"set_trap": "tr_beartrap", "location": coordinate},
+            {"set_trap": "tr_beartrap", "location": coordinate, "radius": 0},
+        ):
+            self.assertIsNone(
+                migrate_lua_first._render_static_map_state_edit(
+                    trap_effect, True, False
+                )
+            )
+
+        trap_result = migrate_lua_first.MigrationResult()
+        trap_source = migrate_lua_first.SourceObject(Path("trap.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "trap_gap",
+            "required_event": "game_start",
+            "effect": {
+                "set_trap": "tr_beartrap",
+                "location": coordinate,
+                "radius": 0,
+            },
+        })
+        trap_main = migrate_lua_first.render_eoc(trap_source, trap_result)
+        self.assertNotIn("services.map.edit(", trap_main)
+        self.assertIn("set_trap needs the native loaded-area and built-in-trap", trap_main)
+        trap_todo = next(todo for todo in trap_result.todos if "set_trap needs" in todo.message)
+        self.assertEqual(trap_todo.category, "platform_gap")
 
         terrain = migrate_lua_first.render_static_set_terrain_or_furniture(
             {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
@@ -25302,15 +25647,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
             True,
             False,
         )
-        self.assertIsNotNone(pickup)
-        pickup_main = "\n".join(pickup or [])
-        self.assertIn("services.items.page(map_holder", pickup_main)
-        self.assertIn(
-            "services.items.transfer(\n                map_entry.handle, map_holder",
-            pickup_main,
-        )
-        self.assertEqual(pickup_main.count("services.map.tile("), 1)
-        self.assertNotIn("position", pickup_main)
+        self.assertIsNone(pickup)
         for legacy_map_write in (
             "services.world.tile(",
             "services.world.set_terrain(",
@@ -25319,7 +25656,43 @@ assert(context.conditions.check==original and context.conditions.check() and con
             "services.world.put_field(",
             "services.world.remove_field(",
         ):
-            self.assertNotIn(legacy_map_write, main + holder_main + pickup_main)
+            self.assertNotIn(legacy_map_write, main + holder_main)
+
+    def test_pickup_migration_preserves_manual_todo_until_selection_is_supported(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "explicit_pickup_requires_native_selection",
+                    "required_event": "game_start",
+                    "effect": {
+                        "u_pickup_items": {"abs_ms": [12, -7, 0]},
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "pickup_selection_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            todo = (
+                "pickup needs explicit map candidates and a Platform API preserving "
+                "native selection and movement/volume/mass constraints"
+            )
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(
+                [todo.category for todo in result.todos], ["platform_gap"]
+            )
+            self.assertIn(todo, main)
+            self.assertIn(todo, report)
+            self.assertNotIn("services.items.page(", main)
+            self.assertNotIn("services.items.transfer(", main)
 
     def test_map_migration_rejects_unproven_frames_with_precise_todos(self) -> None:
         bad_coordinates = (
@@ -25411,11 +25784,17 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "map mutation requires one explicitly typed abs_ms coordinate; "
                 "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
             )
-            self.assertEqual(main.count(todo), len(bad_coordinates))
+            trap_gap = "set_trap needs the native loaded-area and built-in-trap"
+            self.assertEqual(main.count(todo), len(bad_coordinates) - 1)
+            self.assertEqual(main.count(trap_gap), 1)
             self.assertNotIn("services.map.tile(", main)
             self.assertNotIn("services.map.edit(", main)
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
+            self.assertTrue(any(
+                item.category == "platform_gap" and "set_trap needs" in item.message
+                for item in result.todos
+            ))
             for legacy_map_write in (
                 "services.world.tile(",
                 "services.world.set_terrain(",

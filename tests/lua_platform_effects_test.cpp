@@ -628,6 +628,76 @@ TEST_CASE( "lua_platform_technique_large_blacklist_matches_native",
 }
 
 
+TEST_CASE( "lua_platform_cancel_idle_npc_runs_native_backlog_cleanup",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.backlog.emplace_back( activity_id( "ACT_WAIT" ), 100 );
+    fixture.other.backlog.emplace_back( activity_id( "ACT_WAIT" ), 100 );
+    REQUIRE_FALSE( native.activity );
+    REQUIRE_FALSE( fixture.other.activity );
+    REQUIRE_FALSE( native.has_player_activity() );
+    REQUIRE_FALSE( fixture.other.has_player_activity() );
+
+    native.cancel_activity();
+    cata::lua_platform::install_activity_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function cancel = fixture.services["activities"]["cancel"];
+    sol::protected_function_result call = cancel( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    CHECK( value["changed"].get<bool>() );
+    CHECK( fixture.other.backlog.size() == native.backlog.size() );
+    CHECK( fixture.other.backlog.empty() );
+    CHECK_FALSE( fixture.other.activity );
+}
+
+
+TEST_CASE( "lua_platform_cancel_idle_npc_clears_native_auto_resume_guard",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.backlog.emplace_back( activity_id( "ACT_WAIT" ), 100 );
+    fixture.other.backlog.emplace_back( activity_id( "ACT_WAIT" ), 100 );
+    native.backlog.front().auto_resume = true;
+    fixture.other.backlog.front().auto_resume = true;
+    REQUIRE_FALSE( native.activity );
+    REQUIRE_FALSE( fixture.other.activity );
+
+    native.cancel_activity();
+    cata::lua_platform::install_activity_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    },
+    [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function cancel = fixture.services["activities"]["cancel"];
+    sol::protected_function_result call = cancel( fixture.handle( true ) );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    sol::table value = result["value"];
+    CHECK( value["changed"].get<bool>() );
+    REQUIRE( fixture.other.backlog.size() == 1 );
+    REQUIRE( native.backlog.size() == 1 );
+    CHECK_FALSE( fixture.other.backlog.front().auto_resume );
+    CHECK( fixture.other.backlog.front().auto_resume ==
+           native.backlog.front().auto_resume );
+}
+
+
 TEST_CASE( "lua_platform_revert_idle_npc_restores_native_state",
            "[lua][platform][activities][semantic]" )
 {

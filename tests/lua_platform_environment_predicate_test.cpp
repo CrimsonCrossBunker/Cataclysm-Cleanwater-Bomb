@@ -7,15 +7,20 @@
 #include <string>
 #include <vector>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "condition.h"
+#include "coordinates.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "map.h"
+#include "map_scale_constants.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
 #include "translations.h"
@@ -167,6 +172,37 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
     CHECK( translated_spring.get<bool>() == localized_spring( context ) );
     CHECK( translated_spring.get<bool>() );
 #endif
+
+    map &here = get_map();
+    const tripoint_abs_ms origin = get_avatar().pos_abs();
+    const tripoint_abs_ms outside_position = origin + tripoint_rel_ms(
+                here.getmapsize() * SEEX, 0, 0 );
+    const tripoint_bub_ms outside_bubble = here.get_bub( outside_position );
+    REQUIRE_FALSE( here.inbounds( outside_bubble ) );
+    lua["outside_position"] = script_tripoint_coord::from_native(
+                                  coords::origin::abs, coords::scale::map_square,
+                                  outside_position.raw() );
+    const sol::protected_function outside_query = lua.load(
+                "return services.gameplay.environment.is_outside(outside_position)" );
+    const sol::protected_function_result outside_result = outside_query();
+    REQUIRE( outside_result.valid() );
+    CHECK( outside_result.get<bool>() == here.is_outside( outside_bubble ) );
+
+    const sol::protected_function character_snapshot_query = lua.load(
+                "local snapshot = services.characters.snapshot(services.characters.avatar()); "
+                "return snapshot.ok and snapshot.value.environment.outside" );
+    const sol::protected_function_result character_snapshot_result =
+        character_snapshot_query();
+    REQUIRE( character_snapshot_result.valid() );
+    CHECK( character_snapshot_result.get<bool>() == is_creature_outside( get_avatar() ) );
+
+    const sol::protected_function creature_snapshot_query = lua.load(
+                "local snapshot = services.creatures.snapshot(services.characters.avatar()); "
+                "return snapshot.ok and snapshot.value.outside" );
+    const sol::protected_function_result creature_snapshot_result =
+        creature_snapshot_query();
+    REQUIRE( creature_snapshot_result.valid() );
+    CHECK( creature_snapshot_result.get<bool>() == is_creature_outside( get_avatar() ) );
 }
 
 #endif

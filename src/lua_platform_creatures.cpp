@@ -283,6 +283,7 @@ sol::table snapshot_creature(
     result["position"] = script_tripoint_coord::from_native(
                              coords::origin::abs, coords::scale::map_square,
                              position.raw() );
+    result["outside"] = is_creature_outside( creature );
     if( observer != nullptr ) {
         result["visible"] = observer->sees( here, creature );
         result["distance"] = rl_dist(

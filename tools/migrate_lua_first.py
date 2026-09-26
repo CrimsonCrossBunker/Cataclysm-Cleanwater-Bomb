@@ -4201,107 +4201,9 @@ def render_static_eoc_selector(
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    """Lower ``run_eoc_selector`` to a bounded Platform choice menu."""
-    if "run_eoc_selector" not in effect:
-        return None
-    if set(effect) - {
-        "run_eoc_selector", "allow_cancel", "names", "title", "descriptions",
-        "keys", "variables", "hide_failing", "hilight_disabled",
-    }:
-        return None
-    references = _validated_eoc_references(
-        effect.get("run_eoc_selector"), eoc_function_names
-    )
-    if references is None or not references or len(references) > 128:
-        return None
-    names = effect.get("names")
-    if names is None:
-        names = references
-    if (
-        not isinstance(names, list) or len(names) != len(references) or
-        not all(isinstance(name, str) and bounded_utf8_string(name, 512, allow_empty=False) for name in names)
-    ):
-        return None
-    descriptions = effect.get("descriptions", [""] * len(references))
-    if (
-        not isinstance(descriptions, list) or len(descriptions) != len(references) or
-        not all(isinstance(description, str) and bounded_utf8_string(description, 2048, allow_empty=True) for description in descriptions)
-    ):
-        return None
-    title = effect.get("title", "Select an action")
-    if not isinstance(title, str) or not bounded_utf8_string(title, 512, allow_empty=False):
-        return None
-    allow_cancel = effect.get("allow_cancel", True)
-    if not isinstance(allow_cancel, bool):
-        return None
-    for option in ("hide_failing", "hilight_disabled"):
-        if option in effect and not isinstance(effect[option], bool):
-            return None
-    keys = effect.get("keys")
-    if keys is not None and (
-        not isinstance(keys, list) or len(keys) != len(references) or
-        not all(isinstance(key, str) and len(key) == 1 for key in keys)
-    ):
-        return None
-    variable_contexts = effect.get("variables", [])
-    if variable_contexts is None:
-        variable_contexts = []
-    if (
-        not isinstance(variable_contexts, list) or
-        len(variable_contexts) not in {0, 1, len(references)}
-    ):
-        return None
-    for variable_context in variable_contexts:
-        if not isinstance(variable_context, dict) or len(variable_context) > 64:
-            return None
-        if any(
-            not isinstance(name, str) or not bounded_utf8_string(name, 256) or
-            lua_scalar_literal(value) is None and render_eoc_value_expression(value, "nil", actor_expression or "actor") is None
-            for name, value in variable_context.items()
-        ):
-            return None
-    lines = [
-        "    local selector_choices = {",
-    ]
-    for index, (name, description) in enumerate(zip(names, descriptions), 1):
-        lines.append(
-            f"        {{ id = {lua_quote(str(index))}, label = {lua_quote(name)}, "
-            f"description = {lua_quote(description)} }},"
-        )
-    lines.extend([
-        "    }",
-        f"    local selected_id = ccb.presentation.choose({lua_quote(title)}, selector_choices)",
-    ])
-    for index, reference in enumerate(references, 1):
-        prefix = "    if" if index == 1 else "    elseif"
-        lines.append(f"{prefix} selected_id == {lua_quote(str(index))} then")
-        if variable_contexts:
-            context_index = 0 if len(variable_contexts) == 1 else index - 1
-            variable_context = variable_contexts[context_index]
-            for name, value in variable_context.items():
-                rendered_value = lua_scalar_literal(value)
-                if rendered_value is None:
-                    rendered_value = render_eoc_value_expression(
-                        value, "nil", actor_expression or "actor"
-                    )
-                if rendered_value is None:
-                    return None
-                lines.append(
-                    f"        context.data[{lua_quote(name)}] = {rendered_value}"
-                )
-                # Native EOC math variables use the underscored context
-                # spelling while selector JSON uses the compact key (e.g.
-                # `{\"val\": 8}` is read as `_val`).  Publish both aliases
-                # so the typed callback preserves that established contract.
-                if not name.startswith("_"):
-                    lines.append(
-                        f"        context.data[{lua_quote('_' + name)}] = context.data[{lua_quote(name)}]"
-                    )
-        lines.append(
-            f"        {eoc_function_names[reference]}(context, {actor_expression or 'nil'})"
-        )
-    lines.append("    end")
-    return lines
+    """Keep selectors fail-closed until all native menu state can be lowered."""
+    del effect, eoc_function_names, actor_expression
+    return None
 
 
 def render_static_weighted_list_eocs(
@@ -5211,9 +5113,13 @@ def render_static_false_effect(
         ):
             return None
         return [
-            "        services.achievements.complete(",
-            "            services.types.id(\"achievement\", "
-            f"{lua_quote(effect['give_achievement'])}))",
+            "        do",
+            "            local achievement_id = services.types.id(\"achievement\", "
+            f"{lua_quote(effect['give_achievement'])})",
+            "            if achievement_id:is_valid() then",
+            "                services.achievements.complete(achievement_id)",
+            "            end",
+            "        end",
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
@@ -19593,6 +19499,7 @@ def _coordinate_numeric_expression(
     value: Any,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    require_integer: bool = False,
 ) -> str | None:
     """Render a bounded numeric coordinate adjustment with actor-correct vars."""
     actor_expression = "actor" if (avatar_actor_proven or npc_actor_proven) else "nil"
@@ -19600,7 +19507,7 @@ def _coordinate_numeric_expression(
         if len(value) != 2:
             return None
         bounds = [
-            _literal_integer_or_none(entry, -1000000, 1000000)
+            _literal_integer_or_none(entry, -2147483648, 2147483647)
             for entry in value
         ]
         if any(bound is None for bound in bounds):
@@ -19624,16 +19531,16 @@ def _coordinate_numeric_expression(
             if not (avatar_actor_proven or npc_actor_proven):
                 return None
             actor_expression = "actor"
+    if require_integer:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        return None if literal is None else str(literal)
     rendered = render_eoc_numeric_expression(value, "0", actor_expression)
     if rendered is None:
         return None
-    # Native dbl_or_var is converted to an integer Tripoint.  Clamp the
-    # dynamic form before conversion so malformed Mod state cannot overflow a
-    # native coordinate while still preserving ordinary values exactly.
-    return (
-        "math.max(-1000000, math.min(1000000, "
-        f"math.floor(({rendered}) + 0.5)))"
-    )
+    # Native dbl_or_var converts to int by truncating toward zero.  The
+    # parentheses keep Lua from forwarding math.modf's fractional result;
+    # the registered tripoint constructor rejects values outside native int.
+    return f"(math.modf(({rendered})))"
 
 
 def render_static_dimension_name(
@@ -19684,45 +19591,9 @@ def render_static_mirror_coordinates(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Mirror two stored typed coordinates around a third Character variable."""
-    if set(effect) != {"mirror_coordinates", "center_var", "relative_var"}:
-        return None
-    output = _coordinate_variable_descriptor(effect["mirror_coordinates"])
-    center = _coordinate_variable_descriptor(effect["center_var"])
-    relative = _coordinate_variable_descriptor(effect["relative_var"])
-    if output is None or center is None or relative is None:
-        return None
-    if not (output[0] == center[0] == relative[0]):
-        return None
-    if output[0] == "context":
-        return [
-            f"    local center = context.data[{lua_quote(center[1])}]",
-            f"    local relative = context.data[{lua_quote(relative[1])}]",
-            "    if center ~= nil and relative ~= nil then",
-            f"        context.data[{lua_quote(output[1])}] = "
-            "center:scale_by(2):subtract(relative)",
-            "    end",
-        ]
-    if output[0] not in {"u", "npc"}:
-        return None
-    if output[0] == "u":
-        if not avatar_actor_proven:
-            return None
-    elif not npc_actor_proven:
-        return None
-    return [
-        "    local center_result = services.variables.get(",
-        f"        actor, {lua_quote(center[1])})",
-        "    local relative_result = services.variables.get(",
-        f"        actor, {lua_quote(relative[1])})",
-        "    if center_result.exists and relative_result.exists then",
-        "        local center = service_value(center_result)",
-        "        local relative = service_value(relative_result)",
-        "        services.variables.set(",
-        f"            actor, {lua_quote(output[1])}, "
-        "center:scale_by(2):subtract(relative))",
-        "    end",
-    ]
+    """Fail closed: Platform lacks safe absolute-ms reflection semantics."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_closest_city_effect(
@@ -19907,6 +19778,11 @@ def render_static_npc_goal_effect(
         if not isinstance(value, int) or isinstance(value, bool) or not -60 <= value <= 60:
             return None
         offsets.append(value)
+    if key == "u_set_goal":
+        # Native f_npc_goal resolves the alpha talker with get_npc().  In this
+        # proven-avatar context that returns null, so the bounded effect is a
+        # no-op.  Do not pass the avatar Character handle to an NPC service.
+        return []
     actor = "actor"
     visibility = ""
     if "must_see" in target:
@@ -19957,6 +19833,25 @@ def render_static_npc_guard_position_effect(
         return None
     if actor_scope == "npc" and not npc_actor_proven:
         return None
+    if actor_scope == "u":
+        # Native f_guard_pos resolves the alpha talker with get_npc().  In this
+        # proven-avatar context the native effect is a no-op; retain that
+        # behavior instead of passing a Character handle to an NPC service.
+        if unique_id:
+            descriptor = _coordinate_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "global":
+                return None
+        elif (
+            isinstance(target, dict) and
+            set(target) == {"context_val"} and
+            bounded_utf8_string(target.get("context_val"), 256)
+        ):
+            pass
+        else:
+            descriptor = _static_character_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "u":
+                return None
+        return []
     if unique_id:
         descriptor = _coordinate_variable_descriptor(target)
         if descriptor is None or descriptor[0] != "global":
@@ -22628,28 +22523,31 @@ def render_static_location_variable_adjust(
     source = _coordinate_variable_descriptor(effect[key])
     if source is None:
         return None
+    z_override = effect.get("z_override", False)
+    overmap_tile = effect.get("overmap_tile", False)
+    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
+        return None
     output = source
     if "output_var" in effect:
         output = _coordinate_variable_descriptor(effect["output_var"])
         if output is None or output[0] != source[0]:
             return None
     x_adjust = _coordinate_numeric_expression(
-        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven
+        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven,
+        require_integer=overmap_tile,
     )
     y_adjust = _coordinate_numeric_expression(
-        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven
+        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven,
+        require_integer=overmap_tile,
     )
     z_adjust = _coordinate_numeric_expression(
         effect.get("z_adjust", 0), avatar_actor_proven, npc_actor_proven
     )
     if x_adjust is None or y_adjust is None or z_adjust is None:
         return None
-    z_override = effect.get("z_override", False)
-    overmap_tile = effect.get("overmap_tile", False)
-    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
-        return None
     offset = (
-        f"services.coords.tripoint_omt_ms({x_adjust}, {y_adjust}, 0)"
+        "services.coords.tripoint_rel_omt("
+        f"{x_adjust}, {y_adjust}, 0):to(\"ms\")"
         if overmap_tile else
         f"services.coords.tripoint_rel_ms({x_adjust}, {y_adjust}, 0)"
     )
@@ -22915,6 +22813,20 @@ def render_dynamic_location_variable_search(
             f"math.floor(({dynamic}) + 0.5)))"
         )
 
+    def coordinate_integer_expression(
+        value: Any, minimum: int, maximum: int
+    ) -> str | None:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        if literal is not None:
+            return str(literal)
+        dynamic = render_eoc_numeric_expression(value, str(minimum), actor)
+        if dynamic is None:
+            return None
+        # Native coordinate construction converts dbl_or_var to int, which
+        # truncates toward zero.  Typed coordinate operations reject values
+        # outside the native int range instead of silently clamping them.
+        return f"(math.modf(({dynamic})))"
+
     origin = (
         "service_value(services.characters.snapshot(" + actor + ")).creature.position"
     )
@@ -22925,9 +22837,15 @@ def render_dynamic_location_variable_search(
         )
         if source_position is None:
             return None
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+        x_adjust = coordinate_integer_expression(
+            effect.get("x_adjust", 0), -1000, 1000
+        )
+        y_adjust = coordinate_integer_expression(
+            effect.get("y_adjust", 0), -1000, 1000
+        )
+        z_adjust = coordinate_integer_expression(
+            effect.get("z_adjust", 0), -20, 20
+        )
         if x_adjust is None or y_adjust is None or z_adjust is None:
             return None
         lines.append(
@@ -22937,8 +22855,7 @@ def render_dynamic_location_variable_search(
         if x_adjust != "0" or y_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"math.floor(({x_adjust}) + 0.5), "
-                f"math.floor(({y_adjust}) + 0.5), 0))"
+                f"{x_adjust}, {y_adjust}, 0))"
             )
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
@@ -22946,12 +22863,12 @@ def render_dynamic_location_variable_search(
         if z_override:
             lines.append(
                 "    location = services.coords.tripoint_abs_ms("
-                f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+                f"location.x, location.y, {z_adjust})"
             )
         elif z_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+                f"0, 0, {z_adjust}))"
             )
         output_lines = _coordinate_output_lines(
             effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23191,22 +23108,9 @@ def render_dynamic_location_variable_search(
                 return None
             if value:
                 options.append(f"{name} = true")
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
-        if x_adjust is None or y_adjust is None or z_adjust is None:
-            return None
-        if x_adjust != "0":
-            options.append(f"x_adjust = {x_adjust}")
-        if y_adjust != "0":
-            options.append(f"y_adjust = {y_adjust}")
-        if z_adjust != "0":
-            options.append(f"z_adjust = {z_adjust}")
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
             return None
-        if z_override:
-            options.append("z_override = true")
         lines.extend([
             f"    local selected = services.world.find_location({origin}, {selector_expression}, "
             f"{{ {', '.join(options)} }})",
@@ -23215,9 +23119,15 @@ def render_dynamic_location_variable_search(
         ])
 
     adjustment_indent = "        "
-    x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-    y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-    z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+    x_adjust = coordinate_integer_expression(
+        effect.get("x_adjust", 0), -1000, 1000
+    )
+    y_adjust = coordinate_integer_expression(
+        effect.get("y_adjust", 0), -1000, 1000
+    )
+    z_adjust = coordinate_integer_expression(
+        effect.get("z_adjust", 0), -20, 20
+    )
     if x_adjust is None or y_adjust is None or z_adjust is None:
         return None
     z_override = effect.get("z_override", False)
@@ -23226,17 +23136,17 @@ def render_dynamic_location_variable_search(
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"{x_adjust}, {y_adjust}, 0))"
         )
     if z_override:
         lines.append(
             f"{adjustment_indent}location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, {z_adjust})"
         )
     elif z_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, {z_adjust}))"
         )
     output_lines = _coordinate_output_lines(
         effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23336,17 +23246,17 @@ def render_static_location_variable(
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"(math.modf(({x_adjust}))), (math.modf(({y_adjust}))), 0))"
         )
     if z_override:
         lines.append(
             "    location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, (math.modf(({z_adjust}))))"
         )
     elif z_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, (math.modf(({z_adjust}))))"
         )
     if output_context is not None:
         lines.append(f"    context.data[{lua_quote(effect[key]['context_val'])}] = location")
@@ -24009,36 +23919,16 @@ def render_static_pickup_items(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Lower one fully explicit map-square pickup through map/item services.
+    """Keep pickup as a TODO until the native picker can be represented.
 
-    The only accepted coordinate shape is ``{"abs_ms": [x, y, z]}`` (or its
-    keyed equivalent).  A token is created once and the same holder descriptor
-    is used for both the page and every transfer.  The page is deliberately
-    bounded and must be complete before mutation starts: a continuation is
-    invalidated by the first successful transfer, so retrying a partial page
-    would not be an atomic or deterministic migration.
+    The legacy effect presents an interactive selection and applies
+    ``extra_moves_per_item``, ``max_volume`` and ``max_mass`` through
+    ``Pickup::pick_info``.  Paging a tile and transferring every item silently
+    changes the user's selection and ignores those constraints, even when the
+    location is a static absolute map square.
     """
-    if (
-        key not in effect or set(effect) != {key} or
-        (key == "u_pickup_items" and not avatar_actor_proven) or
-        (key == "npc_pickup_items" and not npc_event_character_actor_proven)
-    ):
-        return None
-    holder_lines = render_explicit_map_tile_holder(effect[key])
-    if holder_lines is None:
-        return None
-    return holder_lines + [
-        "    local destination_holder = { kind = \"character\", character = actor, slot = \"inventory\" }",
-        "    local map_page = service_value(services.items.page(map_holder, {",
-        "        page_size = 256, max_depth = 0, recursive = false,",
-        "    }))",
-        "    if map_page.complete then",
-        "        for _, map_entry in ipairs(map_page.items) do",
-        "            service_value(services.items.transfer(",
-        "                map_entry.handle, map_holder, destination_holder))",
-        "        end",
-        "    end",
-    ]
+    del effect, key, avatar_actor_proven, npc_event_character_actor_proven
+    return None
 
 
 def render_static_inventory_consume_sum(
@@ -24086,6 +23976,11 @@ def _render_static_map_state_edit(
     )
     present = [key for key in mutation_keys if key in effect]
     if not present:
+        return None
+    # Native trap placement is a no-op for unloaded/out-of-bounds tiles and
+    # for terrain with a built-in trap.  map.tile/map.edit cannot currently
+    # express both cases without turning those inputs into errors.
+    if "set_trap" in present:
         return None
     comment_keys = {
         name for name in effect
@@ -24338,19 +24233,23 @@ def render_static_location_revert_or_copy(
         )
     if target is None or delay is None or event_key_expression is None:
         return None
+    target_omt = f"({target}):project_to(\"omt\")"
     if key == "revert_location":
         return [
             "    services.world.schedule_location_revert(",
-            f"        {target}, {delay}, {event_key_expression})",
+            f"        {target_omt}, {delay}, {event_key_expression})",
         ]
     source = _coordinate_source_expression(
         effect.get("new_loc"), avatar_actor_proven, npc_actor_proven
     )
     if source is None:
         return None
+    # In the legacy effect, the member value is the snapshot source and
+    # ``new_loc`` is the destination.  Keep that order for the Platform API.
     return [
         "    services.world.schedule_location_copy(",
-        f"        {source}, {target}, {delay}, {event_key_expression})",
+        f"        {target_omt}, ({source}):project_to(\"omt\"), "
+        f"{delay}, {event_key_expression})",
     ]
 
 
@@ -26136,46 +26035,15 @@ def render_static_condition_math(
 def render_static_line_of_sight_condition(
     condition: dict[str, Any],
 ) -> str | None:
-    """Render a literal line-of-sight check against context coordinates.
+    """Keep EOC LOS shapes as TODOs until endpoint bounds can be preserved.
 
-    The native condition accepts dynamic variables and arbitrary numeric
-    expressions.  Migration only emits the typed environment query when both
-    endpoints are explicit context values and the range is a finite integer
-    inside the Platform service bound; all other shapes remain TODOs.
+    The native condition delegates both converted locations to map::sees,
+    which returns false for an out-of-bounds destination but does not require
+    the source endpoint to be in bounds. The Platform query requires both
+    endpoints inside the active map. Context values do not prove that stronger
+    constraint, so even literal-range shapes must remain TODOs.
     """
-    if not {"line_of_sight", "loc_1", "loc_2"} <= set(condition):
-        return None
-    if set(condition) - {"line_of_sight", "loc_1", "loc_2", "with_fields"}:
-        return None
-    raw_range = finite_number_literal(condition.get("line_of_sight"))
-    if (
-        raw_range is None or
-        math.trunc(float(raw_range)) != float(raw_range) or
-        raw_range < 0 or raw_range > 100000
-    ):
-        return None
-
-    def context_location(value: Any) -> str | None:
-        if (
-            not isinstance(value, dict) or
-            set(value) != {"context_val"} or
-            not bounded_utf8_string(value.get("context_val"), 256)
-        ):
-            return None
-        return f"context.data[{lua_quote(value['context_val'])}]"
-
-    first = context_location(condition.get("loc_1"))
-    second = context_location(condition.get("loc_2"))
-    if first is None or second is None:
-        return None
-    with_fields = condition.get("with_fields", True)
-    if not isinstance(with_fields, bool):
-        return None
-    return (
-        "services.gameplay.environment.line_of_sight("
-        f"{first}, {second}, {int(raw_range)}, "
-        f"{'true' if with_fields else 'false'})"
-    )
+    return None
 
 
 def render_static_perception_condition(
@@ -26564,6 +26432,37 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
+        null_safe_id = selector in {
+            "u_has_trait", "npc_has_trait", "u_has_any_trait",
+            "npc_has_any_trait", "u_is_trait_purifiable",
+            "npc_is_trait_purifiable",
+        }
+        if null_safe_id:
+            if isinstance(identifier, dict):
+                raw_id = render_participant_string_expression(
+                    identifier, target, alpha, beta,
+                    native_string_values=True,
+                )
+            elif bounded_platform_id(identifier):
+                raw_id = lua_quote(identifier)
+            else:
+                return None
+            if raw_id is None:
+                return None
+            participants = f"{target}, {observer}" if method == "is_visible_to" else target
+            # Native str_or_var yields an empty string for a missing or
+            # non-string diag_value; the character query then returns false.
+            # Guard the same cases before building a bounded Platform GameId,
+            # and fail closed for unknown ids instead of raising from the API.
+            return (
+                "(function(raw) "
+                'if type(raw) ~= "string" then return false end; '
+                'if #raw > 256 or raw:find("%c") then return false end; '
+                'local id = services.types.id("mutation", raw); '
+                'if not id:is_valid() then return false end; '
+                f"return service_value(services.mutations.{method}({participants}, id)) "
+                f"end)({raw_id})"
+            )
         if isinstance(identifier, dict):
             raw_id = render_participant_string_expression(identifier, target, alpha, beta)
             value = None if raw_id is None else f'services.types.id("mutation", {raw_id})'
@@ -26666,6 +26565,14 @@ def render_eoc_condition_expression(
             f"service_value(services.npcs.training.offerings({teacher}, "
             f"{student})).style_count > 0"
         )
+    # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
+    # Native const_actor(true) does not fall back to alpha when beta is absent,
+    # so only an expression that explicitly names the beta can be queried.
+    npc_assigned_camp_actor = None
+    if npc_actor_expression == "context.actors.beta":
+        npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
+    elif npc_actor_expression == "(context.actors and context.actors.beta) or actor":
+        npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
     if condition in ("u_train_skills", "npc_train_skills"):
         if not avatar_actor_proven or not npc_actor_proven or npc_query_actor is None:
             return None
@@ -26783,9 +26690,8 @@ def render_eoc_condition_expression(
                 )
             if condition == "npc_is_outside":
                 return (
-                    "services.gameplay.environment.is_outside("
                     "service_value(services.creatures.snapshot(" +
-                    npc_query_actor + ")).position)"
+                    npc_query_actor + ")).outside"
                 )
             if condition == "player_see_npc":
                 return (
@@ -26834,6 +26740,16 @@ def render_eoc_condition_expression(
             return (
                 "context.actors.item ~= nil and "
                 "service_value(services.items.snapshot(context.actors.item)).relative_rot > 1"
+            )
+        if condition == "npc_has_assigned_camp":
+            if npc_assigned_camp_actor is None:
+                return None
+            return (
+                "(function(candidate) "
+                'if candidate == nil or candidate.kind ~= "creature" then return false end; '
+                'if service_value(services.creatures.snapshot(candidate)).kind ~= "npc" then return false end; '
+                'return service_value(services.npcs.get(candidate)).has_assigned_camp '
+                "end)(" + npc_assigned_camp_actor + ")"
             )
         # These legacy predicates need a dedicated native query with explicit
         # location/mission/item semantics.  Do not emit a made-up generic
@@ -26974,15 +26890,13 @@ def render_eoc_condition_expression(
             condition == "u_is_outside"
         ):
             return (
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)"
+                ".environment.outside"
             )
         if npc_query_actor is not None and condition == "npc_is_outside":
             return (
-                "services.gameplay.environment.is_outside("
-                f"service_value(services.characters.snapshot({npc_query_actor}))"
-                ".creature.position)"
+                "service_value(services.characters.snapshot(" +
+                npc_query_actor + ")).environment.outside"
             )
         if isinstance(condition, dict) and "expects_vars" in condition:
             return None
@@ -26998,9 +26912,9 @@ def render_eoc_condition_expression(
         ):
             return "true"
         if avatar_actor_proven and condition == "u_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+            return "service_value(services.characters.snapshot(actor)).senses.can_see"
         if npc_query_actor is not None and condition == "npc_can_see":
-            return f"not (service_value(services.characters.snapshot({npc_query_actor})).senses.blind)"
+            return f"service_value(services.characters.snapshot({npc_query_actor})).senses.can_see"
         # The *_is_in_vehicle predicates are intentionally absent: native
         # checks whether a vehicle occupies the actor's tile, while this
         # snapshot field only reports the Character passenger flag.
@@ -27504,7 +27418,8 @@ def render_eoc_condition_expression(
             if not isinstance(values, list) or all_equal and not values:
                 return None
             rendered = [render_participant_string_expression(
-                value, "actor", "actor" if character_actor_proven else None, npc_query_actor)
+                value, "actor", "actor" if character_actor_proven else None,
+                npc_query_actor, native_string_values=True)
                 for value in values]
             if any(value is None for value in rendered):
                 return None
@@ -29192,13 +29107,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate run_eoc_selector through the "
-                        "typed presentation service."
+                        "    -- TODO: run_eoc_selector needs equivalent EOC "
+                        "condition, menu, and translated-text behavior."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs typed selector presentation conversion"
+                        "needs full native selector condition and menu semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "foreach" in effect:
@@ -29426,11 +29341,17 @@ def render_eoc(
                 set(effect) == {"give_achievement"} and
                 safe_platform_id(effect.get("give_achievement"))
             ):
-                lines.append("    services.achievements.complete(")
+                lines.append("    do")
                 lines.append(
-                    "        services.types.id(\"achievement\", "
-                    f"{lua_quote(effect['give_achievement'])}))"
+                    "        local achievement_id = services.types.id(\"achievement\", "
+                    f"{lua_quote(effect['give_achievement'])})"
                 )
+                lines.append("        if achievement_id:is_valid() then")
+                lines.append(
+                    "            services.achievements.complete(achievement_id)"
+                )
+                lines.append("        end")
+                lines.append("    end")
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -30746,13 +30667,14 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: " + _map_mutation_todo() + "."
+                    trap_gap = (
+                        "set_trap needs the native loaded-area and built-in-trap "
+                        "no-op behavior, which map.edit cannot express"
                     )
+                    lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
-                        _map_mutation_todo()
+                        "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
@@ -30848,15 +30770,16 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: map holder requires one explicitly typed "
-                        "abs_ms coordinate; current/u/alpha/local/omt/mixed-frame "
-                        "pickup locations remain TODO."
+                        "    -- TODO: pickup needs explicit map candidates and a "
+                        "Platform API preserving native selection and movement/volume/mass "
+                        "constraints; unsupported location frames remain TODO."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "map holder requires an explicitly typed abs_ms coordinate; "
-                        "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO"
+                        "pickup needs explicit map candidates and a Platform API preserving "
+                        "native selection and movement/volume/mass constraints; unsupported "
+                        "location frames remain TODO"
                     )
                     all_effects_converted = False
             elif (
@@ -32570,13 +32493,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mirror_coordinates through "
-                        "typed coordinate and variable services."
+                        "    -- TODO: mirror_coordinates needs a typed "
+                        "absolute-ms reflection operation and exact beta proof."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs safe absolute-ms reflection and variable-scope semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:
