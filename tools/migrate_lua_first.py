@@ -26467,6 +26467,37 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
+        null_safe_id = selector in {
+            "u_has_trait", "npc_has_trait", "u_has_any_trait",
+            "npc_has_any_trait", "u_is_trait_purifiable",
+            "npc_is_trait_purifiable",
+        }
+        if null_safe_id:
+            if isinstance(identifier, dict):
+                raw_id = render_participant_string_expression(
+                    identifier, target, alpha, beta,
+                    native_string_values=True,
+                )
+            elif bounded_platform_id(identifier):
+                raw_id = lua_quote(identifier)
+            else:
+                return None
+            if raw_id is None:
+                return None
+            participants = f"{target}, {observer}" if method == "is_visible_to" else target
+            # Native str_or_var yields an empty string for a missing or
+            # non-string diag_value; the character query then returns false.
+            # Guard the same cases before building a bounded Platform GameId,
+            # and fail closed for unknown ids instead of raising from the API.
+            return (
+                "(function(raw) "
+                'if type(raw) ~= "string" then return false end; '
+                'if #raw > 256 or raw:find("%c") then return false end; '
+                'local id = services.types.id("mutation", raw); '
+                'if not id:is_valid() then return false end; '
+                f"return service_value(services.mutations.{method}({participants}, id)) "
+                f"end)({raw_id})"
+            )
         if isinstance(identifier, dict):
             raw_id = render_participant_string_expression(identifier, target, alpha, beta)
             value = None if raw_id is None else f'services.types.id("mutation", {raw_id})'

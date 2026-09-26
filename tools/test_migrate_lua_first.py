@@ -1890,7 +1890,7 @@ local context = {data={selected_ref=REFERENCE}}
 local function service_value(result) assert(result.ok); return result.value end
 local called = false
 local function query(character, id)
- assert(character == TARGET and id == IDENTIFIER)
+ assert(character == TARGET and id.value == IDENTIFIER)
  called = true
  return {ok=true,value=true}
 end
@@ -1898,7 +1898,8 @@ local services = {
  variables={resolve=function(data, owner, scope, key)
    return {ok=true,value={value=owner[key]}}
  end},
- types={id=function(kind,id) assert(kind=='mutation'); return id end},
+  types={id=function(kind,id) assert(kind=='mutation'); return {
+    value=id,is_valid=function(self) return self.value~='' end} end},
  mutations={has=query,is_purifiable=query,is_visible_to=function(character,viewer,id)
    assert(viewer == OBSERVER)
    return query(character,id)
@@ -1923,10 +1924,11 @@ local context = {data={}}
 local function service_value(r) return r.value end
 local calls = 0
 local services = {
- types={id=function(kind,id) assert(id == 'QUICK'); return id end},
- variables={resolve=function() error('short-circuited variable was read') end},
- mutations={has=function(character,id)
-   assert(character == actor and id == 'QUICK')
+  types={id=function(kind,id) assert(id == 'QUICK'); return {
+    value=id,is_valid=function(self) return self.value~='' end} end},
+  variables={resolve=function() error('short-circuited variable was read') end},
+  mutations={has=function(character,id)
+    assert(character == actor and id.value == 'QUICK')
    calls = calls + 1
    return {ok=true,value=true}
  end}
@@ -1939,6 +1941,60 @@ assert(calls == 1)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"u_has_trait": {"var_val": "selected"}}, avatar_actor_proven=True))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_trait_predicates_fail_closed_for_missing_or_unknown_dynamic_ids(self) -> None:
+        for selector, target, method in (
+            ("u_has_trait", "actor", "has"),
+            ("npc_is_trait_purifiable", "partner", "is_purifiable"),
+        ):
+            with self.subTest(selector=selector):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {selector: {"u_val": "selected"}},
+                    avatar_actor_proven=True,
+                    npc_actor_expression="partner",
+                )
+                self.assertIsNotNone(expression)
+                script = """
+local actor, partner = {}, {}
+local selected = nil
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ types={id=function(kind,value)
+  assert(kind=='mutation')
+  assert(#value<=256 and not value:find('%c'))
+  return {value=value,is_valid=function(self)
+   return self.value=='KNOWN' or self.value=='73'
+  end}
+ end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(scope=='u' and key=='selected')
+  return {ok=true,value={value=selected}}
+ end},
+ mutations={has=function(character,id)
+   assert(character==TARGET and id.value=='KNOWN')
+   return {ok=true,value=true}
+  end,
+  is_purifiable=function(character,id)
+   assert(character==TARGET and id.value=='KNOWN')
+   return {ok=true,value=true}
+  end}
+}
+assert(not (EXPRESSION))
+selected='UNKNOWN'
+assert(not (EXPRESSION))
+selected=73
+assert(not (EXPRESSION))
+selected=string.rep('x',257)
+assert(not (EXPRESSION))
+selected=string.char(7)
+assert(not (EXPRESSION))
+services.variables.resolve=function() return {ok=true,value={value='KNOWN'}} end
+assert(EXPRESSION)
+""".replace("TARGET", target).replace("EXPRESSION", expression)
+                result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_skill_teaching_requires_two_proven_participants(self) -> None:
         for selector, expected in (
