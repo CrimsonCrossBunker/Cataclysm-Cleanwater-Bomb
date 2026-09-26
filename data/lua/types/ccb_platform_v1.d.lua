@@ -4941,9 +4941,10 @@ function CcbPlatformLoreApi.knows_snippet(id) end
 function CcbPlatformLoreApi.remember_snippet(id) end
 ---@class CcbPlatformNativeEventsApi
 local CcbPlatformNativeEventsApi = {}
----@param type_name string
----@param requested_args? table
----@return any
+---@param type_name string Registered native event type name, 1..128 bytes.
+---@param requested_args? string[] Dense 1-based strings matching the event field count; at most 64 entries.
+---Full byte sequences, including NUL, are forwarded.
+---@return boolean True after dispatch.
 function CcbPlatformNativeEventsApi.emit(type_name, requested_args) end
 ---@class CcbPlatformMessagesApi
 local CcbPlatformMessagesApi = {}
@@ -10085,6 +10086,8 @@ function CcbTypesApi.id_kinds() end
 ---@field value? CcbVariableReadValue
 
 ---@class CcbVariablesApi
+---Native-backed actor/item/vehicle/global storage preserves full byte sequences for top-level strings, including NUL.
+---Nested array strings and callback-context writes retain bounded diag-value conversion; native copy stays direct.
 local CcbVariablesApi = {}
 
 ---@class CcbVariableCopyValue
@@ -10094,7 +10097,7 @@ local CcbVariablesApi = {}
 ---@class CcbVariableCopyResult: CcbResult
 ---@field value? CcbVariableCopyValue
 
----Copy native values without converting arrays, nulls, or coordinates through Lua.
+---Copy native values without converting arrays, nulls, coordinates, or full-length strings through Lua.
 ---Both owners are validated before mutation; missing sources write a stored empty value.
 ---An active write callback is required. Use nil owners for the global variable store.
 ---@param source_owner GameHandle|nil
@@ -10113,7 +10116,8 @@ function CcbVariablesApi.get(character, key) end
 ---Actor/global nil writes store an empty native value with exists=true; remove deletes the key.
 ---@param character GameHandle Explicit live variable-owning actor.
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
----@param value boolean|number|string|TripointCoord|NullValue|any[]|nil Finite numbers, bounded strings, absolute map-square coordinates, or nil.
+---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
+---Top-level native strings preserve all bytes; strings in arrays remain bounded.
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set(character, key, value) end
 
@@ -10128,6 +10132,7 @@ function CcbVariablesApi.get_global(key) end
 
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
+---Top-level native strings preserve all bytes; strings in arrays remain bounded.
 ---@return CcbResult result `value` contains existed, before and after.
 function CcbVariablesApi.set_global(key, value) end
 
@@ -10151,6 +10156,8 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 
 ---For context scope, nil clears the entry; services.types.null retains an empty value.
 ---resolve returns exists=true,value=nil for that explicit empty value.
+---Native u/npc/global targets, including var-indirection targets ending there, preserve top-level string bytes.
+---Context writes and nested array strings retain the existing bounded diag-value conversion.
 ---Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
 ---including targets reached through var indirection, use native storage key semantics. A var target that
 ---resolves to callback context remains subject to the context-key limit.
