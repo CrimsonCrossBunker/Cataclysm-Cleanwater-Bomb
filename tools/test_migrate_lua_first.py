@@ -7483,11 +7483,41 @@ assert(#events == 11)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                "service_value(services.npcs.get(actor)).has_assigned_camp",
+                'candidate.kind ~= "creature" then return false end;',
+                main,
+            )
+            self.assertIn(
+                'snapshot(candidate)).kind ~= "npc" then return false end;',
+                main,
+            )
+            self.assertIn(
+                "services.npcs.get(candidate)).has_assigned_camp",
                 main,
             )
             self.assertNotIn("condition TODO: translate", report)
             self.assertIn("---@field has_assigned_camp boolean", declarations)
+
+    def test_npc_assigned_camp_does_not_fallback_to_alpha_or_selected_actor(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            {"not": "npc_has_assigned_camp"},
+            npc_actor_proven=True,
+            npc_actor_expression="(context.actors and context.actors.beta) or actor",
+        )
+
+        self.assertIsNotNone(predicate)
+        self.assertIn("not (", predicate)
+        self.assertIn(
+            "end)(context and context.actors and context.actors.beta)",
+            predicate,
+        )
+        self.assertNotIn("or actor", predicate)
+        self.assertIn("candidate == nil", predicate)
+        self.assertIn('kind ~= "npc"', predicate)
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_has_assigned_camp"
+            )
+        )
 
     def test_renders_butchery_requirement_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
