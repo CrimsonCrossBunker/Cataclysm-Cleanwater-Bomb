@@ -18,6 +18,7 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
