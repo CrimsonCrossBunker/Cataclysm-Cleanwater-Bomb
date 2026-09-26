@@ -19353,7 +19353,7 @@ assert(#messages==2 and messages[2]=="after")
             self.assertIn("context.conditions = context.conditions or {}", main)
             self.assertIn(
                 "context.conditions[stored_condition_name] = "
-                "function(context, actor)",
+                "function(context, actor, stored_condition_beta)",
                 main,
             )
             self.assertIn(
