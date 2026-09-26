@@ -130,7 +130,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     REQUIRE( player.maybe_get_value( priority_key ) != nullptr );
     const std::string native_choice = player.get_value( priority_key ).str();
     CHECK( native_choice != "17" );
-    CHECK( native_choice == "candidate-a" || native_choice == "candidate-b" );
+    CHECK( ( native_choice == "candidate-a" || native_choice == "candidate-b" ) );
     REQUIRE( observer.changes.size() == 3 );
     CHECK( observer.changes.back().first == priority_key );
     CHECK( observer.changes.back().second == native_choice );
@@ -286,7 +286,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
         )" );
     }
     const std::string platform_choice = player.get_value( priority_key ).str();
-    CHECK( platform_choice == "candidate-a" || platform_choice == "candidate-b" );
+    CHECK( ( platform_choice == "candidate-a" || platform_choice == "candidate-b" ) );
     CHECK( partner.get_value( fallback_key ).str() == "fallback-ready" );
     CHECK( player.get_value( time_override_key ).str() == time_override_value );
     REQUIRE( observer.changes.size() == 8 );
