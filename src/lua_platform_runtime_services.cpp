@@ -3367,10 +3367,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         std::map<std::size_t, std::string> indexed_args;
         if( requested_args ) {
             for( const auto &entry : *requested_args ) {
-                if( !entry.first.is<lua_Integer>() ||
-                    !entry.second.is<std::string>() ) {
+                if( !entry.first.is<lua_Integer>() ) {
                     throw std::invalid_argument(
-                        "services.native_events.emit args must be a dense string array" );
+                        "services.native_events.emit args must be a dense array" );
                 }
                 const lua_Integer raw_index =
                     entry.first.as<lua_Integer>();
@@ -3378,11 +3377,21 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                     throw std::invalid_argument(
                         "services.native_events.emit arg index must be within 1..64" );
                 }
-                std::string value =
-                    entry.second.as<std::string>();
+                const sol::object value = entry.second;
+                // Legacy trigger_event serializes each diag_value with its
+                // native to_string() implementation.  Keep direct strings
+                // byte-exact (including long strings and NUL); route other
+                // supported Lua values through the shared diag_value bridge.
+                std::string serialized;
+                if( value.get_type() == sol::type::string ) {
+                    serialized = value.as<std::string>();
+                } else {
+                    serialized = script_diag_value_from_lua(
+                                     value, "services.native_events.emit argument" ).to_string();
+                }
                 indexed_args.emplace(
                     static_cast<std::size_t>( raw_index ),
-                    std::move( value ) );
+                    std::move( serialized ) );
             }
         }
         if( !indexed_args.empty() &&
@@ -3396,8 +3405,17 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             static_cast<void>( index );
             args.push_back( std::move( value ) );
         }
-        get_event_bus().send(
-            cata::event::make_dyn( *type, args ) );
+        // make_dyn() logs and returns a null event on an arity mismatch.
+        // Check the native event spec first so callers can observe the same
+        // no-dispatch outcome without sending a malformed event to the bus.
+        if( cata::event::get_fields( *type ).size() != args.size() ) {
+            return false;
+        }
+        cata::event event = cata::event::make_dyn( *type, args );
+        if( event.type() == event_type::num_event_types ) {
+            return false;
+        }
+        get_event_bus().send( event );
         return true;
     } );
     services["native_events"] = std::move( native_events );

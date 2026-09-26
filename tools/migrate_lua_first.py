@@ -18933,6 +18933,193 @@ def render_eoc_value_expression(
     )
 
 
+@functools.lru_cache(maxsize=1)
+def registered_native_event_types() -> frozenset[str]:
+    """Return event names from the checked-in inventory generated from event.h."""
+    inventory_path = (
+        REPOSITORY_ROOT / "data" / "lua" / "reference" /
+        "ccb_platform_native_inventory.json"
+    )
+    try:
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return frozenset()
+    entries = inventory.get("event_types") if isinstance(inventory, dict) else None
+    if not isinstance(entries, list):
+        return frozenset()
+    return frozenset(
+        entry["type"] for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("type"), str) and
+        bounded_utf8_string(entry["type"], 128, allow_empty=False)
+    )
+
+
+def _render_static_trigger_event_value(
+    value: Any, depth: int, nodes: list[int]
+) -> str | None:
+    """Render bounded diag_value literals without Python/Lua coercion."""
+    nodes[0] += 1
+    if nodes[0] > 512 or depth > 8:
+        return None
+    if value is None:
+        return "services.types.null"
+    if isinstance(value, bool):
+        # Native diag_value JSON does not accept JSON booleans.
+        return None
+    if isinstance(value, str):
+        if depth > 0:
+            try:
+                if len(value.encode("utf-8")) > 8192:
+                    return None
+            except UnicodeEncodeError:
+                return None
+        return lua_quote(value)
+    if isinstance(value, int):
+        try:
+            number = float(value)
+        except OverflowError:
+            return None
+        return lua_number(number) if math.isfinite(number) else None
+    if isinstance(value, float):
+        return lua_number(value) if math.isfinite(value) else None
+    if isinstance(value, list):
+        if len(value) > 512:
+            return None
+        rendered = [
+            _render_static_trigger_event_value(entry, depth + 1, nodes)
+            for entry in value
+        ]
+        if any(entry is None for entry in rendered):
+            return None
+        return "{ " + ", ".join(rendered) + " }"
+    if not isinstance(value, dict):
+        return None
+    if set(value) == {"tripoint"}:
+        coordinates = value.get("tripoint")
+        if (
+            isinstance(coordinates, list) and len(coordinates) == 3 and
+            all(
+                isinstance(entry, int) and not isinstance(entry, bool) and
+                NATIVE_INT_MIN <= entry <= NATIVE_INT_MAX
+                for entry in coordinates
+            )
+        ):
+            return (
+                "services.coords.tripoint_abs_ms(" +
+                ", ".join(str(entry) for entry in coordinates) + ")"
+            )
+        return None
+    if (
+        "str" in value and set(value) <= {"str", "i18n", "//~"} and
+        bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
+        ("i18n" not in value or isinstance(value["i18n"], bool)) and
+        ("//~" not in value or isinstance(value["//~"], str))
+    ):
+        if value.get("i18n", False):
+            return f"services.translate({lua_quote(value['str'])})"
+        return lua_quote(value["str"])
+    if set(value) == {"dbl"} and isinstance(value.get("dbl"), str):
+        try:
+            number = float(value["dbl"])
+        except ValueError:
+            return None
+        return lua_number(number) if math.isfinite(number) else None
+    return None
+
+
+def _render_trigger_event_argument(
+    value: Any, *, actor_expression: str | None,
+    alpha_character_proven: bool, beta_expression: str | None,
+    depth: int = 0, nodes: list[int] | None = None,
+) -> str | None:
+    """Render one value_or_var argument to native_events.emit's typed input."""
+    if nodes is None:
+        nodes = [0]
+    static_value = _render_static_trigger_event_value(value, depth, nodes)
+    if static_value is not None:
+        return static_value
+    if not isinstance(value, dict):
+        return None
+    variable_keys = {
+        key for key in value
+        if key in {"context_val", "u_val", "npc_val", "global_val"}
+    }
+    if len(variable_keys) != 1 or set(value) - variable_keys - {"default"}:
+        return None
+    key = next(iter(variable_keys))
+    name = value.get(key)
+    if not lua_quotable_native_variable_string(name):
+        return None
+    if key == "u_val" and (not alpha_character_proven or actor_expression is None):
+        return None
+    if key == "npc_val" and beta_expression is None:
+        return None
+    if "default" in value:
+        default_expression = _render_static_trigger_event_value(
+            value["default"], depth + 1, nodes
+        )
+        if default_expression is None:
+            return None
+    else:
+        default_expression = "services.types.null"
+    scope = {
+        "context_val": "context",
+        "u_val": "u",
+        "npc_val": "npc",
+        "global_val": "global",
+    }[key]
+    owner = actor_expression if key in {"u_val", "npc_val"} else "nil"
+    participants = (
+        ", { beta = " + beta_expression + " }"
+        if key == "npc_val" and beta_expression is not None else ""
+    )
+    return (
+        "(function() local resolved = service_value(services.variables.resolve("
+        f"context.data, {owner}, {lua_quote(scope)}, {lua_quote(name)}{participants})); "
+        f"if not resolved.exists then return {default_expression} end; "
+        "if resolved.value == nil then return services.types.null end; "
+        "return resolved.value end)()"
+    )
+
+
+def render_static_trigger_event(
+    effect: dict[str, Any], *, actor_expression: str | None,
+    alpha_character_proven: bool,
+    beta_expression: str | None,
+) -> tuple[list[str] | None, str | None]:
+    """Lower the bounded native trigger_event value_or_var shape."""
+    if set(effect) != {"trigger_event", "args"}:
+        return None, "trigger_event requires only a registered event and an args array"
+    event_name = effect.get("trigger_event")
+    if (
+        not isinstance(event_name, str) or
+        not bounded_utf8_string(event_name, 128, allow_empty=False) or
+        event_name not in registered_native_event_types()
+    ):
+        return None, "trigger_event name is not present in the native event registry"
+    args = effect.get("args")
+    if not isinstance(args, list) or len(args) > 64:
+        return None, "trigger_event args must be a dense array with at most 64 entries"
+    rendered_args: list[str] = []
+    for entry in args:
+        rendered = _render_trigger_event_argument(
+            entry,
+            actor_expression=actor_expression,
+            alpha_character_proven=alpha_character_proven,
+            beta_expression=beta_expression,
+        )
+        if rendered is None:
+            return None, (
+                "trigger_event argument needs a bounded native diag_value or a "
+                "source-proven alpha/beta variable owner"
+            )
+        rendered_args.append(rendered)
+    return [
+        f"    services.native_events.emit({lua_quote(event_name)}, "
+        "{ " + ", ".join(rendered_args) + " })"
+    ], None
+
+
 def render_eoc_string_expression(
     value: Any, actor_expression: str = "actor"
 ) -> str | None:
@@ -31454,10 +31641,28 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "trigger_event" in effect:
-                event_name = effect.get("trigger_event")
-                if isinstance(event_name, str):
-                    lines.append(f"    runtime.trigger({lua_quote('game:' + event_name)})")
+                rendered, reason = render_static_trigger_event(
+                    effect,
+                    actor_expression=actor_expression,
+                    alpha_character_proven=character_actor_proven,
+                    beta_expression=(
+                        "context.actors.beta"
+                        if isinstance(required_event, str) and
+                        required_event in TALKER_ACTOR_EVENTS else None
+                    ),
+                )
+                if rendered is not None:
+                    lines.extend(rendered)
                     converted_effect = True
+                else:
+                    reason = reason or "trigger_event needs an explicit native argument conversion"
+                    lines.append(f"    -- TODO: {reason}.")
+                    result.add_todo(
+                        "semantic_choice"
+                        if "native event registry" in reason else "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and ("u_deal_damage" in effect or "npc_deal_damage" in effect):
                 key = "u_deal_damage" if "u_deal_damage" in effect else "npc_deal_damage"
                 damage_type = effect.get(key)

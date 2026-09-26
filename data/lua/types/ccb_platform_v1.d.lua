@@ -5065,9 +5065,12 @@ function CcbPlatformLoreApi.remember_snippet(id) end
 ---@class CcbPlatformNativeEventsApi
 local CcbPlatformNativeEventsApi = {}
 ---@param type_name string Registered native event type name, 1..128 bytes.
----@param requested_args? string[] Dense 1-based strings matching the event field count; at most 64 entries.
----Full byte sequences, including NUL, are forwarded.
----@return boolean True after dispatch.
+---@param requested_args? any[] Dense 1-based values; at most 64 entries. Use services.types.null for an explicit empty value.
+---Strings pass through byte-for-byte; other values use native diag_value serialization:
+---finite numbers, booleans (1/0), absolute map-square TripointCoord, and dense arrays
+---bounded to 512 nodes, 8 nested levels and 8192 bytes per nested string.
+---The entry count must match the registered event's native field count.
+---@return boolean True after dispatch, false when the native event arity does not match.
 function CcbPlatformNativeEventsApi.emit(type_name, requested_args) end
 ---@class CcbPlatformMessagesApi
 local CcbPlatformMessagesApi = {}
