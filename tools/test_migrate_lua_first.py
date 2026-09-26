@@ -3969,8 +3969,8 @@ assert(#events == 11)
             self.assertEqual(main.count("services.native_events.emit("), 2)
             self.assertIn('{ "u_val", "ready" }', main)
             self.assertIn('{ "context_val", "npc-ready" }', main)
-            self.assertIn('services.variables.remove(actor, "u_val")', main)
-            self.assertIn('services.variables.remove(actor, "context_val")', main)
+            self.assertIn('services.variables.remove(actor, "u_val", { include_before = false })', main)
+            self.assertIn('services.variables.remove(actor, "context_val", { include_before = false })', main)
 
     def test_dynamic_character_variable_shapes_remain_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -4034,7 +4034,7 @@ assert(#events == 11)
             self.assertEqual(len(result.todos), 3)
             self.assertIn('values = { "two" }', main)
             self.assertIn("services.random.int(0, #values - 1) + 1", main)
-            self.assertIn('services.variables.set(\n        actor, "choice", selected_value)', main)
+            self.assertIn('services.variables.set(\n        actor, "choice", selected_value, { include_before = false })', main)
             self.assertNotIn('services.variables.set(\n        actor, "count"', main)
             self.assertNotIn("services.variables.get(actor", main)
             self.assertNotIn("services.state.", main)
@@ -6420,10 +6420,10 @@ assert(#events == 11)
             self.assertEqual(len(result.converted), 10)
             self.assertEqual(len(result.partial), 2)
             self.assertIn(
-                'services.variables.remove(actor, "quest_var")', main
+                'services.variables.remove(actor, "quest_var", { include_before = false })', main
             )
             self.assertIn(
-                'services.variables.remove(actor, "npc_var")', main
+                'services.variables.remove(actor, "npc_var", { include_before = false })', main
             )
             self.assertIn(
                 'services.message("hello")', main
@@ -20536,7 +20536,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn("services.effects.add", main)
             self.assertIn("services.wounds.add", main)
             self.assertIn("services.morale.add", main)
-            self.assertIn('services.variables.remove(actor, "fallback")', main)
+            self.assertIn('services.variables.remove(actor, "fallback", { include_before = false })', main)
 
     def test_false_effect_reuses_inventory_spawn_recipe_and_world_renderers(
         self,
