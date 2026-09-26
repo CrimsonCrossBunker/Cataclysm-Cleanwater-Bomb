@@ -1075,9 +1075,17 @@ void install_activity_api(
         }
         const bool had_activity = static_cast<bool>( character->activity );
         const std::size_t backlog_size_before = character->backlog.size();
+        const bool backlog_auto_resume_before =
+            !character->backlog.empty() &&
+            character->backlog.front().auto_resume;
         character->cancel_activity();
+        const bool backlog_auto_resume_after =
+            !character->backlog.empty() &&
+            character->backlog.front().auto_resume;
         const bool changed = had_activity ||
-                             backlog_size_before != character->backlog.size();
+                             backlog_size_before != character->backlog.size() ||
+                             ( backlog_auto_resume_before &&
+                               !backlog_auto_resume_after );
         sol::table value = state.create_table();
         value["changed"] = changed;
         value["activity"] = character_activity_snapshot(
