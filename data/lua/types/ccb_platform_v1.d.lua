@@ -10085,6 +10085,9 @@ function CcbTypesApi.id_kinds() end
 ---@class CcbVariableReadResult: CcbResult
 ---@field value? CcbVariableReadValue
 
+---@class CcbVariableMutationOptions
+---@field include_before? boolean Include the prior value in the result (default true). False omits `value.before` and skips converting the prior value to Lua.
+
 ---@class CcbVariablesApi
 ---Native-backed actor/item/vehicle/global storage preserves full byte sequences for top-level strings, including NUL.
 ---Nested array strings and callback-context writes retain bounded diag-value conversion; native copy stays direct.
@@ -10118,13 +10121,15 @@ function CcbVariablesApi.get(character, key) end
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
----@return CcbResult result `value` contains existed, before and after.
-function CcbVariablesApi.set(character, key, value) end
+---@param options CcbVariableMutationOptions?
+---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
+function CcbVariablesApi.set(character, key, value, options) end
 
 ---@param character GameHandle
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
----@return CcbResult result `value` contains existed and before.
-function CcbVariablesApi.remove(character, key) end
+---@param options CcbVariableMutationOptions?
+---@return CcbResult result `value` contains removed; before is present by default and omitted when include_before=false.
+function CcbVariablesApi.remove(character, key, options) end
 
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@return CcbVariableReadResult
@@ -10133,12 +10138,14 @@ function CcbVariablesApi.get_global(key) end
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
----@return CcbResult result `value` contains existed, before and after.
-function CcbVariablesApi.set_global(key, value) end
+---@param options CcbVariableMutationOptions?
+---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
+function CcbVariablesApi.set_global(key, value, options) end
 
 ---@param key string Native global storage key; callback-context key limits do not apply.
----@return CcbResult result `value` contains existed and before.
-function CcbVariablesApi.remove_global(key) end
+---@param options CcbVariableMutationOptions?
+---@return CcbResult result `value` contains removed; before is present by default and omitted when include_before=false.
+function CcbVariablesApi.remove_global(key, options) end
 
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
 ---Optional participants select alpha for u and beta for npc, including indirect references.
@@ -10161,14 +10168,16 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 ---Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
 ---including targets reached through var indirection, use native storage key semantics. A var target that
 ---resolves to callback context remains subject to the context-key limit.
+---When include_before is false, the prior snapshot is omitted for every scope, including context.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
 ---@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
----@return CcbResult result `value` contains existed, before and after.
+---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
-function CcbVariablesApi.set_resolved(context, actor, scope, key, value, participants) end
+---@param options CcbVariableMutationOptions? Same snapshot behavior as set/remove. If passing options without participants, pass nil for participants.
+function CcbVariablesApi.set_resolved(context, actor, scope, key, value, participants, options) end
 
 ---@class CcbEffectRelatedIdPage
 ---@field items GameId[] Detached related IDs.
