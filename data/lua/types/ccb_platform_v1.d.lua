@@ -7456,6 +7456,21 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
+---@class CcbCharacterBodyPartPickOptions
+---@field wounded? boolean If set, only select parts whose wound state matches this value.
+---@field types? string[] Keep parts matching at least one native body-part type.
+---@field exclude_types? string[] Exclude parts matching any native body-part type.
+---@field flags? string[] Require every listed JSON character flag.
+---@field exclude_flags? string[] Exclude parts with any listed JSON character flag.
+---@field title? string Accepted but ignored by the non-interactive picker.
+---@field allow_cancel? boolean Accepted but ignored by the non-interactive picker.
+
+---Select a uniform random main body part without opening a UI; an empty candidate set returns `no_match`.
+---@param character GameHandle Exact live Character handle.
+---@param options? CcbCharacterBodyPartPickOptions
+---@return CcbResult result `value` contains accepted, cancelled, body_part, candidates, interactive and optional wounded.
+function CcbCharactersApi.pick_body_part(character, options) end
+
 ---Select through native combat rules in an active write callback; does not execute the attack.
 ---@param attacker GameHandle Exact live Character.
 ---@param target GameHandle Exact live Creature.
@@ -9266,6 +9281,16 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field owed integer
 ---@field sold integer
 
+---@class CcbNpcAiRulesSnapshot
+---@field aim string Current native aim policy name.
+---@field engagement string Current native engagement policy name.
+---@field cbm_recharge string Current native CBM recharge policy name.
+---@field cbm_reserve string Current native CBM reserve policy name.
+---@field allies string[] Effective enabled native ally rules in native catalog order.
+---@field base_allies string[] Base enabled native ally rules, before overrides.
+---@field overrides table<string, boolean> Values for ally rules with an enabled override.
+---@field pickup_whitelist boolean Whether the native pickup whitelist is nonempty.
+
 ---@class CcbNpcSnapshot
 ---@field handle GameHandle Exact live NPC handle.
 ---@field id integer Native character identity; display-only.
@@ -9280,10 +9305,14 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field attitude GameId
 ---@field attitude_name string
 ---@field dead boolean
+---@field enemy boolean Native NPC enemy state (KILL or FLEE attitude).
+---@field friendly boolean Native is_friendly result against the global avatar.
+---@field following boolean Native FOLLOW or WAIT attitude.
+---@field leader boolean Native LEAD attitude.
 ---@field player_ally boolean
 ---@field first_topic string
 ---@field opinion CcbNpcOpinion Stored opinion; no avatar lookup is performed.
----@field ai_rules table<string, any>
+---@field ai_rules CcbNpcAiRulesSnapshot
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
 
@@ -9429,11 +9458,14 @@ function CcbNpcGroomingApi.open_style(provider, client, area) end
 ---@return CcbResult
 function CcbNpcGroomingApi.provide(provider, client, service) end
 
+---@class CcbNpcTrainingOfferings
+---@field style_count integer Native count of teachable martial-art styles offered to this student.
+
 ---@class CcbNpcTrainingApi
 local CcbNpcTrainingApi = {}
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param student GameHandle Exact Character student handle.
----@return CcbResult
+---@return CcbResult result `value` is a detached CcbNpcTrainingOfferings snapshot.
 function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param students GameHandle[] Exact student handles.
@@ -9635,7 +9667,7 @@ function CcbNpcsApi.open_control_menu(avatar) end
 ---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
 function CcbNpcsApi.take_control(handle, avatar) end
 ---@param handle GameHandle Exact NPC handle.
----@return CcbResult
+---@return CcbResult result `value` is a CcbNpcAiRulesSnapshot.
 function CcbNpcsApi.ai_rules(handle) end
 ---@field medical CcbNpcMedicalApi
 ---@field grooming CcbNpcGroomingApi
@@ -10055,8 +10087,17 @@ function CcbMoraleApi.add(character, morale, bonus, max_bonus, options) end
 ---@return CcbResult result `value` contains before, after and changed.
 function CcbMoraleApi.remove(character, morale) end
 
+---Bionic definition field shape confirmed by current migration sources.
+---Other snapshot fields are not declared here until their Lua contract is audited.
+---@class CcbBionicDefinition
+---@field name string Localized display name.
+
 ---@class CcbBionicsApi
 local CcbBionicsApi = {}
+
+---@param bionic GameId GameId<bionic>.
+---@return CcbBionicDefinition detached definition snapshot.
+function CcbBionicsApi.definition(bionic) end
 
 ---Inspect native installed count, stored power, maximum power and capacity independently.
 ---@param character GameHandle Exact avatar or NPC handle.
@@ -10364,6 +10405,13 @@ function CcbMutationsApi.set_active(character, mutation, active, retrigger) end
 ---@return CcbResult result `value` contains category, removed GameId<mutation>[] and removed_count.
 function CcbMutationsApi.remove_category(character, category) end
 
+---Invoke native random mutation selection for the explicit Character.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param true_random_chance? integer Non-negative chance from 0 through 1000000; defaults to 0.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult result `value` contains changed, before_count and after_count.
+function CcbMutationsApi.mutate(character, true_random_chance, use_vitamins) end
+
 ---Invoke native category mutation selection for the explicit Character.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
 ---@param category? GameId GameId<mutation_category>; nil selects any category.
@@ -10371,6 +10419,14 @@ function CcbMutationsApi.remove_category(character, category) end
 ---@param true_random? boolean Defaults to false.
 ---@return CcbResult result `value` contains changed, before_count and after_count.
 function CcbMutationsApi.mutate_category(character, category, use_vitamins, true_random) end
+
+---Mutate the explicit Character toward a permanent mutation using native rules.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId Valid GameId<mutation>.
+---@param category? GameId Optional GameId<mutation_category>; nil uses native default category selection.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult result `value` contains changed, before_count, after_count and accepted.
+function CcbMutationsApi.mutate_towards(character, mutation, category, use_vitamins) end
 
 ---Remove all mutations of a type from the explicit avatar or NPC; runtime-callback write only.
 ---Uses native unset semantics, without purifier downgrades or restoring prerequisites.

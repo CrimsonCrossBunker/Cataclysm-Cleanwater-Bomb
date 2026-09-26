@@ -556,6 +556,7 @@ sol::table snapshot_npc(
     result["hallucination"] =
         entry.is_hallucination();
     result["enemy"] = entry.is_enemy();
+    result["friendly"] = entry.is_friendly( get_avatar() );
     result["following"] = entry.is_following();
     result["player_ally"] =
         entry.is_player_ally();
