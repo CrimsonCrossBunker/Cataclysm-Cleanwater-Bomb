@@ -5270,7 +5270,7 @@ def render_static_false_effect(
         name = effect[key]
         if target is not None and lua_quotable_native_variable_string(name):
             return [
-                f"        services.variables.remove({target}, {lua_quote(name)})"
+                f"        services.variables.remove({target}, {lua_quote(name)}, {{ include_before = false }})"
             ]
     if isinstance(effect, dict):
         key: str | None = next(
@@ -24917,7 +24917,7 @@ def render_static_character_variable(
         lines = [
             "    services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
-            f"{value_expression})",
+            f"{value_expression}, {{ include_before = false }})",
         ]
         if target_expression == "context.actors.item":
             return [
@@ -24938,7 +24938,7 @@ def render_static_character_variable(
             f"    local values = {{ {rendered_values} }}",
             "    local selected_value = values[services.random.int(0, #values - 1) + 1]",
             "    local write_result = services.variables.set(",
-            f"        {target_expression}, {lua_quote(effect[key])}, selected_value)",
+            f"        {target_expression}, {lua_quote(effect[key])}, selected_value, {{ include_before = false }})",
             "    if write_result.ok then",
             "        services.native_events.emit(",
             f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, selected_value }})",
@@ -24959,7 +24959,7 @@ def render_static_character_variable(
         lines = [
             "    local write_result = services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
-            f"{value_expression})",
+            f"{value_expression}, {{ include_before = false }})",
             "    if write_result.ok then",
             "        services.native_events.emit(",
             f"            \"u_var_changed\", {{ {lua_quote(effect[key])}, "
@@ -29032,7 +29032,7 @@ def render_eoc(
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
-                    f"{lua_quote(effect['u_lose_var'])})"
+                    f"{lua_quote(effect['u_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
             elif (
@@ -29043,7 +29043,7 @@ def render_eoc(
             ):
                 lines.append(
                     "    services.variables.remove(actor, "
-                    f"{lua_quote(effect['npc_lose_var'])})"
+                    f"{lua_quote(effect['npc_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
             elif (
