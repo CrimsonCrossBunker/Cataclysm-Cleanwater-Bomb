@@ -23001,13 +23001,19 @@ assert(npcs()==0)
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
-local context={data={value='initial'}}
 local reads,calls=0,0
-local function service_value(r) return r.value end
-local services={variables={resolve=function(data,owner,scope,key,participants)
- assert(calls==0 and data==context.data and scope=='context' and participants.alpha==actor)
- reads=reads+1;return {value={exists=data[key]~=nil,value=data[key]}}
-end},message=function()
+local stored={value='initial'}
+local context={data=setmetatable({}, {
+ __index=function(_,key)
+  if key=='value' or key=='missing' then
+   assert(calls==0) -- All target reads must precede the first body effect.
+   reads=reads+1
+  end
+  return stored[key]
+ end,
+ __newindex=function(_,key,value) stored[key]=value end,
+})}
+local services={message=function()
  calls=calls+1;assert(reads==3)
  assert(context.data.entry==({'initial','initial','fallback'})[calls])
  context.data.value='changed'
