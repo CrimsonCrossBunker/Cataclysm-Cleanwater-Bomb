@@ -19943,7 +19943,9 @@ def render_static_assign_mission_effect(
     deadline_expression: str | None = None
     if deadline is not None:
         deadline_number = finite_number_literal(deadline)
-        if deadline_number is not None:
+        if deadline_number is None:
+            return None
+        if deadline_number != 0:
             if (
                 not math.isfinite(float(deadline_number)) or
                 float(deadline_number) < 0 or
@@ -19952,29 +19954,17 @@ def render_static_assign_mission_effect(
             ):
                 return None
             deadline_expression = str(int(deadline_number))
-        else:
-            dynamic_deadline = render_eoc_numeric_expression(
-                deadline, "0", avatar
-            )
-            if dynamic_deadline is None:
-                return None
-            deadline_expression = (
-                "math.max(0, math.min(2147483647, "
-                f"math.floor(({dynamic_deadline}) + 0.5)))"
-            )
     lines = [
         "    local reservation = service_value(services.missions.reserve(",
         f"        {mission_id}))",
         "    local token = reservation.token",
+        "    service_value(services.missions.assign(actor, token))",
     ]
     if deadline_expression is not None:
         lines.extend([
             "    service_value(services.missions.set_deadline(",
             f"        token, services.time.point({deadline_expression}))",
         ])
-    lines.extend([
-        "    service_value(services.missions.assign(actor, token))",
-    ])
     return lines
 
 

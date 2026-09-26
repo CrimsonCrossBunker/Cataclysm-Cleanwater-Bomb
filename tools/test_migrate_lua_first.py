@@ -11663,6 +11663,10 @@ assert(#events == 11)
             self.assertIn("services.missions.set_deadline(", main)
             self.assertIn("services.time.point(500)", main)
             self.assertIn("services.missions.assign(actor, token)", main)
+            self.assertLess(
+                main.index("services.missions.assign(actor, token)"),
+                main.index("services.missions.set_deadline("),
+            )
             self.assertIn("services.missions.complete(", main)
             self.assertIn("services.missions.abandon(actor, entry.token)", main)
             self.assertNotIn("mission lifecycle shape", main)
@@ -11710,19 +11714,47 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn('services.types.id("mission", tostring((context.data["mission_id"])', main)
-            self.assertIn('services.variables.get_global("mission_deadline")', main)
             self.assertIn('services.variables.resolve(context.data, actor, "u", "mission_id")', main)
             self.assertIn(
                 'services.missions.step_complete(\n                    actor, entry.token,',
                 main,
             )
-            self.assertIn('services.missions.assign(actor, token)', main)
+            self.assertNotIn('services.missions.assign(actor, token)', main)
+            self.assertNotIn('services.variables.get_global("mission_deadline")', main)
             self.assertIn('services.missions.abandon(actor, entry.token)', main)
-            self.assertNotIn("mission lifecycle shape", report)
+            self.assertIn("mission lifecycle shape", report)
+
+    def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
+        lines = migrate_lua_first.render_static_assign_mission_effect(
+            {"assign_mission": "MISSION_TEST", "deadline": 500}, True
+        )
+        self.assertIsNotNone(lines)
+        rendered = "\n".join(lines or [])
+        self.assertLess(
+            rendered.index("services.missions.assign(actor, token)"),
+            rendered.index("services.missions.set_deadline("),
+        )
+
+        zero_deadline = migrate_lua_first.render_static_assign_mission_effect(
+            {"assign_mission": "MISSION_TEST", "deadline": 0}, True
+        )
+        self.assertIsNotNone(zero_deadline)
+        self.assertNotIn(
+            "services.missions.set_deadline(", "\n".join(zero_deadline or [])
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_assign_mission_effect(
+                {
+                    "assign_mission": "MISSION_TEST",
+                    "deadline": {"global_val": "mission_deadline"},
+                },
+                True,
+            )
+        )
 
     def test_translates_bounded_npc_mission_provider_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
