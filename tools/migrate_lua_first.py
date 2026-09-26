@@ -27396,8 +27396,11 @@ def render_eoc_condition_expression(
         elif isinstance(value, dict) and value.get("mutator") == "topic_item":
             if set(value) != {"mutator"}:
                 return None
-            # EOC activation evaluates its predicate on a copied dialogue.
-            # That copy drops cur_item, so the native mutator observes "".
+            # This renderer is only used for migrated EOC predicates, which
+            # evaluate on activate's copied dialogue (including nested EOC
+            # predicates). That copy drops cur_item, so the native mutator
+            # observes "". Standalone native test_condition calls are outside
+            # this renderer's runtime path.
             requested = lua_quote("")
         else:
             if isinstance(value, dict) and not set(value).intersection({
