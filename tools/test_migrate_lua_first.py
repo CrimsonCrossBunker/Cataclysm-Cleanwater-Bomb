@@ -3434,6 +3434,138 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("services.state.", main)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_character_variable_add_preserves_changed_events(self) -> None:
+        cases = (
+            ("u_add_var", "u_val", "ready", "u_owner"),
+            ("npc_add_var", "context_val", "npc-ready", "npc_owner"),
+        )
+        rendered = {}
+        for selector, name, value, target in cases:
+            lines = migrate_lua_first.render_static_character_variable(
+                {selector: name, "value": value}, selector, target
+            )
+            self.assertIsNotNone(lines)
+            body = "\n".join(lines)
+            self.assertLess(body.index("services.variables.set("),
+                            body.index("services.native_events.emit("))
+            rendered[selector] = body
+
+        choice_lines = migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "choice", "possible_values": ["only"]},
+            "u_add_var", "u_owner",
+        )
+        time_lines = migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "turn", "time": True}, "u_add_var", "u_owner",
+        )
+        self.assertIsNotNone(choice_lines)
+        self.assertIsNotNone(time_lines)
+        self.assertIn("services.random.int(1, #values)", "\n".join(choice_lines))
+        self.assertNotIn("native_events.emit", "\n".join(time_lines))
+        self.assertIsNone(migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "large", "value": "x" * 1025}, "u_add_var", "u_owner",
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_character_variable(
+            {"u_add_var": "large", "possible_values": ["x" * 1025]},
+            "u_add_var", "u_owner",
+        ))
+        script = r"""
+local u_owner, npc_owner = {values={}}, {values={}}
+local events, random_calls, write_allowed = {}, 0, true
+local services = {
+    variables = {set=function(owner, key, value)
+        if not write_allowed then return {ok=false} end
+        owner.values[key] = value
+        return {ok=true}
+    end},
+    native_events = {emit=function(name, args)
+        assert(name == "u_var_changed")
+        events[#events + 1] = {var=args[1], value=args[2]}
+        return true
+    end},
+    random = {int=function(first, last)
+        random_calls = random_calls + 1
+        assert(first == 1 and last == 1)
+        return first
+    end},
+    turn = function() return 1440 end,
+}
+do
+BODY_U
+end
+do
+BODY_NPC
+end
+assert(u_owner.values.u_val == "ready")
+assert(npc_owner.values.context_val == "npc-ready")
+assert(#events == 2)
+assert(events[1].var == "u_val" and events[1].value == "ready")
+assert(events[2].var == "context_val" and events[2].value == "npc-ready")
+do
+CHOICE_BODY
+end
+assert(u_owner.values.choice == "only")
+assert(random_calls == 1)
+assert(#events == 3 and events[3].var == "choice" and events[3].value == "only")
+do
+TIME_BODY
+end
+assert(u_owner.values.turn == "1440")
+assert(#events == 3)
+u_owner.values.u_val = "kept"
+write_allowed = false
+do
+BODY_U
+end
+assert(u_owner.values.u_val == "kept")
+assert(#events == 3)
+""".replace("BODY_U", rendered["u_add_var"])
+        script = script.replace("BODY_NPC", rendered["npc_add_var"])
+        script = script.replace("CHOICE_BODY", "\n".join(choice_lines))
+        script = script.replace("TIME_BODY", "\n".join(time_lines))
+        executed = subprocess.run(["lua", "-"], input=script, text=True,
+                                  capture_output=True, timeout=10)
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {
+                    "type": "effect_on_condition", "id": "u_add_literal",
+                    "required_event": "game_start",
+                    "effect": {"u_add_var": "u_val", "value": "ready"},
+                },
+                {
+                    "type": "effect_on_condition", "id": "npc_add_literal",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"npc_add_var": "context_val", "value": "npc-ready"},
+                },
+                {
+                    "type": "effect_on_condition", "id": "time_literal",
+                    "required_event": "game_start",
+                    "effect": {"u_add_var": "turn", "time": True},
+                },
+                {
+                    "type": "effect_on_condition", "id": "u_remove_literal",
+                    "required_event": "game_start",
+                    "effect": {"u_lose_var": "u_val"},
+                },
+                {
+                    "type": "effect_on_condition", "id": "npc_remove_literal",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"npc_lose_var": "context_val"},
+                },
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "variable_event_mod"
+            )
+            main = result.files[Path("main.lua")]
+            self.assertEqual(main.count("services.native_events.emit("), 2)
+            self.assertIn('{ "u_val", "ready" }', main)
+            self.assertIn('{ "context_val", "npc-ready" }', main)
+            self.assertIn('services.variables.remove(actor, "u_val")', main)
+            self.assertIn('services.variables.remove(actor, "context_val")', main)
+
     def test_dynamic_character_variable_shapes_remain_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
