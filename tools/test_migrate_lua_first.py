@@ -515,28 +515,110 @@ assert(participant_calls==#participant_expected)
         self.assertEqual(result.returncode, 0, result.stderr)
 
         valid_context_keys = ("x" * 128, "雪" * 42 + "xx")
-        invalid_context_keys = (
+        invalid_resolve_keys = (
             "", "x" * 129, "雪" * 43, "control\x01", "delete\x7f", "nul\x00", "bad\ud800",
         )
         for key in valid_context_keys:
             self.assertIsNotNone(migrate_lua_first.render_eoc_value_expression(
                 {"var_val": key}, "nil", "actor"))
-            for scope in ("context_val", "var_val"):
+            self.assertIsNotNone(migrate_lua_first.render_participant_string(
+                {"var_val": key}, "actor", "actor", "partner"))
+        for key in ("", "x" * 129, "雪" * 43, "control\x01", "delete\x7f", "nul\x00"):
+            with self.subTest(scope="participant context", key=repr(key)):
                 self.assertIsNotNone(migrate_lua_first.render_participant_string(
-                    {scope: key}, "actor", "actor", "partner"))
-        for key in invalid_context_keys:
+                    {"context_val": key}, "actor", "actor", "partner"))
+        for key in invalid_resolve_keys:
             with self.subTest(scope="resolve", key=repr(key)):
                 self.assertIsNone(migrate_lua_first.render_eoc_value_expression(
                     {"var_val": key}, "nil", "actor"))
-                for scope in ("context_val", "var_val"):
-                    self.assertIsNone(migrate_lua_first.render_participant_string(
-                        {scope: key}, "actor", "actor", "partner"))
+                self.assertIsNone(migrate_lua_first.render_participant_string(
+                    {"var_val": key}, "actor", "actor", "partner"))
                 if key == "bad\ud800":
                     self.assertIsNone(migrate_lua_first.render_eoc_value_expression(
                         {"context_val": key}, "nil", "actor"))
+                    self.assertIsNone(migrate_lua_first.render_participant_string(
+                        {"context_val": key}, "actor", "actor", "partner"))
                 else:
                     self.assertIsNotNone(migrate_lua_first.render_eoc_value_expression(
                         {"context_val": key}, "nil", "actor"))
+                    self.assertIsNotNone(migrate_lua_first.render_participant_string(
+                        {"context_val": key}, "actor", "actor", "partner"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_participant_context_string_reference_preserves_native_missing_and_string_semantics(self) -> None:
+        long_unicode_key = "雪" * 65
+        long_key = "k" * 9000
+        nul_control_key = "nul\x00context\x01"
+        expressions = {}
+        for label, key, default in (
+                ("empty_key", "", "fallback"),
+                ("nul_key", nul_control_key, "fallback"),
+                ("long_unicode_key", long_unicode_key, "fallback"),
+                ("long_key", long_key, "fallback"),
+                ("missing_default", "missing", "fallback"),
+                ("missing_empty", "missing", None)):
+            value = {"context_val": key}
+            if default is not None:
+                value["default"] = default
+            expression = migrate_lua_first.render_participant_string(
+                value, "actor", "actor", "partner")
+            self.assertIsNotNone(expression)
+            expressions[label] = expression
+
+        data_setup = "\n".join((
+            f"context.data[{migrate_lua_first.lua_quote('')}] = 'empty-key-value'",
+            f"context.data[{migrate_lua_first.lua_quote(nul_control_key)}] = services.types.null",
+            f"context.data[{migrate_lua_first.lua_quote(long_unicode_key)}] = " +
+            migrate_lua_first.lua_quote("v" * 9000),
+            f"context.data[{migrate_lua_first.lua_quote(long_key)}] = 42",
+            "context.data['false-value'] = false",
+            "context.data['array-value'] = { 'value' }",
+            "context.data['empty-value'] = ''",
+        ))
+        extra_expressions = {}
+        for label, key in (("false_value", "false-value"),
+                           ("array_value", "array-value"),
+                           ("empty_value", "empty-value")):
+            expression = migrate_lua_first.render_participant_string(
+                {"context_val": key, "default": "fallback"}, "actor", "actor", "partner")
+            self.assertIsNotNone(expression)
+            extra_expressions[label] = expression
+
+        script = r"""
+local services={types={null={}}}
+local context={data={}}
+DATA_SETUP
+assert(EXPR_EMPTY_KEY == 'empty-key-value')
+assert(EXPR_NUL_KEY == '')
+assert(EXPR_LONG_UNICODE_KEY == LONG_VALUE)
+assert(EXPR_LONG_KEY == '')
+assert(EXPR_FALSE_VALUE == '')
+assert(EXPR_ARRAY_VALUE == '')
+assert(EXPR_EMPTY_VALUE == '')
+assert(EXPR_MISSING_DEFAULT == 'fallback')
+assert(EXPR_MISSING_EMPTY == '')
+context={}
+assert(EXPR_MISSING_DEFAULT == 'fallback')
+assert(EXPR_MISSING_EMPTY == '')
+context={data=nil}
+assert(EXPR_MISSING_DEFAULT == 'fallback')
+assert(EXPR_MISSING_EMPTY == '')
+context=nil
+assert(EXPR_MISSING_DEFAULT == 'fallback')
+""".replace("DATA_SETUP", data_setup).replace(
+            "EXPR_EMPTY_KEY", expressions["empty_key"]).replace(
+            "EXPR_NUL_KEY", expressions["nul_key"]).replace(
+            "EXPR_LONG_UNICODE_KEY", expressions["long_unicode_key"]).replace(
+            "LONG_VALUE", migrate_lua_first.lua_quote("v" * 9000)).replace(
+            "EXPR_LONG_KEY", expressions["long_key"]).replace(
+            "EXPR_FALSE_VALUE", extra_expressions["false_value"]).replace(
+            "EXPR_ARRAY_VALUE", extra_expressions["array_value"]).replace(
+            "EXPR_EMPTY_VALUE", extra_expressions["empty_value"]).replace(
+            "EXPR_MISSING_DEFAULT", expressions["missing_default"]).replace(
+            "EXPR_MISSING_EMPTY", expressions["missing_empty"])
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_translated_defaults_do_not_translate_stored_null(self) -> None:
