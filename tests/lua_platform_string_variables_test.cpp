@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,6 +20,7 @@
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "global_vars.h"
+#include "json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
