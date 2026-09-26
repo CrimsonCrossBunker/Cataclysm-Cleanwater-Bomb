@@ -206,6 +206,13 @@ PROVEN_NPC_ACTOR_EVENTS = frozenset({
     "npc_becomes_hostile",
 })
 
+# The native EOC event dispatcher only chooses alpha from these event fields;
+# an arbitrary Character-valued payload field is not enough to prove u_ target
+# semantics. Keep this list aligned with effect_on_conditions::process_event.
+NATIVE_EOC_ALPHA_EVENT_FIELDS = frozenset({
+    "avatar_id", "character", "attacker", "killer", "npc",
+})
+
 # These event contracts are avatar-scoped even though they intentionally do
 # not carry a character_id field.  The event payload remains actor-free (the
 # runtime must not invent ``actors.avatar``), while an EOC subscribed to the
@@ -248,6 +255,12 @@ VICTIM_CHARACTER_EVENTS = frozenset({
     "character_kills_character",
     "character_melee_attacks_character",
     "character_ranged_attacks_character",
+})
+
+MONSTER_BETA_EVENTS = frozenset({
+    "character_kills_monster",
+    "character_melee_attacks_monster",
+    "character_ranged_attacks_monster",
 })
 
 
@@ -4696,8 +4709,11 @@ def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
     character_target_proven: bool | None = True,
+    target_kind: str | None = "character",
 ) -> list[str] | None:
-    if target_expression is None or key not in effect:
+    if target_expression is None or key not in effect or target_kind not in {
+        "character", "monster",
+    }:
         return None
     if set(effect) - {key, "target_part"}:
         return None
@@ -4787,6 +4803,7 @@ def render_static_remove_effects(
             {key: raw_ids, "target_part": "ALL"}, key, target_expression,
             avatar_expression=alpha, npc_expression=beta,
             character_target_proven=character_target_proven,
+            target_kind=target_kind,
         )
         assert all_lines is not None
         return (
@@ -4807,6 +4824,7 @@ def render_static_false_effect(
     eoc_conditions: dict[str, Any] | None = None,
     creature_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Render the small, branch-free false-effect subset inline.
 
@@ -4819,6 +4837,7 @@ def render_static_false_effect(
             effect, avatar_actor_proven, npc_actor_proven,
             eoc_function_names, eoc_actor_requirements,
             actor_expression, eoc_conditions, npc_actor_expression,
+            effect_actor_targets,
         )
     activation = render_mutation_action(
         effect, (actor_expression or "actor") if avatar_actor_proven else None,
@@ -4953,21 +4972,43 @@ def render_static_false_effect(
             "u_lose_effect" if "u_lose_effect" in effect
             else "npc_lose_effect"
         )
-        target = _eoc_actor_expression(
-            key, avatar_actor_proven, npc_actor_proven
+        target_kind: str | None = None
+        if effect_actor_targets is None:
+            target = _eoc_actor_expression(
+                key, avatar_actor_proven, npc_actor_proven
+            )
+            if target is None and key == "u_lose_effect" and creature_actor_proven:
+                target = actor_expression or "actor"
+            target_kind = (
+                "monster" if creature_actor_proven and not avatar_actor_proven
+                else "character" if target is not None else None
+            )
+        else:
+            target_info = effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+            target = target_info[0] if target_info is not None else None
+            target_kind = target_info[1] if target_info is not None else None
+        alpha = (
+            target if key.startswith("u_") and effect_actor_targets is not None else
+            (actor_expression or "actor") if avatar_actor_proven else None
         )
-        if target is None and key == "u_lose_effect" and creature_actor_proven:
-            target = actor_expression or "actor"
-        alpha = (actor_expression or "actor") if avatar_actor_proven else None
-        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
-        if key == "npc_lose_effect":
+        beta = (
+            target if key.startswith("npc_") and effect_actor_targets is not None else
+            npc_actor_expression or ("actor" if npc_actor_proven else None)
+        )
+        if effect_actor_targets is None and key == "npc_lose_effect":
             target = beta
-        elif alpha is not None:
+        elif effect_actor_targets is None and alpha is not None:
             target = alpha
+        if effect_actor_targets is None and target_kind is None and target is not None:
+            target_kind = (
+                "monster" if creature_actor_proven and not avatar_actor_proven
+                else "character"
+            )
         rendered = render_static_remove_effects(
             effect, key, target, avatar_expression=alpha, npc_expression=beta,
-            character_target_proven=avatar_actor_proven if key.startswith("u_") else (
-                True if npc_actor_proven else None))
+            character_target_proven=target_kind == "character",
+            target_kind=target_kind,
+        )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
@@ -5295,18 +5336,40 @@ def render_static_false_effect(
             None,
         )
         if key is not None:
-            target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+            target_kind: str | None = None
+            if "effect" in key and effect_actor_targets is not None:
+                target_info = effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+                target = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
+            else:
+                target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
             if "effect" in key:
-                alpha = (actor_expression or "actor") if avatar_actor_proven else None
-                if key.startswith("npc_"):
+                alpha = (
+                    target if key.startswith("u_") and effect_actor_targets is not None else
+                    (actor_expression or "actor") if avatar_actor_proven else None
+                )
+                beta = (
+                    target if key.startswith("npc_") and effect_actor_targets is not None else
+                    npc_actor_expression or ("actor" if npc_actor_proven else None)
+                )
+                if effect_actor_targets is None and key.startswith("npc_"):
                     target = npc_actor_expression or target
-                elif alpha is not None:
+                elif effect_actor_targets is None and alpha is not None:
                     target = alpha
-                rendered = render_static_character_effect(effect, key, target)
+                if target_kind is None and target is not None and effect_actor_targets is None:
+                    target_kind = (
+                        "monster" if creature_actor_proven and not avatar_actor_proven
+                        else "character"
+                    )
+                rendered = render_static_character_effect(
+                    effect, key, target, target_kind=target_kind
+                )
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target, avatar_expression=alpha,
-                        npc_expression=npc_actor_expression or ("actor" if npc_actor_proven else None))
+                        npc_expression=beta,
+                        target_kind=target_kind,
+                    )
             elif "wound" in key:
                 rendered = render_static_character_wound(
                     effect, key, target, key.endswith("remove_wound")
@@ -5361,40 +5424,6 @@ def render_static_false_effect(
                         "        services.morale.remove(",
                         f"            {target}, services.types.id(\"morale\", {lua_quote(effect[morale_key])}))",
                     ]
-        for lose_key in ("u_lose_effect", "npc_lose_effect"):
-            if lose_key in effect:
-                target = _eoc_actor_expression(
-                    lose_key, avatar_actor_proven, npc_actor_proven
-                )
-                if (
-                    target is None and lose_key == "u_lose_effect" and
-                    creature_actor_proven
-                ):
-                    target = actor_expression or "actor"
-                if target is not None and set(effect) <= {lose_key, "target_part"}:
-                    effect_ids = effect.get(lose_key)
-                    effect_ids = (
-                        effect_ids if isinstance(effect_ids, list)
-                        else [effect_ids]
-                    )
-                    part = effect.get("target_part")
-                    if (
-                        0 < len(effect_ids) <= 64 and
-                        all(safe_platform_id(effect_id) for effect_id in effect_ids) and
-                        (part is None or safe_platform_id(part))
-                    ):
-                        rendered: list[str] = []
-                        for effect_id in effect_ids:
-                            rendered.extend([
-                                "        services.effects.remove(",
-                                f"            {target}, services.types.id(\"effect\", {lua_quote(effect_id)})" +
-                                (
-                                    ", services.types.id(\"body_part\", " +
-                                    lua_quote(part) + "))"
-                                    if part is not None else ")"
-                                ),
-                            ])
-                        return rendered
         if effect == "u_prevent_death" and avatar_actor_proven:
             return ["        services.characters.prevent_death(actor)"]
         comment_keys = {
@@ -5450,6 +5479,8 @@ def render_static_false_effect(
                 effect, avatar_actor_proven, npc_actor_proven, False,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
+                npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5457,7 +5488,8 @@ def render_static_false_effect(
             rendered = render_static_if_effect(
                 effect, avatar_actor_proven, npc_actor_proven, False,
                 eoc_function_names, eoc_actor_requirements, actor_expression,
-                eoc_conditions,
+                eoc_conditions, npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5713,6 +5745,7 @@ def render_static_foreach(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
@@ -5761,6 +5794,7 @@ def render_static_foreach(
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
                 npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
             )
             if rendered is None:
                 return False
@@ -5908,6 +5942,7 @@ def render_static_if_effect(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Lower an ``if/then/else`` made solely of simple Lua-native effects."""
     if (
@@ -5933,6 +5968,7 @@ def render_static_if_effect(
             value, avatar_actor_proven, npc_actor_proven, eoc_function_names,
             eoc_actor_requirements,
             actor_expression, eoc_conditions, creature_actor_proven,
+            effect_actor_targets=effect_actor_targets,
         )
         if chunk is None:
             return None
@@ -5943,6 +5979,7 @@ def render_static_if_effect(
             value, avatar_actor_proven, npc_actor_proven, eoc_function_names,
             eoc_actor_requirements,
             actor_expression, eoc_conditions, creature_actor_proven,
+            effect_actor_targets=effect_actor_targets,
         )
         if chunk is None:
             return None
@@ -5964,6 +6001,7 @@ def render_static_switch_effect(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Lower a legacy ``switch`` into ordinary Lua comparisons.
 
@@ -6055,6 +6093,7 @@ def render_static_switch_effect(
                 branch_value, avatar_actor_proven, npc_actor_proven,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions, creature_actor_proven,
+                effect_actor_targets=effect_actor_targets,
             )
             if chunk is None:
                 return None
@@ -19245,9 +19284,14 @@ def render_static_character_effect(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
+    *,
+    target_kind: str | None = "character",
 ) -> list[str] | None:
     """Render one static u_/npc_add_effect without preserving EOC syntax."""
-    if target_expression is None or not safe_platform_id(effect.get(key)):
+    if (
+        target_expression is None or target_kind not in {"character", "monster"} or
+        not safe_platform_id(effect.get(key))
+    ):
         return None
     allowed_keys = {
         key, "duration", "intensity", "target_part", "force",
@@ -19259,6 +19303,12 @@ def render_static_character_effect(
     target_part = effect.get("target_part")
     force = effect.get("force", False)
     if target_part is not None and not safe_platform_id(target_part):
+        return None
+    if target_kind == "monster" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # talker_monster::add_effect passes RANDOM through as a body-part ID;
+        # it does not sample the avatar's random part like Character talkers.
         return None
     if not isinstance(force, bool):
         return None
@@ -19431,9 +19481,13 @@ def _effect_numeric_expression(
 def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
+    target_kind: str | None = "character",
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
-    if target_expression is None or key not in effect or "duration" not in effect:
+    if (
+        target_expression is None or target_kind not in {"character", "monster"} or
+        key not in effect or "duration" not in effect
+    ):
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
@@ -19467,6 +19521,12 @@ def render_dynamic_character_effect(
     ):
         return None
     target_part = effect.get("target_part")
+    if target_kind == "monster" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # A dynamic part can evaluate to RANDOM at runtime, whose native add
+        # behavior differs for Monster and Character talkers.
+        return None
     options: list[str] = []
     if target_part == "RANDOM":
         options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
@@ -28360,6 +28420,7 @@ def render_eoc(
         # through actor_override instead of fabricating an ambient avatar.
         nested_character_override = True
         callback_character_actor_proven = True
+    exact_callback_character_actor_proven = callback_character_actor_proven
     character_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         npc_event_character_actor_proven or event_character_actor_proven or
@@ -28469,6 +28530,54 @@ def render_eoc(
         # while retaining the selected actor as the safe fallback for ordinary
         # NPC traversal callbacks that have no talker pair.
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
+    exact_alpha_effect_kind: str | None = None
+    alpha_effect_kinds: set[str] = set()
+    if (
+        exact_avatar_actor_proven or exact_npc_actor_proven or
+        event_character_actor_proven and
+        event_actor_field in NATIVE_EOC_ALPHA_EVENT_FIELDS or
+        required_event in PROVEN_ITEM_ACTOR_EVENTS or
+        exact_callback_character_actor_proven or
+        character_recurrence or eoc_id in character_override_ids or
+        value.get("__inline_actor_kind") == "character"
+    ):
+        alpha_effect_kinds.add("character")
+    if monster_actor_proven:
+        alpha_effect_kinds.add("monster")
+    if len(alpha_effect_kinds) == 1:
+        exact_alpha_effect_kind = next(iter(alpha_effect_kinds))
+    if exact_alpha_effect_kind is not None:
+        alpha_effect_target: tuple[str, str] | None = (
+            (
+                "context.actors.speaker"
+                if exact_alpha_effect_kind == "monster" and
+                required_event in CREATURE_ACTOR_EVENTS else "actor"
+            ),
+            exact_alpha_effect_kind,
+        )
+    else:
+        alpha_effect_target = None
+
+    if required_event in VICTIM_CHARACTER_EVENTS:
+        if required_event == "character_kills_character":
+            # This event uses send(), so dialogue::actor(true) has no beta and
+            # falls back to alpha.  Its victim payload field is not a talker.
+            beta_effect_target = alpha_effect_target
+        else:
+            # Melee/ranged character events use send_with_talker(alpha, victim).
+            beta_effect_target = ("context.actors.interlocutor", "character")
+    elif required_event in MONSTER_BETA_EVENTS:
+        # These event producers attach the monster as the second talker; the
+        # Platform event bridge names that handle "interlocutor".
+        beta_effect_target = ("context.actors.interlocutor", "monster")
+    elif exact_npc_actor_proven:
+        beta_effect_target = ("actor", "character")
+    else:
+        beta_effect_target = None
+    effect_actor_targets = {
+        "u": alpha_effect_target,
+        "npc": beta_effect_target,
+    }
     lines = [
         f"-- Extracted from {source.location}; review every TODO before enabling.",
         # Function declarations are assigned to a predeclared local in the
@@ -28681,6 +28790,7 @@ def render_eoc(
                     actor_expression,
                     eoc_conditions, creature_actor_proven,
                     npc_actor_expression,
+                    effect_actor_targets,
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
@@ -28791,6 +28901,7 @@ def render_eoc(
                     eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28815,6 +28926,7 @@ def render_eoc(
                     eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28972,6 +29084,7 @@ def render_eoc(
                     eoc_function_names or {}, eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29476,24 +29589,25 @@ def render_eoc(
                 ("u_add_effect" in effect or "npc_add_effect" in effect)
             ):
                 key = "u_add_effect" if "u_add_effect" in effect else "npc_add_effect"
-                target_expression = (
-                    (npc_actor_expression or "actor")
-                    if key == "npc_add_effect" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
-                    else "actor" if key == "u_add_effect" and (
-                        character_actor_proven or creature_actor_proven
-                    )
-                    else None
+                target_info = effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+                target_expression = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
+                rendered = render_static_character_effect(
+                    effect, key, target_expression, target_kind=target_kind
                 )
-                rendered = render_static_character_effect(effect, key, target_expression)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target_expression,
-                        avatar_expression="actor" if character_actor_proven else None,
-                        npc_expression=npc_actor_expression or (
-                            "actor" if npc_event_character_actor_proven else None),
+                        avatar_expression=(
+                            target_expression if key.startswith("u_") else
+                            "actor" if character_actor_proven else None
+                        ),
+                        npc_expression=(
+                            target_expression if key.startswith("npc_") else
+                            npc_actor_expression or (
+                                "actor" if npc_event_character_actor_proven else None)
+                        ),
+                        target_kind=target_kind,
                     )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29517,25 +29631,22 @@ def render_eoc(
                     "u_lose_effect" if "u_lose_effect" in effect
                     else "npc_lose_effect"
                 )
-                target_expression = (
-                    "actor"
-                    if key == "u_lose_effect" and
-                    (character_actor_proven or creature_actor_proven)
-                    else (npc_actor_expression or "actor")
-                    if key == "npc_lose_effect" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
-                    else None
-                )
+                target_info = effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+                target_expression = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
                 rendered = render_static_remove_effects(
                     effect, key, target_expression,
-                    avatar_expression="actor" if character_actor_proven else None,
-                    npc_expression=npc_actor_expression or (
-                        "actor" if npc_event_character_actor_proven else None),
-                    character_target_proven=character_actor_proven if key.startswith("u_") else (
-                        True if npc_event_character_actor_proven or required_event in VICTIM_CHARACTER_EVENTS
-                        else None),
+                    avatar_expression=(
+                        target_expression if key.startswith("u_") else
+                        "actor" if character_actor_proven else None
+                    ),
+                    npc_expression=(
+                        target_expression if key.startswith("npc_") else
+                        npc_actor_expression or (
+                            "actor" if npc_event_character_actor_proven else None)
+                    ),
+                    character_target_proven=target_kind == "character",
+                    target_kind=target_kind,
                 )
                 if rendered is not None:
                     lines.extend(rendered)

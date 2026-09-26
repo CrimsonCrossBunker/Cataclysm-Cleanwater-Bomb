@@ -1460,9 +1460,7 @@ assert(adds==1 and random_calls==2 and reads==READS)
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_all_removal_event_beta_uses_actual_creature_kind(self) -> None:
         for event, kind in (("character_melee_attacks_monster", "monster"),
-                            ("character_melee_attacks_character", "npc"),
-                            ("character_takes_damage", "monster"),
-                            ("character_takes_damage", "avatar")):
+                            ("character_melee_attacks_character", "npc")):
             for dynamic in (False, True):
                 with self.subTest(event=event, kind=kind, dynamic=dynamic), tempfile.TemporaryDirectory() as temporary:
                     source = Path(temporary) / "eoc.json"
@@ -1497,7 +1495,7 @@ local services={
 package.preload.ccb=function() return {content={},services=services,runtime={
  handler=function(id,fn) handlers[id]=fn end,on=function() end}} end
 BODY
-handlers['migrated.remove_all']({data={part='ALL'},actors={beta=target,attacker=actor,character=actor}})
+handlers['migrated.remove_all']({data={part='ALL'},actors={interlocutor=target,attacker=actor,character=actor}})
 assert(calls==(kind=='monster' and 1 or 3))
 assert(part_calls==(kind=='monster' and 0 or 1))
 """.replace("KIND", migrate_lua_first.lua_quote(kind)).replace("BODY", main)
@@ -5492,6 +5490,135 @@ assert(#events == 11)
             self.assertNotIn("choose mutation conflict replacement and event policy", report)
             self.assertNotIn("choose mutation removal and event policy", report)
             self.assertNotIn("run_eoc", main)
+
+    def test_effect_mutation_requires_a_proven_creature_talker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "known_avatar_effect",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_kill_beta_fallback",
+                            "required_event": "character_kills_character",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_alpha_static",
+                            "required_event": "monster_takes_damage",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_melee_beta",
+                            "required_event": "character_melee_attacks_character",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_beta_static",
+                            "required_event": "character_kills_monster",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_alpha_add",
+                            "condition": "u_is_vehicle",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_beta_add",
+                            "condition": "npc_is_vehicle",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_alpha_remove",
+                            "condition": "u_is_vehicle",
+                            "effect": {"u_lose_effect": "bleed"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_beta_remove",
+                            "condition": "npc_is_vehicle",
+                            "effect": {"npc_lose_effect": "bleed"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_alpha_random_add",
+                            "required_event": "monster_takes_damage",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 5,
+                                "target_part": "RANDOM",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_beta_random_add",
+                            "required_event": "character_kills_monster",
+                            "effect": {
+                                "npc_add_effect": "bleed",
+                                "duration": 5,
+                                "target_part": "RANDOM",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_false_remove",
+                            "condition": "u_is_vehicle",
+                            "false_effect": {"u_lose_effect": "bleed"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "effect_actor_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.effects.add("), 5)
+            self.assertEqual(main.count("        context.actors.interlocutor,"), 2)
+            self.assertEqual(main.count("        context.actors.speaker,"), 1)
+            self.assertIn("character_kill_beta_fallback", main)
+            self.assertNotIn("services.effects.remove(", main)
+            for eoc_id in (
+                "vehicle_alpha_add", "vehicle_beta_add",
+                "vehicle_alpha_remove", "vehicle_beta_remove",
+                "monster_alpha_random_add", "monster_beta_random_add",
+                "vehicle_false_remove",
+            ):
+                self.assertIn(eoc_id, main)
 
     def test_translates_bounded_mutation_effects_for_avatar_and_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -21155,6 +21282,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertNotIn("domain-service conversion", report)
             self.assertIn("context.actors.beta", main)
+            self.assertIn("context.actors.interlocutor", main)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.variables.set", main)
             # Each ID now has ALL per-part/unqualified calls and a normal
