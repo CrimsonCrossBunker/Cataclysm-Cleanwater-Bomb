@@ -3143,11 +3143,16 @@ def render_static_traversal(
         if set(effect) - allowed:
             return None
         radius = effect.get("monster_range")
+        # The native selector omits the radius predicate when this field is
+        # absent.  Do not approximate that unbounded loaded-creature query by
+        # the Platform service's finite maximum radius.
+        if radius is None:
+            return None
         radius_expression = (
             _traversal_integer_expression(
                 radius, 0, 1000, actor_expression
             )
-            if radius is not None else "1000"
+            if radius is not None else None
         )
         if radius_expression is None:
             return None
@@ -3334,71 +3339,12 @@ def render_static_traversal(
         return lines
 
     if key in {"u_run_inv_eocs", "npc_run_inv_eocs"}:
-        if actor_expression is None or effect.get(key) not in {
-            "all", "random", "manual", "manual_mult",
-        }:
-            return None
-        comment_keys = {
-            name for name in effect
-            if isinstance(name, str) and name.startswith("//")
-        }
-        allowed = {
-            key, "true_eocs", "false_eocs", "search_data", "title"
-        } | comment_keys
-        if set(effect) - allowed:
-            return None
-        true_refs = _validated_eoc_references(
-            effect.get("true_eocs", []), eoc_function_names,
-            allow_empty=True,
-        )
-        false_refs = _validated_eoc_references(
-            effect.get("false_eocs", []), eoc_function_names, allow_empty=True
-        )
-        if true_refs is None or false_refs is None:
-            return None
-        if eoc_actor_requirements is not None and any(
-            eoc_actor_requirements.get(reference) == "exact_avatar"
-            for reference in (*true_refs, *false_refs)
-        ):
-            return None
-        mode = effect[key]
-        search_data = effect.get("search_data", [])
-        filters = _item_search_descriptors(
-            search_data, allow_condition=True
-        )
-        if filters is None or search_data or mode != "all":
-            # Platform item pages deliberately do not accept a legacy filter
-            # tree or an unbounded candidate array.  Only the proven actor,
-            # literal holder, and bounded page/depth shape can lower here;
-            # filtered, random, and interactive selectors remain TODOs.
-            return None
-        calls = _traversal_calls(
-            true_refs, eoc_function_names, item=True, item_actor=actor_expression
-        )
-        indented_calls = [line.replace("        ", "            ", 1) for line in calls]
-        lines = [
-            "    context.actors = context.actors or {}",
-            f"    local inventory_holder = {{ kind = \"character\", character = {actor_expression}, slot = \"inventory\" }}",
-            "    local inventory_options = { recursive = true, max_depth = 64, page_size = 256 }",
-            "    local inventory_cursor = nil",
-            "    local inventory_seen = false",
-            "    while true do",
-            "        local inventory_page = service_value(services.items.page(inventory_holder, inventory_options, inventory_cursor))",
-            "        for _, inventory_entry in ipairs(inventory_page.items) do",
-            "            inventory_seen = true",
-            "            local target_item = inventory_entry.handle",
-            *indented_calls,
-            "        end",
-            "        if inventory_page.complete or inventory_page.continuation == nil or inventory_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        inventory_cursor = inventory_page.continuation",
-            "    end",
-            "    if not inventory_seen then",
-            *_render_traversal_false_calls(false_refs, eoc_function_names),
-            "    end",
-        ]
-        return lines
+        # Native Character::all_items_loc() walks wielded and worn roots in
+        # postorder, while services.items.page currently exposes individual
+        # holder roots in preorder and traverses a broader pocket set.  Keep
+        # this lowering fail-closed until the item service can express that
+        # exact selector contract.
+        return None
 
     if key in {"u_map_run_eocs", "npc_map_run_eocs"}:
         allowed = {key, "target_var", "range", "store_coordinates_in", "stop_at_first", "condition"}
@@ -21554,7 +21500,7 @@ def render_static_roll_remainder_effect(
     avatar_actor_proven: bool, npc_actor_proven: bool,
     eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Render a literal remainder roll for mutations, spells, or recipes."""
+    """Render a literal remainder roll through matching typed services."""
     actor_proven = (
         avatar_actor_proven
         if key == "u_roll_remainder" else npc_actor_proven
@@ -21584,11 +21530,12 @@ def render_static_roll_remainder_effect(
     if (
         not isinstance(raw, list) or not raw or len(raw) > 64 or
         not all(safe_platform_id(value) for value in raw) or
-        kind not in {"mutation", "spell", "recipe"}
+        kind not in {"bionic", "mutation", "spell", "recipe"}
     ):
         return None
     actor_expression = "actor"
     type_name = {
+        "bionic": "bionic",
         "mutation": "mutation",
         "spell": "spell",
         "recipe": "recipe",
@@ -21602,6 +21549,7 @@ def render_static_roll_remainder_effect(
             lua_quote(value) + ")"
         )
         query = {
+            "bionic": "services.bionics.has",
             "mutation": "services.mutations.has",
             "spell": "services.spells.knows",
             "recipe": "services.recipes.knows",
@@ -21616,7 +21564,11 @@ def render_static_roll_remainder_effect(
         "    if #remainder_candidates > 0 then",
         "        local remainder = remainder_candidates[services.random.int(1, #remainder_candidates)]",
     ])
-    if kind == "mutation":
+    if kind == "bionic":
+        lines.append(
+            f"        service_value(services.bionics.grant({actor_expression}, remainder))"
+        )
+    elif kind == "mutation":
         lines.append(
             f"        service_value(services.mutations.grant({actor_expression}, remainder))"
         )
@@ -21626,13 +21578,14 @@ def render_static_roll_remainder_effect(
         )
     else:
         lines.append(
-            f"        service_value(services.recipes.learn({actor_expression}, remainder, true))"
+            f"        service_value(services.recipes.learn({actor_expression}, remainder))"
         )
-    if message_expression is not None:
+    if message_expression is not None and key == "u_roll_remainder":
         lines.extend([
             "        local remainder_name = tostring(remainder)",
         ])
         definition_service = {
+            "bionic": "bionics",
             "mutation": "mutations",
             "spell": "spells",
         }.get(kind)
@@ -21643,9 +21596,21 @@ def render_static_roll_remainder_effect(
                 "            remainder_name = remainder_definition.name",
                 "        end",
             ])
+        elif kind == "recipe":
+            lines.extend([
+                "        local remainder_definition = service_value(services.recipes.get(",
+                f"            {actor_expression}, remainder))",
+                "        if remainder_definition.result_name ~= nil then",
+                "            remainder_name = remainder_definition.result_name",
+                "        end",
+            ])
         lines.append(
-            f"        services.message(string.format({message_expression}, remainder_name))"
+            "        if actor.subtype == \"avatar\" then",
         )
+        lines.append(
+            f"            services.message(string.format({message_expression}, remainder_name))"
+        )
+        lines.append("        end")
     for reference in true_refs:
         lines.append(
             f"        {callback_names[reference]}(context, {actor_expression})"
@@ -24365,17 +24330,12 @@ def render_static_transform_radius(
     transform = effect.get("ter_furn_transform")
     radius = _literal_nonnegative_integer(effect[key], 60)
     radius_expression = str(radius) if radius is not None else None
-    if radius_expression is None:
-        dynamic_radius = render_eoc_numeric_expression(
-            effect[key], "0", actor or "actor"
-        )
-        if dynamic_radius is not None:
-            radius_expression = (
-                "math.max(0, math.min(60, math.floor((" +
-                dynamic_radius + ") + 0.5)))"
-            )
-    delay = _duration_expression(
-        effect.get("time_in_future", 0), actor_expression=actor or "actor"
+    raw_delay = effect.get("time_in_future", 0)
+    parsed_delay = parse_turns(raw_delay)
+    delay = (
+        _duration_expression(raw_delay, actor_expression=actor or "actor")
+        if parsed_delay is not None and
+        0 <= parsed_delay <= MAX_EFFECT_DURATION_TURNS else None
     )
     event_key = effect.get("key", "")
     if not bounded_platform_id(transform) or radius_expression is None or delay is None:
@@ -25376,14 +25336,13 @@ def render_static_character_pick_bodypart(
     options = ""
     if wounded is not None:
         options = "{ wounded = " + ("true" if wounded else "false") + " }"
-    call = (
-        "service_value(services.characters.pick_body_part(actor, " +
-        (options if options else "{}") + "))"
-    )
     return [
-        f"    local picked = {call}",
-        "    if picked ~= nil then",
-        f"        services.variables.set(actor, {lua_quote(target[1])}, picked.body_part.value)",
+        "    local picked_result = services.characters.pick_body_part(actor, " +
+        (options if options else "{}") + ")",
+        "    if picked_result.ok then",
+        f"        services.variables.set(actor, {lua_quote(target[1])}, picked_result.value.body_part.value)",
+        '    elseif picked_result.error.code ~= "no_match" then',
+        "        error(picked_result.error.message)",
         "    end",
     ]
 
@@ -25982,19 +25941,14 @@ def render_static_faction_trust(
     if target_expression is None or set(effect) != {"u_add_faction_trust"}:
         return None
     raw_amount = effect["u_add_faction_trust"]
-    amount = _traversal_integer_expression(
-        raw_amount, -1000000, 1000000, target_expression,
-    )
-    if amount is None:
+    if (
+        not isinstance(raw_amount, int) or isinstance(raw_amount, bool) or
+        not -1000000 <= raw_amount <= 1000000
+    ):
         return None
-    if finite_number_literal(raw_amount) is None:
-        amount = (
-            "math.max(-1000000, math.min(1000000, "
-            f"({amount})))"
-        )
     return [
-        "    services.characters.add_faction_trust(",
-        f"        {target_expression}, {amount})",
+        "    service_value(services.characters.add_faction_trust(",
+        f"        {target_expression}, {raw_amount}))",
     ]
 
 
@@ -30223,8 +30177,22 @@ def render_eoc(
             }:
                 key = next(iter(effect))
                 target = npc_actor_expression or "actor"
-                requested = render_participant_string_expression(
-                    effect[key], target, "actor" if avatar_actor_proven else None, target)
+                topic_value = effect[key]
+                topic_is_bounded_literal = (
+                    key != "npc_first_topic" or
+                    isinstance(topic_value, str) and
+                    bounded_utf8_string(topic_value, 256, allow_empty=False) and
+                    not any(
+                        ord(character) < 0x20 or ord(character) == 0x7F
+                        for character in topic_value
+                    )
+                )
+                requested = (
+                    render_participant_string_expression(
+                        topic_value, target,
+                        "actor" if avatar_actor_proven else None, target)
+                    if topic_is_bounded_literal else None
+                )
                 if requested is not None:
                     if key == "npc_first_topic":
                         call = f"services.npcs.set_first_topic({target}, {requested})"
@@ -32470,9 +32438,16 @@ def render_eoc(
                 isinstance(effect, dict) and
                 "u_add_faction_trust" in effect
             ):
+                # Native `u_add_faction_trust` calls d.actor(true): the beta
+                # participant.  Reject an inferred fallback that could name
+                # alpha instead of passing an exact beta/NPC handle.
+                trust_target = (
+                    npc_actor_expression
+                    if npc_actor_expression in {"actor", "context.actors.beta"}
+                    else None
+                )
                 rendered = render_static_faction_trust(
-                    effect,
-                    "actor" if avatar_actor_proven else None,
+                    effect, trust_target,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
