@@ -965,36 +965,29 @@ def normalize_inline_eocs(
         # Effect nodes carry the selector/branches as sibling members (the
         # ``switch`` member is only the selector expression).  Normalize those
         # nodes before walking their children so each branch becomes a private
-        # callback rather than an opaque legacy object.
+        # callback rather than an opaque legacy object.  Native ``f_switch``
+        # has no action-level default branch, so leave that whole switch intact
+        # for the renderer to report as a manual rewrite.
         if "switch" in result and isinstance(result.get("cases"), list):
-            switch_cases = result.get("cases")
-            actor_kind = (
-                inherited_actor_kind
-                if inherited_actor_kind != "inherit"
-                else actor_kind_for(result)
-            )
-            for case_index, case in enumerate(switch_cases):
-                if not isinstance(case, dict) or "effect" not in case:
-                    continue
-                descriptor = {
-                    "type": "effect_on_condition",
-                    "effect": case.get("effect"),
-                }
-                child_id = lower_descriptor(
-                    descriptor, parent, "switch", case_index,
-                    source, actor_kind,
+            if "default" not in result:
+                switch_cases = result.get("cases")
+                actor_kind = (
+                    inherited_actor_kind
+                    if inherited_actor_kind != "inherit"
+                    else actor_kind_for(result)
                 )
-                case["effect"] = {"run_eocs": child_id}
-            if "default" in result:
-                descriptor = {
-                    "type": "effect_on_condition",
-                    "effect": result.get("default"),
-                }
-                child_id = lower_descriptor(
-                    descriptor, parent, "switch_default", 0,
-                    source, actor_kind,
-                )
-                result["default"] = {"run_eocs": child_id}
+                for case_index, case in enumerate(switch_cases):
+                    if not isinstance(case, dict) or "effect" not in case:
+                        continue
+                    descriptor = {
+                        "type": "effect_on_condition",
+                        "effect": case.get("effect"),
+                    }
+                    child_id = lower_descriptor(
+                        descriptor, parent, "switch", case_index,
+                        source, actor_kind,
+                    )
+                    case["effect"] = {"run_eocs": child_id}
 
         if "if" in result and "then" in result:
             actor_kind = (
@@ -1029,7 +1022,10 @@ def normalize_inline_eocs(
                     if inherited_actor_kind != "inherit"
                     else actor_kind_for(switch)
                 )
-                if isinstance(switch_cases, list):
+                # This non-canonical nested form is not a native switch
+                # branch container.  In particular, never reinterpret its
+                # ``default`` member as an executable fallback callback.
+                if isinstance(switch_cases, list) and "default" not in switch:
                     for case_index, case in enumerate(switch_cases):
                         if not isinstance(case, dict) or "effect" not in case:
                             continue
@@ -1044,17 +1040,6 @@ def normalize_inline_eocs(
                         )
                         case["effect"] = {"run_eocs": child_id}
                     switch["cases"] = switch_cases
-                    if "default" in switch:
-                        branch = switch.get("default")
-                        descriptor = {
-                            "type": "effect_on_condition",
-                            "effect": branch,
-                        }
-                        child_id = lower_descriptor(
-                            descriptor, parent, "switch_default", 0,
-                            source, actor_kind,
-                        )
-                        switch["default"] = {"run_eocs": child_id}
                 result[member] = switch
                 continue
             if member == "if" and isinstance(raw, dict) and "then" in raw:
@@ -5952,9 +5937,12 @@ def render_static_switch_effect(
         key for key in effect
         if isinstance(key, str) and key.startswith("//")
     }
+    # Legacy f_switch ignores an unmatched switch and has no top-level
+    # ``default`` branch.  Only numeric defaults inside selector descriptors
+    # (handled below) are supported here.
     if (
         "switch" not in effect or
-        set(effect) - {"switch", "cases", "default"} - comment_keys
+        set(effect) - {"switch", "cases"} - comment_keys
     ):
         return None
     raw_switch = effect.get("switch")
@@ -6047,23 +6035,6 @@ def render_static_switch_effect(
         lines.append(
             f"    {'if' if index == 1 else 'elseif'} switch_case == {index} then"
         )
-        lines.extend(rendered)
-    if "default" in effect:
-        default_effect = effect.get("default")
-        default_values = (
-            default_effect if isinstance(default_effect, list) else [default_effect]
-        )
-        rendered = []
-        for default_value in default_values:
-            chunk = render_static_false_effect(
-                default_value, avatar_actor_proven, npc_actor_proven,
-                eoc_function_names, eoc_actor_requirements,
-                actor_expression, eoc_conditions, creature_actor_proven,
-            )
-            if chunk is None:
-                return None
-            rendered.extend(chunk)
-        lines.append("    else")
         lines.extend(rendered)
     if case_data:
         lines.append("    end")
