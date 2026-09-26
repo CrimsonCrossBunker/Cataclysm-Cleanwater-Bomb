@@ -461,4 +461,71 @@ TEST_CASE( "lua_context_string_lookup_matches_native_unrestricted_keys",
     }
 }
 
+
+TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
+           "[lua][platform][strings][semantic]" )
+{
+    restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
+    get_globals().set_global_value( "", "empty-global" );
+    for( const std::string &key : std::vector<std::string> {
+    "", std::string( "pointer\0key", 11 ), "pointer\nkey", std::string( 9000, 'p' )
+    } ) {
+        CAPTURE( key.size() );
+        std::ostringstream input;
+        JsonOut writer( input );
+        writer.start_object();
+        writer.member( "value" );
+        writer.start_object();
+        writer.member( "var_val", key );
+        writer.member( "default", "fallback" );
+        writer.end_object();
+        writer.end_object();
+        const JsonObject object = json_loader::from_string( input.str() ).get_object();
+        const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        dialogue context;
+        CHECK( native.evaluate( context ) == "fallback" );
+        context.set_value( key, diag_value{} );
+        CHECK( native.evaluate( context ) == "empty-global" );
+        context.set_value( key, "" );
+        CHECK( native.evaluate( context ) == "empty-global" );
+        for( const diag_value &pointer : {
+                 diag_value( 42.0 ), diag_value( diag_array{ diag_value( "u_key" ) } )
+             } ) {
+            context.set_value( key, pointer );
+            const std::string diagnostic = capture_debugmsg_during( [&]() {
+                CHECK( native.evaluate( context ) == "empty-global" );
+            } );
+            CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+        }
+        // Prefixes select a scope once; a missing participant is a missing value.
+        for( const std::string pointer : {
+                 "u_key", "n_key"
+             } ) {
+            context.set_value( key, pointer );
+            CHECK( native.evaluate( context ) == "fallback" );
+        }
+        // A referenced string that itself looks like a pointer is not followed.
+        const std::string target = "native_indirect_target";
+        context.set_value( target, "u_not_followed" );
+        context.set_value( key, "_" + target );
+        CHECK( native.evaluate( context ) == "u_not_followed" );
+        context.set_value( target, diag_value{} );
+        CHECK( native.evaluate( context ).empty() );
+        context.remove_value( target );
+        CHECK( native.evaluate( context ) == "fallback" );
+        avatar alpha;
+        npc beta;
+        alpha.set_value( key, "alpha-value" );
+        beta.set_value( key, "beta-value" );
+        dialogue participants( get_talker_for( alpha ), get_talker_for( beta ) );
+        participants.set_value( key, "u_" + key );
+        CHECK( native.evaluate( participants ) == "alpha-value" );
+        participants.set_value( key, "n_" + key );
+        CHECK( native.evaluate( participants ) == "beta-value" );
+        get_globals().set_global_value( target, "global-value" );
+        participants.set_value( key, target );
+        CHECK( native.evaluate( participants ) == "global-value" );
+    }
+}
+
 #endif
