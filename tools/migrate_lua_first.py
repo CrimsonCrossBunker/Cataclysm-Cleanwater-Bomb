@@ -26054,46 +26054,15 @@ def render_static_condition_math(
 def render_static_line_of_sight_condition(
     condition: dict[str, Any],
 ) -> str | None:
-    """Render a literal line-of-sight check against context coordinates.
+    """Keep EOC LOS shapes as TODOs until endpoint bounds can be preserved.
 
-    The native condition accepts dynamic variables and arbitrary numeric
-    expressions.  Migration only emits the typed environment query when both
-    endpoints are explicit context values and the range is a finite integer
-    inside the Platform service bound; all other shapes remain TODOs.
+    The native condition delegates both converted locations to map::sees,
+    which returns false for an out-of-bounds destination but does not require
+    the source endpoint to be in bounds. The Platform query requires both
+    endpoints inside the active map. Context values do not prove that stronger
+    constraint, so even literal-range shapes must remain TODOs.
     """
-    if not {"line_of_sight", "loc_1", "loc_2"} <= set(condition):
-        return None
-    if set(condition) - {"line_of_sight", "loc_1", "loc_2", "with_fields"}:
-        return None
-    raw_range = finite_number_literal(condition.get("line_of_sight"))
-    if (
-        raw_range is None or
-        math.trunc(float(raw_range)) != float(raw_range) or
-        raw_range < 0 or raw_range > 100000
-    ):
-        return None
-
-    def context_location(value: Any) -> str | None:
-        if (
-            not isinstance(value, dict) or
-            set(value) != {"context_val"} or
-            not bounded_utf8_string(value.get("context_val"), 256)
-        ):
-            return None
-        return f"context.data[{lua_quote(value['context_val'])}]"
-
-    first = context_location(condition.get("loc_1"))
-    second = context_location(condition.get("loc_2"))
-    if first is None or second is None:
-        return None
-    with_fields = condition.get("with_fields", True)
-    if not isinstance(with_fields, bool):
-        return None
-    return (
-        "services.gameplay.environment.line_of_sight("
-        f"{first}, {second}, {int(raw_range)}, "
-        f"{'true' if with_fields else 'false'})"
-    )
+    return None
 
 
 def render_static_perception_condition(
@@ -26619,9 +26588,8 @@ def render_eoc_condition_expression(
                 )
             if condition == "npc_is_outside":
                 return (
-                    "services.gameplay.environment.is_outside("
                     "service_value(services.creatures.snapshot(" +
-                    npc_query_actor + ")).position)"
+                    npc_query_actor + ")).outside"
                 )
             if condition in {"player_see_npc", "u_see_npc"}:
                 return (
@@ -26783,15 +26751,13 @@ def render_eoc_condition_expression(
             condition == "u_is_outside"
         ):
             return (
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)"
+                ".environment.outside"
             )
         if npc_actor_proven and condition == "npc_is_outside":
             return (
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)"
+                ".environment.outside"
             )
         if condition == "npc_has_activity":
             return "(services.characters.snapshot(actor).activity ~= nil)"

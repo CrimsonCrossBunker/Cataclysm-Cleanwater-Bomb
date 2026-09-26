@@ -10655,7 +10655,7 @@ function CcbPlatformEnvironmentQueries.dimension() end
 --- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
 function CcbPlatformEnvironmentQueries.is_night() end
 
----@param position TripointCoord Absolute map-square coordinate inside the active map.
+---@param position TripointCoord Absolute map-square coordinate; out-of-bounds positions return true, matching map::is_outside.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
 
@@ -10746,6 +10746,10 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field hunger integer
 ---@field thirst integer
 ---@field sleepiness integer
+---@field environment CcbCharacterEnvironmentSnapshot
+
+---@class CcbCharacterEnvironmentSnapshot
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
 
 ---@class CcbMovementModesSnapshot
 ---@field items table
@@ -10765,6 +10769,7 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
 ---@field visible? boolean Present only when a separate observer was supplied.
 ---@field distance? integer Present only when a separate observer was supplied.
 ---@field attitude? string Present only when a separate observer was supplied.

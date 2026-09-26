@@ -3190,26 +3190,39 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         require_read();
         return ::is_night( calendar::turn );
     } );
-    const auto require_environment_position = []( const cata::lua_platform::script_tripoint_coord &
-    position, const std::string & api_name ) {
+    const auto require_environment_absolute_position = [](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & api_name ) {
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
                 api_name + " requires an absolute map-square Tripoint" );
         }
+        return tripoint_abs_ms( position.to_native() );
+    };
+    const auto require_environment_position =
+    [require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & api_name ) {
         map &here = get_map();
-        const tripoint_abs_ms absolute( position.to_native() );
+        const tripoint_abs_ms absolute =
+            require_environment_absolute_position( position, api_name );
         if( !here.inbounds( absolute ) ) {
             throw std::invalid_argument( api_name + " position is outside the active map" );
         }
         return here.get_bub( absolute );
     };
-    environment.set_function( "is_outside", [require_read, require_environment_position](
+    environment.set_function( "is_outside", [require_read,
+    require_environment_absolute_position](
     const cata::lua_platform::script_tripoint_coord & position ) {
         require_read();
         map &here = get_map();
-        return here.is_outside( require_environment_position(
-                                    position, "services.gameplay.environment.is_outside" ) );
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.is_outside" );
+        if( !here.inbounds( absolute ) ) {
+            return true;
+        }
+        return here.is_outside( here.get_bub( absolute ) );
     } );
     environment.set_function( "line_of_sight", [require_read, require_environment_position](
                                   const cata::lua_platform::script_tripoint_coord & from,

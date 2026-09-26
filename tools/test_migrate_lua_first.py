@@ -7116,8 +7116,15 @@ assert(#events == 11)
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "npc_outside",
+                            "id": "npc_outside_unproven",
                             "required_event": "game_start",
+                            "condition": "npc_is_outside",
+                            "effect": {"message": "npc outside"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_outside_proven",
+                            "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_outside",
                             "effect": {"message": "npc outside"},
                         },
@@ -7138,22 +7145,29 @@ assert(#events == 11)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.converted), 3)
             self.assertEqual(len(result.partial), 1)
             self.assertIn('runtime.on("game:game_start"', main)
             self.assertIn(
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)",
+                ".environment.outside",
                 main,
             )
             self.assertIn(
-                "EOC npc_outside condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC npc_outside_unproven condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
                 "EOC item_outside condition TODO: translate the legacy condition into a Lua predicate",
                 report,
+            )
+            self.assertEqual(
+                migrate_lua_first.render_eoc_condition_expression(
+                    "npc_is_outside",
+                    npc_actor_expression="context.actors.npc",
+                ),
+                "service_value(services.creatures.snapshot("
+                "context.actors.npc)).outside",
             )
             self.assertNotIn("run_eoc", main)
 
@@ -15547,14 +15561,19 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertIn(
-                "services.gameplay.environment.line_of_sight("
-                "context.data[\"origin\"], context.data[\"target\"], 12, false)",
-                main,
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn(
+                "services.gameplay.environment.line_of_sight(", main
             )
-            self.assertIn("EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate", report)
+            self.assertIn(
+                "EOC literal_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
             self.assertNotIn("run_eoc", main)
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
