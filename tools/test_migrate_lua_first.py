@@ -6674,14 +6674,10 @@ assert(#events == 9)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("services.characters.add_wet(actor, 42)", main)
-            self.assertEqual(main.count("services.characters.add_wet(actor, 42)"), 1)
-            self.assertIn(
-                "EOC add_wet_npc effect #0 needs domain-service conversion",
-                report,
-            )
+            self.assertEqual(main.count("services.characters.add_wet(actor, 42)"), 2)
             self.assertIn(
                 "EOC add_wet_huge effect #0 needs domain-service conversion",
                 report,
@@ -6717,6 +6713,27 @@ assert(#events == 9)
                         "required_event": "npc_becomes_hostile",
                         "effect": {"npc_add_wet": 12},
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_unproven_beta_wet",
+                        "required_event": "character_takes_damage",
+                        "effect": {"npc_add_wet": 12},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_item_beta_wet",
+                        # Native npc.cpp sends character_wields_item with
+                        # send_with_talker(character, item), so get_character()
+                        # on beta returns null and the effect is a no-op.
+                        "required_event": "character_wields_item",
+                        "effect": {"npc_add_wet": 12},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_killer_fallback_wet",
+                        "required_event": "character_kills_character",
+                        "effect": {"npc_add_wet": 12},
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -6728,17 +6745,74 @@ assert(#events == 9)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
         self.assertIn("services.characters.add_wet(actor, 12)", main)
+        self.assertIn("services.characters.add_wet(actor, 2)", main)
+        self.assertEqual(main.count("services.characters.add_wet(actor, 12)"), 3)
         self.assertNotIn("services.characters.add_wet(services.characters.avatar()", main)
         for eoc_id in (
-            "npc_event_fractional_wet",
-            "npc_event_dynamic_wet",
-            "npc_event_beta_wet",
+            "npc_event_dynamic_wet", "npc_event_unproven_beta_wet",
+            "npc_event_item_beta_wet",
         ):
             self.assertIn(
                 f"EOC {eoc_id} effect #0 needs domain-service conversion",
                 report,
             )
         self.assertNotIn("math.floor((", main)
+
+    def test_npc_add_wet_requires_a_proven_native_character_beta(self) -> None:
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "direct_pair_wet",
+            "effect": {"npc_add_wet": 30},
+        })
+        self.assertIn("local wet_target = context.actors.beta", direct_pair)
+        self.assertIn("wet_target.subtype == \"npc\"", direct_pair)
+        self.assertIn("services.characters.add_wet(wet_target, 30)", direct_pair)
+
+        fatal_result = migrate_lua_first.MigrationResult()
+        fatal = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "npc_death_wet",
+                "eoc_type": "NPC_DEATH",
+                "effect": {"npc_add_wet": 30},
+            }),
+            fatal_result,
+        )
+        self.assertIn("local wet_target = context.killer or actor", fatal)
+        self.assertIn("wet_target.subtype == \"npc\"", fatal)
+        self.assertNotIn("wet_target.subtype == \"monster\"", fatal)
+        self.assertFalse(fatal_result.todos)
+
+        event_result = migrate_lua_first.MigrationResult()
+        event_beta = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "event_beta_wet",
+                "required_event": "character_melee_attacks_character",
+                "effect": {"npc_add_wet": 30},
+            }),
+            event_result,
+        )
+        self.assertIn("local wet_target = context.actors.interlocutor", event_beta)
+        self.assertIn("services.characters.add_wet(wet_target, 30)", event_beta)
+
+        generic_result = migrate_lua_first.MigrationResult()
+        generic_pair = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "generic_pair_wet",
+                "effect": {"npc_add_wet": 30},
+            }),
+            generic_result,
+            talker_pair_ids=frozenset({"generic_pair_wet"}),
+        )
+        self.assertNotIn("services.characters.add_wet(", generic_pair)
+        self.assertTrue(generic_result.todos)
+
+        declarations = (
+            REPOSITORY_ROOT / "data" / "lua" / "types" /
+            "ccb_platform_v1.d.lua"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "function CcbCharactersApi.add_wet(character, amount) end",
+            declarations,
+        )
 
     def test_static_timed_morale_emits_native_duration_service_call(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

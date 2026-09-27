@@ -275,6 +275,16 @@ TALKER_ACTOR_EVENTS = frozenset({
     "monster_takes_damage",
 })
 
+# These audited event producers call event_bus::send with no beta talker.
+# EOC dialogue::actor(true) therefore falls back to the proven alpha.  Do not
+# infer this from absence in TALKER_ACTOR_EVENTS: other send_with_talker events
+# (for example character_wields_item) carry an item beta; native get_character
+# rejects it.
+NATIVE_EOC_ALPHA_FALLBACK_EVENTS = frozenset({
+    "game_start",
+    "npc_becomes_hostile",
+})
+
 VICTIM_CHARACTER_EVENTS = frozenset({
     "character_kills_character",
     "character_melee_attacks_character",
@@ -30961,43 +30971,105 @@ def render_eoc(
                 ("u_add_wet" in effect or "npc_add_wet" in effect)
             ):
                 key = "u_add_wet" if "u_add_wet" in effect else "npc_add_wet"
-                amount = effect.get(key)
-                exact_integer_amount = (
-                    isinstance(amount, int) and not isinstance(amount, bool) and
-                    -1000000 <= amount <= 1000000
+                raw_amount = finite_number_literal(effect.get(key))
+                amount = int(raw_amount) if raw_amount is not None else None
+                bounded_native_amount = (
+                    amount is not None and -1000000 <= amount <= 1000000
                 )
                 if (
-                    set(effect) == {key} and exact_integer_amount and
-                    key == "u_add_wet" and (
-                        avatar_actor_proven or exact_npc_actor_proven or
-                        training_pair_proven
-                    )
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "u_add_wet" and alpha_effect_target is not None and
+                    alpha_effect_target[1] == "character"
                 ):
-                    # Native u_* effects target dialogue alpha. In the exact
-                    # NPC event, alpha is that NPC, not the ambient avatar.
+                    # f_add_wet consumes dialogue alpha and truncates its
+                    # dbl_or_var to int at wet_character's call boundary.
                     lines.append(
                         f"    services.characters.add_wet(actor, {amount})"
                     )
                     converted_effect = True
                 elif (
-                    set(effect) == {key} and exact_integer_amount and
-                    key == "npc_add_wet" and training_pair_proven
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and npc_fatal_hook
                 ):
                     lines.extend([
-                        "    if context ~= nil and context.actors ~= nil and "
-                        "context.actors.beta ~= nil and "
-                        'context.actors.beta.kind == "creature" and '
-                        '(context.actors.beta.subtype == "avatar" or '
-                        'context.actors.beta.subtype == "character" or '
-                        'context.actors.beta.subtype == "npc") then',
-                        f"        services.characters.add_wet(context.actors.beta, {amount})",
+                        "    do",
+                        "        local wet_target = context.killer or actor",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
                         "    end",
                     ])
                     converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and
+                    npc_dialogue_mission_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ):
+                    lines.extend([
+                        "    do",
+                        "        local wet_target = context.actors.beta",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and beta_effect_target is not None and
+                    beta_effect_target[1] == "character" and
+                    required_event == "character_kills_character" and
+                    beta_effect_target == alpha_effect_target
+                ):
+                    # This event uses event_bus::send, not send_with_talker;
+                    # its native dialogue beta lookup therefore alpha-falls
+                    # back even though the payload also names the victim.
+                    lines.append(
+                        f"    services.characters.add_wet(actor, {amount})"
+                    )
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and beta_effect_target is not None and
+                    beta_effect_target[1] == "character"
+                ):
+                    target = beta_effect_target[0]
+                    lines.extend([
+                        "    do",
+                        f"        local wet_target = {target}",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and
+                    required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS and
+                    alpha_effect_target is not None and
+                    alpha_effect_target[1] == "character"
+                ):
+                    # These source-audited events have no native beta talker,
+                    # so actor(true) takes the native alpha fallback.
+                    lines.append(
+                        f"    services.characters.add_wet(actor, {amount})"
+                    )
+                    converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: preserve the native wetness target and "
-                        "double-to-int truncation through typed character services."
+                        "    -- TODO: preserve the native Character target and "
+                        "bounded dbl_or_var-to-int conversion through typed wetness services."
                     )
                     result.add_todo(
                         "manual_rewrite",

@@ -5,6 +5,7 @@
 #include <functional>
 #include <initializer_list>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -262,6 +263,81 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
     CHECK( old_item_handle.validation_error( fixture.runtime, fixture.world ) );
     CHECK( cata::lua_platform::item_holder_mutation_generation() > item_epoch );
     CHECK( write_called );
+}
+
+TEST_CASE( "lua_platform_add_wet_matches_native_dialogue_actor_selection",
+           "[lua][platform][wetness][semantic]" )
+{
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+    struct restore_turn {
+        time_point saved = calendar::turn;
+        ~restore_turn() {
+            calendar::turn = saved;
+        }
+    } turn_scope;
+    const int mode = GENERATE( 0, 1, 2 );
+    effect_fixture legacy( 8100 );
+    effect_fixture modern( 8200 );
+    const bool npc_selector = mode != 0;
+    const bool alpha_npc_fallback = mode == 2;
+    Character &legacy_target = mode == 0 ?
+                               static_cast<Character &>( legacy.player ) :
+                               static_cast<Character &>( legacy.other );
+    Character &modern_target = mode == 0 ?
+                               static_cast<Character &>( modern.player ) :
+                               static_cast<Character &>( modern.other );
+    legacy_target.clear_worn();
+    legacy_target.set_wielded_item( item() );
+    modern_target.clear_worn();
+    modern_target.set_wielded_item( item() );
+
+    Character &legacy_alpha = alpha_npc_fallback ?
+                              static_cast<Character &>( legacy.other ) :
+                              static_cast<Character &>( legacy.player );
+    std::unique_ptr<talker> legacy_beta;
+    if( !alpha_npc_fallback ) {
+        legacy_beta = get_talker_for( legacy.other );
+    }
+    dialogue native_dialogue( get_talker_for( legacy_alpha ), std::move( legacy_beta ) );
+    const std::string selector = npc_selector ? "npc_add_wet" : "u_add_wet";
+    talk_effect_t native_effect;
+    native_effect.parse_sub_effect(
+        json_loader::from_string( "{\"" + selector + "\": 100}" ).get_object(),
+        "wetness_semantics" );
+    finalize_conditions();
+
+    cata::lua_platform::install_creature_api(
+    modern.services, [&]() {
+        return modern.runtime;
+    }, [&]() {
+        return modern.world;
+    }, []() {}, []() {} );
+
+    calendar::turn = calendar::turn_zero + 12_hours;
+    rng_set_engine_seed( 58163 );
+    for( const talk_effect_fun_t &operation : native_effect.effects ) {
+        operation( native_dialogue );
+    }
+    calendar::turn = calendar::turn_zero + 12_hours;
+    rng_set_engine_seed( 58163 );
+    sol::protected_function add_wet = modern.services["characters"]["add_wet"];
+    sol::protected_function_result call = add_wet(
+            modern.handle( mode != 0 ), 100 );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( result["value"].get<bool>() );
+
+    for( const bodypart_id &part : legacy_target.get_all_body_parts() ) {
+        CHECK( legacy_target.get_part_wetness( part ) ==
+               modern_target.get_part_wetness( part ) );
+    }
+    CHECK( legacy_target.get_part_wetness( body_part_torso ) > 0 );
 }
 
 TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
