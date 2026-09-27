@@ -26732,14 +26732,18 @@ def render_trait_condition(
         if selector in {
             "u_has_trait", "npc_has_trait",
             "u_has_any_trait", "npc_has_any_trait",
+            "u_is_trait_purifiable", "npc_is_trait_purifiable",
         }:
             if (
-                selector in {"u_has_any_trait", "npc_has_any_trait"} and
+                selector in {
+                    "u_has_any_trait", "npc_has_any_trait",
+                    "u_is_trait_purifiable", "npc_is_trait_purifiable",
+                } and
                 isinstance(identifier, dict) and "mutator" in identifier
             ):
                 # Some native str_or_var mutators consume RNG or depend on
-                # both dialogue actors.  Keep list order/short-circuit, but
-                # do not replace those callback semantics without parity proof.
+                # both dialogue actors.  Do not replace their callback
+                # semantics without parity proof.
                 return None
             if isinstance(identifier, dict):
                 raw_id = render_participant_string_expression(
@@ -26760,6 +26764,10 @@ def render_trait_condition(
                 "context and context.actors and context.actors.beta"
                 if target == "context.actors.beta" else target
             )
+            query_method = (
+                "is_purifiable_id_text"
+                if selector.endswith("is_trait_purifiable") else "has_id_text"
+            )
             return (
                 "(function(character) "
                 'if character == nil or character.kind ~= "creature" then return false end; '
@@ -26767,37 +26775,8 @@ def render_trait_condition(
                 'and character.subtype ~= "npc" then return false end; '
                 f"local raw = {raw_id}; "
                 'if type(raw) ~= "string" then return false end; '
-                "return service_value(services.mutations.has_id_text(character, raw)) "
+                f"return service_value(services.mutations.{query_method}(character, raw)) "
                 f"end)({character_expression})"
-            )
-        null_safe_id = selector in {
-            "u_is_trait_purifiable", "npc_is_trait_purifiable",
-        }
-        if null_safe_id:
-            if isinstance(identifier, dict):
-                raw_id = render_participant_string_expression(
-                    identifier, target, alpha, beta,
-                    native_string_values=True,
-                )
-            elif bounded_platform_id(identifier):
-                raw_id = lua_quote(identifier)
-            else:
-                return None
-            if raw_id is None:
-                return None
-            participants = f"{target}, {observer}" if method == "is_visible_to" else target
-            # Native str_or_var yields an empty string for a missing or
-            # non-string diag_value; the character query then returns false.
-            # Guard the same cases before building a bounded Platform GameId,
-            # and fail closed for unknown ids instead of raising from the API.
-            return (
-                "(function(raw) "
-                'if type(raw) ~= "string" then return false end; '
-                'if #raw > 256 or raw:find("%c") then return false end; '
-                'local id = services.types.id("mutation", raw); '
-                'if not id:is_valid() then return false end; '
-                f"return service_value(services.mutations.{method}({participants}, id)) "
-                f"end)({raw_id})"
             )
         if isinstance(identifier, dict):
             raw_id = render_participant_string_expression(identifier, target, alpha, beta)

@@ -866,6 +866,29 @@ sol::table is_purifiable(
                        trait_id( requested_id.value() ) ) ) );
 }
 
+sol::table is_purifiable_id_text(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_id_text,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // The native condition constructs a trait_id from raw str_or_var text
+    // and Character::purifiable returns the null definition's false default
+    // for unknown IDs. Preserve that lookup without GameId pre-validation.
+    const bool can_be_purified = character->purifiable(
+                                     trait_id( requested_id_text ) );
+    return make_game_value_result(
+               state, sol::make_object( state, can_be_purified ) );
+}
+
 sol::table set_purifiable(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const bool purifiable,
@@ -1521,6 +1544,17 @@ void install_mutation_api(
         require_read();
         return is_purifiable(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "is_purifiable_id_text",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & id_text ) {
+        require_read();
+        return is_purifiable_id_text(
+                   lua_state, handle, id_text,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
