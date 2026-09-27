@@ -24426,11 +24426,18 @@ def render_static_inventory_consume_sum(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    # Native consumption uses an unordered owned-item set across inventory,
-    # nearby map items, and vehicle cargo, spills whole-item contents, and
-    # accumulates one coverage fraction across all requested types.  The
-    # current crafting-inventory consume_sum service does not preserve those
-    # source, ownership, ordering, or removal semantics.
+    # Native d.actor(is_npc) selects dialogue alpha for u_ and beta for npc_;
+    # its mutable beta lookup falls back to alpha when beta is absent.  These
+    # EOC proof flags alone cannot establish that pair/fallback behavior for
+    # each call site.  Native then iterates one unordered set of owned item
+    # locations spanning inventory, nearby map items, and vehicle cargo.  The
+    # ordered rows share one fractional coverage accumulator, and full-item
+    # removal spills contents before removing the item; partial charge stacks
+    # are mutated in place.  The effect has no transaction or rollback.  The
+    # crafting-inventory consume_sum service does not expose this candidate
+    # set or preserve its selection, ownership, spill, and incremental
+    # mutation semantics, so even static positive rows are not equivalent.
+    del effect, key, avatar_actor_proven, npc_event_character_actor_proven
     return None
 
 
@@ -31979,13 +31986,16 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: native weighted consumption scans one unordered "
                         "owned inventory/map/vehicle set, shares one coverage fraction, "
-                        "and spills whole-item contents."
+                        "and spills whole-item contents; alpha/beta fallback and "
+                        "incremental mutation semantics also differ."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs the native owned inventory/map/vehicle candidate set, "
-                        "shared coverage fraction, and whole-item spill semantics"
+                        "needs native alpha/beta selection including mutable beta "
+                        "fallback, an unordered owned inventory/map/vehicle candidate "
+                        "set, shared ordered-row coverage, and incremental spill/removal "
+                        "semantics without rollback"
                     )
                     all_effects_converted = False
             elif (
