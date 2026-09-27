@@ -40,6 +40,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 avatar_actor_proven=True))
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_worn_with_flag": "WATERPROOF"},
+                npc_actor_proven=True, npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
                 {"u_has_effect": "bleed", "bodypart": {"u_val": "part"}},
                 avatar_actor_proven=True))
         self.assertIsNone(
@@ -52,24 +56,221 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 avatar_actor_proven=True))
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF",
+                 "bodypart": {"context_val": "part"}},
+                avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
                 {"npc_has_worn_with_flag": "WATERPROOF"},
                 npc_actor_proven=True, npc_actor_expression="partner"))
-        self.assertEqual(
-            migrate_lua_first.render_eoc_condition_expression(
-                {"u_has_effect": "bleed", "bodypart": "arm_l"},
-                avatar_actor_proven=True),
-            'service_value(services.effects.has(actor, '
-            'services.types.id("effect", "bleed"), '
-            'services.types.id("body_part", "arm_l"), -1))',
+        null_bodypart_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "bp_null"},
+            avatar_actor_proven=True)
+        self.assertIsNotNone(null_bodypart_expression)
+        self.assertIn(
+            'resolve_id("body_part", "bp_null")',
+            null_bodypart_expression,
+        )
+        effect_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "arm_l"},
+            avatar_actor_proven=True)
+        self.assertIsNotNone(effect_expression)
+        self.assertIn(
+            'local bodypart = resolve_id("body_part", "arm_l")',
+            effect_expression,
         )
         self.assertIn(
-            'services.inventory.has_worn_flag(actor, '
-            'services.types.id("json_flag", "WATERPROOF"), '
-            'services.types.id("body_part", "torso"))',
-            migrate_lua_first.render_eoc_condition_expression(
-                {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
-                avatar_actor_proven=True),
+            'local effect = resolve_id("effect", "bleed")',
+            effect_expression,
         )
+        self.assertIn(
+            "return service_value(services.effects.has(actor, effect, bodypart, -1))",
+            effect_expression,
+        )
+        worn_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
+            avatar_actor_proven=True)
+        self.assertIsNotNone(worn_expression)
+        self.assertIn('resolve_id("json_flag", "WATERPROOF")', worn_expression)
+        self.assertIn(
+            "services.inventory.has_worn_flag(actor, flag, bodypart)",
+            worn_expression,
+        )
+
+    def test_role_effect_and_worn_selectors_guard_typed_ids(self) -> None:
+        for prefix, target, proofs in (
+            ("u_", "actor", {"avatar_actor_proven": True}),
+            ("npc_", "partner", {
+                "avatar_actor_proven": True,
+                "npc_actor_proven": True,
+                "npc_actor_expression": "partner",
+            }),
+        ):
+            for selector in ("has_effect", "has_any_effect"):
+                key = prefix + selector
+                value = "bleed" if selector == "has_effect" else ["bleed", "cold"]
+                for candidate in (value, {"context_val": "effect_id"} if selector == "has_effect" else
+                                  [{"context_val": "effect_id"}, "cold"]):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {key: candidate, "bodypart": "torso"}, **proofs)
+                    self.assertIsNotNone(expression)
+                    self.assertIn("pcall(services.types.id, kind, value)", expression)
+                    self.assertIn("not id:is_valid()", expression)
+                    self.assertIn(
+                        f"services.effects.has({target}, effect, bodypart, -1)",
+                        expression,
+                    )
+            worn_key = prefix + "has_worn_with_flag"
+            for flag in ("WATERPROOF", {"context_val": "flag_id"}):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {worn_key: flag, "bodypart": "torso"}, **proofs)
+                self.assertIsNotNone(expression)
+                self.assertIn("not id:is_valid()", expression)
+                self.assertIn(
+                    f"services.inventory.has_worn_flag({target}, flag, bodypart)",
+                    expression,
+                )
+            if prefix == "npc_":
+                owner_expression = migrate_lua_first.render_eoc_condition_expression(
+                    {worn_key: {"u_val": "flag_id"}, "bodypart": "torso"},
+                    **proofs,
+                )
+                self.assertIn(
+                    'services.variables.resolve(context.data, actor, "u", "flag_id")',
+                    owner_expression,
+                )
+                self.assertNotIn(
+                    'services.variables.resolve(context.data, partner, "u", "flag_id")',
+                    owner_expression,
+                )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_effect_queries_preserve_short_circuit_and_only_guard_id_errors(self) -> None:
+        any_effect = migrate_lua_first.render_eoc_condition_expression(
+            {
+                "npc_has_any_effect": [
+                    {"context_val": "factory_error"}, {"context_val": "unknown"},
+                    "absent", "bleed", {"context_val": "unread"},
+                ],
+                "bodypart": "torso",
+                "intensity": {"u_val": "minimum"},
+            },
+            avatar_actor_proven=True,
+            npc_actor_proven=True,
+            npc_actor_expression="partner",
+        )
+        bad_body_part = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "missing"},
+            avatar_actor_proven=True,
+        )
+        body_part_factory_error = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "ID_FACTORY_ERROR"},
+            avatar_actor_proven=True,
+        )
+        stale_effect_lookup = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "torso", "intensity": {"u_val": "minimum"}},
+            avatar_actor_proven=True,
+        )
+        stale_effect_has = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "torso"},
+            avatar_actor_proven=True,
+        )
+        unknown_worn_flag = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_worn_with_flag": "UNKNOWN_FLAG", "bodypart": "torso"},
+            avatar_actor_proven=True,
+        )
+        stale_worn_flag = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
+            avatar_actor_proven=True,
+        )
+        for expression in (
+            any_effect, bad_body_part, body_part_factory_error,
+            stale_effect_lookup, stale_effect_has, unknown_worn_flag,
+            stale_worn_flag,
+        ):
+            self.assertIsNotNone(expression)
+
+        script = r"""
+local actor={minimum=2}
+local partner={}
+local get_calls,has_calls,worn_calls,intensity_reads,unread_reads=0,0,0,0,0
+local stale_effect,stale_worn=false,false
+local context={data=setmetatable({unknown='unknown',factory_error='ID_FACTORY_ERROR'}, {__index=function(_,key)
+ if key=='unread' then unread_reads=unread_reads+1 end
+ return 'bleed'
+end})}
+local function game_id(kind,value)
+ local valid=(kind=='body_part' and value=='torso') or
+  (kind=='effect' and value~='unknown') or
+  (kind=='json_flag' and value=='WATERPROOF')
+ return {kind=kind,value=value,is_valid=function() return valid end}
+end
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local services={
+ types={id=function(kind,value)
+  if value=='ID_FACTORY_ERROR' then error('bad typed id text') end
+  return game_id(kind,value)
+ end},
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner==actor and scope=='u' and key=='minimum')
+  intensity_reads=intensity_reads+1
+  return {ok=true,value={value=owner[key]}}
+ end},
+ effects={
+  get=function(character,effect,bodypart)
+   assert((character==actor or character==partner) and effect.kind=='effect' and bodypart.value=='torso')
+   get_calls=get_calls+1
+   if stale_effect then return {ok=false,error={code='stale_handle'}} end
+   if effect.value=='absent' then return {ok=false,error={code='not_found'}} end
+   assert(effect.value=='bleed')
+   return {ok=true,value={intensity=2}}
+  end,
+  has=function(character,effect,bodypart,intensity)
+   assert(character==actor and effect.value=='bleed' and bodypart.value=='torso')
+   assert(intensity==-1)
+   has_calls=has_calls+1
+   if stale_effect then return {ok=false,error={code='stale_handle'}} end
+   return {ok=true,value=true}
+  end
+ },
+ inventory={has_worn_flag=function(character,flag,bodypart)
+  assert(character==actor and flag.value=='WATERPROOF' and bodypart.value=='torso')
+  worn_calls=worn_calls+1
+  if stale_worn then return {ok=false,error={code='stale_handle'}} end
+  return {ok=true,value=true}
+ end}
+}
+assert(__ANY_EFFECT__)
+assert(get_calls==2 and intensity_reads==1 and unread_reads==0)
+assert(not (__BAD_BODY_PART__))
+assert(not (__BODY_PART_FACTORY_ERROR__))
+assert(get_calls==2 and intensity_reads==1)
+assert(not (__UNKNOWN_WORN_FLAG__))
+assert(worn_calls==0)
+stale_effect=true
+local ok_get,err_get=pcall(function() return __STALE_EFFECT_LOOKUP__ end)
+assert(not ok_get and string.find(err_get,'stale_handle',1,true))
+local ok_has,err_has=pcall(function() return __STALE_EFFECT_HAS__ end)
+assert(not ok_has and string.find(err_has,'stale_handle',1,true))
+stale_effect=false
+stale_worn=true
+local ok_worn,err_worn=pcall(function() return __STALE_WORN_FLAG__ end)
+assert(not ok_worn and string.find(err_worn,'stale_handle',1,true))
+assert(worn_calls==1 and has_calls==1)
+"""
+        script = script.replace("__ANY_EFFECT__", any_effect or "nil")
+        script = script.replace("__BAD_BODY_PART__", bad_body_part or "nil")
+        script = script.replace("__BODY_PART_FACTORY_ERROR__", body_part_factory_error or "nil")
+        script = script.replace("__STALE_EFFECT_LOOKUP__", stale_effect_lookup or "nil")
+        script = script.replace("__STALE_EFFECT_HAS__", stale_effect_has or "nil")
+        script = script.replace("__UNKNOWN_WORN_FLAG__", unknown_worn_flag or "nil")
+        script = script.replace("__STALE_WORN_FLAG__", stale_worn_flag or "nil")
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_u_friend_preserves_character_talker_semantics(self) -> None:
         self.assertEqual(
@@ -1530,8 +1731,11 @@ local partner={hi='-1.9'}
 local context={data={}}
 local queries,random_calls,reads,adds=0,0,0,0
 local function service_value(r) assert(r.ok);return r.value end
+local function game_id(kind,value)
+ return {kind=kind,value=value,is_valid=function() return true end}
+end
 local services={
- types={id=function(kind,id) return id end},
+ types={id=function(kind,id) return game_id(kind,id) end},
  variables={resolve=function(data,owner,scope,key)
   assert((owner==actor and key=='lo') or (owner==partner and key=='hi'))
   reads=reads+1;return {ok=true,value={value=owner[key]}}
@@ -1541,13 +1745,13 @@ local services={
  end},
  time={duration=function(value,unit) return value end},
  effects={get=function(character,id,part)
-  assert(character==TARGET);queries=queries+1
-  if id=='absent' then
+  assert(character==TARGET and part.value=='torso');queries=queries+1
+  if id.value=='absent' then
    assert(random_calls==0 and reads==0);return {ok=false,error={code='not_found'}}
   end
   return {ok=true,value={intensity=2}}
  end,add=function(character,id,duration,options)
-  assert(character==TARGET and id=='bleed' and options.intensity==2)
+  assert(character==TARGET and id.value=='bleed' and options.intensity==2)
   adds=adds+1;return {ok=true}
  end}
 }
@@ -2052,16 +2256,19 @@ assert(calls==COUNT)
                 values = ["poison"] * max(0, count - 1) + (["bleed"] if count else [])
                 expression = migrate_lua_first.render_eoc_condition_expression(
                     {"npc_has_any_effect": values, "bodypart": "arm_l", "intensity": 2},
-                    npc_actor_expression="partner")
+                    npc_actor_proven=True, npc_actor_expression="partner")
                 self.assertIsNotNone(expression)
                 script = """
 local partner = {}
 local calls = 0
 local function service_value(r) assert(r.ok); return r.value end
-local services = {types={id=function(kind,id) return id end},effects={has=function(character,id,part,minimum)
- assert(character==partner and part=='arm_l' and minimum==2)
+local function game_id(kind,value)
+ return {kind=kind,value=value,is_valid=function() return true end}
+end
+local services = {types={id=function(kind,id) return game_id(kind,id) end},effects={has=function(character,id,part,minimum)
+ assert(character==partner and part.value=='arm_l' and minimum==2)
  calls=calls+1
- return {ok=true,value=id=='bleed'}
+ return {ok=true,value=id.value=='bleed'}
 end}}
 assert((EXPRESSION) == EXPECTED)
 assert(calls == COUNT)
@@ -2078,7 +2285,8 @@ assert(calls == COUNT)
                 value = [value]
             expression = migrate_lua_first.render_eoc_condition_expression(
                 {key: value, "bodypart": "arm_l", "intensity": {"u_val": "minimum"}},
-                avatar_actor_proven=True, npc_actor_expression="partner")
+                avatar_actor_proven=True, npc_actor_proven=True,
+                npc_actor_expression="partner")
             self.assertIsNotNone(expression)
             script = """
 local actor={effect='bleed',minimum=2000001}
@@ -2087,14 +2295,17 @@ local context={data={}}
 local present=false
 local intensity_reads=0
 local function service_value(r) assert(r.ok); return r.value end
+local function game_id(kind,value)
+ return {kind=kind,value=value,is_valid=function() return true end}
+end
 local services={
  variables={resolve=function(data,owner,scope,key)
    if key=='minimum' then intensity_reads=intensity_reads+1 end
    return {ok=true,value={value=owner[key]}}
  end},
- types={id=function(kind,id) return id end},
+ types={id=function(kind,id) return game_id(kind,id) end},
  effects={get=function(character,id,part)
-   assert(character==partner and id=='bleed' and part=='arm_l')
+   assert(character==partner and id.value=='bleed' and part.value=='arm_l')
    if not present then return {ok=false,error={code='not_found'}} end
    return {ok=true,value={intensity=2000001}}
  end}
@@ -2833,7 +3044,11 @@ assert(read() == 'bio_batteries')
                     self.assertIsNone(expression)
                     continue
                 self.assertIsNotNone(expression)
-                self.assertEqual(expression.count("services.effects.has(partner,"), 2)
+                self.assertEqual(expression.count("services.effects.has(partner,"), 1)
+                self.assertIn(
+                    'return has_effect("poison") or has_effect("bleed")',
+                    expression,
+                )
                 self.assertNotIn("services.effects.has(actor,", expression)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
@@ -2847,13 +3062,16 @@ assert(read() == 'bio_batteries')
 local actor = { poison = true, bleed = true }
 local partner = { poison = false, bleed = false }
 local calls = 0
+local function game_id(kind,value)
+ return {kind=kind,value=value,is_valid=function() return true end}
+end
 local services = {
-  types = { id = function(kind, id) return id end },
+  types = { id = function(kind, id) return game_id(kind,id) end },
   effects = { has = function(character, id, part)
-    assert(character == partner and part == 'arm_l')
+    assert(character == partner and part.value == 'arm_l')
     calls = calls + 1
     if character.stale then error('stale_world') end
-    return { ok = true, value = character[id] }
+    return { ok = true, value = character[id.value] }
   end },
 }
 local function service_value(result) assert(result.ok); return result.value end
@@ -3381,7 +3599,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 5)
             self.assertIn(
-                'services.effects.has(actor, services.types.id("effect", "downed"), services.types.id("body_part", "torso"), 1)',
+                'local effect = resolve_id("effect", "downed")',
+                main,
+            )
+            self.assertIn(
+                'services.effects.has(actor, effect, bodypart, 1)',
                 main,
             )
             self.assertNotIn(
