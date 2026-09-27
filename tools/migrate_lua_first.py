@@ -27170,7 +27170,7 @@ def render_eoc_condition_expression(
                 "services.creatures.has_line_of_sight(context.actors.beta, actor)"
             )
         return beta_guard + alpha_guard + f"service_value({query})"
-    if condition in {"u_has_stolen_item", "npc_has_stolen_item"}:
+    if condition in ("u_has_stolen_item", "npc_has_stolen_item"):
         # Both native aliases ignore their is_npc parameter and query
         # const_actor(false) as the inventory holder and const_actor(true) as
         # the owner.  A direct talk-topic pair proves those alpha/beta roles;
@@ -27192,6 +27192,36 @@ def render_eoc_condition_expression(
             "if not is_character(alpha) or not is_character(beta) then "
             "return false end; "
             "return service_value(services.inventory.has_stolen_from(alpha, beta)) "
+            "end)()"
+        )
+    npc_beta_snapshot_fields = {
+        "npc_controlling_vehicle": "movement.controlling_vehicle",
+        "npc_driving": "movement.driving",
+        "npc_following": "npc_state.following",
+    }
+    if isinstance(condition, str) and condition in npc_beta_snapshot_fields:
+        # These native aliases read const_actor(true), not the callback's
+        # alpha actor.  The snapshot uses the same map occupancy/control test;
+        # for driving, map::veh_at(abs) converts through get_bub just as
+        # Character::is_driving's pos_bub does.  NPC following is
+        # npc::is_following in both paths.
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        field = npc_beta_snapshot_fields[condition]
+        result = f"state.{field}"
+        if condition == "npc_following":
+            result += " == true"
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "local state = service_value(services.characters.snapshot(beta)); "
+            f"return {result} "
             "end)()"
         )
     if condition == "u_can_stow_weapon":
@@ -27565,13 +27595,10 @@ def render_eoc_condition_expression(
                 f".movement.{field}"
             )
         if npc_query_actor is not None and condition in {
-            "npc_driving", "npc_is_driving",
-            "npc_controlling_vehicle", "npc_is_riding", "npc_mounted",
+            "npc_is_driving", "npc_is_riding", "npc_mounted",
         }:
             field = {
-                "npc_driving": "driving",
                 "npc_is_driving": "driving",
-                "npc_controlling_vehicle": "controlling_vehicle",
                 "npc_is_riding": "mounted",
                 "npc_mounted": "mounted",
             }[condition]
@@ -27581,8 +27608,6 @@ def render_eoc_condition_expression(
             )
         if avatar_actor_proven and condition == "u_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
-        if npc_query_actor is not None and condition == "npc_following":
-            return f"service_value(services.characters.snapshot({npc_query_actor})).npc_state.following"
         return None
     if not isinstance(condition, dict):
         return None

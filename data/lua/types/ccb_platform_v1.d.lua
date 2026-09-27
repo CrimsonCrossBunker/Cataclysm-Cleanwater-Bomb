@@ -11088,6 +11088,14 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@class CcbCharacterSensesSnapshot
 ---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
 
+---@class CcbCharacterMovementSnapshot
+---@field driving boolean Native current-position vehicle query; true only when the vehicle is moving and the Character controls it.
+---@field controlling_vehicle boolean Native current-position vehicle query; true when the Character controls the vehicle at its map square.
+
+---@class CcbCharacterNpcStateSnapshot
+---@field present boolean Whether the Character is an NPC.
+---@field following? boolean Present for NPCs; native FOLLOW or WAIT attitude.
+
 ---@class CcbCharacterSnapshot
 ---@field name string
 ---@field x integer
@@ -11104,6 +11112,8 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field sleepiness integer
 ---@field senses CcbCharacterSensesSnapshot
 ---@field environment CcbCharacterEnvironmentSnapshot
+---@field movement CcbCharacterMovementSnapshot
+---@field npc_state CcbCharacterNpcStateSnapshot
 
 ---@class CcbCharacterEnvironmentSnapshot
 ---@field outside boolean Native is_creature_outside result, including its surface-z check.

@@ -20,7 +20,10 @@ extern "C" {
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <monster.h>
+#include <npc.h>
 #include <point.h>
+#include <talker_character.h>
+#include <talker_npc.h>
 #include <type_id.h>
 #include <viewer.h>
 #include <cstddef>
@@ -212,6 +215,76 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
     CHECK( stale_result["error"].get<sol::table>()
            ["code"].get<std::string>() == "stale_world" );
     --fixture.active_world_generation;
+}
+
+TEST_CASE( "lua_platform_character_snapshot_matches_npc_movement_conditions",
+           "[lua][platform][characters][movement][semantic]" )
+{
+    platform_vehicle_relocation_fixture fixture( 734, 33 );
+    REQUIRE( fixture.test_vehicle );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+        fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 7334 ), true );
+    beta.setpos( fixture.get_map(), fixture.source_local );
+    beta.set_attitude( NPCATT_FOLLOW );
+    const talker_npc_const native_beta( &beta );
+    const sol::protected_function snapshot =
+        fixture.services["characters"]["snapshot"];
+
+    const auto check_native_match = [&]( const bool expected_controlling,
+    const bool expected_driving, const bool expected_following ) {
+        const optional_vpart_position control_vehicle = fixture.get_map().veh_at(
+                    native_beta.pos_bub( fixture.get_map() ) );
+        const bool native_controlling = control_vehicle &&
+                                        native_beta.is_in_control_of( control_vehicle->vehicle() );
+        const optional_vpart_position driving_vehicle = fixture.get_map().veh_at(
+                    native_beta.pos_abs() );
+        const bool native_driving = driving_vehicle &&
+                                    driving_vehicle->vehicle().is_moving() &&
+                                    native_beta.is_in_control_of( driving_vehicle->vehicle() );
+        const bool native_following = native_beta.is_following();
+        CHECK( native_controlling == expected_controlling );
+        CHECK( native_driving == expected_driving );
+        CHECK( native_following == expected_following );
+        const tripoint_abs_ms position = beta.pos_abs();
+        const cata::lua_platform::game_handle beta_handle =
+            cata::lua_platform::game_handle::from_creature(
+                beta,
+                { "npc", beta.getID().get_value(), position.x(),
+                  position.y(), position.z(), {} },
+                fixture.active_runtime, fixture.active_world_generation );
+        const sol::protected_function_result result = snapshot( beta_handle );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        const sol::table movement = value["movement"].get<sol::table>();
+        const sol::table npc_state = value["npc_state"].get<sol::table>();
+        CHECK( movement["controlling_vehicle"].get<bool>() == native_controlling );
+        CHECK( movement["driving"].get<bool>() == native_driving );
+        CHECK( npc_state["following"].get<bool>() == native_following );
+    };
+
+    fixture.test_vehicle->tags.insert( "IN_CONTROL_OVERRIDE" );
+    fixture.test_vehicle->velocity = 0;
+    check_native_match( true, false, true ); // In control of a stationary vehicle.
+    fixture.test_vehicle->velocity = 100;
+    check_native_match( true, true, true ); // In control of a moving vehicle.
+    beta.set_attitude( NPCATT_WAIT );
+    check_native_match( true, true, true ); // WAIT is also a native following attitude.
+    beta.set_attitude( NPCATT_KILL );
+    check_native_match( true, true, false ); // Not following despite the same vehicle state.
+    beta.setpos( fixture.get_map(), fixture.target_local );
+    check_native_match( false, false, false ); // No vehicle at the native actor square.
 }
 
 TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
