@@ -13166,12 +13166,28 @@ assert(#events == 9)
         for raw, expected in (
             (50, -5000),
             ("6 seconds", -600),
+            ("1 t", -100),
             (-2, 200),
+            (10000, -1000000),
+            (-10000, 1000000),
+            ("10000 turns", -1000000),
+            ("-10000 turns", 1000000),
         ):
             with self.subTest(raw=raw):
                 self.assertEqual(
                     migrate_lua_first.parse_turn_cost_adjustment(raw), expected
                 )
+        for raw in (
+            10001,
+            -10001,
+            1.5,
+            "0.5 seconds 0.5 seconds",
+            "1 SECONDS",
+            "1 sec",
+            "1 min",
+        ):
+            with self.subTest(raw=raw):
+                self.assertIsNone(migrate_lua_first.parse_turn_cost_adjustment(raw))
         self.assertIsNone(
             migrate_lua_first.parse_turn_cost_adjustment(
                 {"math": ["u_strength()"]}
@@ -13180,6 +13196,52 @@ assert(#events == 9)
         self.assertIsNone(
             migrate_lua_first.parse_turn_cost_adjustment(21474837)
         )
+
+    def test_turn_cost_migration_respects_platform_adjustment_and_native_units(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "turn_cost_boundaries",
+                    "required_event": "game_start",
+                    "effect": [
+                        {"turn_cost": 10000},
+                        {"turn_cost": 10001},
+                        {"turn_cost": -10000},
+                        {"turn_cost": -10001},
+                        {"turn_cost": "10000 turns"},
+                        {"turn_cost": "10001 turns"},
+                        {"turn_cost": "1 t"},
+                        {"turn_cost": "0.5 seconds 0.5 seconds"},
+                        {"turn_cost": "1 SECONDS"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "turn_cost_bounds_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(
+                main.count("services.characters.adjust(actor, { moves = "), 4
+            )
+            self.assertIn(
+                "services.characters.adjust(actor, { moves = -1000000 })", main
+            )
+            self.assertIn(
+                "services.characters.adjust(actor, { moves = 1000000 })", main
+            )
+            self.assertIn(
+                "services.characters.adjust(actor, { moves = -100 })", main
+            )
+            for effect_index in (1, 3, 5, 7, 8):
+                self.assertIn(
+                    f"EOC turn_cost_boundaries effect #{effect_index} needs domain-service conversion",
+                    report,
+                )
 
     def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
