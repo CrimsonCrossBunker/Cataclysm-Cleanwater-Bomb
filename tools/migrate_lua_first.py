@@ -29115,9 +29115,12 @@ def render_eoc(
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
     # Static talk-effect WRAP entries invoke their C++ function only when
     # dialogue::actor(true)->get_npc() succeeds.  A single event Character is
-    # alpha evidence, not proof of that beta handle.  Restrict these WRAP
-    # lowerings to callbacks with a separately proven beta participant, then
-    # preserve the native no-op for a beta that is not an NPC at runtime.
+    # alpha evidence, not proof of that beta handle.  A direct topic response
+    # callback runs in avatar::talk_to's dialogue, which has alpha and a
+    # non-null interlocutor; only this path can justify the beta handle.  The
+    # native actor(true) alpha fallback applies to other no-beta dialogues,
+    # which are deliberately not inferred from event or generic-pair proof.
+    # Preserve the native no-op for a present beta that is not an NPC.
     static_wrapped_beta_npc = (
         npc_dialogue_mission_pair_proven and
         npc_actor_expression == "context.actors.beta"
@@ -33509,30 +33512,55 @@ def render_eoc(
                 "assign_mission", "mission_success", "mission_failure",
                 "clear_mission", "mission_reward",
             }:
-                if static_wrapped_beta_npc:
-                    mission_action = {
-                        "assign_mission": "assign_selected",
-                        "mission_success": "succeed_selected",
-                        "mission_failure": "fail_selected",
-                        "clear_mission": "clear_selected",
-                        "mission_reward": "claim_selected_reward",
-                    }[effect]
-                    arguments = ["services.characters.avatar()"]
-                    if effect == "mission_success":
-                        arguments.append("false")
+                if static_wrapped_beta_npc and effect == "assign_mission":
+                    # This lowering is bounded to a live dialogue selection.
+                    # The Platform service additionally validates provider
+                    # ownership and unique available-list membership; native
+                    # assign_mission assumes those chatbin invariants.
                     lines.extend(render_static_wrapped_beta_npc_call(
-                        f"missions.{mission_action}", *arguments
+                        "missions.assign_selected", "services.characters.avatar()"
                     ))
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the selected NPC mission "
-                        "action through a direct dialogue beta NPC."
-                    )
+                    if static_wrapped_beta_npc:
+                        reason = {
+                            "mission_success": (
+                                "the Platform service requires an active, complete "
+                                "mission while the native WRAP only wraps the selection"
+                            ),
+                            "mission_failure": (
+                                "the Platform service requires an active mission "
+                                "assigned to this avatar while the native WRAP fails "
+                                "the selection"
+                            ),
+                            "clear_mission": (
+                                "the Platform service rejects in-progress selections "
+                                "while the native WRAP clears any assigned selection"
+                            ),
+                            "mission_reward": (
+                                "the native WRAP adds owed value and opens reward trade; "
+                                "the Platform generic-reward claim has different semantics"
+                            ),
+                        }.get(effect, "the selected mission action is not equivalent")
+                        todo = f"TODO: preserve native {effect}: {reason}."
+                        detail = (
+                            f"native {effect} cannot be represented by the current "
+                            "Platform selected-mission service"
+                        )
+                    else:
+                        todo = (
+                            "TODO: translate the selected NPC mission action through "
+                            "a direct dialogue beta NPC."
+                        )
+                        detail = (
+                            "needs a direct talk-topic beta NPC for the selected "
+                            "mission action"
+                        )
+                    lines.append(f"    -- {todo}")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a direct talk-topic beta NPC for the selected mission action"
+                        f"{detail}"
                     )
                     all_effects_converted = False
             elif effect == "remove_active_mission" and (

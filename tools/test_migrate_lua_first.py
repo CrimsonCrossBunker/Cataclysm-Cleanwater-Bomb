@@ -14012,7 +14012,7 @@ assert(#events == 9)
             self.assertIn("direct talk-topic beta NPC", main)
             self.assertNotIn("services.characters.avatar()", main)
 
-    def test_static_npc_mission_wrappers_use_direct_beta_npc_and_avatar(self) -> None:
+    def test_static_npc_mission_wrappers_preserve_native_semantics(self) -> None:
         effects = [
             "assign_mission", "mission_success", "mission_failure",
             "clear_mission", "mission_reward",
@@ -14056,29 +14056,30 @@ assert(#events == 9)
             "type": "effect_on_condition", "id": "dialogue_missions",
             "effect": effects,
         })
+        # The synthetic true_eocs callback models avatar.talk_to, which supplies
+        # alpha and a non-null interlocutor; the runtime guard preserves WRAP's
+        # no-op when that interlocutor is not an NPC. Only assign is admitted.
+        # assign_selected also enforces live/provider/unique available-list
+        # membership, stronger than native assign_mission's chatbin assumptions.
         self.assertEqual(direct_pair.count(
             'wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc"'
-        ), len(effects))
+        ), 1)
         self.assertIn(
             "services.npcs.missions.assign_selected(wrapped_beta_npc, services.characters.avatar())",
             direct_pair,
         )
-        self.assertIn(
-            "services.npcs.missions.succeed_selected(wrapped_beta_npc, services.characters.avatar(), false)",
-            direct_pair,
-        )
-        self.assertIn(
-            "services.npcs.missions.fail_selected(wrapped_beta_npc, services.characters.avatar())",
-            direct_pair,
-        )
-        self.assertIn(
-            "services.npcs.missions.clear_selected(wrapped_beta_npc, services.characters.avatar())",
-            direct_pair,
-        )
-        self.assertIn(
-            "services.npcs.missions.claim_selected_reward(wrapped_beta_npc, services.characters.avatar())",
-            direct_pair,
-        )
+        for method in (
+            "succeed_selected", "fail_selected", "clear_selected",
+            "claim_selected_reward",
+        ):
+            self.assertNotIn(f"services.npcs.missions.{method}(", direct_pair)
+        for reason in (
+            "requires an active, complete mission",
+            "requires an active mission assigned to this avatar",
+            "rejects in-progress selections",
+            "opens reward trade",
+        ):
+            self.assertIn(reason, direct_pair)
 
     def test_npc_mission_contract_declarations_cover_native_surface(self) -> None:
         declarations = (
