@@ -26389,15 +26389,14 @@ def render_effect_condition(
     if target is None:
         return None
 
-    def identifier(value: Any, kind: str) -> str | None:
-        if isinstance(value, dict):
-            raw = render_participant_string_expression(value, target, alpha, beta)
-            return None if raw is None else f'services.types.id("{kind}", {raw})'
-        return _dynamic_id_expression(value, kind, target)
+    def raw_identifier(value: Any) -> str | None:
+        return render_participant_string_expression(value, target, alpha, beta)
 
-    bodypart = f'services.types.id("body_part", {lua_quote(condition["bodypart"])})'
     values = condition[key] if key.endswith("any_effect") else [condition[key]]
     if not isinstance(values, list):
+        return None
+    raw_effects = [raw_identifier(value) for value in values]
+    if any(value is None for value in raw_effects):
         return None
     raw_intensity = condition.get("intensity", -1)
     literal = finite_number_literal(raw_intensity)
@@ -26409,30 +26408,45 @@ def render_effect_condition(
             return None
     if not values:
         return "false"
-    queries = []
-    for value in values:
-        effect = identifier(value, "effect")
-        if effect is None:
-            return None
-        if literal is not None and -1000000 <= literal <= 1000000:
-            queries.append(
-                f"service_value(services.effects.has({target}, {effect}, {bodypart}, {intensity}))")
-        else:
-            # Native EOC evaluates intensity only when this effect exists.
-            # Snapshot comparison also preserves thresholds outside has()'s
-            # bounded optional argument without clamping their meaning.
-            queries.append(
-                f"(function() local result = services.effects.get({target}, {effect}, {bodypart}); "
-                'if not result.ok then if result.error.code == "not_found" then return false end; '
-                'service_value(result) end; '
-                f'return result.value.intensity >= ({intensity}) end)()')
-    if len(queries) <= 64:
-        return " or ".join(queries)
-    # A long flat chain of `or` expressions can hit Lua parser nesting limits.
-    # Sequential branches retain lazy reads with no arbitrary list-size cap.
-    return "(function() " + " ".join(
-        f"if {query} then return true end;" for query in queries
-    ) + " return false end)()"
+    query = (
+        f"return service_value(services.effects.has({target}, effect, bodypart, {intensity}))"
+        if literal is not None and -1000000 <= literal <= 1000000 else
+        # Native EOC evaluates intensity only when this effect exists.
+        # Snapshot comparison also preserves thresholds outside has()'s
+        # bounded optional argument without clamping their meaning.
+        f"local result = services.effects.get({target}, effect, bodypart); "
+        'if not result.ok then if result.error.code == "not_found" then return false end; '
+        'service_value(result) end; '
+        f'return result.value.intensity >= ({intensity})'
+    )
+    lines = [
+        "(function()",
+        "    local function resolve_id(kind, value)",
+        "        local ok, id = pcall(services.types.id, kind, value)",
+        "        if not ok or not id:is_valid() then return nil end",
+        "        return id",
+        "    end",
+        f'    local bodypart = resolve_id("body_part", {lua_quote(condition["bodypart"])})',
+        "    if bodypart == nil then return false end",
+        "    local function has_effect(raw_id)",
+        '        local effect = resolve_id("effect", raw_id)',
+        "        if effect == nil then return false end",
+        f"        {query}",
+        "    end",
+    ]
+    if len(raw_effects) <= 64:
+        lines.append(
+            "    return " + " or ".join(
+                f"has_effect({effect})" for effect in raw_effects
+            )
+        )
+    else:
+        # Keep long source arrays sequential without a deep Lua `or` chain.
+        for effect in raw_effects:
+            lines.append(f"    if has_effect({effect}) then return true end")
+        lines.append("    return false")
+    lines.append("end)()")
+    return "\n".join(lines)
 
 
 def render_dynamic_character_condition(
@@ -26540,6 +26554,33 @@ def render_dynamic_character_condition(
         proven, actor = actor_specs[scope]
         if not proven:
             return None
+        if service.endswith("has_worn_flag"):
+            if (
+                set(condition) != {key, "bodypart"} or
+                not bounded_platform_body_part_id(condition.get("bodypart"))
+            ):
+                return None
+            flag_value = render_participant_string_expression(
+                condition[key], actor,
+                "actor" if avatar_actor_proven else None,
+                actor_specs["npc"][1] if npc_actor_proven else None,
+            )
+            if flag_value is None:
+                return None
+            return (
+                "(function() "
+                "local function resolve_id(kind, value) "
+                "local ok, id = pcall(services.types.id, kind, value); "
+                "if not ok or not id:is_valid() then return nil end; "
+                "return id end; "
+                "local bodypart = resolve_id(\"body_part\", "
+                f"{lua_quote(condition['bodypart'])}); "
+                "if bodypart == nil then return false end; "
+                f"local flag = resolve_id(\"json_flag\", {flag_value}); "
+                "if flag == nil then return false end; "
+                f"return service_value(services.inventory.has_worn_flag({actor}, flag, bodypart)) "
+                "end)()"
+            )
         identifier = _dynamic_id_expression(condition[key], kind, actor)
         if identifier is None:
             return None
@@ -26553,14 +26594,6 @@ def render_dynamic_character_condition(
             if count is None:
                 return None
             return f"service_value(services.{service}({actor}, {identifier})) >= ({count})"
-        if service.endswith("has_worn_flag"):
-            bodypart = ""
-            if "bodypart" in condition:
-                bodypart_id = _dynamic_id_expression(condition["bodypart"], "body_part", actor)
-                if bodypart_id is None:
-                    return None
-                bodypart = ", " + bodypart_id
-            return f"service_value(services.{service}({actor}, {identifier}{bodypart}))"
         return f"service_value(services.{service}({actor}, {identifier}))"
 
     for key, scope in (
@@ -27769,26 +27802,6 @@ def render_eoc_condition_expression(
                 "services.types.id(\"item\", "
                 f"{lua_quote(raw['item'])}), {lua_number(raw.get('charges', 0))}, {device_expr}))"
             )
-    for item_key, actor_proven in (
-        ("u_has_worn_with_flag", avatar_actor_proven),
-        ("npc_has_worn_with_flag", npc_actor_proven),
-    ):
-        if (
-            actor_proven and "bodypart" in condition and
-            set(condition) <= {item_key, "bodypart"} and
-            bounded_platform_id(condition.get(item_key)) and
-            bounded_platform_body_part_id(condition.get("bodypart"))
-        ):
-            bodypart = condition.get("bodypart")
-            bodypart_expr = (
-                ", services.types.id(\"body_part\", " + lua_quote(bodypart) + ")"
-                if "bodypart" in condition else ""
-            )
-            return (
-                f"service_value(services.inventory.has_worn_flag({actor}, "
-                "services.types.id(\"json_flag\", "
-                f"{lua_quote(condition[item_key])}){bodypart_expr})"
-            )
     for item_key, actor_proven, kind in (
         ("u_has_wielded_with_flag", avatar_actor_proven, "json_flag"),
         ("npc_has_wielded_with_flag", npc_actor_proven, "json_flag"),
@@ -28195,9 +28208,9 @@ def render_eoc_condition_expression(
                     f"{lua_number(threshold)}))"
                 )
 
-    # Effect predicates are safe only for a proven character actor and a
-    # finite literal effect id.  Keep the query in the normal Platform service
-    # surface; dynamic/context-valued ids and unproven actors remain TODOs.
+    # Effect predicates are safe only for a proven actor and explicit part.
+    # Let the shared renderer validate typed IDs before calling Platform so
+    # unknown native IDs remain false instead of becoming service errors.
     for effect_key, actor_proven in (
         (
             "u_has_effect",
@@ -28205,19 +28218,16 @@ def render_eoc_condition_expression(
         ),
         ("npc_has_effect", npc_actor_proven),
     ):
-        actor = npc_query_actor if effect_key.startswith("npc_") else "actor"
         if (
             actor_proven and
             set(condition) == {effect_key, "bodypart"} and
             bounded_platform_body_part_id(condition.get("bodypart")) and
             safe_platform_id(condition.get(effect_key))
         ):
-            return (
-                f"service_value(services.effects.has({actor}, "
-                "services.types.id(\"effect\", "
-                f"{lua_quote(condition[effect_key])}), "
-                "services.types.id(\"body_part\", "
-                f"{lua_quote(condition['bodypart'])}), -1))"
+            return render_effect_condition(
+                condition,
+                "actor" if avatar_actor_proven or generic_character_actor_proven else None,
+                npc_query_actor,
             )
     for effect_key, actor_proven in (
         (
@@ -28226,7 +28236,6 @@ def render_eoc_condition_expression(
         ),
         ("npc_has_any_effect", npc_actor_proven),
     ):
-        actor = npc_query_actor if effect_key.startswith("npc_") else "actor"
         if (
             actor_proven and
             set(condition) == {effect_key, "bodypart"} and
@@ -28235,15 +28244,11 @@ def render_eoc_condition_expression(
             0 < len(condition[effect_key]) <= 64 and
             all(safe_platform_id(value) for value in condition[effect_key])
         ):
-            queries = [
-                f"service_value(services.effects.has({actor}, "
-                "services.types.id(\"effect\", "
-                f"{lua_quote(value)}), "
-                "services.types.id(\"body_part\", "
-                f"{lua_quote(condition['bodypart'])}), -1))"
-                for value in condition[effect_key]
-            ]
-            return " or ".join(f"({query})" for query in queries)
+            return render_effect_condition(
+                condition,
+                "actor" if avatar_actor_proven or generic_character_actor_proven else None,
+                npc_query_actor,
+            )
 
     if (
         set(condition) == {"u_safe_mode_trigger"} and
