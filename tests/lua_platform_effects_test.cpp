@@ -1506,6 +1506,18 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     const int expected_friendly = native_pets.front()->friendly;
     const time_duration expected_duration = native_pets.front()->get_effect_dur( pet_effect );
     const bool expected_permanent = native_pets.front()->get_effect( pet_effect ).is_permanent();
+    dialogue native_dialogue( get_talker_for( fixture.other ),
+                              get_talker_for( *native_pets.front() ) );
+    talk_effect_t native_remove_effect;
+    native_remove_effect.parse_sub_effect(
+        json_loader::from_string( R"({"npc_lose_effect":"pet"})" ).get_object(),
+        "effect_monster_beta" );
+    finalize_conditions();
+    REQUIRE( native_pets.front()->has_effect( pet_effect ) );
+    for( const talk_effect_fun_t &operation : native_remove_effect.effects ) {
+        operation( native_dialogue );
+    }
+    CHECK_FALSE( native_pets.front()->has_effect( pet_effect ) );
     g->clear_zombies();
     cata::lua_platform::install_game_world_service_api(
     fixture.services, [&]() {
@@ -1556,6 +1568,16 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     CHECK( actual->friendly == expected_friendly );
     CHECK( actual->get_effect_dur( pet_effect ) == expected_duration );
     CHECK( actual->get_effect( pet_effect ).is_permanent() == expected_permanent );
+    // Compare native npc_lose_effect on a beta-Monster above with a fresh,
+    // equivalent Platform-spawned Monster; don't remove twice from one target.
+    sol::protected_function remove = fixture.services["effects"]["remove"];
+    sol::protected_function_result remove_call = remove(
+                handle, cata::lua_platform::script_game_id( "effect", "pet" ), sol::lua_nil );
+    REQUIRE( remove_call.valid() );
+    sol::table remove_result = remove_call;
+    REQUIRE( remove_result["ok"].get<bool>() );
+    CHECK( remove_result["value"].get<bool>() );
+    CHECK_FALSE( actual->has_effect( pet_effect ) );
     g->clear_zombies();
 }
 
