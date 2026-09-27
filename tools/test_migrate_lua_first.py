@@ -17186,7 +17186,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 )
             self.assertNotIn("has no native Platform registrar", report)
 
-    def test_player_weapon_drop_lowers_only_the_native_string_effect(self) -> None:
+    def test_player_weapon_drop_requires_native_dialogue_beta(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -17214,6 +17214,50 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.characters.drop_weapon(", main)
+            self.assertIn(
+                "native wrapper requires a dialogue beta NPC", main
+            )
+            self.assertIn(
+                "TODO: translate this legacy effect through a typed native service",
+                main,
+            )
+            self.assertIn("direct talk-topic beta NPC proof", report)
+
+    def test_player_weapon_drop_requires_direct_talk_topic_beta_npc(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic", "id": "drop_weapon_topic",
+                            "responses": [{"true_eocs": "player_weapon_drop_pair"}],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_weapon_drop_pair",
+                            "effect": "player_weapon_drop",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_weapon_drop_npc_event",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": "player_weapon_drop",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "player_weapon_drop_pair_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 1)
             self.assertEqual(
@@ -17223,10 +17267,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 1,
             )
             self.assertIn(
-                "TODO: translate this legacy effect through a typed native service",
-                main,
+                'beta.kind == "creature" and beta.subtype == "npc"', main
             )
-            self.assertIn("needs domain-service conversion", report)
+            self.assertIn("native wrapper requires a dialogue beta NPC", main)
+            self.assertIn("direct talk-topic beta NPC proof", report)
 
     def test_can_stow_weapon_conditions_require_proven_native_characters(self) -> None:
         u_expression = migrate_lua_first.render_eoc_condition_expression(
@@ -17506,9 +17550,12 @@ assert(not pcall(function() return U_EXPRESSION end))
                 main,
             )
             self.assertIn("services.world.transform_radius(", main)
-            self.assertIn(
+            self.assertNotIn(
                 "services.characters.drop_weapon(services.characters.avatar())",
                 main,
+            )
+            self.assertIn(
+                "native wrapper requires a dialogue beta NPC", main
             )
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)

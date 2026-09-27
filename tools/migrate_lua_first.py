@@ -32326,13 +32326,33 @@ def render_eoc(
                 )
                 all_effects_converted = False
             elif effect == "player_weapon_drop":
-                # The native talk effect always targets get_player_character(),
-                # regardless of the EOC event actor or dialogue partner.
-                lines.append(
-                    "    service_value(services.characters.drop_weapon("
-                    "services.characters.avatar()))"
-                )
-                converted_effect = True
+                # The static WRAP still requires talk_effect_fun_t's beta NPC
+                # before it invokes player_weapon_drop, even though the native
+                # function itself targets the global player Character.  Only
+                # direct talk-topic callbacks prove that beta pair; the
+                # runtime subtype guard preserves the wrapper's no-op for a
+                # non-NPC beta.
+                if npc_dialogue_mission_pair_proven:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and context.actors.beta",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.characters.drop_weapon(services.characters.avatar()))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: player_weapon_drop's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no direct talk-topic pair proof."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "player_weapon_drop needs a direct talk-topic beta NPC proof"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:
