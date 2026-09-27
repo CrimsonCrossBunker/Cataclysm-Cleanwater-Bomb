@@ -9671,6 +9671,15 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field busy_turns integer Remaining `currently_busy` duration in turns.
 ---@field current_activity string Native current-activity description.
 
+---@alias CcbNpcRefusalRequest 'follow'|'lead'|'equipment'|'training'|'personal_info'
+
+---@class CcbNpcRefusalResult
+---@field request CcbNpcRefusalRequest Request recorded for this NPC.
+---@field effect GameId Native refusal effect applied.
+---@field duration TimeDuration Native duration in hours: follow/lead/training 6, equipment 1, personal_info 3.
+---@field already_active boolean Whether the refusal effect was active before the call.
+---@field active boolean Whether the refusal effect is active after the call.
+
 ---@class CcbNpcMissionsStateResult
 ---@field before CcbNpcMissionsState State before selecting a mission.
 ---@field after CcbNpcMissionsState State after selecting a mission.
@@ -9940,8 +9949,8 @@ function CcbNpcsApi.copy_ai_rules(target, source) end
 ---@return CcbResult
 function CcbNpcsApi.make_thankful(handle) end
 ---@param handle GameHandle Exact NPC handle.
----@param request string
----@return CcbResult
+---@param request CcbNpcRefusalRequest Exact legacy refusal category; applies the same native effect and duration as its talk effect.
+---@return CcbResult result `value` is a CcbNpcRefusalResult; unsupported request strings are rejected.
 function CcbNpcsApi.record_refusal(handle, request) end
 ---@param handle GameHandle Exact NPC handle.
 ---@return CcbResult
