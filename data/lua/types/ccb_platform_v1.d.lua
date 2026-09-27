@@ -9301,6 +9301,10 @@ function CcbItemsApi.erase_var(handle, key) end
 ---@param flag GameId GameId<json_flag>
 ---@return CcbResult
 function CcbItemsApi.has_flag(handle, flag) end
+---@param item_handle GameHandle Exact live item talker handle; may be outside the Character's inventory.
+---@param character GameHandle Exact live alpha Character; queried as the carrier for native has_ammo semantics.
+---@return CcbResult boolean matching the native has_ammo condition.
+function CcbItemsApi.has_ammo(item_handle, character) end
 ---@param item_handle GameHandle Exact live item handle.
 ---@param character GameHandle Exact live Character holder; no avatar fallback.
 ---@param method? string
@@ -9386,6 +9390,12 @@ function CcbInventoryApi.choose_many_map(character, candidates, options) end
 ---@param quantity integer
 ---@return CcbResult
 function CcbInventoryApi.resources(character, item_type, quantity) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
+---@param count integer Non-negative requested item count, at most 1000000000.
+---@param charges integer Non-negative requested charge count, at most 1000000000.
+---@return CcbResult boolean native-style item requirement result.
+function CcbInventoryApi.has_items(character, item_type, count, charges) end
 ---@class CcbInventorySumEntry
 ---@field item GameId GameId<item> queried by native item type id.
 ---@field amount number Finite desired quantity in (0, 1000000000].
