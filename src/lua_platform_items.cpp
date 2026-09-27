@@ -73,8 +73,10 @@ extern "C" {
 #include "lua_platform_world.h"
 #include "map.h"
 #include "math_parser_diag_value.h"
+#include "output.h"
 #include "requirements.h"
 #include "string_formatter.h"
+#include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
@@ -4193,6 +4195,79 @@ sol::table consume_inventory_items(
                    state, std::move( value ) ) );
 }
 
+sol::table consume_inventory_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t requested_count,
+    const std::int64_t requested_charges,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        type, "item", "services.inventory.consume_by_type" );
+    if( requested_count < std::numeric_limits<int>::min() ||
+        requested_count > std::numeric_limits<int>::max() ||
+        requested_charges < std::numeric_limits<int>::min() ||
+        requested_charges > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_by_type count and charges must fit native int" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    // Match the legacy ID path: an unknown but well-formed itype_id resolves
+    // through the native undefined-item template, then follows the ordinary
+    // amount check and missing-item popup path.
+    const itype_id native_type( type.value() );
+
+    int count = static_cast<int>( requested_count );
+    int charges = static_cast<int>( requested_charges );
+    if( charges == 0 && item::count_by_charges( native_type ) ) {
+        charges = count;
+        count = 0;
+    }
+
+    talker_character target( character );
+    bool matched = false;
+    bool changed = false;
+    if( count == 0 && charges > 0 &&
+        target.has_charges( native_type, charges, true ) ) {
+        target.use_charges( native_type, charges, true );
+        matched = true;
+        changed = true;
+    } else if( target.has_amount( native_type, count ) ) {
+        if( charges > 0 && target.has_charges( native_type, charges, true ) ) {
+            target.use_charges( native_type, charges, true );
+            changed = true;
+        }
+        const std::list<item> consumed = target.use_amount( native_type, count );
+        matched = true;
+        changed = changed || !consumed.empty();
+    }
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["count"] = count;
+    value["charges"] = charges;
+    value["matched"] = matched;
+    if( !matched ) {
+        const item missing_item( native_type );
+        popup( _( "%1$s doesn't have a %2$s!" ), target.disp_name(),
+               missing_item.tname() );
+    } else if( changed ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table remove_inventory_items_by_type(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &type,
@@ -7508,6 +7583,20 @@ void install_item_api(
         return consume_inventory_items(
                    lua_state, character, type,
                    count.value_or( 0 ), charges.value_or( 0 ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "consume_by_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle &character,
+            const script_game_id &type,
+            const std::int64_t count,
+            const std::int64_t charges ) {
+        require_item_write();
+        return consume_inventory_by_type(
+                   lua_state, character, type, count, charges,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

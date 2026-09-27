@@ -33,8 +33,11 @@
 class Character;
 
 static const itype_id itype_2x4( "2x4" );
+static const itype_id itype_apple( "apple" );
+static const itype_id itype_battery( "battery" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const vproto_id vehicle_prototype_car( "car" );
 
 TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][platform]" )
@@ -680,6 +683,161 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
            before_unknown_id );
     CHECK( character.has_amount( itype_2x4, 1 ) );
     CHECK( write_gate_calls == 3 );
+}
+
+TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search",
+           "[lua][platform][items][mutation][semantic]" )
+{
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 33 );
+    constexpr std::size_t world_generation = 1;
+    avatar character;
+    character.normalize();
+    character.setID( character_id( 6403 ), true );
+    item &apple = character.inv->add_item(
+                      item( itype_apple ), false, false, false );
+
+    const cata::lua_platform::game_handle character_handle =
+        cata::lua_platform::game_handle::from_creature(
+            character, { "avatar", character.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle apple_handle =
+        cata::lua_platform::game_handle::from_item(
+            apple, { "character_inventory", apple.uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    int write_gate_calls = 0;
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = [&]() {
+        return world_generation;
+    };
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_item_api(
+        services, current_runtime, current_world, []() {}, [&]() {
+        ++write_gate_calls;
+    } );
+    const sol::protected_function consume =
+        services["inventory"]["consume_by_type"];
+
+    // Native f_consume_item falls through to has_amount(count) even when a
+    // positive requested charge amount is unavailable.
+    const std::uint64_t epoch_before_amount =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result amount_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "apple" ), 1, 9 );
+    REQUIRE( amount_result.valid() );
+    const sol::table amount_envelope = amount_result.get<sol::table>();
+    REQUIRE( amount_envelope["ok"].get<bool>() );
+    const sol::table amount_value = amount_envelope["value"].get<sol::table>();
+    CHECK( amount_value["matched"].get<bool>() );
+    CHECK( amount_value["count"].get<int>() == 1 );
+    CHECK( amount_value["charges"].get<int>() == 9 );
+    CHECK_FALSE( character.has_amount( itype_apple, 1 ) );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() >
+           epoch_before_amount );
+    CHECK( apple_handle.validation_error(
+               runtime, world_generation ).has_value() );
+
+    // A zero count with unavailable charges reaches native has_amount(id, 0),
+    // which matches and performs no mutation rather than showing the popup.
+    const std::uint64_t epoch_before_zero =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result zero_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "apple" ), 0, 2 );
+    REQUIRE( zero_result.valid() );
+    const sol::table zero_envelope = zero_result.get<sol::table>();
+    REQUIRE( zero_envelope["ok"].get<bool>() );
+    CHECK( zero_envelope["value"].get<sol::table>()
+           ["matched"].get<bool>() );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() ==
+           epoch_before_zero );
+
+    const std::uint64_t epoch_before_out_of_range =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result out_of_range_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "apple" ),
+                static_cast<std::int64_t>( std::numeric_limits<int>::max() ) + 1,
+                0 );
+    CHECK_FALSE( out_of_range_result.valid() );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() ==
+           epoch_before_out_of_range );
+
+    // count-by-charges item types move count to charges when charges is zero.
+    REQUIRE( item::count_by_charges( itype_battery ) );
+    item battery( itype_battery );
+    battery.charges = 5;
+    item &stored_battery = character.inv->add_item(
+                              std::move( battery ), false, false, false );
+    const cata::lua_platform::game_handle battery_handle =
+        cata::lua_platform::game_handle::from_item(
+            stored_battery, { "character_inventory", stored_battery.uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const std::uint64_t epoch_before_partial_charges =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result battery_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "battery" ), 2, 0 );
+    REQUIRE( battery_result.valid() );
+    const sol::table battery_envelope = battery_result.get<sol::table>();
+    REQUIRE( battery_envelope["ok"].get<bool>() );
+    const sol::table battery_value = battery_envelope["value"].get<sol::table>();
+    CHECK( battery_value["matched"].get<bool>() );
+    CHECK( battery_value["count"].get<int>() == 0 );
+    CHECK( battery_value["charges"].get<int>() == 2 );
+    CHECK( character.charges_of( itype_battery ) == 3 );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() >
+           epoch_before_partial_charges );
+    const auto partially_consumed_battery = battery_handle.resolve_item(
+                runtime, world_generation );
+    REQUIRE( partially_consumed_battery );
+    CHECK( partially_consumed_battery.value->charges == 3 );
+
+    const std::uint64_t epoch_before_full_charges =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result full_battery_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "battery" ), 0, 3 );
+    REQUIRE( full_battery_result.valid() );
+    const sol::table full_battery_envelope = full_battery_result.get<sol::table>();
+    REQUIRE( full_battery_envelope["ok"].get<bool>() );
+    CHECK( full_battery_envelope["value"].get<sol::table>()
+           ["matched"].get<bool>() );
+    CHECK_FALSE( character.has_amount( itype_battery, 1 ) );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() >
+           epoch_before_full_charges );
+    CHECK( battery_handle.validation_error(
+               runtime, world_generation ).has_value() );
+
+    // talker_character's in_tools=true path includes ammo stored in tools.
+    item tool( itype_soldering_iron_portable );
+    tool.ammo_set( itype_battery, 5 );
+    item &stored_tool = character.inv->add_item(
+                            std::move( tool ), false, false, false );
+    const std::uint64_t epoch_before_tool_charges =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result tool_result = consume(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "battery" ), 0, 2 );
+    REQUIRE( tool_result.valid() );
+    const sol::table tool_envelope = tool_result.get<sol::table>();
+    REQUIRE( tool_envelope["ok"].get<bool>() );
+    CHECK( tool_envelope["value"].get<sol::table>()
+           ["matched"].get<bool>() );
+    CHECK( stored_tool.ammo_remaining() == 3 );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() >
+           epoch_before_tool_charges );
+    CHECK( write_gate_calls == 6 );
+
+    // Do not invoke the unmatched branch in this headless test: production
+    // calls the native modal popup directly, with no Lua notice text limit.
 }
 
 TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
