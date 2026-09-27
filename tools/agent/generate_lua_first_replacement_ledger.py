@@ -2367,9 +2367,10 @@ NATIVE_PRIMITIVE_EVIDENCE = [
 ]
 
 BOUNDED_IMPLEMENTED_EOC = {
-    # Charge-aware inventory queries and wielded/worn predicates now lower to
-    # the typed inventory API for proven avatar/NPC actors.  Dynamic variable
-    # forms remain explicit TODOs in the migrator.
+    # Charge-aware inventory queries and worn/wielded flag predicates now
+    # lower to typed inventory APIs for proven Character slots.  Dynamic flag
+    # values are validated through services.types.id; unsupported provenance
+    # and implicit dialogue-reason body parts remain explicit TODOs.
     ("eoc-conditions", "has_ammo"): "services.items",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "u_has_item"): "services.inventory",
@@ -2382,14 +2383,10 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_has_item_category"): "services.items",
     ("eoc-conditions", "u_has_software"): "services.characters",
     ("eoc-conditions", "npc_has_software"): "services.characters",
-    ("eoc-conditions", "u_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "npc_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "u_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
-    ("eoc-conditions", "npc_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
+    ("eoc-conditions", "u_has_worn_with_flag"): "services.inventory",
+    ("eoc-conditions", "npc_has_worn_with_flag"): "services.inventory",
+    ("eoc-conditions", "u_has_wielded_with_flag"): "services.inventory",
+    ("eoc-conditions", "npc_has_wielded_with_flag"): "services.inventory",
     ("eoc-conditions", "u_has_wielded_with_weapon_category"): (
         "services.items"
     ),
@@ -3960,6 +3957,36 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/talker_character.cpp",
         "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "npc_has_worn_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "u_has_worn_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "npc_has_wielded_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
     ],
     ("eoc-conditions", "u_has_any_trait"): [
         "src/condition.cpp",
@@ -4204,9 +4231,6 @@ EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-conditions", "npc_has_weapon"): (
         "services.inventory-and-martial-arts"
     ),
-    ("eoc-conditions", "npc_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
     ("eoc-effects", "assign_mission"): "services.missions-and-dialogue",
     ("eoc-effects", "give_aid"): "services.characters-and-effects",
     ("eoc-effects", "give_equipment"): "services.inventory-and-presentation",
@@ -4406,10 +4430,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ("eoc-conditions", "npc_has_weapon"): [
         "src/melee.cpp", "src/lua_platform_items.cpp",
         "src/lua_platform_martial_arts.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-    ],
-    ("eoc-conditions", "npc_has_wielded_with_flag"): [
-        "src/talker_character.cpp", "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "assign_mission"): [

@@ -134,16 +134,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
         )
 
     def test_role_effect_and_worn_selectors_guard_typed_ids(self) -> None:
-        for prefix, target, proofs, effect_proofs in (
+        for prefix, target, effect_proofs, flag_proofs in (
             (
-                "u_", "actor", {"avatar_actor_proven": True},
+                "u_", "actor",
+                {"avatar_actor_proven": True},
                 {"avatar_actor_proven": True},
             ),
             (
-                "npc_", "partner", {
+                "npc_", "beta", {
                     "avatar_actor_proven": True,
-                    "npc_actor_proven": True,
-                    "npc_actor_expression": "partner",
+                    "npc_dialogue_pair_proven": True,
+                    "npc_actor_expression": "context.actors.beta",
                 }, {
                     "avatar_actor_proven": True,
                     "npc_dialogue_pair_proven": True,
@@ -168,17 +169,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
             worn_key = prefix + "has_worn_with_flag"
             for flag in ("WATERPROOF", {"context_val": "flag_id"}):
                 expression = migrate_lua_first.render_eoc_condition_expression(
-                    {worn_key: flag, "bodypart": "torso"}, **proofs)
+                    {worn_key: flag, "bodypart": "torso"}, **flag_proofs)
                 self.assertIsNotNone(expression)
                 self.assertIn("not id:is_valid()", expression)
                 self.assertIn(
-                    f"services.inventory.has_worn_flag({target}, flag, bodypart)",
+                    f"services.inventory.has_worn_flag({'beta' if prefix == 'npc_' else target}, flag, bodypart)",
                     expression,
                 )
             if prefix == "npc_":
                 owner_expression = migrate_lua_first.render_eoc_condition_expression(
                     {worn_key: {"u_val": "flag_id"}, "bodypart": "torso"},
-                    **proofs,
+                    **flag_proofs,
                 )
                 self.assertIn(
                     'services.variables.resolve(context.data, actor, "u", "flag_id")',
@@ -229,6 +230,85 @@ class LuaFirstMigrationTest(unittest.TestCase):
         self.assertIn('beta.kind ~= "creature"', expression)
         self.assertNotIn('beta.subtype ~= "npc"', expression)
         self.assertIn("services.effects.has(beta,", expression)
+
+    def test_inventory_flag_conditions_keep_alpha_beta_slots_and_dynamic_flags(self) -> None:
+        alpha_worn = migrate_lua_first.render_eoc_condition_expression(
+            {
+                "u_has_worn_with_flag": {"u_val": "worn_flag"},
+                "bodypart": "torso",
+            },
+            avatar_actor_proven=True,
+        )
+        self.assertIsNotNone(alpha_worn)
+        self.assertIn(
+            'services.variables.resolve(context.data, actor, "u", "worn_flag")',
+            alpha_worn,
+        )
+        self.assertIn("services.inventory.has_worn_flag(actor, flag, bodypart)", alpha_worn)
+
+        alpha_wielded = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_wielded_with_flag": {"context_val": "wielded_flag"}},
+            avatar_actor_proven=True,
+        )
+        self.assertIsNotNone(alpha_wielded)
+        self.assertIn(
+            'services.variables.resolve(context.data, nil, "context", "wielded_flag")',
+            alpha_wielded,
+        )
+        self.assertIn("services.inventory.wielded_matches(actor, flag)", alpha_wielded)
+
+        beta_proofs = {
+            "avatar_actor_proven": True,
+            "npc_dialogue_pair_proven": True,
+            "npc_actor_expression": "context.actors.beta",
+        }
+        for key, condition, service_call in (
+            (
+                "npc_has_worn_with_flag",
+                {"npc_val": "worn_flag"},
+                "services.inventory.has_worn_flag(beta, flag, bodypart)",
+            ),
+            (
+                "npc_has_wielded_with_flag",
+                {"npc_val": "wielded_flag"},
+                "services.inventory.wielded_matches(beta, flag)",
+            ),
+        ):
+            expression = migrate_lua_first.render_eoc_condition_expression(
+                {
+                    key: condition,
+                    **({"bodypart": "torso"} if "worn" in key else {}),
+                },
+                **beta_proofs,
+            )
+            self.assertIsNotNone(expression)
+            self.assertIn(
+                'local beta = context and context.actors and context.actors.beta',
+                expression,
+            )
+            self.assertIn('beta.kind ~= "creature"', expression)
+            self.assertIn('beta.subtype ~= "avatar"', expression)
+            self.assertIn('beta.subtype ~= "character"', expression)
+            self.assertIn('beta.subtype ~= "npc"', expression)
+            self.assertIn(service_call, expression)
+
+        for key, condition in (
+            ("npc_has_worn_with_flag", {"bodypart": "torso"}),
+            ("npc_has_wielded_with_flag", {}),
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    {key: "WATERPROOF", **condition},
+                    npc_actor_proven=True,
+                    npc_actor_expression="actor",
+                )
+            )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_worn_with_flag": "WATERPROOF"},
+                avatar_actor_proven=True,
+            )
+        )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_queries_preserve_short_circuit_and_only_guard_id_errors(self) -> None:
@@ -3945,12 +4025,15 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 )
             self.assertNotIn("run_eoc", main)
 
-    def test_npc_effect_conditions_need_exact_dialogue_beta(self) -> None:
+    def test_npc_effect_and_inventory_flags_need_exact_dialogue_beta(self) -> None:
         topic = migrate_lua_first.SourceObject(
             Path("source.json"), 0, {
                 "type": "talk_topic", "id": "effect_pair_topic",
                 "responses": [{
-                    "true_eocs": ["paired_npc_effect", "paired_npc_any_effect"]
+                    "true_eocs": [
+                        "paired_npc_effect", "paired_npc_any_effect",
+                        "paired_npc_worn_flag", "paired_npc_wielded_flag",
+                    ]
                 }],
             },
         )
@@ -3971,6 +4054,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "npc_has_any_effect": ["poison", "bleed"],
                     "bodypart": "arm_l", "intensity": 1,
                 }),
+                ("paired_npc_worn_flag", {
+                    "npc_has_worn_with_flag": {"npc_val": "worn_flag"},
+                    "bodypart": "torso",
+                }),
+                ("paired_npc_wielded_flag", {
+                    "npc_has_wielded_with_flag": {"npc_val": "wielded_flag"},
+                }),
             ), start=1)
         ]
         sources = [topic, *paired]
@@ -3981,7 +4071,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         self.assertEqual(talker_pair_ids, dialogue_pair_ids)
         self.assertEqual(
             dialogue_pair_ids,
-            frozenset({"paired_npc_effect", "paired_npc_any_effect"}),
+            frozenset({
+                "paired_npc_effect", "paired_npc_any_effect",
+                "paired_npc_worn_flag", "paired_npc_wielded_flag",
+            }),
         )
         for source in paired:
             with self.subTest(eoc=source.value["id"]):
@@ -3995,7 +4088,16 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     rendered,
                 )
                 self.assertIn('beta.kind ~= "creature"', rendered)
-                self.assertIn("services.effects.has(beta,", rendered)
+                if "effect" in source.value["id"]:
+                    self.assertIn("services.effects.has(beta,", rendered)
+                elif source.value["id"] == "paired_npc_worn_flag":
+                    self.assertIn("services.inventory.has_worn_flag(beta,", rendered)
+                    self.assertIn(
+                        'services.variables.resolve(context.data, context.actors.beta, "npc", "worn_flag")',
+                        rendered,
+                    )
+                else:
+                    self.assertIn("services.inventory.wielded_matches(beta,", rendered)
                 self.assertNotIn(
                     "condition TODO: translate the legacy condition into a Lua predicate",
                     rendered,
@@ -4005,10 +4107,17 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             Path("source.json"), 4, {
                 "type": "effect_on_condition", "id": "unpaired_npc_effect",
                 "required_event": "npc_becomes_hostile",
-                "condition": {
-                    "npc_has_effect": "bleed", "bodypart": "arm_l",
-                    "intensity": 2,
-                },
+                "condition": {"and": [
+                    {
+                        "npc_has_effect": "bleed", "bodypart": "arm_l",
+                        "intensity": 2,
+                    },
+                    {
+                        "npc_has_worn_with_flag": "WATERPROOF",
+                        "bodypart": "torso",
+                    },
+                    {"npc_has_wielded_with_flag": "SPEAR"},
+                ]},
                 "effect": {"message": "unpaired effect"},
             },
         )
@@ -4018,6 +4127,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             npc_dialogue_mission_pair_ids=dialogue_pair_ids,
         )
         self.assertNotIn("services.effects.has(beta,", unpaired)
+        self.assertNotIn("services.inventory.has_worn_flag(beta,", unpaired)
+        self.assertNotIn("services.inventory.wielded_matches(beta,", unpaired)
         self.assertIn(
             "condition TODO: translate the legacy condition into a Lua predicate",
             unpaired,
@@ -4217,6 +4328,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "game_start",
                     {"u_has_wielded_with_flag": "SPEAR"},
                 ),
+                (
+                    "game_start",
+                    {"u_has_wielded_with_flag": {"context_val": "dynamic_flag"}},
+                ),
                 ("character_wields_item", "u_has_weapon"),
                 ("character_wears_item", "u_can_drop_weapon"),
                 (
@@ -4268,6 +4383,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(
                 'services.types.id("json_flag", "DURABLE_MELEE")', main
             )
+            self.assertIn(
+                'services.variables.resolve(context.data, nil, "context", "dynamic_flag")',
+                main,
+            )
             self.assertEqual(
                 main.count("context.actors.character"), 4
             )
@@ -4295,14 +4414,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 ("character_wields_item", "npc_can_drop_weapon"),
                 ([], "u_has_weapon"),
                 ("game_start", {"u_has_weapon": True}),
-                (
-                    "game_start",
-                    {
-                        "u_has_wielded_with_flag": {
-                            "context_val": "dynamic_flag"
-                        }
-                    },
-                ),
                 (
                     "game_start",
                     {"npc_has_wielded_with_flag": "SPEAR"},
@@ -4335,14 +4446,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 6)
+            self.assertEqual(len(result.partial), 5)
             self.assertIn("local function character_has_weapon", main)
             self.assertNotIn("local function character_can_drop_weapon", main)
             self.assertNotIn("local function character_wields_with_flag", main)
             self.assertIn("services.inventory.wielded_matches", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                5,
+                4,
             )
 
     def test_item_event_npc_flag_effects_use_optional_item_actor_guard(self) -> None:

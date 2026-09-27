@@ -26532,6 +26532,112 @@ def _dynamic_id_expression(
     return f'services.types.id("{kind}", {rendered})'
 
 
+def render_inventory_flag_condition(
+    condition: dict[str, Any],
+    avatar_actor_proven: bool,
+    weapon_actor_proven: bool,
+    generic_character_actor_proven: bool,
+    creature_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower worn/wielded flag checks for their exact native talker slots."""
+    selectors = {
+        "u_has_worn_with_flag": ("u", True),
+        "npc_has_worn_with_flag": ("npc", True),
+        "u_has_wielded_with_flag": ("u", False),
+        "npc_has_wielded_with_flag": ("npc", False),
+    }
+    keys = selectors.keys() & condition.keys()
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    scope, worn = selectors[key]
+    if set(condition) != ({key, "bodypart"} if worn else {key}):
+        return None
+    if worn and not bounded_platform_body_part_id(condition.get("bodypart")):
+        # Native omitted bodypart inherits d.reason. The Platform event context
+        # does not prove that reason, so only an explicit registered part is safe.
+        return None
+
+    alpha = (
+        "actor" if (
+            avatar_actor_proven or weapon_actor_proven or
+            generic_character_actor_proven or creature_actor_proven
+        ) else None
+    )
+    beta_proven = (
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
+    beta = "context.actors.beta" if beta_proven else None
+    if scope == "u":
+        # Inventory methods resolve an exact Character. A generic Creature
+        # proof alone can also be a monster, which this API cannot query.
+        if not (
+            avatar_actor_proven or weapon_actor_proven or
+            generic_character_actor_proven
+        ):
+            return None
+        target = "actor"
+        service_target = target
+    else:
+        # The npc_ selector reads const_actor(true), not an NPC event's alpha.
+        # Exact direct-pair provenance proves beta; the runtime guard narrows
+        # that Creature to the Character types accepted by inventory services.
+        if not beta_proven:
+            return None
+        target = beta
+        service_target = "beta"
+
+    raw_flag = condition[key]
+    if isinstance(raw_flag, str) and not bounded_platform_id(raw_flag):
+        return None
+    if (
+        isinstance(raw_flag, dict) and raw_flag.get("i18n") is True and
+        not bounded_platform_id(raw_flag.get("str"))
+    ):
+        return None
+    flag_expression = render_participant_string_expression(
+        raw_flag, target, alpha, beta,
+    )
+    if flag_expression is None:
+        return None
+
+    lines = ["(function()"]
+    if scope == "npc":
+        lines.extend([
+            "    local beta = context and context.actors and context.actors.beta",
+            '    if beta == nil or beta.kind ~= "creature" or ',
+            '       (beta.subtype ~= "avatar" and beta.subtype ~= "character" and ',
+            '        beta.subtype ~= "npc") then return false end',
+        ])
+    lines.extend([
+        "    local function resolve_id(kind, value)",
+        "        local ok, id = pcall(services.types.id, kind, value)",
+        "        if not ok or not id:is_valid() then return nil end",
+        "        return id",
+        "    end",
+    ])
+    if worn:
+        lines.extend([
+            '    local bodypart = resolve_id("body_part", '
+            f'{lua_quote(condition["bodypart"])})',
+            "    if bodypart == nil then return false end",
+        ])
+    lines.extend([
+        f'    local flag = resolve_id("json_flag", {flag_expression})',
+        "    if flag == nil then return false end",
+        (
+            f"    return service_value(services.inventory.has_worn_flag({service_target}, flag, bodypart))"
+            if worn else
+            f"    return service_value(services.inventory.wielded_matches({service_target}, flag))"
+        ),
+        "end)()",
+    ])
+    return "\n".join(lines)
+
+
 def render_effect_condition(
     condition: dict[str, Any], alpha: str | None, beta: str | None,
 ) -> str | None:
@@ -26658,6 +26764,15 @@ def render_dynamic_character_condition(
         # particular, the npc_ prefix selects dialogue::const_actor(true),
         # not the NPC event's alpha actor.  The provenance-aware lowerers
         # handle these selectors before this generic Character fallback.
+        return None
+    inventory_flag_selectors = {
+        "u_has_worn_with_flag", "npc_has_worn_with_flag",
+        "u_has_wielded_with_flag", "npc_has_wielded_with_flag",
+    }
+    if inventory_flag_selectors.intersection(condition):
+        # Worn flags depend on the dialogue reason when bodypart is omitted;
+        # npc_ flags read beta rather than an NPC event's alpha. The dedicated
+        # lowerer handles these only with an explicit part and exact slot proof.
         return None
 
     # Simple single-id queries share the same shape across Character domains.
@@ -28154,8 +28269,6 @@ def render_eoc_condition_expression(
                 f"{lua_quote(raw['item'])}), {lua_number(raw.get('charges', 0))}, {device_expr}))"
             )
     for item_key, actor_proven, kind in (
-        ("u_has_wielded_with_flag", avatar_actor_proven, "json_flag"),
-        ("npc_has_wielded_with_flag", npc_actor_proven, "json_flag"),
         ("u_has_wielded_with_weapon_category", avatar_actor_proven, "weapon_category"),
         ("npc_has_wielded_with_weapon_category", npc_actor_proven, "weapon_category"),
         ("u_has_wielded_with_skill", avatar_actor_proven, "skill"),
@@ -28583,6 +28696,18 @@ def render_eoc_condition_expression(
                     f"{lua_quote(condition['bodypart'])}), "
                     f"{lua_number(threshold)}))"
                 )
+
+    inventory_flag_condition = render_inventory_flag_condition(
+        condition,
+        avatar_actor_proven,
+        weapon_actor_proven,
+        generic_character_actor_proven,
+        creature_actor_proven,
+        npc_dialogue_pair_proven,
+        npc_actor_expression,
+    )
+    if inventory_flag_condition is not None:
+        return inventory_flag_condition
 
     # Effect predicates are safe only for a proven actor and explicit part.
     # Let the shared renderer validate typed IDs before calling Platform so
@@ -29024,17 +29149,6 @@ def render_eoc_condition_expression(
             "service_value(services.characters.snapshot(actor))"
             ".movement.id == "
             f"{lua_quote(condition['npc_has_move_mode'])}"
-        )
-    if (
-        weapon_actor_proven and
-        set(condition) == {"u_has_wielded_with_flag"} and
-        safe_platform_id(condition.get("u_has_wielded_with_flag")) and
-        len(condition["u_has_wielded_with_flag"].encode("utf-8")) <= 256
-    ):
-        return (
-            "service_value(services.inventory.wielded_matches(actor, "
-            "services.types.id(\"json_flag\", "
-            f"{lua_quote(condition['u_has_wielded_with_flag'])})))"
         )
     if (
         avatar_actor_proven and
