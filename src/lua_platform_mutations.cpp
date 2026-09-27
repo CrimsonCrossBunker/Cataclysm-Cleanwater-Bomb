@@ -746,10 +746,10 @@ sol::table has_id_text_state(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    // Legacy has_trait builds a trait_id from the raw str_or_var result and
-    // looks it up in Character's mutation cache.  Preserve that behavior for
-    // unknown, long, and control-containing text rather than applying the
-    // stricter services.types.id validation contract.
+    // Legacy has_trait/has_any_trait build a trait_id from raw str_or_var
+    // text and look it up in Character's mutation cache. Preserve that
+    // behavior for unknown, long, and control-containing text rather than
+    // applying the stricter services.types.id validation contract.
     const bool present = character->has_trait( trait_id( requested_id_text ) );
     return make_game_value_result(
                state, sol::make_object( state, present ) );

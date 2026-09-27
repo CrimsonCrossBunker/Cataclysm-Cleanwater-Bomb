@@ -2051,27 +2051,32 @@ assert(called)
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_trait_indirect_any_list_keeps_short_circuit(self) -> None:
         expression = migrate_lua_first.render_eoc_condition_expression(
-            {"u_has_any_trait": ["QUICK", {"var_val": "missing"}]},
+            {"u_has_any_trait": [
+                "UNKNOWN_MUTATION", "QUICK", {"var_val": "missing"},
+            ]},
             avatar_actor_proven=True, npc_actor_proven=True,
             npc_actor_expression="partner")
         self.assertIsNotNone(expression)
+        self.assertIn("services.mutations.has_id_text", expression)
         script = """
-local actor, partner = {}, {}
-local context = {data={}}
+local actor, partner =
+ {kind='creature',subtype='avatar'},
+ {kind='creature',subtype='npc'}
+local context = {data={missing='u_selected'}}
 local function service_value(r) return r.value end
-local calls = 0
+local seen = {}
 local services = {
   types={id=function(kind,id) assert(id == 'QUICK'); return {
     value=id,is_valid=function(self) return self.value~='' end} end},
   variables={resolve=function() error('short-circuited variable was read') end},
-  mutations={has=function(character,id)
-    assert(character == actor and id.value == 'QUICK')
-   calls = calls + 1
-   return {ok=true,value=true}
+  mutations={has_id_text=function(character,id)
+    assert(character == actor)
+   seen[#seen+1] = id
+   return {ok=true,value=id == 'QUICK'}
  end}
 }
 assert(EXPRESSION)
-assert(calls == 1)
+assert(#seen == 2 and seen[1] == 'UNKNOWN_MUTATION' and seen[2] == 'QUICK')
 """.replace("EXPRESSION", expression)
         result = subprocess.run([shutil.which("lua"), "-"], input=script,
                                 text=True, capture_output=True, timeout=10)
@@ -2080,15 +2085,65 @@ assert(calls == 1)
             {"u_has_trait": {"var_val": "selected"}}, avatar_actor_proven=True))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_npc_trait_query_requires_exact_beta_and_never_uses_alpha(self) -> None:
-        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-            {"npc_has_trait": "QUICK"}, avatar_actor_proven=True,
-            npc_actor_proven=True, npc_actor_expression="actor"))
+    def test_any_trait_queries_dynamic_string_then_short_circuit(self) -> None:
         expression = migrate_lua_first.render_eoc_condition_expression(
-            {"npc_has_trait": "QUICK"}, avatar_actor_proven=True,
-            npc_actor_proven=True, npc_actor_expression="context.actors.beta")
+            {"u_has_any_trait": [{"u_val": "selected"}, "QUICK"]},
+            avatar_actor_proven=True,
+        )
         self.assertIsNotNone(expression)
         script = """
+local actor = {kind='creature',subtype='avatar'}
+local context = {data={}}
+local selected = 'UNKNOWN_MUTATION'
+local seen = {}
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ variables={resolve=function(data,owner,scope,key)
+  assert(owner == actor and scope == 'u' and key == 'selected')
+  return {ok=true,value={exists=true,value=selected}}
+ end},
+ mutations={has_id_text=function(character,id)
+  assert(character == actor)
+  seen[#seen+1] = id
+  return {ok=true,value=id == 'QUICK'}
+ end}
+}
+assert(EXPRESSION)
+assert(#seen == 2 and seen[1] == 'UNKNOWN_MUTATION' and seen[2] == 'QUICK')
+seen = {}
+selected = 'QUICK'
+assert(EXPRESSION)
+assert(#seen == 1 and seen[1] == 'QUICK')
+""".replace("EXPRESSION", expression)
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_any_trait_mutator_without_rng_parity_remains_partial(self) -> None:
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_any_trait": [{
+                "mutator": "valid_technique", "crit": True,
+            }]},
+            avatar_actor_proven=True, npc_actor_proven=True,
+            npc_actor_expression="partner",
+        ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_trait_query_requires_exact_beta_and_never_uses_alpha(self) -> None:
+        for selector, value in (
+            ("npc_has_trait", "QUICK"),
+            ("npc_has_any_trait", ["QUICK"]),
+        ):
+            with self.subTest(selector=selector):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    {selector: value}, avatar_actor_proven=True,
+                    npc_actor_proven=True, npc_actor_expression="actor"))
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {selector: value}, avatar_actor_proven=True,
+                    npc_actor_proven=True,
+                    npc_actor_expression="context.actors.beta")
+                self.assertIsNotNone(expression)
+                script = """
 local actor = {kind='creature',subtype='avatar',has_trait=true}
 local context = {actors={}}
 local function service_value(result) assert(result.ok); return result.value end
@@ -2108,9 +2163,9 @@ context.actors.beta.has_trait = true
 assert(EXPRESSION)
 assert(calls == 2)
 """.replace("EXPRESSION", expression)
-        result = subprocess.run([shutil.which("lua"), "-"], input=script,
-                                text=True, capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
+                result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_trait_predicates_fail_closed_for_missing_or_unknown_dynamic_ids(self) -> None:
@@ -3094,11 +3149,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertIn("services.gameplay.environment.is_night()", main)
             self.assertEqual(main.count("local function service_value"), 1)
-            self.assertIn(
-                'services.types.id("mutation", "SAMPLE_TRAIT")',
-                main,
-            )
-            self.assertIn('services.types.id("mutation", "TOUGH")', main)
+            self.assertIn("services.mutations.has_id_text", main)
+            self.assertIn('"SAMPLE_TRAIT"', main)
+            self.assertIn('"TOUGH"', main)
+            self.assertNotIn('services.types.id("mutation"', main)
             self.assertIn(
                 'services.types.id("martial_art", "style_karate")',
                 main,

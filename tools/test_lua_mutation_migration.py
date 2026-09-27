@@ -169,7 +169,7 @@ end
                     )
                     self.assertIsNotNone(expression, condition)
                     self.assertIn("services.mutations.", expression)
-                    if selector == "u_has_trait":
+                    if selector in {"u_has_trait", "u_has_any_trait"}:
                         self.assertIn("services.mutations.has_id_text", expression)
                         self.assertNotIn('services.types.id("mutation"', expression)
                 if selector == "npc_has_visible_trait":

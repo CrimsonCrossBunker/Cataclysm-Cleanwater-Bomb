@@ -276,6 +276,10 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
                          fixture.query( "has", npc_target, "FELINE_EARS" );
         CHECK( any == fixture.legacy_condition(
                    R"({")" + prefix + R"(has_any_trait":["QUICK","FELINE_EARS"]})" ) );
+        const bool raw_any = fixture.query_id_text( npc_target, "UNKNOWN_MUTATION" ) ||
+                             fixture.query_id_text( npc_target, "QUICK" );
+        CHECK( raw_any == fixture.legacy_condition(
+                   R"({")" + prefix + R"(has_any_trait":["UNKNOWN_MUTATION","QUICK"]})" ) );
         for( const char *trait : {
                  "QUICK", "FELINE_EARS"
              } ) {
