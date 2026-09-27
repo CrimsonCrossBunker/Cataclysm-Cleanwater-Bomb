@@ -19721,6 +19721,17 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "type": "popup",
                         },
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "sound_query_message",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {
+                            "message": "sound gates the query",
+                            "sound": True,
+                            "popup_w_interrupt_query": True,
+                            "interrupt_type": "portal_storm_popup",
+                        },
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -19731,11 +19742,16 @@ assert(not pcall(function() return U_EXPRESSION end))
             report = result.files[Path("MIGRATION_REPORT.md")]
 
         self.assertEqual(result.converted, ["popup_and_message"])
-        self.assertEqual(len(result.partial), 1)
+        self.assertEqual(len(result.partial), 2)
         self.assertIn(
             "EOC invalid_popup_type effect #0 needs domain-service conversion",
             report,
         )
+        self.assertIn(
+            "EOC sound_query_message effect #0 needs domain-service conversion",
+            report,
+        )
+        self.assertNotIn("services.activities.offer_portal_storm_interruption", main)
         popup = main.index("ccb.presentation.notice_top(message_text)")
         cancellation = main.index('services.activities.offer_interruption("")')
         message = main.index('services.messages.add(message_text, "good")')
@@ -19803,15 +19819,12 @@ assert(not pcall(function() return U_EXPRESSION end))
             for entry in result.todos
         ))
         self.assertFalse(any(
-            "EOC direct_npc_message effect #0" in entry
-            for entry in result.todos
-        ))
-        self.assertFalse(any(
             "EOC fatal_killer_message effect #0" in entry
             for entry in result.todos
         ))
         for eoc_id in (
-            "item_beta_message", "monster_beta_message", "unbound_npc_message",
+            "direct_npc_message", "item_beta_message", "monster_beta_message",
+            "unbound_npc_message",
         ):
             self.assertTrue(any(
                 f"EOC {eoc_id} effect #0" in entry
@@ -19823,7 +19836,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         ))
         self.assertIn("needs domain-service conversion", report)
         self.assertNotIn('services.message("role unknown")', main)
-        self.assertIn('message_target = context.actors.beta', main)
+        self.assertNotIn('message_target = context.actors.beta', main)
         self.assertIn('message_target = (context.killer or actor)', main)
         self.assertIn('message_target.subtype == "avatar"', main)
 

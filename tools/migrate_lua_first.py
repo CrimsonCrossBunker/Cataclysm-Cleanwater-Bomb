@@ -5730,8 +5730,8 @@ def render_message_effect(
         # Native f_message only implements the portal-storm query.  Other
         # values either produce a debug message or no query at all.
         return None
-    if sound and popup:
-        # Native sound gating happens before both popup and message.  The
+    if sound and (popup or popup_w_interrupt_query):
+        # Native sound gating happens before popup and interruption UI.  The
         # Platform audibility helper emits a message, so it cannot guard UI
         # operations without changing behavior.
         return None
@@ -29646,10 +29646,6 @@ def render_eoc(
         )
     elif avatar_fatal_hook:
         message_dialogue_pair = ("actor", "services.characters.avatar()")
-    elif npc_dialogue_mission_pair_proven:
-        message_dialogue_pair = (
-            "services.characters.avatar()", "context.actors.beta"
-        )
     elif (
         required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS and
         alpha_effect_target is not None
@@ -30458,8 +30454,7 @@ def render_eoc(
                 # The avatar target is the player, so the u_ spelling is the
                 # same player message as the bare `message` effect.
                 if (
-                    not exact_avatar_actor_proven and
-                    not npc_dialogue_mission_pair_proven
+                    not exact_avatar_actor_proven
                 ):
                     lines.append(
                         "    -- TODO: translate u_message only with an exact "
@@ -30484,9 +30479,7 @@ def render_eoc(
                 else:
                     rendered = render_message_effect(
                         effect, "u_message",
-                        "services.characters.avatar()"
-                        if npc_dialogue_mission_pair_proven and
-                        not exact_avatar_actor_proven else "actor",
+                        "actor",
                         message_dialogue_pair[0], message_dialogue_pair[1],
                     )
                     if rendered is not None:
@@ -30510,8 +30503,6 @@ def render_eoc(
                 # uses its killer as beta and falls back to the dead NPC.
                 npc_message_target = (
                     "(context.killer or actor)" if npc_fatal_hook else
-                    "context.actors.beta"
-                    if npc_dialogue_mission_pair_proven else
                     "actor" if (
                         avatar_fatal_hook or
                         required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS
