@@ -27162,10 +27162,27 @@ def render_eoc_condition_expression(
             )
         if selected_mission_condition is not None:
             return selected_mission_condition
-        # These selectors ask native has_effect(..., NULL_ID), while the
-        # Platform effects.has default searches all body parts.
-        if condition in {"u_available", "npc_available"}:
+        # Native has_effect(..., bp_null) and Platform effects.has without a
+        # part both search every target part.  Only a proven dialogue beta
+        # establishes the actor used by npc_available.
+        if condition == "u_available":
             return None
+        if condition == "npc_available":
+            if (
+                not npc_dialogue_pair_proven or
+                npc_actor_expression != "context.actors.beta"
+            ):
+                return None
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                'local busy = services.types.id("effect", "currently_busy"); '
+                "if not busy:is_valid() then return true end; "
+                "return not service_value(services.effects.has(beta, busy)) "
+                "end)()"
+            )
         if condition in {"has_beta", "npc_exists"}:
             # These read dialogue/beta state, which actor provenance alone
             # does not establish. Event bridges and nested run_eocs expose
