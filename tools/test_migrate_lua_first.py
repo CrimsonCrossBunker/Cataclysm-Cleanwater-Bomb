@@ -14,7 +14,10 @@ import migrate_lua_first
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
-def render_direct_npc_dialogue_pair(eoc: dict[str, object]) -> str:
+def render_direct_npc_dialogue_pair(
+    eoc: dict[str, object], *, vehicle_actor_proven: bool = False,
+) -> str:
+    """Model a direct true_eocs response in avatar.talk_to's two-actor dialogue."""
     source = migrate_lua_first.SourceObject(Path("source.json"), 0, eoc)
     topic = migrate_lua_first.SourceObject(
         Path("source.json"), 1, {
@@ -26,10 +29,15 @@ def render_direct_npc_dialogue_pair(eoc: dict[str, object]) -> str:
     proven_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
         [topic, source]
     )
+    extra_proofs = (
+        {"vehicle_override_ids": frozenset({str(eoc["id"])})}
+        if vehicle_actor_proven else {}
+    )
     return migrate_lua_first.render_eoc(
         source,
         migrate_lua_first.MigrationResult(),
         npc_dialogue_mission_pair_ids=proven_ids,
+        **extra_proofs,
     )
 
 
@@ -18515,6 +18523,56 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 report,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_static_vehicle_service_strings_preserve_native_order_semantics(self) -> None:
+        effects = [
+            "quote_vehicle_full_repair", "select_vehicle_part_service",
+            "start_vehicle_full_repair",
+        ]
+        event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "event_vehicle_services",
+            "required_event": "npc_becomes_hostile", "effect": effects,
+        })
+        generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "generic_pair_vehicle_services",
+            "required_event": "character_takes_damage", "effect": effects,
+        })
+        with patch.object(
+            migrate_lua_first,
+            "PROVEN_NPC_ACTOR_EVENTS",
+            migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS | {
+                "npc_becomes_hostile", "character_takes_damage",
+            },
+        ):
+            event_only = migrate_lua_first.render_eoc(
+                event_source, migrate_lua_first.MigrationResult(),
+                vehicle_override_ids=frozenset({"event_vehicle_services"}),
+            )
+            generic_pair = migrate_lua_first.render_eoc(
+                generic_source, migrate_lua_first.MigrationResult(),
+                vehicle_override_ids=frozenset({"generic_pair_vehicle_services"}),
+                talker_pair_ids=frozenset({"generic_pair_vehicle_services"}),
+            )
+
+        for unproven in (event_only, generic_pair):
+            self.assertNotIn("services.vehicles.", unproven)
+            self.assertIn("direct talk-topic beta NPC", unproven)
+            self.assertIn("native WRAP vehicle/order flow also differs", unproven)
+
+        # The fixture supplies direct beta proof and an exact vehicle override;
+        # migration remains TODO because the service changes order flow.
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_vehicle_services",
+            "effect": effects,
+        }, vehicle_actor_proven=True)
+        self.assertNotIn("services.vehicles.", direct_pair)
+        self.assertNotIn("mechanic.kind == \"creature\"", direct_pair)
+        for reason in (
+            "native quote uses the existing marked vehicle",
+            "native selection uses existing marked vehicle state",
+            "native start begins the existing paid order",
+        ):
+            self.assertIn(reason, direct_pair)
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

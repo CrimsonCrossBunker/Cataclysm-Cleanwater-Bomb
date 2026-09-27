@@ -21796,7 +21796,10 @@ def render_static_vehicle_service_effect(
     } or not vehicle_actor_proven:
         return None
     if isinstance(effect, str):
-        payload: dict[str, Any] = {}
+        # The native WRAP consumes existing marked vehicle/order state.  The
+        # similarly named Platform services also perform marking, multiplier,
+        # quote, or payment steps, so the string cannot lower faithfully.
+        return None
     elif isinstance(effect, dict):
         payload = effect
     else:
@@ -31886,14 +31889,42 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    if isinstance(effect, str) and not static_wrapped_beta_npc:
+                        reason = (
+                            "needs direct talk-topic beta NPC proof; the native WRAP "
+                            "vehicle/order flow also differs from the Platform service"
+                        )
+                    elif isinstance(effect, str) and not vehicle_actor_override:
+                        reason = (
+                            "needs an exact vehicle handle; the native WRAP vehicle/order "
+                            "flow differs from the Platform service"
+                        )
+                    elif isinstance(effect, str):
+                        reason = {
+                            "quote_vehicle_full_repair": (
+                                "native quote uses the existing marked vehicle and repair "
+                                "multiplier, while the Platform service marks a vehicle "
+                                "and changes the multiplier"
+                            ),
+                            "select_vehicle_part_service": (
+                                "native selection uses existing marked vehicle state, "
+                                "while the Platform service marks a vehicle and applies "
+                                "a multiplier"
+                            ),
+                            "start_vehicle_full_repair": (
+                                "native start begins the existing paid order, while the "
+                                "Platform service requotes and charges the mechanic"
+                            ),
+                        }[vehicle_key]
+                    else:
+                        reason = "needs vehicle service conversion"
                     lines.append(
-                        "    -- TODO: translate the vehicle service through typed "
-                        "vehicle and mechanic handles."
+                        f"    -- TODO: preserve native {vehicle_key}: {reason}."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs vehicle service conversion"
+                        f"{reason}"
                     )
                     all_effects_converted = False
             elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
