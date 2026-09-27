@@ -8301,11 +8301,6 @@ assert(#events == 9)
     def test_dynamic_character_availability_and_movement_conditions(self) -> None:
         cases = (
             (
-                "npc_following", {"npc_actor_proven": True},
-                "service_value(services.characters.snapshot(actor))"
-                ".npc_state.following",
-            ),
-            (
                 "u_controlling_vehicle", {"avatar_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
                 ".movement.controlling_vehicle",
@@ -8345,16 +8340,6 @@ assert(#events == 9)
                 'service_value(services.characters.is_in_vehicle(beta)) end)()',
             ),
             (
-                "npc_controlling_vehicle", {"npc_actor_proven": True},
-                "service_value(services.characters.snapshot(actor))"
-                ".movement.controlling_vehicle",
-            ),
-            (
-                "npc_driving", {"npc_actor_proven": True},
-                "service_value(services.characters.snapshot(actor))"
-                ".movement.driving",
-            ),
-            (
                 "npc_is_riding", {"npc_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
                 ".movement.mounted",
@@ -8368,6 +8353,101 @@ assert(#events == 9)
                     ),
                     expected,
                 )
+        npc_movement_conditions = {
+            "npc_controlling_vehicle": "movement.controlling_vehicle",
+            "npc_driving": "movement.driving",
+            "npc_following": "npc_state.following",
+        }
+        for condition, field in npc_movement_conditions.items():
+            with self.subTest(condition=condition):
+                expected = (
+                    "(function() local beta = context and context.actors and "
+                    "context.actors.beta; if beta == nil or "
+                    'beta.kind ~= "creature" or (beta.subtype ~= "avatar" and '
+                    'beta.subtype ~= "character" and beta.subtype ~= "npc") '
+                    "then return false end; local state = "
+                    "service_value(services.characters.snapshot(beta)); return "
+                    f"state.{field}" + (" == true" if condition == "npc_following" else "") +
+                    " end)()"
+                )
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, npc_dialogue_pair_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                    ),
+                    expected,
+                )
+                for provenance in (
+                    {"npc_actor_proven": True,
+                     "npc_actor_expression": "actor"},
+                    {"npc_actor_proven": True,
+                     "npc_actor_expression": "context.actors.beta"},
+                    {"npc_dialogue_pair_proven": True,
+                     "npc_actor_expression": "context.actors.interlocutor"},
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            condition, **provenance
+                        )
+                    )
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "npc_movement_topic",
+                "responses": [
+                    {"true_eocs": f"dialogue_{condition}"}
+                    for condition in npc_movement_conditions
+                ],
+            },
+        )
+        dialogue_eocs = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index, {
+                    "type": "effect_on_condition", "id": f"dialogue_{condition}",
+                    "condition": condition, "effect": {"message": "state"},
+                },
+            )
+            for index, condition in enumerate(npc_movement_conditions)
+        ]
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, *dialogue_eocs]
+        )
+        self.assertEqual(
+            pair_ids,
+            frozenset(f"dialogue_{condition}" for condition in npc_movement_conditions),
+        )
+        for dialogue_eoc in dialogue_eocs:
+            with self.subTest(condition=dialogue_eoc.value["condition"]):
+                paired = migrate_lua_first.render_eoc(
+                    dialogue_eoc, migrate_lua_first.MigrationResult(),
+                    talker_pair_ids=pair_ids,
+                    npc_dialogue_mission_pair_ids=pair_ids,
+                )
+                self.assertIn(
+                    "services.characters.snapshot(beta)", paired
+                )
+                self.assertNotIn(
+                    "condition TODO: translate the legacy condition into a Lua predicate",
+                    paired,
+                )
+
+        for index, condition in enumerate(npc_movement_conditions):
+            event_eoc = migrate_lua_first.SourceObject(
+                Path("source.json"), 10 + index, {
+                    "type": "effect_on_condition", "id": f"event_{condition}",
+                    "required_event": "npc_becomes_hostile",
+                    "condition": condition, "effect": {"message": "state"},
+                },
+            )
+            unpaired = migrate_lua_first.render_eoc(
+                event_eoc, migrate_lua_first.MigrationResult(),
+                npc_dialogue_mission_pair_ids=frozenset(),
+            )
+            self.assertNotIn("services.characters.snapshot(", unpaired)
+            self.assertIn(
+                "condition TODO: translate the legacy condition into a Lua predicate",
+                unpaired,
+            )
         for condition, provenance in (
             ("u_available", {"avatar_actor_proven": True}),
             ("npc_available", {"npc_actor_proven": True}),
@@ -8419,6 +8499,53 @@ assert(#events == 9)
                         condition, **provenance
                     )
                 )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_movement_predicates_guard_beta_character_handle(self) -> None:
+        expected_values = {
+            "npc_controlling_vehicle": "true",
+            "npc_driving": "false",
+            "npc_following": "true",
+        }
+        for condition, expected in expected_values.items():
+            with self.subTest(condition=condition):
+                predicate = migrate_lua_first.render_eoc_condition_expression(
+                    condition, npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta",
+                )
+                script = """
+local beta = { kind = "creature", subtype = "npc" }
+local context = nil
+local calls = 0
+local state = {
+    movement = { controlling_vehicle = true, driving = false },
+    npc_state = { following = true },
+}
+local function service_value(value) return value end
+local services = { characters = { snapshot = function(handle)
+    calls = calls + 1
+    assert(handle == beta)
+    return state
+end } }
+assert(not (PREDICATE))
+context = {}
+assert(not (PREDICATE))
+context = { actors = { beta = { kind = "item" } } }
+assert(not (PREDICATE))
+context.actors.beta = { kind = "creature", subtype = "monster" }
+assert(not (PREDICATE))
+assert(calls == 0)
+context.actors.beta = beta
+assert((PREDICATE) == EXPECTED)
+assert(calls == 1)
+""".replace("PREDICATE", predicate or "false").replace(
+                    "EXPECTED", expected
+                )
+                result = subprocess.run(
+                    ["lua", "-"], input=script, text=True,
+                    capture_output=True, timeout=10
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_vehicle_condition_lowering_guards_exact_native_roles(self) -> None:
@@ -9234,14 +9361,6 @@ assert(not available())
             "npc_can_see": (
                 "not (service_value(services.characters.snapshot("
                 "context.actors.beta)).senses.blind)"
-            ),
-            "npc_driving": (
-                "service_value(services.characters.snapshot("
-                "context.actors.beta)).movement.driving"
-            ),
-            "npc_following": (
-                "service_value(services.characters.snapshot("
-                "context.actors.beta)).npc_state.following"
             ),
             "at_safe_space": (
                 "character_at_safe_space(context.actors.beta)"
