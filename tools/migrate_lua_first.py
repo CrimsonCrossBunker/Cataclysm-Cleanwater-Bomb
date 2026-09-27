@@ -27170,6 +27170,30 @@ def render_eoc_condition_expression(
                 "services.creatures.has_line_of_sight(context.actors.beta, actor)"
             )
         return beta_guard + alpha_guard + f"service_value({query})"
+    if condition in {"u_has_stolen_item", "npc_has_stolen_item"}:
+        # Both native aliases ignore their is_npc parameter and query
+        # const_actor(false) as the inventory holder and const_actor(true) as
+        # the owner.  A direct talk-topic pair proves those alpha/beta roles;
+        # a single event actor or a merely NPC-shaped handle does not.
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            "local beta = context and context.actors and context.actors.beta; "
+            "local function is_character(value) "
+            "return value ~= nil and value.kind == \"creature\" and "
+            "(value.subtype == \"avatar\" or "
+            "value.subtype == \"character\" or value.subtype == \"npc\") "
+            "end; "
+            "if not is_character(alpha) or not is_character(beta) then "
+            "return false end; "
+            "return service_value(services.inventory.has_stolen_from(alpha, beta)) "
+            "end)()"
+        )
     if condition == "u_can_stow_weapon":
         if not character_actor_proven:
             return None
