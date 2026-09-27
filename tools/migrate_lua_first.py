@@ -27721,10 +27721,22 @@ def render_eoc_condition_expression(
                 "return not service_value(services.effects.has(beta, busy)) "
                 "end)()"
             )
-        if condition in {"has_beta", "npc_exists"}:
-            # These read dialogue/beta state, which actor provenance alone
-            # does not establish. Event bridges and nested run_eocs expose
-            # different actor keys.
+        if condition == "has_beta":
+            # Native f_has_beta reads const_dialogue::has_beta.  A direct
+            # talk-topic callback carries that dialogue's beta in the
+            # migration context; event bridges and nested run_eocs do not.
+            if (
+                not npc_dialogue_pair_proven or
+                npc_actor_expression != "context.actors.beta"
+            ):
+                return None
+            return (
+                "context ~= nil and context.actors ~= nil and "
+                "context.actors.beta ~= nil"
+            )
+        if condition == "npc_exists":
+            # This selector has separate NPC existence semantics; beta actor
+            # provenance alone does not establish them.
             return None
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
