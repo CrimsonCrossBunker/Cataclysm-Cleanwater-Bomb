@@ -9969,6 +9969,9 @@ function CcbNpcsApi.request_talk(handle) end
 
 function CcbNpcsApi.warn_player_departure(handle) end
 function CcbNpcsApi.clear_stolen_item_claim(handle) end
+---@param handle GameHandle Exact dialogue beta NPC whose faction owns the stolen items.
+---@return CcbResult result Value.dropped reports whether any matching items were returned; matching items are recursively removed from the active avatar's inventory and placed at their current tile by the native operation.
+function CcbNpcsApi.drop_stolen_items(handle) end
 ---@param handle GameHandle Exact NPC handle.
 function CcbNpcsApi.destinations(handle) end
 ---@param handle GameHandle Exact NPC handle.

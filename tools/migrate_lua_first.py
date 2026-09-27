@@ -32402,16 +32402,30 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif effect == "drop_stolen_item":
-                lines.append(
-                    "    -- TODO: drop_stolen_item needs explicit Item handles, "
-                    "source holders, and a destination transaction."
-                )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "drop_stolen_item needs explicit equipment/trade holders"
-                )
-                all_effects_converted = False
+                # The native static WRAP selects dialogue beta and no-ops when
+                # beta is not an NPC.  Preserve that exact participant
+                # requirement; ordinary event actors do not prove this role.
+                if npc_dialogue_mission_pair_proven:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and context.actors.beta",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.npcs.drop_stolen_items(beta))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: drop_stolen_item's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no direct talk-topic pair proof."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "drop_stolen_item needs a direct talk-topic beta NPC proof"
+                    )
+                    all_effects_converted = False
             elif effect == "player_weapon_drop":
                 # The static WRAP still requires talk_effect_fun_t's beta NPC
                 # before it invokes player_weapon_drop, even though the native
