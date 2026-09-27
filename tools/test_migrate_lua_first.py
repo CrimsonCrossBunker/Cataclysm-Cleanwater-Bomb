@@ -27254,6 +27254,28 @@ prices={};draws={};limits={};assert(choose()==nil and #limits==0)
         )
         self.assertIn("services.trade.quote(provider, recipient", direct_pair)
 
+    def test_object_give_equipment_requires_direct_beta_npc_provenance(self) -> None:
+        effect = {"give_equipment": {"allowance": 5}}
+        event_result = migrate_lua_first.MigrationResult()
+        event_only = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "event_object_equipment_gift",
+                "required_event": "npc_becomes_hostile", "effect": effect,
+            }), event_result)
+        self.assertNotIn("services.trade.quote(provider, recipient", event_only)
+        self.assertIn("TODO: translate the equipment allowance", event_only)
+        self.assertTrue(event_result.todos)
+
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_object_equipment_gift",
+            "effect": effect,
+        })
+        self.assertIn("local provider = context.actors.beta", direct_pair)
+        self.assertIn(
+            'provider.kind == "creature" and provider.subtype == "npc"', direct_pair
+        )
+        self.assertIn("services.trade.quote(provider, recipient", direct_pair)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_equipment_gift_composes_exact_offer_and_stops_after_errors(self) -> None:
         lines = migrate_lua_first.render_static_give_equipment_effect(
@@ -27330,14 +27352,20 @@ log={};beta.subtype='avatar';give();assert(#log==0)
     def test_equipment_modifier_migration_preserves_original_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition",
-                "id": "equipment_modifier_pair",
-                "condition": {"and": [
-                    {"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"},
-                ]},
-                "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "equipment_modifier_pair_topic",
+                    "responses": [{"true_eocs": "equipment_modifier_pair"}],
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "equipment_modifier_pair",
+                    "condition": {"and": [
+                        {"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"},
+                    ]},
+                    "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "equipment_pair_mod")
             main = result.files[Path("main.lua")]

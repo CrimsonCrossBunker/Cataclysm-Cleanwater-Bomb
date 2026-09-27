@@ -32731,19 +32731,23 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":
-                static_string_effect = effect == "give_equipment"
+                require_beta_npc = (
+                    effect == "give_equipment" or
+                    isinstance(effect, dict) and "give_equipment" in effect
+                )
                 rendered = render_static_give_equipment_effect(
                     effect,
-                    static_wrapped_beta_npc if static_string_effect else npc_actor_proven,
+                    static_wrapped_beta_npc if require_beta_npc else npc_actor_proven,
                     avatar_actor_proven,
                     npc_actor_expression=(
                         npc_actor_expression
-                        if not static_string_effect or static_wrapped_beta_npc else None
+                        if not require_beta_npc or static_wrapped_beta_npc else None
                     ),
                     alpha_actor_expression="actor" if (
-                        talker_pair_override or unbound_mixed_talker_contract
+                        talker_pair_override or unbound_mixed_talker_contract or
+                        require_beta_npc and npc_dialogue_mission_pair_proven
                     ) else None,
-                    require_beta_npc=static_string_effect,
+                    require_beta_npc=require_beta_npc,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
