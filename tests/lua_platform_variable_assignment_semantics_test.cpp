@@ -354,6 +354,40 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     CHECK( get_globals().get_global_value( empty_global_key ) == copy_value );
     CHECK( observer.changes.size() == events_before_copy );
 
+    const std::string empty_string_global_key = "lua_platform_set_string_empty";
+    const diag_value *old_string_global =
+        get_globals().maybe_get_global_value( empty_string_global_key );
+    const bool string_global_existed = old_string_global != nullptr;
+    const diag_value old_string_global_value = string_global_existed ?
+            *old_string_global : diag_value{};
+    const on_out_of_scope restore_string_global(
+        [empty_string_global_key, string_global_existed, old_string_global_value]() {
+            if( string_global_existed ) {
+                get_globals().set_global_value( empty_string_global_key, old_string_global_value );
+            } else {
+                get_globals().remove_global_value( empty_string_global_key );
+            }
+        } );
+    apply_talk_effect( context,
+                       R"({"set_string_var":"","target_var":{"global_val":"lua_platform_set_string_empty"}})",
+                       "lua_platform_set_string_empty_native" );
+    REQUIRE( get_globals().maybe_get_global_value( empty_string_global_key ) != nullptr );
+    CHECK( get_globals().get_global_value( empty_string_global_key ).is_str() );
+    CHECK( get_globals().get_global_value( empty_string_global_key ).str().empty() );
+    CHECK( observer.changes.size() == events_before_copy );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local result = ccb.services.variables.set_global(
+                "lua_platform_set_string_empty", "")
+            assert(result.ok and result.value.existed)
+        )" );
+    }
+    REQUIRE( get_globals().maybe_get_global_value( empty_string_global_key ) != nullptr );
+    CHECK( get_globals().get_global_value( empty_string_global_key ).is_str() );
+    CHECK( get_globals().get_global_value( empty_string_global_key ).str().empty() );
+    CHECK( observer.changes.size() == events_before_copy );
+
     player.remove_value( u_key );
     partner.remove_value( npc_key );
     CHECK( player.maybe_get_value( u_key ) == nullptr );

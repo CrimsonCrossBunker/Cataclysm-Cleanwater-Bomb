@@ -5226,7 +5226,7 @@ def render_static_false_effect(
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "set_string_var" in effect:
         rendered = render_static_character_string_var(
-            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
+            effect, effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -25873,147 +25873,69 @@ def render_participant_translation_expression(
 
 def render_static_character_string_var(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> list[str] | None:
-    if "set_string_var" not in effect or "target_var" not in effect:
-        return None
-    if set(effect) - {
-        "set_string_var", "target_var", "parse_tags", "i18n", "string_input",
-    }:
+    """Render bounded literal string choices with native RNG and exact owners."""
+    if (
+        not isinstance(effect, dict) or
+        not {"set_string_var", "target_var"}.issubset(effect) or
+        set(effect) - {"set_string_var", "target_var", "parse_tags", "i18n"}
+    ):
         return None
     target = _static_string_variable_descriptor(effect["target_var"])
-    if target is None:
+    if target is None or target[0] == "var":
         return None
-    if target[0] == "npc" and not npc_actor_proven:
+    if effect.get("parse_tags", False) is not False:
+        # Platform snippet/tag expansion draws from the runtime-local stream;
+        # native parse_tags expands snippets through the shared game RNG.
         return None
-    if target[0] == "var" and not (avatar_actor_proven and npc_actor_proven):
-        return None
-    parse_tags = effect.get("parse_tags", False)
     i18n = effect.get("i18n", False)
-    if not isinstance(parse_tags, bool) or not isinstance(i18n, bool):
+    if not isinstance(i18n, bool):
         return None
     values = effect["set_string_var"]
-    if isinstance(values, (str, dict)):
+    if isinstance(values, str):
         values = [values]
-    if not isinstance(values, list) or not values or len(values) > 64:
-        return None
-    if any(
-        isinstance(value, str) and not bounded_utf8_string(value, 8192, allow_empty=True)
-        for value in values
+    if (
+        not isinstance(values, list) or not values or len(values) > 64 or
+        any(not bounded_utf8_string(value, 8192, allow_empty=True) for value in values)
     ):
         return None
 
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-    if target[0] in {"u", "npc"}:
-        if target[0] == "u" and not avatar_actor_proven:
-            actor_expression = "services.characters.avatar()"
-        elif target[0] == "npc":
-            if npc_actor_expression is not None:
-                actor_expression = npc_actor_expression
-            elif not npc_actor_proven:
-                return None
-            else:
-                actor_expression = "actor"
-        else:
-            actor_expression = "actor"
-
-    def render_value(value: Any) -> str | None:
-        renderer = render_participant_translation_expression if i18n else render_participant_string_expression
-        return renderer(
-            value, actor_expression,
-            "actor" if avatar_actor_proven else None,
-            npc_actor_expression or ("actor" if npc_actor_proven else None),
-        )
-
-    rendered_values = [render_value(value) for value in values]
-    if any(value is None for value in rendered_values):
+    owner: str | None = None
+    if target[0] == "u":
+        owner = _proven_copy_variable_target(effect_actor_targets, "u")
+    elif target[0] == "npc":
+        owner = _proven_copy_variable_target(effect_actor_targets, "npc")
+    if target[0] in {"u", "npc"} and owner is None:
         return None
-    expressions = [value for value in rendered_values if value is not None]
-    lines: list[str] = []
-    if len(expressions) == 1:
-        value_expression = expressions[0]
-    else:
-        choices = [f"function() return {expression} end" for expression in expressions]
-        lines.append(f"    local values = {{ {', '.join(choices)} }}")
-        value_expression = "values[services.random.int(1, #values)]()"
 
-    input_options = effect.get("string_input")
-    if input_options is not None:
-        if not isinstance(input_options, dict) or set(input_options) - {
-            "title", "description", "default_text", "identifier",
-        }:
-            return None
-        alpha = "actor" if avatar_actor_proven else None
-        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
-        translated_options = [render_participant_translation_expression(
-            input_options[key], actor_expression, alpha, beta) if key in input_options else '""'
-            for key in ("title", "default_text", "description")]
-        identifier = render_participant_string_expression(
-            input_options["identifier"], actor_expression, alpha, beta) if "identifier" in input_options else '""'
-        if any(option is None for option in translated_options) or identifier is None:
-            return None
-        title, initial, description = translated_options
-        lines.extend([
-            f"    local value = {value_expression}",
-            f"    local input_label_width = #{title}",
-            f"    local input_default = {initial}",
-            f"    local input_title = {title}",
-            f"    local input_description = {description}",
-            f"    local input_identifier = {identifier}",
-            "    local input = services.interaction.input_text(",
-            "        input_title, { default = input_default, description = input_description,",
-            "        identifier = input_identifier, width = 40 + input_label_width })",
-            "    if input.accepted then",
-            "        value = input.value",
-            "    end",
-        ])
-        value_expression = "value"
-
-    if parse_tags:
-        alpha = "actor" if avatar_actor_proven else "services.characters.avatar()"
-        beta = npc_actor_expression or (
-            "actor" if npc_actor_proven else "services.characters.avatar()")
-        value_expression = (
-            "service_value(services.text.expand_for("
-            f"{value_expression}, {alpha}, {beta}))")
-
+    rendered_values = [
+        f"services.translate({lua_quote(value)})" if i18n else lua_quote(value)
+        for value in values
+    ]
+    lines = [
+        "    local string_values = { " + ", ".join(
+            f"function() return {value} end" for value in rendered_values
+        ) + " }",
+        "    local assigned_value = string_values[",
+        "        services.random.native_int(0, #string_values - 1) + 1]()",
+    ]
     if target[0] == "context":
         lines.append(
-            f"    context.data[{lua_quote(target[1])}] = {value_expression}"
+            f"    context.data[{lua_quote(target[1])}] = assigned_value"
         )
     elif target[0] == "global":
         lines.extend([
-            "    services.variables.set_global(",
-            f"        {lua_quote(target[1])}, {value_expression})",
-        ])
-    elif target[0] in {"u", "npc"}:
-        lines.extend([
-            "    services.variables.set(",
-            f"        {actor_expression}, {lua_quote(target[1])}, {value_expression})",
+            "    service_value(services.variables.set_global(",
+            f"        {lua_quote(target[1])}, assigned_value))",
         ])
     else:
-        beta = npc_actor_expression or "actor"
         lines.extend([
-            f"    local assigned_value = {value_expression}",
-            f"    local target_name = context.data[{lua_quote(target[1])}]",
-            '    if target_name == nil or target_name == "" then error("missing target variable") end',
-            '    local target_scope, target_owner = "global", nil',
-            '    if target_name:sub(1, 2) == "u_" then',
-            '        target_scope, target_owner, target_name = "u", actor, target_name:sub(3)',
-            '    elseif target_name:sub(1, 2) == "n_" then',
-            f'        target_scope, target_owner, target_name = "npc", {beta}, target_name:sub(3)',
-            '    elseif target_name:sub(1, 1) == "_" then',
-            '        target_scope, target_name = "context", target_name:sub(2)',
-            '    end',
-            '    service_value(services.variables.set_resolved(',
-            '        context.data, target_owner, target_scope, target_name, assigned_value))',
+            "    service_value(services.variables.set(",
+            f"        {owner}, {lua_quote(target[1])}, assigned_value))",
         ])
     return lines
+
 
 
 def render_static_sample_range(
@@ -29429,6 +29351,12 @@ def render_eoc(
                             "translate copy_var only for bounded literal u/npc/global "
                             "scopes; context_val and var_val need a value-preserving "
                             "copy path, and actor scopes need exact handles"
+                        )
+                    elif isinstance(false_value, dict) and "set_string_var" in false_value:
+                        false_todo = (
+                            "translate set_string_var only for bounded literal strings "
+                            "with native RNG and exact target handles; parse_tags, "
+                            "string_input, variable values, and var_val targets remain TODO"
                         )
                     semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
@@ -33050,17 +32978,17 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "set_string_var" in effect:
                 rendered = render_static_character_string_var(
-                    effect, character_actor_proven,
-                    npc_event_character_actor_proven,
-                    npc_actor_expression,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate set_string_var into typed "
-                        "variable services."
+                        "    -- TODO: translate set_string_var only for bounded "
+                        "literal strings with native RNG and exact target handles; "
+                        "parse_tags, string_input, variable values, and var_val "
+                        "targets remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
