@@ -1591,6 +1591,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         return to_turn<std::int64_t>( calendar::turn );
     } );
+    services.set_function( "turn_native_int", [weak]() {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready ) {
+            throw std::runtime_error( "services are only available after world_ready" );
+        }
+        return to_turn<int>( calendar::turn );
+    } );
     sol::table mapgen = lua.create_table();
     const auto register_mapgen = [weak](
                                      const std::string & handler_id,
