@@ -14,6 +14,7 @@
 #include "character_id.h"
 #include "condition.h"
 #include "dialogue.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json_loader.h"
@@ -31,6 +32,7 @@ class runtime;
 }  // namespace cata::lua_platform
 
 static const itype_id itype_longsword( "longsword" );
+static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
 static const proficiency_id proficiency_prof_carving( "prof_carving" );
 static const skill_id skill_fabrication( "fabrication" );
 
@@ -88,6 +90,14 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                                                        R"("})" ) ).get_object() );
                 return condition( conversation );
             };
+            const auto legacy_worn_flag = [&]( const std::string & body_part ) {
+                const conditional_t condition( json_loader::from_string(
+                                                   std::string( R"({")" ).append( prefix ).append(
+                                                       "has_worn_with_flag" ).append(
+                                                       R"(": "WATERPROOF", "bodypart": ")" ).append(
+                                                           body_part ).append( R"("})" ) ).get_object() );
+                return condition( conversation );
+            };
             // Teaching depends on student knowledge, not training enabled or practical level.
             for( const Skill &definition : Skill::skills ) {
                 teacher.set_skill_level( definition.ident(), 0 );
@@ -118,6 +128,21 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     }
                 }
             }
+            REQUIRE( teacher.wear_item( item( itype_test_hazmat_shirt ), false ).has_value() );
+            for( const auto &part_expected : std::vector<std::pair<std::string, bool>> {
+                     { "torso", true }, { "head", false }
+                 } ) {
+                const std::string &body_part = part_expected.first;
+                const bool expected = part_expected.second;
+                const bool old_value = legacy_worn_flag( body_part );
+                const bool new_value = value_of(
+                                           services["inventory"]["has_worn_flag"], teacher_handle,
+                                           cata::lua_platform::script_game_id( "json_flag", "WATERPROOF" ),
+                                           cata::lua_platform::script_game_id( "body_part", body_part ) ).as<bool>();
+                CAPTURE( prefix, body_part );
+                CHECK( old_value == new_value );
+                CHECK( old_value == expected );
+            }
             const proficiency_id &carving = proficiency_prof_carving;
             teacher.lose_proficiency( carving );
             for( const bool known : {
@@ -136,8 +161,16 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                      false, true
                  } ) {
                 if( wielded ) {
-                    teacher.set_wielded_item( item( itype_longsword ) );
+                    item weapon( itype_longsword );
+                    weapon.set_flag( flag_WATERPROOF );
+                    teacher.set_wielded_item( std::move( weapon ) );
                 }
+                const bool old_flag = legacy( "has_wielded_with_flag", "WATERPROOF" );
+                const bool new_flag = value_of(
+                                          services["inventory"]["wielded_matches"], teacher_handle,
+                                          cata::lua_platform::script_game_id( "json_flag", "WATERPROOF" ) ).as<bool>();
+                CHECK( old_flag == new_flag );
+                CHECK( old_flag == wielded );
                 for( const auto &criterion : std::vector<std::pair<std::string, std::string>> {
                 { "skill", "cutting" }, { "skill", "pistol" },
                 { "weapon_category", "LONG_SWORDS" }, { "weapon_category", "KNIVES" }
