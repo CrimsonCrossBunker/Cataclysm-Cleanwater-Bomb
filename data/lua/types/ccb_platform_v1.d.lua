@@ -9476,6 +9476,26 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
 ---@alias CcbNpcSelectedMissionPredicate 'complete'|'incomplete'|'failed'
+---@alias CcbNpcMissionGoal
+---| 'MGOAL_NULL'
+---| 'MGOAL_GO_TO'
+---| 'MGOAL_GO_TO_TYPE'
+---| 'MGOAL_FIND_ITEM'
+---| 'MGOAL_FIND_ANY_ITEM'
+---| 'MGOAL_FIND_ITEM_GROUP'
+---| 'MGOAL_FIND_MONSTER'
+---| 'MGOAL_FIND_NPC'
+---| 'MGOAL_ASSASSINATE'
+---| 'MGOAL_KILL_MONSTER'
+---| 'MGOAL_KILL_MONSTERS'
+---| 'MGOAL_KILL_MONSTER_TYPE'
+---| 'MGOAL_KILL_MONSTER_SPEC'
+---| 'MGOAL_KILL_NEMESIS'
+---| 'MGOAL_RECRUIT_NPC'
+---| 'MGOAL_RECRUIT_NPC_CLASS'
+---| 'MGOAL_COMPUTER_TOGGLE'
+---| 'MGOAL_TALK_TO_NPC'
+---| 'MGOAL_CONDITION'
 
 ---@class CcbNpcMissionSnapshot
 ---@field token MissionToken Exact mission-instance token bound to this runtime and world.
@@ -9565,6 +9585,10 @@ function CcbNpcMissionsApi.available_count(provider) end
 ---@param predicate CcbNpcSelectedMissionPredicate Native selected-mission predicate to evaluate.
 ---@return CcbResult result `value` is boolean; missing or stale selections return false. Live selected pointers are evaluated even if they are not in this provider's mission collections.
 function CcbNpcMissionsApi.selected_condition(provider, owner, predicate) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param goal CcbNpcMissionGoal Native mission goal enum name.
+---@return CcbResult result `value` is boolean; a missing or stale selection returns false.
+function CcbNpcMissionsApi.selected_has_goal(provider, goal) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
 ---@return CcbResult result `value` is a CcbNpcMissionsStateResult.

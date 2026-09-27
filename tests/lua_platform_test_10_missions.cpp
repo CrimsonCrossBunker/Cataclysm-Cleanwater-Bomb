@@ -218,7 +218,8 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     REQUIRE( missions.valid() );
     for( const char *name : {
              "state", "assigned_for_owner", "available_count",
-             "selected_condition", "select", "offer", "add_assigned",
+             "selected_condition", "selected_has_goal", "select", "offer",
+             "add_assigned",
              "assign_selected", "succeed_selected", "fail_selected",
              "clear_selected", "claim_selected_reward"
          } ) {
@@ -323,6 +324,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         missions["available_count"];
     const sol::protected_function selected_condition =
         missions["selected_condition"];
+    const sol::protected_function selected_has_goal =
+        missions["selected_has_goal"];
     const sol::protected_function select = missions["select"];
     const sol::protected_function offer = missions["offer"];
     const sol::protected_function add_assigned = missions["add_assigned"];
@@ -382,6 +385,10 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         CHECK_FALSE( boolean_from( selected_condition(
                                       provider_handle, owner_handle, predicate ) ) );
     }
+    CHECK_FALSE( boolean_from( selected_has_goal(
+                                  provider_handle, "MGOAL_CONDITION" ) ) );
+    CHECK_FALSE( boolean_from( selected_has_goal(
+                                  provider_handle, "NOT_A_MISSION_GOAL" ) ) );
     CHECK( error_code( selected_condition(
                            provider_handle, owner_handle, "unknown" ) ) ==
            "invalid_predicate" );
@@ -411,6 +418,13 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     value_from( select( provider_handle, offered_token ) );
     CHECK( provider->chatbin.mission_selected != nullptr );
     CHECK( provider->chatbin.mission_selected->in_progress() == false );
+    CHECK( boolean_from( selected_has_goal(
+                             provider_handle, "MGOAL_CONDITION" ) ) );
+    CHECK_FALSE( boolean_from( selected_has_goal(
+                                   provider_handle, "MGOAL_ASSASSINATE" ) ) );
+    CHECK( error_code( selected_has_goal(
+                           provider_handle, "NOT_A_MISSION_GOAL" ) ) ==
+           "invalid_mission_goal" );
     CHECK( error_code( add_assigned(
                            provider_handle, stale_owner_handle, mission_id ) ) ==
            "stale_runtime" );
@@ -634,6 +648,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         CHECK_FALSE( boolean_from( selected_condition(
                                       provider_handle, owner_handle, predicate ) ) );
     }
+    CHECK_FALSE( boolean_from( selected_has_goal(
+                                  provider_handle, "MGOAL_CONDITION" ) ) );
     provider->chatbin.mission_selected = nullptr;
 
     mission *foreign = mission::reserve_new(
@@ -654,6 +670,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
                              provider_handle, owner_handle, "incomplete" ) ) );
     CHECK( boolean_from( selected_condition(
                              provider_handle, owner_handle, "failed" ) ) );
+    CHECK( boolean_from( selected_has_goal(
+                             provider_handle, "MGOAL_CONDITION" ) ) );
     provider->chatbin.missions.push_back( foreign );
     CHECK( error_code( select( provider_handle, foreign_token ) ) ==
            "not_provided_here" );

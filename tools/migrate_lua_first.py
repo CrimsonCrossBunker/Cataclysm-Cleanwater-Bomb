@@ -124,6 +124,27 @@ MAX_MUTATION_RANDOM_CHANCE = 1000000
 NATIVE_MAX_SKILL = 10
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_GAME_START_SENDER_SITES = (("src/game.cpp", "send"),)
+NATIVE_MISSION_GOALS = frozenset({
+    "MGOAL_NULL",
+    "MGOAL_GO_TO",
+    "MGOAL_GO_TO_TYPE",
+    "MGOAL_FIND_ITEM",
+    "MGOAL_FIND_ANY_ITEM",
+    "MGOAL_FIND_ITEM_GROUP",
+    "MGOAL_FIND_MONSTER",
+    "MGOAL_FIND_NPC",
+    "MGOAL_ASSASSINATE",
+    "MGOAL_KILL_MONSTER",
+    "MGOAL_KILL_MONSTERS",
+    "MGOAL_KILL_MONSTER_TYPE",
+    "MGOAL_KILL_MONSTER_SPEC",
+    "MGOAL_KILL_NEMESIS",
+    "MGOAL_RECRUIT_NPC",
+    "MGOAL_RECRUIT_NPC_CLASS",
+    "MGOAL_COMPUTER_TOGGLE",
+    "MGOAL_TALK_TO_NPC",
+    "MGOAL_CONDITION",
+})
 # These native item-event contracts always name the legacy alpha/u Character
 # as `actors.character`.  An item talker is optional because ordinary event
 # sends do not carry the positional talker used by send_with_talker().  Keep
@@ -26882,6 +26903,35 @@ def render_npc_selected_mission_condition(
     )
 
 
+def render_npc_selected_mission_goal_condition(
+    condition: Any, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower static native mission-goal checks for a proven dialogue beta."""
+    if (
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta" or
+        not isinstance(condition, dict) or
+        len(condition) != 1
+    ):
+        return None
+    condition_key, goal = next(iter(condition.items()))
+    if (
+        condition_key not in {"mission_goal", "npc_mission_goal"} or
+        not isinstance(goal, str) or goal not in NATIVE_MISSION_GOALS
+    ):
+        return None
+    return (
+        "(function() "
+        "local beta = context and context.actors and context.actors.beta; "
+        "if beta == nil or beta.kind ~= \"creature\" or "
+        "beta.subtype ~= \"npc\" then return false end; "
+        "return service_value(services.npcs.missions.selected_has_goal("
+        f"beta, \"{goal}\")) "
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -28294,9 +28344,14 @@ def render_eoc_condition_expression(
         # The actor talker has no selected mission, so the legacy handler
         # compares a null mission regardless of the goal value.
         return "false"
+    selected_mission_goal = render_npc_selected_mission_goal_condition(
+        condition, npc_dialogue_pair_proven, npc_actor_expression,
+    )
+    if selected_mission_goal is not None:
+        return selected_mission_goal
     if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
-        # Both legacy spellings query beta's selected mission. A primary
-        # actor proof does not establish beta's mission selection.
+        # Both legacy spellings query beta's selected mission. Only static
+        # enum names plus a proven dialogue beta are eligible for lowering.
         return None
     if (
         avatar_actor_proven and
