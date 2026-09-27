@@ -18625,6 +18625,16 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         },
                         {
                             "type": "effect_on_condition",
+                            "id": "static_query_tile_native_center",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_query_tile": "anywhere",
+                                "target_var": {"context_val": "default_center"},
+                                "message": "Pick at actor",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
                             "id": "static_query_omt",
                             "required_event": "game_start",
                             "effect": {
@@ -18650,7 +18660,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "game_start",
                             "effect": {
                                 "u_choose_adjacent_highlight": {"u_val": "adjacent"},
-                                "message": "Pick an adjacent tile",
                                 "allow_vertical": True,
                             },
                         },
@@ -18660,8 +18669,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_choose_adjacent_highlight": {"npc_val": "adjacent"},
-                                "message": "Pick near NPC",
-                                "failure_message": "No adjacent tile",
                             },
                         },
                     ]
@@ -18675,7 +18682,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 10)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.partial), 1)
             self.assertIn(
                 'services.variables.get(actor, "origin"))',
                 main,
@@ -18684,11 +18691,17 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'services.coords.tripoint_rel_ms(math.max(-1000000',
                 main,
             )
+            self.assertNotIn('services.targeting.choose_map_square("Pick a tile"', main)
             self.assertIn(
-                'services.targeting.choose_map_square("Pick a tile", '
-                'context.data["center"], false)',
+                'services.targeting.choose_map_square("Pick at actor", '
+                'service_value(services.characters.snapshot(actor)).creature.position, false)',
                 main,
             )
+            self.assertIn(
+                "TODO: translate the tile query through the typed targeting service.",
+                main,
+            )
+            self.assertIn("static_query_tile", report)
             self.assertIn(
                 'services.targeting.choose_overmap_point('
                 '"Pick an overmap tile", nil, 12)',
@@ -18700,7 +18713,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn(
-                'center, "Pick an adjacent tile", "",',
+                'center, "", "",',
                 main,
             )
             self.assertIn(
@@ -18708,10 +18721,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn(
-                'center, "Pick near NPC", "No adjacent tile"',
+                'center, "", ""',
                 main,
             )
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertIn("needs domain-service conversion", report)
 
     def test_dynamic_coordinate_and_targeting_effects_remain_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -18767,22 +18780,35 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("typed targeting service", main)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_lowers_dynamic_line_of_sight_query_range(self) -> None:
+    def test_dynamic_and_fractional_line_of_sight_query_ranges_stay_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps(
-                    {
-                        "type": "effect_on_condition",
-                        "id": "dynamic_query_tile_range",
-                        "required_event": "game_start",
-                        "effect": {
-                            "u_query_tile": "line_of_sight",
-                            "target_var": {"context_val": "picked"},
-                            "message": "Pick a visible tile",
-                            "range": {"math": ["u_spell_level('demo') + 3"]},
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_query_tile_range",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_query_tile": "line_of_sight",
+                                "target_var": {"context_val": "picked"},
+                                "message": "Pick a visible tile",
+                                "range": {"math": ["u_spell_level('demo') + 3"]},
+                            },
                         },
-                    }
+                        {
+                            "type": "effect_on_condition",
+                            "id": "fractional_query_tile_range",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_query_tile": "line_of_sight",
+                                "target_var": {"context_val": "picked"},
+                                "message": "Pick a visible tile",
+                                "range": 3.5,
+                            },
+                        },
+                    ]
                 ),
                 encoding="utf-8",
             )
@@ -18792,15 +18818,96 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn(
-                'services.targeting.choose_visible_map_square("Pick a visible tile", '
-                "math.max(0, math.min(1000",
-                main,
+            self.assertNotIn("services.targeting.choose_visible_map_square(", main)
+            self.assertEqual(
+                main.count(
+                    "TODO: translate the tile query through the typed targeting service."
+                ),
+                2,
             )
-            self.assertNotIn("typed targeting service", report)
+            self.assertIn("dynamic_query_tile_range", report)
+            self.assertIn("fractional_query_tile_range", report)
+
+    def test_query_tile_default_center_matches_native_actor_position(self) -> None:
+        effect = {
+            "u_query_tile": "anywhere",
+            "target_var": {"context_val": "picked"},
+            "message": "Pick at actor",
+        }
+        self.assertIsNone(
+            migrate_lua_first.render_static_query_tile(
+                effect, "u_query_tile", avatar_actor_proven=False
+            )
+        )
+        lines = migrate_lua_first.render_static_query_tile(
+            effect, "u_query_tile", avatar_actor_proven=True
+        )
+        self.assertIsNotNone(lines)
+        body = "\n".join(lines or [])
+        self.assertIn("services.characters.snapshot(actor)", body)
+        self.assertNotIn('choose_map_square("Pick at actor", nil', body)
+        self.assertIsNone(
+            migrate_lua_first.render_static_query_tile(
+                {**effect, "range": 1}, "u_query_tile", avatar_actor_proven=True
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_query_tile(
+                {**effect, "range": {"context_val": "range"}},
+                "u_query_tile", avatar_actor_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_query_tile(
+                {**effect, "message": "x" * 1025},
+                "u_query_tile", avatar_actor_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_query_tile(
+                {**effect, "center_var": {"context_val": "center"}},
+                "u_query_tile", avatar_actor_proven=True,
+            )
+        )
+        for range_value in (3.5, {"math": ["u_spell_level('demo') + 3"]}):
+            self.assertIsNone(
+                migrate_lua_first.render_static_query_tile(
+                    {
+                        "u_query_tile": "line_of_sight",
+                        "target_var": {"context_val": "picked"},
+                        "range": range_value,
+                    },
+                    "u_query_tile", avatar_actor_proven=True,
+                )
+            )
+
+        if shutil.which("lua") is None:
+            return
+        script = r"""
+local native_center={x=17,y=29,z=0}
+local view_offset={x=300,y=400,z=0}
+local actor={position=native_center,view_offset=view_offset}
+local context={data={}}
+local selected={x=18,y=29,z=0}
+local function service_value(result) return result.value end
+local services={
+ characters={snapshot=function(owner)
+  assert(owner==actor)
+  return {value={creature={position=owner.position}}}
+ end},
+ targeting={choose_map_square=function(message,center,allow_vertical)
+  assert(message=="Pick at actor")
+  assert(center==native_center and center~=view_offset)
+  assert(not allow_vertical)
+  return selected
+ end}
+}
+BODY
+assert(context.data.picked==selected)
+""".replace("BODY", body)
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_lowers_context_backed_location_variable_adjustments_for_proven_actors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -26432,18 +26539,32 @@ assert(calls==3 and context.data.entry=='zombie')
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_adjacent_selector_keeps_center_and_autoselect_setting(self) -> None:
-        lines = migrate_lua_first.render_static_choose_adjacent_highlight({
+        effect = {
             "u_choose_adjacent_highlight": {"context_val": "picked"},
             "allow_vertical": True, "allow_autoselect": False,
-        }, "u_choose_adjacent_highlight", True)
+        }
+        lines = migrate_lua_first.render_static_choose_adjacent_highlight(
+            effect, "u_choose_adjacent_highlight", True
+        )
         self.assertIsNotNone(lines)
+        self.assertIsNone(
+            migrate_lua_first.render_static_choose_adjacent_highlight(
+                effect, "u_choose_adjacent_highlight", False
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_choose_adjacent_highlight(
+                {**effect, "target_var": {"context_val": "center"}},
+                "u_choose_adjacent_highlight", True,
+            )
+        )
         script = r"""
 local context={data={picked='unchanged'}}
 local actor={}
 local center={add=function(self,p) return p end}
 local function service_value(r) return r.value end
 local services={world={bounds=function() return {minimum={x=-1,y=-1},maximum={x=1,y=1}} end},
- characters={snapshot=function() return {value={creature={position=center}}} end},
+ characters={snapshot=function(owner) assert(owner==actor);return {value={creature={position=center}}} end},
  coords={tripoint_rel_ms=function(x,y,z) return {x=x,y=y,z=z} end},
  targeting={choose_adjacent_where_at=function(c,m,f,points,vertical,auto)
  assert(c==center and vertical and not auto and #points==9)
@@ -26476,11 +26597,17 @@ assert(context.data.loc.x==1 and context.data.loc.y==1)
         lines = migrate_lua_first.render_static_npc_choose_adjacent_highlight({
             "npc_choose_adjacent_highlight": {"context_val": "picked"},
             "condition": {"one_in_chance": 2},
-        }, "npc_choose_adjacent_highlight", True, "partner")
+        }, "npc_choose_adjacent_highlight", True, "context.actors.beta")
         self.assertIsNotNone(lines)
+        self.assertIsNone(
+            migrate_lua_first.render_static_npc_choose_adjacent_highlight({
+                "npc_choose_adjacent_highlight": {"context_val": "picked"},
+                "target_var": {"context_val": "center"},
+            }, "npc_choose_adjacent_highlight", True, "context.actors.beta")
+        )
         script = r"""
 local actor,partner={},{}
-local context={data={}}
+local context={data={},actors={beta=partner}}
 local center={add=function(self,p) return p end}
 local function service_value(r) return r.value end
 local calls=0
@@ -26508,19 +26635,7 @@ assert(context.data.loc.x==1 and context.data.loc.y==1)
             "target_var": {"npc_val": "center"},
             "condition": {"one_in_chance": 2},
         }, "npc_choose_adjacent_highlight", False, "partner", True)
-        self.assertIsNotNone(owned_lines)
-        owned_script = script.replace("\n".join(lines), "\n".join(owned_lines))
-        owned_script = owned_script.replace("local calls=0", "local calls=0\npartner.center=center")
-        owned_script = owned_script.replace("local services={world=", r"""local services={variables={
- get=function(owner,key) assert(owner==partner and key=='center');return {value={value=owner.center}} end,
- set=function(owner,key,value) assert(owner==partner and key=='picked');owner.picked=value end
-},world=""")
-        owned_script = owned_script.replace("context.data.picked.x", "partner.picked.x")
-        owned_script = owned_script.replace("context.data.picked.y", "partner.picked.y")
-        owned_script += "\nassert(actor.picked==nil)"
-        result = subprocess.run(["lua", "-"], input=owned_script, text=True,
-                                capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(owned_lines)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_coordinate_indirection_receives_distinct_participants(self) -> None:
@@ -26599,7 +26714,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
             self.assertIn("    else", rendered)
             self.assertIn("        first(failure_context, actor)", rendered)
 
-    def test_adjacent_selectors_filter_candidates_and_honor_explicit_centers(self) -> None:
+    def test_adjacent_selectors_filter_candidates_and_fail_closed_for_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -26616,8 +26731,17 @@ assert(context.conditions.check==original and context.conditions.check() and con
                                 "map_terrain_with_flag": "TREE",
                                 "loc": {"context_val": "loc"},
                             },
-                            "message": "Select tree",
-                            "failure_message": "No tree",
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "explicit_u_adjacent_center",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_choose_adjacent_highlight": {
+                                "context_val": "u_direction"
+                            },
+                            "target_var": {"context_val": "center"},
                         },
                     },
                     {
@@ -26629,7 +26753,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
                                 "context_val": "direction"
                             },
                             "target_var": {"context_val": "center"},
-                            "message": "Select direction",
                         },
                     },
                 ]),
@@ -26639,16 +26762,68 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 migrate_lua_first.load_objects([source]), "adjacent_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn('context.data["loc"] = candidate', main)
             self.assertIn(
                 "services.gameplay.environment.terrain_has_flag", main
             )
             self.assertIn("services.targeting.choose_adjacent_where_at", main)
-            self.assertIn('local center = context.data["center"]', main)
-            self.assertIn('context.data["direction"] = selected', main)
+            self.assertNotIn('local center = context.data["center"]', main)
+            self.assertNotIn('context.data["direction"] = selected', main)
+            self.assertNotIn('context.data["u_direction"] = selected', main)
+            self.assertEqual(
+                main.count(
+                    "TODO: translate adjacent highlighting through the typed targeting service."
+                ),
+                2,
+            )
+            self.assertIn("explicit_u_adjacent_center", report)
+            self.assertIn("centered_adjacent", report)
+
+    def test_adjacent_translation_prompts_remain_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "localized_u_adjacent",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_choose_adjacent_highlight": {"context_val": "picked"},
+                            "message": "Pick a nearby tile",
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "localized_npc_adjacent",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {
+                            "npc_choose_adjacent_highlight": {"context_val": "picked"},
+                            "failure_message": "No valid tile",
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "localized_adjacent_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("services.targeting.choose_adjacent_where_at(", main)
+            self.assertEqual(
+                main.count(
+                    "TODO: translate adjacent highlighting through the typed targeting service."
+                ),
+                2,
+            )
+            self.assertIn("localized_u_adjacent", report)
+            self.assertIn("localized_npc_adjacent", report)
 
     def test_vehicle_inheritance_lowers_only_typed_collection_patches(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -23577,7 +23577,7 @@ def render_static_query_tile(
     if query_type not in {"anywhere", "line_of_sight"}:
         return None
     message = effect.get("message", "")
-    if not isinstance(message, str) or not bounded_utf8_string(message, 8192, allow_empty=True):
+    if not isinstance(message, str) or not bounded_utf8_string(message, 1024, allow_empty=True):
         return None
     z_level = effect.get("z_level", False)
     if not isinstance(z_level, bool):
@@ -23585,30 +23585,29 @@ def render_static_query_tile(
     output = effect.get("target_var")
     if output is None:
         return None
-    center = None
+    # Anywhere selection maps this absolute variable to bubble coordinates
+    # without a loaded-map check; choose_map_square requires an in-bounds
+    # absolute point. The LOS path reads but ignores center_var, so keep both
+    # source shapes unlowered rather than dropping a lookup on one branch.
     if "center_var" in effect:
-        center = _coordinate_source_expression(
-            effect["center_var"], avatar_actor_proven, False
-        )
-        if center is None:
-            return None
+        return None
     lines: list[str]
     if query_type == "anywhere":
-        call = f"services.targeting.choose_map_square({lua_quote(message)}"
-        if center is not None:
-            call += f", {center}"
-        else:
-            call += ", nil"
+        if "range" in effect and finite_number_literal(effect["range"]) != 0:
+            # Native accepts a dbl_or_var here only to emit a debug message
+            # when it is nonzero.  Do not silently discard that input.
+            return None
+        # The native effect centers anywhere-selection on actor.pos_bub.
+        # Passing nil would instead use the targeting API's avatar view
+        # offset, which is a different point when the map is panned.
+        center = "service_value(services.characters.snapshot(actor)).creature.position"
+        call = f"services.targeting.choose_map_square({lua_quote(message)}, {center}"
         call += f", {lua_boolean(z_level)})"
     else:
-        distance = _combat_number_expression(
-            effect.get("range", 0), "actor", 0, 1000, integer=True
-        )
+        # Native converts dbl_or_var to the targeting API's int range by
+        # truncation; dynamic rounding/clamping would change the prompt.
+        distance = _literal_integer_or_none(effect.get("range", 0), 0, 1000)
         if distance is None:
-            return None
-        if center is not None:
-            # The legacy line-of-sight selector always uses the avatar as the
-            # viewpoint; a non-default center would change that contract.
             return None
         call = f"services.targeting.choose_visible_map_square({lua_quote(message)}, {distance})"
     lines = [f"    local selected = {call}", "    if selected ~= nil then"]
@@ -23720,6 +23719,10 @@ def render_static_choose_adjacent_highlight(
         "allow_autoselect", "condition", "false_eocs",
     }:
         return None
+    # The native effect accepts arbitrary absolute coordinates, while the
+    # Platform picker requires its center to be inside the active map.
+    if "target_var" in effect:
+        return None
     output = effect[key]
     if _coordinate_variable_descriptor(output) is None and _context_coordinate_expression(output) is None:
         return None
@@ -23737,6 +23740,11 @@ def render_static_choose_adjacent_highlight(
         not bounded_utf8_string(failure_message, 8192, allow_empty=True)
     ):
         return None
+    # Native translation_or_var resolves these strings through gettext at
+    # runtime.  Lua literals would lose localization and translated lengths
+    # can exceed the bounded targeting prompt contract.
+    if message or failure_message:
+        return None
     allow_vertical = effect.get("allow_vertical", False)
     allow_autoselect = effect.get("allow_autoselect", True)
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
@@ -23744,16 +23752,7 @@ def render_static_choose_adjacent_highlight(
     condition = effect.get("condition", True)
     if "condition" in effect and not isinstance(condition, (str, dict)):
         return None
-    center = (
-        _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_actor_proven, npc_actor_expression,
-        )
-        if "target_var" in effect else
-        "service_value(services.characters.snapshot(actor)).creature.position"
-    )
-    if center is None:
-        return None
+    center = "service_value(services.characters.snapshot(actor)).creature.position"
     predicate = "true"
     if condition is not True:
         predicate = render_eoc_condition_expression(
@@ -23827,6 +23826,10 @@ def render_static_npc_choose_adjacent_highlight(
         "allow_autoselect", "condition", "false_eocs",
     }:
         return None
+    # The native effect accepts arbitrary absolute coordinates, while the
+    # Platform picker requires its center to be inside the active map.
+    if "target_var" in effect:
+        return None
     output_value = effect[key]
     if (
         _coordinate_variable_descriptor(output_value) is None and
@@ -23859,6 +23862,11 @@ def render_static_npc_choose_adjacent_highlight(
         not bounded_utf8_string(failure_message, 8192, allow_empty=True)
     ):
         return None
+    # Native translation_or_var resolves these strings through gettext at
+    # runtime.  Lua literals would lose localization and translated lengths
+    # can exceed the bounded targeting prompt contract.
+    if message or failure_message:
+        return None
     allow_vertical = effect.get("allow_vertical", False)
     allow_autoselect = effect.get("allow_autoselect", True)
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
@@ -23873,15 +23881,10 @@ def render_static_npc_choose_adjacent_highlight(
         f"{x}, {y}, {z}))"
         for x, y, z in offsets
     )
+    center_actor = npc_actor_expression or "actor"
     center_expression = (
-        _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven, npc_actor_proven, npc_actor_expression
-        ) if "target_var" in effect else
-        "service_value(services.characters.snapshot(" +
-        (npc_actor_expression or "actor") + ")).creature.position"
+        f"service_value(services.characters.snapshot({center_actor})).creature.position"
     )
-    if center_expression is None:
-        return None
     lines = [
         f"    local center = {center_expression}",
         "    local candidate_points = {",

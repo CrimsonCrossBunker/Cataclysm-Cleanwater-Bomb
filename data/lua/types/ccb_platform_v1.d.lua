@@ -6611,6 +6611,30 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 ---@return string|nil text
 function CcbPlatformPresentation.input_text(prompt, options) end
 
+---@class CcbTargetingApi
+local CcbTargetingApi = {}
+
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param center? TripointCoord Optional absolute map-square center inside the active map.
+---@param allow_vertical? boolean Whether the map picker may change z-level; defaults to false.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil when cancelled.
+function CcbTargetingApi.choose_map_square(message, center, allow_vertical) end
+
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param range integer Targeting range from 0 through 1000.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil when cancelled.
+function CcbTargetingApi.choose_visible_map_square(message, range) end
+
+---@param center TripointCoord Absolute map-square center inside the active map.
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param failure_message string Failure text, at most 1024 UTF-8 bytes; may be empty.
+---@param candidates TripointCoord[] Dense candidate positions, each within one map square of center.
+---@param allow_vertical? boolean Whether the picker may change z-level; defaults to false.
+---@param allow_autoselect? boolean Whether to auto-select one valid candidate; defaults to true.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil on failure/cancel.
+function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_message,
+        candidates, allow_vertical, allow_autoselect) end
+
 ---@class CcbPlatformInteractionApi
 local CcbPlatformInteractionApi = {}
 
