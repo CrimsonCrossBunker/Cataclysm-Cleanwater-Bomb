@@ -9423,6 +9423,13 @@ function CcbInventoryApi.is_wearing(character, item_type) end
 ---@param flag GameId GameId<json_flag>
 ---@return CcbResult
 function CcbInventoryApi.has_item_flag(character, flag) end
+---Test item type flags as native u_has_item_with_flag/npc_has_item_with_flag conditions do.
+---This checks flags declared on item types, not per-instance flags. An unknown but well-formed
+---flag ID keeps the native cache behavior.
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>
+---@return CcbResult
+function CcbInventoryApi.has_item_type_flag(character, flag) end
 ---@param character GameHandle Exact live Character handle.
 ---@param category GameId GameId<item_category>
 ---@return CcbResult

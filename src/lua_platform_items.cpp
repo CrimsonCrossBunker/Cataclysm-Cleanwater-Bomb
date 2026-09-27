@@ -3817,8 +3817,34 @@ sol::table inventory_has_item_flag(
         return make_game_error_result( state, *error );
     }
     return make_game_value_result(
+                   state, sol::make_object(
+                       state, character->has_item_with_flag(
+                           flag_id( requested_flag.value() ) ) ) );
+}
+
+sol::table inventory_has_item_type_flag(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &requested_flag,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_flag.kind() != "json_flag" ) {
+        throw std::invalid_argument(
+            "services.inventory.has_item_type_flag requires GameId<json_flag>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native item-flag conditions use cache_has_item_with(), which matches
+    // flags declared on item types and treats an invalid flag ID as no filter.
+    return make_game_value_result(
                state, sol::make_object(
-                   state, character->has_item_with_flag(
+                   state, character->cache_has_item_with(
                        flag_id( requested_flag.value() ) ) ) );
 }
 
@@ -7583,6 +7609,18 @@ void install_item_api(
     const script_game_id & flag ) {
         require_read();
         return inventory_has_item_flag(
+                   lua_state, character, flag,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "has_item_type_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle & character,
+    const script_game_id & flag ) {
+        require_read();
+        return inventory_has_item_type_flag(
                    lua_state, character, flag,
                    current_runtime_generation(),
                    current_world_generation() );

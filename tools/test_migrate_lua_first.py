@@ -17906,7 +17906,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn("services.inventory.resources(actor", main)
-            self.assertIn("services.inventory.category_count(actor", main)
+            self.assertIn("services.inventory.category_count(alpha", main)
+            self.assertIn("services.inventory.has_item_type_flag(alpha", main)
             self.assertIn("services.inventory.wielded_matches(actor", main)
             self.assertIn("services.inventory.has_items(alpha", main)
             self.assertIn("services.items.has_ammo(item_handle, character)", main)
@@ -17979,6 +17980,95 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             migrate_lua_first.render_eoc_condition_expression("has_ammo")
         )
 
+    def test_static_category_and_type_flag_conditions_require_exact_roles(self) -> None:
+        normalized_counts = (
+            (None, 1),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+            (2, 2),
+            (migrate_lua_first.NATIVE_INT_MAX - 1,
+             migrate_lua_first.NATIVE_INT_MAX - 1),
+            (migrate_lua_first.NATIVE_INT_MAX, 1),
+        )
+        for count, native_threshold in normalized_counts:
+            condition = {"u_has_item_category": "food"}
+            if count is not None:
+                condition["count"] = count
+            rendered = migrate_lua_first.render_eoc_condition_expression(
+                condition, avatar_actor_proven=True,
+            )
+            self.assertIsNotNone(rendered)
+            self.assertIn("local alpha = actor", rendered)
+            self.assertIn('services.types.id("item_category", "food")', rendered)
+            self.assertIn("if not category:is_valid() then return false end", rendered)
+            self.assertIn(
+                f"services.inventory.category_count(alpha, category)) >= {native_threshold}",
+                rendered,
+            )
+
+        u_pair_category = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_item_category": "food", "count": 2},
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIn(
+            "local alpha = context and context.actors and context.actors.alpha",
+            u_pair_category,
+        )
+        beta_category = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_item_category": "food", "count": 2},
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIn(
+            "local beta = context and context.actors and context.actors.beta",
+            beta_category,
+        )
+        self.assertIn('beta.subtype ~= "character"', beta_category)
+        self.assertIn("category_count(beta, category)) >= 2", beta_category)
+
+        u_type_flag = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_item_with_flag": "FIRE"}, avatar_actor_proven=True,
+        )
+        self.assertIn("has_item_type_flag(alpha, flag)", u_type_flag)
+        self.assertIn('services.types.id("json_flag", "FIRE")', u_type_flag)
+        self.assertNotIn("flag:is_valid()", u_type_flag)
+        beta_type_flag = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_item_with_flag": "EATEN_COLD"},
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIn("has_item_type_flag(beta, flag)", beta_type_flag)
+        self.assertIn('beta.subtype ~= "npc"', beta_type_flag)
+
+        for condition in (
+            {"npc_has_item_category": "food"},
+            {"npc_has_item_with_flag": "FIRE"},
+        ):
+            # An NPC event proves its alpha actor, never dialogue beta.
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_actor_proven=True, npc_actor_expression="actor",
+            ))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_item_category": "food"}, weapon_actor_proven=True,
+        ))
+        for unsupported in (
+            {"u_has_item_category": "food", "count": 1.0},
+            {"u_has_item_category": "food", "count": {"context_val": "count"}},
+            {
+                "u_has_item_category": "food",
+                "count": migrate_lua_first.NATIVE_INT_MAX + 1,
+            },
+            {"u_has_item_category": "food", "extra": True},
+            {"u_has_item_category": "food\u0001"},
+            {"u_has_item_with_flag": {"context_val": "flag"}},
+            {"u_has_item_with_flag": "FIRE", "extra": True},
+        ):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                unsupported, avatar_actor_proven=True,
+            ))
+
     def test_static_items_sum_requires_exact_alpha_beta_roles(self) -> None:
         entries = [
             {"item": "scrap", "amount": 2},
@@ -18036,6 +18126,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "condition": {"and": [
                     {"u_has_items_sum": entries},
                     {"npc_has_items_sum": entries},
+                    {"u_has_item_category": "food", "count": 2},
+                    {"npc_has_item_category": "food"},
+                    {"u_has_item_with_flag": "EATEN_COLD"},
+                    {"npc_has_item_with_flag": "EATEN_COLD"},
                 ]},
                 "effect": {"message": "weighted inventory"},
             },
@@ -18052,6 +18146,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             npc_dialogue_mission_pair_ids=pair_ids,
         )
         self.assertIn("services.inventory.has_items_sum(", paired)
+        self.assertIn("services.inventory.category_count(alpha, category)", paired)
+        self.assertIn("services.inventory.category_count(beta, category)", paired)
+        self.assertIn("services.inventory.has_item_type_flag(alpha, flag)", paired)
+        self.assertIn("services.inventory.has_item_type_flag(beta, flag)", paired)
         self.assertIn("context and context.actors and context.actors.alpha", paired)
         self.assertIn("context and context.actors and context.actors.beta", paired)
 
