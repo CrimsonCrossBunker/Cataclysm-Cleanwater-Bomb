@@ -485,26 +485,34 @@ def render_dynamic_item_transform_effect(
     ]
 
 
+def native_int_literal(value: Any) -> int | None:
+    """Truncate a finite literal as the native double-to-int conversion does."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value if NATIVE_INT_MIN <= value <= NATIVE_INT_MAX else None
+    if not isinstance(value, float) or not math.isfinite(value):
+        return None
+    # C++ truncates toward zero before checking whether the result fits int.
+    if value <= NATIVE_INT_MIN - 1 or value >= NATIVE_INT_MAX + 1:
+        return None
+    converted = math.trunc(value)
+    return converted if NATIVE_INT_MIN <= converted <= NATIVE_INT_MAX else None
+
+
 def render_static_light_override(effect: dict[str, Any]) -> list[str] | None:
-    """Render the finite literal custom-light timed-event shape."""
+    """Render a literal custom-light event with the native append semantics."""
     if set(effect) - {"custom_light_level", "length", "key"}:
         return None
-    if "length" not in effect:
+    level = native_int_literal(effect.get("custom_light_level"))
+    if level is None:
         return None
-    level = effect.get("custom_light_level")
-    if (
-        not isinstance(level, int) or isinstance(level, bool) or
-        not 0 <= level <= 125
-    ):
-        return None
-    duration = parse_turns(effect.get("length"))
-    if duration is None or not 0 <= duration <= MAX_WORLD_CHANGE_DELAY_TURNS:
+    duration = parse_turns(effect.get("length", 0))
+    if duration is None or not NATIVE_INT_MIN <= duration <= NATIVE_INT_MAX:
         return None
     key = effect.get("key", "")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
+    if not isinstance(key, str):
         return None
     call = [
-        "    service_value(services.weather.override_light(",
+        "    service_value(services.weather.append_light_event(",
         f"        {level}, services.time.duration({duration}, \"turn\")",
     ]
     if key:
@@ -512,34 +520,6 @@ def render_static_light_override(effect: dict[str, Any]) -> list[str] | None:
     else:
         call[-1] += "))"
     return call
-
-
-def render_dynamic_light_override(
-    effect: dict[str, Any], actor_expression: str = "actor",
-) -> list[str] | None:
-    """Render context/variable-backed custom-light values."""
-    if set(effect) - {"custom_light_level", "length", "key"}:
-        return None
-    if "length" not in effect:
-        return None
-    level = render_eoc_numeric_expression(
-        effect.get("custom_light_level"), "0", actor_expression
-    )
-    duration = _duration_expression(
-        effect.get("length"), minimum=0, actor_expression=actor_expression
-    )
-    key = effect.get("key", "")
-    if level is None or duration is None or not bounded_utf8_string(
-        key, PLATFORM_ID_MAX_BYTES, allow_empty=True
-    ):
-        return None
-    return [
-        "    service_value(services.weather.override_light(",
-        (
-            f"        math.floor(({level}) + 0.5), {duration}, "
-            f"{lua_quote(key)}))" if key else "))"
-        ),
-    ]
 
 
 def render_static_goto_location_effect(
@@ -5404,10 +5384,6 @@ def render_static_false_effect(
                 return [line.replace("    ", "        ", 1) for line in rendered]
         if "custom_light_level" in effect:
             rendered = render_static_light_override(effect)
-            if rendered is None:
-                rendered = render_dynamic_light_override(
-                    effect, "actor" if (avatar_actor_proven or npc_actor_proven) else "actor"
-                )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
         for activity_key in ("u_assign_activity", "npc_assign_activity"):
@@ -32406,20 +32382,18 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "custom_light_level" in effect:
                 rendered = render_static_light_override(effect)
-                if rendered is None:
-                    rendered = render_dynamic_light_override(effect)
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate custom_light_level through an "
-                        "explicit world-light service."
+                        "    -- TODO: manually translate dynamic or non-native-range "
+                        "custom_light_level values."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs proven static native-int and duration values"
                     )
                     all_effects_converted = False
             elif (

@@ -2437,7 +2437,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_activate"): "services.items",
     ("eoc-effects", "npc_activate"): "services.items",
-    ("eoc-effects", "custom_light_level"): "services.gameplay",
+    ("eoc-effects", "custom_light_level"): "services.weather.append_light_event",
     ("eoc-effects", "alter_timed_events"): "services.time",
     ("eoc-effects", "dimension_name"): "services.gameplay.environment",
     ("eoc-effects", "mirror_coordinates"): "services.coords",
