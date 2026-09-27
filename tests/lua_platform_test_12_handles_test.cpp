@@ -5,6 +5,7 @@
 #include <coordinates.h>
 #include <dialogue.h>
 #include <dialogue_helpers.h>
+#include <flag.h>
 #include <game_constants.h>
 #include <inventory.h>
 #include <item.h>
@@ -1347,6 +1348,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     item &alpha_rock = alpha.inv->add_item(
                            item( itype_rock ), false, false, false );
     REQUIRE( alpha.has_item( alpha_rock ) );
+    alpha_rock.set_flag( flag_id( "FIRE" ) );
     item &alpha_water = alpha.inv->add_item(
                             item( itype_water_clean ), false, false, false );
     alpha_water.set_charges( 3 );
@@ -1406,6 +1408,12 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
         services, current_runtime, current_world, []() {}, []() {} );
     const sol::protected_function has_items =
         services["inventory"]["has_items"];
+    const sol::protected_function category_count =
+        services["inventory"]["category_count"];
+    const sol::protected_function has_item_flag =
+        services["inventory"]["has_item_flag"];
+    const sol::protected_function has_item_type_flag =
+        services["inventory"]["has_item_type_flag"];
 
     dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
     const auto compare_items = [&](
@@ -1444,6 +1452,78 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     CHECK( compare_items( "npc_has_items", beta_handle, "water_clean", 0, 2 ) );
     CHECK( compare_items( "npc_has_items", beta_handle, "bandages", 1, 0 ) );
     CHECK_FALSE( compare_items( "npc_has_items", beta_handle, "rock", 1, 0 ) );
+
+    const auto compare_category = [&](
+        const char *selector, const cata::lua_platform::game_handle &target,
+        const char *category, const std::optional<int> count ) {
+        std::string native_source = std::string( "{\"" ) + selector +
+                                    "\":\"" + category + "\"";
+        if( count ) {
+            native_source += ",\"count\":" + std::to_string( *count );
+        }
+        native_source += "}";
+        const conditional_t native_condition(
+            json_loader::from_string( native_source ).get_object() );
+        const bool expected = native_condition( native_pair );
+        const sol::protected_function_result call = category_count(
+                    target,
+                    cata::lua_platform::script_game_id( "item_category", category ) );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const std::size_t matches = envelope["value"].get<std::size_t>();
+        const int native_threshold = count && *count > 1 &&
+                                     *count < std::numeric_limits<int>::max() ? *count : 1;
+        const bool actual = matches >= static_cast<std::size_t>( native_threshold );
+        CHECK( actual == expected );
+        return actual;
+    };
+
+    CHECK( compare_category( "u_has_item_category", alpha_handle, "food",
+                             std::nullopt ) );
+    CHECK( compare_category( "u_has_item_category", alpha_handle, "food", 0 ) );
+    CHECK( compare_category( "u_has_item_category", alpha_handle, "food", -1 ) );
+    CHECK( compare_category( "u_has_item_category", alpha_handle, "food", 1 ) );
+    CHECK_FALSE( compare_category( "u_has_item_category", alpha_handle, "food",
+                                   2 ) );
+    CHECK( compare_category( "u_has_item_category", alpha_handle, "food",
+                             std::numeric_limits<int>::max() ) );
+    CHECK( compare_category( "npc_has_item_category", beta_handle, "food",
+                             std::nullopt ) );
+    compare_category( "npc_has_item_category", beta_handle, "food", 2 );
+
+    const auto compare_item_type_flag = [&](
+        const char *selector, const cata::lua_platform::game_handle &target,
+        const char *flag ) {
+        const std::string native_source = std::string( "{\"" ) + selector +
+                                          "\":\"" + flag + "\"}";
+        const conditional_t native_condition(
+            json_loader::from_string( native_source ).get_object() );
+        const bool expected = native_condition( native_pair );
+        const sol::protected_function_result call = has_item_type_flag(
+                    target, cata::lua_platform::script_game_id( "json_flag", flag ) );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const bool actual = envelope["value"].get<bool>();
+        CHECK( actual == expected );
+        return actual;
+    };
+
+    CHECK( compare_item_type_flag( "u_has_item_with_flag", alpha_handle,
+                                   "EATEN_COLD" ) );
+    CHECK( compare_item_type_flag( "npc_has_item_with_flag", beta_handle,
+                                   "EATEN_COLD" ) );
+    CHECK_FALSE( compare_item_type_flag( "u_has_item_with_flag", alpha_handle,
+                                         "FIRE" ) );
+    CHECK( compare_item_type_flag( "u_has_item_with_flag", alpha_handle,
+                                   "UNREGISTERED_LUA_PLATFORM_TEST_FLAG" ) );
+    const sol::protected_function_result instance_flag_call = has_item_flag(
+                alpha_handle, cata::lua_platform::script_game_id( "json_flag", "FIRE" ) );
+    REQUIRE( instance_flag_call.valid() );
+    const sol::table instance_flag_envelope = instance_flag_call.get<sol::table>();
+    REQUIRE( instance_flag_envelope["ok"].get<bool>() );
+    CHECK( instance_flag_envelope["value"].get<bool>() );
 
     const tripoint_bub_ms loaded_tool_pos( 82, 60, 0 );
     const tripoint_bub_ms empty_tool_pos( 85, 60, 0 );

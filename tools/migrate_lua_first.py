@@ -26855,15 +26855,12 @@ def render_dynamic_character_condition(
             call += ".selected" if "using_" in key else ".known"
         return call
 
-    # Inventory and weapon predicates are all represented by typed GameId
-    # arguments.  Dynamic values therefore need no compatibility adapter.
+    # Remaining inventory and weapon predicates use typed GameIds directly.
+    # Categories and item-type flags have separate static lowerers because
+    # their native count and flag semantics are narrower than the generic APIs.
     for key, scope, kind, service in (
         ("u_has_item", "u", "item", "inventory.resources"),
         ("npc_has_item", "npc", "item", "inventory.resources"),
-        ("u_has_item_category", "u", "item_category", "inventory.category_count"),
-        ("npc_has_item_category", "npc", "item_category", "inventory.category_count"),
-        ("u_has_item_with_flag", "u", "json_flag", "inventory.has_item_flag"),
-        ("npc_has_item_with_flag", "npc", "json_flag", "inventory.has_item_flag"),
         ("u_has_worn_with_flag", "u", "json_flag", "inventory.has_worn_flag"),
         ("npc_has_worn_with_flag", "npc", "json_flag", "inventory.has_worn_flag"),
         ("u_has_wielded_with_flag", "u", "json_flag", "inventory.wielded_matches"),
@@ -27376,6 +27373,92 @@ def render_static_items_sum_condition(
         f"    if {local_name} == nil or {character_guard} then return false end\n"
         "    return service_value(services.inventory.has_items_sum(\n"
         f"        {local_name}, {{\n{rendered_entries}\n        }}))\n"
+        "end)()"
+    )
+
+
+def render_static_item_category_or_flag_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower static item-category and item-type-flag predicates with exact roles."""
+    category_selectors = {"u_has_item_category", "npc_has_item_category"}
+    flag_selectors = {"u_has_item_with_flag", "npc_has_item_with_flag"}
+    present_selectors = (category_selectors | flag_selectors).intersection(condition)
+    if len(present_selectors) != 1:
+        return None
+    selector = next(iter(present_selectors))
+    if selector in category_selectors:
+        if set(condition) - {selector, "count"}:
+            return None
+        native_count = condition.get("count", 1)
+        if (
+            not isinstance(native_count, int) or isinstance(native_count, bool) or
+            not NATIVE_INT_MIN <= native_count <= NATIVE_INT_MAX
+        ):
+            return None
+        # Native f_has_item_category only honors counts strictly between 1
+        # and INT_MAX; every other int leaves its initialized threshold at 1.
+        count = native_count if 1 < native_count < NATIVE_INT_MAX else 1
+        kind = "item_category"
+    elif selector in flag_selectors:
+        if set(condition) != {selector}:
+            return None
+        count = 1
+        kind = "json_flag"
+    else:
+        return None
+
+    raw_id = condition.get(selector)
+    if (
+        not bounded_platform_id(raw_id) or
+        any(ord(character) < 0x20 or ord(character) == 0x7F for character in raw_id)
+    ):
+        return None
+
+    if selector.startswith("u_"):
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+        elif avatar_actor_proven:
+            target = "actor"
+        else:
+            return None
+        local_name = "alpha"
+    else:
+        # npc_* selects beta. An event's ordinary actor is alpha and cannot
+        # prove beta; only direct talk-topic response callbacks establish it.
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    if kind == "item_category":
+        return (
+            "(function() "
+            f"local {local_name} = {target}; "
+            f"if {local_name} == nil or {character_guard} then return false end; "
+            'local category = services.types.id("item_category", ' +
+            lua_quote(raw_id) + "); "
+            "if not category:is_valid() then return false end; "
+            f"return service_value(services.inventory.category_count({local_name}, category)) >= {count} "
+            "end)()"
+        )
+
+    return (
+        "(function() "
+        f"local {local_name} = {target}; "
+        f"if {local_name} == nil or {character_guard} then return false end; "
+        'local flag = services.types.id("json_flag", ' +
+        lua_quote(raw_id) + "); "
+        # Do not guard on flag validity: native cache_has_item_with(flag_id)
+        # treats an invalid ID as an unfiltered item-presence query.
+        f"return service_value(services.inventory.has_item_type_flag({local_name}, flag)) "
         "end)()"
     )
 
@@ -28264,39 +28347,13 @@ def render_eoc_condition_expression(
         return render_static_items_sum_condition(
             condition, avatar_actor_proven, npc_dialogue_pair_proven,
         )
-    for item_key, actor_proven in (
-        ("u_has_item_with_flag", avatar_actor_proven),
-        ("npc_has_item_with_flag", npc_actor_proven),
-    ):
-        if actor_proven and set(condition) == {item_key} and safe_platform_id(condition.get(item_key)):
-            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
-            if actor is None:
-                continue
-            return (
-                f"service_value(services.inventory.has_item_flag({actor}, "
-                "services.types.id(\"json_flag\", "
-                f"{lua_quote(condition[item_key])}))"
-            )
-    for item_key, actor_proven in (
-        ("u_has_item_category", avatar_actor_proven),
-        ("npc_has_item_category", npc_actor_proven),
-    ):
-        if (
-            actor_proven and item_key in condition and
-            set(condition) <= {item_key, "count"} and
-            bounded_platform_id(condition.get(item_key)) and
-            isinstance(condition.get("count", 1), int) and
-            not isinstance(condition.get("count", 1), bool) and
-            1 <= condition.get("count", 1) <= 1000000000
-        ):
-            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
-            if actor is None:
-                continue
-            return (
-                f"service_value(services.inventory.category_count({actor}, "
-                "services.types.id(\"item_category\", "
-                f"{lua_quote(condition[item_key])}))) >= {condition.get('count', 1)}"
-            )
+    if {
+        "u_has_item_category", "npc_has_item_category",
+        "u_has_item_with_flag", "npc_has_item_with_flag",
+    }.intersection(condition):
+        return render_static_item_category_or_flag_condition(
+            condition, avatar_actor_proven, npc_dialogue_pair_proven,
+        )
     for item_key, actor_proven in (
         ("u_has_software", avatar_actor_proven),
         ("npc_has_software", npc_actor_proven),
