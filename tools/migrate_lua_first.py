@@ -26548,16 +26548,27 @@ def render_effect_condition(
     # literal part; a dynamic part can still evaluate empty and inherit reason.
     if not bounded_platform_body_part_id(condition.get("bodypart")):
         return None
+    values = condition[key] if key.endswith("any_effect") else [condition[key]]
+    if not isinstance(values, list):
+        return None
     target = beta if key.startswith("npc_") else alpha
     if target is None:
         return None
+    # Native has_any_effect never resolves an actor, effect id, or intensity
+    # when its list is empty.  The body-part expression above is the only
+    # other potentially evaluated input, and it is already bounded to a
+    # literal.  Still require a proven actor before taking this shortcut so
+    # this renderer cannot bypass the EOC source-provenance gate.
+    if not values:
+        return "false"
+    beta_context_target = (
+        key.startswith("npc_") and target == "context.actors.beta"
+    )
+    service_target = "beta" if beta_context_target else target
 
     def raw_identifier(value: Any) -> str | None:
         return render_participant_string_expression(value, target, alpha, beta)
 
-    values = condition[key] if key.endswith("any_effect") else [condition[key]]
-    if not isinstance(values, list):
-        return None
     raw_effects = [raw_identifier(value) for value in values]
     if any(value is None for value in raw_effects):
         return None
@@ -26569,21 +26580,24 @@ def render_effect_condition(
         intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta)
         if intensity is None:
             return None
-    if not values:
-        return "false"
     query = (
-        f"return service_value(services.effects.has({target}, effect, bodypart, {intensity}))"
+        f"return service_value(services.effects.has({service_target}, effect, bodypart, {intensity}))"
         if literal is not None and -1000000 <= literal <= 1000000 else
         # Native EOC evaluates intensity only when this effect exists.
         # Snapshot comparison also preserves thresholds outside has()'s
         # bounded optional argument without clamping their meaning.
-        f"local result = services.effects.get({target}, effect, bodypart); "
+        f"local result = services.effects.get({service_target}, effect, bodypart); "
         'if not result.ok then if result.error.code == "not_found" then return false end; '
         'service_value(result) end; '
         f'return result.value.intensity >= ({intensity})'
     )
-    lines = [
-        "(function()",
+    lines = ["(function()"]
+    if beta_context_target:
+        lines.extend([
+            "    local beta = context and context.actors and context.actors.beta",
+            '    if beta == nil or beta.kind ~= "creature" then return false end',
+        ])
+    lines.extend([
         "    local function resolve_id(kind, value)",
         "        local ok, id = pcall(services.types.id, kind, value)",
         "        if not ok or not id:is_valid() then return nil end",
@@ -26596,7 +26610,7 @@ def render_effect_condition(
         "        if effect == nil then return false end",
         f"        {query}",
         "    end",
-    ]
+    ])
     if len(raw_effects) <= 64:
         lines.append(
             "    return " + " or ".join(
@@ -26640,11 +26654,11 @@ def render_dynamic_character_condition(
     effect_selectors = {prefix + name for prefix in ("u_", "npc_")
                         for name in ("has_effect", "has_any_effect")}
     if effect_selectors.intersection(condition):
-        return render_effect_condition(
-            condition,
-            actor_specs["u"][1] if actor_specs["u"][0] else None,
-            actor_specs["npc"][1] if actor_specs["npc"][0] else None,
-        )
+        # Effect predicates need their own alpha/beta source proof.  In
+        # particular, the npc_ prefix selects dialogue::const_actor(true),
+        # not the NPC event's alpha actor.  The provenance-aware lowerers
+        # handle these selectors before this generic Character fallback.
+        return None
 
     # Simple single-id queries share the same shape across Character domains.
     simple_id_queries: tuple[tuple[str, str, str], ...] = (
@@ -28514,40 +28528,65 @@ def render_eoc_condition_expression(
     for effect_key, actor_proven in (
         (
             "u_has_effect",
-            avatar_actor_proven or generic_character_actor_proven,
+            avatar_actor_proven or generic_character_actor_proven or
+            creature_actor_proven,
         ),
-        ("npc_has_effect", npc_actor_proven),
+        (
+            "npc_has_effect",
+            npc_dialogue_pair_proven and
+            npc_actor_expression == "context.actors.beta",
+        ),
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key, "bodypart"} and
-            bounded_platform_body_part_id(condition.get("bodypart")) and
-            safe_platform_id(condition.get(effect_key))
+            set(condition) in (
+                {effect_key, "bodypart"},
+                {effect_key, "bodypart", "intensity"},
+            ) and
+            bounded_platform_body_part_id(condition.get("bodypart"))
         ):
             return render_effect_condition(
                 condition,
-                "actor" if avatar_actor_proven or generic_character_actor_proven else None,
-                npc_query_actor,
+                "actor" if (
+                    avatar_actor_proven or generic_character_actor_proven or
+                    creature_actor_proven
+                ) else None,
+                "context.actors.beta" if (
+                    npc_dialogue_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ) else npc_query_actor,
             )
     for effect_key, actor_proven in (
         (
             "u_has_any_effect",
-            avatar_actor_proven or generic_character_actor_proven,
+            avatar_actor_proven or generic_character_actor_proven or
+            creature_actor_proven,
         ),
-        ("npc_has_any_effect", npc_actor_proven),
+        (
+            "npc_has_any_effect",
+            npc_dialogue_pair_proven and
+            npc_actor_expression == "context.actors.beta",
+        ),
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key, "bodypart"} and
+            set(condition) in (
+                {effect_key, "bodypart"},
+                {effect_key, "bodypart", "intensity"},
+            ) and
             bounded_platform_body_part_id(condition.get("bodypart")) and
-            isinstance(condition.get(effect_key), list) and
-            0 < len(condition[effect_key]) <= 64 and
-            all(safe_platform_id(value) for value in condition[effect_key])
+            isinstance(condition.get(effect_key), list)
         ):
             return render_effect_condition(
                 condition,
-                "actor" if avatar_actor_proven or generic_character_actor_proven else None,
-                npc_query_actor,
+                "actor" if (
+                    avatar_actor_proven or generic_character_actor_proven or
+                    creature_actor_proven
+                ) else None,
+                "context.actors.beta" if (
+                    npc_dialogue_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ) else npc_query_actor,
             )
 
     if (

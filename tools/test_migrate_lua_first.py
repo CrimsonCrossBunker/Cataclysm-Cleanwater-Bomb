@@ -114,6 +114,15 @@ class LuaFirstMigrationTest(unittest.TestCase):
             "return service_value(services.effects.has(actor, effect, bodypart, -1))",
             effect_expression,
         )
+        creature_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_effect": "bleed", "bodypart": "arm_l", "intensity": 2},
+            creature_actor_proven=True,
+        )
+        self.assertIsNotNone(creature_expression)
+        self.assertIn(
+            "services.effects.has(actor, effect, bodypart, 2)",
+            creature_expression,
+        )
         worn_expression = migrate_lua_first.render_eoc_condition_expression(
             {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
             avatar_actor_proven=True)
@@ -125,13 +134,22 @@ class LuaFirstMigrationTest(unittest.TestCase):
         )
 
     def test_role_effect_and_worn_selectors_guard_typed_ids(self) -> None:
-        for prefix, target, proofs in (
-            ("u_", "actor", {"avatar_actor_proven": True}),
-            ("npc_", "partner", {
-                "avatar_actor_proven": True,
-                "npc_actor_proven": True,
-                "npc_actor_expression": "partner",
-            }),
+        for prefix, target, proofs, effect_proofs in (
+            (
+                "u_", "actor", {"avatar_actor_proven": True},
+                {"avatar_actor_proven": True},
+            ),
+            (
+                "npc_", "partner", {
+                    "avatar_actor_proven": True,
+                    "npc_actor_proven": True,
+                    "npc_actor_expression": "partner",
+                }, {
+                    "avatar_actor_proven": True,
+                    "npc_dialogue_pair_proven": True,
+                    "npc_actor_expression": "context.actors.beta",
+                },
+            ),
         ):
             for selector in ("has_effect", "has_any_effect"):
                 key = prefix + selector
@@ -139,12 +157,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 for candidate in (value, {"context_val": "effect_id"} if selector == "has_effect" else
                                   [{"context_val": "effect_id"}, "cold"]):
                     expression = migrate_lua_first.render_eoc_condition_expression(
-                        {key: candidate, "bodypart": "torso"}, **proofs)
+                        {key: candidate, "bodypart": "torso"}, **effect_proofs)
                     self.assertIsNotNone(expression)
                     self.assertIn("pcall(services.types.id, kind, value)", expression)
                     self.assertIn("not id:is_valid()", expression)
                     self.assertIn(
-                        f"services.effects.has({target}, effect, bodypart, -1)",
+                        f"services.effects.has({'beta' if prefix == 'npc_' else target}, effect, bodypart, -1)",
                         expression,
                     )
             worn_key = prefix + "has_worn_with_flag"
@@ -171,6 +189,47 @@ class LuaFirstMigrationTest(unittest.TestCase):
                     owner_expression,
                 )
 
+    def test_beta_effect_predicates_require_exact_dialogue_pair(self) -> None:
+        condition = {"npc_has_effect": "bleed", "bodypart": "arm_l"}
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_actor_proven=True,
+                npc_actor_expression="actor"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_actor_proven=True,
+                npc_actor_expression="partner"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_any_effect": [], "bodypart": "arm_l"},
+                npc_actor_proven=True,
+                npc_actor_expression="actor"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                condition, npc_dialogue_pair_proven=True,
+                npc_actor_expression="(context.actors.beta) or actor"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_any_effect": ["bleed"]},
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_effect": "bleed", "bodypart": {"u_val": "part"}},
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"))
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            condition, npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta")
+        self.assertIsNotNone(expression)
+        self.assertIn(
+            "local beta = context and context.actors and context.actors.beta",
+            expression,
+        )
+        self.assertIn('beta.kind ~= "creature"', expression)
+        self.assertNotIn('beta.subtype ~= "npc"', expression)
+        self.assertIn("services.effects.has(beta,", expression)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_queries_preserve_short_circuit_and_only_guard_id_errors(self) -> None:
         any_effect = migrate_lua_first.render_eoc_condition_expression(
@@ -183,8 +242,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 "intensity": {"u_val": "minimum"},
             },
             avatar_actor_proven=True,
-            npc_actor_proven=True,
-            npc_actor_expression="partner",
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
         )
         bad_body_part = migrate_lua_first.render_eoc_condition_expression(
             {"u_has_effect": "bleed", "bodypart": "missing"},
@@ -219,10 +278,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
         script = r"""
 local actor={minimum=2}
-local partner={}
+local partner={kind='creature',subtype='monster'}
 local get_calls,has_calls,worn_calls,intensity_reads,unread_reads=0,0,0,0,0
 local stale_effect,stale_worn=false,false
-local context={data=setmetatable({unknown='unknown',factory_error='ID_FACTORY_ERROR'}, {__index=function(_,key)
+local context={actors={beta=partner},data=setmetatable({unknown='unknown',factory_error='ID_FACTORY_ERROR'}, {__index=function(_,key)
  if key=='unread' then unread_reads=unread_reads+1 end
  return 'bleed'
 end})}
@@ -2492,17 +2551,19 @@ assert(calls==COUNT)
                 values = ["poison"] * max(0, count - 1) + (["bleed"] if count else [])
                 expression = migrate_lua_first.render_eoc_condition_expression(
                     {"npc_has_any_effect": values, "bodypart": "arm_l", "intensity": 2},
-                    npc_actor_proven=True, npc_actor_expression="partner")
+                    npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta")
                 self.assertIsNotNone(expression)
                 script = """
-local partner = {}
+local beta = { kind = "creature", subtype = "monster" }
+local context = { actors = { beta = beta } }
 local calls = 0
 local function service_value(r) assert(r.ok); return r.value end
 local function game_id(kind,value)
  return {kind=kind,value=value,is_valid=function() return true end}
 end
 local services = {types={id=function(kind,id) return game_id(kind,id) end},effects={has=function(character,id,part,minimum)
- assert(character==partner and part.value=='arm_l' and minimum==2)
+ assert(character==beta and part.value=='arm_l' and minimum==2)
  calls=calls+1
  return {ok=true,value=id.value=='bleed'}
 end}}
@@ -2521,13 +2582,13 @@ assert(calls == COUNT)
                 value = [value]
             expression = migrate_lua_first.render_eoc_condition_expression(
                 {key: value, "bodypart": "arm_l", "intensity": {"u_val": "minimum"}},
-                avatar_actor_proven=True, npc_actor_proven=True,
-                npc_actor_expression="partner")
+                avatar_actor_proven=True, npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta")
             self.assertIsNotNone(expression)
             script = """
 local actor={effect='bleed',minimum=2000001}
-local partner={effect='poison',part='arm_l',minimum=0}
-local context={data={}}
+local beta={kind='creature',subtype='monster',effect='poison',part='arm_l',minimum=0}
+local context={data={},actors={beta=beta}}
 local present=false
 local intensity_reads=0
 local function service_value(r) assert(r.ok); return r.value end
@@ -2541,7 +2602,7 @@ local services={
  end},
  types={id=function(kind,id) return game_id(kind,id) end},
  effects={get=function(character,id,part)
-   assert(character==partner and id.value=='bleed' and part.value=='arm_l')
+   assert(character==beta and id.value=='bleed' and part.value=='arm_l')
    if not present then return {ok=false,error={code='not_found'}} end
    return {ok=true,value={intensity=2000001}}
  end}
@@ -3274,13 +3335,13 @@ assert(read() == 'bio_batteries')
                 condition["bodypart"] = bodypart
             with self.subTest(bodypart=bodypart):
                 expression = migrate_lua_first.render_eoc_condition_expression(
-                    condition, npc_actor_proven=True,
-                    npc_actor_expression="partner")
+                    condition, npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta")
                 if bodypart is None:
                     self.assertIsNone(expression)
                     continue
                 self.assertIsNotNone(expression)
-                self.assertEqual(expression.count("services.effects.has(partner,"), 1)
+                self.assertEqual(expression.count("services.effects.has(beta,"), 1)
                 self.assertIn(
                     'return has_effect("poison") or has_effect("bleed")',
                     expression,
@@ -3301,12 +3362,14 @@ assert(read() == 'bio_batteries')
     def test_any_effect_generated_lua_queries_live_npc(self) -> None:
         # This executes generated Lua against a service double, not the engine.
         expression = migrate_lua_first.render_eoc_condition_expression(
-            {"npc_has_any_effect": ["poison", "bleed"], "bodypart": "arm_l"},
-            npc_actor_proven=True, npc_actor_expression="partner")
+                {"npc_has_any_effect": ["poison", "bleed"], "bodypart": "arm_l"},
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta")
         self.assertIsNotNone(expression)
         script = """
 local actor = { poison = true, bleed = true }
-local partner = { poison = false, bleed = false }
+local partner = { kind = "creature", subtype = "monster", poison = false, bleed = false }
+local context = { actors = { beta = partner } }
 local calls = 0
 local function game_id(kind,value)
  return {kind=kind,value=value,is_valid=function() return true end}
@@ -3322,6 +3385,13 @@ local services = {
 }
 local function service_value(result) assert(result.ok); return result.value end
 local function predicate() return EXPRESSION end
+context = nil
+assert(predicate() == false and calls == 0)
+context = {}
+assert(predicate() == false and calls == 0)
+context.actors = { beta = { kind = "item" } }
+assert(predicate() == false and calls == 0)
+context.actors.beta = partner
 assert(predicate() == false and calls == 2)
 partner.bleed = true
 assert(predicate() == true and calls == 4)
@@ -3797,7 +3867,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "id": "avatar_any_effect",
                             "required_event": "game_start",
                             "condition": {
-                                "u_has_any_effect": ["downed", "blind"]
+                                "u_has_any_effect": ["downed", "blind"],
+                                "bodypart": "torso",
+                                "intensity": 2,
                             },
                             "effect": {"message": "avatar any"},
                         },
@@ -3845,8 +3917,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 5)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 4)
             self.assertIn(
                 'local effect = resolve_id("effect", "downed")',
                 main,
@@ -3855,12 +3927,16 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 'services.effects.has(actor, effect, bodypart, 1)',
                 main,
             )
+            self.assertIn(
+                'services.effects.has(actor, effect, bodypart, 2)',
+                main,
+            )
             self.assertNotIn(
                 'services.effects.has(actor, services.types.id("effect", "downed")))',
                 main,
             )
             for eoc_id in (
-                "avatar_effect", "avatar_any_effect", "npc_effect",
+                "avatar_effect", "npc_effect",
                 "dynamic_effect", "unproven_npc_effect",
             ):
                 self.assertIn(
@@ -3868,6 +3944,84 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     report,
                 )
             self.assertNotIn("run_eoc", main)
+
+    def test_npc_effect_conditions_need_exact_dialogue_beta(self) -> None:
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "talk_topic", "id": "effect_pair_topic",
+                "responses": [{
+                    "true_eocs": ["paired_npc_effect", "paired_npc_any_effect"]
+                }],
+            },
+        )
+        paired = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index, {
+                    "type": "effect_on_condition", "id": identifier,
+                    "condition": condition,
+                    "effect": {"message": "effect condition"},
+                },
+            )
+            for index, (identifier, condition) in enumerate((
+                ("paired_npc_effect", {
+                    "npc_has_effect": "bleed", "bodypart": "arm_l",
+                    "intensity": 2,
+                }),
+                ("paired_npc_any_effect", {
+                    "npc_has_any_effect": ["poison", "bleed"],
+                    "bodypart": "arm_l", "intensity": 1,
+                }),
+            ), start=1)
+        ]
+        sources = [topic, *paired]
+        dialogue_pair_ids = \
+            migrate_lua_first._npc_dialogue_mission_pair_provenance(sources)
+        talker_pair_ids = \
+            migrate_lua_first._content_callback_actor_provenance(sources)[2]
+        self.assertEqual(talker_pair_ids, dialogue_pair_ids)
+        self.assertEqual(
+            dialogue_pair_ids,
+            frozenset({"paired_npc_effect", "paired_npc_any_effect"}),
+        )
+        for source in paired:
+            with self.subTest(eoc=source.value["id"]):
+                rendered = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                    talker_pair_ids=talker_pair_ids,
+                    npc_dialogue_mission_pair_ids=dialogue_pair_ids,
+                )
+                self.assertIn(
+                    'local beta = context and context.actors and context.actors.beta',
+                    rendered,
+                )
+                self.assertIn('beta.kind ~= "creature"', rendered)
+                self.assertIn("services.effects.has(beta,", rendered)
+                self.assertNotIn(
+                    "condition TODO: translate the legacy condition into a Lua predicate",
+                    rendered,
+                )
+
+        event_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 4, {
+                "type": "effect_on_condition", "id": "unpaired_npc_effect",
+                "required_event": "npc_becomes_hostile",
+                "condition": {
+                    "npc_has_effect": "bleed", "bodypart": "arm_l",
+                    "intensity": 2,
+                },
+                "effect": {"message": "unpaired effect"},
+            },
+        )
+        unpaired = migrate_lua_first.render_eoc(
+            event_eoc, migrate_lua_first.MigrationResult(),
+            talker_pair_ids=talker_pair_ids,
+            npc_dialogue_mission_pair_ids=dialogue_pair_ids,
+        )
+        self.assertNotIn("services.effects.has(beta,", unpaired)
+        self.assertIn(
+            "condition TODO: translate the legacy condition into a Lua predicate",
+            unpaired,
+        )
 
     def test_translates_faction_trust_only_for_proven_dialogue_beta(self) -> None:
         self.assertIsNone(
