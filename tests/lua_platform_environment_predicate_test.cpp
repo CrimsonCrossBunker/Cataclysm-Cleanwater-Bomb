@@ -6,6 +6,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -24,6 +25,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_scale_constants.h"
+#include "worldfactory.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
 #include "translations.h"
@@ -312,6 +314,71 @@ TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
     REQUIRE( outside_target_result.valid() );
     CHECK_FALSE( outside_target_result.get<bool>() );
     CHECK( outside_target_result.get<bool>() == here.sees( edge_target, outside_source, 1 ) );
+}
+
+TEST_CASE( "lua_platform_mod_world_query_matches_native_alias_predicate",
+           "[lua][platform][mods][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    REQUIRE( world_generator != nullptr );
+    WORLD *old_world = world_generator->active_world;
+    WORLD isolated_world( "mod_active_order_semantics" );
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "runtime_only_mod", 4904, lua );
+    on_out_of_scope cleanup( [old_world]() {
+        clear_active_runtimes();
+        world_generator->active_world = old_world;
+    } );
+    world_generator->active_world = &isolated_world;
+    isolated_world.active_mod_order = { mod_id( "dda" ), mod_id( "aftershock" ) };
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    const sol::protected_function world_query = lua.load(
+                "return services.gameplay.mods.is_active_in_world(mod_id)" );
+    const std::array<std::pair<std::string, bool>, 5> legacy_world_cases = {{
+            { "ccb", true },
+            { "dda", true },
+            { "aftershock", true },
+            { "runtime_only_mod", false },
+            { "missing_mod", false },
+        }
+    };
+    dialogue context;
+    for( const auto &test_case : legacy_world_cases ) {
+        const std::string &id = test_case.first;
+        CAPTURE( id );
+        lua["mod_id"] = id;
+        const sol::protected_function_result actual = world_query();
+        REQUIRE( actual.valid() );
+        conditional_t legacy( json_loader::from_string(
+                                  R"({"mod_is_loaded":")" + id + R"("})" ).get_object() );
+        CHECK( actual.get<bool>() == legacy( context ) );
+        CHECK( actual.get<bool>() == test_case.second );
+    }
+
+    isolated_world.active_mod_order = { mod_id( "ccb" ) };
+    lua["mod_id"] = "dda";
+    const sol::protected_function_result requested_alias = world_query();
+    REQUIRE( requested_alias.valid() );
+    conditional_t legacy_alias( json_loader::from_string(
+                                    R"({"mod_is_loaded":"dda"})" ).get_object() );
+    CHECK( requested_alias.get<bool>() == legacy_alias( context ) );
+    CHECK( requested_alias.get<bool>() );
+
+    lua["mod_id"] = "runtime_only_mod";
+    const sol::protected_function loaded_query = lua.load(
+                "return services.gameplay.mods.is_loaded(mod_id)" );
+    const sol::protected_function_result runtime_loaded = loaded_query();
+    REQUIRE( runtime_loaded.valid() );
+    CHECK( runtime_loaded.get<bool>() );
+    const sol::protected_function_result runtime_world_only = world_query();
+    REQUIRE( runtime_world_only.valid() );
+    CHECK_FALSE( runtime_world_only.get<bool>() );
 }
 
 #endif

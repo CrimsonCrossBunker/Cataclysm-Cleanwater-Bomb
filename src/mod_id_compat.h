@@ -16,6 +16,16 @@ inline mod_id canonical_mod_id( const mod_id &id )
     return id.str() == "dda" ? mod_id( "ccb" ) : id;
 }
 
+inline bool mod_id_is_in_active_order( const mod_id &requested,
+                                       const std::vector<mod_id> &active_mod_order )
+{
+    const mod_id canonical_requested = canonical_mod_id( requested );
+    return std::any_of( active_mod_order.begin(), active_mod_order.end(),
+    [&canonical_requested]( const mod_id &active ) {
+        return canonical_mod_id( active ) == canonical_requested;
+    } );
+}
+
 inline bool is_core_data_source( std::string_view id )
 {
     return id == "ccb" || id == "dda";

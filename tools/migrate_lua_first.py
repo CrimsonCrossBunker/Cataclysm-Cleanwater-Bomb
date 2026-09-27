@@ -28020,11 +28020,11 @@ def render_eoc_condition_expression(
             f"{check_expression}, {difficulty_expression}, {die_expression})"
         )
 
-    if set(condition) == {"mod_is_loaded"} and isinstance(
-        condition["mod_is_loaded"], str
+    if set(condition) == {"mod_is_loaded"} and bounded_utf8_string(
+        condition["mod_is_loaded"], 256
     ):
         return (
-            "services.gameplay.mods.is_loaded("
+            "services.gameplay.mods.is_active_in_world("
             f"{lua_quote(condition['mod_is_loaded'])})"
         )
     if set(condition) == {"current_dimension"} and isinstance(

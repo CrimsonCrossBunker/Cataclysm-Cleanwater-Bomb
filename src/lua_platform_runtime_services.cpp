@@ -3098,6 +3098,19 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         const std::vector<mod_id> &order = world_generator->active_world->active_mod_order;
         return std::find( order.begin(), order.end(), requested ) != order.end();
     } );
+    mods.set_function( "is_active_in_world", [require_read]( const std::string & id ) {
+        require_read();
+        if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                "services.gameplay.mods.is_active_in_world requires a bounded non-empty "
+                "Mod id" );
+        }
+        if( !world_generator || world_generator->active_world == nullptr ) {
+            return false;
+        }
+        return mod_id_is_in_active_order(
+                   mod_id( id ), world_generator->active_world->active_mod_order );
+    } );
     mods.set_function( "load_order", [require_read]( const std::string & id ) {
         require_read();
         if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
