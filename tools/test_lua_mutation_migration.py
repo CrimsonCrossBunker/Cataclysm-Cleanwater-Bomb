@@ -164,10 +164,14 @@ end
                     expression = migration.render_eoc_condition_expression(
                         condition,
                         avatar_actor_proven=True,
+                        npc_actor_proven=selector.startswith("npc_"),
                         npc_actor_expression="partner",
                     )
                     self.assertIsNotNone(expression, condition)
                     self.assertIn("services.mutations.", expression)
+                    if selector == "u_has_trait":
+                        self.assertIn("services.mutations.has_id_text", expression)
+                        self.assertNotIn('services.types.id("mutation"', expression)
                 if selector == "npc_has_visible_trait":
                     self.assertIn("is_visible_to(partner, actor,", expression)
                 if "gracken" in filename:

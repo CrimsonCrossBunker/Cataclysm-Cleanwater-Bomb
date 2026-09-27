@@ -732,6 +732,29 @@ sol::table has_state(
                state, sol::make_object( state, present ) );
 }
 
+sol::table has_id_text_state(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_id_text,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Legacy has_trait builds a trait_id from the raw str_or_var result and
+    // looks it up in Character's mutation cache.  Preserve that behavior for
+    // unknown, long, and control-containing text rather than applying the
+    // stricter services.types.id validation contract.
+    const bool present = character->has_trait( trait_id( requested_id_text ) );
+    return make_game_value_result(
+               state, sol::make_object( state, present ) );
+}
+
 mut_count_type mutation_count_type(
     const sol::optional<std::string> &requested,
     const std::string &api_name )
@@ -1450,6 +1473,17 @@ void install_mutation_api(
         require_read();
         return has_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "has_id_text",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & id_text ) {
+        require_read();
+        return has_id_text_state(
+                   lua_state, handle, id_text,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
