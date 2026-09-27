@@ -74,6 +74,7 @@ extern "C" {
 #include "vpart_position.h"
 #include "weather.h"
 #include "widget.h"
+#include "viewer.h"
 
 // Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
 // u_has_flag checks threshold-crossing state rather than literal flag presence.
@@ -4193,6 +4194,23 @@ void install_creature_api(
         return make_game_value_result(
                    state, sol::make_object(
                        state, resolved_observer.value->sees(
+                           get_map(), *resolved_target.value ) ) );
+    } );
+    creatures.set_function(
+        "player_can_see",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &target ) {
+        require_read();
+        sol::state_view state( lua_state );
+        const native_handle_result<Creature> resolved_target =
+            target.resolve_creature(
+                current_runtime_generation(), current_world_generation() );
+        if( !resolved_target ) {
+            return make_game_error_result( state, *resolved_target.error );
+        }
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, get_player_view().sees(
                            get_map(), *resolved_target.value ) ) );
     } );
     creatures.set_function(

@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
+#include <avatar.h>
 #include <calendar.h>
 #include <cata_scope_helpers.h>
 #include <coordinates.h>
@@ -21,6 +22,7 @@ extern "C" {
 #include <monster.h>
 #include <point.h>
 #include <type_id.h>
+#include <viewer.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -40,6 +42,82 @@ static const itype_id itype_rock( "rock" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
+
+TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
+           "[lua][platform][creatures][vision]" )
+{
+    platform_map_api_test_fixture fixture( 710, 10 );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+        fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    const tripoint_bub_ms target_position = player.pos_bub() + tripoint::east;
+    const shared_ptr_fast<monster> target = make_shared_fast<monster>(
+            mon_zombie, target_position );
+    REQUIRE( target );
+    target->set_hp( 1 );
+    REQUIRE( get_creature_tracker().add( target ) );
+    const on_out_of_scope cleanup( [&target]() {
+        if( target && get_creature_tracker().temporary_id( *target ) >= 0 ) {
+            get_creature_tracker().remove( *target );
+        }
+    } );
+    const tripoint_abs_ms position = fixture.get_map().get_abs( target_position );
+    const cata::lua_platform::game_handle target_handle =
+        cata::lua_platform::game_handle::from_creature(
+            *target,
+            { "monster", target->uid().get_value(), position.x(),
+              position.y(), position.z(), {} },
+            fixture.active_runtime, fixture.active_world_generation );
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["target_handle"] = target_handle;
+    fixture.lua["empty_handle"] = cata::lua_platform::game_handle{};
+    fixture.lua["stale_handle"] = target_handle;
+
+    const sol::protected_function_result visible = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(target_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( visible.valid() );
+    const sol::table visible_result = visible.get<sol::table>();
+    REQUIRE( visible_result["ok"].get<bool>() );
+    // The map fixture has no remote-view switch; this checks target handle
+    // resolution and delegation to the active player-view interface only.
+    CHECK( visible_result["value"].get<bool>() ==
+           get_player_view().sees( fixture.get_map(), *target ) );
+
+    const sol::protected_function_result empty = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(empty_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( empty.valid() );
+    const sol::table empty_result = empty.get<sol::table>();
+    REQUIRE_FALSE( empty_result["ok"].get<bool>() );
+    CHECK( empty_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_kind" );
+
+    ++fixture.active_world_generation;
+    const sol::protected_function_result stale = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(stale_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( stale.valid() );
+    const sol::table stale_result = stale.get<sol::table>();
+    REQUIRE_FALSE( stale_result["ok"].get<bool>() );
+    CHECK( stale_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "stale_world" );
+    --fixture.active_world_generation;
+
+    const sol::protected_function_result nil_target = fixture.lua.safe_script( R"(
+        local ok = pcall(services.creatures.player_can_see, nil)
+        assert(not ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( nil_target.valid() );
+}
 
 TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
            "[lua][platform][map][creatures][semantic]" )
