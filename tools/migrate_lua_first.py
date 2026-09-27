@@ -21341,16 +21341,31 @@ def render_static_remove_item_with_effect(
     effect: dict[str, Any], key: str, actor_proven: bool,
     actor_expression: str | None = "actor",
 ) -> list[str] | None:
-    """Reject legacy same-id inventory selection unless a stable item exists.
+    """Lower a static type removal through the exact Character inventory API.
 
-    ``*_remove_item_with`` identifies an item type, not an item instance.  A
-    recursive page scan would select an arbitrary object after a transfer or
-    replacement, so this shape remains an explicit migration TODO until the
-    source supplies a generation-safe item handle.
+    Native ``Character::remove_items_with`` matches the type recursively in
+    inventory, worn items, and the wielded item.  A static item id and proven
+    actor preserve that operation; dynamic ``str_or_var`` values stay TODO.
+    Control bytes are excluded because ``services.types.id`` rejects them.
     """
-    if not actor_proven or actor_expression is None or set(effect) != {key}:
+    if (
+        key not in {"u_remove_item_with", "npc_remove_item_with"} or
+        not isinstance(effect, dict) or
+        not actor_proven or actor_expression is None or
+        set(effect) != {key} or
+        not bounded_platform_id(effect.get(key))
+    ):
         return None
-    return None
+    item_type = effect[key]
+    if any(
+        ord(character) < 0x20 or ord(character) == 0x7F
+        for character in item_type
+    ):
+        return None
+    return [
+        "    service_value(services.inventory.remove_type(",
+        f'        {actor_expression}, services.types.id("item", {lua_quote(item_type)})))',
+    ]
 
 
 def render_static_equipment_effect(
@@ -32405,13 +32420,14 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate item removal through the "
-                        "typed inventory traversal service."
+                        "    -- TODO: translate item removal with a static "
+                        "item ID and a proven Character actor."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded inventory-removal conversion"
+                        "needs a static item ID accepted by services.types.id and "
+                        "a proven Character actor"
                     )
                     all_effects_converted = False
             elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":

@@ -4193,6 +4193,53 @@ sol::table consume_inventory_items(
                    state, std::move( value ) ) );
 }
 
+sol::table remove_inventory_items_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( type.kind() != "item" ) {
+        throw std::invalid_argument(
+            "services.inventory.remove_type requires GameId<item>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    // Match the native remove_items_with contract: an unknown item id simply
+    // matches nothing, and matching recursively covers inventory/equipment.
+    // Do not validate the native id here: the legacy predicate also receives
+    // the empty weapon slot, so the valid null item id must follow that path.
+    // Retire while each native item still has its original address: in
+    // particular, remove_weapon() moves from the Character's weapon slot.
+    const itype_id native_type( type.value() );
+    std::list<item> removed = character->remove_items_with(
+                                  [&native_type]( const item &entry ) {
+        if( entry.typeId() != native_type ) {
+            return false;
+        }
+        retire_item_handle_identity( const_cast<item &>( entry ) );
+        return true;
+    } );
+    if( !removed.empty() ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["removed"] = removed.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table hand_in_inventory_items(
     sol::this_state lua, const game_handle &character_handle,
     const game_handle &recipient_handle,
@@ -7461,6 +7508,18 @@ void install_item_api(
         return consume_inventory_items(
                    lua_state, character, type,
                    count.value_or( 0 ), charges.value_or( 0 ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "remove_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle &character,
+            const script_game_id &type ) {
+        require_item_write();
+        return remove_inventory_items_by_type(
+                   lua_state, character, type,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

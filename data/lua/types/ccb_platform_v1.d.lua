@@ -9390,6 +9390,11 @@ function CcbInventoryApi.give_group(character, group, options) end
 ---@return CcbResult
 function CcbInventoryApi.consume(character, item_type, count, charges) end
 ---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@return CcbResult result `value` contains the item id and matching-item removal count.
+---Removes matching items from inventory, worn equipment, wielded item, and nested contents.
+function CcbInventoryApi.remove_type(character, item_type) end
+---@param character GameHandle Exact live Character handle.
 ---@param recipient GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
 ---@param count? integer
