@@ -8308,6 +8308,30 @@ assert(#events == 9)
                 ".movement.mounted",
             ),
             (
+                "u_is_in_vehicle", {"avatar_actor_proven": True},
+                'actor ~= nil and actor.kind == "creature" and '
+                '(actor.subtype == "avatar" or actor.subtype == "character" '
+                'or actor.subtype == "npc") and '
+                "service_value(services.characters.is_in_vehicle(actor))",
+            ),
+            (
+                "u_is_in_vehicle", {"npc_actor_proven": True},
+                'actor ~= nil and actor.kind == "creature" and '
+                '(actor.subtype == "avatar" or actor.subtype == "character" '
+                'or actor.subtype == "npc") and '
+                "service_value(services.characters.is_in_vehicle(actor))",
+            ),
+            (
+                "npc_is_in_vehicle",
+                {"npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "context.actors.beta"},
+                '(function() local beta = context and context.actors and '
+                'context.actors.beta; if beta == nil or beta.kind ~= "creature" '
+                'or (beta.subtype ~= "avatar" and beta.subtype ~= "character" '
+                'and beta.subtype ~= "npc") then return false end; return '
+                'service_value(services.characters.is_in_vehicle(beta)) end)()',
+            ),
+            (
                 "npc_controlling_vehicle", {"npc_actor_proven": True},
                 "service_value(services.characters.snapshot(actor))"
                 ".movement.controlling_vehicle",
@@ -8363,8 +8387,18 @@ assert(#events == 9)
         self.assertIn('services.effects.has(beta, busy)', npc_available)
         self.assertIn('if not busy:is_valid() then return true end', npc_available)
         for condition, provenance in (
-            ("u_is_in_vehicle", {"avatar_actor_proven": True}),
+            ("u_is_in_vehicle", {"creature_actor_proven": True}),
             ("npc_is_in_vehicle", {"npc_actor_proven": True}),
+            (
+                "npc_is_in_vehicle",
+                {"npc_actor_proven": True, "npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "actor"},
+            ),
+            (
+                "npc_is_in_vehicle",
+                {"npc_actor_proven": True, "npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "(context.actors and context.actors.beta) or actor"},
+            ),
         ):
             with self.subTest(condition=condition):
                 self.assertIsNone(
@@ -8372,6 +8406,66 @@ assert(#events == 9)
                         condition, **provenance
                     )
                 )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_vehicle_condition_lowering_guards_exact_native_roles(self) -> None:
+        u_expression = migrate_lua_first.render_eoc_condition_expression(
+            "u_is_in_vehicle", avatar_actor_proven=True,
+        )
+        npc_expression = migrate_lua_first.render_eoc_condition_expression(
+            "npc_is_in_vehicle", npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIsNotNone(u_expression)
+        self.assertIsNotNone(npc_expression)
+        script = r"""
+local actor={kind='creature',subtype='avatar',on_vehicle=true}
+local beta={kind='creature',subtype='npc',on_vehicle=false}
+local context={actors={beta=beta}}
+local calls=0
+local services={characters={is_in_vehicle=function(target)
+ calls=calls+1
+ return {ok=true,value=target.on_vehicle}
+end}}
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+assert(U_EXPRESSION)
+assert(calls==1)
+actor.subtype='monster'
+assert(not (U_EXPRESSION))
+assert(calls==1)
+actor=nil
+assert(not (U_EXPRESSION))
+assert(calls==1)
+actor={kind='creature',subtype='avatar',on_vehicle=true}
+assert(not (NPC_EXPRESSION))
+assert(calls==2)
+local saved_context=context
+context=nil
+assert(not (NPC_EXPRESSION))
+assert(calls==2)
+context={}
+assert(not (NPC_EXPRESSION))
+assert(calls==2)
+context={actors={beta={kind='creature',subtype='monster',on_vehicle=true}}}
+assert(not (NPC_EXPRESSION))
+assert(calls==2)
+context=saved_context
+beta.on_vehicle=true
+assert(NPC_EXPRESSION)
+assert(calls==3)
+services.characters.is_in_vehicle=function()
+ return {ok=false,error={code='stale_world'}}
+end
+assert(not pcall(function() return U_EXPRESSION end))
+""".replace("U_EXPRESSION", u_expression).replace(
+            "NPC_EXPRESSION", npc_expression
+        )
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_available_checks_any_part_on_the_proven_beta(self) -> None:
