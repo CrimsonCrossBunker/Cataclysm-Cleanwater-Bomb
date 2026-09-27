@@ -345,21 +345,31 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     CHECK( player.maybe_get_value( u_key ) == nullptr );
     CHECK( observer.changes.size() == events_before_remove );
 
+    // This key is used by the real lumbermill dialogue cleanup in
+    // data/json/npcs/lumbermill_employees/TALK_lumbermill_fabricate.json.
+    // npc_lose_var must erase beta's value, leave alpha's same-named value,
+    // and publish no u_var_changed event.
+    const std::string npc_remove_key = "timer_fabricate_waiting";
+    player.set_value( npc_remove_key, "alpha-kept" );
+    partner.set_value( npc_remove_key, "beta-removed" );
     apply_talk_effect( context,
-                       R"({"npc_lose_var":"context_val"})",
+                       R"({"npc_lose_var":"timer_fabricate_waiting"})",
                        "lua_platform_npc_lose_var_semantics" );
-    CHECK( partner.maybe_get_value( npc_key ) == nullptr );
+    CHECK( partner.maybe_get_value( npc_remove_key ) == nullptr );
+    REQUIRE( player.maybe_get_value( npc_remove_key ) != nullptr );
+    CHECK( player.get_value( npc_remove_key ).str() == "alpha-kept" );
     CHECK( observer.changes.size() == events_before_remove );
-    partner.set_value( npc_key, assignment_value );
-    REQUIRE( partner.maybe_get_value( npc_key ) != nullptr );
+    partner.set_value( npc_remove_key, "beta-removed" );
+    REQUIRE( partner.maybe_get_value( npc_remove_key ) != nullptr );
     {
         platform::detail::callback_scope active_callback( *owner );
         run_platform_write( R"(
-            local result = ccb.services.variables.remove(partner_owner, "context_val")
+            local result = ccb.services.variables.remove(partner_owner, "timer_fabricate_waiting")
             assert(result.ok and result.value.removed)
         )" );
     }
-    CHECK( partner.maybe_get_value( npc_key ) == nullptr );
+    CHECK( partner.maybe_get_value( npc_remove_key ) == nullptr );
+    CHECK( player.get_value( npc_remove_key ).str() == "alpha-kept" );
     CHECK( observer.changes.size() == events_before_remove );
 }
 

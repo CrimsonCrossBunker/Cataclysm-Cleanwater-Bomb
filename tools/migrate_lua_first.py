@@ -5276,7 +5276,11 @@ def render_static_false_effect(
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and set(effect) in ({"u_lose_var"}, {"npc_lose_var"}):
         key = next(iter(effect))
-        target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        target = (
+            _proven_character_variable_target(effect_actor_targets, key)
+            if key == "npc_lose_var" else
+            _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        )
         name = effect[key]
         if target is not None and lua_quotable_native_variable_string(name):
             return [
@@ -25233,6 +25237,24 @@ def render_static_character_variable(
     return None
 
 
+def _proven_character_variable_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    selector: str,
+) -> str | None:
+    """Return only an exact Character target proven for a variable selector."""
+    if effect_actor_targets is None:
+        return None
+    role = "npc" if selector.startswith("npc_") else "u"
+    target_info = effect_actor_targets.get(role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] != "character" or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info[0]
+
+
 def render_static_character_wound(
     effect: dict[str, Any],
     key: str,
@@ -29500,13 +29522,19 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"npc_lose_var"} and
+                _proven_character_variable_target(
+                    effect_actor_targets, "npc_lose_var"
+                ) is not None and
                 lua_quotable_native_variable_string(effect.get("npc_lose_var"))
             ):
+                npc_target = _proven_character_variable_target(
+                    effect_actor_targets, "npc_lose_var"
+                )
+                assert npc_target is not None
                 lines.append(
-                    "    services.variables.remove(actor, "
+                    f"    services.variables.remove({npc_target}, "
                     f"{lua_quote(effect['npc_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
