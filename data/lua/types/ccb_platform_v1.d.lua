@@ -438,6 +438,16 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@return CcbResult result `value` is a CcbOvermapRevealResult.
 function CcbOvermapApi.reveal(center, radius) end
 
+---@param position TripointCoord Explicit absolute overmap-terrain position.
+---@param terrain_id string Native terrain text (1..256 UTF-8 bytes, without control characters) compared with `oter_no_dir_or_connections`; this query may lazily load or create/populate its overmap.
+---@return boolean True when the normalized native terrain id equals `terrain_id`.
+function CcbOvermapApi.matches_terrain(position, terrain_id) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain position.
+---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`; this query may lazily load or create/populate its overmap.
+---@return boolean Native `u_at_om_location` / `u_near_om_location` location predicate result at this exact tile.
+function CcbOvermapApi.matches_location(position, location_id) end
+
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}
 
