@@ -8631,7 +8631,7 @@ assert(#events == 9)
                 report,
             )
             self.assertIn(
-                'services.message("hello")', main
+                "services.message(message_text)", main
             )
             self.assertNotIn(
                 "services.mutations.set_active(", main
@@ -19658,6 +19658,21 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "outdoor_only": True,
                         },
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "nul_message",
+                        "required_event": "game_start",
+                        "effect": {"message": "invalid\u0000message"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "outdoor_flag_without_sound",
+                        "required_event": "game_start",
+                        "effect": {
+                            "message": "ordinary message",
+                            "outdoor_only": True,
+                        },
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -19668,24 +19683,105 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertEqual(result.converted, [])
-        self.assertEqual(len(result.partial), 2)
+        self.assertEqual(result.converted, ["outdoor_flag_without_sound"])
+        self.assertEqual(len(result.partial), 3)
         self.assertIn("EOC tagged_message effect #0 needs domain-service conversion", report)
         self.assertIn("EOC outdoor_sound_message effect #0 needs domain-service conversion", report)
+        self.assertIn("EOC nul_message effect #0 needs domain-service conversion", report)
         self.assertNotIn('services.message("Hello <u_name>")', main)
         self.assertNotIn("services.messages.add_from_outdoors", main)
         self.assertNotIn("services.messages.add_if_audible", main)
+        self.assertIn("services.message(message_text)", main)
+        self.assertIn(
+            'services.text.expand_for(services.translate("ordinary message")', main
+        )
 
-    def test_npc_message_noop_requires_exact_npc_provenance(self) -> None:
+    def test_popup_message_keeps_the_native_popup_and_message_order(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps([
                     {
                         "type": "effect_on_condition",
+                        "id": "popup_and_message",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_message": "two visible effects",
+                            "type": "good",
+                            "popup": True,
+                            "popup_flag": "PF_ON_TOP",
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "invalid_popup_type",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_message": "popup is not a message type",
+                            "type": "popup",
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "popup_message_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(result.converted, ["popup_and_message"])
+        self.assertEqual(len(result.partial), 1)
+        self.assertIn(
+            "EOC invalid_popup_type effect #0 needs domain-service conversion",
+            report,
+        )
+        popup = main.index("ccb.presentation.notice_top(message_text)")
+        cancellation = main.index('services.activities.offer_interruption("")')
+        message = main.index('services.messages.add(message_text, "good")')
+        self.assertLess(popup, cancellation)
+        self.assertLess(cancellation, message)
+        self.assertIn('message_target.subtype == "avatar"', main)
+        self.assertNotIn('ccb.presentation.notice(message_text)', main)
+
+    def test_npc_message_requires_a_proven_beta_character(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "talk_topic",
+                        "id": "npc_message_topic",
+                        "responses": [{"true_eocs": "direct_npc_message"}],
+                    },
+                    {
+                        "type": "effect_on_condition",
                         "id": "exact_npc_message",
                         "required_event": "npc_becomes_hostile",
                         "effect": {"npc_message": "ignored by native"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "direct_npc_message",
+                        "effect": {"npc_message": "beta target"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "fatal_killer_message",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"npc_message": "killer sees this", "type": "bad"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "item_beta_message",
+                        "required_event": "character_wields_item",
+                        "effect": {"npc_message": "item beta is not a Character"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_beta_message",
+                        "required_event": "character_kills_monster",
+                        "effect": {"npc_message": "monster beta is not a Character"},
                     },
                     {
                         "type": "effect_on_condition",
@@ -19706,12 +19802,30 @@ assert(not pcall(function() return U_EXPRESSION end))
             "EOC exact_npc_message effect #0" in entry
             for entry in result.todos
         ))
+        self.assertFalse(any(
+            "EOC direct_npc_message effect #0" in entry
+            for entry in result.todos
+        ))
+        self.assertFalse(any(
+            "EOC fatal_killer_message effect #0" in entry
+            for entry in result.todos
+        ))
+        for eoc_id in (
+            "item_beta_message", "monster_beta_message", "unbound_npc_message",
+        ):
+            self.assertTrue(any(
+                f"EOC {eoc_id} effect #0" in entry
+                for entry in result.todos
+            ))
         self.assertTrue(any(
             "EOC unbound_npc_message effect #0" in entry
             for entry in result.todos
         ))
         self.assertIn("needs domain-service conversion", report)
         self.assertNotIn('services.message("role unknown")', main)
+        self.assertIn('message_target = context.actors.beta', main)
+        self.assertIn('message_target = (context.killer or actor)', main)
+        self.assertIn('message_target.subtype == "avatar"', main)
 
     def test_preserves_native_explosion_shrapnel_shapes_and_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -19745,7 +19859,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "shrapnel = { casing_mass = 3, fragment_mass = 0.08 }", main
             )
 
-    def test_lowers_variable_backed_non_popup_messages(self) -> None:
+    def test_dynamic_messages_stay_fail_closed_without_native_tag_expansion(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -19768,12 +19882,19 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, ["dynamic_messages"])
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('services.message(tostring((context.data["message_text"])', main)
-            self.assertIn('services.variables.get_global("avatar_message")', main)
-            self.assertNotIn("message presentation options", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 2)
+            self.assertIn(
+                "EOC dynamic_messages effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_messages effect #1 needs domain-service conversion",
+                report,
+            )
+            self.assertNotIn("context.data[\"message_text\"]", main)
+            self.assertNotIn('services.variables.get_global("avatar_message")', main)
 
     def test_u_message_without_event_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -19830,7 +19951,7 @@ assert(not pcall(function() return U_EXPRESSION end))
 
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn('ccb.presentation.notice_top("on top")', main)
+            self.assertIn("ccb.presentation.notice_top(message_text)", main)
 
     def test_opposite_actor_visibility_requires_exact_alpha_and_beta_proof(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -26331,7 +26452,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 3)
             self.assertTrue(
                 any("switch_action_default" in item for item in result.partial)
             )
@@ -26346,11 +26467,15 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertNotIn('services.message("nested matched")', main)
             self.assertNotIn("switch_action_default__switch_default", main)
             self.assertNotIn("switch_nested_default__switch_default", main)
+            self.assertTrue(any(
+                "EOC switch_selector_default effect #0" in entry
+                for entry in result.todos
+            ))
             self.assertIn(
                 'services.variables.get_global("selector_choice")', main
             )
             self.assertIn(".value or 17", main)
-            self.assertIn('services.message("selector fallback")', main)
+            self.assertNotIn('services.message("selector fallback")', main)
 
     def test_false_effect_switch_reuses_switch_renderer(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -26380,11 +26505,11 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("local switch_case = 0", main)
-            self.assertIn('services.message("zero")', main)
-            self.assertNotIn("switch-control-flow conversion", report)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("local switch_case = 0", main)
+            self.assertNotIn('services.message("zero")', main)
+            self.assertIn("false_effect #0", report)
 
     def test_explicit_invalid_eoc_conditions_are_not_reported_converted(self) -> None:
         for key in ("condition", "deactivate_condition"):
@@ -28927,9 +29052,10 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertTrue(result.todos)
             self.assertEqual({todo.category for todo in result.todos}, {"manual_rewrite"})
             self.assertIn(
-                'services.messages.add("A translated message", "good")',
+                'services.text.expand_for(services.translate("A translated message")',
                 main,
             )
+            self.assertIn('services.messages.add(message_text, "good")', main)
             self.assertIn("services.recipes.forget", main)
             self.assertIn('context.data["effect_to_remove"]', main)
             self.assertNotIn('services.variables.get_global("trait_to_gain")', main)
