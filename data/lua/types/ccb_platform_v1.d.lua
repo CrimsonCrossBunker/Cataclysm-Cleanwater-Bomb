@@ -7670,6 +7670,12 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
 
+---Query vehicle occupancy at the Character's current map square, matching the native vehicle-at-position lookup.
+---This may differ from snapshot movement.in_vehicle, which is a cached passenger flag.
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult result `value` is true when a vehicle occupies character.pos_bub().
+function CcbCharactersApi.is_in_vehicle(character) end
+
 ---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
 ---@param trainer GameHandle Exact live trainer Character handle.
 ---@param student GameHandle Exact live student Character handle.

@@ -27170,6 +27170,30 @@ def render_eoc_condition_expression(
                 "services.creatures.has_line_of_sight(context.actors.beta, actor)"
             )
         return beta_guard + alpha_guard + f"service_value({query})"
+    if condition == "u_is_in_vehicle":
+        if not character_actor_proven:
+            return None
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc") and '
+            "service_value(services.characters.is_in_vehicle(actor))"
+        )
+    if condition == "npc_is_in_vehicle":
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "return service_value(services.characters.is_in_vehicle(beta)) "
+            "end)()"
+        )
     if creature_actor_proven:
         if isinstance(condition, str):
             if condition == "u_is_alive":
@@ -27477,9 +27501,6 @@ def render_eoc_condition_expression(
             return "service_value(services.characters.snapshot(actor)).senses.can_see"
         if npc_query_actor is not None and condition == "npc_can_see":
             return f"service_value(services.characters.snapshot({npc_query_actor})).senses.can_see"
-        # The *_is_in_vehicle predicates are intentionally absent: native
-        # checks whether a vehicle occupies the actor's tile, while this
-        # snapshot field only reports the Character passenger flag.
         if avatar_actor_proven and condition in {
             "u_driving", "u_is_driving",
             "u_controlling_vehicle", "u_is_riding", "u_mounted",

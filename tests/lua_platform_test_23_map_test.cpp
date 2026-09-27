@@ -119,6 +119,101 @@ TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
     REQUIRE( nil_target.valid() );
 }
 
+TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
+           "[lua][platform][characters][vehicle][semantic]" )
+{
+    platform_vehicle_relocation_fixture fixture( 733, 32 );
+    REQUIRE( fixture.test_vehicle );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+        fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    player.setpos( fixture.get_map(), fixture.source_local );
+    player.in_vehicle = false;
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+
+    const sol::protected_function_result on_vehicle = fixture.lua.safe_script(
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
+    REQUIRE( on_vehicle.valid() );
+    const sol::table on_vehicle_result = on_vehicle.get<sol::table>();
+    REQUIRE( on_vehicle_result["ok"].get<bool>() );
+    CHECK_FALSE( player.in_vehicle );
+    CHECK( get_map().veh_at( player.pos_bub() ).has_value() );
+    CHECK( on_vehicle_result["value"].get<bool>() ==
+           get_map().veh_at( player.pos_bub() ).has_value() );
+
+    player.setpos( fixture.get_map(), fixture.target_local );
+    player.in_vehicle = true;
+    const sol::protected_function_result off_vehicle = fixture.lua.safe_script(
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
+    REQUIRE( off_vehicle.valid() );
+    const sol::table off_vehicle_result = off_vehicle.get<sol::table>();
+    REQUIRE( off_vehicle_result["ok"].get<bool>() );
+    CHECK( player.in_vehicle );
+    CHECK_FALSE( get_map().veh_at( player.pos_bub() ).has_value() );
+    CHECK_FALSE( off_vehicle_result["value"].get<bool>() );
+
+    fixture.lua["vehicle_handle"] = fixture.vehicle_handle;
+    const sol::protected_function_result wrong_kind = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(vehicle_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( wrong_kind.valid() );
+    const sol::table wrong_kind_result = wrong_kind.get<sol::table>();
+    REQUIRE_FALSE( wrong_kind_result["ok"].get<bool>() );
+    CHECK( wrong_kind_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_kind" );
+
+    const tripoint_bub_ms non_character_local =
+        fixture.source_local + tripoint_rel_ms( 8, 1, 0 );
+    const shared_ptr_fast<monster> non_character =
+        fixture.add_monster( non_character_local );
+    REQUIRE( non_character );
+    const tripoint_abs_ms non_character_position =
+        fixture.get_map().get_abs( non_character_local );
+    fixture.lua["non_character_handle"] =
+        cata::lua_platform::game_handle::from_creature(
+            *non_character,
+            { "monster", non_character->uid().get_value(),
+              non_character_position.x(), non_character_position.y(),
+              non_character_position.z(), {} },
+            fixture.active_runtime, fixture.active_world_generation );
+    const sol::protected_function_result wrong_subtype = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(non_character_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( wrong_subtype.valid() );
+    const sol::table wrong_subtype_result = wrong_subtype.get<sol::table>();
+    REQUIRE_FALSE( wrong_subtype_result["ok"].get<bool>() );
+    CHECK( wrong_subtype_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_subtype" );
+
+    const sol::protected_function_result saved_character =
+        fixture.lua.safe_script(
+            "stale_character = services.characters.avatar()",
+            sol::script_pass_on_error );
+    REQUIRE( saved_character.valid() );
+    ++fixture.active_world_generation;
+    const sol::protected_function_result stale = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(stale_character)",
+                sol::script_pass_on_error );
+    REQUIRE( stale.valid() );
+    const sol::table stale_result = stale.get<sol::table>();
+    REQUIRE_FALSE( stale_result["ok"].get<bool>() );
+    CHECK( stale_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "stale_world" );
+    --fixture.active_world_generation;
+}
+
 TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
            "[lua][platform][map][creatures][semantic]" )
 {

@@ -4369,6 +4369,26 @@ void install_creature_api(
                    current_world_generation() );
     } );
     characters.set_function(
+        "is_in_vehicle",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        // Native talker_character_const::is_in_vehicle checks this map
+        // occupancy directly.  Character::in_vehicle is only a cached
+        // passenger flag and is not equivalent.
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, get_map().veh_at( character->pos_bub() ).has_value() ) );
+    } );
+    characters.set_function(
         "intimidation",
         [current_runtime_generation, current_world_generation, require_read](
     sol::this_state lua_state, const game_handle & handle ) {
