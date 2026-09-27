@@ -11,6 +11,7 @@
 #include <item_location.h>
 #include <item_uid.h>
 #include <json_loader.h>
+#include <lua_platform_bindings_values.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>
 #include <lua_platform_vehicles.h>
@@ -45,11 +46,14 @@ class Character;
 
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_apple( "apple" );
+static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
+static const itype_id itype_test_charged_fast_cutter( "test_charged_fast_cutter" );
+static const itype_id itype_water_clean( "water_clean" );
 static const vproto_id vehicle_prototype_car( "car" );
 static const vproto_id vehicle_prototype_test_cargo_space( "test_cargo_space" );
 
@@ -1258,6 +1262,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const auto current_world = []() {
         return world_generation;
     };
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
         lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
@@ -1316,6 +1321,178 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                               { { "bandages", 1.0 } } ) );
     CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
                               { { "bandages", 1.0 } } ) );
+}
+
+
+TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker",
+           "[lua][platform][items][semantic]" )
+{
+    clear_avatar();
+    clear_vehicles();
+    clear_map_without_vision();
+    struct cleanup_map_state {
+        ~cleanup_map_state() {
+            clear_vehicles();
+            clear_map_without_vision();
+            clear_avatar();
+        }
+    } cleanup;
+
+    map &here = get_map();
+    avatar &alpha = get_avatar();
+    alpha.normalize();
+    alpha.setID( character_id( 6510 ), true );
+    const tripoint_bub_ms alpha_pos( 60, 60, 0 );
+    alpha.setpos( here, alpha_pos );
+    item &alpha_rock = alpha.inv->add_item(
+                           item( itype_rock ), false, false, false );
+    REQUIRE( alpha.has_item( alpha_rock ) );
+    item &alpha_water = alpha.inv->add_item(
+                            item( itype_water_clean ), false, false, false );
+    alpha_water.set_charges( 3 );
+    item alpha_tool( itype_soldering_iron_portable );
+    alpha_tool.ammo_set( itype_battery, 5 );
+    item &stored_alpha_tool = alpha.inv->add_item(
+                                  std::move( alpha_tool ), false, false, false );
+    REQUIRE( alpha.has_item( stored_alpha_tool ) );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 6511 ), true );
+    cata::lua_platform::register_npc_handle_identity( beta );
+    struct cleanup_npc_handle_identity {
+        npc &value;
+        ~cleanup_npc_handle_identity() {
+            cata::lua_platform::retire_npc_handle_identity( value );
+        }
+    } retire_beta_identity{ beta };
+    const tripoint_bub_ms beta_pos( 65, 60, 0 );
+    beta.setpos( here, beta_pos );
+    item &beta_bandages = beta.inv->add_item(
+                              item( itype_bandages ), false, false, false );
+    REQUIRE( beta.has_item( beta_bandages ) );
+    item &beta_water = beta.inv->add_item(
+                           item( itype_water_clean ), false, false, false );
+    beta_water.set_charges( 2 );
+
+    REQUIRE( item::count_by_charges( itype_water_clean ) );
+    constexpr std::size_t world_generation = 1;
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 65 );
+    const cata::lua_platform::game_handle alpha_handle =
+        cata::lua_platform::game_handle::from_creature(
+            alpha,
+            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle beta_handle =
+        cata::lua_platform::game_handle::from_creature(
+            beta,
+            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = []() {
+        return world_generation;
+    };
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_item_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+    const sol::protected_function has_items =
+        services["inventory"]["has_items"];
+
+    dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
+    const auto compare_items = [&](
+        const char *selector, const cata::lua_platform::game_handle &target,
+        const char *item_id, const std::int64_t count,
+        const std::int64_t charges ) {
+        const std::string native_source =
+            std::string( "{\"" ) + selector + "\":{\"item\":\"" + item_id +
+            "\",\"count\":" + std::to_string( count ) +
+            ",\"charges\":" + std::to_string( charges ) + "}}";
+        const conditional_t native_condition(
+            json_loader::from_string( native_source ).get_object() );
+        const bool expected = native_condition( native_pair );
+        const sol::protected_function_result call = has_items(
+                    target, cata::lua_platform::script_game_id( "item", item_id ),
+                    count, charges );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const bool actual = envelope["value"].get<bool>();
+        CHECK( actual == expected );
+        return actual;
+    };
+
+    CHECK( compare_items( "u_has_items", alpha_handle, "water_clean", 0, 0 ) );
+    CHECK( compare_items( "u_has_items", alpha_handle, "water_clean", 3, 0 ) );
+    CHECK_FALSE( compare_items( "u_has_items", alpha_handle, "water_clean", 4, 0 ) );
+    CHECK( compare_items( "u_has_items", alpha_handle, "water_clean", 1, 2 ) );
+    CHECK_FALSE( compare_items( "u_has_items", alpha_handle, "water_clean", 1, 4 ) );
+    CHECK( compare_items( "u_has_items", alpha_handle, "rock", 1, 0 ) );
+    CHECK_FALSE( compare_items( "u_has_items", alpha_handle, "bandages", 1, 0 ) );
+    CHECK( compare_items( "u_has_items", alpha_handle, "battery", 0, 3 ) );
+    CHECK_FALSE( compare_items( "u_has_items", alpha_handle, "battery", 0, 6 ) );
+    CHECK( compare_items( "npc_has_items", beta_handle, "water_clean", 2, 0 ) );
+    CHECK_FALSE( compare_items( "npc_has_items", beta_handle, "water_clean", 3, 0 ) );
+    CHECK( compare_items( "npc_has_items", beta_handle, "water_clean", 0, 2 ) );
+    CHECK( compare_items( "npc_has_items", beta_handle, "bandages", 1, 0 ) );
+    CHECK_FALSE( compare_items( "npc_has_items", beta_handle, "rock", 1, 0 ) );
+
+    const tripoint_bub_ms loaded_tool_pos( 82, 60, 0 );
+    const tripoint_bub_ms empty_tool_pos( 85, 60, 0 );
+    const ter_str_id floor_id( "t_floor" );
+    REQUIRE( floor_id.is_valid() );
+    here.ter_set( loaded_tool_pos, floor_id.id() );
+    here.ter_set( empty_tool_pos, floor_id.id() );
+
+    item loaded_tool( itype_test_charged_fast_cutter );
+    item battery( itype_heavy_battery_cell );
+    battery.ammo_set( itype_battery, 100 );
+    REQUIRE( loaded_tool.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+    item &loaded_on_map = here.add_item( loaded_tool_pos, std::move( loaded_tool ) );
+    item &empty_on_map = here.add_item(
+                             empty_tool_pos, item( itype_test_charged_fast_cutter ) );
+    item_location loaded_location(
+        map_cursor( here.get_abs( loaded_tool_pos ) ), &loaded_on_map );
+    item_location empty_location(
+        map_cursor( here.get_abs( empty_tool_pos ) ), &empty_on_map );
+    REQUIRE( loaded_location );
+    REQUIRE( empty_location );
+    const cata::lua_platform::game_handle loaded_handle =
+        cata::lua_platform::game_handle::from_item(
+            loaded_on_map,
+            { "map_item", loaded_on_map.uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle empty_handle =
+        cata::lua_platform::game_handle::from_item(
+            empty_on_map,
+            { "map_item", empty_on_map.uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const sol::protected_function has_ammo = services["items"]["has_ammo"];
+    const conditional_t native_has_ammo( "has_ammo" );
+    const auto compare_ammo = [&]( item_location &location,
+                                   const cata::lua_platform::game_handle &tool_handle ) {
+        dialogue native_item_dialogue( get_talker_for( alpha ),
+                                       get_talker_for( location ) );
+        const bool expected = native_has_ammo( native_item_dialogue );
+        const sol::protected_function_result call = has_ammo(
+                    tool_handle, alpha_handle );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const bool actual = envelope["value"].get<bool>();
+        CHECK( actual == expected );
+        return actual;
+    };
+    CHECK( compare_ammo( loaded_location, loaded_handle ) );
+    CHECK_FALSE( compare_ammo( empty_location, empty_handle ) );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

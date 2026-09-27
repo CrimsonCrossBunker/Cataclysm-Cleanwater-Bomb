@@ -17908,9 +17908,76 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.inventory.resources(actor", main)
             self.assertIn("services.inventory.category_count(actor", main)
             self.assertIn("services.inventory.wielded_matches(actor", main)
-            self.assertIn("services.items.ammo_sufficient(context.actors.item, actor)", main)
+            self.assertIn("services.inventory.has_items(alpha", main)
+            self.assertIn("services.items.has_ammo(item_handle, character)", main)
+            self.assertIn('item_handle.kind ~= "item"', main)
             self.assertIn("relative_rot > 1", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+
+    def test_static_has_items_and_has_ammo_require_exact_roles(self) -> None:
+        static = {"u_has_items": {"item": "water_clean", "count": 2}}
+        u_avatar = migrate_lua_first.render_eoc_condition_expression(
+            static, avatar_actor_proven=True,
+        )
+        self.assertIn("local alpha = actor", u_avatar)
+        self.assertIn('local item_type = services.types.id("item", "water_clean")', u_avatar)
+        self.assertIn("if not item_type:is_valid() then return 2 == 0 and 0 == 0 end", u_avatar)
+        self.assertIn(
+            "services.inventory.has_items(alpha, item_type, 2, 0)",
+            u_avatar,
+        )
+
+        u_event = migrate_lua_first.render_eoc_condition_expression(
+            static, weapon_actor_proven=True, npc_actor_proven=True,
+            npc_actor_expression="actor",
+        )
+        self.assertIn("local alpha = actor", u_event)
+        u_pair = migrate_lua_first.render_eoc_condition_expression(
+            static, npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        npc_pair = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_items": {"item": "rock", "count": 1}},
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIn("local alpha = context and context.actors and context.actors.alpha", u_pair)
+        self.assertIn("local beta = context and context.actors and context.actors.beta", npc_pair)
+        self.assertIn('beta.subtype ~= "character"', npc_pair)
+        self.assertIn(
+            "services.inventory.has_items(beta, item_type, 1, 0)",
+            npc_pair,
+        )
+
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            static, generic_character_actor_proven=True, weapon_actor_proven=True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_items": {"item": "rock", "count": 1}},
+            npc_actor_proven=True, npc_actor_expression="actor",
+        ))
+        for unsupported in (
+            {"u_has_items": {"item": "water_clean"}},
+            {"u_has_items": {"item": "water_clean", "count": -1}},
+            {"u_has_items": {"item": "water_clean", "count": 1.5}},
+            {"u_has_items": {"item": "water_clean", "count": {"context_val": "count"}}},
+            {"u_has_items": {"item": {"context_val": "item"}, "count": 1}},
+            {"u_has_items": {"item": "water_clean", "count": 1, "extra": True}},
+            {"u_has_items": {"item": "any", "count": 1}},
+        ):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                unsupported, avatar_actor_proven=True,
+            ))
+
+        has_ammo = migrate_lua_first.render_eoc_condition_expression(
+            "has_ammo", weapon_actor_proven=True,
+        )
+        self.assertIn('item_handle.kind ~= "item"', has_ammo)
+        self.assertIn("item_handle:is_valid()", has_ammo)
+        self.assertIn("services.items.has_ammo(item_handle, character)", has_ammo)
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression("has_ammo")
+        )
 
     def test_static_items_sum_requires_exact_alpha_beta_roles(self) -> None:
         entries = [

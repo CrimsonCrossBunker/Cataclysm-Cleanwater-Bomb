@@ -2425,6 +2425,31 @@ sol::table item_ammo_sufficient(
                state, sol::make_object( state, sufficient ) );
 }
 
+sol::table item_has_ammo(
+    sol::this_state lua, const game_handle &item_handle,
+    const game_handle &character_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        item_handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, resolved.value->ammo_sufficient( character ) ) );
+}
+
 sol::table set_item_flag(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &flag, const bool enabled,
@@ -3549,6 +3574,50 @@ sol::table inventory_resources(
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
+}
+
+sol::table inventory_has_items(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t count,
+    const std::int64_t charges,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.inventory.has_items";
+    require_id_kind( type, "item", std::string( api_name ) );
+    if( count < 0 || count > maximum_inventory_resource_quantity ||
+        charges < 0 || charges > maximum_inventory_resource_quantity ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " count and charges must be within 0..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native( type.value() );
+    const int requested_count = static_cast<int>( count );
+    const int requested_charges = static_cast<int>( charges );
+    const talker_character_const actor( character );
+    bool matches = false;
+    if( requested_charges == 0 && item::count_by_charges( native ) ) {
+        matches = actor.has_charges( native, requested_count, true );
+    } else if( requested_charges > 0 && requested_count == 0 ) {
+        matches = actor.has_charges( native, requested_charges, true );
+    } else {
+        const bool enough_charges = requested_charges == 0 ||
+                                    actor.has_charges(
+                                        native, requested_charges, true );
+        matches = enough_charges &&
+                  actor.has_amount( native, requested_count );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, matches ) );
 }
 
 sol::table inventory_has_items_sum(
@@ -7214,6 +7283,17 @@ void install_item_api(
                    current_world_generation() );
     } );
     items.set_function(
+        "has_ammo",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & item_handle,
+            const game_handle & character ) {
+        require_read();
+        return item_has_ammo(
+                   lua_state, item_handle, character,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
         "ammo_sufficient",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & item_handle,
@@ -7428,6 +7508,18 @@ void install_item_api(
         require_read();
         return inventory_resources(
                    lua_state, character, type, quantity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "has_items",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & character,
+            const script_game_id & type, const std::int64_t count,
+            const std::int64_t charges ) {
+        require_read();
+        return inventory_has_items(
+                   lua_state, character, type, count, charges,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

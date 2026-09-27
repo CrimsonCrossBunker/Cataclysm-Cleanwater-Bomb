@@ -27240,6 +27240,73 @@ def render_npc_selected_generic_rewards_condition(
     )
 
 
+def render_static_item_requirements_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    alpha_character_actor_proven: bool, npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower static legacy item requirements with exact native actor roles."""
+    selector = next(iter(condition), None)
+    if selector not in {"u_has_items", "npc_has_items"} or \
+            set(condition) != {selector}:
+        return None
+    requested = condition[selector]
+    # Native item::count_by_charges("any") plus Character::has_amount gives
+    # "any" wildcard semantics that the typed inventory service does not expose.
+    if (
+        not isinstance(requested, dict) or
+        set(requested) - {"item", "count", "charges"} or
+        not bounded_platform_id(requested.get("item")) or
+        requested.get("item") == "any" or
+        not ({"count", "charges"} & set(requested))
+    ):
+        return None
+
+    quantities: dict[str, int] = {}
+    for key in ("count", "charges"):
+        value = finite_number_literal(requested.get(key, 0))
+        if (
+            value is None or value != math.trunc(float(value)) or
+            not 0 <= value <= 1000000000
+        ):
+            return None
+        quantities[key] = int(value)
+
+    if selector == "u_has_items":
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+            local_name = "alpha"
+        elif avatar_actor_proven or alpha_character_actor_proven:
+            target = "actor"
+            local_name = "alpha"
+        else:
+            return None
+    else:
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    # Unknown non-wildcard IDs match the native zero-count empty result.
+    return (
+        "(function() "
+        f"local {local_name} = {target}; "
+        f"if {local_name} == nil or {character_guard} then return false end; "
+        'local item_type = services.types.id("item", ' +
+        lua_quote(requested["item"]) + "); "
+        f"if not item_type:is_valid() then return {quantities['count']} == 0 "
+        f"and {quantities['charges']} == 0 end; "
+        f"return service_value(services.inventory.has_items({local_name}, item_type, " +
+        str(quantities["count"]) + ", " + str(quantities["charges"]) +
+        ")) end)()"
+    )
+
+
 def render_static_items_sum_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
     npc_dialogue_pair_proven: bool,
@@ -27715,8 +27782,17 @@ def render_eoc_condition_expression(
                 )
         if weapon_actor_proven and condition == "has_ammo":
             return (
-                "context.actors.item ~= nil and "
-                "service_value(services.items.ammo_sufficient(context.actors.item, actor))"
+                "(function() "
+                "local item_handle = context and context.actors and context.actors.item; "
+                "local character = actor; "
+                "if item_handle == nil or item_handle.kind ~= \"item\" or "
+                "not item_handle:is_valid() or character == nil or "
+                "character.kind ~= \"creature\" or "
+                "(character.subtype ~= \"avatar\" and "
+                "character.subtype ~= \"character\" and "
+                "character.subtype ~= \"npc\") then return false end; "
+                "return service_value(services.items.has_ammo(item_handle, character)) "
+                "end)()"
             )
         if weapon_actor_proven and condition == "is_rotten":
             return (
@@ -28162,70 +28238,13 @@ def render_eoc_condition_expression(
                 "services.types.id(\"item\", "
                 f"{lua_quote(condition[item_key])}), 1)).has_charges)"
             )
-    for item_key, actor_proven in (
-        ("u_has_items", avatar_actor_proven),
-        ("npc_has_items", npc_actor_proven),
-    ):
-        raw = condition.get(item_key)
-        if not actor_proven or set(condition) != {item_key} or not isinstance(raw, dict):
-            continue
-        if not bounded_platform_id(raw.get("item")):
-            continue
-        if set(raw) - {"item", "count", "charges"}:
-            continue
-
-        def quantity_expression(value: Any) -> tuple[str, float | None] | None:
-            literal = finite_number_literal(value)
-            if literal is not None:
-                if (
-                    literal < 0 or literal != math.trunc(float(literal)) or
-                    literal > NATIVE_INT_MAX
-                ):
-                    return None
-                return str(int(literal)), literal
-            quantity_actor = (
-                npc_query_actor if item_key.startswith("npc_") else "actor"
-            )
-            if quantity_actor is None:
-                return None
-            rendered = render_eoc_numeric_expression(
-                value, "0", quantity_actor
-            )
-            if rendered is None:
-                return None
-            return (
-                "math.max(0, math.min(2147483647, math.floor((" +
-                rendered + ") + 0.5)))",
-                None,
-            )
-        count_result = quantity_expression(raw.get("count", 0))
-        charges_result = quantity_expression(raw.get("charges", 0))
-        if count_result is None or charges_result is None:
-            continue
-        count_expression, count_number = count_result
-        charges_expression, charges_number = charges_result
-        if count_number == 0 and charges_number == 0:
-            continue
-        item_expr = (
-            "services.types.id(\"item\", " + lua_quote(raw["item"]) + ")"
+    if "u_has_items" in condition or "npc_has_items" in condition:
+        rendered_item_requirements = render_static_item_requirements_condition(
+            condition, avatar_actor_proven, weapon_actor_proven,
+            npc_dialogue_pair_proven,
         )
-        actor = npc_query_actor if item_key.startswith("npc_") else "actor"
-        if actor is None:
-            continue
-        checks: list[str] = []
-        if count_number != 0 or raw.get("count", 0) != 0:
-            checks.append(
-                f"service_value(services.inventory.resources({actor}, "
-                f"{item_expr}, {count_expression})).has_amount"
-            )
-        if charges_number != 0 or raw.get("charges", 0) != 0:
-            checks.append(
-                f"service_value(services.inventory.resources({actor}, "
-                f"{item_expr}, {charges_expression})).has_charges"
-            )
-        if not checks:
-            return None
-        return " and ".join(f"({check})" for check in checks)
+        if rendered_item_requirements is not None:
+            return rendered_item_requirements
     if "u_has_items_sum" in condition or "npc_has_items_sum" in condition:
         return render_static_items_sum_condition(
             condition, avatar_actor_proven, npc_dialogue_pair_proven,
