@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "npc.h"
 #include <talker_character.h>
 
 namespace
@@ -117,6 +118,59 @@ TEST_CASE( "lua_platform_inventory_weapon_state_matches_native_stow_condition",
     REQUIRE( fixture.actor.Character::wield(
                  wielded_value, std::nullopt, false ) );
     check_native_match();
+}
+
+TEST_CASE( "lua_platform_inventory_has_stolen_from_matches_native_condition",
+           "[lua][platform][inventory][ownership][semantic]" )
+{
+    platform_equipment_fixture fixture( 211, 1, 6211 );
+    npc owner;
+    owner.normalize();
+    owner.setID( character_id( 6212 ), true );
+    owner.set_fac( faction_id( "your_followers" ) );
+    REQUIRE( owner.get_faction() != nullptr );
+    REQUIRE( owner.inv_dump().empty() );
+    const cata::lua_platform::game_handle owner_handle =
+        cata::lua_platform::game_handle::from_creature(
+            owner, { "npc", owner.getID().get_value(), 0, 0, 0, {} },
+            fixture.runtime, fixture.active_world_generation );
+
+    item *held_item = fixture.add_item( itype_id( "rock" ) );
+    REQUIRE( held_item != nullptr );
+    const sol::protected_function has_stolen_from =
+        fixture.services["inventory"]["has_stolen_from"];
+    const talker_character_const native_holder( &fixture.actor );
+    const talker_character_const native_owner( &owner );
+    const auto check_native_match = [&]( const bool expected_value ) {
+        const bool expected = native_holder.has_stolen_item( native_owner );
+        CHECK( expected == expected_value );
+        const sol::protected_function_result result = has_stolen_from(
+                    fixture.actor_handle, owner_handle );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        CHECK( envelope["value"].get<bool>() == expected );
+
+        const bool reverse_expected = native_owner.has_stolen_item( native_holder );
+        CHECK_FALSE( reverse_expected );
+        const sol::protected_function_result reverse_result = has_stolen_from(
+                    owner_handle, fixture.actor_handle );
+        REQUIRE( reverse_result.valid() );
+        const sol::table reverse_envelope = reverse_result.get<sol::table>();
+        REQUIRE( reverse_envelope["ok"].get<bool>() );
+        CHECK( reverse_envelope["value"].get<bool>() == reverse_expected );
+    };
+
+    // With available_to_take=true, the native predicate treats an item with
+    // no old-owner faction as a match.
+    check_native_match( true );
+    held_item->set_old_owner( owner.get_faction()->id );
+    check_native_match( true );
+    const faction_id unrelated_old_owner( "robofac" );
+    REQUIRE( unrelated_old_owner.is_valid() );
+    REQUIRE( unrelated_old_owner != owner.get_faction()->id );
+    held_item->set_old_owner( unrelated_old_owner );
+    check_native_match( false );
 }
 
 TEST_CASE( "lua_platform_equipment_wield_inventory_to_wield",

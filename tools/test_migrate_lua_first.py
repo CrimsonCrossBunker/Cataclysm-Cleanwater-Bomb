@@ -17151,8 +17151,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 ("npc_has_items_sum", "npc_becomes_hostile", {
                     "npc_has_items_sum": [{"item": "scrap", "amount": 2}]
                 }),
-                ("u_has_stolen_item", "game_start", "u_has_stolen_item"),
-                ("npc_has_stolen_item", "npc_becomes_hostile", "npc_has_stolen_item"),
             ]
             source.write_text(
                 json.dumps(
@@ -17271,6 +17269,133 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("native wrapper requires a dialogue beta NPC", main)
             self.assertIn("direct talk-topic beta NPC proof", report)
+    def test_stolen_item_conditions_require_proven_alpha_beta_pair(self) -> None:
+        expected = (
+            '(function() local alpha = actor; local beta = context and '
+            'context.actors and context.actors.beta; local function '
+            'is_character(value) return value ~= nil and value.kind == "creature" '
+            'and (value.subtype == "avatar" or value.subtype == "character" '
+            'or value.subtype == "npc") end; if not is_character(alpha) or '
+            'not is_character(beta) then return false end; return '
+            'service_value(services.inventory.has_stolen_from(alpha, beta)) end)()'
+        )
+        for condition in ("u_has_stolen_item", "npc_has_stolen_item"):
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, npc_dialogue_pair_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                    ),
+                    expected,
+                )
+                for provenance in (
+                    {},
+                    {"npc_dialogue_pair_proven": True,
+                     "npc_actor_expression": "actor"},
+                    {"npc_dialogue_pair_proven": True,
+                     "npc_actor_expression": "context.actors.interlocutor"},
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            condition, **provenance
+                        )
+                    )
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "stolen_item_topic",
+                "responses": [
+                    {"true_eocs": "dialogue_u_stolen_item"},
+                    {"true_eocs": "dialogue_npc_stolen_item"},
+                ],
+            },
+        )
+        dialogue_eocs = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index, {
+                    "type": "effect_on_condition", "id": eoc_id,
+                    "condition": condition,
+                    "effect": {"message": "stolen"},
+                },
+            )
+            for index, (eoc_id, condition) in enumerate((
+                ("dialogue_u_stolen_item", "u_has_stolen_item"),
+                ("dialogue_npc_stolen_item", "npc_has_stolen_item"),
+            ))
+        ]
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, *dialogue_eocs]
+        )
+        self.assertEqual(
+            pair_ids,
+            frozenset({"dialogue_u_stolen_item", "dialogue_npc_stolen_item"}),
+        )
+        for dialogue_eoc in dialogue_eocs:
+            paired = migrate_lua_first.render_eoc(
+                dialogue_eoc, migrate_lua_first.MigrationResult(),
+                talker_pair_ids=pair_ids,
+                npc_dialogue_mission_pair_ids=pair_ids,
+            )
+            self.assertIn("has_stolen_from(alpha, beta)", paired)
+            self.assertNotIn(
+                "condition TODO: translate the legacy condition into a Lua predicate",
+                paired,
+            )
+
+        single_npc_event = migrate_lua_first.SourceObject(
+            Path("source.json"), 2, {
+                "type": "effect_on_condition", "id": "single_npc_stolen_item",
+                "required_event": "npc_becomes_hostile",
+                "condition": "npc_has_stolen_item",
+                "effect": {"message": "stolen"},
+            },
+        )
+        unpaired = migrate_lua_first.render_eoc(
+            single_npc_event, migrate_lua_first.MigrationResult(),
+            npc_dialogue_mission_pair_ids=frozenset(),
+        )
+        self.assertNotIn("services.inventory.has_stolen_from(", unpaired)
+        self.assertIn(
+            "condition TODO: translate the legacy condition into a Lua predicate",
+            unpaired,
+        )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_stolen_item_condition_guards_both_character_roles(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            "npc_has_stolen_item", npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        script = """
+local actor = { kind = "creature", subtype = "avatar", role = "alpha" }
+local beta = { kind = "creature", subtype = "npc", role = "beta" }
+local context = nil
+local calls = 0
+local function service_value(value) return value end
+local services = { inventory = { has_stolen_from = function(holder, owner)
+    calls = calls + 1
+    assert(holder == actor and owner == beta)
+    return true
+end } }
+assert(not (PREDICATE))
+context = {}
+assert(not (PREDICATE))
+context = { actors = { beta = { kind = "item" } } }
+assert(not (PREDICATE))
+context.actors.beta = { kind = "creature", subtype = "monster" }
+assert(not (PREDICATE))
+actor = { kind = "creature", subtype = "monster" }
+context.actors.beta = beta
+assert(not (PREDICATE))
+actor = { kind = "creature", subtype = "character", role = "alpha" }
+assert(PREDICATE)
+assert(calls == 1)
+""".replace("PREDICATE", predicate or "false")
+        result = subprocess.run(
+            ["lua", "-"], input=script, text=True,
+            capture_output=True, timeout=10
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_can_stow_weapon_conditions_require_proven_native_characters(self) -> None:
         u_expression = migrate_lua_first.render_eoc_condition_expression(

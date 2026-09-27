@@ -9422,9 +9422,12 @@ function CcbInventoryApi.item_radiation(character, flag, aggregate) end
 ---@param criterion GameId
 ---@return CcbResult
 function CcbInventoryApi.wielded_matches(character, criterion) end
----@param holder GameHandle Exact live Character handle.
----@param owner GameHandle Exact live Character handle.
----@return CcbResult
+---Search the holder's native inventory dump and test each item with
+---`item:is_old_owner(owner, true)`, matching the legacy stolen-item condition.
+---An item with no old-owner faction therefore matches, as it does natively.
+---@param holder GameHandle Exact live Character whose inventory is searched.
+---@param owner GameHandle Exact live Character compared with each item's old owner.
+---@return CcbResult result `value` is a boolean.
 function CcbInventoryApi.has_stolen_from(holder, owner) end
 ---Read native weapon state without changing equipment.
 ---`can_stow` is false when the Character has no selected wielded weapon.
