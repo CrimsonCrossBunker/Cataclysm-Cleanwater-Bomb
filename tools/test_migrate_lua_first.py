@@ -18870,6 +18870,62 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
+    def test_static_consume_item_sum_effects_remain_todo_for_native_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_avatar_consume_sum",
+                            "required_event": "game_start",
+                            "effect": [
+                                {
+                                    "u_consume_item_sum": [
+                                        {"item": "battery", "amount": 2},
+                                        {"item": "scrap", "amount": 1},
+                                    ]
+                                }
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_npc_consume_sum",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {
+                                    "npc_consume_item_sum": [
+                                        {"item": "bandages", "amount": 1},
+                                        {"item": "scrap", "amount": 2},
+                                    ]
+                                }
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "consume_sum_boundaries"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertEqual(
+                main.count("TODO: native weighted consumption scans one unordered"),
+                2,
+            )
+            self.assertNotIn("services.inventory.consume_sum(", main)
+            self.assertIn("EOC static_avatar_consume_sum effect #0", todo_text)
+            self.assertIn("EOC static_npc_consume_sum effect #0", todo_text)
+            self.assertIn("native alpha/beta selection including mutable beta", todo_text)
+            self.assertIn("incremental spill/removal semantics without rollback", report)
+
     def test_item_category_spawn_rates_lower_only_bounded_unique_literals(self) -> None:
         valid_effect = {
             "set_item_category_spawn_rates": [
