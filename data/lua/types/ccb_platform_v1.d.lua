@@ -9386,8 +9386,12 @@ function CcbInventoryApi.choose_many_map(character, candidates, options) end
 ---@param quantity integer
 ---@return CcbResult
 function CcbInventoryApi.resources(character, item_type, quantity) end
----@param character GameHandle Exact live Character handle.
----@param entries table
+---@class CcbInventorySumEntry
+---@field item GameId GameId<item> queried by native item type id.
+---@field amount number Finite desired quantity in (0, 1000000000].
+
+---@param character GameHandle Exact live Character handle; counts its crafting inventory and all cargo of loaded vehicles owned by its faction.
+---@param entries CcbInventorySumEntry[] Dense array of 1..128 weighted item entries.
 ---@return CcbResult
 function CcbInventoryApi.has_items_sum(character, entries) end
 ---@param character GameHandle Exact live Character handle.

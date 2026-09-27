@@ -17697,12 +17697,90 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("relative_rot > 1", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
+    def test_static_items_sum_requires_exact_alpha_beta_roles(self) -> None:
+        entries = [
+            {"item": "scrap", "amount": 2},
+            {"item": "bandages"},
+        ]
+        u_avatar = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_items_sum": entries}, avatar_actor_proven=True,
+        )
+        self.assertIsNotNone(u_avatar)
+        self.assertIn("local alpha = actor", u_avatar)
+        self.assertIn("services.inventory.has_items_sum(\n        alpha", u_avatar)
+
+        pair_provenance = {
+            "npc_dialogue_pair_proven": True,
+            "npc_actor_expression": "context.actors.beta",
+        }
+        u_pair = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_items_sum": entries}, **pair_provenance,
+        )
+        npc_pair = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_items_sum": entries}, npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIn("local alpha = context and context.actors and context.actors.alpha", u_pair)
+        self.assertIn("local beta = context and context.actors and context.actors.beta", npc_pair)
+        self.assertIn('beta.subtype ~= "npc"', npc_pair)
+        self.assertIn("services.inventory.has_items_sum(\n        beta", npc_pair)
+
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_items_sum": entries}, generic_character_actor_proven=True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_items_sum": entries}, npc_actor_proven=True,
+            npc_actor_expression="actor",
+        ))
+        for unsupported in (
+            {"u_has_items_sum": [{"item": "scrap", "amount": 0}]},
+            {"u_has_items_sum": [{"item": "scrap", "amount": {"context_val": "count"}}]},
+            {"u_has_items_sum": ["scrap"]},
+            {"u_has_items_sum": []},
+        ):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                unsupported, avatar_actor_proven=True,
+            ))
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "items_sum_topic",
+                "responses": [{"true_eocs": "items_sum_pair"}],
+            },
+        )
+        paired_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "items_sum_pair",
+                "condition": {"and": [
+                    {"u_has_items_sum": entries},
+                    {"npc_has_items_sum": entries},
+                ]},
+                "effect": {"message": "weighted inventory"},
+            },
+        )
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, paired_eoc]
+        )
+        _, _, talker_pair_ids = migrate_lua_first._content_callback_actor_provenance(
+            [topic, paired_eoc]
+        )
+        paired = migrate_lua_first.render_eoc(
+            paired_eoc, migrate_lua_first.MigrationResult(),
+            talker_pair_ids=talker_pair_ids,
+            npc_dialogue_mission_pair_ids=pair_ids,
+        )
+        self.assertIn("services.inventory.has_items_sum(", paired)
+        self.assertIn("context and context.actors and context.actors.alpha", paired)
+        self.assertIn("context and context.actors and context.actors.beta", paired)
+
     def test_inventory_conditions_with_unrepresented_semantics_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             cases = [
-                ("u_has_items_sum", "game_start", {
-                    "u_has_items_sum": [{"item": "scrap", "amount": 2}]
+                ("u_has_items_sum_dynamic", "avatar_moves", {
+                    "u_has_items_sum": [{
+                        "item": "scrap", "amount": {"context_val": "count"}
+                    }]
                 }),
                 ("npc_has_items_sum", "npc_becomes_hostile", {
                     "npc_has_items_sum": [{"item": "scrap", "amount": 2}]

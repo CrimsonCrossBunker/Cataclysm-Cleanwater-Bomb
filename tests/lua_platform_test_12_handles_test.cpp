@@ -1,21 +1,32 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <avatar.h>
 #include <character_id.h>
+#include <condition.h>
+#include <coordinates.h>
+#include <dialogue.h>
+#include <dialogue_helpers.h>
+#include <game_constants.h>
 #include <inventory.h>
 #include <item.h>
 #include <item_location.h>
 #include <item_uid.h>
+#include <json_loader.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>
 #include <lua_platform_vehicles.h>
+#include <map.h>
+#include <map_helpers.h>
 #include <math_parser_diag_value.h>
 #include <monster.h>
 #include <npc.h>
 #include <pimpl.h>
+#include <player_helpers.h>
 #include <pocket_type.h>
 #include <ret_val.h>
 #include <type_id.h>
+#include <units.h>
 #include <veh_type.h>
+#include <vpart_position.h>
 #include <vehicle.h>
 #include <cstddef>
 #include <cstdint>
@@ -34,11 +45,13 @@ class Character;
 
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_apple( "apple" );
+static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const vproto_id vehicle_prototype_car( "car" );
+static const vproto_id vehicle_prototype_test_cargo_space( "test_cargo_space" );
 
 TEST_CASE( "lua_platform_game_handles_reject_wrong_owner_and_world", "[lua][platform]" )
 {
@@ -1133,6 +1146,176 @@ TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",
         assert(not unknown.ok and unknown.error.code == "stale_continuation")
     )", sol::script_pass_on_error );
     REQUIRE( default_pages.valid() );
+}
+
+
+TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
+           "[lua][platform][items][semantic]" )
+{
+    clear_avatar();
+    clear_vehicles();
+    clear_map_without_vision();
+    struct cleanup_map_state {
+        ~cleanup_map_state() {
+            clear_vehicles();
+            clear_map_without_vision();
+            clear_avatar();
+        }
+    } cleanup;
+
+    map &here = get_map();
+    avatar &alpha = get_avatar();
+    alpha.normalize();
+    alpha.setID( character_id( 6490 ), true );
+    const tripoint_bub_ms alpha_pos( 60, 60, 0 );
+    alpha.setpos( here, alpha_pos );
+    item alpha_rock( itype_rock );
+    REQUIRE( alpha.wield( alpha_rock, std::nullopt, false ) );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 6491 ), true );
+    cata::lua_platform::register_npc_handle_identity( beta );
+    struct cleanup_npc_handle_identity {
+        npc &value;
+        ~cleanup_npc_handle_identity() {
+            cata::lua_platform::retire_npc_handle_identity( value );
+        }
+    } retire_beta_identity{ beta };
+    const faction_id beta_faction( "no_faction" );
+    REQUIRE( beta.get_faction_id() == beta_faction );
+    const tripoint_bub_ms beta_pos( 65, 60, 0 );
+    beta.setpos( here, beta_pos );
+    item beta_apple( itype_apple );
+    REQUIRE( beta.wield( beta_apple, std::nullopt, false ) );
+
+    const tripoint_bub_ms alpha_vehicle_pos( 90, 60, 0 );
+    const tripoint_bub_ms beta_vehicle_pos( 95, 60, 0 );
+    const tripoint_bub_ms unrelated_vehicle_pos( 100, 60, 0 );
+    const ter_str_id floor_id( "t_floor" );
+    REQUIRE( floor_id.is_valid() );
+    for( const tripoint_bub_ms &pos : { alpha_vehicle_pos, beta_vehicle_pos,
+                                        unrelated_vehicle_pos } ) {
+        here.ter_set( pos, floor_id.id() );
+    }
+
+    vehicle *alpha_vehicle = here.add_vehicle(
+                                 vehicle_prototype_test_cargo_space, alpha_vehicle_pos,
+                                 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( alpha_vehicle != nullptr );
+    alpha_vehicle->set_owner( alpha.get_faction_id() );
+    std::optional<vpart_reference> alpha_cargo =
+        here.veh_at( alpha_vehicle_pos ).cargo();
+    REQUIRE( alpha_cargo.has_value() );
+    alpha_cargo->vehicle().add_item( here, alpha_cargo->part(), item( itype_apple ) );
+    alpha_cargo->vehicle().add_item( here, alpha_cargo->part(), item( itype_apple ) );
+
+    vehicle *beta_vehicle = here.add_vehicle(
+                                vehicle_prototype_test_cargo_space, beta_vehicle_pos,
+                                0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( beta_vehicle != nullptr );
+    beta_vehicle->set_owner( beta.get_faction_id() );
+    std::optional<vpart_reference> beta_cargo =
+        here.veh_at( beta_vehicle_pos ).cargo();
+    REQUIRE( beta_cargo.has_value() );
+    beta_cargo->vehicle().add_item( here, beta_cargo->part(), item( itype_rock ) );
+
+    vehicle *unrelated_vehicle = here.add_vehicle(
+                                     vehicle_prototype_test_cargo_space,
+                                     unrelated_vehicle_pos,
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( unrelated_vehicle != nullptr );
+    const faction_id unrelated_faction( "tacoma_commune" );
+    REQUIRE( unrelated_faction.is_valid() );
+    REQUIRE( unrelated_faction != alpha.get_faction_id() );
+    REQUIRE( unrelated_faction != beta.get_faction_id() );
+    unrelated_vehicle->set_owner( unrelated_faction );
+    std::optional<vpart_reference> unrelated_cargo =
+        here.veh_at( unrelated_vehicle_pos ).cargo();
+    REQUIRE( unrelated_cargo.has_value() );
+    unrelated_cargo->vehicle().add_item( here, unrelated_cargo->part(),
+                                         item( itype_bandages ) );
+
+    constexpr std::size_t world_generation = 1;
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 64 );
+    const cata::lua_platform::game_handle alpha_handle =
+        cata::lua_platform::game_handle::from_creature(
+            alpha,
+            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle beta_handle =
+        cata::lua_platform::game_handle::from_creature(
+            beta,
+            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = []() {
+        return world_generation;
+    };
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_item_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+    const sol::protected_function has_items_sum =
+        services["inventory"]["has_items_sum"];
+
+    dialogue native_dialogue( get_talker_for( alpha ), get_talker_for( beta ) );
+    const auto compare_sum = [&]( const char *selector,
+                                  const cata::lua_platform::game_handle &target,
+                                  std::initializer_list<std::pair<const char *, double>> requested ) {
+        std::string native_source = std::string( "{\"" ) + selector + "\":[";
+        sol::table entries = lua.create_table();
+        std::size_t index = 1;
+        bool first = true;
+        for( const auto &entry : requested ) {
+            if( !first ) {
+                native_source += ",";
+            }
+            first = false;
+            native_source += std::string( "{\"item\":\"" ) + entry.first +
+                             "\",\"amount\":" + std::to_string( entry.second ) + "}";
+            sol::table row = lua.create_table();
+            row["item"] = cata::lua_platform::script_game_id( "item", entry.first );
+            row["amount"] = entry.second;
+            entries[index++] = row;
+        }
+        native_source += "]}";
+        const conditional_t native_condition(
+            json_loader::from_string( native_source ).get_object() );
+        const bool expected = native_condition( native_dialogue );
+        const sol::protected_function_result call = has_items_sum( target, entries );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const bool actual = envelope["value"].get<bool>();
+        CHECK( actual == expected );
+        return actual;
+    };
+
+    CHECK( compare_sum( "u_has_items_sum", alpha_handle,
+                        { { "apple", 2.0 } } ) );
+    CHECK( compare_sum( "u_has_items_sum", alpha_handle,
+                        { { "rock", 1.0 } } ) );
+    CHECK( compare_sum( "u_has_items_sum", alpha_handle,
+                        { { "apple", 4.0 }, { "rock", 2.0 } } ) );
+    CHECK( compare_sum( "npc_has_items_sum", beta_handle,
+                        { { "rock", 1.0 } } ) );
+    CHECK( compare_sum( "npc_has_items_sum", beta_handle,
+                        { { "apple", 1.0 } } ) );
+    CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
+                              { { "apple", 2.0 } } ) );
+    CHECK( compare_sum( "npc_has_items_sum", beta_handle,
+                        { { "rock", 2.0 }, { "apple", 2.0 } } ) );
+    CHECK_FALSE( compare_sum( "u_has_items_sum", alpha_handle,
+                              { { "bandages", 1.0 } } ) );
+    CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
+                              { { "bandages", 1.0 } } ) );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

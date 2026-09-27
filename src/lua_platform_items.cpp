@@ -3593,7 +3593,7 @@ sol::table inventory_has_items_sum(
             desired > maximum_inventory_resource_quantity ) {
             throw std::invalid_argument(
                 std::string( api_name ) +
-                " amount must be finite and within 0..1000000000" );
+                " amount must be finite and within (0, 1000000000]" );
         }
         entries.push_back( { id, desired } );
     }
@@ -3606,7 +3606,18 @@ sol::table inventory_has_items_sum(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    const inventory available_inventory = character->crafting_inventory();
+    inventory available_inventory = character->crafting_inventory(
+                                        character->pos_bub(), pickup_range );
+    map &here = get_map();
+    for( const wrapped_vehicle &wv : here.get_vehicles() ) {
+        if( wv.v->owner == character->get_faction_id() ) {
+            for( const tripoint_abs_ms &veh_pt : wv.v->get_points() ) {
+                if( optional_vpart_position vp = here.veh_at( veh_pt ) ) {
+                    vp->form_inventory( here, available_inventory );
+                }
+            }
+        }
+    }
     double coverage = 0.0;
     for( const weighted_entry &entry : entries ) {
         const itype_id native( entry.id.value() );
