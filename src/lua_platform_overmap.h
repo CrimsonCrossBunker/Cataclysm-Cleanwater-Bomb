@@ -63,8 +63,10 @@ std::optional<game_handle_error> validate_overmap_tile_token(
     const game_handle_runtime &runtime_generation,
     std::size_t world_generation );
 
-// Install bounded, existing-overmap-only observation, search and mutation
-// APIs. Calls may load saved overmaps, but never generate new overmaps.
+// Install bounded observation, search and mutation APIs. Most overmap scans
+// only inspect existing tiles; the explicit native-condition matchers call
+// overmap_buffer::ter() and may lazily load a saved overmap or create and
+// populate an overmap for the requested OMT to preserve legacy semantics.
 void install_overmap_api(
     sol::table &services,
     std::function<game_handle_runtime()> current_runtime_generation,

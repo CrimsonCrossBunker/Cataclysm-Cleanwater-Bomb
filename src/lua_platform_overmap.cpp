@@ -1222,6 +1222,48 @@ bool overmap_matches(
                selector.match );
 }
 
+bool overmap_matches_terrain(
+    const script_tripoint_coord &position,
+    const std::string &requested )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_terrain";
+    const tripoint_abs_omt native_position =
+        require_absolute_omt( position, std::string( api_name ) );
+    const std::string terrain_id =
+        require_selector_text( requested, std::string( api_name ) );
+    const oter_id &terrain = overmap_buffer.ter( native_position );
+    return oter_no_dir_or_connections( terrain ) == terrain_id;
+}
+
+bool overmap_matches_location(
+    const script_tripoint_coord &position,
+    const std::string &requested )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_location";
+    const tripoint_abs_omt native_position =
+        require_absolute_omt( position, std::string( api_name ) );
+    const std::string location_id =
+        require_selector_text( requested, std::string( api_name ) );
+    const oter_id &terrain = overmap_buffer.ter( native_position );
+    if( location_id == "FACTION_CAMP_ANY" ) {
+        if( overmap_buffer.find_camp( native_position.xy() ) ) {
+            return true;
+        }
+        // Preserve the native condition's legacy camp-terrain fallback.
+        return terrain.id().str().find( "faction_base_camp" ) !=
+               std::string::npos;
+    }
+    if( location_id == "FACTION_CAMP_START" ) {
+        const std::optional<mapgen_arguments> *arguments =
+            overmap_buffer.mapgen_args( native_position );
+        return !recipe_group::get_recipes_by_id(
+                   "all_faction_base_types", terrain, arguments ).empty();
+    }
+    return oter_no_dir_or_connections( terrain ) == location_id;
+}
+
 bool overmap_is_camp(
     const script_tripoint_coord &position,
     const bool include_legacy_terrain )
@@ -2099,6 +2141,22 @@ void install_overmap_api(
         require_read();
         return overmap_matches(
                    position, selector, match );
+    } );
+    overmap.set_function(
+        "matches_terrain",
+        [require_read](
+            const script_tripoint_coord &position,
+            const std::string &terrain_id ) {
+        require_read();
+        return overmap_matches_terrain( position, terrain_id );
+    } );
+    overmap.set_function(
+        "matches_location",
+        [require_read](
+            const script_tripoint_coord &position,
+            const std::string &location_id ) {
+        require_read();
+        return overmap_matches_location( position, location_id );
     } );
     overmap.set_function(
         "is_safe",

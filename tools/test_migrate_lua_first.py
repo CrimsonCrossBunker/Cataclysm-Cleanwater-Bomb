@@ -16667,7 +16667,31 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "point_omt",
+                            "id": "avatar_camp_omt",
+                            "required_event": "game_start",
+                            "condition": {"u_at_om_location": "FACTION_CAMP_ANY"},
+                            "effect": {"message": "camp"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_zero_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": 0,
+                            },
+                            "effect": {"message": "same tile"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_default_point_omt",
+                            "required_event": "game_start",
+                            "condition": {"overmap_at_point": "field"},
+                            "effect": {"message": "alpha point"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "point_variable_omt",
                             "required_event": "game_start",
                             "condition": {
                                 "overmap_at_point": "field",
@@ -16684,14 +16708,45 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 1)
-            self.assertEqual(main.count("services.overmap.matches("), 2)
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(main.count("services.overmap.matches_location("), 3)
+            self.assertEqual(main.count("services.overmap.matches_terrain("), 1)
+            self.assertNotIn("services.overmap.matches(", main)
             self.assertIn(
-                "EOC npc_omt condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC npc_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
-            self.assertIn('services.coords.project_to(context.data["point"], "omt")', main)
+            self.assertIn(
+                "EOC point_variable_omt condition TODO: translate overmap_at_point only with a proven typed point source",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
+            self.assertNotIn('context.data["point"]', main)
+
+    def test_shipped_mapgen_location_condition_uses_the_native_overmap_query(self) -> None:
+        source = REPOSITORY_ROOT / "data/json/effects_on_condition/mapgen_eocs/lab_mapgen_eocs.json"
+        eoc = next(
+            entry.value for entry in migrate_lua_first.load_objects([source])
+            if entry.value.get("id") == "lab_security_check"
+        )
+        self.assertEqual(eoc["required_event"], "avatar_enters_omt")
+        self.assertIn(eoc["required_event"], migrate_lua_first.AVATAR_ACTOR_EVENTS)
+
+        location = eoc["condition"]["and"][0]
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            location, avatar_actor_proven=True
+        )
+
+        self.assertIsNotNone(expression)
+        self.assertIn("services.overmap.matches_location(", expression)
+        self.assertIn('"lab_1x1x2_RES_8_apartments_lower"', expression)
+        self.assertNotIn("services.characters.avatar()", expression)
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_at_om_location": "field\n"},
+                avatar_actor_proven=True,
+            )
+        )
 
     def test_visibility_and_location_conditions_use_typed_character_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -16751,7 +16806,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                     {"npc_allies": 1},
                                     {"npc_allies_global": 1},
                                     {"u_service": 0},
-                                    {"u_near_om_location": "field", "range": 2},
+                                    {"u_near_om_location": "field", "range": 0},
                                 ]
                             },
                             "effect": {"message": "avatar"},
@@ -16776,12 +16831,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn("services.npcs.count_allies(false)", main)
             self.assertIn("services.npcs.count_allies(true)", main)
-            self.assertIn("services.overmap.search(", main)
+            self.assertIn("services.overmap.matches_location(", main)
+            self.assertNotIn("services.overmap.search(", main)
 
     def test_translates_batch_28_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -20264,12 +20320,17 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
             self.assertIn('services.types.id("effect", tostring(', main)
             self.assertIn('services.registry.get("monster",', main)
-            self.assertIn("services.overmap.search", main)
+            self.assertNotIn("services.overmap.search", main)
+            self.assertNotIn("services.overmap.matches_location", main)
+            self.assertIn(
+                "dynamic_character_shapes condition TODO: translate the legacy condition into a Lua predicate",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
             self.assertIn("services.inventory.resources", main)
             self.assertIn('services.types.id("body_part", "torso")', main)
             self.assertIn("services.effects.add", main)
@@ -21947,8 +22008,8 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertEqual(len(result.partial), 1)
             self.assertNotIn("services.camps.near(", main)
             self.assertIn(
-                "condition TODO: translate FACTION_CAMP_ANY only with an explicit "
-                "camp handle; nearest/location scanning is not supported",
+                "condition TODO: translate FACTION_CAMP_ANY near queries only with the native "
+                "square scan, camp lookup, and lazy overmap lookup",
                 report,
             )
 
@@ -22034,14 +22095,11 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn("services.characters.avatar()", main)
-            self.assertIn(
-                'service_value(services.variables.get_global("destination")).value',
-                main,
-            )
-            self.assertIn("services.overmap.matches(", main)
+            self.assertNotIn('services.variables.get_global("destination")', main)
+            self.assertNotIn("services.overmap.matches_terrain(", main)
 
     def test_missing_test_eoc_is_reported_as_missing_content_not_control_flow(
         self,

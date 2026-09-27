@@ -854,6 +854,14 @@ def bounded_platform_id(value: Any) -> bool:
     )
 
 
+def bounded_overmap_condition_id(value: Any) -> bool:
+    """Match the terrain text accepted by native-condition query services."""
+    return (
+        bounded_platform_id(value) and
+        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
+    )
+
+
 def bounded_platform_body_part_id(value: Any) -> bool:
     # `NULL` is not a body-part ID (the registered null ID is `bp_null`).
     # Platform typed IDs reject it while native bodypart conversion falls
@@ -27510,67 +27518,33 @@ def render_eoc_condition_expression(
             "service_value(services.npcs.has_role_nearby(actor, "
             f"{lua_quote(condition['npc_role_nearby'])}, 48))"
         )
-    for location_key, actor_proven in (
-        ("u_near_om_location", avatar_actor_proven or npc_actor_proven),
-        ("npc_near_om_location", npc_actor_proven),
+    if (
+        avatar_actor_proven and
+        set(condition) <= {"u_near_om_location", "range"} and
+        set(condition) != {"range"}
     ):
-        if not (
-            actor_proven and set(condition) <= {location_key, "range"}
-        ):
-            continue
-        raw_location = condition.get(location_key)
-        faction_camp = raw_location == "FACTION_CAMP_ANY"
+        raw_location = condition.get("u_near_om_location")
+        raw_range = condition.get("range")
+        # Native points_in_radius takes an int and visits a closed square.  A
+        # zero literal is the only bounded scan that has the same one-tile
+        # behavior as the direct location query; all nonzero/dynamic radii can
+        # include OMTs that Platform's bounded existing-tile search omits.
         if (
-            isinstance(raw_location, str) and
-            raw_location.startswith("FACTION_CAMP_") and
-            not faction_camp
+            "range" in condition and
+            not isinstance(raw_range, bool) and
+            isinstance(raw_range, (int, float)) and
+            raw_range == 0 and
+            bounded_overmap_condition_id(raw_location)
         ):
-            continue
-        if faction_camp:
-            # FACTION_CAMP_ANY is an ambient nearest/location scan.  The
-            # Platform API requires an exact camp handle, so this legacy
-            # predicate remains an explicit migration TODO.
-            continue
-        elif bounded_platform_id(raw_location):
-            location_expression = lua_quote(raw_location)
-        else:
-            location_expression = render_eoc_string_expression(
-                raw_location,
-                npc_query_actor if location_key.startswith("npc_") else "actor",
+            position = (
+                "services.coords.project_to("
+                "service_value(services.characters.snapshot(actor)).creature.position, "
+                "\"omt\")"
             )
-            if location_expression is None:
-                continue
-        radius = _literal_nonnegative_integer(condition.get("range", 1), 60)
-        if radius is None:
-            dynamic_radius = render_eoc_numeric_expression(
-                condition.get("range", 1), "1",
-                npc_query_actor if location_key.startswith("npc_") else "actor",
+            return (
+                f"services.overmap.matches_location({position}, "
+                f"{lua_quote(raw_location)})"
             )
-            if dynamic_radius is None:
-                continue
-            radius_expression = (
-                "math.max(0, math.min(60, math.floor((" +
-                dynamic_radius + ") + 0.5)))"
-            )
-        else:
-            radius_expression = str(radius)
-        actor = (
-            npc_query_actor if location_key.startswith("npc_") else
-            "actor" if avatar_actor_proven
-            else "services.characters.avatar()"
-        )
-        if actor is None:
-            continue
-        position = (
-            "services.coords.project_to("
-            "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
-            "\"omt\")"
-        )
-        return (
-            "services.overmap.search("
-            f"{position}, {{ types = {{ {location_expression} }}, "
-            f"radius = {radius_expression}, limit = 1 }}).returned > 0"
-        )
 
     # Inventory predicates are lowered only for a proven avatar/NPC actor and
     # literal GameIds.  The normal resources/category/wielded APIs preserve
@@ -27993,53 +27967,37 @@ def render_eoc_condition_expression(
                     f"{loc_expression}) == "
                     f"{id_expression}"
                 )
-    for location_key, actor_proven in (
-        ("u_at_om_location", avatar_actor_proven or npc_actor_proven),
-        ("npc_at_om_location", npc_actor_proven),
-    ):
-        if (
-            actor_proven and set(condition) == {location_key} and
-            render_eoc_string_expression(condition.get(location_key)) is not None
-        ):
-            actor = (
-                npc_query_actor if location_key.startswith("npc_") else
-                "actor" if avatar_actor_proven
-                else "services.characters.avatar()"
-            )
-            if actor is None:
-                continue
-            position = (
-                "services.coords.project_to("
-                "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
-                "\"omt\")"
-            )
-            target_expression = render_eoc_string_expression(
-                condition[location_key], actor
-            )
-            if target_expression is None:
-                continue
-            return (
-                f"services.overmap.matches({position}, "
-                f"{target_expression})"
-            )
     if (
-        set(condition) == {"overmap_at_point", "point"} and
-        render_eoc_string_expression(condition.get("overmap_at_point")) is not None
+        avatar_actor_proven and
+        set(condition) == {"u_at_om_location"} and
+        bounded_overmap_condition_id(condition.get("u_at_om_location"))
     ):
-        point = _coordinate_source_expression(
-            condition["point"], avatar_actor_proven, npc_actor_proven
+        position = (
+            "services.coords.project_to("
+            "service_value(services.characters.snapshot(actor)).creature.position, "
+            "\"omt\")"
         )
-        if point is not None:
-            position = f"services.coords.project_to({point}, \"omt\")"
-            target_expression = render_eoc_string_expression(
-                condition["overmap_at_point"]
-            )
-            if target_expression is None:
-                return None
-            return (
-                f"services.overmap.matches({position}, "
-                f"{target_expression})"
-            )
+        return (
+            f"services.overmap.matches_location({position}, "
+            f"{lua_quote(condition['u_at_om_location'])})"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"overmap_at_point"} and
+        bounded_overmap_condition_id(condition.get("overmap_at_point"))
+    ):
+        # With no explicit point var, native f_overmap_at_point uses alpha's
+        # absolute position.  Arbitrary point variables remain TODO because
+        # their dynamic type/default conversion is not proven by source.
+        position = (
+            "services.coords.project_to("
+            "service_value(services.characters.snapshot(actor)).creature.position, "
+            "\"omt\")"
+        )
+        return (
+            f"services.overmap.matches_terrain({position}, "
+            f"{lua_quote(condition['overmap_at_point'])})"
+        )
     for location_key, actor_proven in (
         ("u_can_see_location", avatar_actor_proven or npc_actor_proven),
         ("npc_can_see_location", npc_actor_proven),
@@ -29190,13 +29148,46 @@ def render_eoc(
             )
         elif (
             isinstance(raw_condition, dict) and
-            raw_condition.get("u_near_om_location", raw_condition.get(
-                "npc_near_om_location"
-            )) == "FACTION_CAMP_ANY"
+            raw_condition.get("u_near_om_location") == "FACTION_CAMP_ANY"
         ):
             condition_todo = (
-                "translate FACTION_CAMP_ANY only with an explicit camp handle; "
-                "nearest/location scanning is not supported"
+                "translate FACTION_CAMP_ANY near queries only with the native "
+                "square scan, camp lookup, and lazy overmap lookup"
+            )
+        elif isinstance(raw_condition, dict) and (
+            "npc_at_om_location" in raw_condition or
+            "npc_near_om_location" in raw_condition
+        ):
+            condition_todo = (
+                "translate npc_*_om_location only with a proven beta talker; "
+                "the current EOC event actor proves alpha only"
+            )
+        elif (
+            isinstance(raw_condition, dict) and
+            "u_near_om_location" in raw_condition and
+            raw_condition.get("range", 1) != 0
+        ):
+            condition_todo = (
+                "translate nonzero or dynamic u_near_om_location only with "
+                "the full native square scan and lazy overmap lookup"
+            )
+        elif (
+            isinstance(raw_condition, dict) and
+            "overmap_at_point" in raw_condition and
+            "point" in raw_condition
+        ):
+            condition_todo = (
+                "translate overmap_at_point only with a proven typed point "
+                "source and native lazy overmap lookup"
+            )
+        elif (
+            isinstance(raw_condition, dict) and
+            "u_at_om_location" in raw_condition and
+            not exact_avatar_actor_proven
+        ):
+            condition_todo = (
+                "translate u_at_om_location only with a proven alpha/avatar "
+                "handle and native lazy overmap lookup"
             )
         lines.append(f"    -- TODO: {condition_todo}.")
         result.add_todo(
