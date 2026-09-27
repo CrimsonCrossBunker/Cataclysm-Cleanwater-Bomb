@@ -14573,10 +14573,87 @@ assert(#events == 9)
             self.assertFalse(result.partial)
             self.assertIn("services.npcs.open_rules(actor)", main)
             self.assertIn(
+                'if (actor) ~= nil and (actor).kind == "creature" and (actor).subtype == "npc" then',
+                main,
+            )
+            self.assertIn(
                 "services.npcs.orders.open_pickup_rules(context.actors.beta)", main
             )
             self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "npc")', main)
             self.assertNotIn("needs domain-service conversion", report)
+
+    def test_non_wrapped_npc_talker_actions_follow_native_actor_true_selection(self) -> None:
+        event_result = migrate_lua_first.MigrationResult()
+        event_only = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "hostile_npc_talker_actions",
+                "required_event": "npc_becomes_hostile",
+                "effect": ["npc_rules_menu", "npc_wants_to_talk"],
+            }), event_result)
+        self.assertIn("local actor = actor_override or context.actors.npc", event_only)
+        self.assertIn(
+            "services.npcs.open_rules(actor)", event_only
+        )
+        self.assertIn(
+            "services.npcs.request_talk(actor)", event_only
+        )
+        self.assertIn(
+            'and (actor).kind == "creature" and (actor).subtype == "npc" then',
+            event_only,
+        )
+
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_npc_talker_actions",
+            "effect": ["npc_rules_menu", "npc_wants_to_talk"],
+        })
+        self.assertIn("services.npcs.open_rules(context.actors.beta)", direct_pair)
+        self.assertIn(
+            "services.npcs.request_talk(context.actors.beta)", direct_pair
+        )
+        self.assertIn(
+            'and (context.actors.beta).kind == "creature" and '
+            '(context.actors.beta).subtype == "npc" then',
+            direct_pair,
+        )
+        self.assertFalse(event_result.todos)
+
+        death_result = migrate_lua_first.MigrationResult()
+        npc_death = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "npc_death_talker_actions",
+                "eoc_type": "NPC_DEATH",
+                "effect": ["npc_rules_menu", "npc_wants_to_talk"],
+            }), death_result)
+        self.assertNotIn("services.npcs.open_rules", npc_death)
+        self.assertNotIn("services.npcs.request_talk", npc_death)
+        self.assertTrue(death_result.todos)
+
+    def test_non_wrapped_npc_talker_actions_reject_unproven_generic_pair(self) -> None:
+        eoc = migrate_lua_first.SourceObject(Path("source.json"), 1, {
+            "type": "effect_on_condition", "id": "generic_pair_npc_talker_actions",
+            "required_event": "npc_becomes_hostile",
+            "effect": ["npc_rules_menu", "npc_wants_to_talk"],
+        })
+        topic = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "talk_topic", "id": "generic_pair_npc_talker_topic",
+            "responses": [{"effect": {"run_eocs": eoc.value["id"]}}],
+        })
+        pair_ids = migrate_lua_first._content_callback_actor_provenance(
+            [topic, eoc]
+        )[2]
+        direct_pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, eoc]
+        )
+        self.assertIn(eoc.value["id"], pair_ids)
+        self.assertNotIn(eoc.value["id"], direct_pair_ids)
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(
+            eoc, result, talker_pair_ids=pair_ids,
+            npc_dialogue_mission_pair_ids=direct_pair_ids)
+        self.assertNotIn("services.npcs.open_rules", rendered)
+        self.assertNotIn("services.npcs.request_talk", rendered)
+        self.assertTrue(result.todos)
 
     def test_keeps_implicit_dialogue_gaps_while_migrating_npc_training(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

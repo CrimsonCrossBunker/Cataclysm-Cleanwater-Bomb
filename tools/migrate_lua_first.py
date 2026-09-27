@@ -29136,6 +29136,21 @@ def render_eoc(
         character_actor_proven and
         npc_actor_expression == "context.actors.beta"
     )
+    # These two non-WRAP string effects use dialogue::actor(true), which
+    # falls back to alpha when beta is absent. Keep their provider proof
+    # separate from static WRAP's beta-only proof: a direct topic callback
+    # selects beta; the sole PROVEN_NPC_ACTOR_EVENTS member,
+    # npc_becomes_hostile, is sent without talkers and eoc_events::notify
+    # builds an NPC alpha with no beta, so actor is the native fallback. Do
+    # not generalize that event proof to NPC_DEATH: npc::die builds alpha=npc
+    # and beta=killer when present. Generic event fields and pair closures do
+    # not establish which talker actor(true) selected and remain manual until
+    # that invocation path is proven.
+    npc_talker_ui_actor_expression = None
+    if npc_dialogue_mission_pair_proven:
+        npc_talker_ui_actor_expression = "context.actors.beta"
+    elif required_event == "npc_becomes_hostile" and not talker_pair_override:
+        npc_talker_ui_actor_expression = "actor"
     exact_alpha_effect_kind: str | None = None
     alpha_effect_kinds: set[str] = set()
     if (
@@ -30898,16 +30913,20 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and effect == "npc_wants_to_talk":
-                target = npc_actor_expression or "actor"
-                if callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract:
-                    lines.extend([
-                        f'    if ({target}).subtype == "npc" then',
-                        f"        service_value(services.npcs.request_talk({target}))",
-                        "    end",
-                    ])
-                else:
-                    lines.append(f"    service_value(services.npcs.request_talk({target}))")
+            elif (
+                npc_talker_ui_actor_expression is not None and
+                effect == "npc_wants_to_talk"
+            ):
+                # Native f_wants_to_talk(true) returns without mutation when
+                # actor(true)->get_npc() is null; request_talk requires an
+                # exact NPC handle, so preserve that no-op with a typed guard.
+                target = npc_talker_ui_actor_expression
+                lines.extend([
+                    f'    if ({target}) ~= nil and ({target}).kind == "creature" and '
+                    f'({target}).subtype == "npc" then',
+                    f"        service_value(services.npcs.request_talk({target}))",
+                    "    end",
+                ])
                 converted_effect = True
             elif effect == "u_wants_to_talk" and (
                 callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
@@ -33624,12 +33643,17 @@ def render_eoc(
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "npc_rules_menu":
-                # This callback is not a WRAP entry; retain its own native
-                # lowering until its actor proof is reviewed separately.
-                provider = npc_actor_expression or "actor"
+            elif (
+                npc_talker_ui_actor_expression is not None and
+                effect == "npc_rules_menu"
+            ):
+                # Native passes get_npc() to the rules UI; a null NPC logs and
+                # exits without changing rules. open_rules requires an exact
+                # NPC handle, so skip that no-state-change case.
+                provider = npc_talker_ui_actor_expression
                 lines.extend([
-                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and '
+                    f'({provider}).subtype == "npc" then',
                     f"        service_value(services.npcs.open_rules({provider}))",
                     "    end",
                 ])
