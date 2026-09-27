@@ -9389,6 +9389,18 @@ function CcbInventoryApi.give_group(character, group, options) end
 ---@param charges? integer
 ---@return CcbResult
 function CcbInventoryApi.consume(character, item_type, count, charges) end
+---@class CcbInventoryConsumeByTypeResult
+---@field id GameId GameId<item> that was requested.
+---@field count integer Effective native item count after count-by-charges conversion.
+---@field charges integer Effective native charge count after count-by-charges conversion.
+---@field matched boolean Whether the native amount-or-charge branch matched; zero-count requests can match without changing items.
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item> whose type is consumed.
+---@param count integer Native signed-int item count; negative and zero values retain native behavior.
+---@param charges integer Native signed-int charge count; matching charges may come from tools.
+---@return CcbResult result `value` is a CcbInventoryConsumeByTypeResult.
+---Uses the native Character search, including tool charges. Unknown IDs follow the native undefined-item and missing-popup path. Insufficient charges can still fall through to the amount branch; an unmatched request opens the native missing-item popup.
+function CcbInventoryApi.consume_by_type(character, item_type, count, charges) end
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
 ---@return CcbResult result `value` contains the item id and matching-item removal count.

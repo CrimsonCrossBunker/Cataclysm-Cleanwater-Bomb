@@ -16593,9 +16593,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 2)
             self.assertTrue(result.todos)
+            self.assertEqual(main.count("services.inventory.consume_by_type("), 3)
             self.assertNotIn("services.inventory.consume(", main)
             self.assertNotIn("services.inventory.consume_sum(", main)
-            self.assertIn("TODO: translate the inventory consumption", main)
+            self.assertIn("TODO: translate the weighted inventory consumption", main)
             self.assertNotIn("services.world.put_field(", main)
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.mapgen.apply(", main)
@@ -17066,7 +17067,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.inventory.consume(", main)
             self.assertNotIn("services.inventory.consume_sum(", main)
             self.assertNotIn('tostring((context.data["item_id"])', main)
-            self.assertIn("inventory consumption through", report)
+            self.assertIn(
+                "consume_item needs a proven static item/count/charges shape",
+                report,
+            )
 
     def test_lowers_variable_backed_pickup_limits_and_positions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23803,8 +23807,9 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn("services.activities.cancel", main)
             self.assertIn("services.mutations.grant", main)
             self.assertIn("services.spawns.monster_configured", main)
-            self.assertNotIn("services.inventory.consume", main)
-            self.assertIn("TODO: translate the inventory consumption", main)
+            self.assertIn("services.inventory.consume_by_type", main)
+            self.assertNotIn("services.inventory.consume(", main)
+            self.assertNotIn("TODO: translate the inventory consumption", main)
             self.assertIn("services.recipes.forget", main)
             self.assertIn("services.time.reschedule", main)
             self.assertIn("remainder_candidates", main)
@@ -26733,7 +26738,7 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertNotIn("services.characters.choose_technique(", main)
             self.assertIn("services.text.expand_for(", main)
 
-    def test_dialogue_item_popup_uses_native_hand_in_notice(self) -> None:
+    def test_dialogue_item_popup_with_ordered_give_notice_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -26763,7 +26768,7 @@ assert(calls==3 and context.data.entry=='zombie')
             )
             main = result.files[Path("main.lua")]
 
-            self.assertFalse(
+            self.assertTrue(
                 any("EOC hand_in_item" in entry for entry in result.partial)
             )
             self.assertFalse(
@@ -26773,14 +26778,11 @@ assert(calls==3 and context.data.entry=='zombie')
                     for entry in result.todos
                 )
             )
-            self.assertIn("services.inventory.hand_in(", main)
+            self.assertNotIn("services.inventory.hand_in(", main)
+            self.assertNotIn("services.inventory.consume_by_type(", main)
             self.assertIn(
-                "actor, hand_in_recipient", main
+                "u_consume_item popup=true also needs its ordered give notice", main
             )
-            self.assertIn(
-                "local hand_in_recipient = context.actors.beta", main
-            )
-            self.assertIn("ccb.presentation.notice(hand_in.notice)", main)
 
     def test_talker_pair_attack_targets_beta_and_monster_attack_is_native_noop(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -27536,12 +27538,110 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "npc_gets_item", True, True
             )
         )
-        self.assertIsNone(
+        self.assertEqual(
             migrate_lua_first.render_static_inventory_consume(
-                {"u_consume_item": "sample_item"},
+                {"u_consume_item": "apple"},
                 "u_consume_item",
                 True,
                 False,
+            ),
+            [
+                "    service_value(services.inventory.consume_by_type(",
+                '        actor, services.types.id("item", "apple"),',
+                "        1, 0))",
+            ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_inventory_consume(
+                {
+                    "npc_consume_item": "water_clean",
+                    "count": 0,
+                    "charges": 3,
+                    "popup": True,
+                },
+                "npc_consume_item",
+                False,
+                True,
+                "actor",
+            ),
+            [
+                "    service_value(services.inventory.consume_by_type(",
+                '        actor, services.types.id("item", "water_clean"),',
+                "        0, 3))",
+            ],
+        )
+        # Native itype_id lookup creates an undefined runtime template for a
+        # missing but well-formed ID, then follows the ordinary missing-item
+        # popup path; static existence is not a prerequisite for this lowering.
+        self.assertEqual(
+            migrate_lua_first.render_static_inventory_consume(
+                {"u_consume_item": "__unknown_static_item__"},
+                "u_consume_item",
+                True,
+                False,
+            ),
+            [
+                "    service_value(services.inventory.consume_by_type(",
+                '        actor, services.types.id("item", "__unknown_static_item__"),',
+                "        1, 0))",
+            ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_inventory_consume(
+                {
+                    "npc_consume_item": "water_clean",
+                    "count": migrate_lua_first.NATIVE_INT_MIN,
+                },
+                "npc_consume_item",
+                False,
+                True,
+                "actor",
+            )[2],
+            f"        {migrate_lua_first.NATIVE_INT_MIN}, 0))",
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {
+                    "npc_consume_item": "water_clean",
+                    "count": migrate_lua_first.NATIVE_INT_MAX + 1,
+                },
+                "npc_consume_item",
+                False,
+                True,
+                "actor",
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {"u_consume_item": "apple", "popup": True},
+                "u_consume_item",
+                True,
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {"u_consume_item": "apple\nred"},
+                "u_consume_item",
+                True,
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {"u_consume_item": "apple", "count": 1.5},
+                "u_consume_item",
+                True,
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {"npc_consume_item": "water_clean", "count": 1},
+                "npc_consume_item",
+                False,
+                True,
+                "context.actors.beta",
             )
         )
         self.assertIsNone(

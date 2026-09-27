@@ -24187,36 +24187,52 @@ def render_static_inventory_consume(
     npc_event_character_actor_proven: bool,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    # The legacy operation searches the holder for an arbitrary matching item
-    # type.  6D1 only lowers an already proven Item handle; keep this shape a
-    # visible TODO instead of selecting a same-id instance.
+    allowed = {key, "popup", "count", "charges"}
+    if key not in {"u_consume_item", "npc_consume_item"} or set(effect) - allowed:
+        return None
+    item_type = effect.get(key)
     if (
-        key == "u_consume_item" and avatar_actor_proven and
-        npc_actor_expression is not None and effect.get("popup") is True and
-        set(effect) <= {key, "popup", "count", "charges"} and
-        bounded_platform_id(effect.get(key))
+        not bounded_platform_id(item_type) or
+        any(ord(character) < 0x20 or ord(character) == 0x7F for character in item_type)
     ):
-        count = effect.get("count", 1)
-        charges = effect.get("charges", 0)
-        if (
-            not isinstance(count, int) or isinstance(count, bool) or
-            not isinstance(charges, int) or isinstance(charges, bool) or
-            count < 0 or charges < 0 or
-            count > NATIVE_INT_MAX or charges > NATIVE_INT_MAX
-        ):
+        return None
+
+    popup = effect.get("popup", False)
+    if not isinstance(popup, bool):
+        return None
+    if key == "u_consume_item":
+        # Native u_consume_item with popup=true presents the give message
+        # before attempting consumption.  The service opens only the later
+        # native missing-item popup, so it cannot preserve that ordered notice.
+        if not avatar_actor_proven or popup:
             return None
-        return [
-            f"    local hand_in_recipient = {npc_actor_expression}",
-            "    if hand_in_recipient ~= nil then",
-            "        local hand_in = service_value(services.inventory.hand_in(",
-            "            actor, hand_in_recipient, services.types.id(\"item\", " +
-            f"{lua_quote(effect[key])}), {count}, {charges}))",
-            "        if hand_in.notice ~= nil and hand_in.notice ~= \"\" then",
-            "            ccb.presentation.notice(hand_in.notice)",
-            "        end",
-            "    end",
-        ]
-    return None
+        target = "actor"
+    else:
+        # actor(true) is the event's primary Character only when the event
+        # bridge proves that exact NPC actor.  A dialogue beta or a generic
+        # callback actor is not interchangeable with it.
+        if not npc_event_character_actor_proven or npc_actor_expression != "actor":
+            return None
+        target = "actor"
+
+    raw_charges = effect.get("charges", 0)
+    if not isinstance(raw_charges, int) or isinstance(raw_charges, bool):
+        return None
+    default_count = 0 if "charges" in effect else 1
+    count = effect.get("count", default_count)
+    charges = raw_charges
+    if (
+        not isinstance(count, int) or isinstance(count, bool) or
+        not NATIVE_INT_MIN <= count <= NATIVE_INT_MAX or
+        not NATIVE_INT_MIN <= charges <= NATIVE_INT_MAX
+    ):
+        return None
+
+    return [
+        "    service_value(services.inventory.consume_by_type(",
+        f"        {target}, services.types.id(\"item\", {lua_quote(item_type)}),",
+        f"        {count}, {charges}))",
+    ]
 
 
 def render_static_pickup_items(
@@ -24245,8 +24261,11 @@ def render_static_inventory_consume_sum(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    # Weighted consumption is also a same-id inventory search.  It needs an
-    # explicit item-handle migration before it can enter Platform code.
+    # Native consumption uses an unordered owned-item set across inventory,
+    # nearby map items, and vehicle cargo, spills whole-item contents, and
+    # accumulates one coverage fraction across all requested types.  The
+    # current crafting-inventory consume_sum service does not preserve those
+    # source, ownership, ordering, or removal semantics.
     return None
 
 
@@ -31196,7 +31215,7 @@ def render_eoc(
             ):
                 key = "u_consume_item" if "u_consume_item" in effect else "npc_consume_item"
                 rendered = render_static_inventory_consume(
-                    effect, key, character_actor_proven,
+                    effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
                     npc_actor_expression,
                 )
@@ -31205,14 +31224,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the inventory consumption "
-                        "through the typed inventory service."
+                        "    -- TODO: this item ID, numeric, actor, or popup "
+                        "shape is outside the proven consume_by_type lowering."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs inventory consumption through the typed "
-                        "inventory service"
+                        "consume_item needs a proven static item/count/charges "
+                        "shape and exact actor; u_consume_item popup=true also "
+                        "needs its ordered give notice"
                     )
                     all_effects_converted = False
             elif (
