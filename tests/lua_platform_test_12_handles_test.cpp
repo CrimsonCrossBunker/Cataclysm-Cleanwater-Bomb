@@ -585,21 +585,87 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 32 );
     constexpr std::size_t world_generation = 1;
+    const itype_id backpack_type( "backpack" );
+
+    avatar native_character;
+    native_character.normalize();
+    native_character.setID( character_id( 6401 ), true );
+    item &native_inventory_match = native_character.inv->add_item(
+                                       item( backpack_type ), false, false, false );
+    item native_nested_container( itype_debug_backpack );
+    REQUIRE( native_nested_container.put_in(
+                 item( backpack_type ), pocket_type::CONTAINER ).success() );
+    item &native_inventory_container = native_character.inv->add_item(
+                                          std::move( native_nested_container ),
+                                          false, false, false );
+    item *native_nested_match = nullptr;
+    for( item *contained : native_inventory_container.all_items_top() ) {
+        if( contained->typeId() == backpack_type ) {
+            native_nested_match = contained;
+        }
+    }
+    REQUIRE( native_nested_match != nullptr );
+    item native_worn_match( backpack_type );
+    const auto native_worn = native_character.wear_item(
+                                 native_worn_match, false, false, true, true );
+    REQUIRE( native_worn.has_value() );
+    REQUIRE( native_character.has_item( native_inventory_match ) );
+    REQUIRE( native_character.has_item( native_inventory_container ) );
+    REQUIRE( native_character.has_item( *native_nested_match ) );
+    REQUIRE( native_character.has_item( **native_worn ) );
+    item native_wielded_match( itype_rock );
+    REQUIRE( native_character.Character::wield(
+                 native_wielded_match, std::nullopt, false ) );
+    const item_location native_wielded_location = native_character.get_wielded_item();
+    REQUIRE( native_wielded_location );
+    item *native_wielded_item = native_wielded_location.get_item();
+    REQUIRE( native_wielded_item != nullptr );
+    REQUIRE( native_character.has_item( *native_wielded_item ) );
+
+    const auto native_backpacks = native_character.remove_items_with(
+        [&backpack_type]( const item &entry ) {
+            return entry.typeId() == backpack_type;
+        } );
+    CHECK( native_backpacks.size() == 3 );
+    CHECK_FALSE( native_character.is_wearing( backpack_type ) );
+    CHECK_FALSE( native_character.has_amount( backpack_type, 1 ) );
+    const auto native_rocks = native_character.remove_items_with(
+        []( const item &entry ) {
+            return entry.typeId() == itype_rock;
+        } );
+    CHECK( native_rocks.size() == 1 );
+    CHECK_FALSE( native_character.has_weapon() );
+    native_character.inv->add_item( item( itype_2x4 ), false, false, false );
+    const itype_id unknown_item_type( "__unknown_remove_type_test__" );
+    const auto native_unknown = native_character.remove_items_with(
+        [&unknown_item_type]( const item &entry ) {
+            return entry.typeId() == unknown_item_type;
+        } );
+    CHECK( native_unknown.empty() );
+    CHECK( native_character.has_amount( itype_2x4, 1 ) );
+
     avatar character;
     character.normalize();
     character.setID( character_id( 6402 ), true );
 
-    const itype_id backpack_type( "backpack" );
     item &inventory_match = character.inv->add_item(
                                 item( backpack_type ), false, false, false );
     item nested_container( itype_debug_backpack );
     REQUIRE( nested_container.put_in(
                  item( backpack_type ), pocket_type::CONTAINER ).success() );
-    character.inv->add_item(
+    item &nested_inventory_container = character.inv->add_item(
         std::move( nested_container ), false, false, false );
+    item *nested_inventory_match = nullptr;
+    for( item *contained : nested_inventory_container.all_items_top() ) {
+        if( contained->typeId() == backpack_type ) {
+            nested_inventory_match = contained;
+        }
+    }
+    REQUIRE( nested_inventory_match != nullptr );
     item worn_match( backpack_type );
-    REQUIRE( character.wear_item(
-                 worn_match, false, false, true, true ) );
+    const auto worn = character.wear_item(
+                          worn_match, false, false, true, true );
+    REQUIRE( worn.has_value() );
     item wielded_match( itype_rock );
     REQUIRE( character.Character::wield(
                  wielded_match, std::nullopt, false ) );
@@ -613,10 +679,20 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
             inventory_match,
             { "character_inventory", inventory_match.uid().get_value(), 0, 0, 0, {} },
             runtime, world_generation );
+    const cata::lua_platform::game_handle nested_item_handle =
+        cata::lua_platform::game_handle::from_item(
+            *nested_inventory_match,
+            { "character_inventory", nested_inventory_match->uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
     const item_location wielded_location = character.get_wielded_item();
     REQUIRE( wielded_location );
     item *wielded_item = wielded_location.get_item();
     REQUIRE( wielded_item != nullptr );
+    REQUIRE( character.has_item( inventory_match ) );
+    REQUIRE( character.has_item( nested_inventory_container ) );
+    REQUIRE( character.has_item( *nested_inventory_match ) );
+    REQUIRE( character.has_item( **worn ) );
+    REQUIRE( character.has_item( *wielded_item ) );
     const cata::lua_platform::game_handle wielded_item_handle =
         cata::lua_platform::game_handle::from_item(
             *wielded_item,
@@ -649,10 +725,13 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     REQUIRE( backpack_envelope["ok"].get<bool>() );
     const sol::table backpack_value =
         backpack_envelope["value"].get<sol::table>();
-    CHECK( backpack_value["removed"].get<std::size_t>() == 3 );
+    CHECK( backpack_value["removed"].get<std::size_t>() ==
+           native_backpacks.size() );
     CHECK_FALSE( character.is_wearing( backpack_type ) );
     CHECK_FALSE( character.has_amount( backpack_type, 1 ) );
     CHECK( removed_item_handle.validation_error(
+               runtime, world_generation ).has_value() );
+    CHECK( nested_item_handle.validation_error(
                runtime, world_generation ).has_value() );
 
     const sol::protected_function_result wielded_result = remove_type(
@@ -662,7 +741,7 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const sol::table wielded_envelope = wielded_result.get<sol::table>();
     REQUIRE( wielded_envelope["ok"].get<bool>() );
     CHECK( wielded_envelope["value"].get<sol::table>()
-           ["removed"].get<std::size_t>() == 1 );
+           ["removed"].get<std::size_t>() == native_rocks.size() );
     CHECK_FALSE( character.has_weapon() );
     CHECK( wielded_item_handle.validation_error(
                runtime, world_generation ).has_value() );
@@ -673,16 +752,54 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const sol::protected_function_result unknown_result = remove_type(
                 character_handle,
                 cata::lua_platform::script_game_id(
-                    "item", "__unknown_remove_type_test__" ) );
+                    "item", unknown_item_type.str() ) );
     REQUIRE( unknown_result.valid() );
     const sol::table unknown_envelope = unknown_result.get<sol::table>();
     REQUIRE( unknown_envelope["ok"].get<bool>() );
     CHECK( unknown_envelope["value"].get<sol::table>()
-           ["removed"].get<std::size_t>() == 0 );
+           ["removed"].get<std::size_t>() == native_unknown.size() );
     CHECK( cata::lua_platform::item_holder_mutation_generation() ==
            before_unknown_id );
     CHECK( character.has_amount( itype_2x4, 1 ) );
-    CHECK( write_gate_calls == 3 );
+
+    avatar &avatar_decoy = character;
+    item &avatar_decoy_apple = avatar_decoy.inv->add_item(
+                                   item( itype_apple ), false, false, false );
+    REQUIRE( avatar_decoy.has_item( avatar_decoy_apple ) );
+    npc native_npc;
+    native_npc.normalize();
+    native_npc.setID( character_id( 6410 ), true );
+    item &native_npc_apple = native_npc.inv->add_item(
+                                 item( itype_apple ), false, false, false );
+    REQUIRE( native_npc.has_item( native_npc_apple ) );
+    const auto native_npc_removed = native_npc.remove_items_with(
+        []( const item &entry ) {
+            return entry.typeId() == itype_apple;
+        } );
+    CHECK( native_npc_removed.size() == 1 );
+
+    npc platform_npc;
+    platform_npc.normalize();
+    platform_npc.setID( character_id( 6411 ), true );
+    item &platform_npc_apple = platform_npc.inv->add_item(
+                                   item( itype_apple ), false, false, false );
+    REQUIRE( platform_npc.has_item( platform_npc_apple ) );
+    cata::lua_platform::register_npc_handle_identity( platform_npc );
+    const cata::lua_platform::game_handle npc_handle =
+        cata::lua_platform::game_handle::from_creature(
+            platform_npc, { "npc", platform_npc.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const sol::protected_function_result npc_result = remove_type(
+                npc_handle, cata::lua_platform::script_game_id( "item", "apple" ) );
+    REQUIRE( npc_result.valid() );
+    const sol::table npc_envelope = npc_result.get<sol::table>();
+    REQUIRE( npc_envelope["ok"].get<bool>() );
+    CHECK( npc_envelope["value"].get<sol::table>()
+           ["removed"].get<std::size_t>() == native_npc_removed.size() );
+    CHECK_FALSE( platform_npc.has_amount( itype_apple, 1 ) );
+    CHECK( avatar_decoy.has_amount( itype_apple, 1 ) );
+    CHECK( write_gate_calls == 4 );
+    cata::lua_platform::retire_npc_handle_identity( platform_npc );
 }
 
 TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search",

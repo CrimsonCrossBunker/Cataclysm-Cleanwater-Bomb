@@ -15840,7 +15840,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             },
                             {"u_spend_cash": 250},
                             {"u_remove_item_with": "rock"},
-                            {"npc_remove_item_with": "bandage"},
+                            {"npc_remove_item_with": "bandages"},
                             {"u_buy_item": "apple", "cost": 50, "count": 2},
                             {"u_sell_item": "rock", "cost": 25, "count": 1},
                             {"u_level_spell_class": "all", "levels": 2},
@@ -15881,9 +15881,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.trade.commit(quote.token", main)
             self.assertIn("monster-purchase conversion", report)
             self.assertIn("cash-payment conversion", report)
-            self.assertEqual(main.count("services.inventory.remove_type("), 2)
+            self.assertEqual(main.count("services.inventory.remove_type("), 1)
             self.assertIn('services.types.id("item", "rock")', main)
-            self.assertIn('services.types.id("item", "bandage")', main)
+            self.assertIn(
+                'actor, services.types.id("item", "rock")', main
+            )
+            self.assertNotIn('services.types.id("item", "bandages")', main)
+            self.assertIn("direct talk-topic beta Character proof", report)
             self.assertNotIn("services.inventory.remove(actor, matching_items[index])", main)
             self.assertNotIn("services.trade.transfer_matching(", main)
             self.assertNotIn(
@@ -29035,15 +29039,35 @@ assert(context.conditions.check==original and context.conditions.check() and con
         )
         self.assertEqual(
             migrate_lua_first.render_static_remove_item_with_effect(
-                {"npc_remove_item_with": "bandage"},
-                "npc_remove_item_with",
+                {"u_remove_item_with": "rock"},
+                "u_remove_item_with",
                 True,
-                "context.actors.beta",
+                "alpha",
             ),
             [
                 "    service_value(services.inventory.remove_type(",
-                '        context.actors.beta, services.types.id("item", "bandage")))',
+                '        alpha, services.types.id("item", "rock")))',
             ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"npc_remove_item_with": "bandages"},
+                "npc_remove_item_with",
+                True,
+                "beta",
+            ),
+            [
+                "    service_value(services.inventory.remove_type(",
+                '        beta, services.types.id("item", "bandages")))',
+            ],
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"npc_remove_item_with": "bandages"},
+                "npc_remove_item_with",
+                True,
+                "actor",
+            )
         )
         self.assertEqual(
             migrate_lua_first.render_static_remove_item_with_effect(
@@ -29230,6 +29254,106 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 False,
             )
         )
+
+    def test_remove_item_with_preserves_native_dialogue_alpha_and_beta_roles(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic",
+                            "id": "remove_item_with_topic",
+                            "responses": [{
+                                "true_eocs": "remove_item_with_pair",
+                            }],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_item_with_pair",
+                            "effect": [
+                                {"u_remove_item_with": "rock"},
+                                {"npc_remove_item_with": "bandages"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_item_with_npc_event",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"u_remove_item_with": "rock"},
+                                {"npc_remove_item_with": "bandages"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_item_with_avatar_event",
+                            "required_event": "avatar_moves",
+                            "effect": {"u_remove_item_with": "rock"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "remove_item_with_roles_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            # Direct dialogue alpha and beta stay distinct explicit
+            # Character handles. An NPC event's `npc` payload is native alpha,
+            # so its u_ effect uses that event actor while the beta-only npc_
+            # effect remains TODO.
+            self.assertEqual(main.count("services.inventory.remove_type("), 4)
+            self.assertEqual(
+                main.count('services.types.id("item", "rock")'), 3
+            )
+            self.assertEqual(
+                main.count('services.types.id("item", "bandages")'), 1
+            )
+            self.assertIn(
+                'alpha, services.types.id("item", "rock")',
+                main,
+            )
+            self.assertEqual(
+                main.count('actor, services.types.id("item", "rock")'), 2
+            )
+            self.assertIn(
+                "local alpha = context and context.actors and context.actors.alpha",
+                main,
+            )
+            self.assertNotIn(
+                "local alpha = context and context.actors and context.actors.beta",
+                main,
+            )
+            self.assertIn(
+                'alpha ~= nil and alpha.kind == "creature" and '
+                '(alpha.subtype == "avatar" or alpha.subtype == "character" '
+                'or alpha.subtype == "npc")',
+                main,
+            )
+            self.assertIn(
+                "local beta = context and context.actors and context.actors.beta",
+                main,
+            )
+            self.assertIn(
+                'beta, services.types.id("item", "bandages")', main
+            )
+            self.assertIn(
+                'beta.kind == "creature" and (beta.subtype == "avatar" or '
+                'beta.subtype == "character" or beta.subtype == "npc")',
+                main,
+            )
+            self.assertIn("beta ~= nil and beta.kind == \"creature\"", main)
+            self.assertNotIn(
+                'actor, services.types.id("item", "bandages")', main
+            )
+            self.assertIn("direct talk-topic beta Character proof", report)
+            self.assertEqual(len(result.partial), 1)
 
     def test_trade_commit_migration_requires_one_explicit_same_event_shape(self) -> None:
         descriptor = {
