@@ -9315,6 +9315,7 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field ai_rules CcbNpcAiRulesSnapshot
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
+---@alias CcbNpcSelectedMissionPredicate 'complete'|'incomplete'|'failed'
 
 ---@class CcbNpcMissionSnapshot
 ---@field token MissionToken Exact mission-instance token bound to this runtime and world.
@@ -9399,6 +9400,11 @@ function CcbNpcMissionsApi.assigned_for_owner(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@return CcbResult result `value` is raw NPC chatbin.missions length, including entries omitted from the filtered live page.
 function CcbNpcMissionsApi.available_count(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact live avatar used by native mission goal completion checks.
+---@param predicate CcbNpcSelectedMissionPredicate Native selected-mission predicate to evaluate.
+---@return CcbResult result `value` is boolean; missing or stale selections return false. Live selected pointers are evaluated even if they are not in this provider's mission collections.
+function CcbNpcMissionsApi.selected_condition(provider, owner, predicate) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
 ---@return CcbResult result `value` is a CcbNpcMissionsStateResult.

@@ -7533,6 +7533,59 @@ assert(#events == 11)
                     )
                 )
 
+    def test_selected_mission_status_requires_a_dialogue_provider(self) -> None:
+        predicates = {
+            "mission_complete": '"complete"',
+            "npc_mission_complete": '"complete"',
+            "mission_incomplete": '"incomplete"',
+            "npc_mission_incomplete": '"incomplete"',
+            "mission_failed": '"failed"',
+            "npc_mission_failed": '"failed"',
+        }
+        for condition, predicate in predicates.items():
+            with self.subTest(condition=condition):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition,
+                    npc_actor_expression="context.actors.beta",
+                    npc_dialogue_pair_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn(
+                    "services.npcs.missions.selected_condition(beta, alpha, "
+                    + predicate + "))",
+                    expression,
+                )
+                self.assertIn('alpha.subtype ~= "avatar"', expression)
+                self.assertIn('beta.subtype ~= "npc"', expression)
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="context.actors.beta",
+                    )
+                )
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="actor",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
+        for condition in (
+            "u_mission_complete",
+            "u_mission_incomplete",
+            "u_mission_failed",
+        ):
+            with self.subTest(condition=condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        avatar_actor_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
             "has_assigned_mission",

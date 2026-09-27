@@ -26727,6 +26727,41 @@ def render_npc_available_mission_count_condition(
     )
 
 
+def render_npc_selected_mission_condition(
+    condition: str, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower selected mission predicates for an explicit dialogue actor pair."""
+    if (
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta"
+    ):
+        return None
+    predicate = {
+        "mission_complete": "complete",
+        "npc_mission_complete": "complete",
+        "mission_incomplete": "incomplete",
+        "npc_mission_incomplete": "incomplete",
+        "mission_failed": "failed",
+        "npc_mission_failed": "failed",
+    }.get(condition)
+    if predicate is None:
+        return None
+    return (
+        "(function() "
+        "local actors = context and context.actors; "
+        "local alpha = actors and actors.alpha; "
+        "local beta = actors and actors.beta; "
+        "if alpha == nil or alpha.kind ~= \"creature\" or "
+        "alpha.subtype ~= \"avatar\" or beta == nil or "
+        "beta.kind ~= \"creature\" or beta.subtype ~= \"npc\" then "
+        "return false end; "
+        "return service_value(services.npcs.missions.selected_condition("
+        f"beta, alpha, \"{predicate}\")) "
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -26889,6 +26924,13 @@ def render_eoc_condition_expression(
             )
         if available_mission_count is not None:
             return available_mission_count
+        selected_mission_condition = \
+            render_npc_selected_mission_condition(
+                condition, npc_dialogue_pair_proven,
+                npc_actor_expression,
+            )
+        if selected_mission_condition is not None:
+            return selected_mission_condition
         # These selectors ask native has_effect(..., NULL_ID), while the
         # Platform effects.has default searches all body parts.
         if condition in {"u_available", "npc_available"}:

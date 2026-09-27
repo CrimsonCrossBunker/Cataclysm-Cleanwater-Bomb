@@ -217,8 +217,8 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     const sol::table missions = npcs["missions"];
     REQUIRE( missions.valid() );
     for( const char *name : {
-             "state", "assigned_for_owner", "available_count", "select",
-             "offer", "add_assigned",
+             "state", "assigned_for_owner", "available_count",
+             "selected_condition", "select", "offer", "add_assigned",
              "assign_selected", "succeed_selected", "fail_selected",
              "clear_selected", "claim_selected_reward"
          } ) {
@@ -321,6 +321,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         missions["assigned_for_owner"];
     const sol::protected_function available_count =
         missions["available_count"];
+    const sol::protected_function selected_condition =
+        missions["selected_condition"];
     const sol::protected_function select = missions["select"];
     const sol::protected_function offer = missions["offer"];
     const sol::protected_function add_assigned = missions["add_assigned"];
@@ -360,6 +362,12 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         REQUIRE( envelope["ok"].get<bool>() );
         return envelope["value"].get<int>();
     };
+    const auto boolean_from = []( sol::protected_function_result result ) {
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        return envelope["value"].get<bool>();
+    };
 
     const sol::protected_function npc_snapshot = services["npcs"]["get"];
     CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 0 );
@@ -370,6 +378,13 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( initial_state["assigned"].get<sol::table>()
            ["returned"].get<int>() == 0 );
     CHECK( integer_from( available_count( provider_handle ) ) == 0 );
+    for( const char *predicate : { "complete", "incomplete", "failed" } ) {
+        CHECK_FALSE( boolean_from( selected_condition(
+                                      provider_handle, owner_handle, predicate ) ) );
+    }
+    CHECK( error_code( selected_condition(
+                           provider_handle, owner_handle, "unknown" ) ) ==
+           "invalid_predicate" );
     sol::table initial_owner_missions = value_from(
             assigned_for_owner( provider_handle, owner_handle ) );
     CHECK( initial_owner_missions["total"].get<int>() == 0 );
@@ -398,6 +413,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( provider->chatbin.mission_selected->in_progress() == false );
     CHECK( error_code( add_assigned(
                            provider_handle, stale_owner_handle, mission_id ) ) ==
+           "stale_runtime" );
+    CHECK( error_code( selected_condition(
+                           provider_handle, stale_owner_handle, "failed" ) ) ==
            "stale_runtime" );
     CHECK( provider->chatbin.missions.size() == 1 );
     CHECK( provider->chatbin.missions_assigned.empty() );
@@ -430,12 +448,30 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            "not_finished" );
     CHECK( provider->chatbin.missions_assigned.size() == 1 );
     CHECK( owner.get_active_missions().size() == 1 );
+    sol::table active_selected_state = value_from( state( provider_handle ) );
+    CHECK( active_selected_state["selected"].get<sol::table>()
+           ["status"].get<std::string>() == "active" );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "complete" ) ) );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "incomplete" ) ) );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "failed" ) ) );
 
     sol::table success_value = value_from(
                                    succeed_selected(
                                        provider_handle, owner_handle, true ) );
     CHECK( success_value["action"].get<std::string>() == "success" );
     CHECK_FALSE( provider->chatbin.mission_selected->in_progress() );
+    sol::table successful_selected_state = value_from( state( provider_handle ) );
+    CHECK( successful_selected_state["selected"].get<sol::table>()
+           ["status"].get<std::string>() == "success" );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "complete" ) ) );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "incomplete" ) ) );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "failed" ) ) );
     CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 125 );
     CHECK( error_code( succeed_selected(
                            provider_handle, owner_handle, true ) ) ==
@@ -521,6 +557,15 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( error_code( fail_selected( provider_handle, owner_handle ) ) ==
            "not_active" );
     CHECK( provider->chatbin.missions_assigned.size() == 1 );
+    sol::table failed_selected_state = value_from( state( provider_handle ) );
+    CHECK( failed_selected_state["selected"].get<sol::table>()
+           ["status"].get<std::string>() == "failure" );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "complete" ) ) );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "incomplete" ) ) );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "failed" ) ) );
     value_from( clear_selected( provider_handle, owner_handle ) );
     CHECK( provider->chatbin.missions_assigned.empty() );
 
@@ -585,6 +630,10 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     sol::table stale_state = value_from( state( provider_handle ) );
     CHECK_FALSE( stale_state["selected"].valid() );
     CHECK( stale_state["selected_stale"].get<bool>() );
+    for( const char *predicate : { "complete", "incomplete", "failed" } ) {
+        CHECK_FALSE( boolean_from( selected_condition(
+                                      provider_handle, owner_handle, predicate ) ) );
+    }
     provider->chatbin.mission_selected = nullptr;
 
     mission *foreign = mission::reserve_new(
@@ -594,10 +643,17 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const cata::lua_platform::mission_token foreign_token(
         foreign->get_id(), foreign->identity_generation(), runtime,
         active_world );
+    foreign->fail( owner );
     provider->chatbin.mission_selected = foreign;
     sol::table invalid_state = value_from( state( provider_handle ) );
     CHECK_FALSE( invalid_state["selected"].valid() );
     CHECK( invalid_state["selected_invalid"].get<bool>() );
+    CHECK_FALSE( boolean_from( selected_condition(
+                                   provider_handle, owner_handle, "complete" ) ) );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "incomplete" ) ) );
+    CHECK( boolean_from( selected_condition(
+                             provider_handle, owner_handle, "failed" ) ) );
     provider->chatbin.missions.push_back( foreign );
     CHECK( error_code( select( provider_handle, foreign_token ) ) ==
            "not_provided_here" );
