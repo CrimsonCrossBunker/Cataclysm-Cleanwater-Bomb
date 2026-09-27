@@ -27084,11 +27084,6 @@ def render_eoc_condition_expression(
         return f"service_value(services.skills.offered({teacher}, {student})).total > 0"
     if creature_actor_proven:
         if isinstance(condition, str):
-            if condition == "player_see_u":
-                return (
-                    "service_value(services.creatures.can_see("
-                    "services.characters.avatar(), actor))"
-                )
             if condition == "u_is_alive":
                 return (
                     "actor ~= nil and actor.kind == \"creature\" and not "
@@ -27232,12 +27227,6 @@ def render_eoc_condition_expression(
                     "service_value(services.creatures.snapshot(" +
                     npc_query_actor + ")).outside"
                 )
-            if condition == "player_see_npc":
-                return (
-                    "service_value(services.creatures.can_see("
-                    "services.characters.avatar(), " +
-                    npc_query_actor + "))"
-                )
             if (
                 avatar_actor_proven and npc_actor_expression is not None and
                 condition == "u_see_npc"
@@ -27327,28 +27316,6 @@ def render_eoc_condition_expression(
             return f"character_has_pickup_whitelist({npc_query_actor})"
         if npc_query_actor is not None and condition == "npc_has_pickup_list":
             return f"character_has_pickup_whitelist({npc_query_actor})"
-        if weapon_actor_proven and condition == "player_see_u":
-            return ("service_value(services.creatures.can_see("
-                    "services.creatures.avatar(), actor))")
-        if npc_query_actor is not None and condition == "player_see_npc":
-            return ("service_value(services.creatures.can_see("
-                    f"services.creatures.avatar(), {npc_query_actor}))")
-        if npc_query_actor is not None and condition == "npc_see_u":
-            return ("service_value(services.creatures.can_see("
-                    f"{npc_query_actor}, services.characters.avatar()))")
-        if npc_query_actor is not None and condition == "u_see_npc":
-            return ("service_value(services.creatures.can_see("
-                    f"services.characters.avatar(), {npc_query_actor}))")
-        if npc_query_actor is not None and condition == "u_see_npc_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                f"services.characters.avatar(), {npc_query_actor}))"
-            )
-        if npc_query_actor is not None and condition == "npc_see_u_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                f"{npc_query_actor}, services.characters.avatar()))"
-            )
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_warm"

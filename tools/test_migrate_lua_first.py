@@ -329,8 +329,73 @@ assert(worn_calls==1 and has_calls==1)
                         npc_actor_proven=True, npc_actor_expression="partner"),
                     expected,
                 )
+                self.assertNotIn("services.characters.avatar()", expected)
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     condition, npc_actor_proven=True))
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    condition, avatar_actor_proven=True))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_opposite_actor_visibility_uses_event_alpha_handle(self) -> None:
+        # The event alpha is deliberately different from the global avatar.
+        # These generated predicates must keep using the exact alpha handle.
+        for condition, observer, target in (
+            ("u_see_npc", "event_alpha", "partner"),
+            ("npc_see_u", "partner", "event_alpha"),
+            ("u_see_npc_loc", "event_alpha", "partner"),
+            ("npc_see_u_loc", "partner", "event_alpha"),
+        ):
+            with self.subTest(runtime_condition=condition):
+                predicate = migrate_lua_first.render_eoc_condition_expression(
+                    condition, avatar_actor_proven=True,
+                    npc_actor_proven=True, npc_actor_expression="partner")
+                script = """
+local ambient_avatar = { name = \"ambient avatar\" }
+local event_alpha = { name = \"event alpha\" }
+local partner = { name = \"partner\" }
+local actor = event_alpha
+local calls = 0
+local function query(observer, target)
+    calls = calls + 1
+    assert(observer == EXPECTED_OBSERVER)
+    assert(target == EXPECTED_TARGET)
+    assert(observer ~= ambient_avatar)
+    return true
+end
+local function service_value(value) return value end
+local services = { creatures = { can_see = query, has_line_of_sight = query } }
+assert(PREDICATE)
+assert(calls == 1)
+""".replace("EXPECTED_OBSERVER", observer).replace(
+                    "EXPECTED_TARGET", target
+                ).replace("PREDICATE", predicate or "false")
+                result = subprocess.run(
+                    ["lua", "-"], input=script, text=True,
+                    capture_output=True, timeout=10
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_player_view_visibility_stays_todo_without_player_view_api(self) -> None:
+        cases = (
+            ("player_see_u", {"avatar_actor_proven": True}),
+            ("player_see_u", {"weapon_actor_proven": True}),
+            ("player_see_u", {"creature_actor_proven": True}),
+            (
+                "player_see_npc",
+                {
+                    "avatar_actor_proven": True,
+                    "npc_actor_proven": True,
+                    "npc_actor_expression": "partner",
+                },
+            ),
+        )
+        for condition, proof in cases:
+            with self.subTest(condition=condition, proof=proof):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **proof
+                    )
+                )
 
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
@@ -3630,7 +3695,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 "u_is_travelling",
                 "u_at_safe_space",
                 "u_has_pickup_list",
-                "player_see_u",
             ]
             source.write_text(
                 json.dumps(
@@ -3668,9 +3732,50 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertIn("character_has_pickup_whitelist(actor)", main)
             self.assertIn("services.npcs.ai_rules(character)", main)
-            self.assertIn("services.creatures.can_see", main)
             self.assertIn("services.creatures.avatar()", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+
+    def test_player_view_conditions_are_not_lowered_to_avatar_vision(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_view_alpha",
+                            "required_event": "game_start",
+                            "condition": "player_see_u",
+                            "effect": {"message": "visible"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_view_beta",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": "player_see_npc",
+                            "effect": {"message": "visible"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "player_view_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.creatures.can_see(", main)
+            self.assertIn(
+                "EOC player_view_alpha condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC player_view_beta condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
 
     def test_dialogue_predicates_without_actor_proof_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23561,11 +23666,11 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                 "spell_talker_root condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
-            self.assertNotIn(
+            self.assertIn(
                 "spell_visibility_leaf condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
-            self.assertNotIn(
+            self.assertIn(
                 "attack_talker_root condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
@@ -23575,12 +23680,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             )
             self.assertIn("context.actors.beta", main)
             self.assertIn("services.creatures.has_flag(", main)
-            self.assertGreaterEqual(
-                main.count(
-                    "services.creatures.can_see(services.characters.avatar(), actor)"
-                ),
-                2,
-            )
+            self.assertNotIn("services.creatures.can_see(", main)
 
     def test_faction_camp_proximity_uses_the_typed_camp_query(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
