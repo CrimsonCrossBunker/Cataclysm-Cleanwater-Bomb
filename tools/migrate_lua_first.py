@@ -26812,6 +26812,28 @@ def render_npc_selected_mission_goal_condition(
     )
 
 
+def render_npc_selected_generic_rewards_condition(
+    condition: str, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Preserve the predicate result for a proven beta; native debugmsg is omitted."""
+    if (
+        condition != "mission_has_generic_rewards" or
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta"
+    ):
+        return None
+    return (
+        "(function() "
+        "local beta = context and context.actors and context.actors.beta; "
+        "if beta == nil or beta.kind ~= \"creature\" or "
+        "beta.subtype ~= \"npc\" then return false end; "
+        "return service_value(services.npcs.missions."
+        "selected_has_generic_rewards(beta)) "
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -28207,6 +28229,17 @@ def render_eoc_condition_expression(
     if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
         # Both legacy spellings query beta's selected mission. Only static
         # enum names plus a proven dialogue beta are eligible for lowering.
+        return None
+    selected_mission_generic_rewards = (
+        render_npc_selected_generic_rewards_condition(
+            condition, npc_dialogue_pair_proven, npc_actor_expression,
+        ) if isinstance( condition, str ) else None
+    )
+    if selected_mission_generic_rewards is not None:
+        return selected_mission_generic_rewards
+    if condition == "mission_has_generic_rewards":
+        # The native condition reads beta's raw selected pointer and has a
+        # special true result only when that selection is actually null.
         return None
     if (
         avatar_actor_proven and
