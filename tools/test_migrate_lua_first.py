@@ -3848,14 +3848,21 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
     def test_variable_removal_does_not_request_old_value_snapshot(self) -> None:
         for selector, avatar, npc in (("u_lose_var", True, False),
                                       ("npc_lose_var", False, True)):
+            effect_actor_targets = {
+                "u": ("actor", "character") if selector == "u_lose_var" else None,
+                "npc": ("context.actors.beta", "character")
+                if selector == "npc_lose_var" else None,
+            }
             with self.subTest(selector=selector):
                 lines = migrate_lua_first.render_static_false_effect(
                     {selector: "old-array"}, avatar, npc, {},
                     actor_expression="actor",
+                    effect_actor_targets=effect_actor_targets,
                 )
                 self.assertIsNotNone(lines)
                 script = "\n".join([
                     "local actor = {}",
+                    "local context = {actors={beta=actor}}",
                     "local removed = false",
                     "local services = {variables={remove=function(owner, key, options)",
                     "assert(owner == actor and key == 'old-array')",
@@ -3869,6 +3876,32 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     capture_output=True, timeout=10,
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_npc_lose_var_requires_an_exact_beta_character(self) -> None:
+        exact_beta = migrate_lua_first.render_static_false_effect(
+            {"npc_lose_var": "beta-key"}, False, False, {},
+            actor_expression="alpha",
+            effect_actor_targets={
+                "u": ("alpha", "character"),
+                "npc": ("context.actors.beta", "character"),
+            },
+        )
+        self.assertEqual(
+            exact_beta,
+            [
+                '        services.variables.remove(context.actors.beta, '
+                '"beta-key", { include_before = false })'
+            ],
+        )
+        alpha_only = migrate_lua_first.render_static_false_effect(
+            {"npc_lose_var": "alpha-only-key"}, True, False, {},
+            actor_expression="actor",
+            effect_actor_targets={
+                "u": ("actor", "character"),
+                "npc": None,
+            },
+        )
+        self.assertIsNone(alpha_only)
 
     def test_character_variable_keys_match_native_storage_domain(self) -> None:
         valid_names = (
@@ -6993,8 +7026,14 @@ assert(#events == 11)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_var",
-                            "required_event": "npc_becomes_hostile",
+                            "required_event": "character_melee_attack",
                             "effect": {"npc_lose_var": "npc_var"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_var_without_beta",
+                            "required_event": "game_start",
+                            "effect": {"npc_lose_var": "alpha_only_npc_var"},
                         },
                         {
                             "type": "effect_on_condition",
@@ -7069,12 +7108,23 @@ assert(#events == 11)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 10)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 3)
             self.assertIn(
                 'services.variables.remove(actor, "quest_var", { include_before = false })', main
             )
             self.assertIn(
-                'services.variables.remove(actor, "npc_var", { include_before = false })', main
+                'services.variables.remove(context.actors.interlocutor, "npc_var", '
+                '{ include_before = false })',
+                main,
+            )
+            self.assertNotIn(
+                'services.variables.remove(actor, "alpha_only_npc_var", '
+                '{ include_before = false })',
+                main,
+            )
+            self.assertIn(
+                "EOC npc_var_without_beta effect #0 needs domain-service conversion",
+                report,
             )
             self.assertIn(
                 'services.message("hello")', main
