@@ -9884,7 +9884,7 @@ function CcbNpcsApi.ai_rule_catalog() end
 function CcbNpcsApi.set_ai_policy(handle, family, rule) end
 ---@param handle GameHandle Exact NPC handle.
 ---@param rule string
----@param enabled? boolean
+---@param enabled? boolean When omitted, toggle according to the effective rule (including overrides); before/after report the base flag.
 ---@return CcbResult
 function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
 ---@param handle GameHandle Exact NPC handle.
