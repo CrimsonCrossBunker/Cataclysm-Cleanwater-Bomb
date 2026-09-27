@@ -7913,6 +7913,11 @@ assert(#events == 9)
         for condition, provenance in (
             ("u_available", {"avatar_actor_proven": True}),
             ("npc_available", {"npc_actor_proven": True}),
+            (
+                "npc_available",
+                {"npc_actor_proven": True, "npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "(context.actors.beta) or actor"},
+            ),
             ({"u_service": 0}, {"avatar_actor_proven": True}),
             (
                 {"npc_service": 0},
@@ -7926,6 +7931,16 @@ assert(#events == 9)
                         condition, **provenance
                     )
                 )
+        npc_available = migrate_lua_first.render_eoc_condition_expression(
+            "npc_available", npc_actor_proven=True,
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIsNotNone(npc_available)
+        self.assertIn('context.actors.beta', npc_available)
+        self.assertIn('services.types.id("effect", "currently_busy")', npc_available)
+        self.assertIn('services.effects.has(beta, busy)', npc_available)
+        self.assertIn('if not busy:is_valid() then return true end', npc_available)
         for condition, provenance in (
             ("u_is_in_vehicle", {"avatar_actor_proven": True}),
             ("npc_is_in_vehicle", {"npc_actor_proven": True}),
@@ -7936,6 +7951,58 @@ assert(#events == 9)
                         condition, **provenance
                     )
                 )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_available_checks_any_part_on_the_proven_beta(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            "npc_available", npc_actor_proven=True,
+            npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIsNotNone(expression)
+        script = r"""
+local beta={kind='creature',subtype='npc'}
+local context={actors={beta=beta}}
+local calls=0
+local valid=true
+local stale=false
+local effects={{id='other',part='torso'},{id='currently_busy',part='arm_l'}}
+local services={
+ types={id=function(kind,value)
+  assert(kind=='effect' and value=='currently_busy')
+  return {kind=kind,value=value,is_valid=function() return valid end}
+ end},
+ effects={has=function(target,id,...)
+  assert(target==beta and id.kind=='effect' and id.value=='currently_busy')
+  assert(select('#',...)==0) -- no part filter: native bp_null checks any part
+  calls=calls+1
+  if stale then return {ok=false,error={code='stale_handle'}} end
+  for _,entry in ipairs(effects) do
+   if entry.id==id.value then return {ok=true,value=true} end
+  end
+  return {ok=true,value=false}
+ end}
+}
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+local function available() return EXPRESSION end
+assert(not available() and calls==1) -- busy on arm_l still makes beta unavailable
+ effects={{id='other',part='torso'}}
+assert(available() and calls==2)
+valid=false
+assert(available() and calls==2) -- missing native effect ID means has_effect is false
+valid=true
+stale=true
+local ok,err=pcall(available)
+assert(not ok and string.find(err,'stale_handle',1,true))
+context.actors.beta=nil
+assert(not available())
+""".replace("EXPRESSION", expression)
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_guards_npc_ai_rule_effects_with_the_native_rule_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
