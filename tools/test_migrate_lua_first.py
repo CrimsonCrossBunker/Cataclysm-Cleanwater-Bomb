@@ -764,7 +764,10 @@ assert(calls==(PRESENT and 0 or 1))
         effects = [effect for entry in source for effect in entry.get("effect", [])
                    if isinstance(effect, dict) and effect.get("copy_var") == {"npc_val": "gateway_destination_1"}]
         self.assertEqual(len(effects), 1)
-        lines = migrate_lua_first.render_static_character_copy_var(effects[0], True, True, "partner")
+        lines = migrate_lua_first.render_static_character_copy_var(
+            effects[0],
+            {"u": ("actor", "character"), "npc": ("partner", "character")},
+        )
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
@@ -846,62 +849,177 @@ assert(EXPRESSION==EXPECTED and calls==2)
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression({"compare_string_match_all": []}))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_copy_variable_preserves_owners_types_and_empty_write(self) -> None:
-        addresses = [("u_val", "actor", None), ("npc_val", "partner", None),
-                     ("context_val", "context.data", None), ("global_val", "globals", None),
-                     ("var_val", "actor", "u_"), ("var_val", "partner", "n_"),
-                     ("var_val", "context.data", "_"), ("var_val", "globals", "")]
-        for source, source_store, source_prefix in addresses:
-            for target, target_store, target_prefix in addresses:
-                for value in ('"text"', '0', 'nil', 'null'):
+    def test_copy_variable_uses_direct_native_copy_for_static_scopes(self) -> None:
+        addresses = [
+            ("u_val", "actor"),
+            ("npc_val", "partner"),
+            ("global_val", "globals"),
+        ]
+        for source, source_store in addresses:
+            for target, target_store in addresses:
+                for value in ('"text"', '0', 'false', 'null'):
                     lines = migrate_lua_first.render_static_character_copy_var(
-                        {"copy_var": {source: "source_ref" if source_prefix is not None else "input"},
-                         "target_var": {target: "target_ref" if target_prefix is not None else "output"}},
-                        True, True, "partner")
+                        {"copy_var": {source: "input"},
+                         "target_var": {target: "output"}},
+                        {"u": ("actor", "character"), "npc": ("partner", "character")})
                     self.assertIsNotNone(lines)
+                    self.assertIn("services.variables.copy(", "\n".join(lines))
+                    self.assertNotIn("services.variables.resolve(", "\n".join(lines))
                     script = r"""
 local null={}
 local actor={input='alpha'}
 local partner={input='beta'}
 local globals={input='global'}
-local context={data={input='context',source_ref=SOURCE_REF,target_ref=TARGET_REF}}
-SOURCE_STORE.input=VALUE
+local source_store=SOURCE_STORE
+local target_store=TARGET_STORE
+source_store.input=VALUE
+target_store.output='old'
 local writes=0
 local function service_value(r) assert(r.ok);return r.value end
-local services={types={null=null},variables={
+local services={variables={
  copy=function(source,key,target,out)
-  assert((source or globals)==SOURCE_STORE and (target or globals)==TARGET_STORE)
-  assert(key=='input' and out=='output');writes=writes+1;return {ok=true,value={}}
- end,
- resolve=function(data,owner,scope,key)
-  local store=scope=='global' and globals or scope=='context' and data or owner
-  assert(store==SOURCE_STORE and key=='input')
-  return {ok=true,value={exists=store[key]~=nil,value=store[key]}}
- end,
- set_resolved=function(data,owner,scope,key,value)
-  local store=scope=='global' and globals or scope=='context' and data or owner
-  assert(store==TARGET_STORE and key=='output')
-  local expected=VALUE
-  if expected==nil then expected=null end
-  assert(value==expected)
-  store[key]=value
-  assert(store.output~=nil)
-  writes=writes+1;return {ok=true,value={}}
+  assert((source or globals)==source_store and (target or globals)==target_store)
+  assert(key=='input' and out=='output')
+  local value=(source or globals)[key]
+  local result={source_exists=value~=nil,destination_existed=(target or globals)[out]~=nil}
+  if value==nil then value=null end
+  (target or globals)[out]=value
+  writes=writes+1
+  return {ok=true,value=result}
  end
 }}
 BODY
 assert(writes==1)
-""".replace("SOURCE_REF", migrate_lua_first.lua_quote((source_prefix or '') + 'input'))
-                    script = script.replace("TARGET_REF", migrate_lua_first.lua_quote((target_prefix or '') + 'output'))
-                    script = script.replace("SOURCE_STORE", source_store).replace("TARGET_STORE", target_store)
+assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
+""".replace("SOURCE_STORE", source_store).replace("TARGET_STORE", target_store)
                     script = script.replace("VALUE", value).replace("BODY", "\n".join(lines))
                     result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
                     self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_copy_variable_keeps_missing_participants_partial(self) -> None:
-        for source in ("u_val", "npc_val", "var_val"):
+        empty_global_key = migrate_lua_first.render_static_character_copy_var(
+            {"copy_var": {"global_val": ""}, "target_var": {"global_val": ""}},
+            None,
+        )
+        self.assertEqual(
+            empty_global_key,
+            [
+                "    service_value(services.variables.copy(",
+                '        nil, "",',
+                '        nil, ""))',
+            ],
+        )
+
+    def test_copy_variable_context_and_indirection_scopes_remain_partial(self) -> None:
+        for unsupported in ("context_val", "var_val"):
             self.assertIsNone(migrate_lua_first.render_static_character_copy_var(
-                {"copy_var": {source: "input"}, "target_var": {"global_val": "output"}}, False, False))
+                {"copy_var": {unsupported: "input"},
+                 "target_var": {"global_val": "output"}},
+                {"u": ("actor", "character"), "npc": ("partner", "character")}))
+            self.assertIsNone(migrate_lua_first.render_static_character_copy_var(
+                {"copy_var": {"global_val": "input"},
+                 "target_var": {unsupported: "output"}},
+                {"u": ("actor", "character"), "npc": ("partner", "character")}))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "copy_scopes.json"
+            source.write_text(json.dumps([
+                {
+                    "type": "effect_on_condition", "id": "context_copy",
+                    "required_event": "game_start",
+                    "effect": {
+                        "copy_var": {"context_val": "input"},
+                        "target_var": {"global_val": "context_output"},
+                    },
+                },
+                {
+                    "type": "effect_on_condition", "id": "indirect_copy",
+                    "required_event": "game_start",
+                    "effect": {
+                        "copy_var": {"var_val": "input_ref"},
+                        "target_var": {"global_val": "indirect_output"},
+                    },
+                },
+                {
+                    "type": "effect_on_condition", "id": "no_beta_copy",
+                    "required_event": "game_start",
+                    "effect": {
+                        "copy_var": {"npc_val": "input"},
+                        "target_var": {"global_val": "npc_output"},
+                    },
+                },
+                {
+                    "type": "effect_on_condition", "id": "false_context_copy",
+                    "required_event": "game_start",
+                    "condition": {"or": []},
+                    "false_effect": {
+                        "copy_var": {"context_val": "input"},
+                        "target_var": {"global_val": "false_output"},
+                    },
+                    "effect": "nothing",
+                },
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "copy_scope_mod"
+            )
+            main = result.files[Path("main.lua")]
+            self.assertEqual(len(result.partial), 4)
+            self.assertIn(
+                "context_val and var_val need a value-preserving copy path", main
+            )
+            self.assertIn(
+                "copy_var into typed variable services only for bounded literal "
+                "u/npc/global scopes with exact handles",
+                main,
+            )
+            self.assertIn(
+                "context_val and var_val need a value-preserving copy path, "
+                "and actor scopes need exact handles",
+                main,
+            )
+
+    def test_copy_variable_requires_exact_source_and_target_actor_proofs(self) -> None:
+        for effect in (
+            {"copy_var": {"u_val": "input"}, "target_var": {"global_val": "output"}},
+            {"copy_var": {"global_val": "input"}, "target_var": {"u_val": "output"}},
+            {"copy_var": {"npc_val": "input"}, "target_var": {"global_val": "output"}},
+            {"copy_var": {"global_val": "input"}, "target_var": {"npc_val": "output"}},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_static_character_copy_var(effect, None)
+            )
+        beta_copy = migrate_lua_first.render_static_character_copy_var(
+            {"copy_var": {"npc_val": "input"}, "target_var": {"u_val": "output"}},
+            {"u": ("actor", "character"),
+             "npc": ("context.actors.interlocutor", "character")},
+        )
+        self.assertIsNotNone(beta_copy)
+        self.assertIn("context.actors.interlocutor", "\n".join(beta_copy))
+        monster_beta_copy = migrate_lua_first.render_static_character_copy_var(
+            {"copy_var": {"npc_val": "input"}, "target_var": {"global_val": "output"}},
+            {"npc": ("context.actors.interlocutor", "monster")},
+        )
+        self.assertIsNotNone(monster_beta_copy)
+        self.assertIsNone(migrate_lua_first.render_static_character_copy_var(
+            {"copy_var": {"npc_val": "input"}, "target_var": {"u_val": "output"}},
+            {"u": ("actor", "character"), "npc": ("context.actors.item", "item")},
+        ))
+
+    def test_false_branch_copy_uses_the_proven_beta_handle(self) -> None:
+        effect = {
+            "copy_var": {"npc_val": "input"},
+            "target_var": {"u_val": "output"},
+        }
+        lines = migrate_lua_first.render_static_false_effect(
+            effect, True, False, {}, actor_expression="actor",
+            effect_actor_targets={
+                "u": ("actor", "character"), "npc": ("partner", "character"),
+            },
+        )
+        self.assertIsNotNone(lines)
+        self.assertIn("partner, \"input\"", "\n".join(lines))
+        self.assertIn("actor, \"output\"", "\n".join(lines))
+        self.assertIsNone(migrate_lua_first.render_static_false_effect(
+            effect, True, False, {}, actor_expression="actor",
+        ))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_false_branch_string_assignment_preserves_beta_expression(self) -> None:

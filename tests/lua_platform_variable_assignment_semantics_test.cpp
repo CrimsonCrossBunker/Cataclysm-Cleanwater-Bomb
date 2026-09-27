@@ -18,6 +18,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -245,6 +246,113 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     check_native_int_turn( std::numeric_limits<int>::max() );
     check_native_int_turn( std::numeric_limits<int>::min() );
     calendar::turn = original_turn;
+
+    const std::string copy_npc_source = "lua_semantic_copy_npc_source";
+    const std::string copy_u_source = "lua_semantic_copy_u_source";
+    const std::string copy_u_target = "lua_semantic_copy_u_target";
+    const std::string copy_npc_target = "lua_semantic_copy_npc_target";
+    const std::string copy_missing_native = "lua_semantic_copy_missing_native";
+    const std::string copy_missing_platform = "lua_semantic_copy_missing_platform";
+    diag_value copy_value;
+    copy_value._deserialize(
+        json_loader::from_string( R"([null,[1,null,"tail"],{"tripoint":[1,2,3]}])" ),
+        false );
+    player.set_value( copy_u_source, copy_value );
+    partner.set_value( copy_npc_source, copy_value );
+    const std::size_t events_before_copy = observer.changes.size();
+
+    apply_talk_effect( context,
+                       R"({
+                           "copy_var":{"npc_val":"lua_semantic_copy_npc_source"},
+                           "target_var":{"u_val":"lua_semantic_copy_u_target"}
+                       })",
+                       "lua_platform_copy_var_npc_to_u" );
+    CHECK( player.get_value( copy_u_target ) == copy_value );
+    CHECK( observer.changes.size() == events_before_copy );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local result = ccb.services.variables.copy(
+                partner_owner, "lua_semantic_copy_npc_source",
+                player_owner, "lua_semantic_copy_u_target")
+            assert(result.ok and result.value.source_exists and
+                result.value.destination_existed)
+        )" );
+    }
+    CHECK( player.get_value( copy_u_target ) == copy_value );
+    CHECK( observer.changes.size() == events_before_copy );
+
+    apply_talk_effect( context,
+                       R"({
+                           "copy_var":{"u_val":"lua_semantic_copy_u_source"},
+                           "target_var":{"npc_val":"lua_semantic_copy_npc_target"}
+                       })",
+                       "lua_platform_copy_var_u_to_npc" );
+    CHECK( partner.get_value( copy_npc_target ) == copy_value );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local result = ccb.services.variables.copy(
+                player_owner, "lua_semantic_copy_u_source",
+                partner_owner, "lua_semantic_copy_npc_target")
+            assert(result.ok and result.value.source_exists and
+                result.value.destination_existed)
+        )" );
+    }
+    CHECK( partner.get_value( copy_npc_target ) == copy_value );
+    CHECK( observer.changes.size() == events_before_copy );
+
+    apply_talk_effect( context,
+                       R"({
+                           "copy_var":{"u_val":"lua_semantic_copy_source_missing"},
+                           "target_var":{"npc_val":"lua_semantic_copy_missing_native"}
+                       })",
+                       "lua_platform_copy_var_missing_source" );
+    REQUIRE( partner.maybe_get_value( copy_missing_native ) != nullptr );
+    CHECK( partner.get_value( copy_missing_native ).is_empty() );
+    partner.remove_value( copy_missing_platform );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local result = ccb.services.variables.copy(
+                player_owner, "lua_semantic_copy_source_missing",
+                partner_owner, "lua_semantic_copy_missing_platform")
+            assert(result.ok and not result.value.source_exists and
+                not result.value.destination_existed)
+        )" );
+    }
+    REQUIRE( partner.maybe_get_value( copy_missing_platform ) != nullptr );
+    CHECK( partner.get_value( copy_missing_platform ).is_empty() );
+    CHECK( observer.changes.size() == events_before_copy );
+
+    const std::string empty_global_key;
+    const diag_value *old_empty_global = get_globals().maybe_get_global_value( empty_global_key );
+    const bool empty_global_existed = old_empty_global != nullptr;
+    const diag_value old_empty_global_value = empty_global_existed ?
+            *old_empty_global : diag_value{};
+    const on_out_of_scope restore_empty_global(
+        [empty_global_existed, old_empty_global_value]() {
+            if( empty_global_existed ) {
+                get_globals().set_global_value( "", old_empty_global_value );
+            } else {
+                get_globals().remove_global_value( "" );
+            }
+        } );
+    get_globals().set_global_value( empty_global_key, copy_value );
+    apply_talk_effect( context,
+                       R"({"copy_var":{"global_val":""},"target_var":{"global_val":""}})",
+                       "lua_platform_copy_var_global_empty_key_self_copy" );
+    CHECK( get_globals().get_global_value( empty_global_key ) == copy_value );
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local result = ccb.services.variables.copy(nil, "", nil, "")
+            assert(result.ok and result.value.source_exists and
+                result.value.destination_existed)
+        )" );
+    }
+    CHECK( get_globals().get_global_value( empty_global_key ) == copy_value );
+    CHECK( observer.changes.size() == events_before_copy );
 
     player.remove_value( u_key );
     partner.remove_value( npc_key );
