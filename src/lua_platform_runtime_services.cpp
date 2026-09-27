@@ -105,6 +105,7 @@ extern "C" {
 #include "options.h"
 #include "path_info.h"
 #include "recipe_dictionary.h"
+#include "rng.h"
 #include "sounds.h"
 #include "talker.h"
 #include "text_snippets.h"
@@ -2799,6 +2800,18 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return distribution( owner->random_engine );
     };
     random.set_function( "int", random_integer );
+    random.set_function( "native_int", [require_random_runtime]( const std::int64_t minimum,
+    const std::int64_t maximum ) {
+        if( minimum < std::numeric_limits<int>::min() ||
+            minimum > std::numeric_limits<int>::max() ||
+            maximum < std::numeric_limits<int>::min() ||
+            maximum > std::numeric_limits<int>::max() || minimum > maximum ) {
+            throw std::invalid_argument(
+                "services.random.native_int requires an ordered range within native integer bounds" );
+        }
+        static_cast<void>( require_random_runtime() );
+        return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
+    } );
     random.set_function( "chance", [require_random_runtime]( const std::int64_t numerator,
     const std::int64_t denominator ) {
         const std::shared_ptr<runtime> owner = require_random_runtime();

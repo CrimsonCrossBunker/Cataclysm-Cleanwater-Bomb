@@ -10888,6 +10888,12 @@ local CcbPlatformRandomApi = {}
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
+---Draw through the native global game RNG. This advances the shared game random sequence.
+---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
+---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
+---@return integer
+function CcbPlatformRandomApi.native_int(minimum, maximum) end
+
 ---@param numerator integer
 ---@param denominator integer Positive denominator up to 1000000000.
 ---@return boolean
