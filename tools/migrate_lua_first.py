@@ -27437,6 +27437,26 @@ def render_eoc_condition_expression(
             # These aliases read beta or dialogue mission state. Actor
             # provenance alone does not prove either one is empty.
             return None
+        if condition == "u_friend":
+            # Native u_friend reads alpha and asks whether that exact actor is
+            # friendly to the global avatar.  The NPC snapshot exposes the
+            # same query.  Avatar talkers use the base implementation, whose
+            # answer is always false; an unproven or non-NPC Character stays
+            # guarded rather than being confused with dialogue beta.
+            if avatar_actor_proven:
+                return "false"
+            if (
+                weapon_actor_proven or generic_character_actor_proven or
+                (
+                    npc_actor_proven and
+                    npc_actor_expression in (None, "actor")
+                )
+            ):
+                return (
+                    'actor ~= nil and actor.kind == "creature" and '
+                    'actor.subtype == "npc" and '
+                    "service_value(services.npcs.get(actor)).friendly"
+                )
         if npc_query_actor is not None:
             if condition == "npc_friend":
                 return (
@@ -28415,16 +28435,41 @@ def render_eoc_condition_expression(
         )
 
     if (
-        set(condition) == {"u_has_faction_trust"} and
-        npc_actor_proven and npc_actor_expression is not None and
-        finite_number_literal(condition.get("u_has_faction_trust")) is not None
+        isinstance(condition, dict) and
+        set(condition) == {"u_are_owed"} and
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
     ):
-        trust = finite_number_literal(condition["u_has_faction_trust"])
-        return (
-            "service_value(services.factions.for_character("
-            f"{npc_actor_expression})).reputation.trusts >= "
-            f"{lua_number(trust)}"
-        )
+        owed = finite_number_literal(condition.get("u_are_owed"))
+        if owed is not None:
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                "return service_value(services.npcs.get(beta)).opinion.owed >= "
+                f"{lua_number(owed)} "
+                "end)()"
+            )
+
+    if (
+        isinstance(condition, dict) and
+        set(condition) == {"u_has_faction_trust"} and
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    ):
+        trust = finite_number_literal(condition.get("u_has_faction_trust"))
+        if trust is not None:
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                "return service_value(services.factions.for_character(beta))"
+                ".reputation.trusts >= "
+                f"{lua_number(trust)} "
+                "end)()"
+            )
 
     # The legacy body-part temperature predicate defaults its body part from
     # dialogue reason when `bodypart` is omitted.  A Platform handler has no

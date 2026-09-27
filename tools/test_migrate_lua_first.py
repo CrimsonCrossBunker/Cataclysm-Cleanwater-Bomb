@@ -297,6 +297,23 @@ assert(worn_calls==1 and has_calls==1)
                 "u_friend", avatar_actor_proven=True),
             "false",
         )
+        expected = (
+            'actor ~= nil and actor.kind == "creature" and '
+            'actor.subtype == "npc" and '
+            "service_value(services.npcs.get(actor)).friendly"
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_friend", npc_actor_proven=True,
+                npc_actor_expression="actor"),
+            expected,
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_friend", npc_actor_proven=True,
+                npc_actor_expression="context.actors.beta"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression("u_friend"))
 
     def test_u_are_owed_keeps_beta_actor_semantics(self) -> None:
         self.assertIsNone(
@@ -306,6 +323,22 @@ assert(worn_calls==1 and has_calls==1)
             migrate_lua_first.render_eoc_condition_expression(
                 {"u_are_owed": 10}, avatar_actor_proven=True,
                 npc_actor_proven=True, npc_actor_expression="partner"))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_are_owed": 10}, avatar_actor_proven=True,
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"),
+            "(function() local beta = context and context.actors and context.actors.beta; "
+            'if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" '
+            "then return false end; "
+            "return service_value(services.npcs.get(beta)).opinion.owed >= 10 "
+            "end)()",
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_are_owed": {"u_val": "debt_threshold"}},
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"))
 
     def test_npc_role_nearby_rejects_non_native_range_override(self) -> None:
         expected = (
@@ -3828,17 +3861,30 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 )
             self.assertNotIn("run_eoc", main)
 
-    def test_keeps_faction_trust_without_beta_and_uses_exact_beta(self) -> None:
+    def test_translates_faction_trust_only_for_proven_dialogue_beta(self) -> None:
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 {"u_has_faction_trust": 12}, avatar_actor_proven=True))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": 12}, avatar_actor_proven=True,
+                npc_actor_proven=True, npc_actor_expression="partner"))
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
                 {"u_has_faction_trust": 12}, avatar_actor_proven=True,
-                npc_actor_proven=True, npc_actor_expression="partner"),
-            "service_value(services.factions.for_character(partner))"
-            ".reputation.trusts >= 12",
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"),
+            "(function() local beta = context and context.actors and context.actors.beta; "
+            'if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" '
+            "then return false end; "
+            "return service_value(services.factions.for_character(beta))"
+            ".reputation.trusts >= 12 end)()",
         )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"u_has_faction_trust": {"u_val": "trust_threshold"}},
+                npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"))
 
     def test_keeps_literal_faction_trust_condition_without_beta_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
