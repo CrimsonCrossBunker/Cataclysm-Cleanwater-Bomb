@@ -17872,6 +17872,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {"u_has_items": {"item": "water_clean", "count": 2}},
                 {"u_has_item_with_flag": "EATEN_COLD"},
                 {"u_has_item_category": "food", "count": 2},
+                {"count": 2, "u_has_item_category": "food"},
                 {"u_has_software": {"item": "software_calculator", "charges": 1}},
                 {"u_has_worn_with_flag": "WATERPROOF", "bodypart": "torso"},
                 {"u_has_wielded_with_flag": "DURABLE_MELEE"},
@@ -17907,6 +17908,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.todos, [])
             self.assertIn("services.inventory.resources(actor", main)
             self.assertIn("services.inventory.category_count(alpha", main)
+            self.assertIn(
+                "services.inventory.category_count(alpha, category)) >= 2", main,
+            )
             self.assertIn("services.inventory.has_item_type_flag(alpha", main)
             self.assertIn("services.inventory.wielded_matches(actor", main)
             self.assertIn("services.inventory.has_items(alpha", main)

@@ -27372,9 +27372,12 @@ def render_static_item_category_or_flag_condition(
     npc_dialogue_pair_proven: bool,
 ) -> str | None:
     """Lower static item-category and item-type-flag predicates with exact roles."""
-    selector = next(iter(condition), None)
     category_selectors = {"u_has_item_category", "npc_has_item_category"}
     flag_selectors = {"u_has_item_with_flag", "npc_has_item_with_flag"}
+    present_selectors = (category_selectors | flag_selectors).intersection(condition)
+    if len(present_selectors) != 1:
+        return None
+    selector = next(iter(present_selectors))
     if selector in category_selectors:
         if set(condition) - {selector, "count"}:
             return None
