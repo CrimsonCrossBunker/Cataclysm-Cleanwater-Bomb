@@ -26682,6 +26682,14 @@ def render_trait_condition(
     target = beta if selector.startswith("npc_") else alpha
     if target is None:
         return None
+    if selector.startswith("npc_") and target in {
+        "actor", "context.actors.item",
+        "(context.actors and context.actors.beta) or actor",
+    }:
+        # Native npc_* conditions read const_actor(true), which is beta.  A
+        # primary EOC actor or fallback-to-alpha expression is not proof of
+        # that participant and must not be queried as though it were beta.
+        return None
     observer = alpha if selector.startswith("npc_") else beta
     method = "is_visible_to" if selector.endswith("has_visible_trait") else (
         "is_purifiable" if selector.endswith("is_trait_purifiable") else "has")
@@ -26689,9 +26697,38 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
+        if selector in {"u_has_trait", "npc_has_trait"}:
+            if isinstance(identifier, dict):
+                raw_id = render_participant_string_expression(
+                    identifier, target, alpha, beta,
+                    native_string_values=True,
+                )
+            elif lua_quotable_native_variable_string(identifier):
+                raw_id = lua_quote(identifier)
+            else:
+                return None
+            if raw_id is None:
+                return None
+            # Do not run the variable resolver until the selected actor is a
+            # live-shaped Character handle.  This matters for npc_*: beta is
+            # allowed to be absent, and native const_actor(true) never falls
+            # back to alpha.
+            character_expression = (
+                "context and context.actors and context.actors.beta"
+                if target == "context.actors.beta" else target
+            )
+            return (
+                "(function(character) "
+                'if character == nil or character.kind ~= "creature" then return false end; '
+                'if character.subtype ~= "avatar" and character.subtype ~= "character" '
+                'and character.subtype ~= "npc" then return false end; '
+                f"local raw = {raw_id}; "
+                'if type(raw) ~= "string" then return false end; '
+                "return service_value(services.mutations.has_id_text(character, raw)) "
+                f"end)({character_expression})"
+            )
         null_safe_id = selector in {
-            "u_has_trait", "npc_has_trait", "u_has_any_trait",
-            "npc_has_any_trait", "u_is_trait_purifiable",
+            "u_has_any_trait", "npc_has_any_trait", "u_is_trait_purifiable",
             "npc_is_trait_purifiable",
         }
         if null_safe_id:
@@ -27342,10 +27379,19 @@ def render_eoc_condition_expression(
     if set(condition) & {"u_service", "npc_service"}:
         return None
     if set(condition) & TRAIT_QUERY_SELECTORS:
+        trait_beta = npc_query_actor
+        if (
+            trait_beta is None and
+            npc_actor_expression == "context.actors.beta"
+        ):
+            # The content callback provenance identifies beta even when it
+            # does not establish that beta is always a Character.  The trait
+            # renderer performs the runtime Character-kind guard.
+            trait_beta = npc_actor_expression
         return render_trait_condition(
             condition, "actor" if avatar_actor_proven or (
                 generic_character_actor_proven and not npc_actor_proven) else None,
-            npc_query_actor,
+            trait_beta,
         )
 
     if set(condition) == {"test_eoc"} and eoc_conditions is not None:

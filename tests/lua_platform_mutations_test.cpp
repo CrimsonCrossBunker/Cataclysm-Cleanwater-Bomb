@@ -135,6 +135,15 @@ struct mutation_fixture {
         return result["value"].get<bool>();
     }
 
+    bool query_id_text( const bool npc_target, const std::string &trait_text ) {
+        sol::protected_function function = services["mutations"]["has_id_text"];
+        sol::protected_function_result call = function( handle( npc_target ), trait_text );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<bool>();
+    }
+
     cata::lua_platform::game_handle_runtime_owner_ptr owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     cata::lua_platform::game_handle_runtime runtime{ owner, 1 };
@@ -262,6 +271,7 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
         CAPTURE( npc_target, added );
         const bool lua_has = fixture.query( "has", npc_target, "QUICK" );
         CHECK( lua_has == fixture.legacy_condition( R"({")" + prefix + R"(has_trait":"QUICK"})" ) );
+        CHECK( fixture.query_id_text( npc_target, "QUICK" ) == lua_has );
         const bool any = fixture.query( "has", npc_target, "QUICK" ) ||
                          fixture.query( "has", npc_target, "FELINE_EARS" );
         CHECK( any == fixture.legacy_condition(
@@ -294,6 +304,25 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
         CHECK( lua_purifiable == fixture.legacy_condition( R"({")" + prefix +
                 R"(is_trait_purifiable":"VULNERABLECHILL"})" ) );
         CHECK( fixture.query( "is_purifiable", !npc_target, "VULNERABLECHILL" ) );
+    }
+}
+
+TEST_CASE( "lua_platform_mutations_has_id_text_matches_native_lookup",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture fixture;
+    const bool npc_target = GENERATE( false, true );
+    Character &target = fixture.target( npc_target );
+    target.set_mutation( trait_QUICK );
+
+    std::vector<std::string> ids = {
+        "QUICK", "UNKNOWN_MUTATION", std::string( 300, 'x' ),
+        std::string( "UNKNOWN\x01", 8 ), std::string( "UNKNOWN\0", 8 ), ""
+    };
+    for( const std::string &text : ids ) {
+        CAPTURE( npc_target, text );
+        CHECK( fixture.query_id_text( npc_target, text ) ==
+               target.has_trait( trait_id( text ) ) );
     }
 }
 

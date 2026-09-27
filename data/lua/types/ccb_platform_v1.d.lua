@@ -10503,6 +10503,13 @@ function CcbMutationsApi.definitions(options) end
 ---@return CcbResult result `value` is boolean.
 function CcbMutationsApi.has(character, mutation) end
 
+---Read a Character's mutation cache by the exact native ID text.
+---Unknown, overlong, or control-containing text returns false like Character::has_trait.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param id_text string Raw native mutation ID text; no GameId length or character validation is applied.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.has_id_text(character, id_text) end
+
 ---Check a mutation's visibility to the explicit observer, including the native visibility threshold.
 ---@param observed GameHandle Character whose mutation is inspected.
 ---@param observer GameHandle Character performing the observation.
