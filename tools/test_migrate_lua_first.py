@@ -16713,9 +16713,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn("services.world.transform_radius(", main)
-            self.assertIn(
+            self.assertNotIn(
                 "services.characters.drop_weapon(services.characters.avatar())",
                 main,
+            )
+            self.assertIn(
+                "native wrapper requires a dialogue beta NPC", main
             )
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
