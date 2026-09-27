@@ -6348,6 +6348,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "effect": [
                                 {"u_mutate": 0, "use_vitamins": False},
+                                {"u_mutate": 1000000},
                                 {
                                     "u_mutate_category": "HUMAN",
                                     "use_vitamins": False,
@@ -6384,6 +6385,12 @@ assert(#events == 9)
                                     }
                                 },
                                 {"u_mutate_towards": "TOUGH", "unknown": True},
+                                {"u_mutate": -1},
+                                {"u_mutate": 1000001},
+                                {"u_mutate": {"global_val": "next_chance"}},
+                                {"u_mutate": {"math": ["u_strength()"]}},
+                                {"u_mutate": {"u_val": "chance"}},
+                                {"u_mutate": {"npc_val": "chance"}},
                             ],
                         },
                         {
@@ -6391,6 +6398,12 @@ assert(#events == 9)
                             "id": "unproven_npc_mutation",
                             "required_event": "game_start",
                             "effect": {"npc_mutate": 1},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_npc_mutation_chance",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"npc_mutate": {"npc_val": "chance"}},
                         },
                     ]
                 ),
@@ -6403,8 +6416,9 @@ assert(#events == 9)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 2)
-            self.assertIn("services.mutations.mutate(", main)
+            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(main.count("services.mutations.mutate("), 3)
+            self.assertIn("actor, 1000000, true)", main)
             self.assertIn(
                 "services.mutations.mutate_category(\n"
                 "        actor, services.types.id(\"mutation_category\", \"HUMAN\"), "
@@ -6430,9 +6444,39 @@ assert(#events == 9)
                 report,
             )
             self.assertIn(
+                "EOC unsupported_mutation_shapes effect #3 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #4 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #5 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #6 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #7 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #8 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_npc_mutation_chance effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
                 "EOC unproven_npc_mutation effect #0 needs domain-service conversion",
                 report,
             )
+            self.assertNotIn('services.variables.get_global("next_chance")', main)
+            self.assertNotIn('services.gameplay.math.evaluate("u_strength()"', main)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_literal_stat_threshold_conditions_with_provenance(self) -> None:
