@@ -335,6 +335,8 @@ assert(worn_calls==1 and has_calls==1)
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     condition, avatar_actor_proven=True))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_opposite_actor_visibility_uses_event_alpha_handle(self) -> None:
         # The event alpha is deliberately different from the global avatar.
         # These generated predicates must keep using the exact alpha handle.
         for condition, observer, target in (
