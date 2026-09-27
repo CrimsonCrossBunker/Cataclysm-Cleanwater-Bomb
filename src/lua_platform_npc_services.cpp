@@ -658,6 +658,57 @@ sol::table get_npc_mission_available_count(
                    state, provider->chatbin.missions.size() ) );
 }
 
+sol::table get_npc_mission_selected_condition(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle &owner_handle, const std::string &predicate,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    if( predicate != "complete" && predicate != "incomplete" &&
+        predicate != "failed" ) {
+        return make_game_error_result( state, {
+            "invalid_predicate",
+            "NPC mission selected condition must be complete, incomplete, or failed"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    mission *selected = provider->chatbin.mission_selected;
+    if( !live_mission_pointer( selected ) ) {
+        return make_game_value_result(
+                   state, sol::make_object( state, false ) );
+    }
+    // Compute only the requested native predicate.  is_complete can inspect
+    // world and inventory state; has_failed only checks mission status.
+    if( predicate == "complete" ) {
+        return make_game_value_result(
+                   state, sol::make_object( state,
+                                            selected->is_complete(
+                                                provider->getID(), *owner ) ) );
+    }
+    if( predicate == "incomplete" ) {
+        return make_game_value_result(
+                   state, sol::make_object( state,
+                                            !selected->is_complete(
+                                                provider->getID(), *owner ) ) );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, selected->has_failed() ) );
+}
+
 sol::table select_npc_mission(
     sol::this_state lua, const game_handle &provider_handle,
     const mission_token &token,
@@ -1864,6 +1915,17 @@ void install_npc_domain_services(
             require_read();
             return get_npc_mission_available_count(
                        state, provider,
+                       current_runtime_generation(),
+                       current_world_generation() );
+        } );
+    missions.set_function(
+        "selected_condition",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider,
+            const game_handle & owner, const std::string & predicate ) {
+            require_read();
+            return get_npc_mission_selected_condition(
+                       state, provider, owner, predicate,
                        current_runtime_generation(),
                        current_world_generation() );
         } );
