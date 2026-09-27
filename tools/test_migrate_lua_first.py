@@ -7559,6 +7559,136 @@ assert(#events == 11)
             self.assertNotIn("services.npcs.ai_rules(actor)", main)
             self.assertNotIn("run_eoc", main)
 
+    def test_assigned_mission_counts_require_an_exact_dialogue_pair(self) -> None:
+        predicates = {
+            "has_no_assigned_mission": "total == 0",
+            "has_assigned_mission": "total == 1",
+            "has_many_assigned_missions": "total >= 2",
+        }
+        for condition, comparison in predicates.items():
+            with self.subTest(condition=condition):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition,
+                    npc_actor_expression="context.actors.beta",
+                    npc_dialogue_pair_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn(
+                    "services.npcs.missions.assigned_for_owner(beta, alpha)",
+                    expression,
+                )
+                self.assertIn(comparison, expression)
+                self.assertIn('alpha.subtype ~= "avatar"', expression)
+                self.assertIn('beta.subtype ~= "npc"', expression)
+
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="context.actors.beta",
+                    )
+                )
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="actor",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
+        dialogue_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "dialogue_topic",
+                "responses": [{"true_eocs": "assigned_pair"}],
+            },
+        )
+        assigned_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "assigned_pair",
+                "condition": "has_assigned_mission",
+                "effect": {"message": "assigned"},
+            },
+        )
+        exact_dialogue_ids = \
+            migrate_lua_first._npc_dialogue_mission_pair_provenance(
+                [dialogue_topic, assigned_eoc]
+            )
+        self.assertEqual(exact_dialogue_ids, frozenset({"assigned_pair"}))
+        paired = migrate_lua_first.render_eoc(
+            assigned_eoc,
+            migrate_lua_first.MigrationResult(),
+            talker_pair_ids=frozenset({"assigned_pair"}),
+            npc_dialogue_mission_pair_ids=exact_dialogue_ids,
+        )
+        self.assertIn(
+            "services.npcs.missions.assigned_for_owner(beta, alpha)", paired
+        )
+
+        competing_sources = (
+            {
+                "type": "SPELL", "effect": "effect_on_condition",
+                "effect_str": "assigned_pair", "valid_targets": ["ally"],
+            },
+            {"type": "monster_attack", "eoc": "assigned_pair"},
+            {
+                "type": "effect_on_condition", "id": "assigned_pair",
+                "required_event": "game_start",
+                "condition": "has_assigned_mission",
+                "effect": {"message": "assigned"},
+            },
+            {
+                "type": "talk_topic", "id": "delayed_topic",
+                "responses": [{"delay": 1, "true_eocs": "assigned_pair"}],
+            },
+            {
+                "type": "talk_topic", "id": "rebound_topic",
+                "responses": [{"actor": "npc", "true_eocs": "assigned_pair"}],
+            },
+        )
+        for index, competing_source in enumerate(competing_sources):
+            with self.subTest(competing_source=competing_source):
+                competing = migrate_lua_first.SourceObject(
+                    Path("source.json"), index + 2, competing_source
+                )
+                eligible = \
+                    migrate_lua_first._npc_dialogue_mission_pair_provenance(
+                        [dialogue_topic, assigned_eoc, competing]
+                    )
+                self.assertNotIn("assigned_pair", eligible)
+                fail_closed = migrate_lua_first.render_eoc(
+                    assigned_eoc,
+                    migrate_lua_first.MigrationResult(),
+                    talker_pair_ids=frozenset({"assigned_pair"}),
+                    npc_dialogue_mission_pair_ids=eligible,
+                )
+                self.assertNotIn(
+                    "services.npcs.missions.assigned_for_owner(", fail_closed
+                )
+                self.assertIn(
+                    "condition TODO: translate the legacy condition",
+                    fail_closed,
+                )
+
+        delayed_parent = migrate_lua_first.SourceObject(
+            Path("source.json"), 10, {
+                "type": "effect_on_condition", "id": "delayed_parent",
+                "effect": {
+                    "run_eocs": "assigned_pair",
+                    "time_in_future": ["1 minute", "2 minutes"],
+                },
+            },
+        )
+        delayed_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 11, {
+                "type": "talk_topic", "id": "delayed_parent_topic",
+                "responses": [{"true_eocs": "delayed_parent"}],
+            },
+        )
+        delayed_closure = \
+            migrate_lua_first._npc_dialogue_mission_pair_provenance(
+                [dialogue_topic, assigned_eoc, delayed_parent, delayed_topic]
+            )
+        self.assertNotIn("assigned_pair", delayed_closure)
+
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
             "has_assigned_mission",
