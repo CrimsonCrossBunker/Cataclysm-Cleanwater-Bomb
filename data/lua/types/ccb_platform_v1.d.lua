@@ -9841,6 +9841,10 @@ function CcbNpcOrdersApi.open_character_sheet(handle) end
 ---@class CcbNpcsApi
 ---@field orders CcbNpcOrdersApi
 local CcbNpcsApi = {}
+---Run the native talk-effect drop on this NPC; hallucinations are ignored and even an unarmed call passes its null weapon to the map-drop path.
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult result `value.dropped` is true only when a physical wielded item was dropped.
+function CcbNpcsApi.drop_weapon(handle) end
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded NPC-class page.
 function CcbNpcsApi.classes(options) end

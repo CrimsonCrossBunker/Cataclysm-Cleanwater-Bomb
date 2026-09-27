@@ -33,8 +33,10 @@ extern "C" {
 #include "creature.h"
 #include "enum_conversions.h"
 #include "faction.h"
+#include "item_location.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_items.h"
 #include "lua_platform_missions.h"
 #include "mission.h"
 #include "npc.h"
@@ -1400,6 +1402,47 @@ sol::table choose_npc_combat_style(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table drop_npc_weapon(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const bool hallucination = entry->is_hallucination();
+    const item_location wielded = entry->get_wielded_item();
+    const bool dropped = !hallucination && static_cast<bool>( wielded );
+    if( dropped ) {
+        retire_item_handle_identity( *wielded );
+    }
+    // Keep the native talk-effect behavior: hallucinations are ignored and
+    // the NPC's weapon is removed directly onto its current map tile.  This
+    // deliberately does not use orders.run(), whose public order rejects an
+    // unarmed NPC before reaching the native remove-and-map-drop path.
+    talk_function::drop_weapon( *entry );
+    if( dropped ) {
+        entry->invalidate_crafting_inventory();
+    }
+    if( !hallucination ) {
+        // The legacy function also calls map::add_item_or_charges with the
+        // null weapon on an unarmed NPC, so item-query continuations must be
+        // invalidated for every non-hallucination call, not only real drops.
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["dropped"] = dropped;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table open_npc_character_sheet(
     sol::this_state lua, const game_handle &handle,
     const game_handle_runtime &runtime_generation,
@@ -2129,6 +2172,17 @@ void install_npc_domain_services(
                    current_world_generation() );
     } );
     npcs["dialogue"] = std::move( dialogue );
+
+    npcs.set_function(
+        "drop_weapon",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, const game_handle &handle ) {
+        require_write();
+        return drop_npc_weapon(
+                   state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
 
     sol::table orders = lua.create_table();
     orders.set_function(

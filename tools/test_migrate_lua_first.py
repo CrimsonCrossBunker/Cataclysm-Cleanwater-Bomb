@@ -17397,6 +17397,54 @@ assert(calls == 1)
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_npc_drop_weapon_requires_direct_talk_topic_beta_npc(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic", "id": "npc_drop_weapon_topic",
+                            "responses": [{"true_eocs": "npc_drop_weapon_pair"}],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_drop_weapon_pair",
+                            "effect": "drop_weapon",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_drop_weapon_npc_event",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": "drop_weapon",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_drop_weapon_game_start",
+                            "required_event": "game_start",
+                            "effect": "drop_weapon",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_drop_weapon_pair_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(main.count("services.npcs.drop_weapon(beta)"), 1)
+            self.assertIn(
+                'beta.kind == "creature" and beta.subtype == "npc"', main
+            )
+            self.assertNotIn('services.npcs.orders.run(beta, "drop_weapon")', main)
+            self.assertIn("drop_weapon targets native dialogue beta", main)
+            self.assertIn("direct talk-topic beta NPC proof", report)
+
     def test_can_stow_weapon_conditions_require_proven_native_characters(self) -> None:
         u_expression = migrate_lua_first.render_eoc_condition_expression(
             "u_can_stow_weapon", avatar_actor_proven=True,
