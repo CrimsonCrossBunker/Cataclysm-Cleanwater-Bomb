@@ -11071,21 +11071,26 @@ local CcbPlatformGameplayApi = {}
 ---@class CcbPlatformMathApi
 local CcbPlatformMathApi = {}
 
----Evaluate a native gameplay expression against the supplied actor and
----detached callback context.  This is a domain expression service, not an EOC
----runner; it returns a finite number and follows native variable semantics.
+---Evaluate a native, non-assignment gameplay expression against the supplied
+---alpha actor, optional beta actor, and detached callback context.  This is a
+---domain expression service, not an EOC runner; it returns a finite number.
+---The context table is copied for evaluation and is not written back.
 ---@param expression string Native math expression, at most 8192 bytes.
----@param actor? GameHandle Character/creature used for u_/npc_ variables.
+---@param actor? GameHandle Alpha Character/creature used for u_ variables; defaults to the avatar.
 ---@param context? table<string, boolean|number|string|TripointCoord|NullValue>
+---@param beta? GameHandle Beta Character/creature used for n_ variables; when omitted, native dialogue semantics fall back to alpha.
 ---@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.evaluate(expression, actor, context) end
+function CcbPlatformMathApi.evaluate(expression, actor, context, beta) end
 
 ---Evaluate and apply a native assignment expression against an active callback.
----@param expression string Native math assignment/expression, at most 8192 bytes.
----@param actor? GameHandle Character/creature used for u_/npc_ variables.
+---The context table is copied; assignments to context variables are not written
+---back.  Do not use v_ indirect assignments when their target can be context.
+---@param expression string Native math assignment, at most 8192 bytes.
+---@param actor? GameHandle Alpha Character/creature used for u_ variables; defaults to the avatar.
 ---@param context? table<string, boolean|number|string|TripointCoord|NullValue>
+---@param beta? GameHandle Beta Character/creature used for n_ variables; when omitted, native dialogue semantics fall back to alpha.
 ---@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.apply(expression, actor, context) end
+function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 
 ---@class CcbCharacterSensesSnapshot
 ---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.

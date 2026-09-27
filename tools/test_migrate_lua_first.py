@@ -4009,7 +4009,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "type": "effect_on_condition",
                             "id": "bounded_character_math",
                             "required_event": "game_start",
-                            "effect": {"math": ["u_score += 2"]},
+                            "effect": {"math": ["u_score = 2"]},
                         },
                         {
                             "type": "effect_on_condition",
@@ -4058,7 +4058,10 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 'services.variables.set(\n        actor, "label"',
                 main,
             )
-            self.assertIn('current + 2', main)
+            self.assertIn(
+                'services.gameplay.math.apply("u_score = 2", actor, context.data, nil)',
+                main,
+            )
             self.assertEqual(main.count("local function service_value"), 1)
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("services.state.", main)
@@ -4744,9 +4747,9 @@ assert(#events == 9)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 3)
-            self.assertEqual(len(result.todos), 3)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 4)
+            self.assertEqual(len(result.todos), 4)
             self.assertIn('values = { "two" }', main)
             self.assertIn("services.random.int(0, #values - 1) + 1", main)
             self.assertIn('services.variables.set(\n        actor, "choice", selected_value, { include_before = false })', main)
@@ -4754,7 +4757,8 @@ assert(#events == 9)
             self.assertNotIn("services.variables.get(actor", main)
             self.assertNotIn("services.state.", main)
             self.assertIn("variable name/value into bounded Lua values", main)
-            self.assertIn("services.gameplay.math.apply", main)
+            self.assertNotIn("services.gameplay.math.apply", main)
+            self.assertIn("translate this math expression into", main)
             self.assertIn("copy_var into typed variable services", main)
             self.assertNotIn("run_eoc", main)
             self.assertIn("needs domain-service conversion", report)
@@ -4798,6 +4802,81 @@ assert(#events == 9)
             self.assertNotIn("context.data[", main)
             self.assertIn("u_score", main)
             self.assertIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+
+    def test_math_effects_require_native_scope_and_proven_character_roles(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_character_pair",
+                            "required_event": "character_melee_attacks_character",
+                            "effect": [
+                                {"math": ["u_math_alpha = 2"]},
+                                {"math": ["n_math_beta = 3"]},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_alpha_only",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"math": ["n_math_without_beta = 4"]},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_wrong_scope_prefix",
+                            "required_event": "game_start",
+                            "effect": {"math": ["npc_wrong_scope = 5"]},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_random_rhs",
+                            "required_event": "game_start",
+                            "effect": {"math": ["u_math_random = rng(1, 3)"]},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_context_write",
+                            "required_event": "game_start",
+                            "effect": {"math": ["_math_context = 6"]},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_indirect_write",
+                            "required_event": "game_start",
+                            "effect": {"math": ["v_math_target = 7"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "math_scope_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(main.count("services.gameplay.math.apply("), 2)
+            self.assertIn(
+                'services.gameplay.math.apply("u_math_alpha = 2", actor, context.data, nil)',
+                main,
+            )
+            self.assertIn(
+                'services.gameplay.math.apply("n_math_beta = 3", nil, context.data, context.actors.interlocutor)',
+                main,
+            )
+            for effect_id in (
+                "math_alpha_only", "math_wrong_scope_prefix", "math_random_rhs",
+                "math_context_write", "math_indirect_write",
+            ):
+                self.assertIn(f"EOC {effect_id} effect #0 needs domain-service conversion", report)
+            self.assertNotIn('math.apply("npc_wrong_scope = 5"', main)
+            self.assertNotIn('math.apply("u_math_random = rng(1, 3)"', main)
+            self.assertNotIn('math.apply("_math_context = 6"', main)
+            self.assertNotIn('math.apply("v_math_target = 7"', main)
 
     def test_bounded_plain_activity_assignment_uses_typed_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -17668,7 +17747,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 13)
+            self.assertEqual(len(result.todos), 14)
             self.assertNotIn("services.activities.assign(actor)", main)
             self.assertIn("plain typed activity service", main)
             self.assertNotIn("services.state.", main)
@@ -17678,7 +17757,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 '        "event", services.time.duration(0, "turn"))',
                 main,
             )
-            self.assertIn("services.gameplay.math.apply", main)
+            self.assertNotIn("services.gameplay.math.apply", main)
+            self.assertIn("translate this math expression into", main)
             self.assertIn("copy_var into typed variable services", main)
             self.assertIn("add_debt through a bounded NPC opinion/debt service", main)
             self.assertIn(
@@ -23226,11 +23306,12 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertIn("if seen[value] then return true end", main)
             self.assertIn("~= first then return false end", main)
-            self.assertIn("services.gameplay.math.apply", main)
+            self.assertNotIn("services.gameplay.math.apply", main)
+            self.assertIn("translate this math expression into", main)
 
     def test_phase_move_and_global_overmap_point_keep_avatar_context(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -2906,7 +2906,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     sol::table gameplay = lua.create_table();
     const auto make_math_dialogue = [runtime_generation, world_generation](
                                         const sol::optional<cata::lua_platform::game_handle> &requested_actor,
-    const sol::optional<sol::table> &requested_context ) {
+                                        const sol::optional<sol::table> &requested_context,
+                                        const sol::optional<cata::lua_platform::game_handle> &requested_beta ) {
         std::unique_ptr<talker> alpha;
         if( requested_actor ) {
             const cata::lua_platform::native_handle_result<Creature> resolved =
@@ -2919,7 +2920,20 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         } else {
             alpha = get_talker_for( get_avatar() );
         }
-        auto result = std::make_unique<::dialogue>( std::move( alpha ), nullptr );
+        std::unique_ptr<talker> beta;
+        if( requested_beta ) {
+            const cata::lua_platform::native_handle_result<Creature> resolved =
+                requested_beta->resolve_creature(
+                    runtime_generation(), world_generation() );
+            if( !resolved ) {
+                throw std::invalid_argument( resolved.error->message );
+            }
+            beta = get_talker_for( *resolved.value );
+        }
+        // dialogue::actor( true ) falls back to alpha when beta is absent.
+        // Keeping an empty beta here preserves native math-expression behavior.
+        auto result = std::make_unique<::dialogue>(
+                          std::move( alpha ), std::move( beta ) );
         if( requested_context ) {
             for( const auto &entry : *requested_context ) {
                 if( !entry.first.is<std::string>() ) {
@@ -2969,7 +2983,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     math.set_function( "evaluate", [require_read, make_math_dialogue](
                            sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
-    const sol::optional<sol::table> &context ) {
+                           const sol::optional<sol::table> &context,
+                           const sol::optional<cata::lua_platform::game_handle> &beta ) {
         require_read();
         if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -2980,7 +2995,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             throw std::invalid_argument(
                 "services.gameplay.math.evaluate could not parse expression" );
         }
-        std::unique_ptr<::dialogue> conversation = make_math_dialogue( actor, context );
+        if( expression.get_type() == math_type_t::assign ) {
+            throw std::invalid_argument(
+                "services.gameplay.math.evaluate does not accept assignment expressions" );
+        }
+        std::unique_ptr<::dialogue> conversation = make_math_dialogue(
+                    actor, context, beta );
         const double result = expression.eval( *conversation );
         if( !std::isfinite( result ) ) {
             throw std::runtime_error(
@@ -2993,7 +3013,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     math.set_function( "apply", [require_write, make_math_dialogue](
                            sol::this_state state, std::string_view source,
                            const sol::optional<cata::lua_platform::game_handle> &actor,
-    const sol::optional<sol::table> &context ) {
+                           const sol::optional<sol::table> &context,
+                           const sol::optional<cata::lua_platform::game_handle> &beta ) {
         require_write();
         if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -3004,7 +3025,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             throw std::invalid_argument(
                 "services.gameplay.math.apply could not parse expression" );
         }
-        std::unique_ptr<::dialogue> conversation = make_math_dialogue( actor, context );
+        if( expression.get_type() != math_type_t::assign ) {
+            throw std::invalid_argument(
+                "services.gameplay.math.apply requires an assignment expression" );
+        }
+        std::unique_ptr<::dialogue> conversation = make_math_dialogue(
+                    actor, context, beta );
         const double result = expression.eval( *conversation );
         if( !std::isfinite( result ) ) {
             throw std::runtime_error(
