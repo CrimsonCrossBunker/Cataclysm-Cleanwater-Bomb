@@ -20234,6 +20234,21 @@ def render_static_npc_guard_position_effect(
     return destination_lines
 
 
+def _contains_unproven_npc_variable_scope(value: Any) -> bool:
+    if isinstance(value, dict):
+        if "npc_val" in value or "var_val" in value:
+            return True
+        return any(
+            _contains_unproven_npc_variable_scope(nested)
+            for nested in value.values()
+        )
+    if isinstance(value, list):
+        return any(
+            _contains_unproven_npc_variable_scope(nested) for nested in value
+        )
+    return False
+
+
 def render_static_assign_mission_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
@@ -20243,26 +20258,28 @@ def render_static_assign_mission_effect(
     if not avatar_actor_proven:
         return None
     avatar = "actor"
+    mission_value = effect.get("assign_mission")
+    if _contains_unproven_npc_variable_scope(mission_value):
+        return None
     mission_id = _dynamic_id_expression(
-        effect.get("assign_mission"), "mission", avatar
+        mission_value, "mission", avatar
     )
     if mission_id is None:
         return None
-    deadline = effect.get("deadline")
     deadline_expression: str | None = None
-    if deadline is not None:
-        deadline_number = finite_number_literal(deadline)
+    if "deadline" in effect:
+        deadline_number = finite_number_literal(effect["deadline"])
         if deadline_number is None:
             return None
         if deadline_number != 0:
-            if (
-                not math.isfinite(float(deadline_number)) or
-                float(deadline_number) < 0 or
-                float(deadline_number) > NATIVE_INT_MAX or
-                math.trunc(float(deadline_number)) != float(deadline_number)
-            ):
+            # Native time_duration::from_turns(double) narrows to int by
+            # truncating toward zero.  Check the converted value, since values
+            # between INT_MAX and INT_MAX + 1 (or INT_MIN - 1 and INT_MIN)
+            # still convert to a representable native int.
+            native_turns = math.trunc(float(deadline_number))
+            if not NATIVE_INT_MIN <= native_turns <= NATIVE_INT_MAX:
                 return None
-            deadline_expression = str(int(deadline_number))
+            deadline_expression = str(native_turns)
     lines = [
         "    local reservation = service_value(services.missions.reserve(",
         f"        {mission_id}))",
@@ -20272,7 +20289,7 @@ def render_static_assign_mission_effect(
     if deadline_expression is not None:
         lines.extend([
             "    service_value(services.missions.set_deadline(",
-            f"        token, services.time.point({deadline_expression}))",
+            f"        token, services.time.point({deadline_expression})))",
         ])
     return lines
 

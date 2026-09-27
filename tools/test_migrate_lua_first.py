@@ -14024,6 +14024,89 @@ assert(not available())
             )
         )
 
+        for deadline, expected_turn in (
+            (-1.5, -1),
+            (0.5, 0),
+            (-0.5, 0),
+            (migrate_lua_first.NATIVE_INT_MAX + 0.5,
+             migrate_lua_first.NATIVE_INT_MAX),
+            (migrate_lua_first.NATIVE_INT_MIN - 0.5,
+             migrate_lua_first.NATIVE_INT_MIN),
+        ):
+            with self.subTest(deadline=deadline):
+                rendered_deadline = (
+                    migrate_lua_first.render_static_assign_mission_effect(
+                        {"assign_mission": "MISSION_TEST", "deadline": deadline},
+                        True,
+                    )
+                )
+                self.assertIsNotNone(rendered_deadline)
+                rendered_text = "\n".join(rendered_deadline or [])
+                self.assertIn(
+                    f"services.time.point({expected_turn})", rendered_text
+                )
+                self.assertIn(
+                    "service_value(services.missions.set_deadline(\n"
+                    f"        token, services.time.point({expected_turn})))",
+                    rendered_text,
+                )
+                self.assertLess(
+                    rendered_text.index("services.missions.assign(actor, token)"),
+                    rendered_text.index("services.missions.set_deadline("),
+                )
+
+        for deadline in (
+            migrate_lua_first.NATIVE_INT_MAX + 1,
+            migrate_lua_first.NATIVE_INT_MIN - 1,
+        ):
+            with self.subTest(out_of_range_deadline=deadline):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_assign_mission_effect(
+                        {"assign_mission": "MISSION_TEST", "deadline": deadline},
+                        True,
+                    )
+                )
+
+    def test_assign_mission_id_scopes_require_proven_dialogue_owners(self) -> None:
+        for mission_value in (
+            "MISSION_TEST",
+            {"u_val": "mission_id"},
+            {"context_val": "mission_id"},
+            {"global_val": "mission_id"},
+        ):
+            with self.subTest(mission_value=mission_value):
+                self.assertIsNotNone(
+                    migrate_lua_first.render_static_assign_mission_effect(
+                        {"assign_mission": mission_value}, True
+                    )
+                )
+
+        for mission_value in (
+            {"npc_val": "mission_id"},
+            {"var_val": "mission_id"},
+            {
+                "mutator": "mon_faction",
+                "mtype_id": {"npc_val": "source_monster"},
+            },
+            {
+                "mutator": "mon_faction",
+                "mtype_id": {"var_val": "indirect_source"},
+            },
+            {"rand": ["MISSION_A", "MISSION_B"]},
+        ):
+            with self.subTest(unproven_mission_value=mission_value):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_assign_mission_effect(
+                        {"assign_mission": mission_value}, True
+                    )
+                )
+
+        self.assertIsNone(
+            migrate_lua_first.render_static_assign_mission_effect(
+                {"assign_mission": "MISSION_TEST"}, False
+            )
+        )
+
     def test_translates_bounded_npc_mission_provider_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
