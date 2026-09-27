@@ -3814,6 +3814,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {"one_in_chance": 3},
                 {"x_in_y_chance": {"x": 1.5, "y": 4.0}},
                 {"roll_contested": 2, "difficulty": 5, "die_size": 8},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 8.9},
+                {"roll_contested": 2.5, "difficulty": 5.5, "die_size": 8.9},
+                {"roll_contested": 2, "difficulty": 5},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 0},
+                {"roll_contested": 2, "difficulty": 5, "die_size": -3.9},
                 {"mod_is_loaded": "dda"},
                 {"current_dimension": "default"},
                 {"is_season": "spring"},
@@ -3871,7 +3876,23 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("~= first then return false end", main)
             self.assertIn("services.random.one_in(3)", main)
             self.assertIn("services.random.probability(1.5, 4)", main)
-            self.assertIn("services.random.contested(2, 5, 8)", main)
+            self.assertEqual(main.count("services.random.native_int(1, 8)"), 3)
+            self.assertIn(
+                "services.random.native_int(1, 8) + (0.0 + 2.5)) > (0.0 + 5.5)",
+                main,
+            )
+            self.assertIn(
+                "services.random.native_int(1, 10) + (0.0 + 2)) > (0.0 + 5)",
+                main,
+            )
+            self.assertIn(
+                "services.random.native_int(0, 1) + (0.0 + 2)) > (0.0 + 5)",
+                main,
+            )
+            self.assertIn(
+                "services.random.native_int(-3, 1) + (0.0 + 2)) > (0.0 + 5)",
+                main,
+            )
             self.assertIn('services.gameplay.mods.is_active_in_world("dda")', main)
             self.assertNotIn("services.gameplay.mods.is_loaded(", main)
             self.assertIn(
@@ -5767,11 +5788,21 @@ assert(#events == 9)
                 },
                 {"x_in_y_chance": {"x": 2, "y": 1}},
                 {
+                    "roll_contested": {"context_val": "check"},
+                    "difficulty": 5,
+                    "die_size": 8,
+                },
+                {
+                    "roll_contested": 2,
+                    "difficulty": {"context_val": "difficulty"},
+                    "die_size": 8,
+                },
+                {
                     "roll_contested": 2,
                     "difficulty": 5,
                     "die_size": {"context_val": "die_size"},
                 },
-                {"roll_contested": 2, "difficulty": 5, "die_size": 0},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 2147483648},
                 {"roll_contested": 2, "difficulty": 5, "die_size": 10 ** 400},
             ]
             source.write_text(
@@ -5797,13 +5828,14 @@ assert(#events == 9)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 4)
+            self.assertEqual(len(result.partial), 6)
             self.assertIn("services.random.one_in", main)
             self.assertIn("services.random.probability", main)
             self.assertNotIn("services.random.contested", main)
+            self.assertNotIn("services.random.native_int", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
-                4,
+                6,
             )
 
     def test_translates_bionic_any_and_literal_recipe_knowledge(self) -> None:

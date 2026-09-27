@@ -28354,31 +28354,23 @@ def render_eoc_condition_expression(
     } <= set(condition):
         check = finite_number_literal(condition["roll_contested"])
         difficulty = finite_number_literal(condition["difficulty"])
-        raw_die_size = condition.get("die_size", 10)
-        die_size = None
-        if isinstance(raw_die_size, int) and not isinstance(raw_die_size, bool):
-            die_size = raw_die_size
-        elif (
-            isinstance(raw_die_size, float) and math.isfinite(raw_die_size) and
-            raw_die_size.is_integer()
-        ):
-            die_size = int(raw_die_size)
-        check_expression = (
-            lua_number(check) if check is not None else
-            render_eoc_numeric_expression(condition["roll_contested"], "0", "actor")
-        )
-        difficulty_expression = (
-            lua_number(difficulty) if difficulty is not None else
-            render_eoc_numeric_expression(condition["difficulty"], "0", "actor")
-        )
-        if check_expression is None or difficulty_expression is None or die_size is None:
+        die_size_literal = finite_number_literal(condition.get("die_size", 10))
+        if check is None or difficulty is None or die_size_literal is None:
             return None
-        if die_size <= 0 or die_size > 1000000000:
+        # Native casts the evaluated double to int (truncating toward zero),
+        # then rng(1, die_size) swaps its endpoints when die_size < 1. Restrict
+        # this lowering to finite literal inputs whose conversion is defined;
+        # dynamic doubles can be non-finite or fail native value conversion.
+        die_size = math.trunc(die_size_literal)
+        if not NATIVE_INT_MIN <= die_size <= NATIVE_INT_MAX:
             return None
-        die_expression = str(die_size)
+        minimum, maximum = sorted((1, die_size))
+        # `rng` uses the shared native game RNG. `services.random.contested`
+        # deliberately uses an isolated per-Mod stream, so native_int is the
+        # matching bounded draw. Force double arithmetic like C++ int + double.
         return (
-            "services.random.contested("
-            f"{check_expression}, {difficulty_expression}, {die_expression})"
+            f"(services.random.native_int({minimum}, {maximum}) + "
+            f"(0.0 + {lua_number(check)})) > (0.0 + {lua_number(difficulty)})"
         )
 
     if set(condition) == {"mod_is_loaded"} and bounded_utf8_string(

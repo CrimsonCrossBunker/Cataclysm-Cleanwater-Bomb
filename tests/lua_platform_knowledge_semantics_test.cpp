@@ -23,6 +23,7 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
+#include "rng.h"
 #include "skill.h"
 #include "type_id.h"
 
@@ -193,5 +194,78 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
     REQUIRE( registered.valid() );
     cata::lua_platform::runtime_world_ready( true );
     REQUIRE( completed );
+}
+
+TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
+           "[lua][platform][random][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    avatar player;
+    player.normalize();
+    player.setID( character_id( 4311 ), true );
+    dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math );
+    sol::table ccb = lua.create_table();
+    const auto runtime = cata::lua_platform::make_runtime( "roll_contested_semantics", 4304, lua );
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
+    cata::lua_platform::set_active_runtimes( { runtime } );
+    lua["ccb"] = ccb;
+
+    const std::vector<std::string> native_conditions = {
+        R"({"roll_contested":2,"difficulty":5})",
+        R"({"roll_contested":2.5,"difficulty":5.5,"die_size":8.9})",
+        R"({"roll_contested":2,"difficulty":5,"die_size":0})",
+        R"({"roll_contested":2,"difficulty":5,"die_size":-3.9})",
+    };
+    cata_default_random_engine expected_native_engine;
+    lua.set_function( "native_roll_contested", [&native_conditions, &conversation,
+    &expected_native_engine](
+    const int index, const unsigned int seed ) {
+        rng_set_engine_seed( seed );
+        const conditional_t condition( json_loader::from_string(
+                                          native_conditions.at( index - 1 ) ).get_object() );
+        const bool result = condition( conversation );
+        expected_native_engine = rng_get_engine();
+        // Let the following Platform native_int call draw from the same seed.
+        rng_set_engine_seed( seed );
+        return result;
+    } );
+    lua.set_function( "check_roll_contested", [&expected_native_engine]( const bool same ) {
+        CHECK( same );
+        CHECK( rng_get_engine() == expected_native_engine );
+    } );
+    const sol::protected_function_result installed = lua.safe_script( R"(
+local cases = {
+    { 1, 10, 2.0, 5.0 },
+    { 1, 8, 2.5, 5.5 },
+    { 0, 1, 2.0, 5.0 },
+    { -3, 1, 2.0, 5.0 },
+}
+ccb.runtime.handler("compare_rolls", function()
+    local random = ccb.services.random
+    for index, case in ipairs(cases) do
+        for _, seed in ipairs({ 4911, 4912, 4913, 4914 }) do
+            local native_result = native_roll_contested(index, seed)
+            local migrated_result = random.native_int(case[1], case[2]) +
+                (0.0 + case[3]) > (0.0 + case[4])
+            check_roll_contested(native_result == migrated_result)
+        end
+    end
+    done = true
+end)
+ccb.runtime.on("world_ready", "compare_rolls")
+)" );
+    REQUIRE( installed.valid() );
+    cata::lua_platform::runtime_world_ready( true );
+    CHECK( lua["done"].get_or( false ) );
 }
 #endif
