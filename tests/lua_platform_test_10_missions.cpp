@@ -318,6 +318,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
             runtime, active_world );
 
     const sol::table missions = services["npcs"]["missions"];
+    const sol::protected_function has_active_mission =
+        services["missions"]["has_active"];
     const sol::protected_function state = missions["state"];
     const sol::protected_function assigned_for_owner =
         missions["assigned_for_owner"];
@@ -384,6 +386,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( initial_state["assigned"].get<sol::table>()
            ["returned"].get<int>() == 0 );
     CHECK( integer_from( available_count( provider_handle ) ) == 0 );
+    CHECK_FALSE( boolean_from( has_active_mission( owner_handle, mission_id ) ) );
     for( const char *predicate : { "complete", "incomplete", "failed" } ) {
         CHECK_FALSE( boolean_from( selected_condition(
                                       provider_handle, owner_handle, predicate ) ) );
@@ -444,6 +447,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( provider->chatbin.missions_assigned.size() == 1 );
     CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     CHECK( owner.get_active_missions().size() == 1 );
+    CHECK( boolean_from( has_active_mission( owner_handle, mission_id ) ) );
     sol::table one_owner_assignment = value_from(
             assigned_for_owner( provider_handle, owner_handle ) );
     CHECK( one_owner_assignment["total"].get<int>() == 1 );

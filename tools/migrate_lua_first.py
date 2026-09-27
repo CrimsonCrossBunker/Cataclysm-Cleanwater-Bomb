@@ -28266,14 +28266,28 @@ def render_eoc_condition_expression(
             )
     if (
         set(condition) == {"u_has_mission"} and
-        avatar_actor_proven and
         isinstance(condition.get("u_has_mission"), str) and
-        safe_platform_id(condition.get("u_has_mission"))
+        safe_platform_id(condition.get("u_has_mission")) and
+        bounded_utf8_string(condition.get("u_has_mission"), 256) and
+        not any(
+            ord(character) < 0x20 or ord(character) == 0x7f
+            for character in condition["u_has_mission"]
+        )
     ):
+        # The native condition always queries get_avatar(), independently of
+        # the EOC actor.  GameId validity also requires a registered mission
+        # definition, while the native string_id comparison returns false for
+        # an unknown static id; guard that case before calling the typed API.
         return (
-            "service_value(services.missions.has_active(actor, "
-            "services.types.id(\"mission\", "
-            f"{lua_quote(condition['u_has_mission'])})))"
+            "(function() "
+            "local mission_id = services.types.id(\"mission\", "
+            f"{lua_quote(condition['u_has_mission'])}); "
+            "if not mission_id:is_valid() then return false end; "
+            "local avatar = services.characters.avatar(); "
+            "if not avatar:is_valid() then return false end; "
+            "return service_value(services.missions.has_active("
+            "avatar, mission_id)) "
+            "end)()"
         )
 
     if (

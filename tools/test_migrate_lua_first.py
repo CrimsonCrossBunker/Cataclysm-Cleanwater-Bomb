@@ -8754,6 +8754,7 @@ assert(#events == 9)
             source = Path(temporary) / "source.json"
             cases = [
                 ("game_start", {"u_has_mission": "MISSION_MAIN_QUEST"}),
+                ("npc_becomes_hostile", {"u_has_mission": "UNKNOWN_MISSION_ID"}),
             ]
             source.write_text(
                 json.dumps(
@@ -8779,20 +8780,31 @@ assert(#events == 9)
             self.assertEqual(len(result.converted), len(cases))
             self.assertEqual(result.partial, [])
             self.assertIn(
-                'service_value(services.missions.has_active(actor, '
-                'services.types.id("mission", "MISSION_MAIN_QUEST")))',
+                'local mission_id = services.types.id("mission", "MISSION_MAIN_QUEST"); '
+                'if not mission_id:is_valid() then return false end; '
+                'local avatar = services.characters.avatar(); '
+                'if not avatar:is_valid() then return false end; '
+                'return service_value(services.missions.has_active(avatar, mission_id))',
                 main,
             )
+            self.assertIn(
+                'services.types.id("mission", "UNKNOWN_MISSION_ID")', main
+            )
+            self.assertNotIn("services.missions.has_active(actor", main)
             self.assertNotIn("needs a native Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
-    def test_dynamic_or_unproven_u_has_mission_shapes_stay_partial(self) -> None:
+    def test_dynamic_or_invalid_u_has_mission_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             cases = [
+                ("game_start", {"u_has_mission": {"u_val": "mission_id"}}),
+                ("game_start", {"u_has_mission": {"npc_val": "mission_id"}}),
                 ("game_start", {"u_has_mission": {"context_val": "mission_id"}}),
                 ("game_start", {"u_has_mission": 5}),
                 ("game_start", {"u_has_mission": ""}),
+                ("game_start", {"u_has_mission": "bad\nmission"}),
+                ("game_start", {"u_has_mission": "M" * 257}),
             ]
             source.write_text(
                 json.dumps(
@@ -8823,6 +8835,39 @@ assert(#events == 9)
                 len(cases),
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_real_u_has_mission_eoc_uses_the_global_avatar(self) -> None:
+        source = json.loads(
+            (
+                REPOSITORY_ROOT /
+                "data/json/effects_on_condition/npc_eocs/isherwood_barry_rescue_eocs.json"
+            ).read_text(encoding="utf-8")
+        )
+        mission_conditions: list[dict[str, str]] = []
+
+        def collect_mission_conditions(value: object) -> None:
+            if isinstance(value, dict):
+                if set(value) == {"u_has_mission"}:
+                    mission_conditions.append(value)
+                for child in value.values():
+                    collect_mission_conditions(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect_mission_conditions(child)
+
+        collect_mission_conditions(source)
+        self.assertIn(
+            {"u_has_mission": "MISSION_ISHERWOOD_CHRIS_1"},
+            mission_conditions,
+        )
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_mission": "MISSION_ISHERWOOD_CHRIS_1"},
+            avatar_actor_proven=False,
+        )
+        self.assertIsNotNone(expression)
+        self.assertIn("services.characters.avatar()", expression)
+        self.assertIn("mission_id:is_valid()", expression)
+        self.assertNotIn("has_active(actor", expression)
 
     def test_translates_u_has_camp_in_any_event(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
