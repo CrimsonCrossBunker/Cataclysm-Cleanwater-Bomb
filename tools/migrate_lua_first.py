@@ -27215,6 +27215,30 @@ def render_eoc_condition_expression(
                 "services.creatures.has_line_of_sight(context.actors.beta, actor)"
             )
         return beta_guard + alpha_guard + f"service_value({query})"
+    if condition == "u_can_stow_weapon":
+        if not character_actor_proven:
+            return None
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc") and '
+            "service_value(services.inventory.weapon_state(actor)).can_stow"
+        )
+    if condition == "npc_can_stow_weapon":
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "return service_value(services.inventory.weapon_state(beta)).can_stow "
+            "end)()"
+        )
     if condition == "u_is_in_vehicle":
         if not character_actor_proven:
             return None
