@@ -19399,7 +19399,12 @@ def render_mutation_category_expression(value: Any) -> str | None:
 
 
 def render_mutation_chance_expression(value: Any) -> str | None:
-    """Render the integral one-in chance accepted by Character::mutate."""
+    """Render only a static chance proven safe for the typed mutation API.
+
+    Native EOC mutation evaluates a double and passes it to an int parameter,
+    while the Platform API requires an integral value in its bounded range.
+    A dynamic EOC value cannot prove that contract at migration time.
+    """
     if isinstance(value, int) and not isinstance(value, bool):
         if 0 <= value <= MAX_MUTATION_RANDOM_CHANCE:
             return str(value)
@@ -19408,10 +19413,7 @@ def render_mutation_chance_expression(value: Any) -> str | None:
         if value.is_integer() and 0 <= value <= MAX_MUTATION_RANDOM_CHANCE:
             return str(int(value))
         return None
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_numeric_expression(value, "0")
-    return rendered
+    return None
 
 
 def render_static_mutation_effect(
