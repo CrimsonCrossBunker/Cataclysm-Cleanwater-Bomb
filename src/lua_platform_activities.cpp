@@ -8,12 +8,15 @@
 #include <character_id.h>
 #include <coordinates.h>
 #include <enums.h>
+#include <game_inventory.h>
 #include <item_uid.h>
 #include <map_selector.h>
+#include <pickup.h>
 #include <point.h>
 #include <translation.h>
 #include <visitable.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -24,6 +27,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -43,6 +47,7 @@
 #include "npctalk.h"
 #include "player_activity.h"
 #include "type_id.h"
+#include "units.h"
 
 namespace cata::lua_platform
 {
@@ -56,6 +61,85 @@ constexpr std::size_t maximum_activity_job_bytes = 64;
 constexpr std::size_t maximum_training_participants = 64;
 constexpr std::size_t maximum_backlog_snapshot = 128;
 constexpr std::size_t maximum_interruption_message_bytes = 8192;
+
+void require_active_callback(
+    const std::function<bool()> &has_active_callback,
+    const std::string_view api_name )
+{
+    if( !has_active_callback() ) {
+        throw std::runtime_error(
+            std::string( api_name ) + " is only available from an active callback" );
+    }
+}
+
+struct pickup_at_options {
+    int extra_moves_per_item = 0;
+    units::volume max_volume = units::from_milliliter( -1 );
+    units::mass max_mass = units::from_milligram( std::int64_t{ -1000 } );
+};
+
+pickup_at_options read_pickup_at_options(
+    const sol::optional<sol::table> &requested )
+{
+    pickup_at_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "services.activities.pickup_at option names must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( entry.second.get_type() != sol::type::number ) {
+            throw std::invalid_argument(
+                "services.activities.pickup_at options must be numeric" );
+        }
+        const double requested_value = entry.second.as<double>();
+        if( !std::isfinite( requested_value ) ) {
+            throw std::invalid_argument(
+                "services.activities.pickup_at options must be finite" );
+        }
+        if( key == "extra_moves_per_item" ) {
+            if( std::trunc( requested_value ) != requested_value ||
+                requested_value < std::numeric_limits<int>::lowest() ||
+                requested_value > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    "services.activities.pickup_at extra_moves_per_item must be a native int" );
+            }
+            result.extra_moves_per_item = static_cast<int>( requested_value );
+        } else if( key == "max_volume_ml" ) {
+            const double native_value = std::trunc( requested_value );
+            const double native_upper_bound =
+                static_cast<double>( std::numeric_limits<int>::max() ) + 1.0;
+            if( native_value < std::numeric_limits<int>::lowest() ||
+                native_value >= native_upper_bound ) {
+                throw std::invalid_argument(
+                    "services.activities.pickup_at max_volume_ml must truncate to a native volume" );
+            }
+            result.max_volume = units::from_milliliter(
+                                   static_cast<int>( native_value ) );
+        } else if( key == "max_mass_g" ) {
+            const double milligrams = requested_value * 1000.0;
+            const double native_value = std::trunc( milligrams );
+            const double native_upper_bound =
+                -static_cast<double>( std::numeric_limits<std::int64_t>::lowest() );
+            if( !std::isfinite( milligrams ) ||
+                native_value < std::numeric_limits<std::int64_t>::lowest() ||
+                native_value >= native_upper_bound ) {
+                throw std::invalid_argument(
+                    "services.activities.pickup_at max_mass_g must convert to a native mass" );
+            }
+            result.max_mass = units::from_milligram(
+                                  static_cast<std::int64_t>( native_value ) );
+        } else {
+            throw std::invalid_argument(
+                "services.activities.pickup_at received unknown option '" + key + "'" );
+        }
+    }
+    return result;
+}
+
 sol::table activity_snapshot(
     sol::state_view lua, const player_activity &current )
 {
@@ -201,10 +285,18 @@ void install_activity_api(
     std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> require_write )
+    std::function<void()> require_write,
+    std::function<bool()> has_active_callback,
+    activity_pickup_selector pickup_selector )
 {
     sol::state_view lua( services.lua_state() );
     sol::table activities = lua.create_table();
+    if( !pickup_selector ) {
+        pickup_selector = []( const std::set<tripoint_bub_ms> &targets,
+                              Pickup::pick_info &info ) {
+            return game_menus::inv::pickup( targets, {}, info );
+        };
+    }
 
     activities.set_function(
         "snapshot",
@@ -800,6 +892,52 @@ void install_activity_api(
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
+    } );
+    activities.set_function(
+        "pickup_at",
+        [require_write, has_active_callback, pickup_selector,
+         current_runtime_generation, current_world_generation](
+            sol::this_state lua,
+            const game_handle &character_handle,
+            const script_tripoint_coord &target,
+            const sol::optional<sol::table> &requested_options ) {
+        constexpr std::string_view api_name = "services.activities.pickup_at";
+        require_write();
+        require_active_callback( has_active_callback, api_name );
+        const pickup_at_options options = read_pickup_at_options(
+                                              requested_options );
+        if( target.native_origin() != coords::origin::abs ||
+            target.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.activities.pickup_at target must be an absolute map-square Tripoint" );
+        }
+        sol::state_view state( lua );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   character_handle,
+                                   current_runtime_generation(),
+                                   current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const tripoint_abs_ms target_abs( target.to_native() );
+        const tripoint_bub_ms target_local = get_map().get_bub( target_abs );
+        Pickup::pick_info info(
+            options.extra_moves_per_item, options.max_volume, options.max_mass );
+        const drop_locations selected = pickup_selector(
+                                            { target_local }, info );
+        if( !selected.empty() ) {
+            // Native f_pickup_items uses pick_info for the picker, then calls
+            // Character::pick_up(drop_locations) without passing it to the
+            // activity actor.  Keep that boundary: limits affect selection only.
+            character->pick_up( selected );
+        }
+        sol::table value = state.create_table();
+        value["scheduled"] = !selected.empty();
+        value["selected_count"] = static_cast<std::int64_t>( selected.size() );
+        value["activity"] = activity_snapshot( state, character->activity );
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
     } );
     activities.set_function(
         "start_training",

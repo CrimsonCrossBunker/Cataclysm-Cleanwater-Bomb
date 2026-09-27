@@ -14325,12 +14325,14 @@ assert(#events == 9)
             self.assertEqual(len(result.partial), 2)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
-            self.assertIn(
-                "pickup needs explicit map candidates and a Platform API preserving "
-                "native selection and movement/volume/mass constraints",
-                main,
+            self.assertEqual(main.count("services.activities.pickup_at"), 2)
+            self.assertIn("does not prove an absolute map-square value", main)
+            self.assertEqual(report.count("does not prove an absolute map-square value"), 2)
+            self.assertIn("passes has_float('max_mass') as its gram value", report)
+            self.assertEqual(
+                [todo.category for todo in result.todos],
+                ["manual_rewrite", "manual_rewrite"],
             )
-            self.assertEqual(report.count("pickup needs explicit map candidates"), 2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_follower_services_keep_scene_order_cancel_and_copy_direction(self) -> None:
@@ -16829,12 +16831,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertTrue(result.todos)
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
-            self.assertIn(
-                "pickup needs explicit map candidates and a Platform API preserving "
-                "native selection and movement/volume/mass constraints",
-                main,
+            self.assertNotIn("services.activities.pickup_at(", main)
+            self.assertIn("services.activities.pickup_at", main)
+            self.assertIn("does not prove an absolute map-square value", main)
+            self.assertIn("does not prove an absolute map-square value", report)
+            self.assertIn("passes has_float('max_mass') as its gram value", report)
+            self.assertEqual(
+                [todo.category for todo in result.todos], ["manual_rewrite"]
             )
-            self.assertIn("pickup needs explicit map candidates", report)
 
     def test_character_action_effects_lower_for_proven_avatar_and_npc_actors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -26807,7 +26811,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
         ):
             self.assertNotIn(legacy_map_write, main + holder_main)
 
-    def test_pickup_migration_preserves_manual_todo_until_selection_is_supported(
+    def test_pickup_migration_keeps_unproven_var_info_as_manual_todo(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -26818,7 +26822,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     "id": "explicit_pickup_requires_native_selection",
                     "required_event": "game_start",
                     "effect": {
-                        "u_pickup_items": {"abs_ms": [12, -7, 0]},
+                        "u_pickup_items": {"context_val": "pickup_target"},
                     },
                 }),
                 encoding="utf-8",
@@ -26829,17 +26833,15 @@ assert(context.conditions.check==original and context.conditions.check() and con
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            todo = (
-                "pickup needs explicit map candidates and a Platform API preserving "
-                "native selection and movement/volume/mass constraints"
-            )
+            todo = "does not prove an absolute map-square value"
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
             self.assertEqual(
-                [todo.category for todo in result.todos], ["platform_gap"]
+                [todo.category for todo in result.todos], ["manual_rewrite"]
             )
             self.assertIn(todo, main)
             self.assertIn(todo, report)
+            self.assertNotIn("services.activities.pickup_at(", main)
             self.assertNotIn("services.items.page(", main)
             self.assertNotIn("services.items.transfer(", main)
 

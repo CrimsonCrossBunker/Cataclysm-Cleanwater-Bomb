@@ -2059,7 +2059,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                           require_read, require_write );
     cata::lua_platform::install_activity_api(
         services, runtime_generation, world_generation,
-        require_read, require_write );
+        require_read, require_write, has_callback );
     sol::table morale = lua.create_table();
     morale.set_function( "add", [require_write, runtime_generation, world_generation](
                              sol::this_state state, const cata::lua_platform::game_handle & handle,
