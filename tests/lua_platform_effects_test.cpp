@@ -1914,6 +1914,53 @@ TEST_CASE( "lua_platform_copy_rules_does_not_re_equip_or_spend_moves",
     }
 }
 
+TEST_CASE( "lua_platform_ally_rule_toggle_uses_effective_override_state",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+    sol::protected_function toggle = fixture.services["npcs"]["set_ally_rule"];
+    const ally_rule rule = ally_rule::allow_sleep;
+
+    for( const auto &[base_before, override_value] : {
+             std::pair{ true, false }, std::pair{ false, true }
+         } ) {
+        fixture.other.rules = npc_follower_rules();
+        if( base_before ) {
+            fixture.other.rules.set_flag( rule );
+        } else {
+            fixture.other.rules.clear_flag( rule );
+        }
+        fixture.other.rules.enable_override( rule );
+        if( override_value ) {
+            fixture.other.rules.set_override( rule );
+        } else {
+            fixture.other.rules.clear_override( rule );
+        }
+        const bool effective_before = fixture.other.rules.has_flag( rule );
+        const bool expected_base_after = !effective_before;
+
+        sol::protected_function_result call = toggle(
+                    fixture.handle( true ), "allow_sleep", sol::lua_nil );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        sol::table value = result["value"];
+
+        const bool base_after = fixture.other.rules.has_flag( rule, false );
+        CHECK( base_after == expected_base_after );
+        CHECK( fixture.other.rules.has_flag( rule ) == effective_before );
+        CHECK( value["before"].get<bool>() == base_before );
+        CHECK( value["after"].get<bool>() == base_after );
+        CHECK( value["changed"].get<bool>() == ( base_before != base_after ) );
+    }
+}
+
 TEST_CASE( "lua_platform_request_talk_repeated_request_has_no_notification",
            "[lua][platform][npc][semantic]" )
 {

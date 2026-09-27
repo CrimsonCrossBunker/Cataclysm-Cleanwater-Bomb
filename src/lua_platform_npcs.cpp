@@ -1549,19 +1549,24 @@ sol::table set_npc_ally_rule(
     }
     const ally_rule native_rule = found->second.rule;
     const bool before = entry->rules.has_flag( native_rule, false );
-    const bool enabled = requested_enabled.value_or( !before );
-    if( enabled ) {
+    // Native talker_npc::toggle_ai_rule uses toggle_flag(), which chooses the
+    // new base flag from has_flag() including any active override.  Explicit
+    // true/false requests still set or clear only the underlying base flag.
+    const bool base_enabled = requested_enabled.value_or(
+                                  !entry->rules.has_flag( native_rule ) );
+    if( base_enabled ) {
         entry->rules.set_flag( native_rule );
     } else {
         entry->rules.clear_flag( native_rule );
     }
+    const bool after = entry->rules.has_flag( native_rule, false );
     entry->invalidate_range_cache();
     entry->wield_better_weapon();
     sol::table value = state.create_table();
     value["rule"] = rule;
     value["before"] = before;
-    value["after"] = enabled;
-    value["changed"] = before != enabled;
+    value["after"] = after;
+    value["changed"] = before != after;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
