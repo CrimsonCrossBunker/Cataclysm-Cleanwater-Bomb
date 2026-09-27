@@ -7689,6 +7689,57 @@ assert(#events == 11)
             )
         self.assertNotIn("assigned_pair", delayed_closure)
 
+    def test_available_mission_counts_require_a_dialogue_provider(self) -> None:
+        predicates = {
+            "has_no_available_mission": "available_count == 0",
+            "has_available_mission": "available_count == 1",
+            "has_many_available_missions": "available_count >= 2",
+            "npc_has_no_available_mission": "available_count == 0",
+            "npc_has_available_mission": "available_count == 1",
+            "npc_has_many_available_missions": "available_count >= 2",
+        }
+        for condition, comparison in predicates.items():
+            with self.subTest(condition=condition):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition,
+                    npc_actor_expression="context.actors.beta",
+                    npc_dialogue_pair_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn(
+                    "services.npcs.missions.available_count(beta)",
+                    expression,
+                )
+                self.assertIn(comparison, expression)
+                self.assertIn('beta.subtype ~= "npc"', expression)
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="context.actors.beta",
+                    )
+                )
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="actor",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
+        for alias in (
+            "u_has_no_available_mission",
+            "u_has_available_mission",
+            "u_has_many_available_missions",
+        ):
+            with self.subTest(alias=alias):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        alias,
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
             "has_assigned_mission",
@@ -7745,11 +7796,10 @@ assert(#events == 11)
                             npc_actor_expression=actor_expression,
                         )
                     )
-        self.assertEqual(
+        self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 "u_has_available_mission", avatar_actor_proven=True
-            ),
-            "false",
+            )
         )
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(

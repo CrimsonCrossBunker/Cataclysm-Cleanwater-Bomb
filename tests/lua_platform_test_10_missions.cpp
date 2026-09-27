@@ -217,7 +217,8 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     const sol::table missions = npcs["missions"];
     REQUIRE( missions.valid() );
     for( const char *name : {
-             "state", "assigned_for_owner", "select", "offer", "add_assigned",
+             "state", "assigned_for_owner", "available_count", "select",
+             "offer", "add_assigned",
              "assign_selected", "succeed_selected", "fail_selected",
              "clear_selected", "claim_selected_reward"
          } ) {
@@ -318,6 +319,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const sol::protected_function state = missions["state"];
     const sol::protected_function assigned_for_owner =
         missions["assigned_for_owner"];
+    const sol::protected_function available_count =
+        missions["available_count"];
     const sol::protected_function select = missions["select"];
     const sol::protected_function offer = missions["offer"];
     const sol::protected_function add_assigned = missions["add_assigned"];
@@ -351,6 +354,12 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         return envelope["error"].get<sol::table>()
                ["code"].get<std::string>();
     };
+    const auto integer_from = []( sol::protected_function_result result ) {
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        return envelope["value"].get<int>();
+    };
 
     const sol::protected_function npc_snapshot = services["npcs"]["get"];
     CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 0 );
@@ -360,6 +369,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            ["returned"].get<int>() == 0 );
     CHECK( initial_state["assigned"].get<sol::table>()
            ["returned"].get<int>() == 0 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     sol::table initial_owner_missions = value_from(
             assigned_for_owner( provider_handle, owner_handle ) );
     CHECK( initial_owner_missions["total"].get<int>() == 0 );
@@ -369,6 +379,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         offer_value["mission"].get<sol::table>()
         ["token"].get<cata::lua_platform::mission_token>();
     CHECK( provider->chatbin.missions.size() == 1 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
 
     active_runtime = other_runtime;
     CHECK( error_code( select( provider_handle, offered_token ) ) ==
@@ -394,6 +405,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     value_from( assign_selected( provider_handle, owner_handle ) );
     CHECK( provider->chatbin.missions.empty() );
     CHECK( provider->chatbin.missions_assigned.size() == 1 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     CHECK( owner.get_active_missions().size() == 1 );
     sol::table one_owner_assignment = value_from(
             assigned_for_owner( provider_handle, owner_handle ) );
@@ -555,6 +567,20 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     REQUIRE( mission::remove_unassigned( retired->get_id() ) );
     CHECK( error_code( select( provider_handle, retired_token ) ) ==
            "missing_mission" );
+    provider->chatbin.missions.push_back( retired );
+    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
+    sol::table stale_available_state = value_from( state( provider_handle ) );
+    CHECK( stale_available_state["available"].get<sol::table>()
+           ["total"].get<int>() == 0 );
+    provider->chatbin.missions.clear();
+
+    provider->chatbin.missions.push_back( nullptr );
+    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
+    sol::table null_available_state = value_from( state( provider_handle ) );
+    CHECK( null_available_state["available"].get<sol::table>()
+           ["total"].get<int>() == 0 );
+    provider->chatbin.missions.clear();
+
     provider->chatbin.mission_selected = retired;
     sol::table stale_state = value_from( state( provider_handle ) );
     CHECK_FALSE( stale_state["selected"].valid() );
@@ -577,7 +603,10 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            "not_provided_here" );
     sol::table filtered_state = value_from( state( provider_handle ) );
     CHECK( filtered_state["available"].get<sol::table>()
+           ["total"].get<int>() == 0 );
+    CHECK( filtered_state["available"].get<sol::table>()
            ["returned"].get<int>() == 0 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
     provider->chatbin.missions.clear();
     provider->chatbin.mission_selected = nullptr;
     REQUIRE( mission::remove_unassigned( foreign->get_id() ) );
