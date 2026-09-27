@@ -106,21 +106,8 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
     compare_at( R"({"u_at_om_location":"FACTION_CAMP_ANY"})",
                 "FACTION_CAMP_ANY" );
 
-    const sol::protected_function_result installed = fixture.lua.safe_script( R"(
-matches_near = function(center, location, radius)
-    for dy = -radius, radius do
-        for dx = -radius, radius do
-            if services.overmap.matches_location(
-                center + services.coords.tripoint_rel_omt(dx, dy, 0), location) then
-                return true
-            end
-        end
-    end
-    return false
-end
-)" );
-    REQUIRE( installed.valid() );
-    const sol::protected_function matches_near = fixture.lua["matches_near"];
+    const sol::protected_function matches_near =
+        fixture.services["overmap"]["matches_location_near"];
     const auto compare_near = [&]( const std::string &condition_json,
     const std::string &location, const int native_radius ) {
         const conditional_t native_condition( json_loader::from_string(
@@ -138,6 +125,8 @@ end
                   "field", 1 );
     compare_near( R"({"u_near_om_location":"field","range":-0.9})",
                   "field", 0 );
+    compare_near( R"({"u_near_om_location":"FACTION_CAMP_START","range":1})",
+                  "FACTION_CAMP_START", 1 );
     compare_near( R"({"u_near_om_location":"FACTION_CAMP_ANY","range":2})",
                   "FACTION_CAMP_ANY", 2 );
 }

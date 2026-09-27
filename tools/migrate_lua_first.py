@@ -28131,37 +28131,21 @@ def render_eoc_condition_expression(
         raw_range = condition.get("range", 1)
         radius = native_int_literal(raw_range)
         # Native converts the evaluated dbl_or_var to int, then visits a
-        # closed x/y square at the actor's OMT z-level.  Only small static
-        # radii are lowered here; dynamic, negative converted radii, and large
-        # ranges remain TODO rather than risking conversion errors or unbounded
-        # work.  A small negative fraction that truncates to zero is safe.
+        # closed x/y square at the actor's OMT z-level.  The bounded native
+        # Platform query preserves its candidate order and per-candidate
+        # origin mapgen-argument lookup.
         if (
             radius is not None and 0 <= radius <= 30 and
-            bounded_overmap_condition_id(raw_location) and
-            (radius == 0 or raw_location != "FACTION_CAMP_START")
+            bounded_overmap_condition_id(raw_location)
         ):
             position = (
                 "services.coords.project_to("
                 "service_value(services.creatures.snapshot(actor)).position, "
                 "\"omt\")"
             )
-            if radius == 0:
-                return (
-                    f"services.overmap.matches_location({position}, "
-                    f"{lua_quote(raw_location)})"
-                )
-            # `points_in_radius` increments x first and then y.  Keep that
-            # order so candidate terrain/camp queries stop on the same first
-            # matching tile as the native condition.
             return (
-                "(function() "
-                f"local center = {position}; "
-                f"for dy = -{radius}, {radius} do "
-                f"for dx = -{radius}, {radius} do "
-                "if services.overmap.matches_location(center + "
-                "services.coords.tripoint_rel_omt(dx, dy, 0), "
-                f"{lua_quote(raw_location)}) then return true end "
-                "end end return false end)()"
+                f"services.overmap.matches_location_near({position}, "
+                f"{lua_quote(raw_location)}, {radius})"
             )
 
     # Inventory predicates are lowered only for a proven avatar/NPC actor and
@@ -29850,8 +29834,8 @@ def render_eoc(
         ):
             condition_todo = (
                 "translate this FACTION_CAMP_ANY near-query shape only with a "
-                "bounded native square scan, camp lookup, and lazy overmap "
-                "lookup"
+                "bounded native square scan, per-candidate origin mapgen-argument "
+                "lookup, camp lookup, and lazy overmap queries"
             )
         elif isinstance(raw_condition, dict) and (
             "npc_at_om_location" in raw_condition or
@@ -29868,8 +29852,9 @@ def render_eoc(
         ):
             condition_todo = (
                 "translate this u_near_om_location shape only with native "
-                "double-to-int range conversion, x/y scan order, lazy overmap "
-                "lookups, and center mapgen args for FACTION_CAMP_START"
+                "double-to-int range conversion, a bounded x/y square scan, "
+                "per-candidate origin mapgen-argument lookups, and lazy "
+                "overmap queries"
             )
         elif (
             isinstance(raw_condition, dict) and

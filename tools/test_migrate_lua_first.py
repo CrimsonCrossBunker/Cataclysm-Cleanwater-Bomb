@@ -19871,16 +19871,19 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 7)
-            self.assertEqual(len(result.partial), 7)
-            self.assertEqual(main.count("services.overmap.matches_location("), 6)
+            self.assertEqual(len(result.converted), 8)
+            self.assertEqual(len(result.partial), 6)
+            self.assertEqual(main.count("services.overmap.matches_location("), 2)
+            self.assertEqual(
+                main.count("services.overmap.matches_location_near("), 5
+            )
             self.assertEqual(main.count("services.overmap.matches_terrain("), 1)
             self.assertEqual(
                 main.count("service_value(services.creatures.snapshot(actor)).position"),
-                6,
+                7,
             )
-            self.assertEqual(main.count("for dy = -1, 1 do"), 2)
-            self.assertEqual(main.count("services.coords.tripoint_rel_omt(dx, dy, 0)"), 2)
+            self.assertNotIn("for dy =", main)
+            self.assertNotIn("services.coords.tripoint_rel_omt(dx, dy, 0)", main)
             self.assertNotIn("services.overmap.matches(", main)
             self.assertIn(
                 "EOC npc_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
@@ -19890,12 +19893,9 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "EOC npc_near_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
+            self.assertIn('"FACTION_CAMP_START", 1)', main)
             self.assertIn(
-                "FACTION_CAMP_START",
-                result.files[Path("MIGRATION_REPORT.md")],
-            )
-            self.assertIn(
-                "double-to-int range conversion, x/y scan order",
+                "double-to-int range conversion, a bounded x/y square scan",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertIn(
@@ -25687,7 +25687,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
             self.assertNotIn("services.camps.near(", main)
-            self.assertIn("for dy = -2, 2 do", main)
+            self.assertIn("services.overmap.matches_location_near(", main)
             self.assertIn('"FACTION_CAMP_ANY"', main)
             self.assertNotIn("FACTION_CAMP_ANY near-query shape", report)
 
