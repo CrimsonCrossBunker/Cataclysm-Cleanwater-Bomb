@@ -24211,13 +24211,15 @@ def render_static_pickup_items(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep pickup as a TODO until the native picker can be represented.
+    """Keep legacy pickup out of automatic migration without a typed target.
 
-    The legacy effect presents an interactive selection and applies
-    ``extra_moves_per_item``, ``max_volume`` and ``max_mass`` through
-    ``Pickup::pick_info``.  Paging a tile and transferring every item silently
-    changes the user's selection and ignores those constraints, even when the
-    location is a static absolute map square.
+    The native effect resolves its ``var_info`` target to a dialogue value at
+    runtime.  That lookup does not prove the value is an absolute map-square
+    coordinate (and legacy values may use string conversion).  The manual
+    ``services.activities.pickup_at`` API preserves the native picker and
+    activity; the migration cannot safely invent the typed coordinate or
+    translate legacy limit fields, including the native ``max_mass`` parsing
+    quirk.
     """
     del effect, key, avatar_actor_proven, npc_event_character_actor_proven
     return None
@@ -31267,17 +31269,23 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    pickup_gap = (
+                        "pickup target_var is a legacy var_info lookup and does not "
+                        "prove an absolute map-square value; manually bind the matching "
+                        "character_handle and convert a typed TripointCoord through "
+                        "services.activities.pickup_at, then review legacy limit semantics"
+                    )
+                    if "max_mass" in effect:
+                        pickup_gap += (
+                            "; native max_mass currently passes has_float('max_mass') "
+                            "as its gram value, so that field needs manual review"
+                        )
                     lines.append(
-                        "    -- TODO: pickup needs explicit map candidates and a "
-                        "Platform API preserving native selection and movement/volume/mass "
-                        "constraints; unsupported location frames remain TODO."
+                        f"    -- TODO: {pickup_gap}."
                     )
                     result.add_todo(
-                        "platform_gap",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "pickup needs explicit map candidates and a Platform API preserving "
-                        "native selection and movement/volume/mass constraints; unsupported "
-                        "location frames remain TODO"
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {pickup_gap}"
                     )
                     all_effects_converted = False
             elif (

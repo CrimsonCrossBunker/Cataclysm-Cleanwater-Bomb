@@ -8577,6 +8577,11 @@ function CcbPlatformActivitiesApi.offer_portal_storm_interruption(message) end
 ---@param autopickup? boolean
 ---@return CcbResult result `value` is a CcbItemActivityResult; the input handle is retired before scheduling.
 function CcbPlatformActivitiesApi.pickup_item(character_handle, item_handle, quantity, autopickup) end
+---@param character_handle GameHandle Exact avatar or NPC whose activity receives the selected batch.
+---@param target TripointCoord Absolute map-square target passed to the native pickup selector.
+---@param options? CcbPickupAtOptions
+---@return CcbResult result `value` is a CcbPickupAtResult. Requires a write phase and active callback; the native picker presents map and vehicle items at the target, then schedules one pickup activity with the selected quantities. Options constrain the picker only; the activity receives the same default pick_info as native f_pickup_items. An empty or cancelled selection leaves the character activity unchanged.
+function CcbPlatformActivitiesApi.pickup_at(character_handle, target, options) end
 ---@param character_handle GameHandle
 ---@param book_handle GameHandle
 ---@param duration TimeDuration
@@ -9123,6 +9128,16 @@ function CcbFactionsApi.set_relationship(id, target, options) end
 ---@field item_uid integer Display-only UID; never used to resolve a handle.
 ---@field input_handle_retired boolean The scheduled operation retires the input handle before it runs.
 ---@field activity table<string, any> Detached activity snapshot.
+
+---@class CcbPickupAtOptions
+---@field extra_moves_per_item? integer Native pickup extra-moves integer; negative values are passed through.
+---@field max_volume_ml? number Truncated toward zero to the native integer milliliter volume; values outside the native int range are rejected, and negative values are passed through.
+---@field max_mass_g? number Converted to integer milligrams by truncation toward zero; values outside native mass range are rejected, and negative values are passed through. This is the manual API's numeric limit, not a claim that legacy EOC max_mass migrates equivalently.
+
+---@class CcbPickupAtResult
+---@field scheduled boolean True when the native picker returned at least one selection and the character received one pickup activity.
+---@field selected_count integer Number of selected drop locations returned by the native picker.
+---@field activity table<string, any> Detached activity snapshot after selection; unchanged when scheduled is false.
 
 ---@class CcbItemTransferResult
 ---@field accepted boolean True only after destination insertion and exact source removal/charge mutation commit.

@@ -1,8 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <limits>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -49,14 +53,18 @@
 #include "npctalk.h"
 #include "npctrade.h"
 #include "options_helpers.h"
+#include "pickup.h"
 #include "player_helpers.h"
 #include "viewer.h"
 #include "rng.h"
 #include "type_id.h"
+#include "units.h"
 
 static const bodypart_str_id body_part_test_tail( "test_tail" );
 
 static const efftype_id effect_bleed( "bleed" );
+static const itype_id itype_test_apple( "test_apple" );
+static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
 
 namespace
 {
@@ -648,7 +656,9 @@ TEST_CASE( "lua_platform_cancel_idle_npc_runs_native_backlog_cleanup",
     },
     [&]() {
         return fixture.world;
-    }, []() {}, []() {} );
+    }, []() {}, []() {}, []() {
+        return true;
+    } );
     sol::protected_function cancel = fixture.services["activities"]["cancel"];
     sol::protected_function_result call = cancel( fixture.handle( true ) );
     REQUIRE( call.valid() );
@@ -659,6 +669,221 @@ TEST_CASE( "lua_platform_cancel_idle_npc_runs_native_backlog_cleanup",
     CHECK( fixture.other.backlog.size() == native.backlog.size() );
     CHECK( fixture.other.backlog.empty() );
     CHECK_FALSE( fixture.other.activity );
+}
+
+
+TEST_CASE( "lua_platform_pickup_at_requires_an_active_callback",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    bool picker_called = false;
+    cata::lua_platform::activity_pickup_selector picker =
+    [&]( const std::set<tripoint_bub_ms> &, Pickup::pick_info & ) {
+        picker_called = true;
+        return drop_locations();
+    };
+    cata::lua_platform::install_activity_api(
+        fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {
+        return false;
+    }, picker );
+    const tripoint_bub_ms local( 60, 60, 0 );
+    const tripoint_abs_ms absolute = get_map().get_abs( local );
+    const auto target = cata::lua_platform::script_tripoint_coord::from_native(
+                            coords::origin::abs, coords::scale::map_square,
+                            absolute.raw() );
+    sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
+    sol::protected_function_result call = pickup( fixture.handle( false ), target );
+    CHECK_FALSE( call.valid() );
+    CHECK_FALSE( picker_called );
+    CHECK_FALSE( fixture.player.activity );
+}
+
+
+TEST_CASE( "lua_platform_pickup_at_rejects_invalid_options_before_selection",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    bool picker_called = false;
+    cata::lua_platform::activity_pickup_selector picker =
+    [&]( const std::set<tripoint_bub_ms> &, Pickup::pick_info & ) {
+        picker_called = true;
+        return drop_locations();
+    };
+    cata::lua_platform::install_activity_api(
+        fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {
+        return true;
+    }, picker );
+    const tripoint_bub_ms local( 60, 60, 0 );
+    const tripoint_abs_ms absolute = get_map().get_abs( local );
+    const auto target = cata::lua_platform::script_tripoint_coord::from_native(
+                            coords::origin::abs, coords::scale::map_square,
+                            absolute.raw() );
+    sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
+    const std::vector<std::pair<std::string, double>> invalid_options = {
+        { "extra_moves_per_item", 1.5 },
+        { "extra_moves_per_item",
+          static_cast<double>( std::numeric_limits<int>::max() ) + 1.0 },
+        { "max_volume_ml",
+          static_cast<double>( std::numeric_limits<int>::max() ) + 1.0 },
+        { "max_mass_g", 1e300 },
+        { "unknown_option", 1.0 },
+    };
+    for( const auto &invalid_option : invalid_options ) {
+        sol::table options = fixture.lua.create_table();
+        options[invalid_option.first] = invalid_option.second;
+        sol::protected_function_result call = pickup(
+                fixture.handle( false ), target, options );
+        CHECK_FALSE( call.valid() );
+    }
+    const auto relative_target = cata::lua_platform::script_tripoint_coord::from_native(
+                                     coords::origin::relative, coords::scale::map_square,
+                                     absolute.raw() );
+    sol::protected_function_result bad_frame_call = pickup(
+                fixture.handle( false ), relative_target );
+    CHECK_FALSE( bad_frame_call.valid() );
+    CHECK_FALSE( picker_called );
+    CHECK_FALSE( fixture.player.activity );
+}
+
+
+TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
+           "[lua][platform][activities][semantic]" )
+{
+    effect_fixture fixture;
+    fixture.player.assign_activity( activity_id( "ACT_WAIT" ), 100 );
+    const std::string previous_activity = fixture.player.activity.id().str();
+    const int previous_moves = fixture.player.activity.moves_total;
+    const tripoint_bub_ms local( 60, 60, 0 );
+    const tripoint_abs_ms absolute = get_map().get_abs( local );
+    bool received_target = false;
+    bool received_options = false;
+    cata::lua_platform::activity_pickup_selector picker =
+    [&]( const std::set<tripoint_bub_ms> &targets, Pickup::pick_info &info ) {
+        received_target = targets == std::set<tripoint_bub_ms>{ local };
+        received_options = info.extra_moves_per_distance == 11 &&
+                           info.max_volume == units::from_milliliter( 1250 ) &&
+                           info.max_mass == units::from_milligram( std::int64_t{ 2500 } );
+        return drop_locations();
+    };
+    cata::lua_platform::install_activity_api(
+        fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {
+        return true;
+    }, picker );
+    sol::table options = fixture.lua.create_table();
+    options["extra_moves_per_item"] = 11;
+    options["max_volume_ml"] = 1250.9;
+    options["max_mass_g"] = 2.5;
+    const auto target = cata::lua_platform::script_tripoint_coord::from_native(
+                            coords::origin::abs, coords::scale::map_square,
+                            absolute.raw() );
+    sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
+    sol::protected_function_result call = pickup(
+            fixture.handle( false ), target, options );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    const sol::table value = result["value"];
+    CHECK( received_target );
+    CHECK( received_options );
+    CHECK_FALSE( value["scheduled"].get<bool>() );
+    CHECK( value["selected_count"].get<std::int64_t>() == 0 );
+    CHECK( fixture.player.activity.id().str() == previous_activity );
+    CHECK( fixture.player.activity.moves_total == previous_moves );
+}
+
+
+TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
+           "[lua][platform][activities][semantic]" )
+{
+    for( const bool npc_target : { false, true } ) {
+        clear_map();
+        effect_fixture fixture;
+        map &here = get_map();
+        const tripoint_bub_ms local( 60, 60, 0 );
+        const tripoint_abs_ms absolute = here.get_abs( local );
+        here.add_item_or_charges( local, item( itype_test_apple ) );
+        here.add_item_or_charges( local, item( itype_test_bitter_almond ) );
+        map_stack stack = here.i_at( local );
+        REQUIRE( stack.size() == 2 );
+        auto entry = stack.begin();
+        item &first = *entry++;
+        item &second = *entry;
+        drop_locations selected;
+        selected.emplace_back( item_location( map_cursor( absolute ), &first ), 1 );
+        selected.emplace_back( item_location( map_cursor( absolute ), &second ), 1 );
+        bool got_native_target = false;
+        bool got_native_limits = false;
+        cata::lua_platform::activity_pickup_selector picker =
+        [&, selected]( const std::set<tripoint_bub_ms> &targets,
+                       Pickup::pick_info &info ) {
+            // The production selector is game_menus::inv::pickup, whose native
+            // implementation adds both vehicle and map items for each target.
+            // This seam checks its inputs and selected batch without opening UI.
+            got_native_target = targets == std::set<tripoint_bub_ms>{ local };
+            got_native_limits = info.extra_moves_per_distance == -4 &&
+                                info.max_volume == units::from_milliliter( -2 ) &&
+                                info.max_mass == units::from_milligram( std::int64_t{ -2 } );
+            return selected;
+        };
+        cata::lua_platform::install_activity_api(
+            fixture.services, [&]() {
+            return fixture.runtime;
+        }, [&]() {
+            return fixture.world;
+        }, []() {}, []() {}, []() {
+            return true;
+        }, picker );
+        sol::table options = fixture.lua.create_table();
+        options["extra_moves_per_item"] = -4;
+        options["max_volume_ml"] = -2.9;
+        options["max_mass_g"] = -0.0029;
+        const auto target = cata::lua_platform::script_tripoint_coord::from_native(
+                                coords::origin::abs, coords::scale::map_square,
+                                absolute.raw() );
+        sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
+        sol::protected_function_result call = pickup(
+                fixture.handle( npc_target ), target, options );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        const sol::table value = result["value"];
+        CHECK( got_native_target );
+        CHECK( got_native_limits );
+        CHECK( value["scheduled"].get<bool>() );
+        CHECK( value["selected_count"].get<std::int64_t>() == 2 );
+        REQUIRE( fixture.target( npc_target ).activity );
+        CHECK( fixture.target( npc_target ).activity.id().str() == "ACT_PICKUP" );
+        CHECK_FALSE( fixture.target( !npc_target ).activity );
+
+        std::ostringstream serialized;
+        JsonOut output( serialized );
+        fixture.target( npc_target ).activity.serialize( output );
+        JsonValue activity_value = json_loader::from_string( serialized.str() );
+        const JsonObject activity = activity_value.get_object();
+        const JsonObject actor_wrapper = activity.get_object( "actor" );
+        const JsonObject actor = actor_wrapper.get_object( "actor_data" );
+        std::vector<int> quantities;
+        actor.read( "quantities", quantities );
+        CHECK( quantities == std::vector<int>{ 1, 1 } );
+        Pickup::pick_info activity_info;
+        activity_info.deserialize( actor.get_object( "info" ) );
+        CHECK( activity_info.extra_moves_per_distance == 0 );
+        CHECK( activity_info.max_volume == units::from_milliliter( -1 ) );
+        CHECK( activity_info.max_mass == units::from_milligram( std::int64_t{ -1000 } ) );
+    }
+    clear_map();
 }
 
 
@@ -682,7 +907,9 @@ TEST_CASE( "lua_platform_cancel_idle_npc_clears_native_auto_resume_guard",
     },
     [&]() {
         return fixture.world;
-    }, []() {}, []() {} );
+    }, []() {}, []() {}, []() {
+        return true;
+    } );
     sol::protected_function cancel = fixture.services["activities"]["cancel"];
     sol::protected_function_result call = cancel( fixture.handle( true ) );
     REQUIRE( call.valid() );
@@ -723,7 +950,9 @@ TEST_CASE( "lua_platform_revert_idle_npc_restores_native_state",
     },
     [&]() {
         return fixture.world;
-    }, []() {}, []() {} );
+    }, []() {}, []() {}, []() {
+        return true;
+    } );
     sol::protected_function restore = fixture.services["activities"]["revert_npc_job"];
     sol::protected_function_result call = restore( fixture.handle( true ) );
     REQUIRE( call.valid() );
@@ -774,7 +1003,9 @@ TEST_CASE( "lua_platform_npc_jobs_match_native_assignment",
         },
         [&]() {
             return fixture.world;
-        }, []() {}, []() {} );
+        }, []() {}, []() {}, []() {
+            return true;
+        } );
         sol::protected_function assign = fixture.services["activities"]["assign_npc_job"];
         sol::protected_function_result call = assign( fixture.handle( true ), job.first );
         REQUIRE( call.valid() );
@@ -823,7 +1054,9 @@ TEST_CASE( "lua_platform_find_mount_no_match_restores_active_npc",
         },
         [&]() {
             return fixture.world;
-        }, []() {}, []() {} );
+        }, []() {}, []() {}, []() {
+            return true;
+        } );
         sol::protected_function assign = fixture.services["activities"]["assign_npc_job"];
         sol::protected_function_result call = assign( fixture.handle( true ), "find_mount" );
         REQUIRE( call.valid() );
