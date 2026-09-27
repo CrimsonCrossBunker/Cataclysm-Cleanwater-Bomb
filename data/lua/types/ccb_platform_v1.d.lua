@@ -87,6 +87,11 @@ function CcbCoordsApi.tripoint_abs_omt(x, y, z) end
 ---@return TripointCoord Relative overmap-terrain offset.
 function CcbCoordsApi.tripoint_rel_omt(x, y, z) end
 
+---@param value PointCoord|TripointCoord
+---@param scale string Target coordinate scale.
+---@return PointCoord|TripointCoord
+function CcbCoordsApi.project_to(value, scale) end
+
 ---@class TimeDuration
 ---@field turns integer
 ---@field value integer
