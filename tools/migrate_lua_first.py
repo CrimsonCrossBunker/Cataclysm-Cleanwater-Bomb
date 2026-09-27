@@ -21463,10 +21463,15 @@ def render_static_remove_item_with_effect(
     actor preserve that operation; dynamic ``str_or_var`` values stay TODO.
     Control bytes are excluded because ``services.types.id`` rejects them.
     """
+    expected_actor_expressions = {
+        "u_remove_item_with": {"actor", "alpha"},
+        "npc_remove_item_with": {"beta"},
+    }
     if (
         key not in {"u_remove_item_with", "npc_remove_item_with"} or
         not isinstance(effect, dict) or
         not actor_proven or actor_expression is None or
+        actor_expression not in expected_actor_expressions[key] or
         set(effect) != {key} or
         not bounded_platform_id(effect.get(key))
     ):
@@ -32629,32 +32634,84 @@ def render_eoc(
                     if "u_remove_item_with" in effect
                     else "npc_remove_item_with"
                 )
-                actor_proven = (
-                    avatar_actor_proven or npc_event_character_actor_proven
-                    if key == "u_remove_item_with"
-                    else npc_event_character_actor_proven
-                )
-                actor_expression = (
-                    "actor"
-                    if key == "npc_remove_item_with" or avatar_actor_proven
-                    else "services.characters.avatar()"
-                )
+                # The native selectors target dialogue alpha and beta,
+                # respectively.  The event dispatcher promotes only its
+                # designated Character field to alpha; an NPC event actor is
+                # not beta.  Direct dialogue callbacks retain both roles, but
+                # beta still needs a runtime Character guard before invoking
+                # the Character inventory API.
+                direct_talk_topic_pair_proven = npc_dialogue_mission_pair_proven
+                if key == "u_remove_item_with":
+                    event_alpha_proven = (
+                        event_character_actor_proven and
+                        event_actor_field in NATIVE_EOC_ALPHA_EVENT_FIELDS
+                    )
+                    actor_proven = (
+                        avatar_actor_proven or event_alpha_proven or
+                        direct_talk_topic_pair_proven
+                    )
+                    actor_expression = (
+                        "actor" if avatar_actor_proven or event_alpha_proven else
+                        "alpha" if direct_talk_topic_pair_proven else None
+                    )
+                else:
+                    actor_proven = direct_talk_topic_pair_proven
+                    actor_expression = "beta" if actor_proven else None
                 rendered = render_static_remove_item_with_effect(
                     effect, key, actor_proven, actor_expression
                 )
                 if rendered is not None:
-                    lines.extend(rendered)
+                    if actor_expression == "beta":
+                        # This proof only admits direct talk-topic response
+                        # callbacks, whose native dialogue carries both
+                        # participants. The nil guard fails closed on malformed
+                        # Platform context;
+                        # event-only EOCs remain TODO because mutable
+                        # dialogue::actor(true) would otherwise fall back to
+                        # alpha when beta is absent.
+                        lines.extend([
+                            "    do",
+                            "        local beta = context and context.actors and context.actors.beta",
+                            (
+                                '        if beta ~= nil and beta.kind == "creature" and '
+                                '(beta.subtype == "avatar" or beta.subtype == "character" '
+                                'or beta.subtype == "npc") then'
+                            ),
+                            *[f"    {line}" for line in rendered],
+                            "        end",
+                            "    end",
+                        ])
+                    elif actor_expression == "alpha":
+                        lines.extend([
+                            "    do",
+                            "        local alpha = context and context.actors and context.actors.alpha",
+                            (
+                                '        if alpha ~= nil and alpha.kind == "creature" and '
+                                '(alpha.subtype == "avatar" or alpha.subtype == "character" '
+                                'or alpha.subtype == "npc") then'
+                            ),
+                            *[f"    {line}" for line in rendered],
+                            "        end",
+                            "    end",
+                        ])
+                    else:
+                        lines.extend(rendered)
                     converted_effect = True
                 else:
+                    required_role = (
+                        "a proven dialogue alpha Character"
+                        if key == "u_remove_item_with" else
+                        "a direct talk-topic beta Character proof"
+                    )
                     lines.append(
                         "    -- TODO: translate item removal with a static "
-                        "item ID and a proven Character actor."
+                        "item ID and its proven native dialogue role."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a static item ID accepted by services.types.id and "
-                        "a proven Character actor"
+                        f"{required_role}"
                     )
                     all_effects_converted = False
             elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":
