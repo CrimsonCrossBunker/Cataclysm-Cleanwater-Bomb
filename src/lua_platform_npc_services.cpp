@@ -638,6 +638,26 @@ sol::table get_npc_mission_assigned_for_owner(
                        world_generation, owner->getID() ) ) );
 }
 
+sol::table get_npc_mission_available_count(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native talker_npc_const::available_missions returns this raw vector;
+    // its count includes entries omitted from the bounded live-item snapshot.
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, provider->chatbin.missions.size() ) );
+}
+
 sol::table select_npc_mission(
     sol::this_state lua, const game_handle &provider_handle,
     const mission_token &token,
@@ -1834,6 +1854,16 @@ void install_npc_domain_services(
             require_read();
             return get_npc_mission_assigned_for_owner(
                        state, provider, owner,
+                       current_runtime_generation(),
+                       current_world_generation() );
+        } );
+    missions.set_function(
+        "available_count",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider ) {
+            require_read();
+            return get_npc_mission_available_count(
+                       state, provider,
                        current_runtime_generation(),
                        current_world_generation() );
         } );

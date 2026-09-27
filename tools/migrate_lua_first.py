@@ -26686,9 +26686,43 @@ def render_npc_assigned_mission_count_condition(
         "alpha.subtype ~= \"avatar\" or beta == nil or "
         "beta.kind ~= \"creature\" or beta.subtype ~= \"npc\" then "
         "return false end; "
-        "local dialogue_missions = service_value(" 
+        "local dialogue_missions = service_value("
         "services.npcs.missions.assigned_for_owner(beta, alpha)); "
         f"return dialogue_missions.total {comparison} {count} "
+        "end)()"
+    )
+
+
+def render_npc_available_mission_count_condition(
+    condition: str, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower provider availability aliases for a proven dialogue beta."""
+    if (
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta"
+    ):
+        return None
+    if condition in {
+        "has_no_available_mission", "npc_has_no_available_mission",
+    }:
+        comparison, count = "==", 0
+    elif condition in {"has_available_mission", "npc_has_available_mission"}:
+        comparison, count = "==", 1
+    elif condition in {
+        "has_many_available_missions", "npc_has_many_available_missions",
+    }:
+        comparison, count = ">=", 2
+    else:
+        return None
+    return (
+        "(function() "
+        "local beta = context and context.actors and context.actors.beta; "
+        "if beta == nil or beta.kind ~= \"creature\" or "
+        "beta.subtype ~= \"npc\" then return false end; "
+        "local available_count = service_value("
+        "services.npcs.missions.available_count(beta)); "
+        f"return available_count {comparison} {count} "
         "end)()"
     )
 
@@ -26848,6 +26882,13 @@ def render_eoc_condition_expression(
             )
         if assigned_mission_count is not None:
             return assigned_mission_count
+        available_mission_count = \
+            render_npc_available_mission_count_condition(
+                condition, npc_dialogue_pair_proven,
+                npc_actor_expression,
+            )
+        if available_mission_count is not None:
+            return available_mission_count
         # These selectors ask native has_effect(..., NULL_ID), while the
         # Platform effects.has default searches all body parts.
         if condition in {"u_available", "npc_available"}:
