@@ -32353,6 +32353,32 @@ def render_eoc(
                         "player_weapon_drop needs a direct talk-topic beta NPC proof"
                     )
                     all_effects_converted = False
+            elif effect == "drop_weapon":
+                # The native static WRAP passes dialogue beta to
+                # talk_effect_fun_t, so alpha-only event actors cannot be
+                # substituted here.  Preserve its get_npc() no-op for any
+                # beta that is not an exact NPC GameHandle.
+                if npc_dialogue_mission_pair_proven:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and context.actors.beta",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.npcs.drop_weapon(beta))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: drop_weapon targets native dialogue beta, "
+                        "which is not proven as an NPC for this EOC."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "drop_weapon needs a direct talk-topic beta NPC proof"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:

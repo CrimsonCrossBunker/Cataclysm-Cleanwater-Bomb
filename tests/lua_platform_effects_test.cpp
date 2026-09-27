@@ -1298,6 +1298,144 @@ TEST_CASE( "lua_platform_wake_and_rule_reset_match_native_orders",
 }
 
 
+TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
+           "[lua][platform][npc][item][semantic]" )
+{
+    clear_map();
+    get_map().build_map_cache( 0 );
+    struct cleanup_scene {
+        ~cleanup_scene() {
+            clear_map();
+        }
+    } cleanup;
+
+    effect_fixture fixture;
+    const tripoint_bub_ms npc_position( 60, 60, 0 );
+    fixture.other.setpos( get_map(), npc_position );
+    npc native;
+    native.normalize();
+    native.setID( character_id( 9100 ), true );
+    native.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+
+    const auto count_rocks_at = []( const tripoint_bub_ms &position ) {
+        int count = 0;
+        for( const item &entry : get_map().i_at( position ) ) {
+            if( entry.typeId() == itype_id( "rock" ) ) {
+                ++count;
+            }
+        }
+        return count;
+    };
+    const auto count_items_at = []( const tripoint_bub_ms &position ) {
+        return get_map().i_at( position ).size();
+    };
+
+    const JsonValue native_effect_json = json_loader::from_string(
+            R"({"effect":"drop_weapon"})" );
+    talk_effect_t native_effect(
+        native_effect_json.get_object(), "effect", "npc_drop_weapon_test" );
+    finalize_conditions();
+    dialogue native_dialogue(
+        get_talker_for( fixture.player ), get_talker_for( native ) );
+    const std::size_t native_empty_before = count_items_at( native.pos_bub() );
+    const int native_before = count_rocks_at( native.pos_bub() );
+    native_effect.apply( native_dialogue );
+    CHECK_FALSE( native.get_wielded_item() );
+    CHECK( count_rocks_at( native.pos_bub() ) == native_before );
+    const std::size_t native_empty_delta =
+        count_items_at( native.pos_bub() ) - native_empty_before;
+
+    item native_weapon( itype_id( "rock" ), calendar::turn_zero );
+    REQUIRE( native.Character::wield( native_weapon, std::nullopt, false ) );
+    native_effect.apply( native_dialogue );
+    CHECK_FALSE( native.get_wielded_item() );
+    CHECK( count_rocks_at( native.pos_bub() ) == native_before + 1 );
+
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+        npcs, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    sol::protected_function drop = npcs["drop_weapon"];
+    sol::protected_function orders = npcs["orders"]["run"];
+
+    const std::uint64_t empty_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    const std::size_t platform_empty_before =
+        count_items_at( fixture.other.pos_bub() );
+    const int empty_rocks_before = count_rocks_at( fixture.other.pos_bub() );
+    const sol::protected_function_result empty = drop( fixture.handle( true ) );
+    REQUIRE( empty.valid() );
+    const sol::table empty_result = empty.get<sol::table>();
+    REQUIRE( empty_result["ok"].get<bool>() );
+    CHECK_FALSE( empty_result["value"]["dropped"].get<bool>() );
+    CHECK( count_items_at( fixture.other.pos_bub() ) - platform_empty_before ==
+           native_empty_delta );
+    CHECK( count_rocks_at( fixture.other.pos_bub() ) == empty_rocks_before );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() > empty_epoch );
+    const std::size_t guarded_order_before =
+        count_items_at( fixture.other.pos_bub() );
+    const sol::protected_function_result guarded_order = orders(
+                fixture.handle( true ), "drop_weapon" );
+    REQUIRE( guarded_order.valid() );
+    CHECK_FALSE( guarded_order.get<sol::table>()["ok"].get<bool>() );
+    CHECK( guarded_order.get<sol::table>()["error"]["code"].get<std::string>() ==
+           "unarmed" );
+    CHECK( count_items_at( fixture.other.pos_bub() ) == guarded_order_before );
+
+    item platform_weapon( itype_id( "rock" ), calendar::turn_zero );
+    REQUIRE( fixture.other.Character::wield(
+                 platform_weapon, std::nullopt, false ) );
+    const item_location wielded = fixture.other.get_wielded_item();
+    REQUIRE( wielded );
+    const tripoint_abs_ms position = fixture.other.pos_abs();
+    const cata::lua_platform::game_handle old_item_handle =
+        cata::lua_platform::game_handle::from_item(
+            *wielded,
+            { "character_wielded", wielded->uid().get_value(),
+              position.x(), position.y(), position.z(), {} },
+            fixture.runtime, fixture.world );
+    fixture.other.hallucination = true;
+    const int hallucination_before = count_rocks_at( fixture.other.pos_bub() );
+    const std::size_t hallucination_items_before =
+        count_items_at( fixture.other.pos_bub() );
+    const std::uint64_t hallucination_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result ignored = drop( fixture.handle( true ) );
+    REQUIRE( ignored.valid() );
+    const sol::table ignored_result = ignored.get<sol::table>();
+    REQUIRE( ignored_result["ok"].get<bool>() );
+    CHECK_FALSE( ignored_result["value"]["dropped"].get<bool>() );
+    CHECK( fixture.other.get_wielded_item() );
+    CHECK( count_rocks_at( fixture.other.pos_bub() ) == hallucination_before );
+    CHECK( count_items_at( fixture.other.pos_bub() ) == hallucination_items_before );
+    CHECK_FALSE( old_item_handle.validation_error( fixture.runtime, fixture.world ) );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() == hallucination_epoch );
+
+    fixture.other.hallucination = false;
+    const int platform_before = count_rocks_at( fixture.other.pos_bub() );
+    const std::uint64_t platform_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result dropped = drop( fixture.handle( true ) );
+    REQUIRE( dropped.valid() );
+    const sol::table dropped_result = dropped.get<sol::table>();
+    REQUIRE( dropped_result["ok"].get<bool>() );
+    CHECK( dropped_result["value"]["dropped"].get<bool>() );
+    CHECK_FALSE( fixture.other.get_wielded_item() );
+    CHECK( count_rocks_at( fixture.other.pos_bub() ) == platform_before + 1 );
+    CHECK( old_item_handle.validation_error( fixture.runtime, fixture.world ) );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() > platform_epoch );
+
+    const sol::protected_function_result wrong_target = drop( fixture.handle( false ) );
+    REQUIRE( wrong_target.valid() );
+    CHECK_FALSE( wrong_target.get<sol::table>()["ok"].get<bool>() );
+    CHECK( wrong_target.get<sol::table>()["error"]["code"].get<std::string>() ==
+           "wrong_subtype" );
+}
+
+
 TEST_CASE( "lua_platform_finish_dialogue_matches_native_topic_change",
            "[lua][platform][npc][semantic]" )
 {
