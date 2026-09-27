@@ -14,6 +14,25 @@ import migrate_lua_first
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
+def render_direct_npc_dialogue_pair(eoc: dict[str, object]) -> str:
+    source = migrate_lua_first.SourceObject(Path("source.json"), 0, eoc)
+    topic = migrate_lua_first.SourceObject(
+        Path("source.json"), 1, {
+            "type": "talk_topic",
+            "id": f"topic_{eoc['id']}",
+            "responses": [{"true_eocs": eoc["id"]}],
+        },
+    )
+    proven_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+        [topic, source]
+    )
+    return migrate_lua_first.render_eoc(
+        source,
+        migrate_lua_first.MigrationResult(),
+        npc_dialogue_mission_pair_ids=proven_ids,
+    )
+
+
 class LuaFirstMigrationTest(unittest.TestCase):
     def test_effect_and_worn_flag_predicates_require_explicit_bodyparts(self) -> None:
         self.assertIsNone(
@@ -12743,12 +12762,13 @@ assert(#events == 9)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("services.npcs.request_talk(actor)", main)
-            self.assertIn('services.npcs.become_hostile(actor)', main)
-            self.assertIn('services.npcs.start_fleeing(actor)', main)
-            self.assertNotIn("needs review", report)
+            self.assertNotIn('services.npcs.become_hostile(', main)
+            self.assertNotIn('services.npcs.start_fleeing(', main)
+            self.assertIn("EOC npc_attitude_effects effect #2", report)
+            self.assertIn("EOC npc_attitude_effects effect #3", report)
 
     def test_translates_spawn_and_world_interaction_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -12786,9 +12806,13 @@ assert(#events == 9)
                             ],
                         },
                         {
+                            "type": "talk_topic",
+                            "id": "npc_attitudes_extended_topic",
+                            "responses": [{"true_eocs": "npc_attitudes_extended"}],
+                        },
+                        {
                             "type": "effect_on_condition",
                             "id": "npc_attitudes_extended",
-                            "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "follow",
                                 "stop_following",
@@ -12849,8 +12873,8 @@ assert(#events == 9)
                 "reveal_route has no transactional Platform API",
                 report,
             )
-            self.assertIn('services.npcs.join_player(actor, services.characters.avatar())', main)
-            self.assertIn("services.npcs.stop_temporary_following(actor)", main)
+            self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
+            self.assertIn("services.npcs.stop_temporary_following(wrapped_beta_npc)", main)
             self.assertNotIn("needs review", report)
 
     def test_translates_foreach_with_native_definition_pages(self) -> None:
@@ -13198,30 +13222,12 @@ assert(#events == 9)
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertIn('services.npcs.dialogue.provoke_combat(actor)', main)
-            self.assertIn('services.npcs.orders.run(actor, "lead_to_safety")', main)
-            self.assertIn('services.npcs.leave_player(actor, services.characters.avatar())', main)
-            self.assertIn('services.npcs.follow_temporarily(actor)', main)
-            self.assertIn(
-                'services.npcs.record_refusal(actor, "follow")',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.record_refusal(actor, "lead")',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.record_refusal(actor, "equipment")',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.record_refusal(actor, "training")',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.record_refusal(actor, "personal_info")',
-                main,
-            )
+            for service in (
+                "dialogue.provoke_combat", "orders.run", "leave_player",
+                "follow_temporarily", "record_refusal",
+            ):
+                self.assertNotIn(f"services.npcs.{service}(", main)
+            self.assertIn("needs domain-service conversion", report)
             self.assertIn("condition TODO", report)
 
     def test_npc_refusal_effects_require_an_exact_npc_actor(self) -> None:
@@ -13251,10 +13257,55 @@ assert(#events == 9)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(main.count("services.npcs.record_refusal("), 1)
+            self.assertEqual(main.count("services.npcs.record_refusal("), 0)
             self.assertIn("exact_npc_refusal", main)
             self.assertIn("character_only_refusal", main)
             self.assertTrue(result.todos)
+
+    def test_static_wrapped_npc_effects_require_direct_beta_npc_provenance(self) -> None:
+        effects = [
+            "follow", "stop_following", "hostile", "flee", "leave",
+            "deny_follow", "deny_equipment",
+        ]
+        event_only = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(
+                Path("source.json"), 0, {
+                    "type": "effect_on_condition", "id": "event_wrapped",
+                    "required_event": "npc_becomes_hostile", "effect": effects,
+                },
+            ),
+            migrate_lua_first.MigrationResult(),
+        )
+        for service in (
+            "join_player", "stop_temporary_following", "become_hostile",
+            "start_fleeing", "leave_player", "record_refusal",
+        ):
+            self.assertNotIn(f"services.npcs.{service}(", event_only)
+        self.assertIn("TODO", event_only)
+
+        generic_pair_only = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(
+                Path("source.json"), 0, {
+                    "type": "effect_on_condition", "id": "generic_pair_only",
+                    "effect": effects,
+                },
+            ),
+            migrate_lua_first.MigrationResult(),
+            talker_pair_ids=frozenset({"generic_pair_only"}),
+        )
+        self.assertNotIn("services.npcs.join_player(", generic_pair_only)
+
+        exact_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "direct_pair",
+            "effect": effects,
+        })
+        self.assertIn(
+            'wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc"',
+            exact_pair,
+        )
+        self.assertIn("services.npcs.join_player(wrapped_beta_npc,", exact_pair)
+        self.assertIn("services.npcs.become_hostile(wrapped_beta_npc)", exact_pair)
+        self.assertIn('services.npcs.record_refusal(wrapped_beta_npc, "follow")', exact_pair)
 
     def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13263,9 +13314,13 @@ assert(#events == 9)
                 json.dumps(
                     [
                         {
+                            "type": "talk_topic",
+                            "id": "npc_guard_trade_topic",
+                            "responses": [{"true_eocs": "npc_guard_and_trade"}],
+                        },
+                        {
                             "type": "effect_on_condition",
                             "id": "npc_guard_and_trade",
-                            "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "player_leaving",
                                 "start_mugging",
@@ -13294,23 +13349,23 @@ assert(#events == 9)
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.npcs.warn_player_departure(actor)', main)
-            self.assertIn('services.npcs.start_mugging(actor)', main)
-            self.assertIn('services.npcs.set_guarding(actor, true)', main)
-            self.assertIn('services.npcs.set_guarding(actor, false)', main)
+            self.assertIn('services.npcs.warn_player_departure(wrapped_beta_npc)', main)
+            self.assertIn('services.npcs.start_mugging(wrapped_beta_npc)', main)
+            self.assertIn('services.npcs.set_guarding(wrapped_beta_npc, true)', main)
+            self.assertIn('services.npcs.set_guarding(wrapped_beta_npc, false)', main)
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_chicken"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
+                'service_value(services.characters.snapshot(wrapped_beta_npc)).creature.position, 1, false)',
                 main,
             )
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_horse"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
+                'service_value(services.characters.snapshot(wrapped_beta_npc)).creature.position, 1, false)',
                 main,
             )
             self.assertIn(
                 'services.spawns.monster(services.types.id("monster", "mon_cow"), '
-                'service_value(services.characters.snapshot(actor)).creature.position, 1, false)',
+                'service_value(services.characters.snapshot(wrapped_beta_npc)).creature.position, 1, false)',
                 main,
             )
             self.assertNotIn("needs review", report)
@@ -13322,9 +13377,13 @@ assert(#events == 9)
                 json.dumps(
                     [
                         {
+                            "type": "talk_topic",
+                            "id": "npc_activity_topic",
+                            "responses": [{"true_eocs": "npc_activity_assigns"}],
+                        },
+                        {
                             "type": "effect_on_condition",
                             "id": "npc_activity_assigns",
-                            "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "revert_activity",
                                 "morale_chat_activity",
@@ -13360,25 +13419,25 @@ assert(#events == 9)
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('service_value(services.activities.revert_npc_job(actor))', main)
-            self.assertIn('services.activities.socialize(services.characters.avatar(), actor, services.time.duration(600, "turn"))', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "butcher")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "chop_planks")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "chop_trees")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "construction")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "farming")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "fishing")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "mining")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "mopping")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "read")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "read_repeatedly")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "study")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "sort_loot")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "craft")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "disassembly")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "vehicle_deconstruct")', main)
-            self.assertIn('services.activities.assign_npc_job(actor, "vehicle_repair")', main)
-            self.assertIn('services.npcs.orders.run(actor, "drop_carried_items")', main)
+            self.assertIn('service_value(services.activities.revert_npc_job(context.actors.beta))', main)
+            self.assertIn('services.activities.socialize(services.characters.avatar(), context.actors.beta, services.time.duration(600, "turn"))', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "butcher")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "chop_planks")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "chop_trees")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "construction")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "farming")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "fishing")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "mining")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "mopping")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "read")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "read_repeatedly")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "study")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "sort_loot")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "craft")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "disassembly")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "vehicle_deconstruct")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "vehicle_repair")', main)
+            self.assertIn('services.npcs.orders.run(context.actors.beta, "drop_carried_items")', main)
             self.assertNotIn("needs review", report)
 
     def test_translates_npc_mount_training_and_interaction_effects(self) -> None:
@@ -13388,9 +13447,13 @@ assert(#events == 9)
                 json.dumps(
                     [
                         {
+                            "type": "talk_topic",
+                            "id": "npc_mount_topic",
+                            "responses": [{"true_eocs": "npc_mount_and_train"}],
+                        },
+                        {
                             "type": "effect_on_condition",
                             "id": "npc_mount_and_train",
-                            "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "dismount",
                                 "find_mount",
@@ -13417,8 +13480,8 @@ assert(#events == 9)
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
-            self.assertIn('services.activities.assign_npc_job(actor, "find_mount")', main)
-            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "seminar")', main)
+            self.assertIn('services.activities.assign_npc_job(context.actors.beta, "find_mount")', main)
+            self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "seminar")', main)
             self.assertNotIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD")', main)
             self.assertIn(
                 "needs explicit camp, manager, and storage holder handles",
@@ -14415,18 +14478,26 @@ assert(#events == 9)
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
-                json.dumps(
+                json.dumps([
+                    {
+                        "type": "talk_topic", "id": "npc_service_menus_topic",
+                        "responses": [{"true_eocs": "npc_service_menus"}],
+                    },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_service_menus",
-                        "required_event": "npc_becomes_hostile",
                         "effect": [
-                            "npc_rules_menu",
                             "set_npc_pickup",
                             "start_training_npc",
                         ],
-                    }
-                ),
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_service_menu_rules",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": "npc_rules_menu",
+                    },
+                ]),
                 encoding="utf-8",
             )
             result = migrate_lua_first.migrate(
@@ -14439,27 +14510,30 @@ assert(#events == 9)
             self.assertFalse(result.partial)
             self.assertIn("services.npcs.open_rules(actor)", main)
             self.assertIn(
-                "services.npcs.orders.open_pickup_rules(actor)", main
+                "services.npcs.orders.open_pickup_rules(context.actors.beta)", main
             )
-            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "npc")', main)
+            self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "npc")', main)
             self.assertNotIn("needs domain-service conversion", report)
 
     def test_keeps_implicit_dialogue_gaps_while_migrating_npc_training(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
-                json.dumps(
+                json.dumps([
+                    {
+                        "type": "talk_topic", "id": "implicit_npc_dialogue_topic",
+                        "responses": [{"true_eocs": "implicit_npc_dialogue"}],
+                    },
                     {
                         "type": "effect_on_condition",
                         "id": "implicit_npc_dialogue",
-                        "required_event": "npc_becomes_hostile",
                         "effect": [
                             {"open_dialogue": {"topic": "TALK_TEST"}},
                             "open_dialogue",
                             "start_training_npc",
                         ],
-                    }
-                ),
+                    },
+                ]),
                 encoding="utf-8",
             )
             result = migrate_lua_first.migrate(
@@ -14472,7 +14546,7 @@ assert(#events == 9)
             self.assertEqual(len(result.todos), 2)
             self.assertNotIn("services.dialogue.open_topic", main)
             self.assertNotIn("services.npcs.open_dialogue", main)
-            self.assertIn('services.npcs.training.start_selected(actor, services.characters.avatar(), "npc")', main)
+            self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "npc")', main)
             self.assertIn(
                 "exact NPC and avatar handles plus an explicit topic", main
             )
@@ -14666,7 +14740,7 @@ assert(#events == 9)
                 lines = migrate_lua_first.render_static_follower_service_effect(effect, True)
                 self.assertIsNotNone(lines)
                 script = r"""
-local actor,other={subtype='npc'},{}
+local actor,other={kind='creature',subtype='npc'},{}
 local candidates={{id=9,name='Other',handle=other,position={x=9}},
  {id=2,name='Provider',handle=actor,position={x=2}}}
 local selected,calls,menus='9',0,0
@@ -14705,16 +14779,22 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
     def test_direct_bionic_services_preserve_beta_and_native_avatar_patient(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition", "id": "bionic_pair",
-                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["bionic_install", "bionic_remove", "repair_bionic_limbs"],
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "bionic_pair_topic",
+                    "responses": [{"true_eocs": "bionic_pair"}],
+                },
+                {
+                    "type": "effect_on_condition", "id": "bionic_pair",
+                    "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                    "effect": ["bionic_install", "bionic_remove", "repair_bionic_limbs"],
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "bionic_pair_mod")
             main = result.files[Path("main.lua")]
             self.assertEqual(main.count("local provider = context.actors.beta"), 3)
-            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 3)
+            self.assertEqual(main.count('if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then'), 3)
             self.assertIn('provider, "install", services.characters.avatar())', main)
             self.assertIn('provider, "remove", services.characters.avatar())', main)
             self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
@@ -14736,32 +14816,44 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                      "do_craft": "craft", "find_mount": "find_mount"})
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition", "id": "work_pair",
-                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": list(jobs),
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "work_pair_topic",
+                    "responses": [{"true_eocs": "work_pair"}],
+                },
+                {
+                    "type": "effect_on_condition", "id": "work_pair",
+                    "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                    "effect": list(jobs),
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "work_pair_mod")
             main = result.files[Path("main.lua")]
-            self.assertEqual(main.count('(context.actors.beta).subtype == "npc"'), len(jobs))
+            self.assertEqual(main.count('(context.actors.beta).kind == "creature" and (context.actors.beta).subtype == "npc"'), len(jobs))
             for job in jobs.values():
                 self.assertIn(f'services.activities.assign_npc_job(context.actors.beta, "{job}")', main)
 
     def test_start_trade_retains_explicit_beta_and_delegate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition", "id": "trade_pair",
-                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["start_trade", "revert_activity", "morale_chat_activity",
-                           "start_training", "start_training_npc", "start_training_seminar", "drop_items_in_place", "npc_rules_menu", "set_npc_pickup", "reveal_stats", "pick_style"],
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "trade_pair_topic",
+                    "responses": [{"true_eocs": "trade_pair"}],
+                },
+                {
+                    "type": "effect_on_condition", "id": "trade_pair",
+                    "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                    "effect": ["start_trade", "revert_activity", "morale_chat_activity",
+                               "start_training", "start_training_npc", "start_training_seminar", "drop_items_in_place", "set_npc_pickup", "reveal_stats", "pick_style"],
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "trade_pair_mod")
             main = result.files[Path("main.lua")]
             self.assertIn("local provider = context.actors.beta", main)
-            self.assertIn('if provider ~= nil and provider.subtype == "npc" then', main)
+            self.assertIn('if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then', main)
             self.assertIn('services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true)', main)
             self.assertIn("services.activities.revert_npc_job(context.actors.beta)", main)
             self.assertIn('services.activities.socialize(services.characters.avatar(), context.actors.beta, services.time.duration(600, "turn"))', main)
@@ -14771,7 +14863,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
             self.assertIn('services.npcs.orders.run(context.actors.beta, "drop_carried_items")', main)
 
-            self.assertIn("services.npcs.open_rules(context.actors.beta)", main)
             self.assertIn("services.npcs.orders.open_pickup_rules(context.actors.beta)", main)
 
             self.assertIn("services.npcs.orders.open_character_sheet(context.actors.beta)", main)
@@ -14780,17 +14871,23 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
     def test_player_services_use_explicit_beta_and_current_player(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition", "id": "grooming_pair",
-                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["barber_hair", "barber_beard", "buy_haircut", "buy_shave",
-                           "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid"],
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "grooming_pair_topic",
+                    "responses": [{"true_eocs": "grooming_pair"}],
+                },
+                {
+                    "type": "effect_on_condition", "id": "grooming_pair",
+                    "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                    "effect": ["barber_hair", "barber_beard", "buy_haircut", "buy_shave",
+                               "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid"],
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "grooming_pair_mod")
             main = result.files[Path("main.lua")]
             self.assertEqual(main.count("local provider = context.actors.beta"), 8)
-            self.assertEqual(main.count('if provider ~= nil and provider.subtype == "npc" then'), 8)
+            self.assertEqual(main.count('if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then'), 8)
             for method, choice in (("open_style", "hair"), ("open_style", "beard"),
                                    ("provide", "haircut"), ("provide", "shave")):
                 self.assertIn(f'services.npcs.grooming.{method}(provider, services.characters.avatar(), "{choice}")', main)
@@ -14801,15 +14898,21 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
     def test_follower_services_use_beta_from_explicit_talker_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(json.dumps({
-                "type": "effect_on_condition", "id": "follower_pair",
-                "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
-                "effect": ["bionic_install_allies", "bionic_remove_allies", "copy_npc_rules"],
-            }), encoding="utf-8")
+            source.write_text(json.dumps([
+                {
+                    "type": "talk_topic", "id": "follower_pair_topic",
+                    "responses": [{"true_eocs": "follower_pair"}],
+                },
+                {
+                    "type": "effect_on_condition", "id": "follower_pair",
+                    "condition": {"and": [{"u_has_trait": "STRONG"}, {"npc_has_trait": "STRONG"}]},
+                    "effect": ["bionic_install_allies", "bionic_remove_allies", "copy_npc_rules"],
+                },
+            ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "follower_pair_mod")
             main = result.files[Path("main.lua")]
-            self.assertEqual(main.count('if (context.actors.beta) ~= nil and (context.actors.beta).subtype == "npc" then'), 3)
+            self.assertEqual(main.count('if (context.actors.beta) ~= nil and (context.actors.beta).kind == "creature" and (context.actors.beta).subtype == "npc" then'), 3)
             self.assertIn('(context.actors.beta), "install", selected_handle)', main)
             self.assertIn('(context.actors.beta), "remove", selected_handle)', main)
             self.assertIn('(context.actors.beta), selected_handle)', main)
@@ -14842,22 +14945,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
-            self.assertEqual(main.count("services.npcs.visible_allies()"), 3)
-            self.assertIn(
-                'services.npcs.medical.open_bionic_service(\n'
-                '                    actor, "install", selected_handle)',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.medical.open_bionic_service(\n'
-                '                    actor, "remove", selected_handle)',
-                main,
-            )
-            self.assertIn(
-                "services.npcs.copy_ai_rules(\n"
-                "                    actor, selected_handle)",
-                main,
-            )
+            self.assertEqual(main.count("services.npcs.visible_allies()"), 0)
+            self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
+            self.assertNotIn("services.npcs.copy_ai_rules(", main)
             self.assertEqual(main.count("services.inventory.choose("), 0)
             self.assertNotIn("services.npcs.offer_item(", main)
             self.assertTrue(result.todos or result.partial)
@@ -17249,7 +17339,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "needs domain-service conversion",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
-            self.assertIn("services.npcs.make_thankful(", main)
+            self.assertNotIn("services.npcs.make_thankful(", main)
             self.assertIn("services.sound.emit(", main)
             self.assertIn("services.variables.set(", main)
             self.assertIn("services.mutations.set_purifiable(", main)
@@ -24941,12 +25031,12 @@ assert(#targets==0)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_revert_job_uses_native_restore_and_propagates_failure(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "restore_job",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": "revert_activity"}), migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "restore_job",
+            "effect": "revert_activity",
+        })
         script = r"""
-local npc,override={subtype="npc"},{subtype="npc"}
+local npc,override={kind="creature",subtype="npc"},{kind="creature",subtype="npc"}
 local expected=npc
 local calls=0
 local fail=false
@@ -24966,11 +25056,11 @@ local services={activities={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.restore_job({actors={npc=npc}},nil)
+migrated_eoc_functions.restore_job({actors={beta=npc}},nil)
 expected=override
-migrated_eoc_functions.restore_job({actors={npc=npc}},override)
+migrated_eoc_functions.restore_job({actors={beta=override}},override)
 fail=true
-local ok,err=pcall(migrated_eoc_functions.restore_job,{actors={npc=npc}},override)
+local ok,err=pcall(migrated_eoc_functions.restore_job,{actors={beta=override}},override)
 assert(not ok and tostring(err):find('restore failed',1,true))
 assert(calls==3)
 """.replace("BODY", rendered)
@@ -24989,12 +25079,11 @@ assert(calls==3)
             "sort_loot": "sort_loot", "do_disassembly": "disassembly",
             "do_vehicle_deconstruct": "vehicle_deconstruct", "do_vehicle_repair": "vehicle_repair",
         }
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "jobs",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": list(jobs)}), migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "jobs", "effect": list(jobs),
+        })
         script = r"""
-local npc,override={subtype="npc"},{subtype="npc"}
+local npc,override={kind="creature",subtype="npc"},{kind="creature",subtype="npc"}
 local target=npc
 local expected={EXPECTED}
 local calls=0
@@ -25015,17 +25104,17 @@ local services={activities={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.jobs({actors={npc=npc}},nil)
+migrated_eoc_functions.jobs({actors={beta=npc}},nil)
 assert(calls==14)
 calls=0;target=override
-migrated_eoc_functions.jobs({actors={npc=npc}},override)
+migrated_eoc_functions.jobs({actors={beta=override}},override)
 assert(calls==14)
 calls=0;fail=true
-local ok,err=pcall(migrated_eoc_functions.jobs,{actors={npc=npc}},override)
+local ok,err=pcall(migrated_eoc_functions.jobs,{actors={beta=override}},override)
 assert(not ok and tostring(err):find('assignment failed',1,true) and calls==1)
 calls=0;fail=false
-local non_npc={subtype="avatar"}
-migrated_eoc_functions.jobs({actors={npc=non_npc}},non_npc)
+local non_npc={kind="creature",subtype="avatar"}
+migrated_eoc_functions.jobs({actors={beta=non_npc}},non_npc)
 assert(calls==0)
 """.replace("EXPECTED", ",".join(migrate_lua_first.lua_quote(job) for job in jobs.values()))
         script = script.replace("BODY", rendered)
@@ -25035,13 +25124,12 @@ assert(calls==0)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_interactive_npc_jobs_preserve_cancel_and_real_errors(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "interactive_jobs",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["do_read", "do_eread", "do_craft"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "interactive_jobs",
+            "effect": ["do_read", "do_eread", "do_craft"],
+        })
         script = r"""
-local npc={subtype="npc"}
+local npc={kind="creature",subtype="npc"}
 local calls=0
 local mode='assignment_rejected'
 local function service_value(result)
@@ -25057,13 +25145,13 @@ end}}
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.interactive_jobs({actors={npc=npc}},nil)
+migrated_eoc_functions.interactive_jobs({actors={beta=npc}},nil)
 assert(calls==3)
 calls=0;mode='success'
-migrated_eoc_functions.interactive_jobs({actors={npc=npc}},nil)
+migrated_eoc_functions.interactive_jobs({actors={beta=npc}},nil)
 assert(calls==3)
 calls=0;mode='stale_npc'
-local ok,err=pcall(migrated_eoc_functions.interactive_jobs,{actors={npc=npc}},nil)
+local ok,err=pcall(migrated_eoc_functions.interactive_jobs,{actors={beta=npc}},nil)
 assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25072,13 +25160,12 @@ assert(not ok and tostring(err):find('stale_npc',1,true) and calls==1)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_find_mount_migration_continues_only_for_no_match(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "mount",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["find_mount", "revert_activity"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "mount",
+            "effect": ["find_mount", "revert_activity"],
+        })
         script = r"""
-local npc={subtype="npc"}
+local npc={kind="creature",subtype="npc"}
 local mode='no_match'
 local calls,continued=0,0
 local function service_value(result)
@@ -25102,7 +25189,7 @@ local runtime={handler=function() end,on=function() end}
 BODY
 for _,status in ipairs({'no_match','success','stale_npc','assignment_rejected'}) do
  mode=status;calls=0;continued=0
- local ok,err=pcall(migrated_eoc_functions.mount,{actors={npc=npc}},nil)
+ local ok,err=pcall(migrated_eoc_functions.mount,{actors={beta=npc}},nil)
  assert(calls==1)
  if status=='no_match' or status=='success' then assert(ok and continued==1)
  else assert(not ok and continued==0 and tostring(err):find(status,1,true)) end
@@ -25114,13 +25201,14 @@ end
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_socialize_and_drop_preserve_native_participants(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "social_drop",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["morale_chat_activity", "drop_items_in_place"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "social_drop",
+            "effect": ["morale_chat_activity", "drop_items_in_place"],
+        })
         script = r"""
-local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
+local avatar,npc,override={subtype="avatar"},
+                      {kind="creature",subtype="npc"},
+                      {kind="creature",subtype="npc"}
 local expected=npc
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
@@ -25139,13 +25227,13 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.social_drop({actors={npc=npc}},nil)
+migrated_eoc_functions.social_drop({actors={beta=npc}},nil)
 assert(table.concat(calls,',')=='socialize,drop')
 calls={};expected=override
-migrated_eoc_functions.social_drop({actors={npc=npc}},override)
+migrated_eoc_functions.social_drop({actors={beta=override}},override)
 assert(table.concat(calls,',')=='socialize,drop')
 calls={}
-migrated_eoc_functions.social_drop({actors={npc=avatar}},avatar)
+migrated_eoc_functions.social_drop({actors={beta=avatar}},avatar)
 assert(#calls==0)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25154,13 +25242,14 @@ assert(#calls==0)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_player_training_uses_selected_native_course(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["start_training", "revert_activity"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "train",
+            "effect": ["start_training", "revert_activity"],
+        })
         script = r"""
-local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
+local avatar,npc,override={subtype="avatar"},
+                      {kind="creature",subtype="npc"},
+                      {kind="creature",subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false
@@ -25183,13 +25272,13 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.train({actors={npc=npc}},nil)
+migrated_eoc_functions.train({actors={beta=npc}},nil)
 assert(calls==1 and continued==1)
 expected=override
-migrated_eoc_functions.train({actors={npc=npc}},override)
+migrated_eoc_functions.train({actors={beta=override}},override)
 assert(calls==2 and continued==2)
 fail=true
-local ok,err=pcall(migrated_eoc_functions.train,{actors={npc=npc}},override)
+local ok,err=pcall(migrated_eoc_functions.train,{actors={beta=override}},override)
 assert(not ok and tostring(err):find('stale_npc',1,true))
 assert(calls==3 and continued==2)
 """.replace("BODY", rendered)
@@ -25199,13 +25288,14 @@ assert(calls==3 and continued==2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_training_uses_avatar_teacher_mode(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["start_training_npc", "revert_activity"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "train",
+            "effect": ["start_training_npc", "revert_activity"],
+        })
         script = r"""
-local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
+local avatar,npc,override={subtype="avatar"},
+                      {kind="creature",subtype="npc"},
+                      {kind="creature",subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false
@@ -25228,13 +25318,13 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.train({actors={npc=npc}},nil)
+migrated_eoc_functions.train({actors={beta=npc}},nil)
 assert(calls==1 and continued==1)
 expected=override
-migrated_eoc_functions.train({actors={npc=npc}},override)
+migrated_eoc_functions.train({actors={beta=override}},override)
 assert(calls==2 and continued==2)
 fail=true
-local ok,err=pcall(migrated_eoc_functions.train,{actors={npc=npc}},override)
+local ok,err=pcall(migrated_eoc_functions.train,{actors={beta=override}},override)
 assert(not ok and tostring(err):find('stale_npc',1,true))
 assert(calls==3 and continued==2)
 """.replace("BODY", rendered)
@@ -25244,13 +25334,14 @@ assert(calls==3 and continued==2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_seminar_training_preserves_cancel_and_provider(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "train",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["start_training_seminar", "revert_activity"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "train",
+            "effect": ["start_training_seminar", "revert_activity"],
+        })
         script = r"""
-local avatar,npc,override={subtype="avatar"},{subtype="npc"},{subtype="npc"}
+local avatar,npc,override={subtype="avatar"},
+                      {kind="creature",subtype="npc"},
+                      {kind="creature",subtype="npc"}
 local expected=npc
 local calls,continued=0,0
 local fail=false
@@ -25273,13 +25364,13 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.train({actors={npc=npc}},nil)
+migrated_eoc_functions.train({actors={beta=npc}},nil)
 assert(calls==1 and continued==1)
 expected=override
-migrated_eoc_functions.train({actors={npc=npc}},override)
+migrated_eoc_functions.train({actors={beta=override}},override)
 assert(calls==2 and continued==2)
 fail=true
-local ok,err=pcall(migrated_eoc_functions.train,{actors={npc=npc}},override)
+local ok,err=pcall(migrated_eoc_functions.train,{actors={beta=override}},override)
 assert(not ok and tostring(err):find('stale_npc',1,true))
 assert(calls==3 and continued==2)
 """.replace("BODY", rendered)
@@ -25290,12 +25381,11 @@ assert(calls==3 and continued==2)
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_grooming_effects_are_native_calls_not_noops(self) -> None:
         effects = ["barber_hair", "barber_beard", "buy_haircut", "buy_shave"]
-        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
-            "type": "effect_on_condition", "id": "groom",
-            "required_event": "npc_becomes_hostile", "effect": effects})
-        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "groom", "effect": effects,
+        })
         script = r"""
-local avatar,npc={subtype="avatar"},{subtype="npc"}
+local avatar,npc={subtype="avatar"},{kind="creature",subtype="npc"}
 local calls={}
 local fail=false
 local function service_value(result) assert(result.ok);return result.value end
@@ -25315,13 +25405,13 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.groom({actors={npc=npc}},nil)
+migrated_eoc_functions.groom({actors={beta=npc}},nil)
 assert(table.concat(calls,',')=='style:hair,style:beard,provide:haircut,provide:shave')
 calls={}
-migrated_eoc_functions.groom({actors={npc=avatar}},avatar)
+migrated_eoc_functions.groom({actors={beta=avatar}},avatar)
 assert(#calls==0)
 fail=true
-assert(not pcall(migrated_eoc_functions.groom,{actors={npc=npc}},npc))
+assert(not pcall(migrated_eoc_functions.groom,{actors={beta=npc}},npc))
 assert(#calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25336,12 +25426,12 @@ assert(#calls==1)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_start_trade_retains_delegate_and_cancel_semantics(self) -> None:
-        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+        rendered = render_direct_npc_dialogue_pair({
             "type": "effect_on_condition", "id": "trade",
-            "required_event": "npc_becomes_hostile", "effect": ["start_trade", "revert_activity"]})
-        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+            "effect": ["start_trade", "revert_activity"],
+        })
         script = r"""
-local avatar,npc={subtype="avatar"},{subtype="npc"}
+local avatar,npc={subtype="avatar"},{kind="creature",subtype="npc"}
 local mode='cancel'
 local continued=0
 local function service_value(result)
@@ -25365,7 +25455,7 @@ local runtime={handler=function() end,on=function() end}
 BODY
 for _,next_mode in ipairs({'cancel','accept','error'}) do
  mode=next_mode;continued=0
- local ok,err=pcall(migrated_eoc_functions.trade,{actors={npc=npc}},nil)
+ local ok,err=pcall(migrated_eoc_functions.trade,{actors={beta=npc}},nil)
  if mode=='error' then assert(not ok and continued==0 and tostring(err):find('stale_npc',1,true))
  else assert(ok and continued==1) end
 end
@@ -25383,12 +25473,11 @@ end
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_native_npc_orders_are_executed(self) -> None:
         effects = ["wake_up", "dismount", "clear_overrides", "lead_to_safety"]
-        source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
-            "type": "effect_on_condition", "id": "orders",
-            "required_event": "npc_becomes_hostile", "effect": effects})
-        rendered = migrate_lua_first.render_eoc(source, migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "orders", "effect": effects,
+        })
         script = r"""
-local npc,override={},{}
+local npc,override={kind="creature",subtype="npc"},{kind="creature",subtype="npc"}
 local expected=npc
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
@@ -25400,7 +25489,7 @@ local runtime={handler=function() end,on=function() end}
 BODY
 for _,target in ipairs({npc,override}) do
  expected=target;calls={}
- migrated_eoc_functions.orders({actors={npc=npc}},target)
+ migrated_eoc_functions.orders({actors={beta=target}},target)
  assert(table.concat(calls,',')=='wake,dismount,clear_temporary_rules,lead_to_safety')
 end
 """.replace("BODY", rendered)
@@ -25417,12 +25506,11 @@ end
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_dialogue_finish_and_presentation_are_executed(self) -> None:
         effects = ["end_conversation", "reveal_stats", "pick_style"]
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "presentation",
-                                     "required_event": "npc_becomes_hostile", "effect": effects}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "presentation", "effect": effects,
+        })
         script = r"""
-local npc={subtype='npc',topic='TALK_TEST'}
+local npc={kind='creature',subtype='npc',topic='TALK_TEST'}
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={
@@ -25443,7 +25531,7 @@ local services={npcs={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.presentation({actors={npc=npc}},nil)
+ migrated_eoc_functions.presentation({actors={beta=npc}},nil)
 assert(table.concat(calls,',')=='finish,sheet,style')
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25457,12 +25545,12 @@ assert(table.concat(calls,',')=='finish,sheet,style')
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_combat_insult_calls_complete_native_dialogue_action(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "insult",
-                                     "required_event": "npc_becomes_hostile", "effect": "insult_combat"}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "insult", "effect": "insult_combat",
+        })
         script = r"""
-local npc,override={},{}
+local npc,override={kind='creature',subtype='npc'},
+                  {kind='creature',subtype='npc'}
 local expected=npc
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
@@ -25472,9 +25560,9 @@ end}}}
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.insult({actors={npc=npc}},nil)
+migrated_eoc_functions.insult({actors={beta=npc}},nil)
 expected=override
-migrated_eoc_functions.insult({actors={npc=npc}},override)
+migrated_eoc_functions.insult({actors={beta=override}},override)
 assert(calls==2)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25483,13 +25571,14 @@ assert(calls==2)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_follower_migration_preserves_relationship_operations(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "relations",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["follow", "stop_following", "stranger_neutral"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "relations",
+            "effect": ["follow", "stop_following", "stranger_neutral"],
+        })
         script = r"""
-local avatar,npc,override={},{},{}
+local avatar={}
+local npc={kind='creature',subtype='npc'}
+local other={kind='creature',subtype='character'}
 local expected=npc
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
@@ -25510,11 +25599,12 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target;calls={}
- migrated_eoc_functions.relations({actors={npc=npc}},target)
- assert(table.concat(calls,',')=='join,stop,neutral')
-end
+calls={}
+migrated_eoc_functions.relations({actors={beta=npc}},nil)
+assert(table.concat(calls,',')=='join,stop,neutral')
+expected=other;calls={}
+migrated_eoc_functions.relations({actors={beta=other}},nil)
+assert(#calls==0)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -25522,12 +25612,12 @@ end
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_leave_and_temporary_follow_use_relationship_services(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "leave_follow",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["leave", "follow_only"]}), migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "leave_follow",
+            "effect": ["leave", "follow_only"],
+        })
         script = r"""
-local avatar,npc={},{}
+local avatar,npc={}, {kind='creature',subtype='npc'}
 local calls={}
 local function service_value(result) assert(result.ok);return result.value end
 local services={
@@ -25544,7 +25634,7 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-migrated_eoc_functions.leave_follow({actors={npc=npc}},nil)
+migrated_eoc_functions.leave_follow({actors={beta=npc}},nil)
 assert(table.concat(calls,',')=='leave,temporary')
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
@@ -25553,19 +25643,18 @@ assert(table.concat(calls,',')=='leave,temporary')
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_confrontation_routes_preserve_native_operations(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "confrontation",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["hostile", "flee", "player_leaving",
-                                                "start_mugging", "remove_stolen_status", "npc_thankful", "npc_wants_to_talk"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "confrontation",
+            "effect": ["hostile", "flee", "player_leaving",
+                       "start_mugging", "remove_stolen_status", "npc_thankful"],
+        })
         script = r"""
-local npc,override={},{}
+local npc={kind='creature',subtype='npc'}
 local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={}}
 local operations={'become_hostile','start_fleeing','warn_player_departure',
-                  'start_mugging','clear_stolen_item_claim','make_thankful','request_talk'}
+                  'start_mugging','clear_stolen_item_claim','make_thankful'}
 for _,operation in ipairs(operations) do
  services.npcs[operation]=function(target)
   assert(target==expected);calls[#calls+1]=operation
@@ -25575,14 +25664,12 @@ end
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target;calls={};fail=false
- migrated_eoc_functions.confrontation({actors={npc=npc}},target)
- assert(table.concat(calls,',')==table.concat(operations,','))
- calls={};fail=true
- assert(not pcall(migrated_eoc_functions.confrontation,{actors={npc=npc}},target))
- assert(#calls==1)
-end
+expected=npc;calls={};fail=false
+migrated_eoc_functions.confrontation({actors={beta=npc}},nil)
+assert(table.concat(calls,',')==table.concat(operations,','))
+calls={};fail=true
+assert(not pcall(migrated_eoc_functions.confrontation,{actors={beta=npc}},nil))
+assert(#calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -25590,13 +25677,12 @@ end
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_guard_migration_uses_native_lifecycle_and_participants(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "guard",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["assign_guard", "stop_guard"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "guard",
+            "effect": ["assign_guard", "stop_guard"],
+        })
         script = r"""
-local npc,override={},{}
+local npc={kind='creature',subtype='npc'}
 local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={set_guarding=function(target,enabled)
@@ -25606,14 +25692,12 @@ end}}
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target;calls={};fail=false
- migrated_eoc_functions.guard({actors={npc=npc}},target)
- assert(#calls==2 and calls[1]==true and calls[2]==false)
- calls={};fail=true
- assert(not pcall(migrated_eoc_functions.guard,{actors={npc=npc}},target))
- assert(#calls==1)
-end
+expected=npc;calls={};fail=false
+migrated_eoc_functions.guard({actors={beta=npc}},nil)
+assert(#calls==2 and calls[1]==true and calls[2]==false)
+calls={};fail=true
+assert(not pcall(migrated_eoc_functions.guard,{actors={beta=npc}},nil))
+assert(#calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -25622,12 +25706,12 @@ end
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_medical_aid_migrates_levels_allies_and_provider(self) -> None:
         effects = ["lesser_give_aid", "give_aid", "lesser_give_all_aid", "give_all_aid"]
-        source = {"type": "effect_on_condition", "id": "aid",
-                  "required_event": "npc_becomes_hostile", "effect": effects}
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
+        source = {"type": "effect_on_condition", "id": "aid", "effect": effects}
+        rendered = render_direct_npc_dialogue_pair(source)
         script = r"""
-local npc,override,avatar={subtype="npc"},{subtype="npc"},{subtype="avatar"}
+local npc,other,avatar={kind="creature",subtype="npc"},
+                      {kind="creature",subtype="character"},
+                      {kind="creature",subtype="avatar"}
 local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={characters={avatar=function() return avatar end},npcs={medical={
@@ -25640,22 +25724,22 @@ local services={characters={avatar=function() return avatar end},npcs={medical={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target;calls={};fail=false
- migrated_eoc_functions.aid({actors={npc=npc}},target)
- assert(table.concat(calls,',')=='basic:false,advanced:false,basic:true,advanced:true')
- calls={};fail=true
- assert(not pcall(migrated_eoc_functions.aid,{actors={npc=npc}},target))
- assert(#calls==1)
-end
+expected=npc;calls={};fail=false
+migrated_eoc_functions.aid({actors={beta=npc}},nil)
+assert(table.concat(calls,',')=='basic:false,advanced:false,basic:true,advanced:true')
+calls={};fail=true
+assert(not pcall(migrated_eoc_functions.aid,{actors={beta=npc}},nil))
+assert(#calls==1)
+expected=other;calls={};fail=false
+migrated_eoc_functions.aid({actors={beta=other}},nil)
+assert(#calls==0)
 calls={};fail=false
-migrated_eoc_functions.aid({actors={npc=avatar}},avatar)
+migrated_eoc_functions.aid({actors={beta=avatar}},nil)
 assert(#calls==0)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        source.pop("required_event")
         unproven = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, source), migrate_lua_first.MigrationResult())
         self.assertNotIn("services.npcs.medical.provide_aid(", unproven)
@@ -25682,13 +25766,13 @@ assert(#calls==0)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_purchased_animals_keep_pet_state_and_blocked_continuation(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "pets",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["buy_chicken", "buy_horse", "buy_cow"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "pets",
+            "effect": ["buy_chicken", "buy_horse", "buy_cow"],
+        })
         script = r"""
-local npc,override,position={},{},{}
+local npc,other,position={kind='creature',subtype='npc'},
+                       {kind='creature',subtype='character'},{}
 local expected,mode,calls
 local function service_value(result) assert(result.ok);return result.value end
 local services={
@@ -25714,22 +25798,23 @@ local services={
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target
- for _,state in ipairs({'ok','blocked','stale_world'}) do
-  mode=state;calls={}
-  local ok=pcall(migrated_eoc_functions.pets,{actors={npc=npc}},target)
-  assert(ok==(mode~='stale_world'))
-  assert(#calls==(mode=='ok' and 9 or mode=='blocked' and 3 or 1))
-  if mode=='ok' then
-   for i,species in ipairs({'mon_chicken','mon_horse','mon_cow'}) do
-    assert(calls[i*3-2]=='spawn:'..species)
-    assert(calls[i*3-1]=='friendly:'..species)
-    assert(calls[i*3]=='pet:'..species)
-   end
+expected=npc
+for _,state in ipairs({'ok','blocked','stale_world'}) do
+ mode=state;calls={}
+ local ok=pcall(migrated_eoc_functions.pets,{actors={beta=npc}},nil)
+ assert(ok==(mode~='stale_world'))
+ assert(#calls==(mode=='ok' and 9 or mode=='blocked' and 3 or 1))
+ if mode=='ok' then
+  for i,species in ipairs({'mon_chicken','mon_horse','mon_cow'}) do
+   assert(calls[i*3-2]=='spawn:'..species)
+   assert(calls[i*3-1]=='friendly:'..species)
+   assert(calls[i*3]=='pet:'..species)
   end
  end
 end
+calls={};mode='ok';expected=other
+migrated_eoc_functions.pets({actors={beta=other}},nil)
+assert(#calls==0)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -25737,14 +25822,13 @@ end
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_refusal_migration_preserves_requests_and_failure_propagation(self) -> None:
-        rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "refusals",
-                                     "required_event": "npc_becomes_hostile",
-                                     "effect": ["deny_follow", "deny_lead", "deny_equipment",
-                                                "deny_train", "deny_personal_info"]}),
-            migrate_lua_first.MigrationResult())
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "refusals",
+            "effect": ["deny_follow", "deny_lead", "deny_equipment",
+                       "deny_train", "deny_personal_info"],
+        })
         script = r"""
-local npc,override={},{}
+local npc={kind='creature',subtype='npc'}
 local expected,calls,fail
 local function service_value(result) assert(result.ok);return result.value end
 local services={npcs={record_refusal=function(target,request)
@@ -25754,14 +25838,12 @@ end}}
 local migrated_eoc_functions={}
 local runtime={handler=function() end,on=function() end}
 BODY
-for _,target in ipairs({npc,override}) do
- expected=target;calls={};fail=false
- migrated_eoc_functions.refusals({actors={npc=npc}},target)
- assert(table.concat(calls,',')=='follow,lead,equipment,training,personal_info')
- calls={};fail=true
- assert(not pcall(migrated_eoc_functions.refusals,{actors={npc=npc}},target))
- assert(#calls==1)
-end
+expected=npc;calls={};fail=false
+migrated_eoc_functions.refusals({actors={beta=npc}},nil)
+assert(table.concat(calls,',')=='follow,lead,equipment,training,personal_info')
+calls={};fail=true
+assert(not pcall(migrated_eoc_functions.refusals,{actors={beta=npc}},nil))
+assert(#calls==1)
 """.replace("BODY", rendered)
         result = subprocess.run(["lua", "-"], input=script, text=True,
                                 capture_output=True, timeout=10)
@@ -25980,6 +26062,27 @@ prices={};draws={};limits={};assert(choose()==nil and #limits==0)
         self.assertIsNone(render("give_equipment", False, True))
         self.assertIsNotNone(render("give_equipment", False, True,
                                     npc_actor_expression="context.actors.beta"))
+
+    def test_static_give_equipment_requires_direct_beta_npc_provenance(self) -> None:
+        event_result = migrate_lua_first.MigrationResult()
+        event_only = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "event_equipment_gift",
+                "required_event": "npc_becomes_hostile", "effect": "give_equipment",
+            }), event_result)
+        self.assertNotIn("services.trade.quote(provider, recipient", event_only)
+        self.assertIn("TODO: translate the equipment allowance", event_only)
+        self.assertTrue(event_result.todos)
+
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_equipment_gift",
+            "effect": "give_equipment",
+        })
+        self.assertIn("local provider = context.actors.beta", direct_pair)
+        self.assertIn(
+            'provider.kind == "creature" and provider.subtype == "npc"', direct_pair
+        )
+        self.assertIn("services.trade.quote(provider, recipient", direct_pair)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_equipment_gift_composes_exact_offer_and_stops_after_errors(self) -> None:

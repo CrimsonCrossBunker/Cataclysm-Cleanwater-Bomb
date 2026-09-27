@@ -5793,7 +5793,7 @@ def render_optional_npc_job(
 ) -> list[str]:
     """Native interactive jobs may return without assigning an activity."""
     return [
-        f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
+        f'    if ({target}) ~= nil and ({target}).kind == "creature" and ({target}).subtype == "npc" then',
         f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
         f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
         "            service_value(assignment)",
@@ -21264,6 +21264,7 @@ def render_static_give_equipment_effect(
     effect: dict[str, Any] | str, npc_actor_proven: bool,
     avatar_actor_proven: bool, *, npc_actor_expression: str | None = None,
     alpha_actor_expression: str | None = None,
+    require_beta_npc: bool = False,
 ) -> list[str] | None:
     """Compose allowance gifts from exact native offers and settlement.
 
@@ -21292,10 +21293,14 @@ def render_static_give_equipment_effect(
     else:
         return None
     selection = render_equipment_offer_selection("provider", "allowance")
+    provider_guard = (
+        'provider ~= nil and provider.kind == "creature" and provider.subtype == "npc"'
+        if require_beta_npc else 'provider ~= nil and provider.subtype == "npc"'
+    )
     return [
         "    do",
         f"        local provider = {target}",
-        '        if provider ~= nil and provider.subtype == "npc" then',
+        f"        if {provider_guard} then",
         f"            local allowance = {allowance_expression}",
         f"            local offer = {selection}",
         "            local provider_name = service_value(services.npcs.get(provider)).name",
@@ -21334,7 +21339,7 @@ def render_static_follower_service_effect(
         "bionic_remove_allies": "remove",
     }.get(effect)
     lines = [
-        f'    if {target} ~= nil and {target}.subtype == "npc" then',
+        f'    if {target} ~= nil and {target}.kind == "creature" and {target}.subtype == "npc" then',
         "        local followers = service_value(services.npcs.visible_allies())",
         "        local follower_choices = {}",
         "        local follower_handles = {}",
@@ -28841,6 +28846,21 @@ def missing_test_eoc_definitions(
     return tuple(sorted(missing))
 
 
+def render_static_wrapped_beta_npc_call(
+    method: str, *additional_arguments: str,
+) -> list[str]:
+    """Guard a static WRAP lowering with the exact beta NPC shape."""
+    arguments = ", ".join(("wrapped_beta_npc", *additional_arguments))
+    return [
+        "    do",
+        "        local wrapped_beta_npc = context and context.actors and context.actors.beta",
+        '        if wrapped_beta_npc ~= nil and wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc" then',
+        f"            service_value(services.npcs.{method}({arguments}))",
+        "        end",
+        "    end",
+    ]
+
+
 def render_eoc(
     source: SourceObject,
     result: MigrationResult,
@@ -29064,7 +29084,7 @@ def render_eoc(
         generic_talker_actor_override
     )
     npc_actor_expression = None
-    if talker_pair_override:
+    if talker_pair_override or npc_dialogue_mission_pair_proven:
         npc_actor_expression = "context.actors.beta"
     elif isinstance(required_event, str):
         if required_event in PROVEN_ITEM_ACTOR_EVENTS:
@@ -29093,6 +29113,15 @@ def render_eoc(
         # while retaining the selected actor as the safe fallback for ordinary
         # NPC traversal callbacks that have no talker pair.
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
+    # Static talk-effect WRAP entries invoke their C++ function only when
+    # dialogue::actor(true)->get_npc() succeeds.  A single event Character is
+    # alpha evidence, not proof of that beta handle.  Restrict these WRAP
+    # lowerings to callbacks with a separately proven beta participant, then
+    # preserve the native no-op for a beta that is not an NPC at runtime.
+    static_wrapped_beta_npc = (
+        npc_dialogue_mission_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
     # Training-offer selectors require both native dialogue Characters.
     # Prove the second talker only for content callbacks whose source supplies
     # the alpha/beta pair, never from a single-role event or selector spelling.
@@ -29169,6 +29198,12 @@ def render_eoc(
     elif generic_talker_actor_override and not (
         avatar_fatal_hook or npc_fatal_hook
     ):
+        lines.extend([
+            "    context = context or {}",
+            "    context.data = context.data or {}",
+            "    context.actors = context.actors or {}",
+        ])
+    elif static_wrapped_beta_npc:
         lines.extend([
             "    context = context or {}",
             "    context.data = context.data or {}",
@@ -30888,14 +30923,14 @@ def render_eoc(
                     "services.characters.avatar(), true))"
                 )
                 converted_effect = True
-            elif npc_actor_proven and effect == "npc_thankful":
-                lines.append(f"    service_value(services.npcs.make_thankful({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "npc_thankful":
+                lines.extend(render_static_wrapped_beta_npc_call("make_thankful"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "hostile":
-                lines.append(f"    service_value(services.npcs.become_hostile({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "hostile":
+                lines.extend(render_static_wrapped_beta_npc_call("become_hostile"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "flee":
-                lines.append(f"    service_value(services.npcs.start_fleeing({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "flee":
+                lines.extend(render_static_wrapped_beta_npc_call("start_fleeing"))
                 converted_effect = True
             elif npc_actor_proven and isinstance(effect, dict) and len(effect) == 1 and next(iter(effect)) in {
                 "npc_change_class", "npc_change_faction", "npc_first_topic",
@@ -31661,18 +31696,19 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and effect == "follow":
-                lines.append(
-                    f"    service_value(services.npcs.join_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
+            elif static_wrapped_beta_npc and effect == "follow":
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "join_player", "services.characters.avatar()"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stop_following":
-                lines.append(f"    service_value(services.npcs.stop_temporary_following({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "stop_following":
+                lines.extend(render_static_wrapped_beta_npc_call("stop_temporary_following"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stranger_neutral":
-                lines.append(f"    service_value(services.npcs.make_neutral({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "stranger_neutral":
+                lines.extend(render_static_wrapped_beta_npc_call("make_neutral"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "end_conversation":
-                lines.append(f"    service_value(services.npcs.dialogue.finish({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "end_conversation":
+                lines.extend(render_static_wrapped_beta_npc_call("dialogue.finish"))
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -31698,74 +31734,76 @@ def render_eoc(
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "wake_up", "dismount", "clear_overrides", "lead_to_safety"
             }:
                 order = {"wake_up": "wake", "dismount": "dismount",
                          "clear_overrides": "clear_temporary_rules",
                          "lead_to_safety": "lead_to_safety"}[effect]
-                lines.append(
-                    f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "orders.run", lua_quote(order)
+                ))
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "reveal_stats", "pick_style",
             }:
                 method = "open_character_sheet" if effect == "reveal_stats" else "choose_combat_style"
-                target = npc_actor_expression or "actor"
-                lines.extend([
-                    f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
-                    f"        service_value(services.npcs.orders.{method}({target}))",
-                    "    end",
-                ])
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    f"orders.{method}"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "insult_combat":
-                lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "insult_combat":
+                lines.extend(render_static_wrapped_beta_npc_call("dialogue.provoke_combat"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "leave":
-                lines.append(f"    service_value(services.npcs.leave_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
+            elif static_wrapped_beta_npc and effect == "leave":
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "leave_player", "services.characters.avatar()"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "follow_only":
-                lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "follow_only":
+                lines.extend(render_static_wrapped_beta_npc_call("follow_temporarily"))
                 converted_effect = True
-            elif exact_npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "deny_follow", "deny_lead", "deny_equipment", "deny_train", "deny_personal_info",
             }:
                 request = "training" if effect == "deny_train" else effect.removeprefix("deny_")
-                lines.append(
-                    f"    service_value(services.npcs.record_refusal({npc_actor_expression or 'actor'}, {lua_quote(request)}))"
-                )
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "record_refusal", lua_quote(request)
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "player_leaving":
-                lines.append(f"    service_value(services.npcs.warn_player_departure({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "player_leaving":
+                lines.extend(render_static_wrapped_beta_npc_call("warn_player_departure"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "start_mugging":
-                lines.append(f"    service_value(services.npcs.start_mugging({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "start_mugging":
+                lines.extend(render_static_wrapped_beta_npc_call("start_mugging"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "remove_stolen_status":
-                lines.append(f"    service_value(services.npcs.clear_stolen_item_claim({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "remove_stolen_status":
+                lines.extend(render_static_wrapped_beta_npc_call("clear_stolen_item_claim"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "assign_guard":
-                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, true))")
+            elif static_wrapped_beta_npc and effect == "assign_guard":
+                lines.extend(render_static_wrapped_beta_npc_call("set_guarding", "true"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stop_guard":
-                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, false))")
+            elif static_wrapped_beta_npc and effect == "stop_guard":
+                lines.extend(render_static_wrapped_beta_npc_call("set_guarding", "false"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "buy_chicken", "buy_horse", "buy_cow",
             }:
                 animal = "mon_" + effect.removeprefix("buy_")
-                target = npc_actor_expression or "actor"
                 lines.extend([
                     "    do",
-                    f"        local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
-                    f"service_value(services.characters.snapshot({target})).creature.position, 1, false)",
-                    "        if purchase.ok then",
-                    "            local pet = purchase.value.handle",
-                    "            service_value(services.monsters.set_friendly(pet, true))",
-                    "            service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
+                    "        local wrapped_beta_npc = context and context.actors and context.actors.beta",
+                    '        if wrapped_beta_npc ~= nil and wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc" then',
+                    f"            local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
+                    "service_value(services.characters.snapshot(wrapped_beta_npc)).creature.position, 1, false)",
+                    "            if purchase.ok then",
+                    "                local pet = purchase.value.handle",
+                    "                service_value(services.monsters.set_friendly(pet, true))",
+                    "                service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
                     "services.time.duration(1, \"turn\"), { permanent = true }))",
-                    "        elseif purchase.error.code ~= \"blocked\" then",
-                    "            service_value(purchase)",
+                    "            elseif purchase.error.code ~= \"blocked\" then",
+                    "                service_value(purchase)",
+                    "            end",
                     "        end",
                     "    end",
                 ])
@@ -31855,7 +31893,7 @@ def render_eoc(
                         "needs vehicle service conversion"
                     )
                     all_effects_converted = False
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
             }:
                 method, choice = {
@@ -31867,24 +31905,24 @@ def render_eoc(
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression or 'actor'}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     f"            service_value(services.npcs.grooming.{method}("
                     f"provider, services.characters.avatar(), {lua_quote(choice)}))",
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "start_trade":
+            elif static_wrapped_beta_npc and effect == "start_trade":
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression or 'actor'}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     '            service_value(services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true))',
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "revert_activity", "morale_chat_activity",
             }:
                 partner = npc_actor_expression or "actor"
@@ -31894,12 +31932,12 @@ def render_eoc(
                     call = ("services.activities.socialize(services.characters.avatar(), "
                             f'{partner}, services.time.duration(600, "turn"))')
                 lines.extend([
-                    f'    if ({partner}) ~= nil and ({partner}).subtype == "npc" then',
+                    f'    if ({partner}) ~= nil and ({partner}).kind == "creature" and ({partner}).subtype == "npc" then',
                     f"        service_value({call})",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
                 "do_farming", "do_fishing", "do_mining", "do_mopping",
                 "do_read_repeatedly", "do_study", "sort_loot", "do_disassembly", "do_vehicle_deconstruct", "do_vehicle_repair",
@@ -31918,12 +31956,12 @@ def render_eoc(
                 }[effect]
                 worker = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'    if ({worker}) ~= nil and ({worker}).kind == "creature" and ({worker}).subtype == "npc" then',
                     f'        service_value(services.activities.assign_npc_job({worker}, {lua_quote(job)}))',
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "do_read", "do_eread", "do_craft", "find_mount",
             }:
                 job = {"do_read": "read", "do_eread": "read_ebook",
@@ -31932,22 +31970,22 @@ def render_eoc(
                 lines.extend(render_optional_npc_job(
                     npc_actor_expression or "actor", job, normal_return))
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "drop_items_in_place":
+            elif static_wrapped_beta_npc and effect == "drop_items_in_place":
                 worker = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'    if ({worker}) ~= nil and ({worker}).kind == "creature" and ({worker}).subtype == "npc" then',
                     f'        service_value(services.npcs.orders.run({worker}, "drop_carried_items"))',
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "start_training", "start_training_npc", "start_training_seminar",
             }:
                 mode = {"start_training": "player", "start_training_npc": "npc",
                         "start_training_seminar": "seminar"}[effect]
                 provider = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and ({provider}).subtype == "npc" then',
                     f'        service_value(services.npcs.training.start_selected({provider}, '
                     f'services.characters.avatar(), {lua_quote(mode)}))',
                     "    end",
@@ -32244,13 +32282,13 @@ def render_eoc(
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:
-                if npc_actor_proven or npc_actor_expression is not None:
+                if static_wrapped_beta_npc:
                     level = "basic" if effect.startswith("lesser_") else "advanced"
                     include_allies = "true" if "all_aid" in effect else "false"
                     lines.extend([
                         "    do",
                         f"        local provider = {npc_actor_expression or 'actor'}",
-                        '        if provider ~= nil and provider.subtype == "npc" then',
+                        '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                         "            service_value(services.npcs.medical.provide_aid("
                         "provider, services.characters.avatar(), "
                         f"{lua_quote(level)}, {include_allies}))",
@@ -32427,23 +32465,23 @@ def render_eoc(
                     "needs proven camp, manager, and worker handles"
                 )
                 all_effects_converted = False
-            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and npc_actor_expression is not None:
+            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and static_wrapped_beta_npc:
                 operation = "install" if effect == "bionic_install" else "remove"
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     "            service_value(services.npcs.medical.open_bionic_service("
                     f"provider, {lua_quote(operation)}, services.characters.avatar()))",
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif effect == "repair_bionic_limbs" and npc_actor_expression is not None:
+            elif effect == "repair_bionic_limbs" and static_wrapped_beta_npc:
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     "            service_value(services.npcs.medical.repair_bionic_limbs("
                     "provider, services.characters.avatar()))",
                     "        end",
@@ -32505,12 +32543,19 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":
+                static_string_effect = effect == "give_equipment"
                 rendered = render_static_give_equipment_effect(
-                    effect, npc_actor_proven, avatar_actor_proven,
-                    npc_actor_expression=npc_actor_expression,
+                    effect,
+                    static_wrapped_beta_npc if static_string_effect else npc_actor_proven,
+                    avatar_actor_proven,
+                    npc_actor_expression=(
+                        npc_actor_expression
+                        if not static_string_effect or static_wrapped_beta_npc else None
+                    ),
                     alpha_actor_expression="actor" if (
                         talker_pair_override or unbound_mixed_talker_contract
                     ) else None,
+                    require_beta_npc=static_string_effect,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -33481,29 +33526,26 @@ def render_eoc(
                         "needs an exact NPC provider, avatar owner, and selected mission shape"
                     )
                     all_effects_converted = False
-            elif (
-                (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and
-                effect in {
-                    "npc_rules_menu", "set_npc_pickup",
-                }
-            ):
-                # These legacy effects open native NPC service surfaces.  The
-                # Platform contract exposes the same bounded services without
-                # retaining an EOC runner or raw dialogue object.
+            elif static_wrapped_beta_npc and effect == "set_npc_pickup":
+                # This WRAP effect opens the native pickup-rules service.
                 provider = npc_actor_expression or "actor"
-                native_call = {
-                    "npc_rules_menu": f"services.npcs.open_rules({provider})",
-                    "set_npc_pickup": (
-                        f"services.npcs.orders.open_pickup_rules({provider})"
-                    ),
-                }[effect]
                 lines.extend([
-                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
-                    f"        service_value({native_call})",
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and ({provider}).subtype == "npc" then',
+                    f"        service_value(services.npcs.orders.open_pickup_rules({provider}))",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "npc_rules_menu":
+                # This callback is not a WRAP entry; retain its own native
+                # lowering until its actor proof is reviewed separately.
+                provider = npc_actor_expression or "actor"
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f"        service_value(services.npcs.open_rules({provider}))",
+                    "    end",
+                ])
+                converted_effect = True
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
             }:
                 rendered = render_static_follower_service_effect(
