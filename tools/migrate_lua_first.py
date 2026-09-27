@@ -33505,12 +33505,38 @@ def render_eoc(
                         "needs a bounded NPC mission-provider conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, str) and
-                effect in {
-                    "assign_mission", "mission_success", "mission_failure",
-                    "clear_mission", "remove_active_mission", "mission_reward",
-                }
+            elif isinstance(effect, str) and effect in {
+                "assign_mission", "mission_success", "mission_failure",
+                "clear_mission", "mission_reward",
+            }:
+                if static_wrapped_beta_npc:
+                    mission_action = {
+                        "assign_mission": "assign_selected",
+                        "mission_success": "succeed_selected",
+                        "mission_failure": "fail_selected",
+                        "clear_mission": "clear_selected",
+                        "mission_reward": "claim_selected_reward",
+                    }[effect]
+                    arguments = ["services.characters.avatar()"]
+                    if effect == "mission_success":
+                        arguments.append("false")
+                    lines.extend(render_static_wrapped_beta_npc_call(
+                        f"missions.{mission_action}", *arguments
+                    ))
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: translate the selected NPC mission "
+                        "action through a direct dialogue beta NPC."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "needs a direct talk-topic beta NPC for the selected mission action"
+                    )
+                    all_effects_converted = False
+            elif effect == "remove_active_mission" and (
+                npc_actor_proven or npc_actor_expression is not None
             ):
                 rendered = render_static_selected_npc_mission_effect(
                     effect, exact_npc_actor_proven,

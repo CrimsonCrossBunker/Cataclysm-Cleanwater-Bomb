@@ -13950,7 +13950,7 @@ assert(#events == 9)
             self.assertIn("typed provider service", main)
             self.assertNotIn("services.characters.avatar()", main)
 
-    def test_translates_proven_npc_mission_provider_shape_without_ambient_avatar(self) -> None:
+    def test_npc_mission_wrappers_require_direct_talk_topic_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -13989,9 +13989,9 @@ assert(#events == 9)
                 )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.todos)
             self.assertIn(
                 'services.npcs.missions.offer(\n'
                 '        context.actors.beta, '
@@ -14004,27 +14004,81 @@ assert(#events == 9)
                 'services.types.id("mission", "MISSION_ASSIGNED"))',
                 main,
             )
-            self.assertIn(
-                "services.npcs.missions.assign_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.succeed_selected(context.actors.beta, actor, false)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.fail_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.clear_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.claim_selected_reward(context.actors.beta, actor)",
-                main,
-            )
+            for method in (
+                "assign_selected", "succeed_selected", "fail_selected",
+                "clear_selected", "claim_selected_reward",
+            ):
+                self.assertNotIn(f"services.npcs.missions.{method}(", main)
+            self.assertIn("direct talk-topic beta NPC", main)
             self.assertNotIn("services.characters.avatar()", main)
+
+    def test_static_npc_mission_wrappers_use_direct_beta_npc_and_avatar(self) -> None:
+        effects = [
+            "assign_mission", "mission_success", "mission_failure",
+            "clear_mission", "mission_reward",
+        ]
+        event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "event_missions",
+            "required_event": "npc_becomes_hostile", "effect": effects,
+        })
+        generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "generic_pair_missions",
+            "required_event": "character_takes_damage", "effect": effects,
+        })
+        with patch.object(
+            migrate_lua_first,
+            "AVATAR_ACTOR_EVENTS",
+            migrate_lua_first.AVATAR_ACTOR_EVENTS | {
+                "npc_becomes_hostile", "character_takes_damage",
+            },
+        ), patch.object(
+            migrate_lua_first,
+            "PROVEN_NPC_ACTOR_EVENTS",
+            migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS | {"character_takes_damage"},
+        ):
+            event_only = migrate_lua_first.render_eoc(
+                event_source, migrate_lua_first.MigrationResult()
+            )
+            generic_pair = migrate_lua_first.render_eoc(
+                generic_source, migrate_lua_first.MigrationResult(),
+                talker_pair_ids=frozenset({"generic_pair_missions"}),
+            )
+
+        for unproven in (event_only, generic_pair):
+            for method in (
+                "assign_selected", "succeed_selected", "fail_selected",
+                "clear_selected", "claim_selected_reward",
+            ):
+                self.assertNotIn(f"services.npcs.missions.{method}(", unproven)
+            self.assertIn("direct talk-topic beta NPC", unproven)
+
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_missions",
+            "effect": effects,
+        })
+        self.assertEqual(direct_pair.count(
+            'wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc"'
+        ), len(effects))
+        self.assertIn(
+            "services.npcs.missions.assign_selected(wrapped_beta_npc, services.characters.avatar())",
+            direct_pair,
+        )
+        self.assertIn(
+            "services.npcs.missions.succeed_selected(wrapped_beta_npc, services.characters.avatar(), false)",
+            direct_pair,
+        )
+        self.assertIn(
+            "services.npcs.missions.fail_selected(wrapped_beta_npc, services.characters.avatar())",
+            direct_pair,
+        )
+        self.assertIn(
+            "services.npcs.missions.clear_selected(wrapped_beta_npc, services.characters.avatar())",
+            direct_pair,
+        )
+        self.assertIn(
+            "services.npcs.missions.claim_selected_reward(wrapped_beta_npc, services.characters.avatar())",
+            direct_pair,
+        )
 
     def test_npc_mission_contract_declarations_cover_native_surface(self) -> None:
         declarations = (
