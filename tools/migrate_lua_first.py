@@ -103,6 +103,7 @@ COMMON_RECIPE_FIELDS = {
 }
 NATIVE_INT_MIN = -(1 << 31)
 NATIVE_INT_MAX = (1 << 31) - 1
+PLATFORM_CHARACTER_ADJUSTMENT_LIMIT = 1_000_000
 NATIVE_INT64_MAX = (1 << 63) - 1
 NATIVE_MASS_GRAMS_MAX = NATIVE_INT64_MAX // 1000
 NATIVE_FLOAT_MAX = float.fromhex("0x1.fffffep+127")
@@ -746,17 +747,64 @@ def parse_turns(value: Any) -> int | None:
 
 
 def parse_turn_cost_adjustment(value: Any) -> int | None:
-    """Convert a bounded literal duration to the native Character move delta."""
-    turns = parse_turns(value)
+    """Convert a native literal duration within the Platform move-adjustment bound."""
+    turns = parse_native_duration_turns(value)
     if turns is None:
         return None
     moves = turns * 100
     if not NATIVE_INT_MIN <= moves <= NATIVE_INT_MAX:
         return None
     adjustment = -moves
-    if not NATIVE_INT_MIN <= adjustment <= NATIVE_INT_MAX:
+    if not (
+        -PLATFORM_CHARACTER_ADJUSTMENT_LIMIT <= adjustment <=
+        PLATFORM_CHARACTER_ADJUSTMENT_LIMIT
+    ):
         return None
     return adjustment
+
+
+def parse_native_duration_turns(value: Any) -> int | None:
+    """Parse only the integer syntax and units accepted by native time_duration."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value if NATIVE_INT_MIN <= value <= NATIVE_INT_MAX else None
+    if not isinstance(value, str):
+        return None
+    # Keep this list aligned with time_duration::units; parse_turns also accepts
+    # legacy spellings that the native JSON duration parser rejects.
+    units = {
+        "turns": 1,
+        "turn": 1,
+        "t": 1,
+        "seconds": 1,
+        "second": 1,
+        "s": 1,
+        "minutes": 60,
+        "minute": 60,
+        "m": 60,
+        "hours": 3600,
+        "hour": 3600,
+        "h": 3600,
+        "days": 86400,
+        "day": 86400,
+        "d": 86400,
+    }
+    unit_pattern = "|".join(
+        re.escape(unit) for unit in sorted(units, key=len, reverse=True)
+    )
+    token_pattern = rf"[+-]?[0-9]+ *({unit_pattern})"
+    if re.fullmatch(rf" *(?:{token_pattern} *)+", value) is None:
+        return None
+    total = 0
+    for number, unit in re.findall(
+        rf"([+-]?[0-9]+) *({unit_pattern})", value
+    ):
+        component = int(number) * units[unit]
+        if not NATIVE_INT_MIN <= component <= NATIVE_INT_MAX:
+            return None
+        total += component
+        if not NATIVE_INT_MIN <= total <= NATIVE_INT_MAX:
+            return None
+    return total
 
 
 def parse_vitamin_micrograms(value: Any) -> int | None:

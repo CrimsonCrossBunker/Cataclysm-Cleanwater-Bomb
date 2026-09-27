@@ -7640,6 +7640,39 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbCharacterTrainingOffersResult: CcbResult
 ---@field value? CcbCharacterTrainingOffers Present on success.
 
+---@class CcbCharacterMutableState
+---@field moves integer Current moves.
+---@field pain integer Current pain.
+---@field stamina integer Current stamina.
+---@field hunger integer Current hunger.
+---@field thirst integer Current thirst.
+---@field sleepiness integer Current sleepiness.
+---@field focus integer Current focus.
+---@field radiation integer Current radiation.
+---@field painkiller integer Current painkiller level.
+---@field stored_kcal integer Current stored calories.
+
+---Only the listed fields are accepted; each supplied integer must be within
+---[-1000000, 1000000].
+---@class CcbCharacterAdjustments
+---@field moves? integer Move delta.
+---@field pain? integer Pain delta.
+---@field stamina? integer Stamina delta.
+---@field hunger? integer Hunger delta.
+---@field thirst? integer Thirst delta.
+---@field sleepiness? integer Sleepiness delta.
+---@field focus? integer Focus delta.
+---@field radiation? integer Radiation delta.
+---@field painkiller? integer Painkiller delta.
+---@field stored_kcal? integer Stored-calorie delta.
+
+---@class CcbCharacterAdjustmentValue
+---@field before CcbCharacterMutableState State before changes.
+---@field after CcbCharacterMutableState State after changes.
+
+---@class CcbCharacterAdjustmentResult: CcbResult
+---@field value? CcbCharacterAdjustmentValue Present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
@@ -7669,6 +7702,12 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+
+---Apply bounded integer deltas to an exact live Character.
+---@param character GameHandle Exact live Character handle.
+---@param adjustments CcbCharacterAdjustments
+---@return CcbCharacterAdjustmentResult result
+function CcbCharactersApi.adjust(character, adjustments) end
 
 ---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
 ---@param trainer GameHandle Exact live trainer Character handle.
