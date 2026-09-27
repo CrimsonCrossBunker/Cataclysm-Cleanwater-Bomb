@@ -11076,9 +11076,10 @@ function CcbPlatformRandomApi.probability(numerator, denominator) end
 ---@return integer[] values Dense sampled values; unique unless replacement was requested.
 function CcbPlatformRandomApi.sample_integers(minimum, maximum, count, with_replacement) end
 
----@param check number
----@param difficulty number
----@param die_size? integer Defaults to 10.
+---Roll on this Mod's isolated deterministic stream; unlike native_int, this does not advance the shared game RNG.
+---@param check number Finite check value.
+---@param difficulty number Finite difficulty value.
+---@param die_size? integer Inclusive upper bound in 1..1000000000; defaults to 10.
 ---@return boolean success True when `random(1, die_size) + check > difficulty`.
 function CcbPlatformRandomApi.contested(check, difficulty, die_size) end
 
