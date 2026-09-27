@@ -2055,6 +2055,50 @@ def load_objects(inputs: Iterable[Path]) -> list[SourceObject]:
     return objects
 
 
+@functools.lru_cache(maxsize=1)
+def core_mutation_catalog_ids() -> tuple[frozenset[str], frozenset[str]]:
+    """Read direct, concrete core mutation/category IDs from source data."""
+    source_root = REPOSITORY_ROOT / "data" / "json" / "mutations"
+    try:
+        objects = load_objects([source_root])
+    except ValueError:
+        # A missing or unreadable source catalog proves no IDs; callers then
+        # leave every mutation selector as a migration TODO.
+        return frozenset(), frozenset()
+    mutation_ids: set[str] = set()
+    category_ids: set[str] = set()
+    deleted_mutation_ids: set[str] = set()
+    deleted_category_ids: set[str] = set()
+    for source in objects:
+        value = source.value
+        kind = value.get("type")
+        identifier = value.get("id")
+        if (
+            kind not in {"mutation", "mutation_category"} or
+            not safe_platform_id(identifier)
+        ):
+            continue
+        if "delete" in value:
+            if kind == "mutation":
+                deleted_mutation_ids.add(identifier)
+            else:
+                deleted_category_ids.add(identifier)
+            continue
+        if (
+            "abstract" in value or
+            any(key in value for key in ("copy-from", "extend"))
+        ):
+            continue
+        if kind == "mutation":
+            mutation_ids.add(identifier)
+        else:
+            category_ids.add(identifier)
+    return (
+        frozenset(mutation_ids - deleted_mutation_ids),
+        frozenset(category_ids - deleted_category_ids),
+    )
+
+
 def render_materials(
     lines: list[str], raw: Any,
     add_todo: Callable[[TodoCategory, str], None],
@@ -19364,38 +19408,30 @@ def render_eoc_numeric_expression(
     return None if rendered is None else f"tonumber(({rendered}) or {missing_default})"
 
 
-def render_mutation_id_expression(value: Any) -> str | None:
-    """Render a checked mutation GameId from a literal or proven variable."""
-    if safe_platform_id(value):
+def render_mutation_id_expression(
+    value: Any, known_mutation_ids: frozenset[str],
+) -> str | None:
+    """Render only a literal mutation ID found in source catalogs."""
+    if safe_platform_id(value) and value in known_mutation_ids:
         return (
             'services.types.id("mutation", '
             f"{lua_quote(value)})"
         )
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_string_expression(value)
-    if rendered is None:
-        return None
-    return f'services.types.id("mutation", {rendered})'
+    return None
 
 
-def render_mutation_category_expression(value: Any) -> str | None:
+def render_mutation_category_expression(
+    value: Any, known_category_ids: frozenset[str],
+) -> str | None:
     """Render a category GameId, using nil for the native ANY sentinel."""
-    if value is None:
-        return "nil"
-    if safe_platform_id(value):
+    if safe_platform_id(value) and value in known_category_ids:
         if value == "ANY":
             return "nil"
         return (
             'services.types.id("mutation_category", '
             f"{lua_quote(value)})"
         )
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_string_expression(value)
-    if rendered is None:
-        return None
-    return f'services.types.id("mutation_category", {rendered})'
+    return None
 
 
 def render_mutation_chance_expression(value: Any) -> str | None:
@@ -19420,6 +19456,8 @@ def render_static_mutation_effect(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
+    known_mutation_ids: frozenset[str] = frozenset(),
+    known_category_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Render one bounded u_/npc_ mutation effect through typed services."""
     if target_expression is None or key not in effect:
@@ -19440,7 +19478,9 @@ def render_static_mutation_effect(
     if key in {"u_mutate_category", "npc_mutate_category"}:
         if set(effect) - {key, "use_vitamins", "true_random"}:
             return None
-        category = render_mutation_category_expression(effect[key])
+        category = render_mutation_category_expression(
+            effect[key], known_category_ids
+        )
         if category is None:
             return None
         use_vitamins = effect.get("use_vitamins", True)
@@ -19455,8 +19495,17 @@ def render_static_mutation_effect(
     if key in {"u_mutate_towards", "npc_mutate_towards"}:
         if set(effect) - {key, "category", "use_vitamins"}:
             return None
-        mutation = render_mutation_id_expression(effect[key])
-        category = render_mutation_category_expression(effect.get("category"))
+        # Native str_or_var's absent category evaluates to an empty ID. It is
+        # not the Platform API's nil/ANY sentinel, so only migrate an explicit
+        # valid category (including the explicit "ANY" sentinel).
+        if "category" not in effect or effect["category"] is None:
+            return None
+        mutation = render_mutation_id_expression(
+            effect[key], known_mutation_ids
+        )
+        category = render_mutation_category_expression(
+            effect["category"], known_category_ids
+        )
         if mutation is None or category is None:
             return None
         use_vitamins = effect.get("use_vitamins", True)
@@ -28807,6 +28856,8 @@ def render_eoc(
     talker_pair_ids: frozenset[str] = frozenset(),
     content_primary_actor_ids: frozenset[str] = frozenset(),
     npc_dialogue_mission_pair_ids: frozenset[str] = frozenset(),
+    known_mutation_ids: frozenset[str] = frozenset(),
+    known_mutation_category_ids: frozenset[str] = frozenset(),
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -30173,7 +30224,8 @@ def render_eoc(
                     else None
                 )
                 rendered = render_static_mutation_effect(
-                    effect, mutation_key, target_expression
+                    effect, mutation_key, target_expression,
+                    known_mutation_ids, known_mutation_category_ids,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -33927,6 +33979,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         creature_override_ids,
         vehicle_override_ids,
     ) = normalize_inline_eocs(objects)
+    known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
     (
         content_primary_actor_ids,
         content_character_actor_ids,
@@ -34240,6 +34293,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     talker_pair_ids,
                     content_primary_actor_ids,
                     npc_dialogue_mission_pair_ids,
+                    known_mutation_ids,
+                    known_mutation_category_ids,
                 )
             )
         elif kind == "tool_quality":

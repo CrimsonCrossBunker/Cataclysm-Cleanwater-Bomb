@@ -6336,6 +6336,15 @@ assert(#events == 9)
             ):
                 self.assertIn(eoc_id, main)
 
+    def test_core_mutation_catalog_ids_are_direct_concrete_definitions(self) -> None:
+        mutation_ids, category_ids = migrate_lua_first.core_mutation_catalog_ids()
+
+        self.assertIn("TOUGH", mutation_ids)
+        self.assertIn("ANY", category_ids)
+        self.assertIn("HUMAN", category_ids)
+        self.assertNotIn("NOT_A_MUTATION", mutation_ids)
+        self.assertNotIn("NOT_A_MUTATION_CATEGORY", category_ids)
+
     def test_translates_bounded_mutation_effects_for_avatar_and_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -6355,12 +6364,11 @@ assert(#events == 9)
                                     "true_random": True,
                                 },
                                 {
-                                    "u_mutate_towards": {
-                                        "context_val": "trait_id"
-                                    },
+                                    "u_mutate_towards": "TOUGH",
                                     "category": "ANY",
                                     "use_vitamins": False,
                                 },
+                                {"u_mutate_category": "ANY"},
                             ],
                         },
                         {
@@ -6370,7 +6378,7 @@ assert(#events == 9)
                             "effect": [
                                 {"npc_mutate": 1},
                                 {"npc_mutate_category": "HUMAN"},
-                                {"npc_mutate_towards": "TOUGH"},
+                                {"npc_mutate_towards": "TOUGH", "category": "ANY"},
                             ],
                         },
                         {
@@ -6391,6 +6399,25 @@ assert(#events == 9)
                                 {"u_mutate": {"math": ["u_strength()"]}},
                                 {"u_mutate": {"u_val": "chance"}},
                                 {"u_mutate": {"npc_val": "chance"}},
+                                {"u_mutate_category": {"npc_val": "next_category"}},
+                                {
+                                    "u_mutate_towards": {"npc_val": "trait_id"},
+                                    "category": "ANY",
+                                },
+                                {
+                                    "u_mutate_towards": {"var_val": "trait_id"},
+                                    "category": "ANY",
+                                },
+                                {"u_mutate_category": "NOT_A_MUTATION_CATEGORY"},
+                                {
+                                    "u_mutate_towards": "NOT_A_MUTATION",
+                                    "category": "ANY",
+                                },
+                                {
+                                    "u_mutate_towards": {"context_val": "trait_id"},
+                                    "category": "ANY",
+                                },
+                                {"u_mutate_towards": "TOUGH"},
                             ],
                         },
                         {
@@ -6405,6 +6432,19 @@ assert(#events == 9)
                             "required_event": "npc_becomes_hostile",
                             "effect": {"npc_mutate": {"npc_val": "chance"}},
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_npc_mutation_selectors",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"npc_mutate_category": {"u_val": "next_category"}},
+                                {
+                                    "npc_mutate_towards": {"u_val": "trait_id"},
+                                    "category": "ANY",
+                                },
+                                {"npc_mutate_towards": "TOUGH"},
+                            ],
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -6416,8 +6456,9 @@ assert(#events == 9)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.partial), 4)
             self.assertEqual(main.count("services.mutations.mutate("), 3)
+            self.assertEqual(main.count("services.mutations.mutate_category("), 3)
             self.assertIn("actor, 1000000, true)", main)
             self.assertIn(
                 "services.mutations.mutate_category(\n"
@@ -6425,17 +6466,15 @@ assert(#events == 9)
                 "false, true)",
                 main,
             )
-            self.assertIn(
-                "services.mutations.mutate_towards(\n"
-                "        actor, services.types.id(\"mutation\", "
-                "tostring((context.data[\"trait_id\"])",
-                main,
-            )
             self.assertIn("services.mutations.mutate_towards(\n        actor,", main)
             self.assertIn("services.types.id(\"mutation\", \"TOUGH\")", main)
             self.assertIn(
                 "services.mutations.mutate_towards(\n"
                 "        actor, services.types.id(\"mutation\", \"TOUGH\"), nil",
+                main,
+            )
+            self.assertIn(
+                "services.mutations.mutate_category(\n        actor, nil, true, false)",
                 main,
             )
             self.assertNotIn("services.mutations.mutate(\n        actor, 1.5", main)
@@ -6468,7 +6507,47 @@ assert(#events == 9)
                 report,
             )
             self.assertIn(
+                "EOC unsupported_mutation_shapes effect #9 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #10 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #11 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #12 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #13 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #14 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC unsupported_mutation_shapes effect #15 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
                 "EOC dynamic_npc_mutation_chance effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_npc_mutation_selectors effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_npc_mutation_selectors effect #1 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC dynamic_npc_mutation_selectors effect #2 needs domain-service conversion",
                 report,
             )
             self.assertIn(
