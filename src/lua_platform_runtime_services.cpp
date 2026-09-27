@@ -2592,8 +2592,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["snippets"] = std::move( snippets );
 
     sol::table text_services = lua.create_table();
-    text_services.set_function( "expand_for", [require_read, next_snippet_seed,
-                                              runtime_generation, world_generation](
+    text_services.set_function( "expand_for", [require_read, runtime_generation,
+                                              world_generation](
                                     sol::this_state state, const std::string & text,
                                     const cata::lua_platform::game_handle & speaker_handle,
                                     const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
@@ -2629,8 +2629,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             get_const_talker_for( *speaker.value ),
             interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ) );
         const_talker empty_interlocutor;
-        std::string expanded = SNIPPET.expand(
-                                   text, next_snippet_seed() );
+        std::string expanded = text;
         parse_tags(
             expanded, *dialogue_context.const_actor( false ),
             dialogue_context.has_beta ?
