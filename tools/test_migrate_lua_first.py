@@ -7586,6 +7586,50 @@ assert(#events == 11)
                     )
                 )
 
+    def test_selected_mission_goal_requires_static_native_goal_and_dialogue_pair(self) -> None:
+        for condition in ("mission_goal", "npc_mission_goal"):
+            for goal in migrate_lua_first.NATIVE_MISSION_GOALS:
+                with self.subTest(condition=condition, goal=goal):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {condition: goal},
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
+                    self.assertIsNotNone(expression)
+                    self.assertIn(
+                        "services.npcs.missions.selected_has_goal(beta, "
+                        + migrate_lua_first.lua_quote(goal) + ")",
+                        expression,
+                    )
+                    self.assertIn('beta.subtype ~= "npc"', expression)
+
+        for condition in ("mission_goal", "npc_mission_goal"):
+            for unproven_args in (
+                {"npc_actor_expression": "context.actors.beta"},
+                {
+                    "npc_actor_expression": "actor",
+                    "npc_dialogue_pair_proven": True,
+                },
+            ):
+                with self.subTest(condition=condition, unproven_args=unproven_args):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            {condition: "MGOAL_CONDITION"}, **unproven_args
+                        )
+                    )
+            for dynamic_goal in (
+                {"var": "mission_goal"},
+                "NOT_A_MISSION_GOAL",
+            ):
+                with self.subTest(condition=condition, dynamic_goal=dynamic_goal):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            {condition: dynamic_goal},
+                            npc_actor_expression="context.actors.beta",
+                            npc_dialogue_pair_proven=True,
+                        )
+                    )
+
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
             "has_assigned_mission",
