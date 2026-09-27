@@ -1,5 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <limits>
+#include <list>
+#include <string>
+#include <utility>
+
+#include "calendar.h"
 #include "lua_platform_test_support.h"
+#include "timed_event.h"
 
 TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
            "[lua][platform][weather]" )
@@ -16,6 +23,7 @@ TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
     CHECK( weather["refresh"].valid() );
     CHECK( weather["activate_lightning"].valid() );
     CHECK( weather["override_light"].valid() );
+    CHECK( weather["append_light_event"].valid() );
     CHECK_FALSE( fixture.services["gameplay"].valid() );
 
     const sol::protected_function_result limits_result = weather["limits"]();
@@ -25,6 +33,97 @@ TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
     CHECK( limits["maximum_pending_custom_light_events"].get<int>() == 256 );
     CHECK( limits["maximum_wind_direction_degrees"].get<int>() == 359 );
     CHECK( limits["maximum_custom_light_level"].get<int>() == 1000000 );
+}
+
+TEST_CASE( "lua_platform_weather_append_light_event_preserves_native_queue_semantics",
+           "[lua][platform][weather]" )
+{
+    platform_weather_read_fixture fixture;
+    REQUIRE( g != nullptr );
+    platform_calendar_turn_scope calendar_scope;
+    calendar::turn = time_point::from_turn( 1000 );
+
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    events = timed_event_manager();
+
+    const sol::table weather = fixture.services["weather"];
+    const sol::protected_function append = weather["append_light_event"];
+    const std::string long_key( 300, 'k' );
+    const time_point now = calendar::turn;
+
+    const sol::protected_function_result first_result = append(
+                -17,
+                cata::lua_platform::script_time_duration::from_native( -2_turns ),
+                long_key );
+    REQUIRE( first_result.valid() );
+    const sol::table first_envelope = first_result.get<sol::table>();
+    REQUIRE( first_envelope["ok"].get<bool>() );
+    const sol::table first_value = first_envelope["value"].get<sol::table>();
+    CHECK_FALSE( first_value["replaced"].get<bool>() );
+
+    const sol::protected_function_result second_result = append(
+                1000001,
+                cata::lua_platform::script_time_duration::from_native( 10001_days ),
+                long_key );
+    REQUIRE( second_result.valid() );
+    const sol::table second_envelope = second_result.get<sol::table>();
+    REQUIRE( second_envelope["ok"].get<bool>() );
+    const sol::table second_value = second_envelope["value"].get<sol::table>();
+    CHECK_FALSE( second_value["replaced"].get<bool>() );
+
+    const std::list<timed_event> &queued = events.get_all();
+    REQUIRE( queued.size() == 2 );
+    auto event = queued.begin();
+    CHECK( event->type == timed_event_type::CUSTOM_LIGHT_LEVEL );
+    CHECK( event->strength == -17 );
+    CHECK( event->key == long_key );
+    CHECK( event->when == now + ( -2_turns ) + 1_seconds );
+    ++event;
+    CHECK( event->type == timed_event_type::CUSTOM_LIGHT_LEVEL );
+    CHECK( event->strength == 1000001 );
+    CHECK( event->key == long_key );
+    CHECK( event->when == now + 10001_days + 1_seconds );
+
+    calendar::turn = time_point::from_turn( 0 );
+    const sol::protected_function_result max_result = append(
+                std::numeric_limits<int>::max(),
+                cata::lua_platform::script_time_duration::from_native(
+                    time_duration::from_turns( std::numeric_limits<int>::max() - 1 ) ),
+                long_key );
+    REQUIRE( max_result.valid() );
+    const sol::protected_function_result min_result = append(
+                std::numeric_limits<int>::min(),
+                cata::lua_platform::script_time_duration::from_native(
+                    time_duration::from_turns( std::numeric_limits<int>::min() ) ),
+                long_key );
+    REQUIRE( min_result.valid() );
+    CHECK( events.get_all().size() == 4 );
+    ++event;
+    CHECK( event->strength == std::numeric_limits<int>::max() );
+    CHECK( event->when == time_point::from_turn( std::numeric_limits<int>::max() ) );
+    ++event;
+    CHECK( event->strength == std::numeric_limits<int>::min() );
+    CHECK( event->when == time_point::from_turn( std::numeric_limits<int>::min() + 1 ) );
+    REQUIRE( events.get( timed_event_type::CUSTOM_LIGHT_LEVEL ) != nullptr );
+    CHECK( events.get( timed_event_type::CUSTOM_LIGHT_LEVEL )->strength == -17 );
+
+    calendar::turn = time_point::from_turn( std::numeric_limits<int>::max() - 1 );
+    const sol::protected_function_result overflow_result = append(
+                1,
+                cata::lua_platform::script_time_duration::from_native( 1_turns ),
+                long_key );
+    CHECK_FALSE( overflow_result.valid() );
+    CHECK( events.get_all().size() == 4 );
+
+    calendar::turn = time_point::from_turn( std::numeric_limits<int>::min() );
+    const sol::protected_function_result underflow_result = append(
+                1,
+                cata::lua_platform::script_time_duration::from_native( -1_turns ),
+                long_key );
+    CHECK_FALSE( underflow_result.valid() );
+    CHECK( events.get_all().size() == 4 );
+    CHECK( fixture.write_gate_calls == 6 );
 }
 
 TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",

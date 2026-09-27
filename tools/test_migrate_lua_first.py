@@ -14356,7 +14356,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertIn("TODO: translate custom_light_level", main)
+            self.assertIn("services.weather.append_light_event(", main)
+            self.assertIn('50, services.time.duration(0, "turn")', main)
+            self.assertNotIn("TODO: manually translate dynamic", main)
             self.assertNotIn("TODO: translate item activation", main)
             self.assertIn("TODO: translate item fault mutation", main)
             self.assertIn("TODO: translate random item-fault mutation", main)
@@ -14374,7 +14376,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 report,
             )
 
-    def test_renders_bounded_custom_light_override_and_fails_closed(self) -> None:
+    def test_custom_light_migration_truncates_static_levels_and_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -14395,6 +14397,18 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                     "length": "1 seconds",
                                 },
                                 {
+                                    "custom_light_level": -1.9,
+                                    "length": "1 turn",
+                                    "key": "shared",
+                                },
+                                {
+                                    "custom_light_level": 1000001,
+                                    "length": "10001 days",
+                                    "key": "shared",
+                                },
+                                {"custom_light_level": 126, "length": "1 turn"},
+                                {"custom_light_level": 20},
+                                {
                                     "custom_light_level": {
                                         "context_val": "level"
                                     },
@@ -14404,8 +14418,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                     "custom_light_level": 80,
                                     "length": {"context_val": "duration"},
                                 },
-                                {"custom_light_level": 126, "length": "1 turn"},
-                                {"custom_light_level": 20},
+                                {
+                                    "custom_light_level": 50,
+                                    "length": [
+                                        "1 minute",
+                                        {"math": ["ps_str * time(' 1 m')"]},
+                                    ],
+                                },
                             ],
                         },
                     ]
@@ -14421,17 +14440,99 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                'service_value(services.weather.override_light(\n'
+                'service_value(services.weather.append_light_event(\n'
                 '        50, services.time.duration(2, "turn"), "ccb_light"))',
                 main,
             )
             self.assertIn(
-                'service_value(services.weather.override_light(\n'
+                'service_value(services.weather.append_light_event(\n'
                 '        0, services.time.duration(1, "turn")))',
                 main,
             )
-            self.assertEqual(main.count("TODO: translate custom_light_level"), 1)
-            self.assertIn("needs domain-service conversion", report)
+            self.assertIn(
+                'service_value(services.weather.append_light_event(\n'
+                '        -1, services.time.duration(1, "turn"), "shared"))',
+                main,
+            )
+            self.assertIn(
+                'service_value(services.weather.append_light_event(\n'
+                '        1000001, services.time.duration(864086400, "turn"), "shared"))',
+                main,
+            )
+            self.assertIn(
+                'service_value(services.weather.append_light_event(\n'
+                '        20, services.time.duration(0, "turn")))',
+                main,
+            )
+            self.assertEqual(main.count("services.weather.append_light_event("), 6)
+            self.assertEqual(
+                main.count("TODO: manually translate dynamic or non-native-range"), 3
+            )
+            self.assertIn("needs proven static native-int and duration values", report)
+
+    def test_native_custom_light_literals_truncate_toward_zero(self) -> None:
+        self.assertEqual(migrate_lua_first.native_int_literal(1.9), 1)
+        self.assertEqual(migrate_lua_first.native_int_literal(-1.9), -1)
+        self.assertEqual(migrate_lua_first.native_int_literal(1000001), 1000001)
+        self.assertEqual(
+            migrate_lua_first.native_int_literal(float(migrate_lua_first.NATIVE_INT_MIN) - 0.9),
+            migrate_lua_first.NATIVE_INT_MIN,
+        )
+        self.assertIsNone(
+            migrate_lua_first.native_int_literal(migrate_lua_first.NATIVE_INT_MAX + 1)
+        )
+        self.assertIsNone(migrate_lua_first.native_int_literal(True))
+
+    def test_shipped_custom_light_literals_use_append_service_and_dynamic_forms_stay_open(self) -> None:
+        sources = (
+            "data/json/effects_on_condition/nether_eocs/string_dimension.json",
+            "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
+            "data/json/effects_on_condition/nether_eocs/vitrification_effect_on_condition.json",
+            "data/json/effects_on_condition/nether_eocs/reverberations.json",
+            "data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json",
+            "data/json/effects_on_condition/weather_eocs.json",
+        )
+        lowered: list[tuple[str, dict[str, Any], list[str]]] = []
+        open_shapes: list[tuple[str, dict[str, Any]]] = []
+
+        def visit(value: Any, eoc_id: str) -> None:
+            if isinstance(value, dict):
+                if "custom_light_level" in value:
+                    rendered = migrate_lua_first.render_static_light_override(value)
+                    if rendered is None:
+                        open_shapes.append((eoc_id, value))
+                    else:
+                        lowered.append((eoc_id, value, rendered))
+                for child in value.values():
+                    visit(child, eoc_id)
+            elif isinstance(value, list):
+                for child in value:
+                    visit(child, eoc_id)
+
+        for relative in sources:
+            source = REPOSITORY_ROOT / relative
+            for entry in migrate_lua_first.load_objects([source]):
+                visit(entry.value, str(entry.value.get("id", "")))
+
+        self.assertEqual(len(lowered), 5)
+        self.assertTrue(all(
+            "services.weather.append_light_event(" in "\n".join(rendered)
+            for _, _, rendered in lowered
+        ))
+        self.assertEqual(
+            sum(effect.get("key") == "string_dimension_lights_on"
+                for _, effect, _ in lowered),
+            3,
+        )
+        self.assertTrue(any(
+            eoc_id == "EOC_CABIN_DAY_CYCLE_OR_KILL_CYCLE" and
+            effect.get("custom_light_level") == {"context_val": "cabin_light_amount"}
+            for eoc_id, effect in open_shapes
+        ))
+        self.assertTrue(any(
+            isinstance(effect.get("length"), list)
+            for _, effect in open_shapes
+        ))
 
     def test_lowers_dynamic_damage_and_keeps_unproven_npc_target_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -20305,8 +20406,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
             self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
             self.assertIn('services.types.id("effect", tostring(', main)
             self.assertIn('services.registry.get("monster",', main)
@@ -20316,7 +20416,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.morale.add", main)
             self.assertIn("services.wounds.add", main)
-            self.assertIn("service_value(services.weather.override_light(", main)
+            self.assertIn("TODO: manually translate dynamic or non-native-range", main)
+            self.assertNotIn("services.weather.append_light_event(", main)
 
     def test_dynamic_item_callbacks_remain_item_scoped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

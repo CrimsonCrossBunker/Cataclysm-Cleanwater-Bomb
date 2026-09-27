@@ -7864,10 +7864,10 @@ function CcbRelocationApi.travel_to_omt(avatar, target, options) end
 ---@field maximum_wind_speed_mph integer Maximum wind-speed override.
 ---@field maximum_wind_direction_degrees integer Maximum wind-direction override.
 ---@field maximum_temperature_kelvin number Maximum temperature override in kelvins.
----@field maximum_custom_light_level integer Maximum custom-light level.
----@field maximum_custom_light_duration TimeDuration Maximum custom-light duration.
----@field maximum_custom_light_key_bytes integer Maximum custom-light key length in bytes.
----@field maximum_pending_custom_light_events integer Maximum pending custom-light events.
+---@field maximum_custom_light_level integer Maximum level accepted by override_light; append_light_event accepts the native signed integer range.
+---@field maximum_custom_light_duration TimeDuration Maximum duration accepted by override_light; append_light_event accepts signed engine durations.
+---@field maximum_custom_light_key_bytes integer Maximum key length accepted by override_light; append_light_event preserves native keys without this limit.
+---@field maximum_pending_custom_light_events integer Maximum pending events accepted by override_light; append_light_event appends without this limit.
 
 ---@class CcbWeatherApi
 local CcbWeatherApi = {}
@@ -7905,7 +7905,7 @@ function CcbWeatherApi.limits() end
 ---@field expires_at TimePoint Custom-light expiration time.
 ---@field key string Custom-light coordination key, or an empty string.
 ---@field accepted boolean Whether the custom-light override was accepted.
----@field replaced boolean Whether an existing keyed custom-light event was replaced.
+---@field replaced boolean Whether an existing keyed event was replaced; append_light_event always returns false.
 
 ---@param id GameId GameId<weather_type>
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
@@ -7939,6 +7939,12 @@ function CcbWeatherApi.activate_lightning() end
 ---@param key? string
 ---@return CcbResult result `value` is a CcbWeatherLightOverrideResult.
 function CcbWeatherApi.override_light(level, duration, key) end
+
+---@param level integer Native signed timed-event strength.
+---@param duration TimeDuration Signed duration before the native one-second expiry offset.
+---@param key? string Native timed-event key; every call appends, including duplicate keys.
+---@return CcbResult result `value` is a CcbWeatherLightOverrideResult with `replaced` always false.
+function CcbWeatherApi.append_light_event(level, duration, key) end
 
 ---@class ZoneToken
 ---@field faction GameId GameId<faction> Faction owning the zone.
