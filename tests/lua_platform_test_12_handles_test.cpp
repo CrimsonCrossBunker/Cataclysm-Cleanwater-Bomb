@@ -3,6 +3,7 @@
 #include <character_id.h>
 #include <inventory.h>
 #include <item.h>
+#include <item_location.h>
 #include <item_uid.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>
@@ -565,9 +566,120 @@ TEST_CASE( "lua_platform_item_page_is_the_only_public_traversal_entry",
 
     const sol::table inventory = services["inventory"];
     REQUIRE( inventory.valid() );
+    CHECK( inventory["remove_type"].valid() );
     CHECK_FALSE( inventory["find"].valid() );
     CHECK_FALSE( inventory["list"].valid() );
     CHECK_FALSE( inventory["filter"].valid() );
+}
+
+TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
+           "[lua][platform][items][mutation][semantic]" )
+{
+    // Native f_remove_item_with delegates through talker_character directly
+    // to Character::remove_items_with; this service does the same, preserving
+    // that method's inventory, worn, wielded, and nested-item traversal.
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 32 );
+    constexpr std::size_t world_generation = 1;
+    avatar character;
+    character.normalize();
+    character.setID( character_id( 6402 ), true );
+
+    const itype_id backpack_type( "backpack" );
+    item &inventory_match = character.inv->add_item(
+                                item( backpack_type ), false, false, false );
+    item nested_container( itype_debug_backpack );
+    REQUIRE( nested_container.put_in(
+                 item( backpack_type ), pocket_type::CONTAINER ).success() );
+    character.inv->add_item(
+        std::move( nested_container ), false, false, false );
+    item worn_match( backpack_type );
+    REQUIRE( character.wear_item(
+                 worn_match, false, false, true, true ) );
+    item wielded_match( itype_rock );
+    REQUIRE( character.Character::wield(
+                 wielded_match, std::nullopt, false ) );
+
+    const cata::lua_platform::game_handle character_handle =
+        cata::lua_platform::game_handle::from_creature(
+            character, { "avatar", character.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle removed_item_handle =
+        cata::lua_platform::game_handle::from_item(
+            inventory_match,
+            { "character_inventory", inventory_match.uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const item_location wielded_location = character.get_wielded_item();
+    REQUIRE( wielded_location );
+    item *wielded_item = wielded_location.get_item();
+    REQUIRE( wielded_item != nullptr );
+    const cata::lua_platform::game_handle wielded_item_handle =
+        cata::lua_platform::game_handle::from_item(
+            *wielded_item,
+            { "character_wielded", wielded_item->uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+
+    sol::state lua;
+    sol::table services = lua.create_table();
+    int write_gate_calls = 0;
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = [&]() {
+        return world_generation;
+    };
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_item_api(
+        services, current_runtime, current_world, []() {}, [&]() {
+        ++write_gate_calls;
+    } );
+
+    const sol::protected_function remove_type =
+        services["inventory"]["remove_type"];
+    const sol::protected_function_result backpack_result = remove_type(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "backpack" ) );
+    REQUIRE( backpack_result.valid() );
+    const sol::table backpack_envelope = backpack_result.get<sol::table>();
+    REQUIRE( backpack_envelope["ok"].get<bool>() );
+    const sol::table backpack_value =
+        backpack_envelope["value"].get<sol::table>();
+    CHECK( backpack_value["removed"].get<std::size_t>() == 3 );
+    CHECK_FALSE( character.is_wearing( backpack_type ) );
+    CHECK_FALSE( character.has_amount( backpack_type, 1 ) );
+    CHECK( removed_item_handle.validation_error(
+               runtime, world_generation ).has_value() );
+
+    const sol::protected_function_result wielded_result = remove_type(
+                character_handle,
+                cata::lua_platform::script_game_id( "item", "rock" ) );
+    REQUIRE( wielded_result.valid() );
+    const sol::table wielded_envelope = wielded_result.get<sol::table>();
+    REQUIRE( wielded_envelope["ok"].get<bool>() );
+    CHECK( wielded_envelope["value"].get<sol::table>()
+           ["removed"].get<std::size_t>() == 1 );
+    CHECK_FALSE( character.has_weapon() );
+    CHECK( wielded_item_handle.validation_error(
+               runtime, world_generation ).has_value() );
+
+    character.inv->add_item( item( itype_2x4 ), false, false, false );
+    const std::uint64_t before_unknown_id =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result unknown_result = remove_type(
+                character_handle,
+                cata::lua_platform::script_game_id(
+                    "item", "__unknown_remove_type_test__" ) );
+    REQUIRE( unknown_result.valid() );
+    const sol::table unknown_envelope = unknown_result.get<sol::table>();
+    REQUIRE( unknown_envelope["ok"].get<bool>() );
+    CHECK( unknown_envelope["value"].get<sol::table>()
+           ["removed"].get<std::size_t>() == 0 );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() ==
+           before_unknown_id );
+    CHECK( character.has_amount( itype_2x4, 1 ) );
+    CHECK( write_gate_calls == 3 );
 }
 
 TEST_CASE( "lua_platform_item_page_binds_cursor_to_root_and_generations",

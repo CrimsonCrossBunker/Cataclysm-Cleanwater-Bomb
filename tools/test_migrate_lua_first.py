@@ -14862,6 +14862,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.trade.commit(quote.token", main)
             self.assertIn("monster-purchase conversion", report)
             self.assertIn("cash-payment conversion", report)
+            self.assertEqual(main.count("services.inventory.remove_type("), 2)
+            self.assertIn('services.types.id("item", "rock")', main)
+            self.assertIn('services.types.id("item", "bandage")', main)
             self.assertNotIn("services.inventory.remove(actor, matching_items[index])", main)
             self.assertNotIn("services.trade.transfer_matching(", main)
             self.assertNotIn(
@@ -27458,10 +27461,65 @@ assert(context.conditions.check==original and context.conditions.check() and con
             ):
                 self.assertNotIn(legacy_map_write, main)
 
-    def test_item_migration_rejects_ambiguous_instance_selection(self) -> None:
+    def test_item_migration_lowers_only_static_character_type_removal(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": "rock"},
+                "u_remove_item_with",
+                True,
+            ),
+            [
+                "    service_value(services.inventory.remove_type(",
+                '        actor, services.types.id("item", "rock")))',
+            ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"npc_remove_item_with": "bandage"},
+                "npc_remove_item_with",
+                True,
+                "context.actors.beta",
+            ),
+            [
+                "    service_value(services.inventory.remove_type(",
+                '        context.actors.beta, services.types.id("item", "bandage")))',
+            ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": "null"},
+                "u_remove_item_with",
+                True,
+            ),
+            [
+                "    service_value(services.inventory.remove_type(",
+                '        actor, services.types.id("item", "null")))',
+            ],
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": {"context_val": "item_type"}},
+                "u_remove_item_with",
+                True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": "sample\nitem"},
+                "u_remove_item_with",
+                True,
+            )
+        )
         self.assertIsNone(
             migrate_lua_first.render_static_remove_item_with_effect(
                 {"u_remove_item_with": "sample_item"},
+                "u_remove_item_with",
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": "sample_item", "count": 1},
                 "u_remove_item_with",
                 True,
             )
