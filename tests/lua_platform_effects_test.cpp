@@ -5,6 +5,7 @@
 #include <functional>
 #include <initializer_list>
 #include <limits>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -47,6 +48,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_items.h"
 #include "lua_platform_sol.h"
 #include "messages.h"
 #include "npc.h"
@@ -150,6 +152,117 @@ struct effect_fixture {
     sol::table services = lua.create_table();
 };
 } // namespace
+
+TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
+           "[lua][platform][character][semantic]" )
+{
+    clear_map();
+    clear_avatar();
+    Messages::clear_messages();
+    struct cleanup_scene {
+        ~cleanup_scene() {
+            clear_map();
+            clear_avatar();
+            Messages::clear_messages();
+        }
+    } cleanup;
+
+    avatar &player = get_avatar();
+    get_map().build_map_cache( player.pos_bub().z() );
+    effect_fixture fixture;
+    bool write_called = false;
+    cata::lua_platform::install_creature_api(
+        fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, [&]() {
+        write_called = true;
+    } );
+    const sol::protected_function drop =
+        fixture.services["characters"]["drop_weapon"];
+    const sol::protected_function avatar_handle_fn =
+        fixture.services["characters"]["avatar"];
+    const auto count_rocks_at_player = [&]() {
+        int count = 0;
+        for( const item &entry : get_map().i_at( player.pos_bub() ) ) {
+            if( entry.typeId() == itype_id( "rock" ) ) {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    const int empty_count = count_rocks_at_player();
+    const std::uint64_t empty_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    const sol::protected_function_result empty_avatar_handle = avatar_handle_fn();
+    REQUIRE( empty_avatar_handle.valid() );
+    const sol::protected_function_result empty_avatar = drop(
+                empty_avatar_handle.get<cata::lua_platform::game_handle>() );
+    REQUIRE( empty_avatar.valid() );
+    const sol::table empty_result = empty_avatar.get<sol::table>();
+    REQUIRE( empty_result["ok"].get<bool>() );
+    const sol::table empty_value = empty_result["value"];
+    CHECK_FALSE( empty_value["dropped"].get<bool>() );
+    CHECK_FALSE( player.get_wielded_item() );
+    CHECK( count_rocks_at_player() == empty_count );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() == empty_epoch );
+
+    for( const cata::lua_platform::game_handle wrong_target : {
+             fixture.handle( false ), fixture.handle( true )
+         } ) {
+        const sol::protected_function_result wrong = drop( wrong_target );
+        REQUIRE( wrong.valid() );
+        const sol::table wrong_result = wrong.get<sol::table>();
+        CHECK_FALSE( wrong_result["ok"].get<bool>() );
+        CHECK( wrong_result["error"]["code"].get<std::string>() == "wrong_target" );
+    }
+
+    const sol::protected_function_result stale_avatar_handle = avatar_handle_fn();
+    REQUIRE( stale_avatar_handle.valid() );
+    const cata::lua_platform::game_handle stale_player_handle =
+        stale_avatar_handle.get<cata::lua_platform::game_handle>();
+    const int stale_count = count_rocks_at_player();
+    const std::uint64_t stale_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    ++fixture.world;
+    const sol::protected_function_result stale_player = drop( stale_player_handle );
+    REQUIRE( stale_player.valid() );
+    CHECK_FALSE( stale_player.get<sol::table>()["ok"].get<bool>() );
+    CHECK_FALSE( player.get_wielded_item() );
+    CHECK( count_rocks_at_player() == stale_count );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() == stale_epoch );
+
+    item weapon( itype_id( "rock" ), calendar::turn_zero );
+    REQUIRE( player.Character::wield( weapon, std::nullopt, false ) );
+    const item_location wielded = player.get_wielded_item();
+    REQUIRE( wielded );
+    const tripoint_abs_ms position = player.pos_abs();
+    const cata::lua_platform::game_handle old_item_handle =
+        cata::lua_platform::game_handle::from_item(
+            *wielded,
+            { "character_wielded", wielded->uid().get_value(),
+              position.x(), position.y(), position.z(), {} },
+            fixture.runtime, fixture.world );
+    const std::uint64_t item_epoch =
+        cata::lua_platform::item_holder_mutation_generation();
+    const int armed_count = count_rocks_at_player();
+    const sol::protected_function_result armed_avatar_handle = avatar_handle_fn();
+    REQUIRE( armed_avatar_handle.valid() );
+    const sol::protected_function_result armed = drop(
+                armed_avatar_handle.get<cata::lua_platform::game_handle>() );
+    REQUIRE( armed.valid() );
+    const sol::table armed_result = armed.get<sol::table>();
+    REQUIRE( armed_result["ok"].get<bool>() );
+    const sol::table armed_value = armed_result["value"];
+    CHECK( armed_value["dropped"].get<bool>() );
+    CHECK_FALSE( player.get_wielded_item() );
+    CHECK( count_rocks_at_player() == armed_count + 1 );
+    CHECK( old_item_handle.validation_error( fixture.runtime, fixture.world ) );
+    CHECK( cata::lua_platform::item_holder_mutation_generation() > item_epoch );
+    CHECK( write_called );
+}
 
 TEST_CASE( "lua_platform_effects_queries_match_legacy_for_exact_body_part",
            "[lua][platform][effects][semantic]" )

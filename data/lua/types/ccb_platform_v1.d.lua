@@ -7702,6 +7702,10 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+---Immediately drop this exact avatar's wielded item with the native deliberate-drop behavior.
+---@param character GameHandle Exact avatar Character handle.
+---@return CcbResult result `value.dropped` is true when a physical wielded item was present.
+function CcbCharactersApi.drop_weapon(character) end
 
 ---Apply bounded integer deltas to an exact live Character.
 ---@param character GameHandle Exact live Character handle.

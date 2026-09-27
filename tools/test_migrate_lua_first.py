@@ -17179,6 +17179,48 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 )
             self.assertNotIn("has no native Platform registrar", report)
 
+    def test_player_weapon_drop_lowers_only_the_native_string_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_weapon_drop_static",
+                            "required_event": "game_start",
+                            "effect": "player_weapon_drop",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "player_weapon_drop_object_shape",
+                            "required_event": "game_start",
+                            "effect": {"player_weapon_drop": True},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "player_weapon_drop_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(
+                main.count(
+                    "services.characters.drop_weapon(services.characters.avatar())"
+                ),
+                1,
+            )
+            self.assertIn(
+                "TODO: translate this legacy effect through a typed native service",
+                main,
+            )
+            self.assertIn("needs domain-service conversion", report)
+
     def test_inventory_and_world_effects_lower_only_bounded_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -17281,7 +17323,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(main.count("services.inventory.consume_by_type("), 3)
             self.assertNotIn("services.inventory.consume(", main)
             self.assertNotIn("services.inventory.consume_sum(", main)
-            self.assertIn("TODO: translate the weighted inventory consumption", main)
+            self.assertIn(
+                "native weighted consumption scans one unordered owned inventory/map/vehicle set",
+                main,
+            )
             self.assertNotIn("services.world.put_field(", main)
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.mapgen.apply(", main)
@@ -17309,6 +17354,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn("services.world.transform_radius(", main)
+            self.assertIn(
+                "services.characters.drop_weapon(services.characters.avatar())",
+                main,
+            )
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)

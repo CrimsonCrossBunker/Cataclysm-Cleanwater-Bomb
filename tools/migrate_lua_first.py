@@ -31391,14 +31391,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the weighted inventory "
-                        "consumption through the typed inventory service."
+                        "    -- TODO: native weighted consumption scans one unordered "
+                        "owned inventory/map/vehicle set, shares one coverage fraction, "
+                        "and spills whole-item contents."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs weighted inventory consumption through the "
-                        "typed inventory service"
+                        "needs the native owned inventory/map/vehicle candidate set, "
+                        "shared coverage fraction, and whole-item spill semantics"
                     )
                     all_effects_converted = False
             elif (
@@ -32300,6 +32301,14 @@ def render_eoc(
                     "drop_stolen_item needs explicit equipment/trade holders"
                 )
                 all_effects_converted = False
+            elif effect == "player_weapon_drop":
+                # The native talk effect always targets get_player_character(),
+                # regardless of the EOC event actor or dialogue partner.
+                lines.append(
+                    "    service_value(services.characters.drop_weapon("
+                    "services.characters.avatar()))"
+                )
+                converted_effect = True
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:

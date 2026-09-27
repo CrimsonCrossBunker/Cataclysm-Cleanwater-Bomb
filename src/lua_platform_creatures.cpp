@@ -56,15 +56,18 @@ extern "C" {
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_items.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "npctalk.h"
 #include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
 #include "overmapbuffer.h"
+#include "player_helpers.h"
 #include "profession.h"
 #include "rng.h"
 #include "translation.h"
@@ -4387,6 +4390,43 @@ void install_creature_api(
         return make_game_value_result(
                    state, sol::make_object(
                        state, get_map().veh_at( character->pos_bub() ).has_value() ) );
+    } );
+    characters.set_function(
+        "drop_weapon",
+        [current_runtime_generation, current_world_generation,
+         require_write]( sol::this_state lua_state,
+                         const game_handle &handle ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                  handle, current_runtime_generation(),
+                                  current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        if( character != &get_player_character() ) {
+            return make_game_error_result( state, {
+                "wrong_target",
+                "services.characters.drop_weapon requires the current player Character"
+            } );
+        }
+        const item_location wielded = character->get_wielded_item();
+        const bool dropped = static_cast<bool>( wielded );
+        if( wielded ) {
+            retire_item_handle_identity( *wielded );
+        }
+        // Share the legacy effect's immediate deliberate map drop, including
+        // its empty-weapon path and item-drop notification semantics.
+        talk_function::drop_player_weapon( *character );
+        if( dropped ) {
+            character->invalidate_crafting_inventory();
+            bump_item_query_mutation_epoch();
+        }
+        sol::table value = state.create_table();
+        value["dropped"] = dropped;
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
     } );
     characters.set_function(
         "intimidation",

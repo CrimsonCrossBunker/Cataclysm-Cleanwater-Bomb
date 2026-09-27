@@ -2050,14 +2050,17 @@ void talk_function::player_weapon_away( npc &/*p*/ )
     player_character.i_add( player_character.remove_weapon() );
 }
 
-void talk_function::player_weapon_drop( npc &/*p*/ )
+void talk_function::drop_player_weapon( Character &player_character )
 {
     map &here = get_map();
-
-    Character &player_character = get_player_character();
     item weap = player_character.remove_weapon();
     drop_on_map( player_character, item_drop_reason::deliberate, {weap}, &here,
                  player_character.pos_bub( here ) );
+}
+
+void talk_function::player_weapon_drop( npc &/*p*/ )
+{
+    drop_player_weapon( get_player_character() );
 }
 
 void talk_function::lead_to_safety( npc &p )
