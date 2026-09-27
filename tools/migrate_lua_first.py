@@ -5211,7 +5211,7 @@ def render_static_false_effect(
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
-            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
+            effect, effect_actor_targets
         )
         if rendered is None:
             return None
@@ -25744,63 +25744,79 @@ def render_static_character_math(
 
 def render_static_character_copy_var(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> list[str] | None:
     if set(effect) != {"copy_var", "target_var"}:
         return None
-    source = _static_string_variable_descriptor(effect["copy_var"])
-    target = _static_string_variable_descriptor(effect["target_var"])
+
+    def copy_descriptor(value: Any) -> tuple[str, str] | None:
+        if not isinstance(value, dict) or len(value) != 1:
+            return None
+        key, name = next(iter(value.items()))
+        scopes = {
+            "u_val": "u",
+            "npc_val": "npc",
+            "global_val": "global",
+            "context_val": "context",
+            "var_val": "var",
+        }
+        if (
+            key not in scopes or
+            not bounded_utf8_string(name, 256, allow_empty=True)
+        ):
+            return None
+        if any(
+            ord(character) < 0x20 or ord(character) == 0x7F
+            for character in name
+        ):
+            return None
+        return scopes[key], name
+
+    source = copy_descriptor(effect["copy_var"])
+    target = copy_descriptor(effect["target_var"])
     if source is None or target is None:
         return None
-    alpha = "actor" if avatar_actor_proven else None
-    beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
+    # Context values and var_val indirection currently pass through Lua in the
+    # Platform resolver.  Native copy_var copies diag_value directly, so keep
+    # those scopes partial until a value-preserving resolver exists.
+    if (
+        source[0] not in {"u", "npc", "global"} or
+        target[0] not in {"u", "npc", "global"}
+    ):
+        return None
+    alpha = _proven_copy_variable_target(effect_actor_targets, "u")
+    beta = _proven_copy_variable_target(effect_actor_targets, "npc")
     for scope, _ in (source, target):
-        if (scope == "u" and alpha is None or scope == "npc" and beta is None or
-                scope == "var" and (alpha is None or beta is None)):
+        if (
+            (scope == "u" and alpha is None) or
+            (scope == "npc" and beta is None)
+        ):
             return None
 
-    def address(descriptor: tuple[str, str], prefix: str) -> list[str]:
-        scope, key = descriptor
-        owner = {"u": alpha, "npc": beta}.get(scope) or "nil"
-        if scope != "var":
-            return [f"    local {prefix}_scope, {prefix}_owner, {prefix}_key = "
-                    f"{lua_quote(scope)}, {owner}, {lua_quote(key)}"]
-        return [
-            f"    local {prefix}_scope, {prefix}_owner = \"global\", nil",
-            f"    local {prefix}_key = context.data[{lua_quote(key)}]",
-            f"    if {prefix}_key ~= nil then",
-            f'        if {prefix}_key:sub(1, 2) == "u_" then',
-            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "u", {alpha}, {prefix}_key:sub(3)',
-            f'        elseif {prefix}_key:sub(1, 2) == "n_" then',
-            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "npc", {beta}, {prefix}_key:sub(3)',
-            f'        elseif {prefix}_key:sub(1, 1) == "_" then',
-            f'            {prefix}_scope, {prefix}_key = "context", {prefix}_key:sub(2)',
-            '        end',
-            '    end',
-        ]
+    source_owner = {"u": alpha, "npc": beta, "global": "nil"}[source[0]]
+    target_owner = {"u": alpha, "npc": beta, "global": "nil"}[target[0]]
+    return [
+        "    service_value(services.variables.copy(",
+        f"        {source_owner}, {lua_quote(source[1])},",
+        f"        {target_owner}, {lua_quote(target[1])}))",
+    ]
 
-    lines = address(source, "copy_source")
-    lines.extend(address(target, "copy_target"))
-    lines.extend([
-        '    if copy_target_key == nil then error("missing target variable") end',
-        '    if copy_source_key ~= nil and copy_source_scope ~= "context" and copy_target_scope ~= "context" then',
-        '        service_value(services.variables.copy(',
-        '            copy_source_owner, copy_source_key, copy_target_owner, copy_target_key))',
-        '    else',
-        '        local copied = { exists = false }',
-        '        if copy_source_key ~= nil then',
-        '            copied = service_value(services.variables.resolve(',
-        '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
-        '        end',
-        '        local copied_value = copied.value',
-        '        if copied_value == nil then copied_value = services.types.null end',
-        '        service_value(services.variables.set_resolved(',
-        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied_value))',
-        '    end',
-    ])
-    return lines
+
+def _proven_copy_variable_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """Return a proven talker target that exposes native variable storage."""
+    if effect_actor_targets is None:
+        return None
+    target_info = effect_actor_targets.get(role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] not in {"character", "monster"} or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info[0]
 
 
 def render_participant_translation_expression(
@@ -29398,6 +29414,12 @@ def render_eoc(
                         )
                     ):
                         false_todo = "translate " + _map_mutation_todo()
+                    elif isinstance(false_value, dict) and "copy_var" in false_value:
+                        false_todo = (
+                            "translate copy_var only for bounded literal u/npc/global "
+                            "scopes; context_val and var_val need a value-preserving "
+                            "copy path, and actor scopes need exact handles"
+                        )
                     semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
                         false_todo = semantic_choice
@@ -32957,8 +32979,7 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:
                 rendered = render_static_character_copy_var(
-                    effect, character_actor_proven, npc_event_character_actor_proven,
-                    npc_actor_expression,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32966,7 +32987,9 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: translate copy_var into typed variable "
-                        "services."
+                        "services only for bounded literal u/npc/global scopes "
+                        "with exact handles; "
+                        "context_val and var_val need a value-preserving copy path."
                     )
                     result.add_todo(
                         "manual_rewrite",
