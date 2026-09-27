@@ -5375,8 +5375,7 @@ def render_static_false_effect(
         # TODO marker.
         if "math" in effect:
             rendered = render_static_character_math(
-                effect, avatar_actor_proven, npc_actor_proven,
-                creature_actor_proven,
+                effect, effect_actor_targets,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -25664,46 +25663,36 @@ def render_named_character_activity(
 
 def render_static_character_math(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    creature_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Render only finite numeric assignments to a proven actor variable."""
+    """Render finite literal assignments to an exact alpha/beta Character."""
     raw = effect.get("math")
     if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
         return None
+    comment_keys = {
+        key for key in effect
+        if isinstance(key, str) and key.startswith("//")
+    }
+    if set(effect) - {"math"} - comment_keys:
+        return None
     raw = ["".join(raw)]
     match = re.fullmatch(
-        r"(u|npc)_([A-Za-z_][A-Za-z0-9_]*)\s*"
-        r"(\+\+|--|\+=|-=|\*=|/=|=)\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))?",
+        r"(u|n)_([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
         raw[0].strip(),
     )
-    if match is None:
-        expression = raw[0].strip()
-        if not expression or len(expression) > 8192 or "\0" in expression:
-            return None
-        if not (
-            avatar_actor_proven or npc_actor_proven or creature_actor_proven
-        ) and re.search(
-            r"\b(?:u_|npc_|n_|u_val\s*\(|npc_val\s*\(|n_val\s*\()", expression
-        ):
-            return None
-        actor_expression = (
-            "actor" if (
-                avatar_actor_proven or npc_actor_proven or
-                creature_actor_proven
-            )
-            else "services.characters.avatar()"
-        )
-        return [
-            "    service_value(services.gameplay.math.apply(",
-            f"        {lua_quote(expression)}, {actor_expression}, context.data))",
-        ]
-    prefix, name, operator, literal_text = match.groups()
-    if (prefix == "u" and not avatar_actor_proven) or (
-        prefix == "npc" and not npc_actor_proven
-    ):
+    if match is None or effect_actor_targets is None:
+        return None
+    prefix, name, literal_text = match.groups()
+    role = "u" if prefix == "u" else "npc"
+    target = effect_actor_targets.get(role)
+    if target is None or target[1] != "character":
+        return None
+    if prefix == "n" and target[0] not in {
+        "context.actors.interlocutor", "context.actors.beta",
+    }:
+        # Native dialogue falls back to alpha when beta is absent; that does
+        # not prove alpha is the intended n_ target for this migrated effect.
         return None
     try:
         number = float(literal_text) if literal_text is not None else 1.0
@@ -25711,34 +25700,16 @@ def render_static_character_math(
         return None
     if not math.isfinite(number) or abs(number) > 1000000000:
         return None
-    if operator in {"++", "--"}:
-        number = number if operator == "++" else -number
-        operator = "+="
-    if operator == "=" and literal_text is None:
-        return None
-    if operator == "/=" and number == 0:
-        return None
-    actor_expression = "actor"
-    if operator == "=":
-        return [
-            "    services.variables.set(",
-            f"        {actor_expression}, {lua_quote(name)}, {lua_number(number)})",
-        ]
-    operation = {
-        "+=": "+",
-        "-=": "-",
-        "*=": "*",
-        "/=": "/",
-    }.get(operator)
-    if operation is None:
-        return None
+    if prefix == "u":
+        actor_expression = target[0]
+        beta_expression = "nil"
+    else:
+        actor_expression = "nil"
+        beta_expression = target[0]
+    expression = f"{prefix}_{name} = {lua_number(number)}"
     return [
-        f"    local current = service_value(services.variables.get({actor_expression}, "
-        f"{lua_quote(name)}))",
-        "    current = tonumber(current.value) or 0",
-        "    services.variables.set(",
-        f"        {actor_expression}, {lua_quote(name)}, "
-        f"current {operation} {lua_number(number)})",
+        "    service_value(services.gameplay.math.apply("
+        f"{lua_quote(expression)}, {actor_expression}, context.data, {beta_expression}))",
     ]
 
 
@@ -32851,17 +32822,15 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "math" in effect:
                 rendered = render_static_character_math(
-                    effect, character_actor_proven,
-                    npc_event_character_actor_proven,
-                    creature_actor_proven,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate this math expression into "
-                        "ordinary Lua and typed variable services."
+                        "    -- TODO: translate this math expression into ordinary Lua "
+                        "only after proving native scope, RNG, and context semantics."
                     )
                     result.add_todo(
                         "manual_rewrite",
