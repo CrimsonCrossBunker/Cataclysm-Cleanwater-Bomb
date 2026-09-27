@@ -15,6 +15,19 @@ TEST_CASE( "legacy_core_mod_id_is_an_alias", "[mod_manager][core_id]" )
     CHECK_FALSE( is_core_data_source( "aftershock" ) );
 }
 
+TEST_CASE( "active_mod_order_membership_canonicalizes_both_ids", "[mod_manager][core_id]" )
+{
+    const std::vector<mod_id> legacy_order = { mod_id( "dda" ), mod_id( "aftershock" ) };
+    const std::vector<mod_id> canonical_order = { mod_id( "ccb" ), mod_id( "aftershock" ) };
+
+    CHECK( mod_id_is_in_active_order( mod_id( "ccb" ), legacy_order ) );
+    CHECK( mod_id_is_in_active_order( mod_id( "dda" ), canonical_order ) );
+    CHECK( mod_id_is_in_active_order( mod_id( "aftershock" ), canonical_order ) );
+    CHECK_FALSE( mod_id_is_in_active_order( mod_id( "missing" ), canonical_order ) );
+    CHECK_FALSE( mod_id_is_in_active_order( mod_id( "mod#dda" ), canonical_order ) );
+    CHECK_FALSE( mod_id_is_in_active_order( mod_id( "dda" ), {} ) );
+}
+
 TEST_CASE( "core_mod_aliases_are_deduplicated_in_order", "[mod_manager][core_id]" )
 {
     std::vector<mod_id> mods = { mod_id( "dda" ), mod_id( "magiclysm" ), mod_id( "ccb" ),

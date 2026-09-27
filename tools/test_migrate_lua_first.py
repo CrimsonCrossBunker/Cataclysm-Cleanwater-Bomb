@@ -3227,6 +3227,16 @@ assert(read() == 'bio_batteries')
                 )
                 self.assertNotIn("services.effects.has(actor,", expression)
 
+    def test_mod_is_loaded_uses_bounded_world_active_query(self) -> None:
+        render = migrate_lua_first.render_eoc_condition_expression
+        self.assertEqual(
+            render({"mod_is_loaded": "dda"}),
+            'services.gameplay.mods.is_active_in_world("dda")',
+        )
+        for mod_id in ("", "x" * 257, "bad\0id"):
+            with self.subTest(mod_id=mod_id):
+                self.assertIsNone(render({"mod_is_loaded": mod_id}))
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_any_effect_generated_lua_queries_live_npc(self) -> None:
         # This executes generated Lua against a service double, not the engine.
@@ -3652,7 +3662,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("services.random.one_in(3)", main)
             self.assertIn("services.random.probability(1.5, 4)", main)
             self.assertIn("services.random.contested(2, 5, 8)", main)
-            self.assertIn('services.gameplay.mods.is_loaded("dda")', main)
+            self.assertIn('services.gameplay.mods.is_active_in_world("dda")', main)
+            self.assertNotIn("services.gameplay.mods.is_loaded(", main)
             self.assertIn(
                 'services.gameplay.environment.dimension() == "default"',
                 main,
@@ -3703,7 +3714,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 'services.variables.resolve(context.data, actor, "u", "remembered_value")',
                 main,
             )
-            self.assertIn("not (services.gameplay.mods.is_loaded", main)
+            self.assertIn(
+                "not (services.gameplay.mods.is_active_in_world", main
+            )
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_effect_predicates_require_explicit_bodypart(self) -> None:

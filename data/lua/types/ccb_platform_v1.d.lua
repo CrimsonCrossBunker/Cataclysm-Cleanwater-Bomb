@@ -11066,6 +11066,9 @@ local CcbPlatformModQueries = {}
 ---@param mod_id string
 ---@return boolean loaded Includes active Lua-first Platform Mods and the world's active Mod order.
 function CcbPlatformModQueries.is_loaded(mod_id) end
+---@param mod_id string Bounded non-empty native Mod id; `dda` is treated as the `ccb` core alias.
+---@return boolean True only when the canonical ID appears in the world's active Mod order.
+function CcbPlatformModQueries.is_active_in_world(mod_id) end
 
 ---@class CcbPlatformEnvironmentQueries
 local CcbPlatformEnvironmentQueries = {}
