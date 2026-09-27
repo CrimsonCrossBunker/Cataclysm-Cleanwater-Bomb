@@ -5119,7 +5119,8 @@ function CcbPlatformSoundApi.play_if_audible(id, variant, volume) end
 ---@param position TripointCoord Loaded absolute map-square position.
 ---@param volume integer Native gameplay sound volume, 0..1000.
 ---@param category CcbPlatformSoundCategory Native gameplay sound category.
----@param description string Non-NUL sound caption/description, at most 4096 bytes.
+---@param description string Already localized caption; non-NUL and at most 4096 bytes.
+---Talker tags are not interpolated by this service.
 ---@param ambient? boolean Whether the sound is ambient; defaults to false.
 ---@param id? string Optional native sound-effect id, 1..128 bytes.
 ---@param variant? string Optional native variant id, 1..128 bytes.

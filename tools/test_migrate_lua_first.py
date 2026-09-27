@@ -20342,7 +20342,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("weighted_cursor", main)
             self.assertNotIn("weighted-callback conversion", report)
 
-    def test_global_u_sound_false_effect_uses_avatar_talker(self) -> None:
+    def test_global_u_sound_false_effect_uses_proven_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -20353,7 +20353,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     "condition": {"or": []},
                     "false_effect": {
                         "u_make_sound": "a loud tearing sound.",
-                        "target_var": {"context_val": "sound_location"},
                         "volume": 80,
                         "type": "alert",
                     },
@@ -20370,8 +20369,89 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn("services.sound.emit(", main)
-            self.assertIn("sound_location", main)
+            self.assertIn('services.translate("a loud tearing sound.")', main)
             self.assertNotIn("typed Lua services", report)
+
+    def test_plain_make_sound_requires_talkers_and_static_options(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "plain_character_sounds",
+                    "required_event": "character_melee_attacks_character",
+                    "effect": [
+                        {"u_make_sound": "alpha <u_name>"},
+                        {
+                            "npc_make_sound": "beta sound",
+                            "volume": 20,
+                            "type": "speech",
+                            "ambient": True,
+                        },
+                        {
+                            "u_make_sound": "target variable sound",
+                            "target_var": {"context_val": "sound_location"},
+                        },
+                        {"u_make_sound": "snippet sound", "snippet": True},
+                        {"u_make_sound": "same snippet", "same_snippet": True},
+                        {
+                            "u_make_sound": "dynamic volume",
+                            "volume": {"context_val": "sound_volume"},
+                        },
+                        {"u_make_sound": "unsupported category", "type": "sensory"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "plain_character_sound_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertEqual(main.count("services.sound.emit("), 2)
+            self.assertIn(
+                "service_value(services.characters.snapshot(actor)).creature.position",
+                main,
+            )
+            self.assertIn(
+                "service_value(services.characters.snapshot(context.actors.interlocutor)).creature.position",
+                main,
+            )
+            self.assertIn(
+                '0, "background", services.translate("alpha <u_name>")', main
+            )
+            self.assertIn(
+                'services.translate("alpha <u_name>"), false', main
+            )
+            self.assertIn(
+                '20, "speech", services.translate("beta sound"), true', main
+            )
+            self.assertNotIn("services.snippets.random", main)
+            self.assertNotIn("sound_location", main)
+
+    def test_npc_make_sound_without_proven_beta_stays_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_sound_without_beta",
+                    "required_event": "game_start",
+                    "effect": {"npc_make_sound": "no beta handle"},
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_sound_without_beta_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.sound.emit(", main)
+            self.assertIn("TODO: translate the character sound through", main)
 
     def test_global_u_set_field_false_effect_uses_avatar_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

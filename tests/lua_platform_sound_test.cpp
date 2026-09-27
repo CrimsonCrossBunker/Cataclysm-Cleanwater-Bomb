@@ -48,6 +48,22 @@ TEST_CASE( "lua_platform_audible_sound_reports_the_native_hearing_gate",
         INFO( error.what() );
     }
     REQUIRE( result.valid() );
+
+    const sol::protected_function_result emit_result = lua.safe_script( R"(
+        local snapshot = ccb.services.characters.snapshot(
+            ccb.services.characters.avatar())
+        assert(snapshot.ok)
+        ccb.services.sound.emit(
+            snapshot.value.creature.position, 0, "background",
+            ccb.services.translate("A faint sound."), false)
+        assert(not pcall(ccb.services.sound.emit,
+            snapshot.value.creature.position, 1001, "background", "too loud", false))
+    )", sol::script_pass_on_error );
+    if( !emit_result.valid() ) {
+        const sol::error error = emit_result;
+        INFO( error.what() );
+    }
+    REQUIRE( emit_result.valid() );
 }
 
 #endif
