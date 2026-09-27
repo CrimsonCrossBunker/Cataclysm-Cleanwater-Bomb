@@ -21811,7 +21811,10 @@ def render_static_vehicle_service_effect(
     } or not vehicle_actor_proven:
         return None
     if isinstance(effect, str):
-        payload: dict[str, Any] = {}
+        # The native WRAP consumes existing marked vehicle/order state.  The
+        # similarly named Platform services also perform marking, multiplier,
+        # quote, or payment steps, so the string cannot lower faithfully.
+        return None
     elif isinstance(effect, dict):
         payload = effect
     else:
@@ -29291,9 +29294,12 @@ def render_eoc(
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
     # Static talk-effect WRAP entries invoke their C++ function only when
     # dialogue::actor(true)->get_npc() succeeds.  A single event Character is
-    # alpha evidence, not proof of that beta handle.  Restrict these WRAP
-    # lowerings to callbacks with a separately proven beta participant, then
-    # preserve the native no-op for a beta that is not an NPC at runtime.
+    # alpha evidence, not proof of that beta handle.  A direct topic response
+    # callback runs in avatar::talk_to's dialogue, which has alpha and a
+    # non-null interlocutor; only this path can justify the beta handle.  The
+    # native actor(true) alpha fallback applies to other no-beta dialogues,
+    # which are deliberately not inferred from event or generic-pair proof.
+    # Preserve the native no-op for a present beta that is not an NPC.
     static_wrapped_beta_npc = (
         npc_dialogue_mission_pair_proven and
         npc_actor_expression == "context.actors.beta"
@@ -32061,14 +32067,42 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    if isinstance(effect, str) and not static_wrapped_beta_npc:
+                        reason = (
+                            "needs direct talk-topic beta NPC proof; the native WRAP "
+                            "vehicle/order flow also differs from the Platform service"
+                        )
+                    elif isinstance(effect, str) and not vehicle_actor_override:
+                        reason = (
+                            "needs an exact vehicle handle; the native WRAP vehicle/order "
+                            "flow differs from the Platform service"
+                        )
+                    elif isinstance(effect, str):
+                        reason = {
+                            "quote_vehicle_full_repair": (
+                                "native quote uses the existing marked vehicle and repair "
+                                "multiplier, while the Platform service marks a vehicle "
+                                "and changes the multiplier"
+                            ),
+                            "select_vehicle_part_service": (
+                                "native selection uses existing marked vehicle state, "
+                                "while the Platform service marks a vehicle and applies "
+                                "a multiplier"
+                            ),
+                            "start_vehicle_full_repair": (
+                                "native start begins the existing paid order, while the "
+                                "Platform service requotes and charges the mechanic"
+                            ),
+                        }[vehicle_key]
+                    else:
+                        reason = "needs vehicle service conversion"
                     lines.append(
-                        "    -- TODO: translate the vehicle service through typed "
-                        "vehicle and mechanic handles."
+                        f"    -- TODO: preserve native {vehicle_key}: {reason}."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs vehicle service conversion"
+                        f"{reason}"
                     )
                     all_effects_converted = False
             elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
@@ -33752,12 +33786,63 @@ def render_eoc(
                         "needs a bounded NPC mission-provider conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, str) and
-                effect in {
-                    "assign_mission", "mission_success", "mission_failure",
-                    "clear_mission", "remove_active_mission", "mission_reward",
-                }
+            elif isinstance(effect, str) and effect in {
+                "assign_mission", "mission_success", "mission_failure",
+                "clear_mission", "mission_reward",
+            }:
+                if static_wrapped_beta_npc and effect == "assign_mission":
+                    # This lowering is bounded to a live dialogue selection.
+                    # The Platform service additionally validates provider
+                    # ownership and unique available-list membership; native
+                    # assign_mission assumes those chatbin invariants.
+                    lines.extend(render_static_wrapped_beta_npc_call(
+                        "missions.assign_selected", "services.characters.avatar()"
+                    ))
+                    converted_effect = True
+                else:
+                    if static_wrapped_beta_npc:
+                        reason = {
+                            "mission_success": (
+                                "the Platform service requires an active, complete "
+                                "mission while the native WRAP only wraps the selection"
+                            ),
+                            "mission_failure": (
+                                "the Platform service requires an active mission "
+                                "assigned to this avatar while the native WRAP fails "
+                                "the selection"
+                            ),
+                            "clear_mission": (
+                                "the Platform service rejects in-progress selections "
+                                "while the native WRAP clears any assigned selection"
+                            ),
+                            "mission_reward": (
+                                "the native WRAP adds owed value and opens reward trade; "
+                                "the Platform generic-reward claim has different semantics"
+                            ),
+                        }.get(effect, "the selected mission action is not equivalent")
+                        todo = f"TODO: preserve native {effect}: {reason}."
+                        detail = (
+                            f"native {effect} cannot be represented by the current "
+                            "Platform selected-mission service"
+                        )
+                    else:
+                        todo = (
+                            "TODO: translate the selected NPC mission action through "
+                            "a direct dialogue beta NPC."
+                        )
+                        detail = (
+                            "needs a direct talk-topic beta NPC for the selected "
+                            "mission action"
+                        )
+                    lines.append(f"    -- {todo}")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{detail}"
+                    )
+                    all_effects_converted = False
+            elif effect == "remove_active_mission" and (
+                npc_actor_proven or npc_actor_expression is not None
             ):
                 rendered = render_static_selected_npc_mission_effect(
                     effect, exact_npc_actor_proven,

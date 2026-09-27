@@ -14,7 +14,10 @@ import migrate_lua_first
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
-def render_direct_npc_dialogue_pair(eoc: dict[str, object]) -> str:
+def render_direct_npc_dialogue_pair(
+    eoc: dict[str, object], *, vehicle_actor_proven: bool = False,
+) -> str:
+    """Model a direct true_eocs response in avatar.talk_to's two-actor dialogue."""
     source = migrate_lua_first.SourceObject(Path("source.json"), 0, eoc)
     topic = migrate_lua_first.SourceObject(
         Path("source.json"), 1, {
@@ -26,10 +29,15 @@ def render_direct_npc_dialogue_pair(eoc: dict[str, object]) -> str:
     proven_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
         [topic, source]
     )
+    extra_proofs = (
+        {"vehicle_override_ids": frozenset({str(eoc["id"])})}
+        if vehicle_actor_proven else {}
+    )
     return migrate_lua_first.render_eoc(
         source,
         migrate_lua_first.MigrationResult(),
         npc_dialogue_mission_pair_ids=proven_ids,
+        **extra_proofs,
     )
 
 
@@ -14754,7 +14762,7 @@ assert(not available())
             self.assertIn("typed provider service", main)
             self.assertNotIn("services.characters.avatar()", main)
 
-    def test_translates_proven_npc_mission_provider_shape_without_ambient_avatar(self) -> None:
+    def test_npc_mission_wrappers_require_direct_talk_topic_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -14793,9 +14801,9 @@ assert(not available())
                 )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.todos)
             self.assertIn(
                 'services.npcs.missions.offer(\n'
                 '        context.actors.beta, '
@@ -14808,27 +14816,82 @@ assert(not available())
                 'services.types.id("mission", "MISSION_ASSIGNED"))',
                 main,
             )
-            self.assertIn(
-                "services.npcs.missions.assign_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.succeed_selected(context.actors.beta, actor, false)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.fail_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.clear_selected(context.actors.beta, actor)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.missions.claim_selected_reward(context.actors.beta, actor)",
-                main,
-            )
+            for method in (
+                "assign_selected", "succeed_selected", "fail_selected",
+                "clear_selected", "claim_selected_reward",
+            ):
+                self.assertNotIn(f"services.npcs.missions.{method}(", main)
+            self.assertIn("direct talk-topic beta NPC", main)
             self.assertNotIn("services.characters.avatar()", main)
+
+    def test_static_npc_mission_wrappers_preserve_native_semantics(self) -> None:
+        effects = [
+            "assign_mission", "mission_success", "mission_failure",
+            "clear_mission", "mission_reward",
+        ]
+        event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "event_missions",
+            "required_event": "npc_becomes_hostile", "effect": effects,
+        })
+        generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "generic_pair_missions",
+            "required_event": "character_takes_damage", "effect": effects,
+        })
+        with patch.object(
+            migrate_lua_first,
+            "AVATAR_ACTOR_EVENTS",
+            migrate_lua_first.AVATAR_ACTOR_EVENTS | {
+                "npc_becomes_hostile", "character_takes_damage",
+            },
+        ), patch.object(
+            migrate_lua_first,
+            "PROVEN_NPC_ACTOR_EVENTS",
+            migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS | {"character_takes_damage"},
+        ):
+            event_only = migrate_lua_first.render_eoc(
+                event_source, migrate_lua_first.MigrationResult()
+            )
+            generic_pair = migrate_lua_first.render_eoc(
+                generic_source, migrate_lua_first.MigrationResult(),
+                talker_pair_ids=frozenset({"generic_pair_missions"}),
+            )
+
+        for unproven in (event_only, generic_pair):
+            for method in (
+                "assign_selected", "succeed_selected", "fail_selected",
+                "clear_selected", "claim_selected_reward",
+            ):
+                self.assertNotIn(f"services.npcs.missions.{method}(", unproven)
+            self.assertIn("direct talk-topic beta NPC", unproven)
+
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_missions",
+            "effect": effects,
+        })
+        # The synthetic true_eocs callback models avatar.talk_to, which supplies
+        # alpha and a non-null interlocutor; the runtime guard preserves WRAP's
+        # no-op when that interlocutor is not an NPC. Only assign is admitted.
+        # assign_selected also enforces live/provider/unique available-list
+        # membership, stronger than native assign_mission's chatbin assumptions.
+        self.assertEqual(direct_pair.count(
+            'wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc"'
+        ), 1)
+        self.assertIn(
+            "services.npcs.missions.assign_selected(wrapped_beta_npc, services.characters.avatar())",
+            direct_pair,
+        )
+        for method in (
+            "succeed_selected", "fail_selected", "clear_selected",
+            "claim_selected_reward",
+        ):
+            self.assertNotIn(f"services.npcs.missions.{method}(", direct_pair)
+        for reason in (
+            "requires an active, complete mission",
+            "requires an active mission assigned to this avatar",
+            "rejects in-progress selections",
+            "opens reward trade",
+        ):
+            self.assertIn(reason, direct_pair)
 
     def test_npc_mission_contract_declarations_cover_native_surface(self) -> None:
         declarations = (
@@ -19726,6 +19789,56 @@ assert(not pcall(function() return U_EXPRESSION end))
                 report,
             )
             self.assertNotIn("run_eoc", main)
+
+    def test_static_vehicle_service_strings_preserve_native_order_semantics(self) -> None:
+        effects = [
+            "quote_vehicle_full_repair", "select_vehicle_part_service",
+            "start_vehicle_full_repair",
+        ]
+        event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "event_vehicle_services",
+            "required_event": "npc_becomes_hostile", "effect": effects,
+        })
+        generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition", "id": "generic_pair_vehicle_services",
+            "required_event": "character_takes_damage", "effect": effects,
+        })
+        with patch.object(
+            migrate_lua_first,
+            "PROVEN_NPC_ACTOR_EVENTS",
+            migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS | {
+                "npc_becomes_hostile", "character_takes_damage",
+            },
+        ):
+            event_only = migrate_lua_first.render_eoc(
+                event_source, migrate_lua_first.MigrationResult(),
+                vehicle_override_ids=frozenset({"event_vehicle_services"}),
+            )
+            generic_pair = migrate_lua_first.render_eoc(
+                generic_source, migrate_lua_first.MigrationResult(),
+                vehicle_override_ids=frozenset({"generic_pair_vehicle_services"}),
+                talker_pair_ids=frozenset({"generic_pair_vehicle_services"}),
+            )
+
+        for unproven in (event_only, generic_pair):
+            self.assertNotIn("services.vehicles.", unproven)
+            self.assertIn("direct talk-topic beta NPC", unproven)
+            self.assertIn("native WRAP vehicle/order flow also differs", unproven)
+
+        # The fixture supplies direct beta proof and an exact vehicle override;
+        # migration remains TODO because the service changes order flow.
+        direct_pair = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition", "id": "dialogue_vehicle_services",
+            "effect": effects,
+        }, vehicle_actor_proven=True)
+        self.assertNotIn("services.vehicles.", direct_pair)
+        self.assertNotIn("mechanic.kind == \"creature\"", direct_pair)
+        for reason in (
+            "native quote uses the existing marked vehicle",
+            "native selection uses existing marked vehicle state",
+            "native start begins the existing paid order",
+        ):
+            self.assertIn(reason, direct_pair)
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
