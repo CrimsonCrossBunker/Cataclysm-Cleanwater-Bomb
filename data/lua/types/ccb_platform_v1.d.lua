@@ -7709,6 +7709,12 @@ function CcbCharactersApi.avatar() end
 ---@return CcbCharacterAdjustmentResult result
 function CcbCharactersApi.adjust(character, adjustments) end
 
+---Apply native wetness rules, including rain protection and periodic checks.
+---@param character GameHandle Exact live Character handle; monsters are rejected.
+---@param amount integer Native int amount after dbl_or_var truncation; service range is -1000000..1000000.
+---@return CcbResult result `value` is true when the native wetness routine ran.
+function CcbCharactersApi.add_wet(character, amount) end
+
 ---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
 ---@param trainer GameHandle Exact live trainer Character handle.
 ---@param student GameHandle Exact live student Character handle.
