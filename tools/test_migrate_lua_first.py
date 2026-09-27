@@ -311,48 +311,60 @@ assert(worn_calls==1 and has_calls==1)
             {"npc_role_nearby": "scout"}, generic_character_actor_proven=True))
 
     def test_opposite_actor_visibility_requires_exact_alpha_and_beta(self) -> None:
-        cases = {
-            "npc_see_u": "service_value(services.creatures.can_see(partner, actor))",
-            "u_see_npc": "service_value(services.creatures.can_see(actor, partner))",
+        beta_guard = (
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
+            'context.actors.beta.kind == "creature" and '
+        )
+        alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
+        queries = {
+            "npc_see_u": "services.creatures.can_see(context.actors.beta, actor)",
+            "u_see_npc": "services.creatures.can_see(actor, context.actors.beta)",
             "npc_see_u_loc": (
-                "service_value(services.creatures.has_line_of_sight(partner, actor))"
+                "services.creatures.has_line_of_sight(context.actors.beta, actor)"
             ),
             "u_see_npc_loc": (
-                "service_value(services.creatures.has_line_of_sight(actor, partner))"
+                "services.creatures.has_line_of_sight(actor, context.actors.beta)"
             ),
         }
-        for condition, expected in cases.items():
+        proven_beta = {
+            "npc_dialogue_pair_proven": True,
+            "npc_actor_expression": "context.actors.beta",
+        }
+        for condition, query in queries.items():
             with self.subTest(condition=condition):
                 self.assertEqual(
                     migrate_lua_first.render_eoc_condition_expression(
-                        condition, avatar_actor_proven=True,
-                        npc_actor_proven=True, npc_actor_expression="partner"),
-                    expected,
+                        condition, **proven_beta),
+                    beta_guard + alpha_guard + f"service_value({query})",
                 )
-                self.assertNotIn("services.characters.avatar()", expected)
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-                    condition, npc_actor_proven=True))
+                    condition,
+                    npc_dialogue_pair_proven=True,
+                    npc_actor_expression="actor"))
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-                    condition, avatar_actor_proven=True))
+                    condition,
+                    npc_actor_expression="context.actors.beta"))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_opposite_actor_visibility_uses_event_alpha_handle(self) -> None:
-        # The event alpha is deliberately different from the global avatar.
-        # These generated predicates must keep using the exact alpha handle.
+        # The event alpha differs from the global avatar; only the proven
+        # dialogue beta may be used as the opposite participant.
         for condition, observer, target in (
-            ("u_see_npc", "event_alpha", "partner"),
-            ("npc_see_u", "partner", "event_alpha"),
-            ("u_see_npc_loc", "event_alpha", "partner"),
-            ("npc_see_u_loc", "partner", "event_alpha"),
+            ("u_see_npc", "event_alpha", "beta"),
+            ("npc_see_u", "beta", "event_alpha"),
+            ("u_see_npc_loc", "event_alpha", "beta"),
+            ("npc_see_u_loc", "beta", "event_alpha"),
         ):
             with self.subTest(runtime_condition=condition):
                 predicate = migrate_lua_first.render_eoc_condition_expression(
-                    condition, avatar_actor_proven=True,
-                    npc_actor_proven=True, npc_actor_expression="partner")
+                    condition, npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta")
                 script = """
-local ambient_avatar = { name = \"ambient avatar\" }
-local event_alpha = { name = \"event alpha\" }
-local partner = { name = \"partner\" }
+local ambient_avatar = { kind = \"creature\", name = \"ambient avatar\" }
+local event_alpha = { kind = \"creature\", name = \"event alpha\" }
+local beta = { kind = \"creature\", name = \"dialogue beta\" }
+local context = { actors = { beta = beta } }
 local actor = event_alpha
 local calls = 0
 local function query(observer, target)
@@ -364,6 +376,20 @@ local function query(observer, target)
 end
 local function service_value(value) return value end
 local services = { creatures = { can_see = query, has_line_of_sight = query } }
+context = nil
+assert(not (PREDICATE))
+context = {}
+assert(not (PREDICATE))
+context = { actors = {} }
+assert(not (PREDICATE))
+context.actors.beta = { kind = "item" }
+assert(not (PREDICATE))
+context.actors.beta = beta
+actor = nil
+assert(not (PREDICATE))
+actor = { kind = "item" }
+assert(not (PREDICATE))
+actor = event_alpha
 assert(PREDICATE)
 assert(calls == 1)
 """.replace("EXPECTED_OBSERVER", observer).replace(
@@ -375,27 +401,151 @@ assert(calls == 1)
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_player_view_visibility_stays_todo_without_player_view_api(self) -> None:
-        cases = (
-            ("player_see_u", {"avatar_actor_proven": True}),
-            ("player_see_u", {"weapon_actor_proven": True}),
-            ("player_see_u", {"creature_actor_proven": True}),
-            (
-                "player_see_npc",
-                {
-                    "avatar_actor_proven": True,
-                    "npc_actor_proven": True,
-                    "npc_actor_expression": "partner",
-                },
-            ),
+    def test_player_view_visibility_uses_exact_creature_handles(self) -> None:
+        expected_alpha = (
+            'actor ~= nil and actor.kind == "creature" and '
+            "service_value(services.creatures.player_can_see(actor))"
         )
-        for condition, proof in cases:
-            with self.subTest(condition=condition, proof=proof):
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_u", avatar_actor_proven=True),
+            expected_alpha,
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_u", creature_actor_proven=True),
+            expected_alpha,
+        )
+        expected_beta = (
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
+            'context.actors.beta.kind == "creature" and '
+            "service_value(services.creatures.player_can_see(context.actors.beta))"
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_npc", npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"),
+            expected_beta,
+        )
+        # A single-NPC event proves only its alpha actor.  It does not prove
+        # that actor is const_actor(true), so it cannot satisfy player_see_npc.
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_npc", npc_actor_proven=True,
+                npc_actor_expression="actor"),
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_npc", npc_dialogue_pair_proven=False,
+                npc_actor_expression="context.actors.beta"),
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_u", npc_actor_proven=True)
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_npc", avatar_actor_proven=True)
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "player_see_npc", npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"),
+            expected_beta,
+        )
+        for unproven_target in (
+            "actor", "partner", "context.actors.interlocutor",
+            "(context.actors and context.actors.beta) or actor",
+        ):
+            with self.subTest(unproven_target=unproven_target):
                 self.assertIsNone(
                     migrate_lua_first.render_eoc_condition_expression(
-                        condition, **proof
+                        "player_see_npc", npc_dialogue_pair_proven=True,
+                        npc_actor_expression=unproven_target,
                     )
                 )
+
+    def test_player_see_npc_requires_proven_dialogue_pair(self) -> None:
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "visibility_topic",
+                "responses": [{"true_eocs": "dialogue_visibility"}],
+            },
+        )
+        dialogue_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "dialogue_visibility",
+                "condition": "player_see_npc",
+                "effect": {"message": "visible"},
+            },
+        )
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, dialogue_eoc]
+        )
+        self.assertEqual(pair_ids, frozenset({"dialogue_visibility"}))
+        paired = migrate_lua_first.render_eoc(
+            dialogue_eoc, migrate_lua_first.MigrationResult(),
+            talker_pair_ids=pair_ids,
+            npc_dialogue_mission_pair_ids=pair_ids,
+        )
+        self.assertIn(
+            "services.creatures.player_can_see(context.actors.beta)", paired
+        )
+
+        npc_event_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 2, {
+                "type": "effect_on_condition", "id": "single_npc_visibility",
+                "required_event": "npc_becomes_hostile",
+                "condition": "player_see_npc",
+                "effect": {"message": "visible"},
+            },
+        )
+        single_actor = migrate_lua_first.render_eoc(
+            npc_event_eoc, migrate_lua_first.MigrationResult(),
+            npc_dialogue_mission_pair_ids=frozenset(),
+        )
+        self.assertNotIn("services.creatures.player_can_see(", single_actor)
+        self.assertIn(
+            "TODO: translate the legacy condition into a Lua predicate",
+            single_actor,
+        )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_player_see_npc_guard_short_circuits_invalid_contexts(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            "player_see_npc", npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        script = """
+local context = nil
+local calls = 0
+local function service_value(value) return value end
+local services = { creatures = { player_can_see = function(target)
+    calls = calls + 1
+    assert(target == context.actors.beta)
+    return true
+end } }
+assert(not (PREDICATE))
+context = {}
+assert(not (PREDICATE))
+context = { actors = {} }
+assert(not (PREDICATE))
+context.actors.beta = { kind = "item" }
+assert(not (PREDICATE))
+assert(calls == 0)
+context.actors.beta = { kind = "creature" }
+assert(PREDICATE)
+assert(calls == 1)
+services.creatures.player_can_see = function() error("stale player-view target") end
+local ok, message = pcall(function() return PREDICATE end)
+assert(not ok and string.find(message, "stale player-view target", 1, true))
+""".replace("PREDICATE", predicate or "false")
+        result = subprocess.run(
+            ["lua", "-"], input=script, text=True,
+            capture_output=True, timeout=10
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_boolean_groups_reject_non_native_nested_predicates(self) -> None:
         for invalid in (None, True, False, 0, 1, 1.5, []):
@@ -3735,7 +3885,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn("services.creatures.avatar()", main)
             self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
-    def test_player_view_conditions_are_not_lowered_to_avatar_vision(self) -> None:
+    def test_player_view_conditions_use_native_player_view_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -3765,10 +3915,11 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn("services.creatures.player_can_see(actor)", main)
             self.assertNotIn("services.creatures.can_see(", main)
-            self.assertIn(
+            self.assertNotIn(
                 "EOC player_view_alpha condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
@@ -23811,6 +23962,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             )
             self.assertIn("context.actors.beta", main)
             self.assertIn("services.creatures.has_flag(", main)
+            self.assertIn("services.creatures.player_can_see(actor)", main)
             self.assertNotIn("services.creatures.can_see(", main)
 
     def test_faction_camp_proximity_uses_the_typed_camp_query(self) -> None:

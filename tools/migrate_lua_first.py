@@ -27120,6 +27120,52 @@ def render_eoc_condition_expression(
             else (npc_query_actor, "actor")
         )
         return f"service_value(services.skills.offered({teacher}, {student})).total > 0"
+    if condition == "player_see_u" and (
+        avatar_actor_proven or weapon_actor_proven or
+        generic_character_actor_proven or creature_actor_proven
+    ):
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            "service_value(services.creatures.player_can_see(actor))"
+        )
+    opposite_visibility_conditions = {
+        "u_see_npc", "npc_see_u", "u_see_npc_loc", "npc_see_u_loc",
+    }
+    if condition == "player_see_npc" or condition in opposite_visibility_conditions:
+        # These native predicates read const_actor(true), which is the
+        # dialogue beta.  A Character proof or a single NPC event actor does
+        # not establish that role; require the narrow dialogue-pair proof and
+        # its exact beta expression before querying it.
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        beta_guard = (
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
+            'context.actors.beta.kind == "creature" and '
+        )
+        if condition == "player_see_npc":
+            return (
+                beta_guard +
+                "service_value(services.creatures.player_can_see(context.actors.beta))"
+            )
+        alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
+        if condition == "u_see_npc":
+            query = "services.creatures.can_see(actor, context.actors.beta)"
+        elif condition == "npc_see_u":
+            query = "services.creatures.can_see(context.actors.beta, actor)"
+        elif condition == "u_see_npc_loc":
+            query = (
+                "services.creatures.has_line_of_sight(actor, "
+                "context.actors.beta)"
+            )
+        else:
+            query = (
+                "services.creatures.has_line_of_sight(context.actors.beta, actor)"
+            )
+        return beta_guard + alpha_guard + f"service_value({query})"
     if creature_actor_proven:
         if isinstance(condition, str):
             if condition == "u_is_alive":
@@ -27264,38 +27310,6 @@ def render_eoc_condition_expression(
                 return (
                     "service_value(services.creatures.snapshot(" +
                     npc_query_actor + ")).outside"
-                )
-            if (
-                avatar_actor_proven and npc_actor_expression is not None and
-                condition == "u_see_npc"
-            ):
-                return (
-                    "service_value(services.creatures.can_see(" +
-                    "actor, " + npc_actor_expression + "))"
-                )
-            if (
-                avatar_actor_proven and npc_actor_expression is not None and
-                condition == "npc_see_u"
-            ):
-                return (
-                    "service_value(services.creatures.can_see(" +
-                    npc_actor_expression + ", actor))"
-                )
-            if (
-                avatar_actor_proven and npc_actor_expression is not None and
-                condition == "u_see_npc_loc"
-            ):
-                return (
-                    "service_value(services.creatures.has_line_of_sight("
-                    "actor, " + npc_actor_expression + "))"
-                )
-            if (
-                avatar_actor_proven and npc_actor_expression is not None and
-                condition == "npc_see_u_loc"
-            ):
-                return (
-                    "service_value(services.creatures.has_line_of_sight("
-                    npc_actor_expression + ", actor))"
                 )
         if weapon_actor_proven and condition == "has_ammo":
             return (

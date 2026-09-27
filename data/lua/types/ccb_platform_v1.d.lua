@@ -11224,6 +11224,10 @@ function CcbCreaturesApi.nearby(observer, options) end
 ---@return CcbResult result `value` is boolean, using Creature::sees.
 function CcbCreaturesApi.can_see(observer, target) end
 
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean from the active player view; this can differ from an avatar Creature's own vision.
+function CcbCreaturesApi.player_can_see(target) end
+
 ---@param observer GameHandle Exact live Creature observer handle.
 ---@param target GameHandle Exact live Creature target handle.
 ---@return CcbResult result `value` is boolean from coordinate-only map::sees at MAX_VIEW_DISTANCE.
