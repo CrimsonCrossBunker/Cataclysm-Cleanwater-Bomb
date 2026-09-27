@@ -19814,17 +19814,9 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertFalse(any(
-            "EOC exact_npc_message effect #0" in entry
-            for entry in result.todos
-        ))
-        self.assertFalse(any(
-            "EOC fatal_killer_message effect #0" in entry
-            for entry in result.todos
-        ))
         for eoc_id in (
-            "direct_npc_message", "item_beta_message", "monster_beta_message",
-            "unbound_npc_message",
+            "exact_npc_message", "direct_npc_message", "fatal_killer_message",
+            "item_beta_message", "monster_beta_message", "unbound_npc_message",
         ):
             self.assertTrue(any(
                 f"EOC {eoc_id} effect #0" in entry
@@ -19837,8 +19829,123 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertIn("needs domain-service conversion", report)
         self.assertNotIn('services.message("role unknown")', main)
         self.assertNotIn('message_target = context.actors.beta', main)
-        self.assertIn('message_target = (context.killer or actor)', main)
-        self.assertIn('message_target.subtype == "avatar"', main)
+        self.assertNotIn('services.translate("killer sees this")', main)
+
+    def test_message_expansion_requires_live_exact_dialogue_participants(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_npc_global_message",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"message": "dead NPC alpha"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_npc_beta_message",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"npc_message": "dead NPC speaker"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "prevent_death_message",
+                        "eoc_type": "PREVENT_DEATH",
+                        "effect": {"message": "dead avatar alpha"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "prevent_death_u_message",
+                        "eoc_type": "PREVENT_DEATH",
+                        "effect": {"u_message": "dead avatar u target"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_death_message",
+                        "eoc_type": "AVATAR_DEATH",
+                        "effect": {"message": "dead avatar hook"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_death_u_message",
+                        "eoc_type": "AVATAR_DEATH",
+                        "effect": {"u_message": "dead avatar u hook"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "character_kill_message",
+                        "required_event": "character_kills_character",
+                        "effect": {"message": "killed Character beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_kill_message",
+                        "required_event": "character_kills_monster",
+                        "effect": {"message": "dead monster beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "character_ranged_message",
+                        "required_event": "character_ranged_attacks_character",
+                        "effect": {"message": "ranged Character beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_ranged_message",
+                        "required_event": "character_ranged_attacks_monster",
+                        "effect": {"message": "ranged monster beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "character_melee_message",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"message": "live melee Character beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_melee_message",
+                        "required_event": "character_melee_attacks_monster",
+                        "effect": {"message": "live melee monster beta"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "message_lifecycle_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        for eoc_id in (
+            "dead_npc_global_message", "dead_npc_beta_message",
+            "prevent_death_message", "prevent_death_u_message",
+            "avatar_death_message", "avatar_death_u_message",
+            "character_kill_message", "monster_kill_message",
+            "character_ranged_message", "monster_ranged_message",
+        ):
+            self.assertTrue(any(
+                f"EOC {eoc_id} effect #0" in entry
+                for entry in result.todos
+            ), eoc_id)
+        self.assertIn("character_melee_message", result.converted)
+        self.assertIn("monster_melee_message", result.converted)
+        for text in (
+            "dead NPC alpha", "dead NPC speaker", "dead avatar alpha",
+            "dead avatar u target", "dead avatar hook", "dead avatar u hook",
+            "killed Character beta", "dead monster beta",
+            "ranged Character beta", "ranged monster beta",
+        ):
+            self.assertNotIn(f"services.translate({json.dumps(text)})", main)
+        self.assertIn(
+            'services.text.expand_for(services.translate("live melee Character beta")',
+            main,
+        )
+        self.assertIn(
+            'services.text.expand_for(services.translate("live melee monster beta")',
+            main,
+        )
+        self.assertIn("needs domain-service conversion", report)
 
     def test_preserves_native_explosion_shrapnel_shapes_and_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

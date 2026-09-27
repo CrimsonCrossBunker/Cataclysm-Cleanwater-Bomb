@@ -29639,36 +29639,25 @@ def render_eoc(
         beta_effect_target = ("actor", "character")
     else:
         beta_effect_target = None
+    # Text expansion resolves native handles, so only keep message paths whose
+    # dialogue participants are both alive at event dispatch.  Fatal/death and
+    # kill hooks run after the affected Character or monster is already dead;
+    # ranged attacks dispatch after projectile damage.  Native no-beta EOCs
+    # also pass a default avatar to parse_tags while retaining has_beta=false,
+    # which expand_for cannot currently represent.
     message_dialogue_pair: tuple[str, str] | None = None
-    if npc_fatal_hook:
-        message_dialogue_pair = (
-            "actor", "(context.killer or services.characters.avatar())"
-        )
-    elif avatar_fatal_hook:
-        message_dialogue_pair = ("actor", "services.characters.avatar()")
-    elif (
-        required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS and
-        alpha_effect_target is not None
+    if (
+        required_event == "character_melee_attacks_character" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "character"
     ):
         message_dialogue_pair = (
-            alpha_effect_target[0], "services.characters.avatar()"
+            alpha_effect_target[0], beta_effect_target[0]
         )
     elif (
-        required_event in VICTIM_CHARACTER_EVENTS and
-        alpha_effect_target is not None
-    ):
-        message_dialogue_pair = (
-            alpha_effect_target[0],
-            "services.characters.avatar()"
-            if required_event == "character_kills_character" else
-            beta_effect_target[0] if beta_effect_target is not None else None,
-        ) if (
-            required_event == "character_kills_character" or
-            beta_effect_target is not None
-        ) else None
-    elif (
-        required_event in MONSTER_BETA_EVENTS and
-        alpha_effect_target is not None and beta_effect_target is not None
+        required_event == "character_melee_attacks_monster" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "monster"
     ):
         message_dialogue_pair = (
             alpha_effect_target[0], beta_effect_target[0]
@@ -30497,16 +30486,11 @@ def render_eoc(
                         )
                         all_effects_converted = False
             elif isinstance(effect, dict) and "npc_message" in effect:
-                # f_message selects dialogue beta for npc_message (alpha only
-                # when beta is absent).  A known Character target is safe only
-                # behind the native non-NPC visibility condition; NPC_DEATH
-                # uses its killer as beta and falls back to the dead NPC.
+                # f_message selects dialogue beta for npc_message.  Require a
+                # live, explicit Character pair; no-beta alpha fallback and
+                # death paths remain manual until text expansion can preserve
+                # their native lifecycle and dialogue state.
                 npc_message_target = (
-                    "(context.killer or actor)" if npc_fatal_hook else
-                    "actor" if (
-                        avatar_fatal_hook or
-                        required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS
-                    ) else
                     beta_effect_target[0]
                     if beta_effect_target is not None and
                     beta_effect_target[1] == "character" else None
