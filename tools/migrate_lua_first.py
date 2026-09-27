@@ -26340,15 +26340,28 @@ def render_static_condition_math(
 def render_static_line_of_sight_condition(
     condition: dict[str, Any],
 ) -> str | None:
-    """Keep EOC LOS shapes as TODOs until endpoint bounds can be preserved.
+    """Keep EOC LOS shapes partial until dynamic endpoint types are proven.
 
-    The native condition delegates both converted locations to map::sees,
-    which returns false for an out-of-bounds destination but does not require
-    the source endpoint to be in bounds. The Platform query requires both
-    endpoints inside the active map. Context values do not prove that stronger
-    constraint, so even literal-range shapes must remain TODOs.
+    Native ``loc_1`` and ``loc_2`` are ``var_info`` lookups converted through
+    ``diag_value.tripoint()``; missing and legacy-string values therefore have
+    native conversion behavior that an untyped Platform variable read cannot
+    safely assume. Two-ended ``dbl_or_var`` ranges also call native ``rng``.
     """
     return None
+
+
+def contains_line_of_sight_condition(condition: Any) -> bool:
+    if isinstance(condition, dict):
+        if "line_of_sight" in condition:
+            return True
+        return any(
+            contains_line_of_sight_condition(condition[key])
+            for key in ("and", "or", "not")
+            if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_line_of_sight_condition(entry) for entry in condition)
+    return False
 
 
 def render_static_perception_condition(
@@ -29351,6 +29364,12 @@ def render_eoc(
             condition_todo = (
                 "translate u_has_camp only with an explicit camp handle and "
                 "authorized manager handle"
+            )
+        elif contains_line_of_sight_condition(raw_condition):
+            condition_todo = (
+                "translate line_of_sight only after loc_1 and loc_2 are proven "
+                "absolute map-square Tripoint values and dbl_or_var range/RNG "
+                "semantics are preserved"
             )
         elif (
             isinstance(raw_condition, dict) and
