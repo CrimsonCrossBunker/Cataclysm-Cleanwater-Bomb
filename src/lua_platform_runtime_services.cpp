@@ -3231,21 +3231,29 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         return here.is_outside( here.get_bub( absolute ) );
     } );
-    environment.set_function( "line_of_sight", [require_read, require_environment_position](
+    environment.set_function( "line_of_sight",
+                              [require_read, require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & from,
-                                  const cata::lua_platform::script_tripoint_coord & to, const std::int64_t range,
-    const sol::optional<bool> &with_fields ) {
+                                  const cata::lua_platform::script_tripoint_coord & to,
+                                  const double range,
+                                  const sol::optional<bool> &with_fields ) {
         require_read();
-        if( range < 0 || range > 100000 ) {
+        if( !std::isfinite( range ) ) {
             throw std::invalid_argument(
-                "services.gameplay.environment.line_of_sight range must be within 0..100000" );
+                "services.gameplay.environment.line_of_sight range must be finite" );
+        }
+        const double native_range = std::trunc( range );
+        if( native_range < static_cast<double>( std::numeric_limits<int>::lowest() ) ||
+            native_range > static_cast<double>( std::numeric_limits<int>::max() ) ) {
+            throw std::invalid_argument(
+                "services.gameplay.environment.line_of_sight range must truncate to a native int" );
         }
         map &here = get_map();
-        const tripoint_bub_ms first = require_environment_position(
-                                          from, "services.gameplay.environment.line_of_sight" );
-        const tripoint_bub_ms second = require_environment_position(
-                                           to, "services.gameplay.environment.line_of_sight" );
-        return here.sees( first, second, static_cast<int>( range ),
+        const tripoint_bub_ms first = here.get_bub( require_environment_absolute_position(
+                                          from, "services.gameplay.environment.line_of_sight" ) );
+        const tripoint_bub_ms second = here.get_bub( require_environment_absolute_position(
+                                           to, "services.gameplay.environment.line_of_sight" ) );
+        return here.sees( first, second, static_cast<int>( native_range ),
                           with_fields.value_or( true ) );
     } );
     environment.set_function( "furniture_has_flag", [require_read](

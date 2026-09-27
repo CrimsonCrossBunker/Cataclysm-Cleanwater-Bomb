@@ -10960,10 +10960,10 @@ function CcbPlatformEnvironmentQueries.is_night() end
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
 
----@param from TripointCoord Absolute map-square coordinate inside the active map.
----@param to TripointCoord Absolute map-square coordinate inside the active map.
----@param range integer Non-negative maximum range.
----@param with_fields? boolean Defaults to true.
+---@param from TripointCoord Absolute map-square coordinate; the source may be outside the active map.
+---@param to TripointCoord Absolute map-square coordinate; map::sees returns false when the target is outside the active map.
+---@param range number Finite value whose truncation toward zero fits native int. A negative native range disables the distance limit.
+---@param with_fields? boolean Defaults to true; false ignores fields when checking transparency.
 ---@return boolean visible
 function CcbPlatformEnvironmentQueries.line_of_sight(from, to, range, with_fields) end
 

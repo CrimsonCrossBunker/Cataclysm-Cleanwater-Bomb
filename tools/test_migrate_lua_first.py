@@ -17776,6 +17776,56 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             },
                             "effect": {"message": "must stay partial"},
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "fractional_line_of_sight",
+                            "required_event": "game_start",
+                            "condition": {
+                                "line_of_sight": 1.9,
+                                "loc_1": {"context_val": "origin"},
+                                "loc_2": {"context_val": "target"},
+                            },
+                            "effect": {"message": "must stay partial"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "negative_line_of_sight",
+                            "required_event": "game_start",
+                            "condition": {
+                                "line_of_sight": -1.9,
+                                "loc_1": {"context_val": "origin"},
+                                "loc_2": {"context_val": "target"},
+                                "with_fields": True,
+                            },
+                            "effect": {"message": "must stay partial"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "random_line_of_sight_range",
+                            "required_event": "game_start",
+                            "condition": {
+                                "line_of_sight": [1, 3],
+                                "loc_1": {"context_val": "origin"},
+                                "loc_2": {"context_val": "target"},
+                                "with_fields": False,
+                            },
+                            "effect": {"message": "must stay partial"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "nested_line_of_sight",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    {
+                                        "line_of_sight": 2,
+                                        "loc_1": {"context_val": "origin"},
+                                        "loc_2": {"context_val": "target"},
+                                    }
+                                ]
+                            },
+                            "effect": {"message": "must stay partial"},
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -17787,16 +17837,32 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 0)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 6)
             self.assertNotIn(
                 "services.gameplay.environment.line_of_sight(", main
             )
             self.assertIn(
-                "EOC literal_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC literal_line_of_sight condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
                 report,
             )
             self.assertIn(
-                "EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC dynamic_line_of_sight condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
+                report,
+            )
+            self.assertIn(
+                "EOC fractional_line_of_sight condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
+                report,
+            )
+            self.assertIn(
+                "EOC negative_line_of_sight condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
+                report,
+            )
+            self.assertIn(
+                "EOC random_line_of_sight_range condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
+                report,
+            )
+            self.assertIn(
+                "EOC nested_line_of_sight condition TODO: translate line_of_sight only after loc_1 and loc_2 are proven absolute map-square Tripoint values and dbl_or_var range/RNG semantics are preserved",
                 report,
             )
             self.assertNotIn("run_eoc", main)

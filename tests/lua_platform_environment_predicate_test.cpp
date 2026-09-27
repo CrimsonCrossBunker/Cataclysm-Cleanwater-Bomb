@@ -3,6 +3,7 @@
 #include <array>
 #include <functional>
 #include <initializer_list>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,12 +15,14 @@
 #include "condition.h"
 #include "coordinates.h"
 #include "dialogue.h"
+#include "field_type.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "map_scale_constants.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
@@ -28,6 +31,9 @@
 #include "type_id.h"
 #include "weather.h"
 #include "weather_type.h"
+
+static const field_type_str_id field_fd_web( "fd_web" );
+static const ter_str_id ter_t_floor( "t_floor" );
 
 namespace cata::lua_platform
 {
@@ -203,6 +209,109 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
         creature_snapshot_query();
     REQUIRE( creature_snapshot_result.valid() );
     CHECK( creature_snapshot_result.get<bool>() == is_creature_outside( get_avatar() ) );
+}
+
+TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
+           "[lua][platform][environment_predicate][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    clear_map_without_vision();
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "environment_line_of_sight", 4903, lua );
+    on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    map &here = get_map();
+    const int map_width = here.getmapsize() * SEEX;
+    const tripoint_bub_ms from( map_width / 2, map_width / 2, 0 );
+    const tripoint_bub_ms range_from = from;
+    const tripoint_bub_ms range_middle = from + tripoint_rel_ms( 1, 0, 0 );
+    const tripoint_bub_ms range_to = from + tripoint_rel_ms( 2, 0, 0 );
+    const tripoint_bub_ms field_from = from + tripoint_rel_ms( 0, 2, 0 );
+    const tripoint_bub_ms field_middle = from + tripoint_rel_ms( 0, 3, 0 );
+    const tripoint_bub_ms field_to = from + tripoint_rel_ms( 0, 4, 0 );
+    for( const tripoint_bub_ms &position : {
+             range_from, range_middle, range_to,
+             field_from, field_middle, field_to
+         } ) {
+        REQUIRE( here.inbounds( position ) );
+        here.ter_set( position, ter_t_floor );
+    }
+    REQUIRE( here.add_field( field_middle, field_fd_web.id(), 3, 0_turns, false ) );
+    here.build_map_cache( 0, false );
+
+    auto set_positions = [&]( const tripoint_bub_ms &source,
+                              const tripoint_bub_ms &target ) {
+        lua["from"] = script_tripoint_coord::from_native(
+                           coords::origin::abs, coords::scale::map_square,
+                           here.get_abs( source ).raw() );
+        lua["to"] = script_tripoint_coord::from_native(
+                         coords::origin::abs, coords::scale::map_square,
+                         here.get_abs( target ).raw() );
+    };
+    set_positions( field_from, field_to );
+    lua["range"] = 2.0;
+    const sol::protected_function default_fields_query = lua.load(
+                "return services.gameplay.environment.line_of_sight(from, to, range)" );
+    const sol::protected_function_result with_fields = default_fields_query();
+    REQUIRE( with_fields.valid() );
+    CHECK_FALSE( here.sees( field_from, field_to, 2 ) );
+    CHECK( with_fields.get<bool>() == here.sees( field_from, field_to, 2 ) );
+
+    const sol::protected_function no_fields_query = lua.load(
+                "return services.gameplay.environment.line_of_sight(from, to, range, false)" );
+    const sol::protected_function_result without_fields = no_fields_query();
+    REQUIRE( without_fields.valid() );
+    CHECK( here.sees( field_from, field_to, 2, false ) );
+    CHECK( without_fields.get<bool>() == here.sees( field_from, field_to, 2, false ) );
+
+    set_positions( range_from, range_to );
+    for( const double range : std::array<double, 6>{
+             -1.9, -0.9, 1.9, 2.9,
+             static_cast<double>( std::numeric_limits<int>::lowest() ),
+             static_cast<double>( std::numeric_limits<int>::max() )
+         } ) {
+        CAPTURE( range );
+        lua["range"] = range;
+        const sol::protected_function_result actual = no_fields_query();
+        REQUIRE( actual.valid() );
+        CHECK( actual.get<bool>() == here.sees(
+                   range_from, range_to, static_cast<int>( range ), false ) );
+    }
+    for( const double invalid_range : std::array<double, 5>{
+             static_cast<double>( std::numeric_limits<int>::lowest() ) - 1.0,
+             static_cast<double>( std::numeric_limits<int>::max() ) + 1.0,
+             std::numeric_limits<double>::max(),
+             std::numeric_limits<double>::infinity(),
+             std::numeric_limits<double>::quiet_NaN()
+         } ) {
+        CAPTURE( invalid_range );
+        lua["range"] = invalid_range;
+        CHECK_FALSE( no_fields_query().valid() );
+    }
+
+    const tripoint_bub_ms edge_target( map_width - 1, range_from.y(), range_from.z() );
+    const tripoint_bub_ms outside_source( map_width, range_from.y(), range_from.z() );
+    REQUIRE( here.inbounds( edge_target ) );
+    REQUIRE_FALSE( here.inbounds( outside_source ) );
+    set_positions( outside_source, edge_target );
+    lua["range"] = 1.0;
+    const sol::protected_function_result outside_source_result = default_fields_query();
+    REQUIRE( outside_source_result.valid() );
+    CHECK( outside_source_result.get<bool>() == here.sees( outside_source, edge_target, 1 ) );
+
+    set_positions( edge_target, outside_source );
+    const sol::protected_function_result outside_target_result = default_fields_query();
+    REQUIRE( outside_target_result.valid() );
+    CHECK_FALSE( outside_target_result.get<bool>() );
+    CHECK( outside_target_result.get<bool>() == here.sees( edge_target, outside_source, 1 ) );
 }
 
 #endif
