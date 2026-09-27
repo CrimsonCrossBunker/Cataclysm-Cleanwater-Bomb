@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <talker_character.h>
 
 namespace
 {
@@ -87,6 +88,36 @@ struct platform_equipment_fixture {
     sol::table services;
     bool write_called = false;
 };
+
+TEST_CASE( "lua_platform_inventory_weapon_state_matches_native_stow_condition",
+           "[lua][platform][inventory][weapon][semantic]" )
+{
+    platform_equipment_fixture fixture( 207, 1, 6207 );
+    const sol::protected_function weapon_state =
+        fixture.services["inventory"]["weapon_state"];
+    const auto check_native_match = [&]() {
+        const talker_character_const native_actor( &fixture.actor );
+        const bool native_armed =
+            !native_actor.unarmed_attack() &&
+            static_cast<bool>( fixture.actor.get_wielded_item() );
+        const bool native_can_stow =
+            !native_actor.unarmed_attack() && native_actor.can_stash_weapon();
+        const sol::protected_function_result result = weapon_state(
+                    fixture.actor_handle );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        CHECK( value["armed"].get<bool>() == native_armed );
+        CHECK( value["can_stow"].get<bool>() == native_can_stow );
+    };
+
+    check_native_match();
+    item wielded_value( itype_id( "rock" ), calendar::turn_zero );
+    REQUIRE( fixture.actor.Character::wield(
+                 wielded_value, std::nullopt, false ) );
+    check_native_match();
+}
 
 TEST_CASE( "lua_platform_equipment_wield_inventory_to_wield",
            "[lua][platform][equipment]" )

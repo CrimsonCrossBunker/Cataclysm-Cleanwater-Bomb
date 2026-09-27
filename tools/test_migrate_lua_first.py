@@ -16823,12 +16823,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 ("npc_has_items_sum", "npc_becomes_hostile", {
                     "npc_has_items_sum": [{"item": "scrap", "amount": 2}]
                 }),
-                ("u_can_stow_weapon", "game_start", "u_can_stow_weapon"),
-                (
-                    "npc_can_stow_weapon",
-                    "npc_becomes_hostile",
-                    "npc_can_stow_weapon",
-                ),
                 ("u_has_stolen_item", "game_start", "u_has_stolen_item"),
                 ("npc_has_stolen_item", "npc_becomes_hostile", "npc_has_stolen_item"),
             ]
@@ -16863,6 +16857,151 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     report,
                 )
             self.assertNotIn("has no native Platform registrar", report)
+
+    def test_can_stow_weapon_conditions_require_proven_native_characters(self) -> None:
+        u_expression = migrate_lua_first.render_eoc_condition_expression(
+            "u_can_stow_weapon", avatar_actor_proven=True,
+        )
+        npc_expression = migrate_lua_first.render_eoc_condition_expression(
+            "npc_can_stow_weapon", npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertEqual(
+            u_expression,
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc") and '
+            "service_value(services.inventory.weapon_state(actor)).can_stow",
+        )
+        self.assertEqual(
+            npc_expression,
+            '(function() local beta = context and context.actors and '
+            'context.actors.beta; if beta == nil or beta.kind ~= "creature" '
+            'or (beta.subtype ~= "avatar" and beta.subtype ~= "character" '
+            'and beta.subtype ~= "npc") then return false end; return '
+            'service_value(services.inventory.weapon_state(beta)).can_stow end)()',
+        )
+        for condition, provenance in (
+            ("u_can_stow_weapon", {"creature_actor_proven": True}),
+            ("npc_can_stow_weapon", {"npc_actor_proven": True}),
+            (
+                "npc_can_stow_weapon",
+                {"npc_dialogue_pair_proven": True, "npc_actor_expression": "actor"},
+            ),
+            (
+                "npc_can_stow_weapon",
+                {"npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "(context.actors and context.actors.beta) or actor"},
+            ),
+        ):
+            with self.subTest(condition=condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, **provenance
+                    )
+                )
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "stow_weapon_topic",
+                "responses": [{"true_eocs": "dialogue_can_stow"}],
+            },
+        )
+        dialogue_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "dialogue_can_stow",
+                "condition": "npc_can_stow_weapon",
+                "effect": {"message": "stowed"},
+            },
+        )
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, dialogue_eoc]
+        )
+        paired = migrate_lua_first.render_eoc(
+            dialogue_eoc, migrate_lua_first.MigrationResult(),
+            talker_pair_ids=pair_ids,
+            npc_dialogue_mission_pair_ids=pair_ids,
+        )
+        self.assertIn(
+            "services.inventory.weapon_state(context.actors.beta)", paired
+        )
+
+        npc_event_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 2, {
+                "type": "effect_on_condition", "id": "single_npc_stow",
+                "required_event": "npc_becomes_hostile",
+                "condition": "npc_can_stow_weapon",
+                "effect": {"message": "stowed"},
+            },
+        )
+        single_actor = migrate_lua_first.render_eoc(
+            npc_event_eoc, migrate_lua_first.MigrationResult(),
+            npc_dialogue_mission_pair_ids=frozenset(),
+        )
+        self.assertNotIn("services.inventory.weapon_state(", single_actor)
+        self.assertIn(
+            "condition TODO: translate the legacy condition into a Lua predicate",
+            single_actor,
+        )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_can_stow_weapon_lowering_propagates_weapon_state_results(self) -> None:
+        u_expression = migrate_lua_first.render_eoc_condition_expression(
+            "u_can_stow_weapon", avatar_actor_proven=True,
+        )
+        npc_expression = migrate_lua_first.render_eoc_condition_expression(
+            "npc_can_stow_weapon", npc_dialogue_pair_proven=True,
+            npc_actor_expression="context.actors.beta",
+        )
+        self.assertIsNotNone(u_expression)
+        self.assertIsNotNone(npc_expression)
+        script = r"""
+local actor={kind='creature',subtype='avatar'}
+local beta={kind='creature',subtype='npc'}
+local context={actors={beta=beta}}
+local calls={}
+local services={inventory={weapon_state=function(target)
+ calls[#calls+1]=target
+ return {ok=true,value={armed=true,can_stow=target.stow}}
+end}}
+local function service_value(result)
+ if not result.ok then error(result.error.code) end
+ return result.value
+end
+actor.stow=true
+assert(U_EXPRESSION)
+assert(calls[#calls]==actor)
+actor.stow=false
+assert(not (U_EXPRESSION))
+assert(calls[#calls]==actor)
+actor.subtype='monster'
+local before=#calls
+assert(not (U_EXPRESSION))
+assert(#calls==before)
+context=nil
+assert(not (NPC_EXPRESSION))
+assert(#calls==before)
+context={actors={}}
+assert(not (NPC_EXPRESSION))
+assert(#calls==before)
+context={actors={beta={kind='creature',subtype='monster',stow=true}}}
+assert(not (NPC_EXPRESSION))
+assert(#calls==before)
+beta.stow=true
+context={actors={beta=beta}}
+assert(NPC_EXPRESSION)
+assert(calls[#calls]==beta)
+services.inventory.weapon_state=function()
+ return {ok=false,error={code='stale_handle'}}
+end
+actor.subtype='avatar'
+assert(not pcall(function() return U_EXPRESSION end))
+""".replace("U_EXPRESSION", u_expression).replace(
+            "NPC_EXPRESSION", npc_expression
+        )
+        result = subprocess.run([shutil.which("lua"), "-"], input=script,
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_inventory_and_world_effects_lower_only_bounded_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

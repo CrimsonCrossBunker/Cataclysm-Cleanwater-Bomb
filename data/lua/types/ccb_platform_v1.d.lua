@@ -9295,6 +9295,14 @@ function CcbItemsApi.clear_old_owner(item_handle) end
 ---@class CcbInventoryApi
 local CcbInventoryApi = {}
 
+---@class CcbInventoryWeaponState
+---@field armed boolean True when the Character has a wielded item selected for attacks.
+---@field can_stow boolean Native stow result, including weapon-bionic deactivation and current storage capacity.
+---@field can_drop boolean Whether the armed Character's wielded item can be dropped.
+---The native NO_UNWIELD flag prevents dropping; an unarmed Character returns false.
+---@field id? GameId Wielded item type id, when an item is wielded.
+---@field uid? integer Wielded item UID, when an item is wielded.
+
 ---@param character GameHandle Exact live Character handle.
 ---@param candidates GameHandle[] Exact item handles belonging to character.
 ---@param title? string
@@ -9360,8 +9368,10 @@ function CcbInventoryApi.wielded_matches(character, criterion) end
 ---@param owner GameHandle Exact live Character handle.
 ---@return CcbResult
 function CcbInventoryApi.has_stolen_from(holder, owner) end
+---Read native weapon state without changing equipment.
+---`can_stow` is false when the Character has no selected wielded weapon.
 ---@param character GameHandle Exact live Character handle.
----@return CcbResult
+---@return CcbResult result `value` is a detached CcbInventoryWeaponState.
 function CcbInventoryApi.weapon_state(character) end
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
