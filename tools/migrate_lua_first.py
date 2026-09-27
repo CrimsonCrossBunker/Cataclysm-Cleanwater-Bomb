@@ -27077,6 +27077,69 @@ def render_npc_selected_generic_rewards_condition(
     )
 
 
+def render_static_items_sum_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower bounded static weighted sums with exact native actor roles."""
+    selector = next(iter(condition), None)
+    if selector not in {"u_has_items_sum", "npc_has_items_sum"} or \
+            set(condition) != {selector}:
+        return None
+    requested = condition[selector]
+    if not isinstance(requested, list) or not 1 <= len(requested) <= 128:
+        return None
+
+    entries: list[str] = []
+    for row in requested:
+        if (
+            not isinstance(row, dict) or
+            set(row) - {"item", "amount"} or
+            not bounded_platform_id(row.get("item"))
+        ):
+            return None
+        desired = finite_number_literal(row.get("amount", 1))
+        if desired is None or not 0 < desired <= 1000000000:
+            return None
+        entries.append(
+            "{ item = services.types.id(\"item\", " +
+            lua_quote(row["item"]) + "), amount = " + lua_number(desired) + " }"
+        )
+
+    if selector == "u_has_items_sum":
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+            local_name = "alpha"
+        elif avatar_actor_proven:
+            target = "actor"
+            local_name = "alpha"
+        else:
+            return None
+    else:
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    rendered_entries = ",\n".join(
+        f"            {entry}" for entry in entries
+    )
+    return (
+        "(function()\n"
+        f"    local {local_name} = {target}\n"
+        f"    if {local_name} == nil or {character_guard} then return false end\n"
+        "    return service_value(services.inventory.has_items_sum(\n"
+        f"        {local_name}, {{\n{rendered_entries}\n        }}))\n"
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -27931,11 +27994,10 @@ def render_eoc_condition_expression(
         if not checks:
             return None
         return " and ".join(f"({check})" for check in checks)
-    # The native condition adds faction-owned vehicle cargo to the local
-    # crafting inventory. Platform has_items_sum currently sees only the
-    # character crafting inventory, so preserve a TODO until parity exists.
     if "u_has_items_sum" in condition or "npc_has_items_sum" in condition:
-        return None
+        return render_static_items_sum_condition(
+            condition, avatar_actor_proven, npc_dialogue_pair_proven,
+        )
     for item_key, actor_proven in (
         ("u_has_item_with_flag", avatar_actor_proven),
         ("npc_has_item_with_flag", npc_actor_proven),
