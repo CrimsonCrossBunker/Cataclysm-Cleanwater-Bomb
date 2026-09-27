@@ -9338,8 +9338,8 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@class CcbNpcMissionsState
 ---@field provider_id integer Exact NPC provider id.
 ---@field available CcbNpcMissionPage Missions currently offered by the provider.
----@field assigned CcbNpcMissionPage Missions assigned through the provider.
----@field selected? CcbNpcMissionSnapshot Provider-selected mission, when live.
+---@field assigned CcbNpcMissionPage All missions assigned through this provider.
+---@field selected? CcbNpcMissionSnapshot Provider-selected mission, when live; selection is provider-scoped and is not owner-filtered.
 ---@field selected_stale? boolean True when the provider's selected mission is no longer live.
 ---@field selected_invalid? boolean True when a live selected mission is not uniquely owned by this provider.
 
@@ -9392,6 +9392,10 @@ local CcbNpcMissionsApi = {}
 ---@param provider GameHandle Exact live NPC provider handle; no ambient provider is selected.
 ---@return CcbResult result `value` is a CcbNpcMissionsState.
 function CcbNpcMissionsApi.state(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact live avatar dialogue-partner handle.
+---@return CcbResult result `value` is the owner's assigned CcbNpcMissionPage, matching native dialogue mission ownership.
+function CcbNpcMissionsApi.assigned_for_owner(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
 ---@return CcbResult result `value` is a CcbNpcMissionsStateResult.

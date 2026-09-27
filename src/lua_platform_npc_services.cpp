@@ -469,7 +469,8 @@ sol::table npc_mission_collection(
     sol::state_view lua, const std::vector<mission *> &source,
     const character_id &provider_id,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const std::optional<character_id> &assigned_owner = std::nullopt )
 {
     const std::size_t capacity = std::min(
                                      source.size(), maximum_npc_mission_results );
@@ -479,7 +480,9 @@ sol::table npc_mission_collection(
     std::size_t output = 0;
     for( mission *entry : source ) {
         if( !live_mission_pointer( entry ) ||
-            entry->get_npc_id() != provider_id ) {
+            entry->get_npc_id() != provider_id ||
+            ( assigned_owner &&
+              entry->get_assigned_player_id() != *assigned_owner ) ) {
             continue;
         }
         ++total;
@@ -602,6 +605,37 @@ sol::table get_npc_mission_provider_state(
                        state, *provider,
                        runtime_generation,
                        world_generation ) ) );
+}
+
+sol::table get_npc_mission_assigned_for_owner(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle &owner_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native dialogue snapshots assigned missions only for the talker's
+    // assigned player.  Return just that owner-filtered collection so callers
+    // cannot confuse provider-wide selection with dialogue-owned state.
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, npc_mission_collection(
+                       state, provider->chatbin.missions_assigned,
+                       provider->getID(), runtime_generation,
+                       world_generation, owner->getID() ) ) );
 }
 
 sol::table select_npc_mission(
@@ -1792,6 +1826,17 @@ void install_npc_domain_services(
                    current_runtime_generation(),
                    current_world_generation() );
     } );
+    missions.set_function(
+        "assigned_for_owner",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider,
+            const game_handle & owner ) {
+            require_read();
+            return get_npc_mission_assigned_for_owner(
+                       state, provider, owner,
+                       current_runtime_generation(),
+                       current_world_generation() );
+        } );
     missions.set_function(
         "select",
         [current_runtime_generation, current_world_generation, require_write](

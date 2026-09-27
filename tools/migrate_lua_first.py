@@ -1715,6 +1715,79 @@ def _content_callback_actor_provenance(
     )
 
 
+def _npc_dialogue_mission_pair_provenance(
+    objects: Iterable[SourceObject],
+) -> frozenset[str]:
+    """Prove direct talk-topic callbacks have native dialogue mission state.
+
+    Generic alpha/beta provenance includes spell and monster callbacks, and
+    EOC reference closure can cross delayed or actor-rebinding edges.  Only
+    direct ``true_eocs``/``false_eocs`` callbacks from talk topics qualify;
+    every known alternate call site and independent trigger removes that
+    proof.
+    """
+    materialized = list(objects)
+    known_ids = {
+        stable_id(source.value, f"anonymous_{source.index}")
+        for source in materialized
+        if source.value.get("type") in EOC_TYPES
+    }
+    talk_topic_seeds: set[str] = set()
+    other_source_references: set[str] = set()
+    independent_eoc_triggers = {
+        "required_event", "eoc_type", "recurrence", "global"
+    }
+    unsafe_topic_edges = {
+        "delay", "time_in_future", "actor", "actor_override",
+        "alpha", "beta", "speaker", "interlocutor",
+        "run_eocs", "u_run_npc_eocs", "npc_run_npc_eocs",
+    }
+    unsafe_topic_references: set[str] = set()
+
+    def collect_topic_callbacks(
+        source: SourceObject, node: Any, unsafe: bool = False,
+    ) -> None:
+        if isinstance(node, list):
+            for entry in node:
+                collect_topic_callbacks(source, entry, unsafe)
+            return
+        if not isinstance(node, dict):
+            return
+        unsafe = unsafe or bool(unsafe_topic_edges.intersection(node))
+        for key, entry in node.items():
+            if key in EOC_REFERENCE_FIELDS:
+                references = _collect_eoc_references(
+                    [SourceObject(source.path, source.index, {key: entry})],
+                    known_ids,
+                )
+                if (
+                    key in {"true_eocs", "false_eocs"} and not unsafe
+                ):
+                    talk_topic_seeds.update(references)
+                else:
+                    unsafe_topic_references.update(references)
+            else:
+                collect_topic_callbacks(source, entry, unsafe)
+
+    for source in materialized:
+        kind = source.value.get("type")
+        references = set(_collect_eoc_references([source], known_ids))
+        if kind in EOC_TYPES:
+            identifier = stable_id(source.value, f"anonymous_{source.index}")
+            other_source_references.update(references - {identifier})
+            if any(key in source.value for key in independent_eoc_triggers):
+                other_source_references.add(identifier)
+        elif kind == "talk_topic":
+            collect_topic_callbacks(source, source.value)
+        else:
+            other_source_references.update(references)
+
+    # Do not propagate through EOC-to-EOC edges: the nested callback may be
+    # delayed, rebinding actors, or invoked by another non-dialogue caller.
+    other_source_references.update(unsafe_topic_references)
+    return frozenset(talk_topic_seeds - other_source_references)
+
+
 @dataclass(frozen=True)
 class SourceObject:
     path: Path
@@ -26586,6 +26659,40 @@ def render_trait_condition(
     return query(raw)
 
 
+def render_npc_assigned_mission_count_condition(
+    condition: str, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower assigned-count aliases only for an exact dialogue actor pair."""
+    if (
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta"
+    ):
+        return None
+    if condition == "has_no_assigned_mission":
+        comparison, count = "==", 0
+    elif condition == "has_assigned_mission":
+        comparison, count = "==", 1
+    elif condition == "has_many_assigned_missions":
+        comparison, count = ">=", 2
+    else:
+        return None
+    return (
+        "(function() "
+        "local actors = context and context.actors; "
+        "local alpha = actors and actors.alpha; "
+        "local beta = actors and actors.beta; "
+        "if alpha == nil or alpha.kind ~= \"creature\" or "
+        "alpha.subtype ~= \"avatar\" or beta == nil or "
+        "beta.kind ~= \"creature\" or beta.subtype ~= \"npc\" then "
+        "return false end; "
+        "local dialogue_missions = service_value(" 
+        "services.npcs.missions.assigned_for_owner(beta, alpha)); "
+        f"return dialogue_missions.total {comparison} {count} "
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -26596,6 +26703,7 @@ def render_eoc_condition_expression(
     npc_actor_expression: str | None = None,
     generic_character_actor_proven: bool = False,
     training_pair_proven: bool = False,
+    npc_dialogue_pair_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -26733,6 +26841,13 @@ def render_eoc_condition_expression(
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
+        assigned_mission_count = \
+            render_npc_assigned_mission_count_condition(
+                condition, npc_dialogue_pair_proven,
+                npc_actor_expression,
+            )
+        if assigned_mission_count is not None:
+            return assigned_mission_count
         # These selectors ask native has_effect(..., NULL_ID), while the
         # Platform effects.has default searches all body parts.
         if condition in {"u_available", "npc_available"}:
@@ -27075,6 +27190,7 @@ def render_eoc_condition_expression(
                     npc_actor_expression,
                     generic_character_actor_proven,
                     training_pair_proven,
+                    npc_dialogue_pair_proven,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -27194,6 +27310,7 @@ def render_eoc_condition_expression(
                 npc_actor_expression,
                 generic_character_actor_proven,
                 training_pair_proven,
+                npc_dialogue_pair_proven,
             )
             for entry in entries
         ]
@@ -27210,6 +27327,7 @@ def render_eoc_condition_expression(
             npc_actor_expression,
             generic_character_actor_proven,
             training_pair_proven,
+            npc_dialogue_pair_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -28406,6 +28524,7 @@ def render_eoc(
     global_eoc_ids: frozenset[str] = frozenset(),
     talker_pair_ids: frozenset[str] = frozenset(),
     content_primary_actor_ids: frozenset[str] = frozenset(),
+    npc_dialogue_mission_pair_ids: frozenset[str] = frozenset(),
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -28457,6 +28576,9 @@ def render_eoc(
         value.get("__inline_actor_kind") == "monster"
     )
     talker_pair_override = eoc_id in talker_pair_ids
+    npc_dialogue_mission_pair_proven = (
+        eoc_id in npc_dialogue_mission_pair_ids
+    )
     content_primary_actor_override = eoc_id in content_primary_actor_ids
     generic_talker_actor_override = _node_has_generic_talker_type_condition(value)
     vehicle_actor_override = (
@@ -28827,6 +28949,7 @@ def render_eoc(
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
+            npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -28869,6 +28992,7 @@ def render_eoc(
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
+            npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
@@ -33452,6 +33576,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
     ) = (
         _content_callback_actor_provenance(objects)
     )
+    npc_dialogue_mission_pair_ids = \
+        _npc_dialogue_mission_pair_provenance(objects)
     character_override_ids = frozenset(
         set(character_override_ids) | set(content_character_actor_ids)
     )
@@ -33755,6 +33881,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     global_eoc_ids,
                     talker_pair_ids,
                     content_primary_actor_ids,
+                    npc_dialogue_mission_pair_ids,
                 )
             )
         elif kind == "tool_quality":
