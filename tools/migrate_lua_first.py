@@ -26729,7 +26729,18 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
-        if selector in {"u_has_trait", "npc_has_trait"}:
+        if selector in {
+            "u_has_trait", "npc_has_trait",
+            "u_has_any_trait", "npc_has_any_trait",
+        }:
+            if (
+                selector in {"u_has_any_trait", "npc_has_any_trait"} and
+                isinstance(identifier, dict) and "mutator" in identifier
+            ):
+                # Some native str_or_var mutators consume RNG or depend on
+                # both dialogue actors.  Keep list order/short-circuit, but
+                # do not replace those callback semantics without parity proof.
+                return None
             if isinstance(identifier, dict):
                 raw_id = render_participant_string_expression(
                     identifier, target, alpha, beta,
@@ -26760,8 +26771,7 @@ def render_trait_condition(
                 f"end)({character_expression})"
             )
         null_safe_id = selector in {
-            "u_has_any_trait", "npc_has_any_trait", "u_is_trait_purifiable",
-            "npc_is_trait_purifiable",
+            "u_is_trait_purifiable", "npc_is_trait_purifiable",
         }
         if null_safe_id:
             if isinstance(identifier, dict):
