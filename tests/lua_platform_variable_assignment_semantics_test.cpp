@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -227,6 +228,24 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
         }
     };
 
+    const time_point original_turn = calendar::turn;
+    const on_out_of_scope restore_turn( [original_turn]() {
+        calendar::turn = original_turn;
+    } );
+    const auto check_native_int_turn = [&]( const int turns ) {
+        calendar::turn = time_point::from_turn( turns );
+        lua["expected_native_int_turn"] = turns;
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            assert(ccb.services.turn_native_int() == expected_native_int_turn)
+        )" );
+    };
+    check_native_int_turn( to_turn<int>( original_turn ) );
+    check_native_int_turn( 0 );
+    check_native_int_turn( std::numeric_limits<int>::max() );
+    check_native_int_turn( std::numeric_limits<int>::min() );
+    calendar::turn = original_turn;
+
     player.remove_value( u_key );
     partner.remove_value( npc_key );
     CHECK( player.maybe_get_value( u_key ) == nullptr );
@@ -323,6 +342,33 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
         )" );
     }
     CHECK( player.get_value( time_key ).str() == time_value );
+    CHECK( observer.changes.size() == events_before_time );
+
+    const std::string npc_time_key = "lua_semantic_npc_time_assignment";
+    apply_talk_effect( context,
+                       R"({
+                           "npc_add_var":"lua_semantic_npc_time_assignment",
+                           "time":true,
+                           "value":17,
+                           "possible_values":["ignored"]
+                       })",
+                       "lua_platform_npc_add_var_time_semantics" );
+    CHECK( partner.get_value( npc_time_key ).str() == time_value );
+    CHECK( observer.changes.size() == events_before_time );
+    partner.remove_value( npc_time_key );
+    lua["npc_time_key"] = npc_time_key;
+    lua["time_value"] = time_value;
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        run_platform_write( R"(
+            local turn_text = tostring(ccb.services.turn_native_int())
+            assert(turn_text == time_value)
+            local result = ccb.services.variables.set(
+                partner_owner, npc_time_key, turn_text, {include_before = false})
+            assert(result.ok and not result.value.existed)
+        )" );
+    }
+    CHECK( partner.get_value( npc_time_key ).str() == time_value );
     CHECK( observer.changes.size() == events_before_time );
 
     // Legacy lose-var effects and Platform removal only erase the selected

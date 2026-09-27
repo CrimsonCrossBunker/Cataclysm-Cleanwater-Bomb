@@ -5249,7 +5249,13 @@ def render_static_false_effect(
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and ("u_add_var" in effect or "npc_add_var" in effect):
         key = "u_add_var" if "u_add_var" in effect else "npc_add_var"
-        target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        target = (
+            _proven_character_variable_target(effect_actor_targets, key)
+            if key == "npc_add_var" else
+            _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        )
+        if key == "npc_add_var" and effect.get("time", False) is not True:
+            return None
         rendered = render_static_character_variable(effect, key, target)
         if rendered is None:
             return None
@@ -25150,7 +25156,7 @@ def render_static_character_variable(
     ):
         return None
     if time_value:
-        value_expression = "tostring(services.turn())"
+        value_expression = "tostring(services.turn_native_int())"
         lines = [
             "    services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
@@ -25163,6 +25169,11 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
+    if key == "npc_add_var":
+        # Native calls global rng(0, N) even for one value.  Platform's
+        # runtime-local RNG cannot preserve that side effect, so only the
+        # non-random time branch is migrated for beta variables.
+        return None
     # Native variable storage and its event preserve the complete Lua string.
     if values:
         if (
@@ -29503,15 +29514,17 @@ def render_eoc(
                 key = "u_add_var" if "u_add_var" in effect else "npc_add_var"
                 target_expression = (
                     "actor" if key == "u_add_var" and character_actor_proven
-                    else (npc_actor_expression or "actor")
-                    if key == "npc_add_var" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
+                    else _proven_character_variable_target(
+                        effect_actor_targets, key
+                    ) if key == "npc_add_var"
                     else None
                 )
-                rendered = render_static_character_variable(
-                    effect, key, target_expression
+                rendered = (
+                    None if key == "npc_add_var" and
+                    effect.get("time", False) is not True else
+                    render_static_character_variable(
+                        effect, key, target_expression
+                    )
                 )
                 if rendered is not None:
                     lines.extend(rendered)

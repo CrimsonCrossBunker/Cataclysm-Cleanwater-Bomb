@@ -11110,6 +11110,10 @@ function CcbPlatformServices.translate_plural(singular, plural, count, context) 
 ---@return integer
 function CcbPlatformServices.turn() end
 
+---Return the current turn using the native int conversion used by legacy effects.
+---@return integer
+function CcbPlatformServices.turn_native_int() end
+
 ---@param character GameHandle Exact live Character handle; no implicit avatar is selected.
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbPlatformServices.character_snapshot(character) end

@@ -3830,7 +3830,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn('values[services.random.int(1, #values)]', main)
-            self.assertIn('tostring(services.turn())', main)
+            self.assertIn('tostring(services.turn_native_int())', main)
             self.assertIn('context.data["required"] ~= nil', main)
             self.assertIn("1 == 1", main)
             self.assertIn('copy_source_key = "u", actor, "source"', main)
@@ -3917,15 +3917,25 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             ("npc_add_var", "npc_owner"),
         ):
             for name in valid_names:
+                effect = (
+                    {selector: name, "time": True}
+                    if selector == "npc_add_var" else
+                    {selector: name, "value": "ok"}
+                )
                 self.assertIsNotNone(
                     migrate_lua_first.render_static_character_variable(
-                        {selector: name, "value": "ok"}, selector, target
+                        effect, selector, target
                     )
                 )
             for name in invalid_names:
+                effect = (
+                    {selector: name, "time": True}
+                    if selector == "npc_add_var" else
+                    {selector: name, "value": "ok"}
+                )
                 self.assertIsNone(
                     migrate_lua_first.render_static_character_variable(
-                        {selector: name, "value": "ok"}, selector, target
+                        effect, selector, target
                     )
                 )
 
@@ -4069,7 +4079,6 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
     def test_character_variable_add_preserves_changed_events(self) -> None:
         cases = (
             ("u_add_var", "u_val", "ready", "u_owner"),
-            ("npc_add_var", "context_val", "npc-ready", "npc_owner"),
         )
         rendered = {}
         for selector, name, value, target in cases:
@@ -4092,6 +4101,15 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         )
         time_lines = migrate_lua_first.render_static_character_variable(
             {"u_add_var": "turn", "time": True}, "u_add_var", "u_owner",
+        )
+        npc_time_lines = migrate_lua_first.render_static_character_variable(
+            {
+                "npc_add_var": "npc_turn",
+                "time": True,
+                "value": 17,
+                "possible_values": ["ignored"],
+            },
+            "npc_add_var", "npc_owner",
         )
         priority_lines = migrate_lua_first.render_static_character_variable(
             {
@@ -4154,8 +4172,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         self.assertIsNotNone(choice_lines)
         self.assertIsNotNone(repeated_choice_lines)
         self.assertIsNotNone(time_lines)
+        self.assertIsNotNone(npc_time_lines)
         self.assertIsNotNone(priority_lines)
-        self.assertIsNotNone(fallback_lines)
+        self.assertIsNone(fallback_lines)
         self.assertIsNotNone(time_override_lines)
         self.assertIsNotNone(time_empty_candidates_lines)
         self.assertIsNotNone(wide_lines)
@@ -4166,12 +4185,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         self.assertIn("services.random.int(0, #values - 1) + 1", "\n".join(wide_lines))
         self.assertIn('"candidate-a", "candidate-b"', "\n".join(priority_lines))
         self.assertNotIn("17", "\n".join(priority_lines))
-        self.assertIn('"fallback-ready"', "\n".join(fallback_lines))
-        self.assertNotIn("services.random.int", "\n".join(fallback_lines))
-        self.assertIn("tostring(services.turn())", "\n".join(time_override_lines))
+        self.assertIn("tostring(services.turn_native_int())", "\n".join(time_override_lines))
         self.assertNotIn(ignored_time_candidate, "\n".join(time_override_lines))
         self.assertNotIn(ignored_time_value, "\n".join(time_override_lines))
-        self.assertIn("tostring(services.turn())", "\n".join(time_empty_candidates_lines))
+        self.assertIn("tostring(services.turn_native_int())", "\n".join(time_empty_candidates_lines))
+        self.assertIn("tostring(services.turn_native_int())", "\n".join(npc_time_lines))
+        self.assertNotIn("native_events.emit", "\n".join(npc_time_lines))
+        self.assertNotIn("services.random", "\n".join(npc_time_lines))
         self.assertNotIn("services.random.int", "\n".join(time_empty_candidates_lines))
         self.assertNotIn("native_events.emit", "\n".join(time_lines))
         for invalid_effect in (
@@ -4229,18 +4249,19 @@ local services = {
         return result
     end},
     turn = function() return 1440 end,
+    turn_native_int = function() return 1440 end,
 }
 do
 BODY_U
 end
 do
-BODY_NPC
+NPC_TIME_BODY
 end
 assert(u_owner.values.u_val == "ready")
-assert(npc_owner.values.context_val == "npc-ready")
-assert(#events == 2)
+assert(#events == 1)
 assert(events[1].var == "u_val" and events[1].value == "ready")
-assert(events[2].var == "context_val" and events[2].value == "npc-ready")
+assert(npc_owner.values.npc_turn == "1440")
+assert(#events == 1)
 assert(random_calls == 0)
 do
 CHOICE_BODY
@@ -4248,51 +4269,45 @@ end
 assert(u_owner.values.choice == "only")
 assert(random_calls == 1)
 assert(random_bounds[1][1] == 0 and random_bounds[1][2] == 0)
-assert(#events == 3 and events[3].var == "choice" and events[3].value == "only")
+assert(#events == 2 and events[2].var == "choice" and events[2].value == "only")
 do
 REPEATED_CHOICE_BODY
 end
 assert(u_owner.values.choice == "left")
 assert(random_calls == 2)
 assert(random_bounds[2][1] == 0 and random_bounds[2][2] == 1)
-assert(#events == 4 and events[4].value == "left")
+assert(#events == 3 and events[3].value == "left")
 do
 REPEATED_CHOICE_BODY
 end
 assert(u_owner.values.choice == "right")
 assert(random_calls == 3)
 assert(random_bounds[3][1] == 0 and random_bounds[3][2] == 1)
-assert(#events == 5 and events[5].value == "right")
+assert(#events == 4 and events[4].value == "right")
 do
 PRIORITY_BODY
 end
 assert(u_owner.values.priority == "candidate-a")
 assert(random_calls == 4)
 assert(random_bounds[4][1] == 0 and random_bounds[4][2] == 1)
-assert(#events == 6 and events[6].var == "priority" and events[6].value == "candidate-a")
-do
-FALLBACK_BODY
-end
-assert(npc_owner.values.fallback == "fallback-ready")
-assert(random_calls == 4)
-assert(#events == 7 and events[7].var == "fallback" and events[7].value == "fallback-ready")
+assert(#events == 5 and events[5].var == "priority" and events[5].value == "candidate-a")
 do
 TIME_BODY
 end
 assert(u_owner.values.turn == "1440")
-assert(#events == 7)
+assert(#events == 5)
 assert(random_calls == 4)
 do
 TIME_OVERRIDE_BODY
 end
 assert(u_owner.values.turn_override == "1440")
-assert(#events == 7)
+assert(#events == 5)
 assert(random_calls == 4)
 do
 TIME_EMPTY_CANDIDATES_BODY
 end
 assert(u_owner.values.turn_empty_candidates == "1440")
-assert(#events == 7)
+assert(#events == 5)
 assert(random_calls == 4)
 random_index = 64
 do
@@ -4301,13 +4316,13 @@ end
 assert(u_owner.values.wide == "wide-64")
 assert(random_calls == 5)
 assert(random_bounds[5][1] == 0 and random_bounds[5][2] == 64)
-assert(#events == 8 and events[8].var == "wide" and events[8].value == "wide-64")
+assert(#events == 6 and events[6].var == "wide" and events[6].value == "wide-64")
 do
 WIDE_LITERAL_BODY
 end
 assert(u_owner.values[WIDE_LITERAL_KEY] == WIDE_LITERAL_VALUE)
-assert(#events == 9 and events[9].var == WIDE_LITERAL_KEY and
-    events[9].value == WIDE_LITERAL_VALUE)
+assert(#events == 7 and events[7].var == WIDE_LITERAL_KEY and
+    events[7].value == WIDE_LITERAL_VALUE)
 random_index = 1
 do
 WIDE_CANDIDATE_BODY
@@ -4315,27 +4330,26 @@ end
 assert(u_owner.values.wide_candidate == WIDE_CANDIDATE_VALUE)
 assert(random_calls == 6)
 assert(random_bounds[6][1] == 0 and random_bounds[6][2] == 1)
-assert(#events == 10 and events[10].var == "wide_candidate" and
-    events[10].value == WIDE_CANDIDATE_VALUE)
+assert(#events == 8 and events[8].var == "wide_candidate" and
+    events[8].value == WIDE_CANDIDATE_VALUE)
 do
 EMPTY_BODY
 end
 assert(u_owner.values[""] == "")
-assert(#events == 11 and events[11].var == "" and events[11].value == "")
+assert(#events == 9 and events[9].var == "" and events[9].value == "")
 u_owner.values.u_val = "kept"
 write_allowed = false
 do
 BODY_U
 end
 assert(u_owner.values.u_val == "kept")
-assert(#events == 11)
+assert(#events == 9)
 """.replace("BODY_U", rendered["u_add_var"])
-        script = script.replace("BODY_NPC", rendered["npc_add_var"])
+        script = script.replace("NPC_TIME_BODY", "\n".join(npc_time_lines))
         script = script.replace("REPEATED_CHOICE_BODY", "\n".join(repeated_choice_lines))
         script = script.replace("CHOICE_BODY", "\n".join(choice_lines))
         script = script.replace("TIME_BODY", "\n".join(time_lines))
         script = script.replace("PRIORITY_BODY", "\n".join(priority_lines))
-        script = script.replace("FALLBACK_BODY", "\n".join(fallback_lines))
         script = script.replace("TIME_OVERRIDE_BODY", "\n".join(time_override_lines))
         script = script.replace(
             "TIME_EMPTY_CANDIDATES_BODY", "\n".join(time_empty_candidates_lines)
@@ -4364,7 +4378,7 @@ assert(#events == 11)
                 {
                     "type": "effect_on_condition", "id": "npc_add_literal",
                     "required_event": "npc_becomes_hostile",
-                    "effect": {"npc_add_var": "context_val", "value": "npc-ready"},
+                    "effect": {"npc_add_var": "context_val", "time": True},
                 },
                 {
                     "type": "effect_on_condition", "id": "time_literal",
@@ -4386,11 +4400,73 @@ assert(#events == 11)
                 migrate_lua_first.load_objects([source]), "variable_event_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(main.count("services.native_events.emit("), 2)
+            self.assertEqual(main.count("services.native_events.emit("), 1)
             self.assertIn('{ "u_val", "ready" }', main)
-            self.assertIn('{ "context_val", "npc-ready" }', main)
+            self.assertIn(
+                'actor, "context_val", tostring(services.turn_native_int()), '
+                '{ include_before = false })',
+                main,
+            )
             self.assertIn('services.variables.remove(actor, "u_val", { include_before = false })', main)
             self.assertIn('services.variables.remove(actor, "context_val", { include_before = false })', main)
+
+    def test_npc_add_var_time_requires_exact_beta_and_preserves_native_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {
+                    "type": "effect_on_condition", "id": "npc_time",
+                    "required_event": "character_melee_attack",
+                    "effect": {
+                        "npc_add_var": "npc_turn", "time": True,
+                        "value": 17, "possible_values": ["ignored"],
+                    },
+                },
+                {
+                    "type": "effect_on_condition", "id": "no_beta_time",
+                    "required_event": "game_start",
+                    "effect": {"npc_add_var": "no_beta_turn", "time": True},
+                },
+                {
+                    "type": "effect_on_condition", "id": "single_value_rng",
+                    "required_event": "character_melee_attack",
+                    "effect": {"npc_add_var": "single", "value": "ready"},
+                },
+                {
+                    "type": "effect_on_condition", "id": "candidate_rng",
+                    "required_event": "character_melee_attack",
+                    "effect": {
+                        "npc_add_var": "candidate",
+                        "possible_values": ["left", "right"],
+                    },
+                },
+            ]), encoding="utf-8")
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_time_variable_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 3)
+            self.assertIn(
+                'context.actors.interlocutor, "npc_turn", '
+                'tostring(services.turn_native_int()), { include_before = false })',
+                main,
+            )
+            self.assertNotIn("services.native_events.emit", main)
+            self.assertNotIn("services.random.int", main)
+            self.assertIn(
+                "EOC no_beta_time effect #0 needs domain-service conversion", report
+            )
+            self.assertIn(
+                "EOC single_value_rng effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC candidate_rng effect #0 needs domain-service conversion", report
+            )
 
     def test_dynamic_character_variable_shapes_remain_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
