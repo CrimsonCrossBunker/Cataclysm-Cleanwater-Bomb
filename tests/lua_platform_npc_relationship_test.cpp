@@ -125,6 +125,7 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     npc &alpha = spawn_npc( player.pos_bub().xy() + point::south, "thug" );
     npc &beta = spawn_npc( player.pos_bub().xy() + point::north, "thug" );
     alpha.set_fac( faction_id( "your_followers" ) );
+    beta.set_fac( faction_id( "hells_raiders" ) );
     alpha.set_attitude( NPCATT_FOLLOW );
     beta.set_attitude( NPCATT_KILL );
     alpha.op_of_u.owed = 3;
