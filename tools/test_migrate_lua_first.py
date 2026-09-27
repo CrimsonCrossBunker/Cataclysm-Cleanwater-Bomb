@@ -19911,6 +19911,83 @@ assert(not pcall(function() return U_EXPRESSION end))
                         },
                         {
                             "type": "effect_on_condition",
+                            "id": "avatar_default_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {"u_near_om_location": "field"},
+                            "effect": {"message": "default radius"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_fractional_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": 1.9,
+                            },
+                            "effect": {"message": "truncated radius"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_negative_fractional_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": -0.9,
+                            },
+                            "effect": {"message": "truncated negative fraction"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_negative_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": -1,
+                            },
+                            "effect": {"message": "negative radius"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_camp_start_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "FACTION_CAMP_START",
+                                "range": 1,
+                            },
+                            "effect": {"message": "origin mapgen args"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_dynamic_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": {"context_val": "radius"},
+                            },
+                            "effect": {"message": "dynamic radius"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_large_radius_omt",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_near_om_location": "field",
+                                "range": 31,
+                            },
+                            "effect": {"message": "large radius"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_near_omt",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "npc_near_om_location": "forest",
+                                "range": 1,
+                            },
+                            "effect": {"message": "npc near"},
+                        },
+                        {
+                            "type": "effect_on_condition",
                             "id": "avatar_default_point_omt",
                             "required_event": "game_start",
                             "condition": {"overmap_at_point": "field"},
@@ -19935,13 +20012,31 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 4)
-            self.assertEqual(len(result.partial), 2)
-            self.assertEqual(main.count("services.overmap.matches_location("), 3)
+            self.assertEqual(len(result.converted), 8)
+            self.assertEqual(len(result.partial), 6)
+            self.assertEqual(main.count("services.overmap.matches_location("), 2)
+            self.assertEqual(
+                main.count("services.overmap.matches_location_near("), 5
+            )
             self.assertEqual(main.count("services.overmap.matches_terrain("), 1)
+            self.assertEqual(
+                main.count("service_value(services.creatures.snapshot(actor)).position"),
+                7,
+            )
+            self.assertNotIn("for dy =", main)
+            self.assertNotIn("services.coords.tripoint_rel_omt(dx, dy, 0)", main)
             self.assertNotIn("services.overmap.matches(", main)
             self.assertIn(
                 "EOC npc_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
+            self.assertIn(
+                "EOC npc_near_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
+            self.assertIn('"FACTION_CAMP_START", 1)', main)
+            self.assertIn(
+                "double-to-int range conversion, a bounded x/y square scan",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertIn(
@@ -19949,6 +20044,69 @@ assert(not pcall(function() return U_EXPRESSION end))
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertNotIn('context.data["point"]', main)
+
+    def test_direct_beta_pair_om_location_conditions_remain_unlowered(self) -> None:
+        for key in ("npc_at_om_location", "npc_near_om_location"):
+            with self.subTest(key=key):
+                rendered = render_direct_npc_dialogue_pair(
+                    {
+                        "type": "effect_on_condition",
+                        "id": f"direct_{key}",
+                        "condition": {key: "field", "range": 1}
+                        if key == "npc_near_om_location" else {key: "field"},
+                        "effect": {"message": "typed beta position required"},
+                    }
+                )
+                self.assertIn(
+                    "TODO: translate the legacy condition into a Lua predicate",
+                    rendered,
+                )
+                self.assertNotIn("services.overmap.matches_location(", rendered)
+
+    def test_generic_talker_position_predicates_remain_unlowered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "vehicle_talker_omt",
+                            "condition": {
+                                "and": [
+                                    "u_is_vehicle",
+                                    {"u_at_om_location": "field"},
+                                ],
+                            },
+                            "effect": {"message": "vehicle position"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "item_talker_omt",
+                            "condition": {
+                                "and": [
+                                    "u_is_item",
+                                    {
+                                        "u_near_om_location": "field",
+                                        "range": 1,
+                                    },
+                                ],
+                            },
+                            "effect": {"message": "item position"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "generic_talker_omt_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.creatures.snapshot(actor)", main)
+            self.assertNotIn("services.overmap.matches_location(", main)
 
     def test_shipped_mapgen_location_condition_uses_the_native_overmap_query(self) -> None:
         source = REPOSITORY_ROOT / "data/json/effects_on_condition/mapgen_eocs/lab_mapgen_eocs.json"
@@ -25667,13 +25825,12 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
             self.assertNotIn("services.camps.near(", main)
-            self.assertIn(
-                "condition TODO: translate FACTION_CAMP_ANY near queries only with the native "
-                "square scan, camp lookup, and lazy overmap lookup",
-                report,
-            )
+            self.assertIn("services.overmap.matches_location_near(", main)
+            self.assertIn('"FACTION_CAMP_ANY"', main)
+            self.assertNotIn("FACTION_CAMP_ANY near-query shape", report)
 
     def test_empty_math_condition_is_rejected_as_invalid_source_data(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

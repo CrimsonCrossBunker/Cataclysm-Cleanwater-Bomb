@@ -28201,32 +28201,37 @@ def render_eoc_condition_expression(
             "service_value(services.npcs.has_role_nearby(actor, "
             f"{lua_quote(condition['npc_role_nearby'])}, 48))"
         )
+    # This service accepts Creature handles, but `creature_actor_proven` also
+    # covers generic talkers such as items, furniture, and vehicles.  Only
+    # lower when the source independently proves a Character-shaped alpha.
+    alpha_location_actor_proven = (
+        avatar_actor_proven or
+        (weapon_actor_proven and not creature_actor_proven)
+    )
     if (
-        avatar_actor_proven and
+        alpha_location_actor_proven and
         set(condition) <= {"u_near_om_location", "range"} and
-        set(condition) != {"range"}
+        "u_near_om_location" in condition
     ):
         raw_location = condition.get("u_near_om_location")
-        raw_range = condition.get("range")
-        # Native points_in_radius takes an int and visits a closed square.  A
-        # zero literal is the only bounded scan that has the same one-tile
-        # behavior as the direct location query; all nonzero/dynamic radii can
-        # include OMTs that Platform's bounded existing-tile search omits.
+        raw_range = condition.get("range", 1)
+        radius = native_int_literal(raw_range)
+        # Native converts the evaluated dbl_or_var to int, then visits a
+        # closed x/y square at the actor's OMT z-level.  The bounded native
+        # Platform query preserves its candidate order and per-candidate
+        # origin mapgen-argument lookup.
         if (
-            "range" in condition and
-            not isinstance(raw_range, bool) and
-            isinstance(raw_range, (int, float)) and
-            raw_range == 0 and
+            radius is not None and 0 <= radius <= 30 and
             bounded_overmap_condition_id(raw_location)
         ):
             position = (
                 "services.coords.project_to("
-                "service_value(services.characters.snapshot(actor)).creature.position, "
+                "service_value(services.creatures.snapshot(actor)).position, "
                 "\"omt\")"
             )
             return (
-                f"services.overmap.matches_location({position}, "
-                f"{lua_quote(raw_location)})"
+                f"services.overmap.matches_location_near({position}, "
+                f"{lua_quote(raw_location)}, {radius})"
             )
 
     # Inventory predicates are lowered only for a proven avatar/NPC actor and
@@ -28564,13 +28569,13 @@ def render_eoc_condition_expression(
                     f"{id_expression}"
                 )
     if (
-        avatar_actor_proven and
+        alpha_location_actor_proven and
         set(condition) == {"u_at_om_location"} and
         bounded_overmap_condition_id(condition.get("u_at_om_location"))
     ):
         position = (
             "services.coords.project_to("
-            "service_value(services.characters.snapshot(actor)).creature.position, "
+            "service_value(services.creatures.snapshot(actor)).position, "
             "\"omt\")"
         )
         return (
@@ -29857,8 +29862,9 @@ def render_eoc(
             raw_condition.get("u_near_om_location") == "FACTION_CAMP_ANY"
         ):
             condition_todo = (
-                "translate FACTION_CAMP_ANY near queries only with the native "
-                "square scan, camp lookup, and lazy overmap lookup"
+                "translate this FACTION_CAMP_ANY near-query shape only with a "
+                "bounded native square scan, per-candidate origin mapgen-argument "
+                "lookup, camp lookup, and lazy overmap queries"
             )
         elif isinstance(raw_condition, dict) and (
             "npc_at_om_location" in raw_condition or
@@ -29874,8 +29880,10 @@ def render_eoc(
             raw_condition.get("range", 1) != 0
         ):
             condition_todo = (
-                "translate nonzero or dynamic u_near_om_location only with "
-                "the full native square scan and lazy overmap lookup"
+                "translate this u_near_om_location shape only with native "
+                "double-to-int range conversion, a bounded x/y square scan, "
+                "per-candidate origin mapgen-argument lookups, and lazy "
+                "overmap queries"
             )
         elif (
             isinstance(raw_condition, dict) and
@@ -29892,8 +29900,8 @@ def render_eoc(
             not exact_avatar_actor_proven
         ):
             condition_todo = (
-                "translate u_at_om_location only with a proven alpha/avatar "
-                "handle and native lazy overmap lookup"
+                "translate u_at_om_location only with a proven alpha "
+                "Character handle and native lazy overmap lookup"
             )
         lines.append(f"    -- TODO: {condition_todo}.")
         result.add_todo(

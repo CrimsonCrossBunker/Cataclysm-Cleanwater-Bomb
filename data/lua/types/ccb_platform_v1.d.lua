@@ -87,6 +87,11 @@ function CcbCoordsApi.tripoint_abs_omt(x, y, z) end
 ---@return TripointCoord Relative overmap-terrain offset.
 function CcbCoordsApi.tripoint_rel_omt(x, y, z) end
 
+---@param value PointCoord|TripointCoord
+---@param scale string Target coordinate scale.
+---@return PointCoord|TripointCoord
+function CcbCoordsApi.project_to(value, scale) end
+
 ---@class TimeDuration
 ---@field turns integer
 ---@field value integer
@@ -447,6 +452,12 @@ function CcbOvermapApi.matches_terrain(position, terrain_id) end
 ---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`; this query may lazily load or create/populate its overmap.
 ---@return boolean Native `u_at_om_location` / `u_near_om_location` location predicate result at this exact tile.
 function CcbOvermapApi.matches_location(position, location_id) end
+
+---@param origin TripointCoord Explicit absolute overmap-terrain origin.
+---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`.
+---@param radius integer Nonnegative square radius from 0 through 30.
+---@return boolean Native `u_near_om_location` result, preserving candidate order and origin mapgen-argument lookups.
+function CcbOvermapApi.matches_location_near(origin, location_id, radius) end
 
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}

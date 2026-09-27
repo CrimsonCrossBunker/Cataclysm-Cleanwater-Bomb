@@ -31,6 +31,7 @@ extern "C" {
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "map_iterator.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
@@ -80,6 +81,7 @@ constexpr std::size_t maximum_note_width = 1024;
 constexpr std::size_t maximum_note_bytes = 4096;
 constexpr int maximum_note_danger_radius = 100;
 constexpr int maximum_reveal_radius = 30;
+constexpr int maximum_location_near_radius = 30;
 constexpr std::size_t initial_overmap_tile_owner_generation = 1;
 constexpr std::size_t initial_overmap_mutation_epoch = 1;
 
@@ -1264,6 +1266,47 @@ bool overmap_matches_location(
     return oter_no_dir_or_connections( terrain ) == location_id;
 }
 
+bool overmap_matches_location_near(
+    const script_tripoint_coord &position,
+    const std::string &requested,
+    const int radius )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_location_near";
+    if( radius < 0 || radius > maximum_location_near_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0.." +
+            std::to_string( maximum_location_near_radius ) );
+    }
+    const tripoint_abs_omt origin = require_absolute_omt(
+                                       position, std::string( api_name ) );
+    const std::string location_id = require_selector_text(
+                                       requested, std::string( api_name ) );
+    for( const tripoint_abs_omt &curr_pos : points_in_radius( origin, radius ) ) {
+        const oter_id &terrain = overmap_buffer.ter( curr_pos );
+        const std::optional<mapgen_arguments> *arguments =
+            overmap_buffer.mapgen_args( origin );
+        const std::string &terrain_id = terrain.id().str();
+
+        if( location_id == "FACTION_CAMP_ANY" ) {
+            if( overmap_buffer.find_camp( curr_pos.xy() ) ) {
+                return true;
+            }
+            // Preserve the native condition's legacy camp-terrain fallback.
+            if( terrain_id.find( "faction_base_camp" ) != std::string::npos ) {
+                return true;
+            }
+        } else if( location_id == "FACTION_CAMP_START" &&
+                   !recipe_group::get_recipes_by_id(
+                       "all_faction_base_types", terrain, arguments ).empty() ) {
+            return true;
+        } else if( oter_no_dir_or_connections( terrain ) == location_id ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool overmap_is_camp(
     const script_tripoint_coord &position,
     const bool include_legacy_terrain )
@@ -2157,6 +2200,15 @@ void install_overmap_api(
             const std::string &location_id ) {
         require_read();
         return overmap_matches_location( position, location_id );
+    } );
+    overmap.set_function(
+        "matches_location_near",
+        [require_read](
+            const script_tripoint_coord &position,
+            const std::string &location_id, const int radius ) {
+        require_read();
+        return overmap_matches_location_near(
+                   position, location_id, radius );
     } );
     overmap.set_function(
         "is_safe",
