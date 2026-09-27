@@ -4989,7 +4989,7 @@ def render_static_false_effect(
     ):
         key = "u_make_sound" if "u_make_sound" in effect else "npc_make_sound"
         rendered = render_static_character_sound(
-            effect, key, avatar_actor_proven, npc_actor_proven
+            effect, key, avatar_actor_proven, effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -24355,44 +24355,31 @@ def render_static_character_sound(
     effect: dict[str, Any],
     key: str,
     avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     if key not in effect or set(effect) - {
         key, "volume", "type", "ambient", "target_var", "snippet", "same_snippet",
     }:
         return None
-    actor = _eoc_actor_expression(
-        key, avatar_actor_proven, npc_event_character_actor_proven
-    )
-    # Global/activation EOCs receive the avatar as their native `u` talker
-    # even when no event-specific actor proof is available.  Keep NPC-shaped
-    # callbacks fail-closed, but preserve that native avatar fallback for
-    # `u_make_sound` (including false branches and delayed callbacks).
-    if actor is None and key == "u_make_sound" and not npc_event_character_actor_proven:
-        actor = "services.characters.avatar()"
     message = effect[key]
-    if actor is None:
+    # Native f_make_sound accepts translation_or_var text, translates it, and
+    # passes it straight to sounds::sound; it does not parse talker tags.
+    if not bounded_utf8_string(message, 4096, allow_empty=True):
         return None
     snippet = effect.get("snippet", False)
     same_snippet = effect.get("same_snippet", False)
-    if not isinstance(snippet, bool) or not isinstance(same_snippet, bool):
+    if (
+        not isinstance(snippet, bool) or snippet or
+        not isinstance(same_snippet, bool) or same_snippet or
+        "target_var" in effect
+    ):
         return None
-    message_expression = render_eoc_string_expression(message, actor)
-    if message_expression is None:
+    volume = _literal_nonnegative_integer(effect.get("volume", 0), 1000)
+    if volume is None:
         return None
-    volume = _literal_nonnegative_integer(effect.get("volume"), 1000)
-    volume_expression = str(volume) if volume is not None else None
-    if volume_expression is None:
-        dynamic_volume = render_eoc_numeric_expression(effect.get("volume"), "100", actor)
-        if dynamic_volume is None:
-            return None
-        volume_expression = (
-            "math.max(0, math.min(1000, math.floor((" +
-            dynamic_volume + ") + 0.5)))"
-        )
     category = effect.get("type", "background")
     categories = {
-        "background", "weather", "sensory", "music", "movement", "speech",
+        "background", "weather", "music", "movement", "speech",
         "electronic_speech", "activity", "destructive_activity", "alarm",
         "combat", "alert", "order",
     }
@@ -24401,33 +24388,31 @@ def render_static_character_sound(
     ambient = effect.get("ambient", False)
     if not isinstance(ambient, bool):
         return None
-    if "target_var" in effect:
-        position = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
+
+    target_info = (
+        effect_actor_targets.get("npc" if key == "npc_make_sound" else "u")
+        if effect_actor_targets is not None else None
+    )
+    if target_info is not None:
+        target, target_kind = target_info
+        if target_kind != "character":
+            return None
+    elif (
+        effect_actor_targets is None and key == "u_make_sound" and
+        avatar_actor_proven
+    ):
+        # Some global activation callbacks intentionally reacquire the avatar
+        # instead of receiving a generation-safe alpha handle.
+        target = "services.characters.avatar()"
     else:
-        position = (
-            "service_value(services.characters.snapshot(" + actor + ")).creature.position"
-        )
-    if position is None:
         return None
-    if snippet:
-        category_expression = message_expression
-        if same_snippet:
-            return [
-                f"    local selected_sound_snippet = services.snippets.random_named({category_expression})",
-                "    if selected_sound_snippet ~= nil then",
-                "        services.sound.emit(",
-                f"            {position}, {volume_expression}, {lua_quote(category)}, "
-                "services.snippets.expand(selected_sound_snippet.text), "
-                f"{'true' if ambient else 'false'})",
-                "    end",
-            ]
-        message_expression = f"(services.snippets.random({category_expression}) or \"\")"
+    position = (
+        "service_value(services.characters.snapshot(" + target + ")).creature.position"
+    )
     return [
         "    services.sound.emit(",
-        f"        {position}, {volume_expression}, {lua_quote(category)}, {message_expression}, "
+        f"        {position}, {volume}, {lua_quote(category)}, "
+        f"services.translate({lua_quote(message)}), "
         f"{'true' if ambient else 'false'})",
     ]
 
@@ -28615,6 +28600,9 @@ def render_eoc(
         # These event producers attach the monster as the second talker; the
         # Platform event bridge names that handle "interlocutor".
         beta_effect_target = ("context.actors.interlocutor", "monster")
+    elif training_pair_proven:
+        # Nested content callbacks retain the exact dialogue alpha/beta pair.
+        beta_effect_target = ("context.actors.beta", "character")
     elif exact_npc_actor_proven:
         beta_effect_target = ("actor", "character")
     else:
@@ -30140,8 +30128,7 @@ def render_eoc(
             ):
                 key = "u_make_sound" if "u_make_sound" in effect else "npc_make_sound"
                 rendered = render_static_character_sound(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key, avatar_actor_proven, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
