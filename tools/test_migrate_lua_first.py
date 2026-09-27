@@ -8038,6 +8038,62 @@ assert(#events == 9)
                         )
                     )
 
+    def test_mission_generic_rewards_requires_proven_dialogue_beta(self) -> None:
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            "mission_has_generic_rewards",
+            npc_actor_expression="context.actors.beta",
+            npc_dialogue_pair_proven=True,
+        )
+        self.assertIsNotNone(expression)
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            expression,
+        )
+        self.assertIn('beta.subtype ~= "npc"', expression)
+
+        for kwargs in (
+            {"npc_actor_expression": "context.actors.beta"},
+            {
+                "npc_actor_expression": "actor",
+                "npc_dialogue_pair_proven": True,
+            },
+        ):
+            with self.subTest(kwargs=kwargs):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        "mission_has_generic_rewards", **kwargs
+                    )
+                )
+
+        source = json.loads(
+            (REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_MISSION.json")
+            .read_text(encoding="utf-8")
+        )
+        migrated_real_conditions = 0
+
+        def check_real_condition(value: object) -> None:
+            nonlocal migrated_real_conditions
+            if value == "mission_has_generic_rewards":
+                migrated_real_conditions += 1
+                self.assertIsNotNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        value,
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+            elif isinstance(value, dict):
+                for child in value.values():
+                    check_real_condition(child)
+            elif isinstance(value, list):
+                for child in value:
+                    check_real_condition(child)
+
+        for topic in source:
+            for response in topic.get("responses", []):
+                check_real_condition(response.get("condition"))
+        self.assertGreater(migrated_real_conditions, 0)
+
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
             "has_assigned_mission",
@@ -8055,6 +8111,7 @@ assert(#events == 9)
             "npc_mission_complete",
             "npc_mission_incomplete",
             "npc_mission_failed",
+            "mission_has_generic_rewards",
         )
         for condition in mission_aliases:
             with self.subTest(condition=condition):

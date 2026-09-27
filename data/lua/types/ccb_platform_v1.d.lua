@@ -9590,6 +9590,9 @@ function CcbNpcMissionsApi.selected_condition(provider, owner, predicate) end
 ---@return CcbResult result `value` is boolean; a missing or stale selection returns false.
 function CcbNpcMissionsApi.selected_has_goal(provider, goal) end
 ---@param provider GameHandle Exact live NPC provider handle.
+---@return CcbResult result Boolean matches the native condition; an empty selection returns true, stale nonempty selection errors, and native debugmsg logging is omitted.
+function CcbNpcMissionsApi.selected_has_generic_rewards(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
 ---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
 ---@return CcbResult result `value` is a CcbNpcMissionsStateResult.
 function CcbNpcMissionsApi.select(provider, token) end
