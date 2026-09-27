@@ -10630,34 +10630,34 @@ local CcbEffectsApi = {}
 
 ---Apply an effect through native Creature rules. Nonpositive duration is preserved;
 ---it still applies immediately and expires when native effect processing runs.
----@param character GameHandle
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
 ---@param duration TimeDuration Native signed turn range; the effect definition applies its own maximum duration.
 ---@param options? CcbEffectAddOptions
 ---@return CcbResult
-function CcbEffectsApi.add(character, effect, duration, options) end
+function CcbEffectsApi.add(creature, effect, duration, options) end
 
 ---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
----@param character GameHandle
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
 ---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
 ---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
 ---@return CcbResult result `value` is boolean.
-function CcbEffectsApi.has(character, effect, body_part, intensity) end
+function CcbEffectsApi.has(creature, effect, body_part, intensity) end
 
 ---Read a detached effect snapshot. Absence returns not_found; other failures must not be treated as absence.
----@param character GameHandle Exact live Creature handle.
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId GameId<effect>.
 ---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
 ---@return CcbEffectSnapshotResult
-function CcbEffectsApi.get(character, effect, body_part) end
+function CcbEffectsApi.get(creature, effect, body_part) end
 
----Remove an effect, optionally restricted to one body part; repeat removal is harmless.
----@param character GameHandle
+---Remove an effect by native body-part semantics; bp_null removes all instances.
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit to remove all instances.
+---@param body_part? GameId Registered part ID; need not match current anatomy. Omit to use native bp_null, which removes all instances.
 ---@return CcbResult result `value` is whether any instance was removed.
-function CcbEffectsApi.remove(character, effect, body_part) end
+function CcbEffectsApi.remove(creature, effect, body_part) end
 
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}

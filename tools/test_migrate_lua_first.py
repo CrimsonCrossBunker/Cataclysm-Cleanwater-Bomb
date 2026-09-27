@@ -7165,6 +7165,78 @@ assert(#events == 9)
             ):
                 self.assertIn(eoc_id, main)
 
+    def test_npc_death_effects_follow_native_beta_killer_and_alpha_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_death_effects",
+                            "eoc_type": "NPC_DEATH",
+                            "effect": [
+                                {"npc_add_effect": "downed", "duration": 5},
+                                {
+                                    "npc_lose_effect": ["downed", "bleed"],
+                                    "target_part": "ALL",
+                                },
+                                {"u_add_effect": "bleed", "duration": 3},
+                                {"u_lose_effect": "bleed"},
+                                {
+                                    "npc_add_effect": "cold",
+                                    "duration": 5,
+                                    "target_part": "RANDOM",
+                                },
+                                {
+                                    "npc_lose_effect": "cold",
+                                    "target_part": "RANDOM",
+                                },
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_death_effect_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            # npc::die builds alpha=the dead NPC and beta=the optional killer;
+            # `(context.killer or actor)` keeps both the killer and nil-beta
+            # native dialogue::actor(true) paths. The killer handle can be an
+            # NPC or another Creature, so its kind is resolved at runtime.
+            self.assertIn(
+                'services.effects.add(\n'
+                '        (context.killer or actor),\n'
+                '        services.types.id("effect", "downed")',
+                main,
+            )
+            self.assertIn(
+                'services.creatures.snapshot((context.killer or actor)).kind',
+                main,
+            )
+            self.assertIn('services.effects.remove((context.killer or actor)', main)
+            self.assertIn(
+                'services.effects.add(\n'
+                '        actor,\n'
+                '        services.types.id("effect", "bleed")',
+                main,
+            )
+            self.assertIn("services.effects.remove(actor", main)
+            self.assertIn(
+                "EOC npc_death_effects effect #4 needs domain-service conversion",
+                report,
+            )
+            self.assertNotIn(
+                'services.effects.add(\n'
+                '        (context.killer or actor),\n'
+                '        services.types.id("effect", "cold")',
+                main,
+            )
+
     def test_core_mutation_catalog_ids_are_direct_concrete_definitions(self) -> None:
         mutation_ids, category_ids = migrate_lua_first.core_mutation_catalog_ids()
 
