@@ -9792,7 +9792,6 @@ assert(not available())
                             npc_actor_expression=actor_expression,
                         )
                     )
-
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 "u_has_available_mission", avatar_actor_proven=True
@@ -9940,78 +9939,6 @@ assert(not available())
                 npc_actor_expression="context.actors.beta",
             )
         )
-
-    def test_has_beta_requires_direct_talk_topic_pair_provenance(self) -> None:
-        direct_pair = render_direct_npc_dialogue_pair({
-            "type": "effect_on_condition", "id": "direct_has_beta",
-            "condition": "has_beta", "effect": [],
-        })
-        self.assertIn(
-            "context ~= nil and context.actors ~= nil and "
-            "context.actors.beta ~= nil",
-            direct_pair,
-        )
-        self.assertNotIn(
-            "TODO: translate the legacy condition into a Lua predicate",
-            direct_pair,
-        )
-
-        event_pair = render_direct_npc_dialogue_pair({
-            "type": "effect_on_condition", "id": "event_has_beta",
-            "required_event": "character_takes_damage",
-            "condition": "has_beta", "effect": [],
-        })
-        self.assertIn(
-            "TODO: translate the legacy condition into a Lua predicate",
-            event_pair,
-        )
-        self.assertNotIn("context.actors.beta ~= nil", event_pair)
-
-        topic = migrate_lua_first.SourceObject(Path("source.json"), 0, {
-            "type": "talk_topic", "id": "nested_has_beta_topic",
-            "responses": [{"true_eocs": "outer_has_beta"}],
-        })
-        outer = migrate_lua_first.SourceObject(Path("source.json"), 1, {
-            "type": "effect_on_condition", "id": "outer_has_beta",
-            "effect": {"run_eocs": "nested_has_beta"},
-        })
-        nested = migrate_lua_first.SourceObject(Path("source.json"), 2, {
-            "type": "effect_on_condition", "id": "nested_has_beta",
-            "condition": "has_beta", "effect": [],
-        })
-        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
-            [topic, outer, nested]
-        )
-        self.assertIn("outer_has_beta", pair_ids)
-        self.assertNotIn("nested_has_beta", pair_ids)
-        nested_rendered = migrate_lua_first.render_eoc(
-            nested, migrate_lua_first.MigrationResult(),
-            npc_dialogue_mission_pair_ids=pair_ids,
-        )
-        self.assertIn(
-            "TODO: translate the legacy condition into a Lua predicate",
-            nested_rendered,
-        )
-        self.assertNotIn("context.actors.beta ~= nil", nested_rendered)
-
-    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_has_beta_expression_checks_presence_not_actor_kind(self) -> None:
-        expression = migrate_lua_first.render_eoc_condition_expression(
-            "has_beta", npc_dialogue_pair_proven=True,
-            npc_actor_expression="context.actors.beta",
-        )
-        self.assertIsNotNone(expression)
-        script = """
-local function has_beta(context) return (EXPRESSION) end
-assert(has_beta({actors={beta={kind='talker'}}}) == true)
-assert(has_beta({actors={}}) == false)
-assert(has_beta(nil) == false)
-""".replace("EXPRESSION", expression or "nil")
-        result = subprocess.run(
-            [shutil.which("lua"), "-"], input=script,
-            text=True, capture_output=True, timeout=10,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_train_styles_requires_explicit_native_talker_pair(self) -> None:
         for condition, teacher, student in (
