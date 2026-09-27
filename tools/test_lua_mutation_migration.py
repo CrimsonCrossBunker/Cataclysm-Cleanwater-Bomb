@@ -186,6 +186,29 @@ end
                     )
                     self.assertIn('context.data["mutation_id"]', expression)
 
+    def test_real_purifiable_mutation_uses_raw_native_query(self):
+        root = Path(__file__).resolve().parents[1]
+        definitions = json.loads(
+            (root / "data/json/mutations/mutations.json").read_text()
+        )
+        mutation = next(
+            item for item in definitions
+            if item.get("id") == "INTERSTICE_RESONANCE_2"
+        )
+        self.assertTrue(mutation["purifiable"])
+        for selector in ("u_is_trait_purifiable", "npc_is_trait_purifiable"):
+            with self.subTest(selector=selector):
+                expression = migration.render_eoc_condition_expression(
+                    {selector: mutation["id"]},
+                    avatar_actor_proven=True,
+                    npc_actor_proven=selector.startswith("npc_"),
+                    npc_actor_expression="partner",
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn("services.mutations.is_purifiable_id_text", expression)
+                self.assertIn('"INTERSTICE_RESONANCE_2"', expression)
+                self.assertNotIn('services.types.id("mutation"', expression)
+
     def test_mutation_replacement_uses_native_action(self):
         for prefix, event in (
             ("u_", "game_start"),

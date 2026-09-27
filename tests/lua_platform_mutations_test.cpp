@@ -40,6 +40,7 @@ static const trait_id trait_SNAIL_TRAIL( "SNAIL_TRAIL" );
 static const trait_id trait_STRONGER_VULNERABLEWARM( "STRONGER_VULNERABLEWARM" );
 static const trait_id trait_VULNERABLECHILL( "VULNERABLECHILL" );
 static const trait_id trait_VULNERABLEWARM( "VULNERABLEWARM" );
+static const trait_id trait_INTERSTICE_RESONANCE_2( "INTERSTICE_RESONANCE_2" );
 
 namespace
 {
@@ -137,6 +138,16 @@ struct mutation_fixture {
 
     bool query_id_text( const bool npc_target, const std::string &trait_text ) {
         sol::protected_function function = services["mutations"]["has_id_text"];
+        sol::protected_function_result call = function( handle( npc_target ), trait_text );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<bool>();
+    }
+
+    bool query_purifiable_id_text(
+        const bool npc_target, const std::string &trait_text ) {
+        sol::protected_function function = services["mutations"]["is_purifiable_id_text"];
         sol::protected_function_result call = function( handle( npc_target ), trait_text );
         REQUIRE( call.valid() );
         sol::table result = call;
@@ -307,7 +318,50 @@ TEST_CASE( "lua_platform_mutations_character_queries_match_legacy_conditions",
         const bool lua_purifiable = fixture.query( "is_purifiable", npc_target, "VULNERABLECHILL" );
         CHECK( lua_purifiable == fixture.legacy_condition( R"({")" + prefix +
                 R"(is_trait_purifiable":"VULNERABLECHILL"})" ) );
+        CHECK( fixture.query_purifiable_id_text( npc_target, "VULNERABLECHILL" ) ==
+               lua_purifiable );
         CHECK( fixture.query( "is_purifiable", !npc_target, "VULNERABLECHILL" ) );
+    }
+}
+
+TEST_CASE( "lua_platform_mutations_is_purifiable_id_text_matches_native_lookup",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture fixture;
+    const bool npc_target = GENERATE( false, true );
+    Character &target = fixture.target( npc_target );
+    target.set_mutation( trait_INTERSTICE_RESONANCE_2 );
+    CHECK( target.purifiable( trait_INTERSTICE_RESONANCE_2 ) );
+    CHECK( fixture.query_purifiable_id_text(
+               npc_target, "INTERSTICE_RESONANCE_2" ) );
+
+    // VULNERABLECHILL has no `purifiable` field and therefore uses the
+    // mutation_branch default of false.
+    CHECK_FALSE( target.purifiable( trait_VULNERABLECHILL ) );
+    CHECK_FALSE( fixture.query_purifiable_id_text( npc_target, "VULNERABLECHILL" ) );
+
+    const std::string prefix = npc_target ? "npc_" : "u_";
+    fixture.legacy_effect( R"({")" + prefix +
+                          R"(set_trait_purifiability":"INTERSTICE_RESONANCE_2","purifiable":false})" );
+    CHECK_FALSE( target.purifiable( trait_INTERSTICE_RESONANCE_2 ) );
+    CHECK_FALSE( fixture.query_purifiable_id_text(
+                     npc_target, "INTERSTICE_RESONANCE_2" ) );
+
+    fixture.legacy_effect( R"({")" + prefix +
+                          R"(set_trait_purifiability":"INTERSTICE_RESONANCE_2","purifiable":true})" );
+    CHECK( target.purifiable( trait_INTERSTICE_RESONANCE_2 ) );
+    CHECK( fixture.query_purifiable_id_text(
+               npc_target, "INTERSTICE_RESONANCE_2" ) );
+
+    const std::vector<std::string> unknown_ids = {
+        "UNKNOWN_MUTATION", std::string( 300, 'x' ),
+        std::string( "UNKNOWN\x01", 8 ), std::string( "UNKNOWN\0", 8 ), ""
+    };
+    for( const std::string &text : unknown_ids ) {
+        CAPTURE( npc_target, text );
+        const bool native_result = target.purifiable( trait_id( text ) );
+        CHECK_FALSE( native_result );
+        CHECK( fixture.query_purifiable_id_text( npc_target, text ) == native_result );
     }
 }
 

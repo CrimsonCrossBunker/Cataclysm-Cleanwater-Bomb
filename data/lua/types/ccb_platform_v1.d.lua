@@ -10553,6 +10553,14 @@ function CcbMutationsApi.is_visible_to(observed, observer, mutation) end
 ---@return CcbResult result `value` is boolean; stale handles return an error envelope.
 function CcbMutationsApi.is_purifiable(character, mutation) end
 
+---Read purifiability with the exact native ID text used by EOC conditions.
+---Unknown text returns false; long and control-containing text passes through unchanged.
+---This includes the definition flag and the Character's intrinsic override.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param id_text string Raw native mutation ID text, without GameId validation.
+---@return CcbResult result `value` is boolean; stale handles return an error envelope.
+function CcbMutationsApi.is_purifiable_id_text(character, id_text) end
+
 ---Set a present mutation's intrinsic purifiability override; runtime-callback write only.
 ---Absent mutations are unchanged. The definition's own non-purifiable flag still applies.
 ---@param character GameHandle Exact avatar or NPC handle.

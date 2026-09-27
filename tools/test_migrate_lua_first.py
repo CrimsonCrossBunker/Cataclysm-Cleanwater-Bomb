@@ -2119,20 +2119,23 @@ assert(#seen == 1 and seen[1] == 'QUICK')
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_any_trait_mutator_without_rng_parity_remains_partial(self) -> None:
-        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-            {"u_has_any_trait": [{
-                "mutator": "valid_technique", "crit": True,
-            }]},
-            avatar_actor_proven=True, npc_actor_proven=True,
-            npc_actor_expression="partner",
-        ))
+    def test_trait_query_mutators_without_rng_parity_remain_partial(self) -> None:
+        for selector, value in (
+            ("u_has_any_trait", [{"mutator": "valid_technique", "crit": True}]),
+            ("u_is_trait_purifiable", {"mutator": "valid_technique", "crit": True}),
+        ):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                {selector: value},
+                avatar_actor_proven=True, npc_actor_proven=True,
+                npc_actor_expression="partner",
+            ))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_npc_trait_query_requires_exact_beta_and_never_uses_alpha(self) -> None:
         for selector, value in (
             ("npc_has_trait", "QUICK"),
             ("npc_has_any_trait", ["QUICK"]),
+            ("npc_is_trait_purifiable", "QUICK"),
         ):
             with self.subTest(selector=selector):
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
@@ -2148,12 +2151,16 @@ local actor = {kind='creature',subtype='avatar',has_trait=true}
 local context = {actors={}}
 local function service_value(result) assert(result.ok); return result.value end
 local calls = 0
-local services = {mutations={has_id_text=function(character,id)
+local function query(character,id)
   assert(character == context.actors.beta and character ~= actor)
   assert(id == 'QUICK')
   calls = calls + 1
   return {ok=true,value=character.has_trait}
-end}}
+end
+local services = {mutations={
+ has_id_text=query,
+ is_purifiable_id_text=query,
+}}
 assert(not (EXPRESSION))
 assert(calls == 0)
 context.actors.beta = {kind='creature',subtype='npc',has_trait=false}
@@ -2218,37 +2225,39 @@ assert(observed[#observed] == 'KNOWN')
         )
         self.assertIsNotNone(expression)
         script = """
-local actor, partner = {}, {}
+local actor, partner =
+ {kind='creature',subtype='avatar'},
+ {kind='creature',subtype='npc'}
 local selected = nil
+local observed = {}
 local function service_value(result) assert(result.ok); return result.value end
 local services = {
- types={id=function(kind,value)
-  assert(kind=='mutation')
-  assert(#value<=256 and not value:find('%c'))
-  return {value=value,is_valid=function(self)
-   return self.value=='KNOWN'
-  end}
- end},
  variables={resolve=function(data,owner,scope,key)
   assert(scope=='u' and key=='selected')
   return {ok=true,value={value=selected}}
  end},
- mutations={is_purifiable=function(character,id)
-  assert(character==partner and id.value=='KNOWN')
-  return {ok=true,value=true}
+ mutations={is_purifiable_id_text=function(character,text)
+  assert(character==partner)
+  observed[#observed+1] = text
+  return {ok=true,value=text=='KNOWN'}
  end}
 }
 assert(not (EXPRESSION))
+assert(observed[#observed] == '')
 selected='UNKNOWN'
 assert(not (EXPRESSION))
 selected=73
 assert(not (EXPRESSION))
+assert(observed[#observed] == '')
 selected=string.rep('x',257)
 assert(not (EXPRESSION))
+assert(#observed[#observed] == 257)
 selected=string.char(7)
 assert(not (EXPRESSION))
+assert(observed[#observed] == string.char(7))
 selected='KNOWN'
 assert(EXPRESSION)
+assert(observed[#observed] == 'KNOWN')
 """.replace("EXPRESSION", expression)
         result = subprocess.run([shutil.which("lua"), "-"], input=script,
                                 text=True, capture_output=True, timeout=10)
