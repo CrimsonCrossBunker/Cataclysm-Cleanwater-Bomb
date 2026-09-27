@@ -15555,7 +15555,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.npcs.equipment", main)
             self.assertNotIn("request_gift", main)
             self.assertNotIn("return_stolen_items", main)
-            self.assertIn("drop_stolen_item needs explicit Item handles", main)
+            self.assertIn(
+                "drop_stolen_item's native wrapper requires a dialogue beta NPC", main
+            )
+            self.assertNotIn("services.npcs.drop_stolen_items(", main)
             self.assertIn("services.trade.quote(provider, recipient", main)
             self.assertIn("services.trade.commit(quote.token", main)
             self.assertIn("monster-purchase conversion", report)
@@ -17270,6 +17273,50 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'beta.kind == "creature" and beta.subtype == "npc"', main
             )
             self.assertIn("native wrapper requires a dialogue beta NPC", main)
+            self.assertIn("direct talk-topic beta NPC proof", report)
+
+    def test_drop_stolen_items_requires_direct_talk_topic_beta_npc(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic", "id": "drop_stolen_item_topic",
+                            "responses": [{"true_eocs": "drop_stolen_item_pair"}],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "drop_stolen_item_pair",
+                            "effect": "drop_stolen_item",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "drop_stolen_item_npc_event",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": "drop_stolen_item",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "drop_stolen_item_pair_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(main.count("services.npcs.drop_stolen_items(beta)"), 1)
+            self.assertIn(
+                'beta.kind == "creature" and beta.subtype == "npc"', main
+            )
+            self.assertIn(
+                "drop_stolen_item's native wrapper requires a dialogue beta NPC",
+                main,
+            )
             self.assertIn("direct talk-topic beta NPC proof", report)
 
     def test_npc_drop_weapon_requires_direct_talk_topic_beta_npc(self) -> None:

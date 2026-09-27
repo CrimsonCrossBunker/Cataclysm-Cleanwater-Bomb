@@ -33,6 +33,7 @@ extern "C" {
 #include "creature.h"
 #include "enum_conversions.h"
 #include "faction.h"
+#include "item.h"
 #include "item_location.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -72,6 +73,30 @@ void commit_generic_mission_reward(
 {
     provider.op_of_u.owed = owed_after;
     entry.commit_generic_reward_claim();
+}
+
+void collect_stolen_item_subtree_for_retirement(
+    item &entry, std::vector<item *> &items )
+{
+    items.push_back( &entry );
+    for( item *const contained : entry.all_items_top() ) {
+        collect_stolen_item_subtree_for_retirement( *contained, items );
+    }
+}
+
+void collect_stolen_item_identities(
+    item &entry, npc &owner, std::vector<item *> &items )
+{
+    if( entry.is_old_owner( owner ) ) {
+        // The native talk function removes a matching item before it visits
+        // its contents.  The complete subtree moves with it and all handles
+        // into the old inventory tree must become stale.
+        collect_stolen_item_subtree_for_retirement( entry, items );
+    } else if( entry.is_container() ) {
+        for( item *const contained : entry.all_items_top() ) {
+            collect_stolen_item_identities( *contained, owner, items );
+        }
+    }
 }
 
 sol::table character_service_state(
@@ -1443,6 +1468,50 @@ sol::table drop_npc_weapon(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table drop_stolen_npc_items(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    Character &player_character = get_player_character();
+    std::vector<item *> stolen_items;
+    if( entry->get_faction() != nullptr ) {
+        for( item *const candidate : player_character.inv_dump() ) {
+            collect_stolen_item_identities( *candidate, *entry, stolen_items );
+        }
+    }
+    const bool dropped = !stolen_items.empty();
+    const bool had_claim = entry->known_stolen_item != nullptr;
+    for( item *const stolen_item : stolen_items ) {
+        retire_item_handle_identity( *stolen_item );
+    }
+
+    // Preserve the native operation as the single owner of item selection,
+    // recursive removal, ownership transfer, map placement and NPC state.
+    talk_function::drop_stolen_item( *entry );
+    if( dropped ) {
+        player_character.invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["dropped"] = dropped;
+    value["claim_cleared"] = had_claim;
+    value["attitude"] = npc_attitude_id(
+                            entry->get_attitude() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table open_npc_character_sheet(
     sol::this_state lua, const game_handle &handle,
     const game_handle_runtime &runtime_generation,
@@ -2179,6 +2248,16 @@ void install_npc_domain_services(
             sol::this_state state, const game_handle &handle ) {
         require_write();
         return drop_npc_weapon(
+                   state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "drop_stolen_items",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, const game_handle &handle ) {
+        require_write();
+        return drop_stolen_npc_items(
                    state, handle,
                    current_runtime_generation(),
                    current_world_generation() );
