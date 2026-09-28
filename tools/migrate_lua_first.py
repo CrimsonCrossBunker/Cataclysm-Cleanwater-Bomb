@@ -29775,6 +29775,26 @@ def render_eoc(
         npc_event_character_actor_proven and not npc_fatal_hook and
         npc_talker_ui_actor_expression == "actor" and not talker_pair_override
     )
+    # Mutation effects read mutable dialogue alpha/beta. game_start supplies a
+    # live avatar alpha. npc_becomes_hostile is the only native event path here
+    # that constructs an NPC alpha without beta; mutable actor(true) falls back
+    # to that alpha after emitting a debug message. Both proofs require an
+    # event-exclusive EOC, since a referenced callback or dynamic dispatcher
+    # can invoke the body with a different actor pair. The Platform lowering
+    # preserves mutation state on the hostile event path, but not that native
+    # missing-beta diagnostic.
+    mutation_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "game_start" and game_start_avatar_actor_is_proven() and
+        not avatar_fatal_hook and not avatar_death_hook and
+        not talker_pair_override
+    )
+    mutation_npc_alpha_fallback_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and not npc_fatal_hook and
+        npc_talker_ui_actor_expression == "actor" and not talker_pair_override
+    )
     # Native u_has_proficiency reads dialogue alpha. Restrict the current
     # lowerer to game_start, where the avatar is live and source-proven; other
     # avatar hooks can run after death or lack an equivalent live handle.
@@ -30866,9 +30886,9 @@ def render_eoc(
                 )
                 target_expression = (
                     "actor" if mutation_key.startswith("u_") and
-                    avatar_actor_proven
+                    mutation_avatar_actor_proven
                     else "actor" if mutation_key.startswith("npc_") and
-                    npc_event_character_actor_proven
+                    mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_mutation_effect(
@@ -30880,7 +30900,8 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the mutation target, category, "
+                        "    -- TODO: prove the mutation actor source and translate its "
+                        "target, category, "
                         "chance, or options into bounded Lua values."
                     )
                     result.add_todo(
