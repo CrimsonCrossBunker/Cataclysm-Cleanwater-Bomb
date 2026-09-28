@@ -682,6 +682,9 @@ assert(worn_calls==1 and has_calls==1)
         alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
         queries = {
             "u_see_npc": "services.creatures.can_see(actor, context.actors.beta)",
+            "npc_see_u_loc": (
+                "services.creatures.has_line_of_sight(context.actors.beta, actor)"
+            ),
             "u_see_npc_loc": (
                 "services.creatures.has_line_of_sight(actor, context.actors.beta)"
             ),
@@ -727,6 +730,7 @@ assert(worn_calls==1 and has_calls==1)
         # The event alpha differs from the global avatar; only the proven
         # dialogue beta may be used as the opposite participant.
         for condition, observer, target in (
+            ("npc_see_u_loc", "beta", "event_alpha"),
             ("u_see_npc", "event_alpha", "beta"),
             ("u_see_npc_loc", "event_alpha", "beta"),
         ):

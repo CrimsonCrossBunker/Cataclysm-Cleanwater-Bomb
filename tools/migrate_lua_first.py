@@ -27739,8 +27739,6 @@ def render_eoc_condition_expression(
         alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
         if condition == "u_see_npc":
             query = "services.creatures.can_see(actor, context.actors.beta)"
-        elif condition == "npc_see_u":
-            query = "services.creatures.can_see(context.actors.beta, actor)"
         elif condition == "u_see_npc_loc":
             query = (
                 "services.creatures.has_line_of_sight(actor, "
