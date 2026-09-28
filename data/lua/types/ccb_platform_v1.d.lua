@@ -10717,6 +10717,16 @@ function CcbEffectsApi.get(creature, effect, body_part) end
 ---@return CcbResult result `value` is whether any instance was removed.
 function CcbEffectsApi.remove(creature, effect, body_part) end
 
+---@class CcbProficienciesApi
+local CcbProficienciesApi = {}
+
+---Read whether an exact Character knows a proficiency using native ID-text lookup.
+---Unknown IDs return false, matching Character::has_proficiency; no registry lookup is required.
+---@param character GameHandle Exact live Character handle.
+---@param id_text string Raw native proficiency ID text without GameId validation.
+---@return CcbResult result `value` is boolean.
+function CcbProficienciesApi.has_id_text(character, id_text) end
+
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
 

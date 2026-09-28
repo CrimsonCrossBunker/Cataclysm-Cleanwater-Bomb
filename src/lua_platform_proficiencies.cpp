@@ -488,6 +488,30 @@ sol::table get_state(
                            requested_id.value() ).obj() ) ) );
 }
 
+sol::table has_id_text_state(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_id_text,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native has_proficiency constructs a proficiency_id from raw str_or_var
+    // text and checks Character's learned set without requiring a registered
+    // definition.  Preserve false for unknown IDs instead of validating a
+    // GameId and turning this predicate into an error.
+    const bool known = character->has_proficiency(
+                           proficiency_id( requested_id_text ) );
+    return make_game_value_result(
+               state, sol::make_object( state, known ) );
+}
+
 struct grant_options {
     bool ignore_requirements = false;
     bool recursive = false;
@@ -759,6 +783,17 @@ void install_proficiency_api(
         require_read();
         return get_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    proficiencies.set_function(
+        "has_id_text",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & id_text ) {
+        require_read();
+        return has_id_text_state(
+                   lua_state, handle, id_text,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

@@ -26951,8 +26951,6 @@ def render_dynamic_character_condition(
         ("u_has_martial_art", "martial_arts.get", "martial_art"),
         ("npc_using_martial_art", "martial_arts.get", "martial_art"),
         ("u_using_martial_art", "martial_arts.get", "martial_art"),
-        ("npc_has_proficiency", "proficiencies.get", "proficiency"),
-        ("u_has_proficiency", "proficiencies.get", "proficiency"),
     )
     for key, service, kind in simple_id_queries:
         if set(condition) != {key}:
@@ -27606,6 +27604,7 @@ def render_eoc_condition_expression(
     training_pair_proven: bool = False,
     npc_dialogue_pair_proven: bool = False,
     event_beta_presence_proven: bool = False,
+    proficiency_alpha_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -28385,6 +28384,7 @@ def render_eoc_condition_expression(
                 training_pair_proven,
                 npc_dialogue_pair_proven,
                 event_beta_presence_proven,
+                proficiency_alpha_actor_proven,
             )
             for entry in entries
         ]
@@ -28403,6 +28403,7 @@ def render_eoc_condition_expression(
             training_pair_proven,
             npc_dialogue_pair_proven,
             event_beta_presence_proven,
+            proficiency_alpha_actor_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -29232,21 +29233,24 @@ def render_eoc_condition_expression(
             "services.types.id(\"martial_art\", "
             f"{lua_quote(condition['u_using_martial_art'])}))).selected"
         )
-    if (
-        avatar_actor_proven and
-        set(condition) == {"u_has_proficiency"} and
-        safe_platform_id(condition.get("u_has_proficiency"))
-    ):
-        return (
-            "service_value(services.proficiencies.get("
-            "actor, "
-            "services.types.id(\"proficiency\", "
-            f"{lua_quote(condition['u_has_proficiency'])}))).known"
-        )
+    if set(condition) == {"u_has_proficiency"}:
+        raw_id = condition.get("u_has_proficiency")
+        if proficiency_alpha_actor_proven and safe_platform_id(raw_id):
+            # Native checks raw proficiency_id text against the learned set;
+            # it does not require a registered definition. Dynamic
+            # str_or_var/mutator shapes remain TODO until their exact scope
+            # and evaluation semantics are proven at this call site.
+            return (
+                "service_value(services.proficiencies.has_id_text("
+                f"actor, {lua_quote(raw_id)}))"
+            )
+    if "npc_has_proficiency" in condition:
+        # Native reads dialogue beta. The migrated direct-topic EOC action
+        # callback does not yet supply a plain-table beta context.
+        return None
     for npc_key, u_key in (
         ("npc_has_martial_art", "u_has_martial_art"),
         ("npc_using_martial_art", "u_using_martial_art"),
-        ("npc_has_proficiency", "u_has_proficiency"),
     ):
         if (
             npc_actor_proven and
@@ -29260,8 +29264,6 @@ def render_eoc_condition_expression(
                     "services.martial_arts.get", "martial_art", ".known"),
                 "u_using_martial_art": (
                     "services.martial_arts.get", "martial_art", ".selected"),
-                "u_has_proficiency": (
-                    "services.proficiencies.get", "proficiency", ".known"),
             }[u_key]
             return (
                 f"service_value({native_surface}("
@@ -30035,13 +30037,26 @@ def render_eoc(
     # inherit it.  Only this boolean fact is safe for npc_exists and it does
     # not authorize NPC services.
     npc_condition_beta_actor_proven = False
-    # A referenced EOC is also callable by run_eocs/test_eoc and can receive a
-    # different child context.  Dynamic run_eocs selectors can target any
-    # generated EOC, so disable this proof corpus-wide when one is present.
+    # A referenced EOC is also callable by run_eocs, run_eoc_selector, or
+    # test_eoc and can receive a different child context. Dynamic dispatch in
+    # either run_eocs or run_eoc_selector can target any generated EOC, so
+    # disable this proof corpus-wide when one is present.
     # Only an event-exclusive function in a corpus without dynamic dispatch
     # may use its event bridge's interlocutor as native beta-presence evidence.
     event_beta_presence_proven = (
         has_event_trigger and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # Native u_has_proficiency reads dialogue alpha. Restrict the current
+    # lowerer to game_start, where the avatar is live and source-proven; other
+    # avatar hooks can run after death or lack an equivalent live handle.
+    # Also require an event-exclusive EOC so dispatch cannot supply another
+    # actor. This proof is not passed to stored conditions or conditional
+    # effect closures, which may run with a child context.
+    proficiency_alpha_actor_proven = (
+        required_event == "game_start" and
+        game_start_avatar_actor_is_proven() and not inline_eoc and
+        eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
     deactivate_condition = value.get("deactivate_condition")
@@ -30056,6 +30071,7 @@ def render_eoc(
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
             event_beta_presence_proven=event_beta_presence_proven,
+            proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -30100,6 +30116,7 @@ def render_eoc(
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
             event_beta_presence_proven=event_beta_presence_proven,
+            proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
