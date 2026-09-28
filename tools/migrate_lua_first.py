@@ -27279,70 +27279,6 @@ def render_trait_condition(
     return query(raw)
 
 
-def render_npc_selected_mission_condition(
-    condition: str, npc_dialogue_pair_proven: bool,
-    npc_actor_expression: str | None,
-) -> str | None:
-    """Lower selected mission predicates for an explicit dialogue actor pair."""
-    if (
-        not npc_dialogue_pair_proven or
-        npc_actor_expression != "context.actors.beta"
-    ):
-        return None
-    predicate = {
-        "mission_complete": "complete",
-        "npc_mission_complete": "complete",
-        "mission_incomplete": "incomplete",
-        "npc_mission_incomplete": "incomplete",
-        "mission_failed": "failed",
-        "npc_mission_failed": "failed",
-    }.get(condition)
-    if predicate is None:
-        return None
-    return (
-        "(function() "
-        "local actors = context and context.actors; "
-        "local alpha = actors and actors.alpha; "
-        "local beta = actors and actors.beta; "
-        "if alpha == nil or alpha.kind ~= \"creature\" or "
-        "alpha.subtype ~= \"avatar\" or beta == nil or "
-        "beta.kind ~= \"creature\" or beta.subtype ~= \"npc\" then "
-        "return false end; "
-        "return service_value(services.npcs.missions.selected_condition("
-        f"beta, alpha, \"{predicate}\")) "
-        "end)()"
-    )
-
-
-def render_npc_selected_mission_goal_condition(
-    condition: Any, npc_dialogue_pair_proven: bool,
-    npc_actor_expression: str | None,
-) -> str | None:
-    """Lower static native mission-goal checks for a proven dialogue beta."""
-    if (
-        not npc_dialogue_pair_proven or
-        npc_actor_expression != "context.actors.beta" or
-        not isinstance(condition, dict) or
-        len(condition) != 1
-    ):
-        return None
-    condition_key, goal = next(iter(condition.items()))
-    if (
-        condition_key not in {"mission_goal", "npc_mission_goal"} or
-        not isinstance(goal, str) or goal not in NATIVE_MISSION_GOALS
-    ):
-        return None
-    return (
-        "(function() "
-        "local beta = context and context.actors and context.actors.beta; "
-        "if beta == nil or beta.kind ~= \"creature\" or "
-        "beta.subtype ~= \"npc\" then return false end; "
-        "return service_value(services.npcs.missions.selected_has_goal("
-        f"beta, \"{goal}\")) "
-        "end)()"
-    )
-
-
 def render_npc_selected_generic_rewards_condition(
     condition: str, npc_dialogue_pair_proven: bool,
     npc_actor_expression: str | None,
@@ -27875,13 +27811,6 @@ def render_eoc_condition_expression(
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
-        selected_mission_condition = \
-            render_npc_selected_mission_condition(
-                condition, npc_dialogue_pair_proven,
-                npc_actor_expression,
-            )
-        if selected_mission_condition is not None:
-            return selected_mission_condition
         # Native has_effect(..., bp_null) and Platform effects.has without a
         # part both search every target part.  Only a proven dialogue beta
         # establishes the actor used by npc_available.
@@ -27949,7 +27878,9 @@ def render_eoc_condition_expression(
             "npc_mission_complete", "npc_mission_failed",
             "npc_mission_incomplete",
         }:
-            # Actor provenance alone does not prove beta or dialogue state.
+            # These predicates inspect beta's selected mission. Even a
+            # direct topic pair has no executable callback until response
+            # conditions and true_eocs are emitted by render_talk_topic.
             return None
         if condition == "u_friend":
             # Native u_friend reads alpha and asks whether that exact actor is
@@ -29107,14 +29038,11 @@ def render_eoc_condition_expression(
         # The actor talker has no selected mission, so the legacy handler
         # compares a null mission regardless of the goal value.
         return "false"
-    selected_mission_goal = render_npc_selected_mission_goal_condition(
-        condition, npc_dialogue_pair_proven, npc_actor_expression,
-    )
-    if selected_mission_goal is not None:
-        return selected_mission_goal
     if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
-        # Both legacy spellings query beta's selected mission. Only static
-        # enum names plus a proven dialogue beta are eligible for lowering.
+        # Both beta spellings query the selected mission, but direct topic
+        # response condition/true_eocs callbacks are not emitted yet. The
+        # native parameter is also str_or_var, so static IDs alone do not
+        # establish a reachable invocation path.
         return None
     selected_mission_generic_rewards = (
         render_npc_selected_generic_rewards_condition(
@@ -30232,6 +30160,24 @@ def render_eoc(
             condition_todo = (
                 "translate u_has_camp only with an explicit camp handle and "
                 "authorized manager handle"
+            )
+        elif isinstance(raw_condition, str) and raw_condition in {
+            "mission_complete", "mission_failed", "mission_incomplete",
+            "npc_mission_complete", "npc_mission_failed",
+            "npc_mission_incomplete",
+        }:
+            condition_todo = (
+                "translate beta selected-mission status only after a "
+                "reachable topic callback supplies beta's selection; "
+                "complete/incomplete also need the current avatar owner"
+            )
+        elif isinstance(raw_condition, dict) and set(raw_condition) in (
+            {"mission_goal"}, {"npc_mission_goal"}
+        ):
+            condition_todo = (
+                "translate beta mission_goal only after talk-topic response "
+                "EOC callbacks are wired; preserve native str_or_var "
+                "evaluation and enum conversion"
             )
         elif contains_training_offer_condition(raw_condition):
             condition_todo = (
