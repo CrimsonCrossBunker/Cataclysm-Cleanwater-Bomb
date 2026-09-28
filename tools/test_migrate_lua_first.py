@@ -582,7 +582,7 @@ assert(worn_calls==1 and has_calls==1)
             (
                 "live_game_start_role",
                 {"required_event": "game_start",
-                 "condition": {"npc_role_nearby": "scout"}},
+                 "condition": {"npc_role_nearby": "scout"}, "eoc_type": "EVENT"},
                 True,
                 "services.npcs.has_role_nearby(actor, \"scout\", 48)",
             ),
@@ -1755,6 +1755,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
                         "copy_var": {"context_val": "input"},
                         "target_var": {"global_val": "context_output"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "indirect_copy",
@@ -1763,6 +1764,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
                         "copy_var": {"var_val": "input_ref"},
                         "target_var": {"global_val": "indirect_output"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "no_beta_copy",
@@ -1771,6 +1773,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
                         "copy_var": {"npc_val": "input"},
                         "target_var": {"global_val": "npc_output"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "false_context_copy",
@@ -1781,6 +1784,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
                         "target_var": {"global_val": "false_output"},
                     },
                     "effect": "nothing",
+                    "eoc_type": "EVENT",
                 },
             ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
@@ -1936,6 +1940,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "set_string_var": "",
                         "target_var": {"global_val": "literal_empty"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "dynamic_source",
@@ -1944,6 +1949,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "set_string_var": {"u_val": "source"},
                         "target_var": {"global_val": "dynamic"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "parsed_tags",
@@ -1952,6 +1958,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "set_string_var": "<name>", "parse_tags": True,
                         "target_var": {"global_val": "parsed"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "interactive_input",
@@ -1961,6 +1968,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "string_input": {"title": "Input"},
                         "target_var": {"global_val": "input"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "indirect_target",
@@ -1969,6 +1977,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "set_string_var": "value",
                         "target_var": {"var_val": "target"},
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "unproven_npc_target",
@@ -1977,6 +1986,7 @@ assert(table.concat(calls,',')=='rng,translate,write')
                         "set_string_var": "value",
                         "target_var": {"npc_val": "target"},
                     },
+                    "eoc_type": "EVENT",
                 },
             ]), encoding="utf-8")
             result = migrate_lua_first.migrate(
@@ -2371,6 +2381,7 @@ assert(adds==1 and random_calls==2 and reads==READS)
                     source.write_text(json.dumps({
                         "type": "effect_on_condition", "id": "ignored_remove",
                         "required_event": "game_start", "effect": [effect],
+                        "eoc_type": "EVENT",
                     }))
                     result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "ignored_test")
                     self.assertTrue(result.partial)
@@ -3379,6 +3390,7 @@ assert(observed[#observed] == 'KNOWN')
                             ],
                         },
                         "effect": {"message": "nested proficiency"},
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -3416,6 +3428,7 @@ assert(observed[#observed] == 'KNOWN')
                             "test_eoc": "proficiency_child_condition",
                         },
                         "effect": {"message": "parent condition"},
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -3441,6 +3454,7 @@ assert(observed[#observed] == 'KNOWN')
                 "required_event": "game_start",
                 "condition": {"u_has_proficiency": "prof_unregistered_condition_test"},
                 "effect": {"message": "bounded target"},
+                "eoc_type": "EVENT",
             }
             cases = (
                 [
@@ -3450,6 +3464,7 @@ assert(observed[#observed] == 'KNOWN')
                         "id": "static_caller",
                         "required_event": "game_start",
                         "effect": {"run_eocs": ["proficiency_target"]},
+                        "eoc_type": "EVENT",
                     },
                 ],
                 [
@@ -3459,6 +3474,7 @@ assert(observed[#observed] == 'KNOWN')
                         "id": "dynamic_caller",
                         "required_event": "game_start",
                         "effect": {"run_eocs": {"context_val": "next_eoc"}},
+                        "eoc_type": "EVENT",
                     },
                 ],
                 [
@@ -3470,6 +3486,7 @@ assert(observed[#observed] == 'KNOWN')
                         "effect": {
                             "run_eoc_selector": {"global_val": "selected_eoc"},
                         },
+                        "eoc_type": "EVENT",
                     },
                 ],
             )
@@ -4288,6 +4305,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "id": "sample_event",
                             "required_event": "game_start",
                             "effect": {"message": "hello"},
+                            "eoc_type": "EVENT",
                         },
                         {"type": "vehicle", "id": "needs_native_registrar"},
                     ]
@@ -4391,6 +4409,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "required_event": "game_start",
                             "condition": predicate,
                             "effect": {"message": f"predicate {index}"},
+                            "eoc_type": "EVENT",
                         }
                         for index, predicate in enumerate(predicates)
                     ]
@@ -4498,6 +4517,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "required_event": "game_start",
                             "condition": {"u_has_effect": "downed"},
                             "effect": {"message": "avatar"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -4509,6 +4529,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "intensity": 2,
                             },
                             "effect": {"message": "avatar any"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -4520,6 +4541,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "intensity": 1,
                             },
                             "effect": {"message": "avatar qualified"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -4536,6 +4558,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "u_has_effect": {"context_val": "effect_id"}
                             },
                             "effect": {"message": "dynamic"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -4543,6 +4566,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "required_event": "game_start",
                             "condition": {"npc_has_effect": "downed"},
                             "effect": {"message": "unproven"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -4727,6 +4751,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         "required_event": "game_start",
                         "condition": {"u_has_faction_trust": 12},
                         "effect": {"message": "trusted"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -4763,6 +4788,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "required_event": "game_start",
                             "condition": predicate,
                             "effect": {"message": f"predicate {index}"},
+                            "eoc_type": "EVENT",
                         }
                         for index, predicate in enumerate(predicates)
                     ]
@@ -4806,6 +4832,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "required_event": "game_start",
                             "condition": "player_see_u",
                             "effect": {"message": "visible"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5247,6 +5274,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         "u_add_wound": "arm_l",
                         "wound_id": "scratch",
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition",
@@ -5256,6 +5284,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         "u_remove_wound": "arm_l",
                         "wound_id": ["scratch", "deep_scratch"],
                     },
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition",
@@ -5451,6 +5480,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "id": "static_wound_caller",
                     "required_event": "game_start",
                     "effect": {"run_eocs": "item_wound_callback"},
+                    "eoc_type": "EVENT",
                 },
             ],
             [
@@ -5465,6 +5495,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                             "global_val": "selected_wound_callback",
                         },
                     },
+                    "eoc_type": "EVENT",
                 },
             ],
         ]
@@ -5510,12 +5541,14 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 },
                                 {"u_add_var": "turn", "time": True},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_character_math",
                             "required_event": "game_start",
                             "effect": {"math": ["u_score = 2"]},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5525,6 +5558,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "copy_var": {"u_val": "source"},
                                 "target_var": {"u_val": "target"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5534,6 +5568,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "set_string_var": ["one", "two"],
                                 "target_var": {"u_val": "label"},
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -5687,6 +5722,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     "id": f"invalid_unicode_remove_{index}",
                     "required_event": "game_start",
                     "effect": {"u_lose_var": name},
+                    "eoc_type": "EVENT",
                 })
             source.write_text(json.dumps(objects), encoding="utf-8")
             result = migrate_lua_first.migrate(
@@ -5717,6 +5753,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "trigger_event": "u_var_changed",
                                 "args": ["numeric", 42.5],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5726,6 +5763,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "trigger_event": "u_var_changed",
                                 "args": ["global", {"global_val": "payload"}],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5735,6 +5773,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "trigger_event": "u_var_changed",
                                 "args": ["alpha", {"u_val": "payload"}],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -5753,6 +5792,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                                 "trigger_event": "custom_event",
                                 "args": ["unknown", 1],
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6102,6 +6142,7 @@ assert(#events == 9)
                     "type": "effect_on_condition", "id": "u_add_literal",
                     "required_event": "game_start",
                     "effect": {"u_add_var": "u_val", "value": "ready"},
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "npc_add_literal",
@@ -6112,11 +6153,13 @@ assert(#events == 9)
                     "type": "effect_on_condition", "id": "time_literal",
                     "required_event": "game_start",
                     "effect": {"u_add_var": "turn", "time": True},
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "u_remove_literal",
                     "required_event": "game_start",
                     "effect": {"u_lose_var": "u_val"},
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "npc_remove_literal",
@@ -6154,6 +6197,7 @@ assert(#events == 9)
                     "type": "effect_on_condition", "id": "no_beta_time",
                     "required_event": "game_start",
                     "effect": {"npc_add_var": "no_beta_turn", "time": True},
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition", "id": "single_value_rng",
@@ -6210,12 +6254,14 @@ assert(#events == 9)
                                 "u_add_var": {"context_val": "name"},
                                 "value": "ready",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "numeric_character_variable",
                             "required_event": "game_start",
                             "effect": {"u_add_var": "count", "value": 1},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6226,12 +6272,14 @@ assert(#events == 9)
                                 "value": "one",
                                 "possible_values": ["two"],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_character_math",
                             "required_event": "game_start",
                             "effect": {"math": ["u_score = rng(1, 3)"]},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6241,6 +6289,7 @@ assert(#events == 9)
                                 "copy_var": {"u_val": "source"},
                                 "target_var": {"npc_val": "target"},
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6302,6 +6351,7 @@ assert(#events == 9)
                                 "expects_vars": [{"context_val": "name"}]
                             },
                             "effect": {"message": "not proven"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6309,6 +6359,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"math": ["u_score == 1"]},
                             "effect": {"message": "not proven"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6400,24 +6451,28 @@ assert(#events == 9)
                             "id": "math_wrong_scope_prefix",
                             "required_event": "game_start",
                             "effect": {"math": ["npc_wrong_scope = 5"]},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "math_random_rhs",
                             "required_event": "game_start",
                             "effect": {"math": ["u_math_random = rng(1, 3)"]},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "math_context_write",
                             "required_event": "game_start",
                             "effect": {"math": ["_math_context = 6"]},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "math_indirect_write",
                             "required_event": "game_start",
                             "effect": {"math": ["v_math_target = 7"]},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6463,6 +6518,7 @@ assert(#events == 9)
                                 "u_assign_activity": "ACT_WAIT",
                                 "duration": "10 minutes",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6556,6 +6612,7 @@ assert(#events == 9)
                         "id": "avatar_target_practice",
                         "required_event": "game_start",
                         "effect": native_effect,
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -6628,6 +6685,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": predicate,
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         }
                         for index, predicate in enumerate(predicates)
                     ]
@@ -6664,6 +6722,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_bionics": "ANY"},
                             "effect": {"message": "powered"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6673,6 +6732,7 @@ assert(#events == 9)
                                 "u_know_recipe": "cudgel_test_no_tools"
                             },
                             "effect": {"message": "known"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6722,6 +6782,7 @@ assert(#events == 9)
                                 "u_has_bionics": {"context_val": "bionic_id"}
                             },
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6731,6 +6792,7 @@ assert(#events == 9)
                                 "u_know_recipe": {"context_val": "recipe_id"}
                             },
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6773,6 +6835,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"is_day": True},
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6806,6 +6869,7 @@ assert(#events == 9)
                                 "is_season": {"u_val": "remembered_season"}
                             },
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6813,6 +6877,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"is_season": 5},
                             "effect": {"message": "bounded only"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6843,6 +6908,7 @@ assert(#events == 9)
                         "required_event": "game_start",
                         "condition": {"is_weather": "rain"},
                         "effect": {"message": "literal weather"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -6875,6 +6941,7 @@ assert(#events == 9)
                                 "is_weather": {"context_val": "context_weather"}
                             },
                             "effect": {"message": "context weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6884,6 +6951,7 @@ assert(#events == 9)
                                 "is_weather": {"u_val": "remembered_weather"}
                             },
                             "effect": {"message": "u weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6893,6 +6961,7 @@ assert(#events == 9)
                                 "is_weather": {"global_val": "global_weather"}
                             },
                             "effect": {"message": "global weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6900,6 +6969,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"is_weather": {"mutator": "topic_item"}},
                             "effect": {"message": "topic item weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6909,6 +6979,7 @@ assert(#events == 9)
                                 "is_weather": {"math": ["weather('rain')"]}
                             },
                             "effect": {"message": "unexpressed weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6916,6 +6987,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"is_weather": 5},
                             "effect": {"message": "numeric weather"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -6923,6 +6995,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"is_weather": ""},
                             "effect": {"message": "empty weather"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -6975,6 +7048,7 @@ assert(#events == 9)
                         "id": "cancel_activity",
                         "required_event": "game_start",
                         "effect": "u_cancel_activity",
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7001,6 +7075,7 @@ assert(#events == 9)
                         "required_event": "game_start",
                         "condition": {"u_has_item": "water_clean"},
                         "effect": {"message": "water found"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7028,6 +7103,7 @@ assert(#events == 9)
                         "effect": {
                             "give_achievement": "achievement_not_registered"
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7069,6 +7145,7 @@ assert(#events == 9)
                 "hilight_disabled": True,
                 "keys": ["a", "b"],
             },
+            "eoc_type": "EVENT",
         })
 
         rendered = migrate_lua_first.render_eoc(
@@ -7098,6 +7175,7 @@ assert(#events == 9)
                         "id": "install_bionic",
                         "required_event": "game_start",
                         "effect": {"u_add_bionic": "bio_earplugs"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7128,6 +7206,7 @@ assert(#events == 9)
                         "id": "remove_bionic",
                         "required_event": "game_start",
                         "effect": {"u_lose_bionic": "bio_earplugs"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7158,6 +7237,7 @@ assert(#events == 9)
                         "id": "learn_recipe",
                         "required_event": "game_start",
                         "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -7189,6 +7269,7 @@ assert(#events == 9)
                             "id": "forget_recipe",
                             "required_event": "game_start",
                             "effect": {"u_forget_recipe": "cudgel_test_no_tools"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -7198,6 +7279,7 @@ assert(#events == 9)
                                 "u_forget_recipe": "cudgel_test_no_tools",
                                 "category": False,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -7207,6 +7289,7 @@ assert(#events == 9)
                                 "u_forget_recipe": "CC_FOOD",
                                 "category": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -7216,6 +7299,7 @@ assert(#events == 9)
                                 "u_forget_recipe": "CC_FOOD",
                                 "subcategory": "CSC_FOOD_DRINKS",
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -7260,6 +7344,7 @@ assert(#events == 9)
                                 },
                                 "category": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -7271,6 +7356,7 @@ assert(#events == 9)
                                     "context_val": "subcategory_id"
                                 },
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -7301,6 +7387,7 @@ assert(#events == 9)
                             "u_forget_recipe": "CC_NOT_REGISTERED",
                             "category": True,
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -7310,6 +7397,7 @@ assert(#events == 9)
                             "u_forget_recipe": "CC_FOOD",
                             "subcategory": "s" * 257,
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -7335,6 +7423,7 @@ assert(#events == 9)
                         "id": "referenced_recipe",
                         "required_event": "game_start",
                         "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -7372,12 +7461,14 @@ assert(#events == 9)
                 "id": "game_start_recipe",
                 "required_event": "game_start",
                 "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
                 "id": "game_start_wound",
                 "required_event": "game_start",
                 "effect": {"u_add_wound": "arm_l", "wound_id": "scratch"},
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -7388,6 +7479,7 @@ assert(#events == 9)
                     "bonus": 10,
                     "max_bonus": 50,
                 },
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -7395,6 +7487,7 @@ assert(#events == 9)
                 "required_event": "game_start",
                 "condition": {"u_has_proficiency": "prof_knapping"},
                 "effect": "nothing",
+                "eoc_type": "EVENT",
             },
         ]
         reemitter = {
@@ -7461,6 +7554,7 @@ assert(#events == 9)
                     "effect": "nothing",
                 },
             },
+            "eoc_type": "EVENT",
         })
         normal, *_ = migrate_lua_first.normalize_inline_eocs([source], False)
         reemitted, *_ = migrate_lua_first.normalize_inline_eocs([source], True)
@@ -7509,6 +7603,7 @@ assert(#events == 9)
                 "id": "game_start_target",
                 "required_event": "game_start",
                 "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                "eoc_type": "EVENT",
             }),
             migrate_lua_first.SourceObject(Path("source.json"), 1, {
                 "type": "effect_on_condition",
@@ -7603,6 +7698,7 @@ assert(#events == 9)
                         "id": "dynamic_selector_recipe",
                         "required_event": "game_start",
                         "effect": {"u_forget_recipe": "cudgel_test_no_tools"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -7841,18 +7937,21 @@ assert(#events == 9)
                             "id": "learn_style",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "forget_style",
                             "required_event": "game_start",
                             "effect": {"u_forget_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "learn_unregistered_style",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style_from_mod"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -7920,12 +8019,14 @@ assert(#events == 9)
                             "id": "control_character_style_id",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style\ninvalid"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "overlong_style_id",
                             "required_event": "game_start",
                             "effect": {"u_forget_martial_art": "s" * 257},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -7973,18 +8074,21 @@ assert(#events == 9)
                             "id": "static_martial_art_callback",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "static_martial_art_caller",
                             "required_event": "game_start",
                             "effect": {"run_eocs": "static_martial_art_callback"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "static_selector_martial_art_callback",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -7995,12 +8099,14 @@ assert(#events == 9)
                                     "static_selector_martial_art_callback",
                                 ],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_martial_art_callback",
                             "required_event": "game_start",
                             "effect": {"u_forget_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8012,12 +8118,14 @@ assert(#events == 9)
                                     "default": "",
                                 }
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_selector_martial_art_callback",
                             "required_event": "game_start",
                             "effect": {"u_learn_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8028,18 +8136,21 @@ assert(#events == 9)
                                     "global_val": "selected_eoc",
                                 },
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "malformed_dispatch_martial_art_callback",
                             "required_event": "game_start",
                             "effect": {"u_forget_martial_art": "style_karate"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "malformed_dispatch_martial_art_caller",
                             "required_event": "game_start",
                             "effect": {"run_eocs": 42},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -8104,12 +8215,14 @@ assert(#events == 9)
                                 "bonus": 10,
                                 "max_bonus": 50,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "remove_morale",
                             "required_event": "game_start",
                             "effect": {"u_lose_morale": "morale_feeling_good"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8121,6 +8234,7 @@ assert(#events == 9)
                                 "max_bonus": 50,
                                 "duration": "2 hours",
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -8165,12 +8279,14 @@ assert(#events == 9)
                             "decay_start": "2 hours",
                             "capped": True,
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "avatar_morale_remove",
                         "required_event": "game_start",
                         "effect": {"u_lose_morale": "morale_feeling_good"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -8213,6 +8329,7 @@ assert(#events == 9)
                             "bonus": 1.5,
                             "max_bonus": 2,
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -8223,6 +8340,7 @@ assert(#events == 9)
                             "bonus": 2147483648,
                             "max_bonus": 2,
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -8234,6 +8352,7 @@ assert(#events == 9)
                             "max_bonus": 2,
                             "duration": "-1 turns",
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -8399,12 +8518,14 @@ assert(#events == 9)
                                 "bonus": 10,
                                 "max_bonus": 20,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "morale_caller",
                             "required_event": "game_start",
                             "effect": caller_effect,
+                            "eoc_type": "EVENT",
                         },
                     ]),
                     encoding="utf-8",
@@ -8433,6 +8554,7 @@ assert(#events == 9)
                         "max_bonus": 2,
                     },
                     "effect": "nothing",
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -8504,18 +8626,21 @@ assert(#events == 9)
                             "id": "add_wet",
                             "required_event": "game_start",
                             "effect": {"u_add_wet": 42},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "add_wet_npc",
                             "required_event": "game_start",
                             "effect": {"npc_add_wet": 42},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "add_wet_huge",
                             "required_event": "game_start",
                             "effect": {"u_add_wet": 99999999},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -8683,6 +8808,7 @@ assert(#events == 9)
                             "max_bonus": 50,
                             "duration": "2 hours",
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -8716,6 +8842,7 @@ assert(#events == 9)
                                 "u_add_effect": "downed",
                                 "duration": 60,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8725,18 +8852,21 @@ assert(#events == 9)
                                 "u_add_effect": "incorporeal",
                                 "duration": "PERMANENT",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "remove_effect",
                             "required_event": "game_start",
                             "effect": {"u_lose_effect": "downed"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "zero_duration",
                             "required_event": "game_start",
                             "effect": {"u_add_effect": "blind", "duration": 0},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8747,6 +8877,7 @@ assert(#events == 9)
                                 "duration": 60,
                                 "intensity": 2,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8758,6 +8889,7 @@ assert(#events == 9)
                                 "target_part": "eyes",
                                 "force": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8766,6 +8898,7 @@ assert(#events == 9)
                             "effect": {
                                 "u_lose_effect": [{"context_val": "effect_id"}]
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -8822,6 +8955,7 @@ assert(#events == 9)
                             "id": "zero_duration",
                             "required_event": "game_start",
                             "effect": {"u_add_effect": "blind", "duration": 0},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8832,6 +8966,7 @@ assert(#events == 9)
                                 "duration": 60,
                                 "intensity": 1000001,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8840,6 +8975,7 @@ assert(#events == 9)
                             "effect": {
                                 "u_lose_effect": {"unknown_val": "effect_id"}
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -8886,6 +9022,7 @@ assert(#events == 9)
                             "id": "avatar_trait",
                             "required_event": "game_start",
                             "effect": {"u_add_trait": "TOUGH"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8895,12 +9032,14 @@ assert(#events == 9)
                                 "u_add_trait": "SKIN_DARK",
                                 "variant": "black",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "avatar_lose_trait",
                             "required_event": "game_start",
                             "effect": {"u_lose_trait": "TOUGH"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8922,6 +9061,7 @@ assert(#events == 9)
                                 "npc_add_effect": "downed",
                                 "duration": 40,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -8933,6 +9073,7 @@ assert(#events == 9)
                                 "duration": 0,
                                 "intensity": -1,
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -9010,6 +9151,7 @@ assert(#events == 9)
                                 "u_add_effect": "bleed",
                                 "duration": 5,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9232,6 +9374,7 @@ assert(#events == 9)
                                 },
                                 {"u_mutate_category": "ANY"},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9281,12 +9424,14 @@ assert(#events == 9)
                                 },
                                 {"u_mutate_towards": "TOUGH"},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "unproven_npc_mutation",
                             "required_event": "game_start",
                             "effect": {"npc_mutate": 1},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9430,12 +9575,14 @@ assert(#events == 9)
                         "id": "static_mutation_callback",
                         "required_event": "game_start",
                         "effect": {"u_mutate": 1},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "static_mutation_caller",
                         "required_event": "game_start",
                         "effect": {"run_eocs": "static_mutation_callback"},
+                        "eoc_type": "EVENT",
                     },
                 ],
             ),
@@ -9455,6 +9602,7 @@ assert(#events == 9)
                         "effect": {
                             "run_eocs": "static_npc_mutation_callback"
                         },
+                        "eoc_type": "EVENT",
                     },
                 ],
             ),
@@ -9469,6 +9617,7 @@ assert(#events == 9)
                             "u_mutate_towards": "VULNERABLECHILL",
                             "category": "ANY",
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -9479,6 +9628,7 @@ assert(#events == 9)
                                 "global_val": "selected_eoc"
                             }
                         },
+                        "eoc_type": "EVENT",
                     },
                 ],
             ),
@@ -9511,6 +9661,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_strength": 8},
                             "effect": {"message": "strong enough"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9518,6 +9669,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_dexterity": 6},
                             "effect": {"message": "dexterous"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9525,6 +9677,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_intelligence": 7},
                             "effect": {"message": "smart"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9532,6 +9685,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_perception": 9},
                             "effect": {"message": "perceptive"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9567,6 +9721,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"npc_has_strength": 8},
                             "effect": {"message": "unproven"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9574,6 +9729,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_strength": "str_var"},
                             "effect": {"message": "variable"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -9633,6 +9789,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_warm",
                             "effect": {"message": "warm"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9640,6 +9797,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_deaf",
                             "effect": {"message": "deaf"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9661,6 +9819,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "npc_is_warm",
                             "effect": {"message": "unproven"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9668,6 +9827,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_underwater",
                             "effect": {"message": "underwater"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -9721,6 +9881,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_alive",
                             "effect": {"message": "alive"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9728,6 +9889,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "npc_is_alive",
                             "effect": {"message": "npc alive"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9794,6 +9956,7 @@ assert(#events == 9)
                                 "bodypart": "torso",
                             },
                             "effect": {"message": "avatar temp"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9811,6 +9974,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_underwater",
                             "effect": {"message": "avatar underwater"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9825,6 +9989,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_part_temp": 5000},
                             "effect": {"message": "missing bodypart"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -9873,6 +10038,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_avatar",
                             "effect": {"message": "avatar"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9880,6 +10046,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_female",
                             "effect": {"message": "female"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9887,6 +10054,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_cash": 500},
                             "effect": {"message": "cash"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9894,6 +10062,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "npc_female",
                             "effect": {"message": "npc female"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9903,6 +10072,7 @@ assert(#events == 9)
                                 "u_has_cash": {"math": ["cash_var"]}
                             },
                             "effect": {"message": "dynamic"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -9952,6 +10122,7 @@ assert(#events == 9)
                                 "loc": {"context_val": "spot"},
                             },
                             "effect": {"message": "terrain"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9962,6 +10133,7 @@ assert(#events == 9)
                                 "loc": {"context_val": "spot"},
                             },
                             "effect": {"message": "furniture"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9972,6 +10144,7 @@ assert(#events == 9)
                                 "loc": {"context_val": "spot"},
                             },
                             "effect": {"message": "field"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -9982,6 +10155,7 @@ assert(#events == 9)
                                 "loc": {"u_val": "spot"},
                             },
                             "effect": {"message": "dynamic"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -10022,6 +10196,7 @@ assert(#events == 9)
                                 "loc": {"context_val": "spot"},
                             },
                             "effect": {"message": "flag"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10031,6 +10206,7 @@ assert(#events == 9)
                                 "map_in_city": {"context_val": "spot"},
                             },
                             "effect": {"message": "city"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10040,6 +10216,7 @@ assert(#events == 9)
                                 "map_is_outside": {"context_val": "spot"},
                             },
                             "effect": {"message": "indoor"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10049,6 +10226,7 @@ assert(#events == 9)
                                 "is_outside": {"context_val": "spot"},
                             },
                             "effect": {"message": "outside"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10058,6 +10236,7 @@ assert(#events == 9)
                                 "map_in_city": {"u_val": "spot"},
                             },
                             "effect": {"message": "dynamic"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10067,6 +10246,7 @@ assert(#events == 9)
                                 "is_outside": {"u_val": "spot"},
                             },
                             "effect": {"message": "dynamic"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -10461,6 +10641,7 @@ assert(#events == 9)
                             "id": "u_var",
                             "required_event": "game_start",
                             "effect": {"u_lose_var": "quest_var"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10473,24 +10654,28 @@ assert(#events == 9)
                             "id": "npc_var_without_beta",
                             "required_event": "game_start",
                             "effect": {"npc_lose_var": "alpha_only_npc_var"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_var",
                             "required_event": "game_start",
                             "effect": {"u_lose_var": {"u_val": "v"}},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "add_var",
                             "required_event": "game_start",
                             "effect": {"u_add_var": "var", "value": 1},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "u_msg",
                             "required_event": "game_start",
                             "effect": {"u_message": "hello"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10503,18 +10688,21 @@ assert(#events == 9)
                             "id": "sound_msg",
                             "required_event": "game_start",
                             "effect": {"u_message": "hello", "sound": True},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "activate",
                             "required_event": "game_start",
                             "effect": {"u_activate_trait": "ELFAEYES"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "deactivate",
                             "required_event": "game_start",
                             "effect": {"u_deactivate_trait": "ELFAEYES"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10535,6 +10723,7 @@ assert(#events == 9)
                             "effect": {
                                 "u_activate_trait": {"u_val": "trait_var"}
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -10603,6 +10792,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": {"u_has_profession": "unemployed"},
                             "effect": {"message": "unemployed"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -10643,6 +10833,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_male",
                             "effect": {"message": "u_male"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -10650,6 +10841,7 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "condition": "u_is_character",
                             "effect": {"message": "u_char"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -11218,6 +11410,7 @@ assert(not available())
                     "id": "npc_rule_parent",
                     "required_event": "game_start",
                     "effect": {"run_eocs": "npc_rule_reused"},
+                    "eoc_type": "EVENT",
                 },
             ],
             "dynamic_dispatch": [
@@ -11234,6 +11427,7 @@ assert(not available())
                     "effect": {
                         "run_eoc_selector": {"global_val": "selected_eoc"}
                     },
+                    "eoc_type": "EVENT",
                 },
             ],
         }
@@ -11284,6 +11478,7 @@ assert(not available())
                                 ]
                             },
                             "effect": {"message": "avatar predicates ok"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -11381,6 +11576,7 @@ assert(not available())
                                 ]
                             },
                             "effect": {"message": "avatar dialogue ok"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -12180,6 +12376,7 @@ assert(not available())
                 "required_event": "game_start",
                 "condition": "has_assigned_mission",
                 "effect": {"message": "assigned"},
+                "eoc_type": "EVENT",
             },
             {
                 "type": "talk_topic", "id": "delayed_topic",
@@ -13431,6 +13628,7 @@ assert(not available())
                         "required_event": "game_start",
                         "condition": "u_at_safe_space",
                         "effect": [],
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -13669,6 +13867,7 @@ assert(not available())
                                 "u_has_flag": "MUTATION_THRESHOLD"
                             },
                             "effect": {"message": "threshold"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13758,6 +13957,7 @@ assert(not available())
                             "required_event": "game_start",
                             "condition": {"u_is_wearing": "army_top"},
                             "effect": {"message": "wearing"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13843,6 +14043,7 @@ assert(not available())
                             "required_event": "game_start",
                             "condition": "u_is_outside",
                             "effect": {"message": "outside"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13850,6 +14051,7 @@ assert(not available())
                             "required_event": "game_start",
                             "condition": "npc_is_outside",
                             "effect": {"message": "npc outside"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13916,6 +14118,7 @@ assert(not available())
                                 "loc": {"context_val": "target_location"},
                             },
                             "effect": {"message": "transparent furniture"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13928,6 +14131,7 @@ assert(not available())
                                 "loc": {"context_val": "target_location"},
                             },
                             "effect": {"message": "dynamic flag"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -13938,6 +14142,7 @@ assert(not available())
                                 "loc": {"u_val": "remembered_location"},
                             },
                             "effect": {"message": "non-context loc"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -14133,6 +14338,7 @@ assert(not available())
                             "required_event": "game_start",
                             "condition": {"u_has_camp": "ignored"},
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -17759,6 +17965,7 @@ assert(not available())
                                 },
                                 "end_conversation",
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "talk_topic",
@@ -17879,6 +18086,7 @@ assert(not available())
                             "id": "direct_bounded_map_spawn",
                             "required_event": "game_start",
                             "effect": {"map_spawn_item": "radio", "count": 2},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -17888,6 +18096,7 @@ assert(not available())
                                 "map_spawn_item": "radio",
                                 "count": {"math": ["_count"]},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -17897,6 +18106,7 @@ assert(not available())
                                 "map_spawn_item": "radio",
                                 "use_item_group": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -17908,6 +18118,7 @@ assert(not available())
                             "id": "late_map_spawn_after_noop",
                             "required_event": "game_start",
                             "effect": ["nothing", {"map_spawn_item": "radio"}],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -17979,6 +18190,7 @@ assert(not available())
                         "id": "referenced_game_start_spawn_item",
                         "required_event": "game_start",
                         "effect": {"u_spawn_item": "battery"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -18045,6 +18257,7 @@ assert(not available())
                                 "effect": {"u_message": "visit"},
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -18323,6 +18536,7 @@ assert(not available())
                             "effect": [
                                 {"turn_cost": 50},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -18410,6 +18624,7 @@ assert(not available())
                         {"turn_cost": "0.5 seconds 0.5 seconds"},
                         {"turn_cost": "1 SECONDS"},
                     ],
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -19120,6 +19335,7 @@ assert(not available())
                             },
                             {"u_set_guard_pos": {"u_val": "guard_position"}},
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -19153,6 +19369,7 @@ assert(not available())
                                 "u_monsters_in_direction": "NE",
                             },
                             "effect": "u_cancel_activity",
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -19202,6 +19419,7 @@ assert(not available())
                             "default": False,
                         },
                         "effect": "u_cancel_activity",
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -19233,6 +19451,7 @@ assert(not available())
                                 "assign_mission": "MISSION_TEST",
                                 "deadline": 500,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -19242,18 +19461,21 @@ assert(not available())
                                 "finish_mission": "MISSION_TEST",
                                 "success": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "finish_default_failure_mission",
                             "required_event": "game_start",
                             "effect": {"finish_mission": "MISSION_DEFAULT"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "remove_literal_mission",
                             "required_event": "game_start",
                             "effect": {"remove_active_mission": "MISSION_TEST"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -19302,6 +19524,7 @@ assert(not available())
                                 "assign_mission": {"context_val": "mission_id"},
                                 "deadline": {"global_val": "mission_deadline"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -19311,6 +19534,7 @@ assert(not available())
                                 "finish_mission": {"u_val": "mission_id"},
                                 "step": {"context_val": "mission_step"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -19319,6 +19543,7 @@ assert(not available())
                             "effect": {
                                 "remove_active_mission": {"global_val": "mission_id"},
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -20391,6 +20616,7 @@ assert(not available())
                     "id": "invalid_camp_effect_object",
                     "required_event": "game_start",
                     "effect": {"assign_camp": "camp_1"},
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -20443,6 +20669,7 @@ assert(not available())
                             "id": "legacy_camp_task_object",
                             "required_event": "game_start",
                             "effect": {"basecamp_mission": "old_task"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -20775,6 +21002,7 @@ assert(not available())
                             {"platform_upgrade_work": {"upgrade_id": "dynamic"}},
                             "basecamp_mission",
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -20978,6 +21206,7 @@ assert(not available())
                                 "false_eocs": "avatar_required",
                             },
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -20990,6 +21219,7 @@ assert(not available())
                         "id": "avatar_no_topic_open",
                         "required_event": "game_start",
                         "effect": "open_dialogue",
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -21205,6 +21435,7 @@ assert(not available())
                                 "extra_moves_per_item": 5,
                                 "max_volume": 1000,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -21654,6 +21885,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "u_roll_remainder": ["QUICK"],
                                 "type": "mutation",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -21665,6 +21897,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "true_eocs": "roll_remainder_success",
                                 "false_eocs": "roll_remainder_failure",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -21675,6 +21908,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "type": "bionic",
                                 "message": "You learned %s.",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -21819,6 +22053,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "force": True,
                         },
                     ],
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition",
@@ -22045,12 +22280,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                     "take_vehicle": True,
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_dimension_travel",
                             "required_event": "game_start",
                             "effect": {"u_travel_to_dimension": {"u_val": "target"}},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -22126,12 +22363,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     "id": "synthetic_game_start_teleport",
                     "required_event": "game_start",
                     "effect": {"u_teleport": {"abs_ms": [7, 8, 0]}},
+                    "eoc_type": "EVENT",
                 },
                 {
                     "type": "effect_on_condition",
                     "id": "synthetic_game_start_dimension",
                     "required_event": "game_start",
                     "effect": {"u_travel_to_dimension": "nether"},
+                    "eoc_type": "EVENT",
                 },
             ]
         )
@@ -22568,6 +22807,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "pick_random": True,
                                 "wounded": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -22615,6 +22855,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "effect": {
                                 "u_pick_bodypart": {"u_val": "picked"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -22643,6 +22884,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "u_pick_bodypart": {"npc_val": "picked"},
                                 "pick_random": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -23253,6 +23495,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "required_event": "game_start",
                             "condition": condition,
                             "effect": {"message": "inventory condition"},
+                            "eoc_type": "EVENT",
                         }
                         for index, condition in enumerate(conditions)
                     ]
@@ -23575,12 +23818,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "id": "player_weapon_drop_static",
                             "required_event": "game_start",
                             "effect": "player_weapon_drop",
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "player_weapon_drop_object_shape",
                             "required_event": "game_start",
                             "effect": {"player_weapon_drop": True},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -23959,6 +24204,7 @@ assert(calls == 0)
                             "id": "npc_drop_weapon_game_start",
                             "required_event": "game_start",
                             "effect": "drop_weapon",
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -24283,6 +24529,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     ]
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -24570,6 +24817,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     ]
                                 }
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -24623,6 +24871,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"item": "battery", "amount": 1}
                             ]
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -24782,6 +25031,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": f"item_category_spawn_{identifier}",
                             "required_event": "game_start",
                             "effect": effect,
+                            "eoc_type": "EVENT",
                         }
                     ),
                     encoding="utf-8",
@@ -24824,6 +25074,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "u_set_field": "fd_fire",
                             "radius": 0,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ]),
                 encoding="utf-8",
@@ -24903,6 +25154,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             "id": "event_exclusive_radius",
             "required_event": "game_start",
             "effect": effect,
+            "eoc_type": "EVENT",
         }], "radius_event_exclusive")
         eligible = eligible_result.files[Path("main.lua")]
         self.assertEqual(len(eligible_result.converted), 1)
@@ -24916,6 +25168,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "id": "referenced_radius",
                 "required_event": "game_start",
                 "effect": effect,
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -24937,6 +25190,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "id": "dynamic_radius",
                 "required_event": "game_start",
                 "effect": effect,
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -24962,6 +25216,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "id": "replayed_radius",
                 "required_event": "game_start",
                 "effect": effect,
+                "eoc_type": "EVENT",
             },
         ], "radius_synthetic_event")
         synthetic_event = synthetic_result.files[Path("main.lua")]
@@ -25000,6 +25255,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "mirror_vertical": True,
                             "rotation": 2,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25040,6 +25296,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "mapgen_update": "update_pond",
                         "target_var": {"u_val": "mapgen_abs_ms_target"},
                     },
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -25075,6 +25332,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "offset_x": -1,
                         "offset_y": 1,
                     },
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -25135,6 +25393,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "id": "unsafe_mapgen_updates",
                         "required_event": "game_start",
                         "effect": unsafe_effects,
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25176,6 +25435,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "mirror_vertical": False,
                             "rotation": 0,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25225,6 +25485,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 ]
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -25262,6 +25523,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 ],
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25298,6 +25560,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "max_volume": {"context_val": "volume"},
                             "max_mass": {"u_val": "mass"},
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25348,6 +25611,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_spawn_npc": "npc_template_demo", "real_count": 1, "min_radius": 0, "max_radius": 0},
                                 "u_prevent_death",
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -25574,6 +25838,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_lose_mutation_type": "ACCLIMATIZATION"},
                                 {"u_set_trait_purifiability": "VULNERABLECHILL"},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -25629,6 +25894,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_lose_mutation_type": "ACCLIMATIZATION"},
                                 {"u_set_trait_purifiability": "VULNERABLECHILL"},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -25680,6 +25946,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 }
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25755,6 +26022,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "min_hit": {"context_val": "min_hit"},
                             "max_hit": {"context_val": "max_hit"},
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25789,6 +26057,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "min_level": {"math": ["u_spell_level"]},
                             }
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25829,6 +26098,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "targeted": True,
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25893,6 +26163,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     "loc": {"u_val": "ignored_by_native_targeted"},
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -25942,6 +26213,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 }
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -25971,6 +26243,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "max_level": 2,
                             }
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26029,6 +26302,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 },
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26080,6 +26354,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             },
                             "flashbang_radius": {"context_val": "radius"},
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26150,6 +26425,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "u_explosion": {"power": 50000},
                             "target_var": {"context_val": "explode_loc"},
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26264,6 +26540,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "id": "tagged_message",
                         "required_event": "game_start",
                         "effect": {"message": "Hello <u_name>"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -26274,12 +26551,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "sound": True,
                             "outdoor_only": True,
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "nul_message",
                         "required_event": "game_start",
                         "effect": {"message": "invalid\u0000message"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -26289,6 +26568,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "message": "ordinary message",
                             "outdoor_only": True,
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -26328,6 +26608,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "popup": True,
                             "popup_flag": "PF_ON_TOP",
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -26337,6 +26618,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "u_message": "popup is not a message type",
                             "type": "popup",
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -26620,6 +26902,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "id": "no_beta_u_message",
                         "required_event": "game_start",
                         "effect": {"u_message": "no beta"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -26692,6 +26975,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             {"u_explosion": {"shrapnel": 1, "casing_mass": 2}},
                             {"u_explosion": {"shrapnel": {"casing_mass": 3}}},
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26724,6 +27008,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             {"message": {"context_val": "message_text"}},
                             {"u_message": {"global_val": "avatar_message"}, "type": "neutral"},
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26764,6 +27049,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": "unbound_u_message_owner",
                             "required_event": "game_start",
                             "effect": {"run_eocs": "unbound_u_message"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -26792,6 +27078,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "popup": True,
                             "popup_flag": "PF_ON_TOP",
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -26824,6 +27111,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "required_event": "game_start",
                             "condition": "npc_see_u",
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -26857,6 +27145,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "required_event": "game_start",
                             "condition": {"u_at_om_location": "field"},
                             "effect": {"message": "avatar"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26871,6 +27160,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "required_event": "game_start",
                             "condition": {"u_at_om_location": "FACTION_CAMP_ANY"},
                             "effect": {"message": "camp"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26881,6 +27171,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": 0,
                             },
                             "effect": {"message": "same tile"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26888,6 +27179,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "required_event": "game_start",
                             "condition": {"u_near_om_location": "field"},
                             "effect": {"message": "default radius"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26898,6 +27190,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": 1.9,
                             },
                             "effect": {"message": "truncated radius"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26908,6 +27201,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": -0.9,
                             },
                             "effect": {"message": "truncated negative fraction"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26918,6 +27212,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": -1,
                             },
                             "effect": {"message": "negative radius"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26928,6 +27223,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": 1,
                             },
                             "effect": {"message": "origin mapgen args"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26938,6 +27234,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": {"context_val": "radius"},
                             },
                             "effect": {"message": "dynamic radius"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26948,6 +27245,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "range": 31,
                             },
                             "effect": {"message": "large radius"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26965,6 +27263,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "required_event": "game_start",
                             "condition": {"overmap_at_point": "field"},
                             "effect": {"message": "alpha point"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -26975,6 +27274,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "point": {"context_val": "point"},
                             },
                             "effect": {"message": "point"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27238,6 +27538,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_can_see_location": {"context_val": "point"}
                             },
                             "effect": {"message": "avatar"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27286,6 +27587,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 ]
                             },
                             "effect": {"message": "avatar"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27352,6 +27654,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"closest_city": "center"},
                                 "take_control_menu",
                             ],
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -27416,6 +27719,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"closest_city": {"context_val": "dynamic"}},
                                 {"closest_city": {"npc_val": "npc_center"}},
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27458,6 +27762,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     "second": {"context_val": "line_b"},
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27497,6 +27802,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"dimension_name": {"context_val": "dynamic_target"}},
                                 {"dimension_name": {"npc_val": "npc_dimension"}},
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27551,6 +27857,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     "relative_var": {"u_val": "relative"},
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27622,6 +27929,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "id": probe_id,
                 "required_event": "game_start",
                 "effect": effect,
+                "eoc_type": "EVENT",
             })
 
         ship_path = (
@@ -27724,6 +28032,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "with_fields": False,
                             },
                             "effect": {"message": "visible"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27735,6 +28044,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "loc_2": {"context_val": "target"},
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27746,6 +28056,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "loc_2": {"context_val": "target"},
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27758,6 +28069,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "with_fields": True,
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27770,6 +28082,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "with_fields": False,
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -27785,6 +28098,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 ]
                             },
                             "effect": {"message": "must stay partial"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -27981,6 +28295,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "npc_map_run_eocs",
                                 {"npc_set_field": "field_1"},
                             ],
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -28198,12 +28513,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": "rep_child_caller",
                             "required_event": "game_start",
                             "effect": {"run_eocs": "reentered_rep"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "trust_child_caller",
                             "required_event": "game_start",
                             "effect": {"run_eocs": "reentered_trust"},
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -28245,6 +28562,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "trigger_event": "npc_becomes_hostile",
                                 "args": ["unknown_npc", "unknown"],
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -28385,6 +28703,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     ],
                                 }
                             },
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -28513,6 +28832,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     ],
                                 }
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -28530,6 +28850,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     ],
                                 }
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -28561,6 +28882,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "trigger_event": "game_start",
                                 "args": ["replayed version"],
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -28574,6 +28896,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     "target_vars": [{"u_val": "sample"}],
                                 }
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -28605,6 +28928,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "target_vars": [{"u_val": "roll"}],
                             }
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -28670,6 +28994,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_sell_item": "gold"},
                                 {"u_set_field": "fire"},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -28934,6 +29259,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_spend_cash": 100},
                                 {"u_transform_radius": 5},
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29041,6 +29367,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "z_adjust": 1,
                                 "output_var": {"u_val": "target"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29051,6 +29378,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "x_adjust": 1,
                                 "z_adjust": -2,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29089,6 +29417,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "message": "Pick a tile",
                                 "center_var": {"context_val": "center"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29099,6 +29428,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "target_var": {"context_val": "default_center"},
                                 "message": "Pick at actor",
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29109,6 +29439,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "message": "Pick an overmap tile",
                                 "distance_limit": 12,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29120,6 +29451,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "message": "Pick a visible tile",
                                 "range": 20,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29129,6 +29461,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_choose_adjacent_highlight": {"u_val": "adjacent"},
                                 "allow_vertical": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29210,6 +29543,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "location_variable_adjust": {"context_val": "origin"},
                                 "x_adjust": {"context_val": "delta"},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29219,6 +29553,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_query_omt": {"context_val": "output"},
                                 "spread": 1,
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29228,6 +29563,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_choose_adjacent_highlight": {"u_val": "adjacent"},
                                 "condition": {"u_has_activity": "ACT"},
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -29266,6 +29602,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "message": "Pick a visible tile",
                                 "range": {"math": ["u_spell_level('demo') + 3"]},
                             },
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -29277,6 +29614,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "message": "Pick a visible tile",
                                 "range": 3.5,
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -29396,6 +29734,7 @@ assert(context.data.picked==selected)
                                 "z_adjust": {"u_val": "dz"},
                                 "z_override": True,
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -29445,6 +29784,7 @@ assert(context.data.picked==selected)
                                 "overmap_tile": True,
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -29479,6 +29819,7 @@ assert(context.data.picked==selected)
                             "x_adjust": -1.7,
                             "overmap_tile": True,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -29510,6 +29851,7 @@ assert(context.data.picked==selected)
                             "max_radius": 3,
                             "x_adjust": -1.7,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -29540,6 +29882,7 @@ assert(context.data.picked==selected)
                             "output_var": {"var_val": "output_name"},
                             "x_adjust": 1,
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -30999,6 +31342,7 @@ assert(context.data.picked==selected)
                                     "zone_range": 6,
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -31041,6 +31385,7 @@ assert(context.data.picked==selected)
                     "range": 1,
                     "stop_at_first": False,
                 },
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -31056,6 +31401,7 @@ assert(context.data.picked==selected)
                         "loc": {"context_val": "tile"},
                     },
                 },
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -31074,6 +31420,7 @@ assert(context.data.picked==selected)
                     "u_map_run_eocs": {"effect": {"u_message": "reentered"}},
                     "range": 1,
                 },
+                "eoc_type": "EVENT",
             },
             {
                 "type": "effect_on_condition",
@@ -31229,6 +31576,7 @@ assert(context.data.picked==selected)
                         "id": "player_inventory_owner",
                         "required_event": "game_start",
                         "effect": item_effects["u_run_inv_eocs"],
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -31241,6 +31589,7 @@ assert(context.data.picked==selected)
                         "id": "player_map_item_owner",
                         "required_event": "game_start",
                         "effect": item_effects["u_map_run_item_eocs"],
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -31517,6 +31866,7 @@ assert(context.data.picked==selected)
                                     "false_eocs": ["inventory_missing"],
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -31962,6 +32312,7 @@ assert(context.data.picked==selected)
                         "effect": {"weighted_list_eocs": [
                             ["weighted_option_a", 2], ["weighted_option_b", 1],
                         ]},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -31970,6 +32321,7 @@ assert(context.data.picked==selected)
                         "effect": {"weighted_list_eocs": [
                             ["weighted_option_a", 1],
                         ]},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -31980,6 +32332,7 @@ assert(context.data.picked==selected)
                             ["weighted_option_b", -1],
                             ["weighted_option_a", 1],
                         ]},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -31989,6 +32342,7 @@ assert(context.data.picked==selected)
                             ["weighted_option_a", 0.5],
                             ["weighted_option_b", -1],
                         ]},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -32001,6 +32355,7 @@ assert(context.data.picked==selected)
                                 ["weighted_option_b", 1],
                             ]},
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -32016,6 +32371,7 @@ assert(context.data.picked==selected)
                                 ]},
                             }],
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -32026,6 +32382,7 @@ assert(context.data.picked==selected)
                             ["weighted_option_a", 2], ["weighted_option_b", 1],
                         ]},
                         "effect": "nothing",
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -32168,6 +32525,7 @@ assert(context.data.picked==selected)
                         "type": "alert",
                     },
                     "effect": "nothing",
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -32252,6 +32610,7 @@ assert(context.data.picked==selected)
                     "id": "npc_sound_without_beta",
                     "required_event": "game_start",
                     "effect": {"npc_make_sound": "no beta handle"},
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -32280,6 +32639,7 @@ assert(context.data.picked==selected)
                         "radius": 2,
                     },
                     "effect": "nothing",
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -32359,6 +32719,7 @@ assert(context.data.picked==selected)
                                 "length": {"context_val": "light_duration"},
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -32429,9 +32790,9 @@ assert(context.data.picked==selected)
             source = Path(temporary) / "source.json"
             source.write_text(json.dumps([
                 {"type": "effect_on_condition", "id": "target", "required_event": "game_start",
-                 "effect": {"message": "target"}},
+                 "effect": {"message": "target"}, "eoc_type": "EVENT"},
                 {"type": "effect_on_condition", "id": "owner", "required_event": "game_start",
-                 "effect": {"run_eocs": "target", "time_in_future": 2}},
+                 "effect": {"run_eocs": "target", "time_in_future": 2}, "eoc_type": "EVENT"},
             ]), encoding="utf-8")
             result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "task_snapshot")
         main = result.files[Path("main.lua")]
@@ -32479,6 +32840,7 @@ assert(#messages==2 and messages[2]=="target")
                             "id": "delayed_target",
                             "required_event": "game_start",
                             "effect": {"message": "later"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -32488,6 +32850,7 @@ assert(#messages==2 and messages[2]=="target")
                                 "run_eocs": ["delayed_target"],
                                 "time_in_future": "2 turns",
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32530,6 +32893,7 @@ assert(#messages==2 and messages[2]=="target")
                                 "run_eocs": ["npc_delayed_target"],
                                 "time_in_future": "2 turns",
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32698,6 +33062,7 @@ assert(#messages==2 and messages[2]=="target")
                                         "time_in_future": "2 turns",
                                     },
                                 ],
+                                "eoc_type": "EVENT",
                             },
                         ]
                     ),
@@ -32781,6 +33146,7 @@ assert(#messages==2 and messages[2]=="target")
                                     "time_in_future": "2 turns",
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32830,6 +33196,7 @@ assert(#messages==2 and messages[2]=="target")
                             "effect": {
                                 "run_eocs": "recipe_result_callback"
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32859,6 +33226,7 @@ assert(#messages==2 and messages[2]=="target")
                             "id": "dynamic_delay_target",
                             "required_event": "game_start",
                             "effect": {"message": "later"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -32871,6 +33239,7 @@ assert(#messages==2 and messages[2]=="target")
                                     {"math": ["u_spell_level('delay_spell') * 2"]},
                                 ],
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32927,6 +33296,7 @@ assert(#messages==2 and messages[2]=="target")
                                     "randomize_time_in_future": True,
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -32997,6 +33367,7 @@ assert(#messages==2 and messages[2]=="target")
                                     "false_eocs": "talker_failure",
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -33032,6 +33403,7 @@ assert(#messages==2 and messages[2]=="target")
                             "id": "dynamic_target",
                             "required_event": "game_start",
                             "effect": {"message": "target"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -33049,6 +33421,7 @@ assert(#messages==2 and messages[2]=="target")
                                     ]
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -33101,6 +33474,7 @@ assert(#messages==2 and messages[2]=="target")
                                     },
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -33302,6 +33676,7 @@ assert(#messages==2 and messages[2]=="target")
                     "get_condition": {"context_val": "condition_name"},
                 },
                 "effect": [],
+                "eoc_type": "EVENT",
             }),
             migrate_lua_first.MigrationResult(),
         )
@@ -33314,6 +33689,7 @@ assert(#messages==2 and messages[2]=="target")
                 "required_event": "game_start",
                 "condition": {"get_condition": "named"},
                 "effect": [],
+                "eoc_type": "EVENT",
             }),
             migrate_lua_first.MigrationResult(),
             dynamic_eoc_dispatch_present=True,
@@ -33327,6 +33703,7 @@ assert(#messages==2 and messages[2]=="target")
                 "required_event": "game_start",
                 "condition": {"get_condition": "named"},
                 "effect": [],
+                "eoc_type": "EVENT",
             })], frozenset(), frozenset(), frozenset(), frozenset(),
         )
         self.assertEqual(
@@ -33803,6 +34180,7 @@ end
                             "id": "translation_target",
                             "required_event": "game_start",
                             "effect": {"u_message": {"context_val": "message"}},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -33814,6 +34192,7 @@ end
                                     "message": {"str": "translated", "i18n": True}
                                 },
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -33843,6 +34222,7 @@ end
                             "id": "typed_variable_target",
                             "required_event": "game_start",
                             "effect": {"message": "target"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -33855,6 +34235,7 @@ end
                                     "amount": {"math": ["2 + 2 - 1"]},
                                 },
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -33889,6 +34270,7 @@ end
                             "id": "nonfinite_target",
                             "required_event": "game_start",
                             "effect": {"message": "target"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -33901,6 +34283,7 @@ end
                                     "not_a_number": {"dbl": "-nan"},
                                 },
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -34229,6 +34612,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             "range": 2,
                         },
                         "effect": {"message": "near camp"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34257,6 +34641,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "required_event": "game_start",
                         "condition": {"math": []},
                         "effect": {"message": "unreachable"},
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34283,6 +34668,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 "else": {"math": ["global_value++"]},
                             },
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34350,6 +34736,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             "if": {"test_eoc": "MISSING_PREDICATE"},
                             "then": {"u_message": "unreachable"},
                         },
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34554,6 +34941,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             {"u_lose_var": "fallback"},
                         ],
                         "effect": "nothing",
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34590,6 +34978,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             "u_cancel_activity",
                         ],
                         "effect": "nothing",
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34668,6 +35057,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 "true_eocs": ["spawn_success"],
                             },
                         ],
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -34722,6 +35112,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 },
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34802,6 +35193,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 {"case": 1, "effect": {"if": "u_is_outside", "then": {"u_message": "one"}}},
                             ],
                         },
+                        "eoc_type": "EVENT",
                     }
                 ]),
                 encoding="utf-8",
@@ -34852,6 +35244,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 ],
                             },
                         ],
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -34892,6 +35285,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             ],
                             "default": {"u_message": "unmatched fallback"},
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -34909,6 +35303,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 "default": {"u_message": "nested fallback"},
                             },
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -34926,6 +35321,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 }
                             ],
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -34980,6 +35376,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                             ],
                         },
                         "effect": "nothing",
+                        "eoc_type": "EVENT",
                     }
                 ),
                 encoding="utf-8",
@@ -35005,6 +35402,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "type": "effect_on_condition", "id": "invalid_predicate",
                         "required_event": "game_start", "effect": "nothing",
                         key: invalid,
+                        "eoc_type": "EVENT",
                     }))
                     result = migrate_lua_first.migrate(
                         migrate_lua_first.load_objects([source]), "invalid_predicate_mod")
@@ -36158,8 +36556,11 @@ assert(#calls==1)
         self.assertEqual(result.returncode, 0, result.stderr)
         unbound = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "unbound_groom",
-                                     "required_event": "game_start", "effect": effects}), unbound)
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "unbound_groom",
+                "required_event": "game_start", "effect": effects,
+                "eoc_type": "EVENT",
+            }), unbound)
         self.assertNotIn("services.npcs.grooming", main)
         self.assertTrue(unbound.todos)
 
@@ -36204,8 +36605,11 @@ end
         self.assertEqual(result.returncode, 0, result.stderr)
         missing = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing_seller",
-                                     "required_event": "game_start", "effect": "start_trade"}), missing)
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "missing_seller",
+                "required_event": "game_start", "effect": "start_trade",
+                "eoc_type": "EVENT",
+            }), missing)
         self.assertNotIn("services.trade.open", main)
         self.assertTrue(missing.todos)
 
@@ -36237,8 +36641,11 @@ end
         self.assertEqual(result.returncode, 0, result.stderr)
         missing = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "no_npc",
-                                     "required_event": "game_start", "effect": effects}), missing)
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "no_npc",
+                "required_event": "game_start", "effect": effects,
+                "eoc_type": "EVENT",
+            }), missing)
         self.assertNotIn("services.npcs.orders.run", main)
         self.assertTrue(missing.todos)
 
@@ -36278,8 +36685,11 @@ assert(table.concat(calls,',')=='finish,sheet,style')
         self.assertEqual(result.returncode, 0, result.stderr)
         missing = migrate_lua_first.MigrationResult()
         migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
-            Path("source.json"), 0, {"type": "effect_on_condition", "id": "missing",
-                                     "required_event": "game_start", "effect": effects}), missing)
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": "missing",
+                "required_event": "game_start", "effect": effects,
+                "eoc_type": "EVENT",
+            }), missing)
         self.assertTrue(missing.todos)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
@@ -36513,6 +36923,7 @@ assert(#calls==0)
                         "id": "clear_saved_dimension",
                         "required_event": "game_start",
                         "effect": {"clear_dimension": "test_dimension"},
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -36523,6 +36934,7 @@ assert(#calls==0)
                             "length": "1 day",
                             "key": "place_test",
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -36551,6 +36963,7 @@ assert(#calls==0)
                         "id": "live_terminal_menu",
                         "required_event": "game_start",
                         "effect": "take_control_menu",
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -36566,6 +36979,7 @@ assert(#calls==0)
                             "take_control_menu",
                             {"u_add_effect": "effect_sleep"},
                         ],
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -36573,6 +36987,7 @@ assert(#calls==0)
                         "required_event": "game_start",
                         "condition": {"u_has_trait": "TEST_TRAIT"},
                         "effect": "take_control_menu",
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -36580,6 +36995,7 @@ assert(#calls==0)
                         "required_event": "game_start",
                         "deactivate_condition": {"u_has_trait": "TEST_TRAIT"},
                         "effect": "take_control_menu",
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -36644,6 +37060,7 @@ assert(#calls==0)
                         "id": "referenced_menu",
                         "required_event": "game_start",
                         "effect": "take_control_menu",
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -36675,6 +37092,7 @@ assert(#calls==0)
                         "id": "live_terminal_menu",
                         "required_event": "game_start",
                         "effect": "take_control_menu",
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -37501,6 +37919,7 @@ assert(calls==3 and context.data.entry=='zombie')
                         "required_event": "game_start",
                         "condition": {"test_eoc": "predicate_target"},
                         "effect": {"u_message": "matched"},
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -37529,6 +37948,7 @@ assert(calls==3 and context.data.entry=='zombie')
                         "id": "nested_character_owner",
                         "required_event": "game_start",
                         "effect": {"run_eocs": ["nested_character_target"]},
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -37569,6 +37989,7 @@ assert(calls==3 and context.data.entry=='zombie')
                             "iterations": 3,
                             "condition": {"math": ["counter < 2"]},
                         },
+                        "eoc_type": "EVENT",
                     },
                 ]),
                 encoding="utf-8",
@@ -37607,6 +38028,7 @@ assert(calls==3 and context.data.entry=='zombie')
                         },
                         {"u_teleport": {"global_val": "target"}, "force": True},
                     ],
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -37663,6 +38085,7 @@ assert(calls==3 and context.data.entry=='zombie')
                             "search_range": 1200,
                         },
                     },
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -37698,12 +38121,14 @@ assert(calls==3 and context.data.entry=='zombie')
                             "id": "location_success",
                             "required_event": "game_start",
                             "effect": {"message": "found"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "location_failure",
                             "required_event": "game_start",
                             "effect": {"message": "missing"},
+                            "eoc_type": "EVENT",
                         },
                         {
                             "type": "effect_on_condition",
@@ -37722,6 +38147,7 @@ assert(calls==3 and context.data.entry=='zombie')
                                 "true_eocs": "location_success",
                                 "false_eocs": "location_failure",
                             },
+                            "eoc_type": "EVENT",
                         },
                     ]
                 ),
@@ -37758,6 +38184,7 @@ assert(calls==3 and context.data.entry=='zombie')
                         "u_spawn_item": {"context_val": "item_id"},
                         "count": {"math": ["rand(3) + 1"]},
                     },
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -37847,6 +38274,7 @@ assert(calls==3 and context.data.entry=='zombie')
                             "target_var": {"global_val": "expanded_name"},
                         },
                     ],
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -38198,6 +38626,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                                 "loc": {"context_val": "loc"},
                             },
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -38209,6 +38638,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                             },
                             "target_var": {"context_val": "center"},
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -38262,6 +38692,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                             "u_choose_adjacent_highlight": {"context_val": "picked"},
                             "message": "Pick a nearby tile",
                         },
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -38311,6 +38742,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                                 },
                             },
                         ],
+                        "eoc_type": "EVENT",
                     },
                     {
                         "type": "effect_on_condition",
@@ -38503,6 +38935,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "location": coordinate,
                 "radius": 0,
             },
+            "eoc_type": "EVENT",
         })
         trap_main = migrate_lua_first.render_eoc(trap_source, trap_result)
         self.assertNotIn("services.map.edit(", trap_main)
@@ -38539,6 +38972,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "location": coordinate,
                 "radius": 0,
             },
+            "eoc_type": "EVENT",
         })
         furniture_main = migrate_lua_first.render_eoc(
             furniture_source, furniture_result
@@ -38655,6 +39089,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     "effect": {
                         "u_pickup_items": {"context_val": "pickup_target"},
                     },
+                    "eoc_type": "EVENT",
                 }),
                 encoding="utf-8",
             )
@@ -38753,6 +39188,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                                     "radius": 0,
                                 },
                             ],
+                            "eoc_type": "EVENT",
                         }
                     ]
                 ),
@@ -39380,6 +39816,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
             "id": "reenter_melee_event",
             "required_event": "game_start",
             "effect": {"trigger_event": "character_melee_attacks_character"},
+            "eoc_type": "EVENT",
         })
         _, reentered_body = rendered_source([source, reentry_source])
         self.assertNotIn(
@@ -39396,6 +39833,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "id": "call_melee_event_as_child",
                 "required_event": "game_start",
                 "effect": {"run_eocs": "event_pair_sale"},
+                "eoc_type": "EVENT",
             }
         )
         _, child_called_body = rendered_source([source, child_call_source])
