@@ -114,6 +114,7 @@ MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
 MAX_WORLD_CHANGE_DELAY_TURNS = 10000 * 24 * 60 * 60
 MAX_ACTIVITY_DURATION_TURNS = 2147483647 // 100
 MAX_RUN_EOC_ITERATIONS = 10000
+MAX_TEST_EOC_INLINE_DEPTH = 32
 NATIVE_MAX_EFFECT_INTENSITY = 1000000
 MAX_ITEM_CATEGORY_SPAWN_RATE_UPDATES = 256
 MAX_ITEM_CATEGORY_SPAWN_RATE = 1_000_000.0
@@ -1521,6 +1522,15 @@ def _eoc_actor_requirements(
             # A named avatar-only callback cannot be made safe merely by a
             # traversal or run_eocs edge that happens to refer to it.
             requirement = "exact_avatar"
+        elif (
+            _node_has_key(source.value, "get_condition") or
+            _node_has_key(source.value, "set_condition")
+        ):
+            # A stored native conditional is invoked with the dialogue at the
+            # point of evaluation.  Generated closures likewise query their
+            # callback actor, so any statically referenced getter needs a
+            # caller that can provide a Character alpha.
+            requirement = "character"
         elif identifier in item_override_ids:
             requirement = "item"
         elif identifier in creature_override_ids:
@@ -3548,19 +3558,38 @@ def render_static_set_condition(
     """Store one named predicate in the current ordinary Lua context."""
     if set(effect) != {"set_condition", "condition"}:
         return None
-    if actor_expression is None:
+    # Native evaluates this key as str_or_var<std::string>.  A runtime
+    # diag_value is converted with diag_value::str(), which is not proven to
+    # match Lua tostring for every possible value type.  Keep this callback
+    # registry limited to fixed keys until the conversion is modeled exactly.
+    if (
+        actor_expression is None or
+        not bounded_utf8_string(effect["set_condition"], 8192, allow_empty=True)
+    ):
         return None
-    actor = actor_expression
-    name = render_eoc_string_expression(effect["set_condition"], actor)
+    name = lua_quote(effect["set_condition"])
+    # The native stored std::function evaluates against the dialogue passed
+    # later to evaluate_conditional, which may have a different alpha/beta
+    # from the setter event.  Compile only generic runtime actor queries here;
+    # never bake the setter's avatar, weapon, or NPC proof into the closure.
+    # Getter call sites separately prove that their current alpha is a
+    # Character before invoking such a closure.
     predicate = render_eoc_condition_expression(
-        effect["condition"], avatar_actor_proven, weapon_actor_proven,
-        npc_actor_proven, creature_actor_proven, eoc_conditions,
-        npc_actor_expression=(
-            "stored_condition_beta"
-            if npc_actor_expression is not None or npc_actor_proven else None
-        ),
+        effect["condition"],
+        avatar_actor_proven=False,
+        weapon_actor_proven=False,
+        npc_actor_proven=False,
+        creature_actor_proven=True,
+        eoc_conditions=eoc_conditions,
+        generic_character_actor_proven=True,
     )
-    if name is None or predicate is None:
+    # Some legacy math predicates still fall back to the ambient avatar when
+    # no exact variable scope is modeled. A saved callback must use its later
+    # dialogue, so reject that generated fallback rather than capturing it.
+    if (
+        name is None or predicate is None or
+        "services.characters.avatar()" in predicate
+    ):
         return None
     return [
         "    context.conditions = context.conditions or {}",
@@ -3619,6 +3648,22 @@ def render_static_run_eocs(
         eoc_actor_requirements.get(reference) == "exact_avatar"
         for reference in references
     ):
+        return None
+    requires_current_character = (
+        eoc_actor_requirements is not None and any(
+            eoc_actor_requirements.get(reference) == "character"
+            for reference in references
+        )
+    )
+    if requires_current_character and not (
+        character_actor_proven or avatar_actor_proven
+    ):
+        return None
+    if requires_current_character and (
+        "alpha_talker" in effect or "alpha_loc" in effect
+    ):
+        # A child alpha override can select a different generic Creature
+        # talker.  This runner has no Character-kind proof for that override.
         return None
     has_dynamic_references = len(references) != len(reference_entries)
     false_references = _validated_eoc_references(
@@ -27174,6 +27219,7 @@ def render_eoc_condition_expression(
     event_beta_presence_proven: bool = False,
     proficiency_alpha_actor_proven: bool = False,
     npc_melee_beta_actor_proven: bool = False,
+    named_condition_alpha_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -27819,16 +27865,19 @@ def render_eoc_condition_expression(
         referenced = condition.get("test_eoc")
         if (
             isinstance(referenced, str) and referenced in eoc_conditions and
-            referenced not in _test_eoc_stack
+            referenced not in _test_eoc_stack and
+            len(_test_eoc_stack) < MAX_TEST_EOC_INLINE_DEPTH
         ):
             nested = eoc_conditions[referenced]
             if isinstance(nested, dict):
-                # An omitted native EOC condition is unconditional, but an
-                # explicit null/bool/number is rejected by read_condition.
-                if "condition" in nested and not isinstance(nested["condition"], (str, dict)):
+                # f_test_eoc directly calls condition(d); it does not use the
+                # target EOC's unconditional has_condition fallback.  Only an
+                # explicit, parser-valid native predicate can be inlined.
+                nested_condition = nested.get("condition")
+                if not isinstance(nested_condition, (str, dict)):
                     return None
                 return render_eoc_condition_expression(
-                    nested.get("condition", True),
+                    nested_condition,
                     avatar_actor_proven,
                     weapon_actor_proven,
                     npc_actor_proven,
@@ -27840,21 +27889,26 @@ def render_eoc_condition_expression(
                     training_pair_proven,
                     npc_dialogue_pair_proven,
                     event_beta_presence_proven,
+                    proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+                    npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+                    named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
                 )
 
     if set(condition) == {"get_condition"}:
-        actor = (
-            "actor" if character_actor_proven or creature_actor_proven
-            else "services.characters.avatar()"
-        )
-        name = render_eoc_string_expression(
-            condition["get_condition"], actor
-        )
-        if name is not None:
+        # evaluate_conditional passes the current native dialogue to the
+        # stored closure.  A global avatar fallback would silently change its
+        # alpha when the callback has no proven actor, and dynamic key
+        # conversion uses diag_value::str() natively rather than generic Lua
+        # tostring.  Lower only a fixed key and a source-proven current alpha.
+        actor = "actor"
+        name = condition.get("get_condition")
+        if (
+            named_condition_alpha_actor_proven and
+            bounded_utf8_string(name, 8192, allow_empty=True)
+        ):
             return (
-                "(function() local stored_condition_name = tostring((" + name +
-                ") or \"\"); local stored_condition = context.conditions and "
-                "context.conditions[stored_condition_name]; return stored_condition "
+                "(function() local stored_condition = context.conditions and "
+                "context.conditions[" + lua_quote(name) + "]; return stored_condition "
                 "~= nil and stored_condition(context, " + actor + ", " +
                 (npc_query_actor or "nil") + ") or false end)()"
             )
@@ -27963,6 +28017,7 @@ def render_eoc_condition_expression(
                 event_beta_presence_proven,
                 proficiency_alpha_actor_proven,
                 npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+                named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
             )
             for entry in entries
         ]
@@ -27983,6 +28038,7 @@ def render_eoc_condition_expression(
             event_beta_presence_proven,
             proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -29732,6 +29788,13 @@ def render_eoc(
         not dynamic_eoc_dispatch_present
     )
     event_beta_presence_proven = event_exclusive_source_proven
+    # A named getter evaluates its closure against the current dialogue's
+    # alpha.  Its call-site proof is safe for direct/static EOCs only when no
+    # dynamic dispatcher can invoke that generated function with a generic
+    # monster, item, or vehicle as alpha.
+    named_condition_alpha_actor_proven = (
+        character_actor_proven and not dynamic_eoc_dispatch_present
+    )
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
@@ -29746,6 +29809,7 @@ def render_eoc(
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -29792,6 +29856,7 @@ def render_eoc(
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
@@ -30149,11 +30214,15 @@ def render_eoc(
                     effect,
                     avatar_actor_proven,
                     weapon_actor_proven,
-                    npc_event_character_actor_proven,
+                    # Native npc_* predicates read const_dialogue beta.  An
+                    # EOC's proven event actor is alpha even when it is an
+                    # NPC; the direct topic response callback that would prove
+                    # a beta is not wired into the Platform runtime.
+                    npc_condition_beta_actor_proven,
                     creature_actor_proven,
                     eoc_conditions,
                     actor_expression,
-                    npc_actor_expression,
+                    npc_actor_expression if npc_condition_beta_actor_proven else None,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
