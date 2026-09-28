@@ -6615,6 +6615,9 @@ def render_talk_topic_response_condition(
         "has_available_mission": ("available", "== 1"),
         "has_many_available_missions": ("available", ">= 2"),
     }
+    # condition_parser's u_* spelling selects is_npc=false; both unprefixed
+    # and npc_* aliases select is_npc=true. Keep the u_* alpha forms out until
+    # a direct TALK callback can prove the same actor.
     if isinstance( condition, str ) and condition in mission_count_conditions:
         collection, comparison = mission_count_conditions[condition]
         if collection == "available":
