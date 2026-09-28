@@ -18488,7 +18488,12 @@ assert(not available())
                 'body_part = services.types.id("body_part", "torso") })',
                 main,
             )
-            self.assertIn('runtime.trigger("game:custom_event")', main)
+            self.assertIn(
+                "trigger_event requires only a registered event and an args array",
+                main,
+            )
+            self.assertNotIn('runtime.trigger("game:custom_event")', main)
+            self.assertNotIn('services.native_events.emit("custom_event"', main)
             self.assertIn(
                 "native return_to_camp_duties resets camp-resident mission", main
             )
