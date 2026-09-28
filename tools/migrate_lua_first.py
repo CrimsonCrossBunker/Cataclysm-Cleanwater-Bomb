@@ -24440,15 +24440,15 @@ def render_static_pickup_items(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep legacy pickup out of automatic migration without a typed target.
+    """Keep legacy pickup out of migration until its runtime target is typed.
 
-    The native effect resolves its ``var_info`` target to a dialogue value at
-    runtime.  That lookup does not prove the value is an absolute map-square
-    coordinate (and legacy values may use string conversion).  The manual
-    ``services.activities.pickup_at`` API preserves the native picker and
-    activity; the migration cannot safely invent the typed coordinate or
-    translate legacy limit fields, including the native ``max_mass`` parsing
-    quirk.
+    Native ``u_`` and ``npc_`` select the exact alpha and beta Character
+    talkers. The ``var_info`` target is a runtime variable lookup and does not
+    encode the absolute map-square coordinate required by
+    ``services.activities.pickup_at``. Native pickup limits default to zero
+    extra moves and unlimited volume/mass; when ``max_mass`` is present, the
+    native parser currently passes ``has_float("max_mass")`` as the gram
+    value, so forwarding its numeric value would change behavior.
     """
     del effect, key, avatar_actor_proven, npc_event_character_actor_proven
     return None
@@ -32418,10 +32418,13 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    pickup_actor = "alpha" if key == "u_pickup_items" else "beta"
                     pickup_gap = (
-                        "pickup target_var is a legacy var_info lookup and does not "
-                        "prove an absolute map-square value; manually bind the matching "
-                        "character_handle and convert a typed TripointCoord through "
+                        f"native {key} targets the {pickup_actor} Character; "
+                        "target_var is a legacy var_info lookup and does not prove an "
+                        "absolute map-square value; bind that Character handle and "
+                        "convert the target to a typed absolute-map-square TripointCoord "
+                        "before calling "
                         "services.activities.pickup_at, then review legacy limit semantics"
                     )
                     if "max_mass" in effect:
