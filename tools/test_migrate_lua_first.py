@@ -22348,6 +22348,33 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("local definition = content.Vehicle", main)
             self.assertNotIn("has no native Platform registrar", report)
 
+    def test_real_mission_lifecycle_is_not_silently_dropped_by_generic_builder(self) -> None:
+        source_path = REPOSITORY_ROOT / (
+            "data/json/npcs/lumbermill_employees/lumbermill_missions.json"
+        )
+        source = next(
+            item for item in migrate_lua_first.load_objects([source_path])
+            if item.value.get("id") == "MISSION_GET_DRIVEBELTS"
+        )
+        self.assertEqual(
+            source.value["end"]["effect"]["run_eocs"],
+            "EOC_MISSION_GET_DRIVEBELTS_done",
+        )
+        self.assertIsInstance(source.value["goal_condition"], dict)
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_generic_platform_content(
+            source, result, "Mission", "mission_definition",
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(result.converted, [])
+        self.assertEqual(len(result.partial), 1)
+        self.assertTrue(any(
+            "end, goal_condition need explicit Lua phase/goal handlers"
+            in todo.message for todo in result.todos
+        ))
+
     def test_renders_bounded_mapgen_palette_tileset_and_dialogue_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

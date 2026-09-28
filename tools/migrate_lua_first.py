@@ -9530,6 +9530,23 @@ def render_generic_platform_content(
         value = resolved
         source = SourceObject(source.path, source.index, resolved)
     object_id = stable_id(value, f"anonymous_{source.index}")
+    if label == "mission_definition":
+        legacy_lifecycle = [
+            key for key in ("start", "end", "fail", "goal_condition")
+            if key in value
+        ]
+        if legacy_lifecycle:
+            # content.Mission accepts Lua phase handler IDs, not the native
+            # mission_definition effect/condition objects. Passing those
+            # objects through the generic table silently drops the callbacks.
+            result.partial.append(f"{source.location}: {label} {object_id}")
+            result.add_todo(
+                "manual_rewrite",
+                f"{source.location}: {label} {object_id} legacy lifecycle fields "
+                f"{', '.join(legacy_lifecycle)} need explicit Lua phase/goal "
+                "handlers before content.Mission can replace this definition"
+            )
+            return None
     raw_id = value.get("id")
     if raw_id is None and isinstance(value.get("abstract"), str):
         # Abstract generic-factory parents are migration-time templates.  The
