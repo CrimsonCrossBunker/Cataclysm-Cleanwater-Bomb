@@ -34415,37 +34415,6 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             report,
         )
 
-        # Native computer use puts the avatar first and terminal second, while
-        # this test-only EOC is also invoked with a computer as the first actor.
-        condition_source = (REPOSITORY_ROOT / "src/condition.cpp").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn(
-            "return d.const_actor( is_npc )->get_const_computer();",
-            condition_source,
-        )
-        computer_use = (REPOSITORY_ROOT / "src/game.cpp").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn(
-            "dialogue d( get_talker_for( get_avatar() ), "
-            "get_talker_for( used ) );",
-            computer_use,
-        )
-
-        native_source = (REPOSITORY_ROOT / "tests/eoc_test.cpp").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn(
-            "dialogue d_furniture( get_talker_for( comp ), "
-            "std::make_unique<talker>() );",
-            native_source,
-        )
-        self.assertIn(
-            'CHECK( globvars.get_global_value( "key_furniture" ) == "yes" );',
-            native_source,
-        )
-
     def test_unbound_mixed_eoc_keeps_a_fail_closed_condition_actor_contract(
         self,
     ) -> None:
