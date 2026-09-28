@@ -6490,6 +6490,9 @@ def render_talk_topic_response_condition(
     Boolean compositions require every child to have a supported lowering.
     Training-offer predicates use the live alpha/beta pair and select the
     teacher from the native parser's ``is_npc`` orientation.
+    ``mission_has_generic_rewards`` reads beta's selected mission; the typed
+    query preserves the native true result for an empty selection, while
+    non-NPC talkers inherit the native null selection.
     """
     if _depth > 16:
         return None
@@ -6732,6 +6735,18 @@ def render_talk_topic_response_condition(
             "            if not beta:is_valid() then return false end\n"
             "            local selected = services.npcs.missions.selected_has_goal(beta, "
             f"{lua_quote(goal)})\n"
+            "            return selected.ok and selected.value == true\n"
+            "        end"
+        )
+    if condition == "mission_has_generic_rewards":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            "            if beta == nil then return false end\n"
+            '            if beta.kind ~= "creature" or beta.subtype ~= "npc" then return true end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_has_generic_rewards(beta)\n"
             "            return selected.ok and selected.value == true\n"
             "        end"
         )
