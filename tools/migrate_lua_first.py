@@ -31070,9 +31070,12 @@ def render_eoc(
                     "u_lose_mutation_type" if "u_lose_mutation_type" in effect
                     else "npc_lose_mutation_type"
                 )
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_lose_mutation_type" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_lose_mutation_type" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
                 if (
                     target is not None and set(effect) == {key} and
@@ -31085,7 +31088,7 @@ def render_eoc(
                     converted_effect = True
                 else:
                     reason = (
-                        "mutation-type removal requires a proven Character actor "
+                        "mutation-type removal requires an event-exclusive live Character source "
                         "and one literal type of 1..256 bytes without NUL"
                     )
                     lines.append(f"    -- TODO: {reason}.")
@@ -31099,29 +31102,34 @@ def render_eoc(
                 ("u_lose_category" in effect or "npc_lose_category" in effect)
             ):
                 key = "u_lose_category" if "u_lose_category" in effect else "npc_lose_category"
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_lose_category" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_lose_category" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
+                category = effect.get(key)
                 if (
                     target is not None and set(effect) == {key} and
-                    bounded_platform_id(effect[key])
+                    bounded_platform_id(category) and
+                    category in known_mutation_category_ids
                 ):
                     lines.append(
                         "    services.mutations.remove_category("
                         f"{target}, services.types.id(\"mutation_category\", "
-                        f"{lua_quote(effect[key])}))"
+                        f"{lua_quote(category)}))"
                     )
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mutation-category removal through "
-                        "the typed mutation service."
+                        "    -- TODO: remove a category only with an event-exclusive "
+                        "live Character source and a core-catalog category ID registered at runtime."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a proven Character source and a runtime-registered core category ID"
                     )
                     all_effects_converted = False
             elif (
@@ -31519,31 +31527,36 @@ def render_eoc(
                     if "u_set_trait_purifiability" in effect
                     else "npc_set_trait_purifiability"
                 )
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_set_trait_purifiability" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_set_trait_purifiability" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
                 purifiable = effect.get("purifiable", True)
+                mutation = render_mutation_id_expression(
+                    effect.get(key), known_mutation_ids
+                )
                 if (
                     target is not None and set(effect) <= {key, "purifiable"} and
-                    bounded_platform_id(effect[key]) and
+                    mutation is not None and
                     isinstance(purifiable, bool)
                 ):
                     lines.append(
                         "    services.mutations.set_purifiable("
-                        f"{target}, services.types.id(\"mutation\", "
-                        f"{lua_quote(effect[key])}), {'true' if purifiable else 'false'})"
+                        f"{target}, {mutation}, {'true' if purifiable else 'false'})"
                     )
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mutation purifiability through "
-                        "the typed mutation service."
+                        "    -- TODO: change purifiability only with an event-exclusive "
+                        "live Character source and a core-catalog mutation ID registered at runtime."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a proven Character source and a runtime-registered core mutation ID"
                     )
                     all_effects_converted = False
             elif (

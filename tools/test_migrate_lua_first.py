@@ -21510,11 +21510,12 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_emit": "emit_demo", "chance_mult": 2},
                                 {"u_explosion": {"power": 10}},
                                 {"u_knockback": 2, "stun": 1},
-                                {"u_lose_category": "MUTATION_CATEGORY"},
+                                {"u_lose_category": "CATTLE"},
+                                {"u_lose_mutation_type": "ACCLIMATIZATION"},
                                 {"u_lose_effect": "effect_demo"},
                                 {"u_make_sound": "alarm", "volume": 15, "type": "alarm"},
                                 {"u_set_talker": {"u_val": "talker_id"}},
-                                {"u_set_trait_purifiability": "TRAIT", "purifiable": False},
+                                {"u_set_trait_purifiability": "VULNERABLECHILL", "purifiable": False},
                                 {"u_spawn_monster": "mon_demo", "real_count": 1, "min_radius": 0, "max_radius": 0, "//": "spawn comment"},
                                 {"u_spawn_npc": "npc_template_demo", "real_count": 1, "min_radius": 0, "max_radius": 0},
                                 "u_prevent_death",
@@ -21539,13 +21540,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {"u_knockback": 2},
                                 {"npc_change_class": "NC_BOUNTY_HUNTER"},
                                 {"npc_change_faction": "faction_demo"},
-                                {"npc_lose_category": "MUTATION_CATEGORY"},
+                                {"npc_lose_category": "CATTLE"},
+                                {"npc_lose_mutation_type": "ACCLIMATIZATION"},
                                 {"npc_lose_effect": "effect_demo"},
                                 "npc_make_radio_representative",
                                 "npc_thankful",
                                 {"npc_make_sound": "warning", "volume": 10, "type": "alert"},
                                 {"npc_set_talker": {"npc_val": "talker_id"}},
-                                {"npc_set_trait_purifiability": "TRAIT"},
+                                {"npc_set_trait_purifiability": "VULNERABLECHILL"},
                                 {"npc_spawn_monster": "mon_demo", "real_count": 1, "min_radius": 0, "max_radius": 0},
                                 {"npc_spawn_npc": "npc_template_demo", "real_count": 1, "min_radius": 0, "max_radius": 0},
                                 "npc_prevent_death",
@@ -21576,6 +21578,20 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("services.npcs.set_class(", main)
             self.assertIn("services.npcs.set_faction(", main)
             self.assertIn("services.npcs.set_radio_representative(", main)
+            self.assertEqual(main.count("services.mutations.remove_category("), 2)
+            self.assertEqual(main.count("services.mutations.remove_type("), 2)
+            self.assertEqual(main.count("services.mutations.set_purifiable("), 2)
+            self.assertIn(
+                'services.types.id("mutation_category", "CATTLE")', main
+            )
+            self.assertIn(
+                'services.types.id("mutation", "VULNERABLECHILL")', main
+            )
+            self.assertIn(
+                'services.mutations.set_purifiable(actor, '
+                'services.types.id("mutation", "VULNERABLECHILL"), true)',
+                main,
+            )
             self.assertIn(
                 "needs domain-service conversion",
                 result.files[Path("MIGRATION_REPORT.md")],
@@ -21586,6 +21602,109 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("services.mutations.set_purifiable(", main)
             self.assertIn("services.spawns.monster_configured(", main)
             self.assertIn("services.spawns.npc(", main)
+
+    def test_mutation_maintenance_requires_exclusive_source_and_registered_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "referenced_avatar_mutations",
+                            "required_event": "game_start",
+                            "effect": [
+                                {"u_lose_category": "CATTLE"},
+                                {"u_lose_mutation_type": "ACCLIMATIZATION"},
+                                {"u_set_trait_purifiability": "VULNERABLECHILL"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "hostile_npc_mutations",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"npc_lose_category": "CATTLE"},
+                                {"npc_lose_mutation_type": "ACCLIMATIZATION"},
+                                {"npc_lose_mutation_type": "UNKNOWN_TYPE"},
+                                {"npc_set_trait_purifiability": "VULNERABLECHILL"},
+                                {"u_lose_category": "CATTLE"},
+                                {"npc_lose_category": "UNKNOWN_CATEGORY"},
+                                {"npc_set_trait_purifiability": "UNKNOWN_MUTATION"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_mutation_caller",
+                            "effect": {"run_eocs": "referenced_avatar_mutations"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "mutation_maintenance_sources_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertTrue(result.todos)
+            self.assertEqual(main.count("services.mutations.remove_category("), 1)
+            self.assertEqual(main.count("services.mutations.remove_type("), 2)
+            self.assertEqual(main.count("services.mutations.set_purifiable("), 1)
+            self.assertIn(
+                'services.mutations.remove_type(actor, "UNKNOWN_TYPE")', main
+            )
+            self.assertNotIn("UNKNOWN_CATEGORY", main)
+            self.assertNotIn("UNKNOWN_MUTATION", main)
+
+    def test_mutation_maintenance_fails_closed_with_dynamic_eoc_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_mutations",
+                            "required_event": "game_start",
+                            "effect": [
+                                {"u_lose_category": "CATTLE"},
+                                {"u_lose_mutation_type": "ACCLIMATIZATION"},
+                                {"u_set_trait_purifiability": "VULNERABLECHILL"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "hostile_npc_mutations",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"npc_lose_category": "CATTLE"},
+                                {"npc_lose_mutation_type": "ACCLIMATIZATION"},
+                                {"npc_set_trait_purifiability": "VULNERABLECHILL"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_dispatcher",
+                            "effect": {
+                                "run_eoc_selector": {"global_val": "selected_eoc"}
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "mutation_maintenance_dynamic_dispatch_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.mutations.remove_category(", main)
+            self.assertNotIn("services.mutations.remove_type(", main)
+            self.assertNotIn("services.mutations.set_purifiable(", main)
 
     def test_die_migration_preserves_native_legacy_suppress_message_key(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
