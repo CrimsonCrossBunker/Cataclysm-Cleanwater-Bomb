@@ -32757,9 +32757,12 @@ def render_eoc(
                     "to OMT; dbl_or_var radius truncates to int and native "
                     "overmapbuffer::reveal honors CIRCLEDIST and can load/create "
                     "missing overmap data even when radius is 0. "
-                    "services.overmap.reveal requires typed abs_omt and integer "
-                    "radius 0..30, always uses square geometry, and skips missing "
-                    "overmaps"
+                    "services.overmap.reveal_native preserves those native "
+                    "semantics for an explicit typed abs_omt and integer radius "
+                    "0..36, but this var_info target has no proven typed-coordinate "
+                    "resolution and the radius must be proven to be a nonnegative "
+                    "integer no greater than 36. services.overmap.reveal remains "
+                    "a square-area helper that skips missing overmaps"
                 )
                 lines.append(f"    -- TODO: {reveal_gap}.")
                 result.add_todo(

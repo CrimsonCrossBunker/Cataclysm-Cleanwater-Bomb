@@ -470,6 +470,11 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@return CcbResult result `value` is a CcbOvermapRevealResult.
 function CcbOvermapApi.reveal(center, radius) end
 
+---@param center TripointCoord Explicit absolute overmap-terrain center.
+---@param radius integer Nonnegative native reveal radius, bounded to 0..36. Uses native CIRCLEDIST-aware geometry and may lazily create missing overmaps.
+---@return boolean True when native overmap_buffer.reveal changes at least one tile's vision level.
+function CcbOvermapApi.reveal_native(center, radius) end
+
 ---@param start_abs_omt TripointCoord Explicit absolute overmap-terrain route start; local, map-square, and raw coordinates are rejected.
 ---@param end_abs_omt TripointCoord Explicit absolute overmap-terrain route destination; native routing uses its x/y and stays on the start z-level.
 ---@param radius integer Per-path-node radius passed to native reveal (CIRCLEDIST-aware), bounded to 0..30.

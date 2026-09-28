@@ -328,4 +328,92 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
     CHECK_FALSE( fractional_radius_result.valid() );
 }
 
+TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
+           "[lua][platform][overmap][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 825, 55 );
+    REQUIRE( fixture.edit_ready );
+
+    const int om_base_x = fixture.source_omt.x() - fixture.source_local.x();
+    const int om_base_y = fixture.source_omt.y() - fixture.source_local.y();
+    const tripoint_abs_omt center( om_base_x + OMAPX / 2,
+                                   om_base_y + OMAPY / 2,
+                                   fixture.source_omt.z() );
+    const tripoint_om_omt local_center( OMAPX / 2, OMAPY / 2,
+                                        fixture.source_omt.z() );
+
+    struct reveal_tile_preimage {
+        tripoint_om_omt local;
+        om_vision_level seen;
+    };
+    std::vector<reveal_tile_preimage> preimage;
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const tripoint_om_omt local(
+                local_center.x() + dx, local_center.y() + dy,
+                local_center.z() );
+            preimage.push_back( { local,
+                                  fixture.source_overmap->seen( local ) } );
+            fixture.source_overmap->set_seen(
+                local, om_vision_level::unseen, true );
+        }
+    }
+    const on_out_of_scope restore_reveal_tiles( [&]() {
+        for( const reveal_tile_preimage &tile : preimage ) {
+            if( fixture.source_overmap->seen( tile.local ) != tile.seen ) {
+                fixture.source_overmap->set_seen(
+                    tile.local, tile.seen, true );
+            }
+        }
+    } );
+
+    const bool native_changed = overmap_buffer.reveal( center, 2 );
+    REQUIRE( native_changed );
+    std::vector<om_vision_level> native_seen;
+    native_seen.reserve( preimage.size() );
+    for( const reveal_tile_preimage &tile : preimage ) {
+        native_seen.push_back(
+            fixture.source_overmap->seen( tile.local ) );
+        fixture.source_overmap->set_seen(
+            tile.local, om_vision_level::unseen, true );
+    }
+
+    const sol::protected_function reveal_native =
+        fixture.overmap_api()["reveal_native"];
+    const sol::protected_function_result platform_result = reveal_native(
+                fixture.abs_omt_position( center ), 2 );
+    REQUIRE( platform_result.valid() );
+    CHECK( platform_result.get<bool>() == native_changed );
+    std::size_t seen_index = 0;
+    for( const reveal_tile_preimage &tile : preimage ) {
+        CHECK( fixture.source_overmap->seen( tile.local ) ==
+               native_seen[seen_index++] );
+        fixture.source_overmap->set_seen(
+            tile.local, om_vision_level::unseen, true );
+    }
+    CHECK( fixture.write_called );
+
+    const sol::protected_function_result zero_radius_result = reveal_native(
+                fixture.abs_omt_position( center ), 0 );
+    REQUIRE( zero_radius_result.valid() );
+    CHECK( zero_radius_result.get<bool>() );
+    for( const reveal_tile_preimage &tile : preimage ) {
+        const bool is_center = tile.local == local_center;
+        CHECK( fixture.source_overmap->seen( tile.local ) ==
+               ( is_center ? om_vision_level::full :
+                 om_vision_level::unseen ) );
+    }
+
+    const cata::lua_platform::script_tripoint_coord wrong_scale =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            project_to<coords::ms>( center ).raw() );
+    CHECK_FALSE( reveal_native( wrong_scale, 0 ).valid() );
+    const cata::lua_platform::script_tripoint_coord lua_center =
+        fixture.abs_omt_position( center );
+    CHECK_FALSE( reveal_native( lua_center, 37 ).valid() );
+    CHECK_FALSE( reveal_native( lua_center, 1.5 ).valid() );
+    CHECK_FALSE( reveal_native( lua_center, -1 ).valid() );
+}
+
 #endif // CATA_ENABLE_LUA_PLATFORM

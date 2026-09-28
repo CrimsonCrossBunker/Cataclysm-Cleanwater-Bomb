@@ -81,6 +81,9 @@ constexpr std::size_t maximum_note_width = 1024;
 constexpr std::size_t maximum_note_bytes = 4096;
 constexpr int maximum_note_danger_radius = 100;
 constexpr int maximum_reveal_radius = 30;
+// Covers the largest current source radius (EOC_CHECK_MAP_CACHE uses rng(11, 36))
+// while bounding work and keeping overmapbuffer::reveal's radius square safe.
+constexpr int maximum_native_reveal_radius = 36;
 constexpr int maximum_location_near_radius = 30;
 constexpr std::size_t initial_overmap_tile_owner_generation = 1;
 constexpr std::size_t initial_overmap_mutation_epoch = 1;
@@ -1924,6 +1927,28 @@ sol::table reveal_existing_overmap(
                    state, std::move( value ) ) );
 }
 
+bool reveal_native_overmap(
+    const script_tripoint_coord &center,
+    const sol::object &raw_radius )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.reveal_native";
+    const int radius = require_integer(
+                           raw_radius, std::string( api_name ), "radius" );
+    if( radius > maximum_native_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0..36" );
+    }
+    const tripoint_abs_omt native_center = require_absolute_omt(
+            center, std::string( api_name ) );
+    const bool changed = overmap_buffer.reveal( native_center, radius );
+    if( changed ) {
+        // Native reveal may touch multiple tiles and does not expose them.
+        bump_all_tracked_overmap_tile_revisions();
+    }
+    return changed;
+}
+
 bool reveal_overmap_route(
     const script_tripoint_coord & start,
     const script_tripoint_coord & end,
@@ -2291,6 +2316,14 @@ void install_overmap_api(
         require_write();
         return reveal_existing_overmap(
                    lua_state, center, radius );
+    } );
+    overmap.set_function(
+        "reveal_native",
+        [require_write](
+            const script_tripoint_coord & center,
+            const sol::object & radius ) {
+        require_write();
+        return reveal_native_overmap( center, radius );
     } );
     overmap.set_function(
         "reveal_route",

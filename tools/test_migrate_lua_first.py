@@ -23892,6 +23892,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 main,
             )
             self.assertNotIn("services.overmap.reveal(", main)
+            self.assertNotIn("services.overmap.reveal_native(", main)
             self.assertIn(
                 "native reveal_map reads its target_var as abs_ms and projects to OMT",
                 main,
@@ -23903,7 +23904,15 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "can load/create missing overmap data even when radius is 0", main
             )
             self.assertIn(
-                "always uses square geometry, and skips missing overmaps", main
+                "services.overmap.reveal remains a square-area helper that skips missing overmaps",
+                main,
+            )
+            self.assertIn(
+                "services.overmap.reveal_native preserves those native semantics",
+                main,
+            )
+            self.assertIn(
+                "an explicit typed abs_omt and integer radius 0..36", main
             )
             reveal_todos = [
                 todo for todo in result.todos
@@ -23974,6 +23983,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         rendered = migrate_lua_first.render_eoc(source, result)
         todo_text = "\n".join(todo.message for todo in result.todos)
         self.assertNotIn("services.overmap.reveal(", rendered)
+        self.assertNotIn("services.overmap.reveal_native(", rendered)
         self.assertNotIn("services.overmap.reveal_route(", rendered)
         self.assertIn("not yet proven available as typed abs_omt values in Lua", todo_text)
         self.assertIn("preserve the enclosing effect/context order", todo_text)
@@ -23990,9 +24000,50 @@ assert(not pcall(function() return U_EXPRESSION end))
             zero_radius_source, zero_radius_result,
         )
         self.assertNotIn("services.overmap.reveal(", zero_radius_rendered)
+        self.assertNotIn("services.overmap.reveal_native(", zero_radius_rendered)
         self.assertIn(
             "can load/create missing overmap data even when radius is 0",
             "\n".join(todo.message for todo in zero_radius_result.todos),
+        )
+
+    def test_real_computer_map_cache_reveal_map_keeps_native_overmap_todo(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/json/effects_on_condition/computer_eocs.json"
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([source_path])
+            if entry.value.get("type") == "effect_on_condition" and
+            entry.value.get("id") == "EOC_CHECK_MAP_CACHE"
+        )
+        reveal_map = next(
+            effect for effect in source.value["effect"][0]["else"]
+            if isinstance(effect, dict) and "reveal_map" in effect
+        )
+        self.assertEqual(
+            reveal_map["reveal_map"], {"npc_val": "spawn_location"}
+        )
+        self.assertEqual(
+            reveal_map["radius"], {"math": ["rng(11, 36)"]}
+        )
+
+        # Isolate the exact real leaf because its enclosing conditional currently
+        # has a separate control-flow TODO that would otherwise mask this gap.
+        reveal_source = migrate_lua_first.SourceObject(
+            source.path, source.index, {**source.value, "effect": [reveal_map]}
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(reveal_source, result)
+        self.assertNotIn("services.overmap.reveal(", rendered)
+        self.assertNotIn("services.overmap.reveal_native(", rendered)
+        reveal_todos = [
+            todo for todo in result.todos
+            if "native reveal_map reads its target_var" in todo.message
+        ]
+        self.assertEqual(len(reveal_todos), 1)
+        self.assertIn("native overmapbuffer::reveal honors CIRCLEDIST", rendered)
+        self.assertIn("missing overmap data even when radius is 0", rendered)
+        self.assertIn("integer radius 0..36", rendered)
+        self.assertIn(
+            "this var_info target has no proven typed-coordinate resolution",
+            rendered,
         )
 
     def test_static_consume_item_sum_lowers_event_exclusive_mutations(self) -> None:
