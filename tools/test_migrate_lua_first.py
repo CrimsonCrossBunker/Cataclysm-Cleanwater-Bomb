@@ -4115,7 +4115,12 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             migrate_lua_first.game_start_sender_sites(),
             migrate_lua_first.EXPECTED_GAME_START_SENDER_SITES,
         )
-        self.assertTrue(migrate_lua_first.game_start_avatar_actor_is_proven())
+        self.assertTrue(
+            migrate_lua_first.game_start_avatar_actor_is_proven(False)
+        )
+        self.assertFalse(
+            migrate_lua_first.game_start_avatar_actor_is_proven(True)
+        )
 
         with tempfile.TemporaryDirectory() as temporary:
             with patch.object(
@@ -4123,7 +4128,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             ):
                 migrate_lua_first.game_start_sender_sites.cache_clear()
                 self.assertFalse(
-                    migrate_lua_first.game_start_avatar_actor_is_proven()
+                    migrate_lua_first.game_start_avatar_actor_is_proven(False)
                 )
         migrate_lua_first.game_start_sender_sites.cache_clear()
 
@@ -4149,7 +4154,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                              ("src/other.cpp", constructor)),
                         )
                         self.assertFalse(
-                            migrate_lua_first.game_start_avatar_actor_is_proven()
+                            migrate_lua_first.game_start_avatar_actor_is_proven(False)
                         )
 
     def test_directory_discovery_prunes_build_caches(self) -> None:
@@ -7247,6 +7252,245 @@ assert(#events == 9)
             self.assertNotIn("services.recipes.learn(", main)
             self.assertIn("EOC referenced_recipe effect #0", todo_text)
             self.assertIn("event-exclusive game_start avatar", todo_text)
+
+    def test_static_game_start_reemit_disables_all_live_avatar_lowerings(self) -> None:
+        wound = {
+            "type": "wound",
+            "id": "scratch",
+            "name": "scratch",
+            "description": "A test wound.",
+            "damage_types": ["bash"],
+            "damage_required": [1, 2],
+            "pain": [1, 1],
+            "healing_time": ["10 minutes", "10 minutes"],
+            "limit": 1,
+        }
+        eocs = [
+            {
+                "type": "effect_on_condition",
+                "id": "game_start_recipe",
+                "required_event": "game_start",
+                "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "game_start_wound",
+                "required_event": "game_start",
+                "effect": {"u_add_wound": "arm_l", "wound_id": "scratch"},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "game_start_morale",
+                "required_event": "game_start",
+                "effect": {
+                    "u_add_morale": "morale_feeling_good",
+                    "bonus": 10,
+                    "max_bonus": 50,
+                },
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "game_start_proficiency_condition",
+                "required_event": "game_start",
+                "condition": {"u_has_proficiency": "prof_knapping"},
+                "effect": "nothing",
+            },
+        ]
+        reemitter = {
+            "type": "effect_on_condition",
+            "id": "reemits_game_start_for_avatar_proofs",
+            "effect": {
+                "trigger_event": "game_start",
+                "args": ["replayed version"],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([wound, *eocs]), encoding="utf-8")
+            normal = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "game_start_normal_mod"
+            )
+            normal_main = normal.files[Path("main.lua")]
+            self.assertIn("services.recipes.learn(", normal_main)
+            self.assertIn("services.wounds.add_unbounded(", normal_main)
+            self.assertIn("services.morale.add(", normal_main)
+            self.assertIn("services.proficiencies.has_id_text(", normal_main)
+
+            source.write_text(
+                json.dumps([wound, *eocs, reemitter]), encoding="utf-8"
+            )
+            reemitted_objects = migrate_lua_first.load_objects([source])
+            self.assertTrue(
+                migrate_lua_first._has_static_event_emission(
+                    reemitted_objects, "game_start"
+                )
+            )
+            reemitted = migrate_lua_first.migrate(
+                reemitted_objects, "game_start_reemitted_mod"
+            )
+            reemitted_main = reemitted.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in reemitted.todos)
+
+        for lowering in (
+            "services.recipes.learn(",
+            "services.wounds.add_unbounded(",
+            "services.morale.add(",
+            "services.proficiencies.has_id_text(",
+        ):
+            self.assertNotIn(lowering, reemitted_main)
+        for eoc_id in (
+            "game_start_recipe", "game_start_wound", "game_start_morale",
+        ):
+            self.assertIn(f"EOC {eoc_id}", todo_text)
+            self.assertNotIn(eoc_id, reemitted.converted)
+        self.assertIn(
+            "EOC game_start_proficiency_condition condition TODO", todo_text
+        )
+        self.assertIn("event-exclusive game_start avatar", todo_text)
+
+    def test_inline_actor_normalization_does_not_inherit_avatar_after_reemit(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("inline.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "inline_game_start_avatar",
+            "required_event": "game_start",
+            "effect": {
+                "if": "u_is_outside",
+                "then": {
+                    "condition": {"u_has_martial_art": "source_test_style"},
+                    "effect": "nothing",
+                },
+            },
+        })
+        normal, *_ = migrate_lua_first.normalize_inline_eocs([source], False)
+        reemitted, *_ = migrate_lua_first.normalize_inline_eocs([source], True)
+        normal_child = next(
+            child for child in normal
+            if child.value.get("__inline_eoc") is True
+        )
+        reemitted_child = next(
+            child for child in reemitted
+            if child.value.get("__inline_eoc") is True
+        )
+
+        self.assertEqual(normal_child.value["__inline_actor_kind"], "avatar")
+        self.assertEqual(
+            reemitted_child.value["__inline_actor_kind"], "unproven"
+        )
+        reemitted_requirements = migrate_lua_first._eoc_actor_requirements(
+            reemitted, frozenset(), frozenset(), frozenset(), frozenset(),
+            game_start_event_emitted_by_eoc=True,
+        )
+        self.assertEqual(
+            reemitted_requirements[reemitted_child.value["id"]], "unproven"
+        )
+        normal_rendered = migrate_lua_first.render_eoc(
+            normal_child, migrate_lua_first.MigrationResult(),
+            game_start_event_emitted_by_eoc=False,
+        )
+        reemitted_rendered = migrate_lua_first.render_eoc(
+            reemitted_child, migrate_lua_first.MigrationResult(),
+            game_start_event_emitted_by_eoc=True,
+        )
+        self.assertIn("services.martial_arts.get(", normal_rendered)
+        self.assertNotIn("services.martial_arts.get(", reemitted_rendered)
+        self.assertIn("TODO: translate the legacy condition into a Lua predicate.", reemitted_rendered)
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": reemitted_child.value["id"]},
+            {reemitted_child.value["id"]: "reemitted_inline_fn"},
+            eoc_actor_requirements=reemitted_requirements,
+            actor_expression="actor",
+        ))
+
+    def test_game_start_actor_requirement_stays_unproven_through_subcalls(self) -> None:
+        objects = [
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "game_start_target",
+                "required_event": "game_start",
+                "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+            }),
+            migrate_lua_first.SourceObject(Path("source.json"), 1, {
+                "type": "effect_on_condition",
+                "id": "test_eoc_wrapper",
+                "condition": {"test_eoc": "game_start_target"},
+                "effect": "nothing",
+            }),
+            migrate_lua_first.SourceObject(Path("source.json"), 2, {
+                "type": "effect_on_condition",
+                "id": "avatar_shaped_test_eoc_wrapper",
+                "condition": {"and": [
+                    {"test_eoc": "game_start_target"},
+                    {"u_is_outside": True},
+                ]},
+                "effect": "nothing",
+            }),
+            migrate_lua_first.SourceObject(Path("source.json"), 3, {
+                "type": "effect_on_condition",
+                "id": "game_start_reemitter",
+                "effect": {
+                    "trigger_event": "game_start",
+                    "args": ["replayed version"],
+                },
+            }),
+        ]
+        normal_requirements = migrate_lua_first._eoc_actor_requirements(
+            objects[:3], frozenset(), frozenset(), frozenset(), frozenset(),
+            game_start_event_emitted_by_eoc=False,
+        )
+        avatar_shape_alone = migrate_lua_first._eoc_actor_requirements(
+            [objects[2]], frozenset(), frozenset(), frozenset(), frozenset(),
+            game_start_event_emitted_by_eoc=True,
+        )
+        reemitted_requirements = migrate_lua_first._eoc_actor_requirements(
+            objects, frozenset(), frozenset(), frozenset(), frozenset(),
+            game_start_event_emitted_by_eoc=migrate_lua_first._has_static_event_emission(
+                objects, "game_start"
+            ),
+        )
+        self.assertEqual(normal_requirements["game_start_target"], "avatar")
+        self.assertEqual(
+            normal_requirements["avatar_shaped_test_eoc_wrapper"], "avatar"
+        )
+        self.assertEqual(
+            avatar_shape_alone["avatar_shaped_test_eoc_wrapper"], "avatar"
+        )
+        self.assertEqual(
+            reemitted_requirements["game_start_target"], "unproven"
+        )
+        self.assertEqual(
+            reemitted_requirements["test_eoc_wrapper"], "unproven"
+        )
+        self.assertEqual(
+            reemitted_requirements["avatar_shaped_test_eoc_wrapper"],
+            "unproven",
+        )
+
+        names = {
+            "game_start_target": "game_start_target_fn",
+            "test_eoc_wrapper": "test_eoc_wrapper_fn",
+        }
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "game_start_target"}, names,
+            eoc_actor_requirements=reemitted_requirements,
+            actor_expression="actor",
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "game_start_target", "time_in_future": 1}, names,
+            eoc_actor_requirements=reemitted_requirements,
+            actor_expression="actor",
+            global_eoc_ids=frozenset({"game_start_target"}),
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_run_eocs(
+            {"run_eocs": "test_eoc_wrapper"}, names,
+            eoc_actor_requirements=reemitted_requirements,
+            actor_expression="actor",
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_traversal(
+            {"u_run_npc_eocs": "game_start_target", "local": False,
+             "unique_ids": ["test_npc"]},
+            "u_run_npc_eocs", "actor", names,
+            eoc_actor_requirements=reemitted_requirements,
+        ))
 
     def test_recipe_mutations_remain_todo_with_dynamic_selector_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
