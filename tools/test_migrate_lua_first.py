@@ -21229,9 +21229,10 @@ assert(not pcall(function() return U_EXPRESSION end))
                                     "time_in_future": "1 turn",
                                 },
                                 {
-                                    "copy_location": {"context_val": "loc"},
-                                    "new_loc": {"context_val": "destination"},
-                                    "time_in_future": "2 turns",
+                                    "copy_location": {"global_val": "ship"},
+                                    "new_loc": {"global_val": "ship_new"},
+                                    "time_in_future": "infinite",
+                                    "key": "tp_key",
                                 },
                                 {
                                     "u_transform_radius": 0,
@@ -21305,13 +21306,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                 '        (context.data["loc"]):project_to("omt"),',
                 main,
             )
-            self.assertIn("services.world.schedule_location_copy(", main)
             self.assertIn(
-                'services.world.schedule_location_copy(\n'
-                '        (context.data["loc"]):project_to("omt"), '
-                '(context.data["destination"]):project_to("omt"),',
+                "copy_location reads source and destination var_info values",
                 main,
             )
+            self.assertIn("unlike the native loaded-submap lookup", main)
+            self.assertIn("delay must be 1 turn..10000 days", main)
+            self.assertIn("maps 'infinite' to INT_MAX turns", main)
+            self.assertNotIn("services.world.schedule_location_copy(", main)
             self.assertIn("services.world.transform_radius(", main)
             self.assertNotIn(
                 "services.characters.drop_weapon(services.characters.avatar())",
@@ -23650,7 +23652,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("typed city query and writable location variable", main)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_renders_bounded_transform_line_for_actor_coordinates(self) -> None:
+    def test_transform_line_fails_closed_for_offscreen_native_map_loading(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -23683,13 +23685,18 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.world.transform_line", main)
-            self.assertIn('services.types.id("ter_furn_transform", "transform_test")', main)
-            self.assertIn('local first = context.data["line_a"]', main)
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.world.transform_line", main)
+            self.assertIn(
+                "native transform_line loads a temporary map from the line origin",
+                main,
+            )
+            self.assertIn(
+                "currently loaded map", main
+            )
+            self.assertIn("loaded-map endpoints", report)
 
     def test_renders_literal_dimension_name_for_proven_character(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23733,7 +23740,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(main.count("TODO: translate dimension_name"), 1)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_renders_literal_mirror_coordinates_for_same_scope_variables(self) -> None:
+    def test_mirror_coordinates_stays_todo_without_scope_safe_operation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -23774,9 +23781,10 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                "absolute-ms reflection operation and exact beta proof",
+                "absolute-ms var_info values",
                 main,
             )
+            self.assertIn("scope-correct reflection operation", main)
             self.assertNotIn("services.variables.get(", main)
             self.assertNotIn("scale_by(2)", main)
             self.assertEqual(main.count("TODO: mirror_coordinates needs"), 3)
@@ -23798,7 +23806,7 @@ assert(not pcall(function() return U_EXPRESSION end))
 
         rendered = migrate_lua_first.render_eoc(source, result)
 
-        self.assertIn("exact beta proof", rendered)
+        self.assertIn("scope-correct reflection operation", rendered)
         self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
         self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
@@ -33367,7 +33375,10 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertTrue(result.todos)
-            self.assertEqual({todo.category for todo in result.todos}, {"manual_rewrite"})
+            self.assertTrue(
+                {"manual_rewrite", "platform_gap"} <=
+                {todo.category for todo in result.todos}
+            )
             self.assertIn(
                 'services.text.expand_for(services.translate("A translated message")',
                 main,
@@ -33384,20 +33395,10 @@ assert(calls==3 and context.data.entry=='zombie')
                 main,
             )
             self.assertIn("services.world.emit(", main)
-            self.assertIn(
-                'services.variables.get_global(\n        "first_point")',
-                main,
-            )
-            self.assertIn(
-                'services.variables.get_global(\n        "second_point")',
-                main,
-            )
-            self.assertIn("services.world.transform_line(", main)
-            self.assertIn('local center = context.data["center"]', main)
-            self.assertIn(
-                'context.data["mirrored"] = center:scale_by(2):subtract(relative)',
-                main,
-            )
+            self.assertNotIn("services.world.transform_line(", main)
+            self.assertNotIn('context.data["mirrored"] =', main)
+            self.assertIn("TODO: transform_line", main)
+            self.assertIn("TODO: mirror_coordinates reads and writes native", main)
             self.assertIn(
                 'context.data["raised_position"] = location', main
             )
