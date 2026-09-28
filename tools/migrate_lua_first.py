@@ -21665,25 +21665,6 @@ def render_static_follower_service_effect(
     return lines
 
 
-def render_static_npc_item_selection(
-    effect: str, npc_actor_proven: bool, avatar_actor_proven: bool,
-) -> list[str] | None:
-    """Keep the beta NPC's interactive avatar-item picker as a manual TODO.
-
-    These argument-less native effects call ``dialogue::actor(true)->give_item_to``.
-    For an NPC talker, that opens a picker over the global avatar inventory and
-    passes the selected item into native NPC consume/equip/transfer logic.
-    ``services.npcs.offer_item`` requires an exact live ItemHandle, which the
-    EOC source does not provide.  Keep both effects manual even when the NPC
-    event actor is proven.
-    """
-    if not npc_actor_proven or not avatar_actor_proven or effect not in {
-        "npc_gets_item", "npc_gets_item_to_use",
-    }:
-        return None
-    return None
-
-
 def render_static_buy_monster_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
 ) -> list[str] | None:
@@ -34548,28 +34529,33 @@ def render_eoc(
                     converted_effect = True
                 else:
                     all_effects_converted = False
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif isinstance(effect, str) and effect in {
                 "npc_gets_item", "npc_gets_item_to_use",
             }:
-                rendered = render_static_npc_item_selection(
-                    effect, npc_actor_proven, avatar_actor_proven
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
+                if has_event_trigger:
+                    item_picker_todo = (
+                        f"native EOC {effect} calls dialogue::actor(true)->give_item_to; "
+                        "scheduled event processing constructs an alpha-only dialogue, "
+                        "so the missing-beta diagnostic is logged and the call falls "
+                        "back to alpha (an NPC alpha opens the global avatar item picker); "
+                        "this is not an active two-party TALK response action, and "
+                        "services.npcs.offer_item needs the exact selected ItemHandle"
+                    )
                 else:
                     item_picker_todo = (
-                        f"native beta NPC {effect} opens the global avatar's "
-                        "interactive item picker; select and bind its exact "
-                        "ItemHandle before calling services.npcs.offer_item"
+                        f"native EOC {effect} calls dialogue::actor(true)->give_item_to; "
+                        "nested EOCs may inherit two talkers from their caller, but a "
+                        "generic EOC handler cannot prove the active TALK response "
+                        "action or preserve the native alpha fallback; "
+                        "services.npcs.offer_item also needs the exact selected ItemHandle"
                     )
-                    lines.append(f"    -- TODO: {item_picker_todo}.")
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        f"{item_picker_todo}"
-                    )
-                    all_effects_converted = False
+                lines.append(f"    -- TODO: {item_picker_todo}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{item_picker_todo}"
+                )
+                all_effects_converted = False
             elif effect == "take_control_menu" and take_control_menu_live_terminal_proven:
                 # open_control_menu calls the same native Avatar menu entry.
                 # This EOC has no later operation or callback that can observe
