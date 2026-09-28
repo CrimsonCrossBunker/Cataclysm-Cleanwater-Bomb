@@ -24297,7 +24297,7 @@ def render_static_inventory_consume_sum(
         )
     lines.extend(
         "                    { item = services.types.id(\"item\", "
-        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }"
+        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }}"
         + ("," if index + 1 < len(entries) else "")
         for index, (item_id, amount) in enumerate(entries)
     )
