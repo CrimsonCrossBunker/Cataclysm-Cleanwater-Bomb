@@ -19789,6 +19789,17 @@ assert(not pcall(function() return U_EXPRESSION end))
                     },
                     {
                         "type": "effect_on_condition",
+                        "id": "melee_avatar_beta_message",
+                        # Native melee event carries a live alpha/beta pair
+                        # before the attack applies damage.
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {
+                            "npc_message": "live avatar beta",
+                            "type": "good",
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
                         "id": "item_beta_message",
                         "required_event": "character_wields_item",
                         "effect": {"npc_message": "item beta is not a Character"},
@@ -19822,14 +19833,32 @@ assert(not pcall(function() return U_EXPRESSION end))
                 f"EOC {eoc_id} effect #0" in entry
                 for entry in result.todos
             ))
+        self.assertIn("melee_avatar_beta_message", result.converted)
+        self.assertFalse(any(
+            "EOC melee_avatar_beta_message effect #0" in entry
+            for entry in result.todos
+        ))
         self.assertTrue(any(
             "EOC unbound_npc_message effect #0" in entry
             for entry in result.todos
         ))
         self.assertIn("needs domain-service conversion", report)
         self.assertNotIn('services.message("role unknown")', main)
-        self.assertNotIn('message_target = context.actors.beta', main)
-        self.assertNotIn('services.translate("killer sees this")', main)
+        self.assertIn('message_target = context.actors.interlocutor', main)
+        self.assertIn(
+            'if message_target ~= nil and message_target.kind == "creature" and '
+            'message_target.subtype == "avatar" then',
+            main,
+        )
+        avatar_guard = main.index('message_target.subtype == "avatar"')
+        expanded = main.index(
+            'services.text.expand_for(services.translate("live avatar beta")',
+            avatar_guard,
+        )
+        self.assertLess(avatar_guard, expanded)
+        self.assertNotIn(
+            'services.text.expand_for(services.translate("killer sees this")', main
+        )
 
     def test_message_expansion_requires_live_exact_dialogue_participants(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
