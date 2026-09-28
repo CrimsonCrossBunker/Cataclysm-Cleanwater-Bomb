@@ -7316,8 +7316,174 @@ assert(#events == 9)
             self.assertNotIn("services.recipes.forget_category(", main)
             self.assertIn("EOC npc_learn_recipe effect #0", todo_text)
             self.assertIn("EOC npc_forget_recipe effect #0", todo_text)
-            self.assertIn("npc_ recipe mutation needs exact native beta talker proof", todo_text)
+            self.assertIn(
+                "npc_ recipe mutation needs an event-exclusive "
+                "character_melee_attacks_character EOC",
+                todo_text,
+            )
             self.assertIn("registered crafting category", todo_text)
+
+    def test_npc_recipe_mutations_require_live_melee_character_beta(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_npc_learn_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_npc_forget_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {
+                            "npc_forget_recipe": "cudgel",
+                            "category": False,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_beta_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_monster",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "alpha_fallback_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_death_recipe",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unknown_recipe_id",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"npc_learn_recipe": "not_registered"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "uncraft_as_recipe_id",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"npc_learn_recipe": "reverse_only"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "category_forget",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {
+                            "npc_forget_recipe": "CC_WEAPON",
+                            "category": True,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "multi_effect_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": [
+                            {"npc_learn_recipe": "cudgel"},
+                            {"npc_forget_recipe": "cudgel"},
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_melee_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "recipe_caller",
+                        "effect": {"run_eocs": "referenced_melee_recipe"},
+                    },
+                    {"type": "uncraft", "result": "reverse_only"},
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_recipe_melee_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertIn('"recipe", "cudgel"', main)
+            self.assertIn("services.recipes.learn(", main)
+            self.assertIn("services.recipes.forget(", main)
+            self.assertIn(
+                "local recipe_target =\n            context and context.actors and "
+                "context.actors.interlocutor",
+                main,
+            )
+            self.assertNotIn("or actor or services.characters.avatar()", main)
+            self.assertIn(
+                "External native_events.emit may omit beta; that shape stays TODO.",
+                main,
+            )
+            self.assertIn('recipe_target.kind == "creature"', main)
+            self.assertIn('recipe_target.subtype == "npc"', main)
+            self.assertIn("recipe_target:is_valid()", main)
+            self.assertIn("recipe_id:is_valid()", main)
+            self.assertNotIn('"recipe", "not_registered"', main)
+            self.assertNotIn('"recipe", "reverse_only"', main)
+            self.assertNotIn("services.recipes.forget_category(", main)
+            for eoc_id in (
+                "monster_beta_recipe", "alpha_fallback_recipe", "npc_death_recipe",
+                "unknown_recipe_id", "uncraft_as_recipe_id", "category_forget",
+                "multi_effect_recipe",
+                "referenced_melee_recipe",
+            ):
+                self.assertIn(f"EOC {eoc_id} effect", todo_text)
+            self.assertIn("monster beta, and NPC_DEATH remain TODO", todo_text)
+            self.assertIn("core or input recipe catalog", todo_text)
+            self.assertIn("category recipe forget", todo_text)
+
+    def test_npc_recipe_melee_lowering_rejects_static_event_emission(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_npc_learn_recipe",
+                        "eoc_type": "EVENT",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"npc_learn_recipe": "cudgel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "emit_melee_event",
+                        "effect": {
+                            "trigger_event": "character_melee_attacks_character",
+                            "args": ["1", "null", False, "2", "victim"],
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_recipe_emit_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.recipes.learn(", main)
+            self.assertIn("no corpus trigger_event emitter for that event", todo_text)
+            self.assertIn("EOC melee_npc_learn_recipe effect #0", todo_text)
 
     def test_translates_live_avatar_martial_art_learning_and_forgetting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

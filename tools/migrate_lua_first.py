@@ -2230,6 +2230,43 @@ def core_body_part_catalog_ids() -> frozenset[str]:
     return frozenset(identifiers)
 
 
+def source_recipe_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
+    """Collect only directly identifiable recipe IDs from loaded JSON sources."""
+    identifiers: set[str] = set()
+    for source in objects:
+        value = source.value
+        kind = value.get("type")
+        if (
+            kind not in {"recipe", "practice"} or
+            value.get("abstract") is True or
+            "abstract" in value or "copy-from" in value or "extend" in value or
+            value.get("obsolete") is True
+        ):
+            continue
+        if kind == "practice":
+            identifier = value.get("id")
+        else:
+            # Native recipe::load appends variant/id_suffix to the result ID;
+            # keep these shapes out until that exact construction is modeled.
+            if "variant" in value or "id_suffix" in value:
+                continue
+            identifier = value.get("result")
+        if safe_native_recipe_id(identifier):
+            identifiers.add(identifier)
+    return frozenset(identifiers)
+
+
+@functools.lru_cache(maxsize=1)
+def core_recipe_catalog_ids() -> frozenset[str]:
+    """Read concrete core recipe IDs for registry-checked EOC selectors."""
+    source_root = REPOSITORY_ROOT / "data" / "json" / "recipes"
+    try:
+        objects = load_objects([source_root])
+    except ValueError:
+        return frozenset()
+    return source_recipe_catalog_ids(objects)
+
+
 def source_wound_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
     """Accept only self-contained wound definitions from the input corpus."""
     required = {"name", "description", "damage_types", "damage_required"}
@@ -28756,6 +28793,8 @@ def render_eoc(
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
     game_start_event_emitted_by_eoc: bool = False,
+    known_recipe_ids: frozenset[str] = frozenset(),
+    character_melee_event_emitted_by_eoc: bool = True,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29318,6 +29357,20 @@ def render_eoc(
             "character_melee_attacks_monster",
         } and not inline_eoc and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
+    )
+    raw_eoc_effects = value.get("effect", [])
+    if isinstance(raw_eoc_effects, (dict, str)):
+        raw_eoc_effects = [raw_eoc_effects]
+    npc_recipe_melee_beta_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character" and
+        not character_melee_event_emitted_by_eoc and
+        value.get("eoc_type", "EVENT") == "EVENT" and
+        set(value) <= {
+            "type", "id", "eoc_type", "required_event", "effect", "//",
+        } and
+        isinstance(raw_eoc_effects, list) and len(raw_eoc_effects) == 1 and
+        isinstance(raw_eoc_effects[0], dict)
     )
     # A referenced EOC is also callable by run_eocs, run_eoc_selector, or
     # test_eoc and can receive a different child context. Dynamic dispatch in
@@ -30326,6 +30379,51 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
+                npc_recipe_melee_beta_proven and
+                isinstance(effect, dict) and
+                (
+                    set(effect) == {"npc_learn_recipe"} or
+                    set(effect) == {"npc_forget_recipe"} or
+                    (
+                        set(effect) == {"npc_forget_recipe", "category"} and
+                        effect.get("category") is False
+                    )
+                ) and
+                (recipe_literal := effect.get(
+                    "npc_learn_recipe", effect.get("npc_forget_recipe")
+                )) and
+                safe_native_recipe_id(recipe_literal) and
+                recipe_literal in known_recipe_ids
+            ):
+                # Native melee events carry send_with_talker(alpha, Character beta)
+                # before damage. Static JSON trigger_event emitters are gated above;
+                # external Lua native_events.emit remains outside that corpus proof.
+                # Do not infer a missing interlocutor from alpha: native actor(true)
+                # diagnoses and falls back to alpha, a behavior this bounded service
+                # path intentionally leaves unsupported.
+                method = (
+                    "learn" if "npc_learn_recipe" in effect else "forget"
+                )
+                lines.extend([
+                    "    do",
+                    "        -- External native_events.emit may omit beta; that shape stays TODO.",
+                    "        local recipe_target =",
+                    "            context and context.actors and context.actors.interlocutor",
+                    '        if recipe_target ~= nil and recipe_target.kind == "creature" and',
+                    '            (recipe_target.subtype == "avatar" or',
+                    '             recipe_target.subtype == "character" or recipe_target.subtype == "npc") and',
+                    "            recipe_target:is_valid() then",
+                    "            local recipe_id = services.types.id(",
+                    f'                "recipe", {lua_quote(recipe_literal)})',
+                    "            if recipe_id:is_valid() then",
+                    f"                service_value(services.recipes.{method}(",
+                    "                    recipe_target, recipe_id))",
+                    "            end",
+                    "        end",
+                    "    end",
+                ])
+                converted_effect = True
+            elif (
                 martial_art_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_martial_art"} and
@@ -30443,10 +30541,22 @@ def render_eoc(
                     if unproven_recipe_effect:
                         recipe_todo_reasons: list[str] = []
                         if key.startswith("npc_"):
-                            recipe_todo_reasons.append(
-                                "npc_ recipe mutation needs exact native beta talker proof; "
-                                "an event Character does not prove dialogue beta"
-                            )
+                            if not npc_recipe_melee_beta_proven:
+                                if character_melee_event_emitted_by_eoc:
+                                    recipe_todo_reasons.append(
+                                        "npc_ recipe mutation needs an event-exclusive "
+                                        "character_melee_attacks_character EOC with one "
+                                        "effect and no corpus trigger_event emitter for "
+                                        "that event; other event actors, generic callbacks, "
+                                        "monster beta, and NPC_DEATH remain TODO"
+                                    )
+                                else:
+                                    recipe_todo_reasons.append(
+                                        "npc_ recipe mutation needs an event-exclusive "
+                                        "character_melee_attacks_character EOC with one "
+                                        "effect; other event actors, generic callbacks, "
+                                        "monster beta, and NPC_DEATH remain TODO"
+                                    )
                         elif not (
                             event_exclusive_source_proven and
                             required_event == "game_start" and
@@ -30462,10 +30572,17 @@ def render_eoc(
                                 "unknown category IDs remain TODO"
                             )
                         else:
-                            recipe_todo_reasons.append(
-                                "direct recipe mutation needs a static recipe ID literal; "
-                                "registered recipe IDs remain a source-content precondition"
-                            )
+                            if key.startswith("npc_") and npc_recipe_melee_beta_proven:
+                                recipe_todo_reasons.append(
+                                    "direct npc_ recipe mutation needs a static ID in the "
+                                    "core or input recipe catalog; dynamic, variant, "
+                                    "and suffix IDs remain TODO"
+                                )
+                            else:
+                                recipe_todo_reasons.append(
+                                    "direct recipe mutation needs a static recipe ID literal; "
+                                    "registered recipe IDs remain a source-content precondition"
+                                )
                         recipe_todo = "; ".join(recipe_todo_reasons)
                         lines.append(
                             "    -- TODO: " + recipe_todo + "."
@@ -34630,6 +34747,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
     game_start_event_emitted_by_eoc = _has_static_event_emission(
         objects, "game_start"
     )
+    character_melee_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "character_melee_attacks_character"
+    )
     (
         objects,
         character_override_ids,
@@ -34640,6 +34760,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
     known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
     known_body_part_ids = core_body_part_catalog_ids()
     known_wound_ids = source_wound_catalog_ids(objects)
+    known_recipe_ids = core_recipe_catalog_ids() | source_recipe_catalog_ids(objects)
     (
         content_primary_actor_ids,
         content_character_actor_ids,
@@ -34960,6 +35081,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     known_body_part_ids,
                     known_wound_ids,
                     game_start_event_emitted_by_eoc,
+                    known_recipe_ids,
+                    character_melee_event_emitted_by_eoc,
                 )
             )
         elif kind == "tool_quality":
