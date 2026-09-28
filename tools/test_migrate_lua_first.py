@@ -9940,6 +9940,141 @@ assert(not available())
             )
         )
 
+    def test_npc_exists_uses_event_beta_presence_only(self) -> None:
+        expected = (
+            "context ~= nil and "
+            "context.__ccb_event_beta_presence_proven == true and "
+            "context.actors ~= nil and "
+            "context.actors.interlocutor ~= nil"
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_exists", event_beta_presence_proven=True
+            ),
+            expected,
+        )
+        for kwargs in (
+            {},
+            {
+                "npc_actor_proven": True,
+                "npc_actor_expression": "context.actors.beta",
+            },
+            {
+                "npc_dialogue_pair_proven": True,
+                "npc_actor_expression": "context.actors.beta",
+            },
+        ):
+            with self.subTest(kwargs=kwargs):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        "npc_exists", **kwargs
+                    )
+                )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "has_beta", event_beta_presence_proven=True
+            )
+        )
+
+        # This direct-event proof applies only to corpora without a
+        # variable-backed run_eocs dispatch. In a talker-bearing native event,
+        # interlocutor is populated only when event_bus supplied beta; a plain
+        # event has no interlocutor and preserves native d.has_beta == false.
+        for event in (
+            "character_melee_attacks_character",
+            "game_start",
+        ):
+            with self.subTest(event=event):
+                result = migrate_lua_first.MigrationResult()
+                main = migrate_lua_first.render_eoc(
+                    migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                        "type": "effect_on_condition",
+                        "id": "event_npc_exists",
+                        "required_event": event,
+                        "condition": {
+                            "and": ["npc_exists", {"not": "npc_exists"}]
+                        },
+                        "effect": {"message": "event"},
+                    }),
+                    result,
+                )
+                self.assertIn(f'runtime.on("game:{event}"', main)
+                self.assertIn(
+                    "context.__ccb_event_beta_presence_proven = true", main
+                )
+                self.assertEqual(main.count(expected), 2)
+                self.assertNotIn("context.actors.beta", main)
+
+        result = migrate_lua_first.MigrationResult()
+        referenced_main = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "event_npc_exists",
+                "required_event": "character_melee_attacks_character",
+                "condition": "npc_exists",
+                "effect": {"message": "event"},
+            }),
+            result,
+            eoc_referenced_ids=frozenset({"event_npc_exists"}),
+        )
+        self.assertNotIn(
+            "context.__ccb_event_beta_presence_proven = true", referenced_main
+        )
+        self.assertNotIn(expected, referenced_main)
+        self.assertIn(
+            "TODO: translate the legacy condition into a Lua predicate",
+            referenced_main,
+        )
+
+        static_dispatch = migrate_lua_first.SourceObject(Path("source.json"), 0, {
+            "type": "effect_on_condition",
+            "effect": {"run_eocs": ["child_eoc"]},
+        })
+        dynamic_dispatch = migrate_lua_first.SourceObject(Path("source.json"), 1, {
+            "type": "effect_on_condition",
+            "effect": {"run_eocs": [{"context_val": "next_eoc"}]},
+        })
+        self.assertFalse(
+            migrate_lua_first._has_dynamic_eoc_dispatch([static_dispatch])
+        )
+        self.assertTrue(
+            migrate_lua_first._has_dynamic_eoc_dispatch([dynamic_dispatch])
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "event_npc_exists",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": "npc_exists",
+                        "effect": {"message": "event"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_caller",
+                        "effect": {
+                            "run_eocs": [{"context_val": "next_eoc"}]
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            self.assertTrue(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+            migrated = migrate_lua_first.migrate(objects, "event_mod")
+            main = migrated.files[Path("main.lua")]
+            self.assertNotIn(
+                "context.__ccb_event_beta_presence_proven = true", main
+            )
+            self.assertNotIn(expected, main)
+            self.assertIn(
+                "TODO: translate the legacy condition into a Lua predicate",
+                main,
+            )
+
     def test_train_styles_requires_explicit_native_talker_pair(self) -> None:
         for condition, teacher, student in (
             ("u_train_styles", "actor", "context.actors.beta"),

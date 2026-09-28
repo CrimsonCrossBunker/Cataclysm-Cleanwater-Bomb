@@ -1665,6 +1665,46 @@ def _collect_eoc_references(
     return frozenset(references)
 
 
+def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
+    """Fail closed when run_eocs can select a target from runtime data.
+
+    Static references are collected separately.  A variable-backed EOC id can
+    name any generated function, so an event EOC may also be called as a child
+    with a different native beta than its event interlocutor.
+    """
+    def dynamic_reference(value: Any) -> bool:
+        if isinstance(value, str) or not isinstance(value, dict):
+            return False
+        # A localized/string literal is still a fixed reference; all other
+        # accepted table forms resolve through runtime data or a registry.
+        if (
+            "str" in value and set(value) <= {"str", "i18n", "//~"} and
+            bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
+            value.get("i18n") is not True and
+            ("i18n" not in value or isinstance(value["i18n"], bool)) and
+            ("//~" not in value or isinstance(value["//~"], str))
+        ):
+            return False
+        return render_eoc_string_expression(value) is not None
+
+    def walk(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        if not isinstance(value, dict):
+            return False
+        if "run_eocs" in value:
+            raw = value["run_eocs"]
+            references = [raw] if isinstance(raw, (str, dict)) else raw
+            if (
+                isinstance(references, list) and
+                any(dynamic_reference(entry) for entry in references)
+            ):
+                return True
+        return any(walk(entry) for entry in value.values())
+
+    return any(walk(source.value) for source in objects)
+
+
 def _content_callback_actor_provenance(
     objects: Iterable[SourceObject],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
@@ -27481,6 +27521,7 @@ def render_eoc_condition_expression(
     generic_character_actor_proven: bool = False,
     training_pair_proven: bool = False,
     npc_dialogue_pair_proven: bool = False,
+    event_beta_presence_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -27811,10 +27852,21 @@ def render_eoc_condition_expression(
                 "return not service_value(services.effects.has(beta, busy)) "
                 "end)()"
             )
+        if condition == "npc_exists" and event_beta_presence_proven:
+            # conditional_t::f_exists(true) reads only d.has_beta. For a
+            # required_event EOC, event_bus passes the same optional second
+            # talker to the native EOC subscriber and Platform event bridge;
+            # event_to_lua exposes that pointer as actors.interlocutor. This
+            # checks presence only and does not claim the talker is an NPC.
+            return (
+                "context ~= nil and "
+                "context.__ccb_event_beta_presence_proven == true and "
+                "context.actors ~= nil and "
+                "context.actors.interlocutor ~= nil"
+            )
         if condition in {"has_beta", "npc_exists"}:
-            # These read dialogue/beta state, which actor provenance alone
-            # does not establish. Event bridges and nested run_eocs expose
-            # different actor keys.
+            # Outside a required_event callback, actor provenance does not
+            # establish the native dialogue beta slot.
             return None
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
@@ -28127,6 +28179,7 @@ def render_eoc_condition_expression(
                     generic_character_actor_proven,
                     training_pair_proven,
                     npc_dialogue_pair_proven,
+                    event_beta_presence_proven,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -28247,6 +28300,7 @@ def render_eoc_condition_expression(
                 generic_character_actor_proven,
                 training_pair_proven,
                 npc_dialogue_pair_proven,
+                event_beta_presence_proven,
             )
             for entry in entries
         ]
@@ -28264,6 +28318,7 @@ def render_eoc_condition_expression(
             generic_character_actor_proven,
             training_pair_proven,
             npc_dialogue_pair_proven,
+            event_beta_presence_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -29393,6 +29448,7 @@ def render_eoc(
     npc_dialogue_mission_pair_ids: frozenset[str] = frozenset(),
     known_mutation_ids: frozenset[str] = frozenset(),
     known_mutation_category_ids: frozenset[str] = frozenset(),
+    dynamic_eoc_dispatch_present: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29846,11 +29902,22 @@ def render_eoc(
         lines.append("    local actor = actor_override or services.characters.avatar()")
     if avatar_fatal_hook or npc_fatal_hook:
         lines.append("    local prevent_death = false")
-    # EOC event/fatal actor proof is alpha proof.  Legacy ``npc_*`` conditions
-    # read const_actor(true); current event and fatal payloads do not prove
-    # that beta is the same handle.  Keep those selectors as TODOs until a
-    # separately typed beta participant is available.
+    # EOC event/fatal actor proof is not Character/NPC proof for a beta actor.
+    # Separately, the event bridge preserves the exact presence of the native
+    # optional beta talker as ``context.actors.interlocutor``.  The direct
+    # event handler stamps a private marker; copied child contexts do not
+    # inherit it.  Only this boolean fact is safe for npc_exists and it does
+    # not authorize NPC services.
     npc_condition_beta_actor_proven = False
+    # A referenced EOC is also callable by run_eocs/test_eoc and can receive a
+    # different child context.  Dynamic run_eocs selectors can target any
+    # generated EOC, so disable this proof corpus-wide when one is present.
+    # Only an event-exclusive function in a corpus without dynamic dispatch
+    # may use its event bridge's interlocutor as native beta-presence evidence.
+    event_beta_presence_proven = (
+        has_event_trigger and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
@@ -29862,6 +29929,7 @@ def render_eoc(
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -29905,6 +29973,7 @@ def render_eoc(
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
@@ -34576,9 +34645,16 @@ def render_eoc(
         not avatar_death_hook and not nested_only
     )
     if not inline_eoc and not nested_only:
-        lines.extend((
+        handler_lines = [
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
+        ]
+        if event_beta_presence_proven:
+            handler_lines.extend([
+                "    context = context or {}",
+                "    context.__ccb_event_beta_presence_proven = true",
+            ])
+        handler_lines.extend([
             f"    return {function_name}(context, nil)",
             "end)",
             f"runtime.handler({lua_quote('migrated-task.' + eoc_id)}, function(context)",
@@ -34588,7 +34664,8 @@ def render_eoc(
             f"    return {function_name}(task_context, task_actor)",
             "end)",
             "",
-        ))
+        ])
+        lines.extend(handler_lines)
     global_recurrence = global_recurrence and not nested_only
     character_recurrence = character_recurrence and not nested_only
     periodic_trigger = global_recurrence or character_recurrence
@@ -34861,6 +34938,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
     )
     npc_dialogue_mission_pair_ids = \
         _npc_dialogue_mission_pair_provenance(objects)
+    dynamic_eoc_dispatch_present = _has_dynamic_eoc_dispatch(objects)
     character_override_ids = frozenset(
         set(character_override_ids) | set(content_character_actor_ids)
     )
@@ -35167,6 +35245,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     npc_dialogue_mission_pair_ids,
                     known_mutation_ids,
                     known_mutation_category_ids,
+                    dynamic_eoc_dispatch_present,
                 )
             )
         elif kind == "tool_quality":
