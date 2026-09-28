@@ -2196,6 +2196,55 @@ def core_mutation_catalog_ids() -> tuple[frozenset[str], frozenset[str]]:
     )
 
 
+@functools.lru_cache(maxsize=1)
+def core_body_part_catalog_ids() -> frozenset[str]:
+    """Read concrete core body-part IDs used by native wound effects."""
+    source_root = REPOSITORY_ROOT / "data" / "json" / "mutations"
+    try:
+        objects = load_objects([source_root])
+    except ValueError:
+        return frozenset()
+    identifiers = {
+        source.value["id"] for source in objects
+        if source.value.get("type") == "body_part" and
+        isinstance(source.value.get("id"), str) and
+        safe_platform_id(source.value["id"]) and
+        source.value.get("abstract") is not True and
+        "copy-from" not in source.value
+    }
+    return frozenset(identifiers)
+
+
+def source_wound_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
+    """Accept only self-contained wound definitions from the input corpus."""
+    required = {"name", "description", "damage_types", "damage_required"}
+    identifiers: set[str] = set()
+    for source in objects:
+        value = source.value
+        identifier = value.get("id")
+        name = display_text(value.get("name"))
+        description = display_text(value.get("description"))
+        damage_types = string_ids(value.get("damage_types"))
+        damage_required = value.get("damage_required")
+        if (
+            value.get("type") == "wound" and
+            bounded_platform_id(identifier) and
+            value.get("abstract") is not True and "copy-from" not in value and
+            required <= value.keys() and
+            bounded_utf8_string(name, WOUND_NAME_MAX_BYTES) and
+            bounded_utf8_string(description, WOUND_DESCRIPTION_MAX_BYTES) and
+            damage_types and
+            all(bounded_platform_id(damage_type) for damage_type in damage_types) and
+            len(set(damage_types)) == len(damage_types) and
+            isinstance(damage_required, list) and len(damage_required) == 2 and
+            (minimum := native_integer(damage_required[0])) is not None and
+            (maximum := native_integer(damage_required[1])) is not None and
+            maximum >= minimum
+        ):
+            identifiers.add(identifier)
+    return frozenset(identifiers)
+
+
 def render_materials(
     lines: list[str], raw: Any,
     add_todo: Callable[[TodoCategory, str], None],
@@ -25290,26 +25339,31 @@ def render_static_character_wound(
     key: str,
     target_expression: str | None,
     remove: bool,
+    known_body_part_ids: frozenset[str],
+    known_wound_ids: frozenset[str],
 ) -> list[str] | None:
-    """Render literal body-part wound changes through the typed wound service."""
-    if target_expression is None or not safe_platform_id(effect.get(key)):
+    """Render only catalog-proven native direct body-part wound operations."""
+    body_part = effect.get(key)
+    if (
+        target_expression is None or not isinstance(body_part, str) or
+        body_part not in known_body_part_ids
+    ):
         return None
     if set(effect) - {key, "wound_id"}:
         return None
-    body_part = effect[key]
     wound_ids = effect.get("wound_id")
     if remove:
         if (
             not isinstance(wound_ids, list) or not wound_ids or len(wound_ids) > 64 or
-            not all(safe_platform_id(value) for value in wound_ids)
+            not all(isinstance(value, str) and value in known_wound_ids for value in wound_ids)
         ):
             return None
-    elif not safe_platform_id(wound_ids):
+    elif not isinstance(wound_ids, str) or wound_ids not in known_wound_ids:
         return None
     values = wound_ids if remove else [wound_ids]
     lines: list[str] = []
     for wound_id in values:
-        service_name = "remove" if remove else "add"
+        service_name = "remove_all_direct" if remove else "add_unbounded"
         lines.extend(
             [
                 f"    services.wounds.{service_name}(",
@@ -25318,35 +25372,6 @@ def render_static_character_wound(
                 f"        services.types.id(\"wound\", {lua_quote(wound_id)}))",
             ]
         )
-    return lines
-
-
-def render_dynamic_character_wound(
-    effect: dict[str, Any], key: str, target_expression: str | None,
-    remove: bool,
-) -> list[str] | None:
-    """Render variable-backed wound/body-part ids."""
-    if target_expression is None or key not in effect:
-        return None
-    allowed = {key, "wound_id"}
-    if set(effect) - allowed:
-        return None
-    body_part = _dynamic_id_expression(effect[key], "body_part", target_expression)
-    if body_part is None:
-        return None
-    raw = effect.get("wound_id")
-    values = raw if remove and isinstance(raw, list) else [raw]
-    if not values or len(values) > 64:
-        return None
-    rendered = [_dynamic_id_expression(value, "wound", target_expression) for value in values]
-    if any(value is None for value in rendered):
-        return None
-    lines: list[str] = []
-    for wound in rendered:
-        lines.extend([
-            f"    services.wounds.{'remove' if remove else 'add'}(",
-            f"        {target_expression}, {body_part}, {wound})",
-        ])
     return lines
 
 
@@ -29258,6 +29283,8 @@ def render_eoc(
     known_mutation_ids: frozenset[str] = frozenset(),
     known_mutation_category_ids: frozenset[str] = frozenset(),
     dynamic_eoc_dispatch_present: bool = False,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29837,6 +29864,22 @@ def render_eoc(
         required_event == "npc_becomes_hostile" and
         npc_event_character_actor_proven and not npc_fatal_hook and
         npc_talker_ui_actor_expression == "actor" and not talker_pair_override
+    )
+    # Native event EOCs select alpha from the Character ID carried by
+    # character_wields_item, character_wears_item, character_takeoff_item, and
+    # character_armor_destroyed; the Platform bridge resolves that same ID to
+    # actors.character.  Each event producer is a live Character operation.
+    # Keep the proof event-exclusive so child callbacks cannot replace alpha.
+    # npc_becomes_hostile is separately supported only as alpha with no beta;
+    # native actor(true) emits a missing-beta debug message before falling back,
+    # which Platform does not mirror, so only the wound-state mutation matches.
+    wound_alpha_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        not avatar_fatal_hook and not avatar_death_hook and not npc_fatal_hook and
+        not talker_pair_override and (
+            required_event == "game_start" and game_start_avatar_actor_is_proven() or
+            required_event in PROVEN_ITEM_ACTOR_EVENTS
+        )
     )
     # Native u_has_proficiency reads dialogue alpha. Restrict the current
     # lowerer to game_start, where the avatar is live and source-proven; other
@@ -30489,24 +30532,21 @@ def render_eoc(
             ):
                 key = "u_add_wound" if "u_add_wound" in effect else "npc_add_wound"
                 target_expression = (
-                    "actor" if key == "u_add_wound" and character_actor_proven
-                    else "actor" if key == "npc_add_wound" and npc_event_character_actor_proven
+                    "actor" if key == "u_add_wound" and wound_alpha_actor_proven
+                    else "actor" if key == "npc_add_wound" and mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, False
+                    effect, key, target_expression, False,
+                    known_body_part_ids, known_wound_ids,
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target_expression, False
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the wound target or id into "
-                        "bounded Lua values."
+                        "    -- TODO: prove the live native wound target and "
+                        "registered static ids for direct wound semantics."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -30520,24 +30560,21 @@ def render_eoc(
             ):
                 key = "u_remove_wound" if "u_remove_wound" in effect else "npc_remove_wound"
                 target_expression = (
-                    "actor" if key == "u_remove_wound" and character_actor_proven
-                    else "actor" if key == "npc_remove_wound" and npc_event_character_actor_proven
+                    "actor" if key == "u_remove_wound" and wound_alpha_actor_proven
+                    else "actor" if key == "npc_remove_wound" and mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, True
+                    effect, key, target_expression, True,
+                    known_body_part_ids, known_wound_ids,
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target_expression, True
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the wound target or ids into "
-                        "bounded Lua values."
+                        "    -- TODO: prove the live native wound target and "
+                        "registered static ids for direct wound semantics."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -34967,6 +35004,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
         vehicle_override_ids,
     ) = normalize_inline_eocs(objects)
     known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
+    known_body_part_ids = core_body_part_catalog_ids()
+    known_wound_ids = source_wound_catalog_ids(objects)
     (
         content_primary_actor_ids,
         content_character_actor_ids,
@@ -35284,6 +35323,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     known_mutation_ids,
                     known_mutation_category_ids,
                     dynamic_eoc_dispatch_present,
+                    known_body_part_ids,
+                    known_wound_ids,
                 )
             )
         elif kind == "tool_quality":

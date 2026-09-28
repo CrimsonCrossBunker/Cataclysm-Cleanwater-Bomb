@@ -2045,6 +2045,114 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return cata::lua_platform::make_game_value_result(
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
+    wounds.set_function( "add_unbounded", [require_write, runtime_generation, world_generation,
+            make_wound_snapshot, same_wounds]( sol::this_state state,
+                    const cata::lua_platform::game_handle & handle,
+                    const cata::lua_platform::script_game_id & body_part_id,
+                    const cata::lua_platform::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a valid GameId<wound>" );
+        }
+        const bodypart_str_id native_body_part_id( body_part_id.value() );
+        if( !native_body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a registered body part id" );
+        }
+        const wound_type_id native_wound_id( wound_id.value() );
+        if( !native_wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a registered wound id" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.add_unbounded requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = native_body_part_id.id();
+        bodypart *part = character->get_part( native_part_id );
+        if( part == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.add_unbounded found no native next-best body part"
+            } );
+        }
+        const std::vector<wound> before_native = part->get_wounds();
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        part->add_or_worsen_wound( native_wound_id );
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        value["changed"] = !same_wounds( before_native, part->get_wounds() );
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    wounds.set_function( "remove_all_direct", [require_write, runtime_generation, world_generation,
+            make_wound_snapshot]( sol::this_state state,
+                    const cata::lua_platform::game_handle & handle,
+                    const cata::lua_platform::script_game_id & body_part_id,
+                    const cata::lua_platform::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a valid GameId<wound>" );
+        }
+        const bodypart_str_id native_body_part_id( body_part_id.value() );
+        if( !native_body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a registered body part id" );
+        }
+        const wound_type_id native_wound_id( wound_id.value() );
+        if( !native_wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a registered wound id" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.remove_all_direct requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = native_body_part_id.id();
+        bodypart *part = character->get_part( native_part_id );
+        if( part == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.remove_all_direct found no native next-best body part"
+            } );
+        }
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        const std::size_t count_before = part->get_wounds().size();
+        part->remove_all_wounds_of_type( native_wound_id );
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        value["changed"] = part->get_wounds().size() != count_before;
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
     services["wounds"] = std::move( wounds );
     cata::lua_platform::install_mutation_api( services, runtime_generation, world_generation,
             require_read, require_write );

@@ -5212,38 +5212,69 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
     def test_literal_character_wound_changes_use_typed_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
+            wounds = [
+                {
+                    "type": "wound",
+                    "id": wound_id,
+                    "name": wound_id,
+                    "description": "A test wound.",
+                    "damage_types": ["bash"],
+                    "damage_required": [1, 2],
+                    "pain": [1, 1],
+                    "healing_time": ["10 minutes", "10 minutes"],
+                    "limit": 1,
+                }
+                for wound_id in ("scratch", "deep_scratch", "cut")
+            ]
+            effects = [
+                {
+                    "type": "effect_on_condition",
+                    "id": "add_avatar_wound",
+                    "required_event": "game_start",
+                    "effect": {
+                        "u_add_wound": "arm_l",
+                        "wound_id": "scratch",
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "remove_avatar_wounds",
+                    "required_event": "game_start",
+                    "effect": {
+                        "u_remove_wound": "arm_l",
+                        "wound_id": ["scratch", "deep_scratch"],
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "add_named_character_wound",
+                    "required_event": "character_wields_item",
+                    "effect": {
+                        "u_add_wound": "hand_r",
+                        "wound_id": "cut",
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "add_hostile_npc_wound",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {
+                        "npc_add_wound": "arm_l",
+                        "wound_id": "scratch",
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "remove_hostile_npc_wound",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {
+                        "npc_remove_wound": "arm_l",
+                        "wound_id": ["scratch"],
+                    },
+                },
+            ]
             source.write_text(
-                json.dumps(
-                    [
-                        {
-                            "type": "effect_on_condition",
-                            "id": "add_avatar_wound",
-                            "required_event": "game_start",
-                            "effect": {
-                                "u_add_wound": "arm_l",
-                                "wound_id": "scratch",
-                            },
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "remove_avatar_wounds",
-                            "required_event": "game_start",
-                            "effect": {
-                                "u_remove_wound": "arm_l",
-                                "wound_id": ["scratch", "deep_scratch"],
-                            },
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "add_named_character_wound",
-                            "required_event": "character_wields_item",
-                            "effect": {
-                                "u_add_wound": "hand_r",
-                                "wound_id": "cut",
-                            },
-                        },
-                    ]
-                ),
+                json.dumps([*wounds, *effects]),
                 encoding="utf-8",
             )
 
@@ -5253,12 +5284,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.converted), 8)
             self.assertEqual(result.partial, [])
-            self.assertIn("services.wounds.add", main)
-            self.assertIn("services.wounds.remove", main)
+            self.assertEqual(main.count("services.wounds.add_unbounded("), 3)
+            self.assertEqual(main.count("services.wounds.remove_all_direct("), 3)
             self.assertIn("services.characters.avatar()", main)
             self.assertIn("context.actors.character", main)
+            self.assertIn("context.actors.npc", main)
             self.assertIn(
                 'services.types.id("body_part", "arm_l")',
                 main,
@@ -5271,10 +5303,22 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertNotIn("context.alpha", main)
             self.assertNotIn("context.beta", main)
             self.assertNotIn("run_eoc", main)
+            self.assertNotIn("needs domain-service conversion", report)
 
     def test_unproven_or_nonliteral_wound_shapes_remain_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
+            wound_definition = {
+                "type": "wound",
+                "id": "scratch",
+                "name": "scratch",
+                "description": "A test wound.",
+                "damage_types": ["bash"],
+                "damage_required": [1, 2],
+                "pain": [1, 1],
+                "healing_time": ["10 minutes", "10 minutes"],
+                "limit": 1,
+            }
             cases = [
                 (
                     "game_start",
@@ -5332,19 +5376,25 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     [],
                     {"u_add_wound": "arm_l", "wound_id": "scratch"},
                 ),
+                (
+                    "game_start",
+                    {"u_add_wound": "arm_l", "wound_id": "unknown_wound"},
+                ),
+                (
+                    "game_start",
+                    {"u_add_wound": "unknown_part", "wound_id": "scratch"},
+                ),
             ]
             source.write_text(
-                json.dumps(
-                    [
-                        {
-                            "type": "effect_on_condition",
-                            "id": f"unsafe_wound_{index}",
-                            "required_event": event,
-                            "effect": effect,
-                        }
-                        for index, (event, effect) in enumerate(cases)
-                    ]
-                ),
+                json.dumps([wound_definition] + [
+                    {
+                        "type": "effect_on_condition",
+                        "id": f"unsafe_wound_{index}",
+                        "required_event": event,
+                        "effect": effect,
+                    }
+                    for index, (event, effect) in enumerate(cases)
+                ]),
                 encoding="utf-8",
             )
 
@@ -5354,14 +5404,75 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 5)
-            self.assertEqual(len(result.partial), 5)
-            self.assertIn("services.wounds.add", main)
-            self.assertIn("services.wounds.remove", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.wounds.add_unbounded(", main)
+            self.assertNotIn("services.wounds.remove_all_direct(", main)
             self.assertEqual(
                 report.count("effect #0 needs domain-service conversion"),
-                4,
+                len(cases),
             )
+
+    def test_wound_lowering_rejects_referenced_and_dynamic_event_callbacks(self) -> None:
+        wound = {
+            "type": "wound",
+            "id": "scratch",
+            "name": "scratch",
+            "description": "A test wound.",
+            "damage_types": ["bash"],
+            "damage_required": [1, 2],
+            "pain": [1, 1],
+            "healing_time": ["10 minutes", "10 minutes"],
+        }
+        wound_event = {
+            "type": "effect_on_condition",
+            "id": "item_wound_callback",
+            "required_event": "character_wields_item",
+            "effect": {"u_add_wound": "arm_l", "wound_id": "scratch"},
+        }
+        callback_cases = [
+            [
+                wound,
+                wound_event,
+                {
+                    "type": "effect_on_condition",
+                    "id": "static_wound_caller",
+                    "required_event": "game_start",
+                    "effect": {"run_eocs": "item_wound_callback"},
+                },
+            ],
+            [
+                wound,
+                wound_event,
+                {
+                    "type": "effect_on_condition",
+                    "id": "dynamic_wound_caller",
+                    "required_event": "game_start",
+                    "effect": {
+                        "run_eoc_selector": {
+                            "global_val": "selected_wound_callback",
+                        },
+                    },
+                },
+            ],
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            for index, objects in enumerate(callback_cases):
+                source.write_text(json.dumps(objects), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]), "wound_callback_mod"
+                )
+                main = result.files[Path("main.lua")]
+                report = result.files[Path("MIGRATION_REPORT.md")]
+                self.assertNotIn("services.wounds.add_unbounded(", main)
+                self.assertIn("registered static ids", main)
+                self.assertIn("item_wound_callback", main)
+                self.assertIn("needs domain-service conversion", report)
+                if index == 0:
+                    self.assertIn("static_wound_caller", main)
+                else:
+                    self.assertIn("run_eoc_selector", report)
 
     def test_bounded_character_variable_and_math_effects_use_native_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
