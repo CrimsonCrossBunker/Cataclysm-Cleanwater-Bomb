@@ -6,6 +6,7 @@
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_test_support.h"
 #include "npc.h"
+#include "npctalk.h"
 
 TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
            "[lua][platform][missions]" )
@@ -352,7 +353,8 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
              "selected_has_generic_rewards", "select", "offer",
              "add_assigned",
              "assign_selected", "succeed_selected", "fail_selected",
-             "clear_selected", "claim_selected_reward"
+             "clear_selected", "claim_selected_reward",
+             "open_selected_reward_trade"
          } ) {
         CHECK( missions[name].get_type() == sol::type::function );
     }
@@ -361,6 +363,82 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     CHECK_FALSE( missions["current_avatar"].valid() );
     CHECK_FALSE( missions["current_mission"].valid() );
     CHECK_FALSE( npcs["avatar"].valid() );
+}
+
+TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
+           "[lua][platform][missions][npc][semantic]" )
+{
+    avatar &active_avatar = get_avatar();
+    npc provider;
+    provider.normalize();
+    provider.setID( character_id( 7391 ), true );
+    provider.chatbin.mission_selected = nullptr;
+
+    const auto runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime(
+        runtime_owner, 66 );
+    constexpr std::size_t world_generation = 24;
+    bool write_gate_called = false;
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [runtime]() {
+        return runtime;
+    };
+    const auto current_world = []() {
+        return world_generation;
+    };
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_npc_api(
+        services, current_runtime, current_world, []() {}, [&]() {
+        write_gate_called = true;
+    }, []() {} );
+    const cata::lua_platform::game_handle provider_handle =
+        cata::lua_platform::game_handle::from_creature(
+            provider, { "npc", provider.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle active_avatar_handle =
+        cata::lua_platform::game_handle::from_creature(
+            active_avatar,
+            { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const sol::table npc_services = services["npcs"];
+    const sol::table mission_services = npc_services["missions"];
+    const sol::protected_function open_reward_trade =
+        mission_services["open_selected_reward_trade"];
+    const int debt_before = provider.op_of_u.owed;
+
+    // The no-selection branch avoids opening the native barter UI, allowing a
+    // direct comparison that the typed operation delegates to WRAP behavior.
+    talk_function::mission_reward( provider );
+    CHECK( provider.op_of_u.owed == debt_before );
+    sol::protected_function_result result = open_reward_trade(
+                provider_handle, active_avatar_handle );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    CHECK( envelope["value"].get<bool>() );
+    CHECK( provider.chatbin.mission_selected == nullptr );
+    CHECK( provider.op_of_u.owed == debt_before );
+    CHECK( write_gate_called );
+
+    avatar other_avatar;
+    other_avatar.normalize();
+    other_avatar.setID( character_id( 7392 ), true );
+    const cata::lua_platform::game_handle other_avatar_handle =
+        cata::lua_platform::game_handle::from_creature(
+            other_avatar, { "avatar", 7392, 0, 0, 0, {} },
+            runtime, world_generation );
+    sol::protected_function_result unsupported = open_reward_trade(
+                provider_handle, other_avatar_handle );
+    REQUIRE( unsupported.valid() );
+    const sol::table unsupported_envelope = unsupported.get<sol::table>();
+    CHECK_FALSE( unsupported_envelope["ok"].get<bool>() );
+    CHECK( unsupported_envelope["error"].get<sol::table>()
+           ["code"].get<std::string>() == "unsupported_participants" );
+    CHECK( provider.chatbin.mission_selected == nullptr );
+    CHECK( provider.op_of_u.owed == debt_before );
 }
 
 TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",

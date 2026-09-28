@@ -9963,6 +9963,10 @@ function CcbNpcMissionsApi.fail_selected(provider, owner) end
 ---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.clear_selected(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle used as native dialogue beta.
+---@param owner GameHandle Exact active avatar handle used as native dialogue alpha.
+---@return CcbResult result `value` is true when the native mission reward effect was invoked; native behavior adds the selected mission value to NPC debt before opening the localized Reward barter UI. A missing selection follows the native debug-message/no-op path. The trade acceptance result is not returned.
+function CcbNpcMissionsApi.open_selected_reward_trade(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult; `error.code` is `no_generic_reward`, `already_claimed`, `not_successful`, or `reward_overflow` when claim preflight rejects.

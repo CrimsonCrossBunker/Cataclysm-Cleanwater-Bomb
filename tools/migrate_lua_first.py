@@ -6841,14 +6841,22 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
             "preserve that ordering",
         )
     if isinstance(effect, str) and effect in {
-        "mission_success", "mission_failure", "clear_mission", "mission_reward",
+        "mission_success", "mission_failure", "clear_mission",
     }:
         return (
             "manual_rewrite",
             f"native WRAP {effect} executes inside talk_effect_t::apply before "
-            "opinion/hostility handling, while Platform on_select runs after the "
-            "native response effect; the current callback phase cannot preserve "
-            "mission mutation, provider side effects, or trade UI ordering",
+            "opinion/hostility handling; Platform on_action can preserve that "
+            "phase, but the current typed services do not match this effect's "
+            "selected-mission and provider-side-effect semantics",
+        )
+    if effect == "mission_reward":
+        return (
+            "manual_rewrite",
+            "native mission_reward adds beta's selected mission value to NPC debt "
+            "before opening the localized Reward barter UI; only the bounded direct "
+            "TALK response with a converted condition is lowered, while EOCs and "
+            "responses with additional fields remain TODO",
         )
     if effect == "remove_active_mission":
         return (
@@ -6872,15 +6880,22 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
                 )
         mission_selectors = {
             "finish_mission", "remove_active_mission", "mission_success",
-            "mission_failure", "clear_mission", "mission_reward",
+            "mission_failure", "clear_mission",
         }
         if mission_selectors.intersection(effect):
             return (
                 "manual_rewrite",
                 "native response mission effects execute inside talk_effect_t::apply "
-                "before opinion/hostility handling, while Platform on_select runs "
-                "after the native response effect; the current callback phase "
-                "cannot preserve mission mutation ordering",
+                "before opinion/hostility handling; Platform on_action can preserve "
+                "that phase, but the current typed services do not match the "
+                "selected-mission and provider-side-effect semantics",
+            )
+        if "mission_reward" in effect:
+            return (
+                "manual_rewrite",
+                "native mission_reward adds beta's selected mission value to NPC debt "
+                "before opening the localized Reward barter UI; this object-shaped "
+                "form is outside the bounded direct TALK string-effect lowering",
             )
     if not _node_has_key(effect, "run_eocs"):
         if not (
@@ -6944,6 +6959,38 @@ def render_talk_topic_npc_lose_morale_action(
         "    end\n"
         "end"
     )
+
+
+def render_talk_topic_mission_reward_action(
+    entry: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Run native WRAP mission_reward for one exact, conditioned TALK response."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "condition", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        converted_condition is None or
+        entry.get("effect") != "mission_reward"
+    ):
+        return None
+    # avatar::talk_to builds native alpha from the active avatar and beta from
+    # talk_with. The typed operation calls the original native function, which
+    # preserves debt-before-UI ordering, localization, and null-selection
+    # behavior. EOCs and responses with additional fields remain TODO.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local alpha = context:speaker()",
+        '    if alpha == nil or alpha.kind ~= "creature" or alpha.subtype ~= "avatar" then return end',
+        "    if not alpha:is_valid() then return end",
+        "    local beta = context:interlocutor()",
+        '    if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return end',
+        "    if not beta:is_valid() then return end",
+        "    service_value(services.npcs.missions.open_selected_reward_trade(beta, alpha))",
+        "end",
+    ]))
 
 
 def render_talk_topic_item_offer_effect(response: Any) -> LuaRaw | None:
@@ -7036,8 +7083,10 @@ def render_talk_topic(
             else:
                 response["condition"] = condition
         if "effect" in entry:
-            action_callback = None
-            if set(entry) <= {"text", "topic", "effect"}:
+            action_callback = render_talk_topic_mission_reward_action(
+                entry, converted_condition,
+            )
+            if action_callback is None and set(entry) <= {"text", "topic", "effect"}:
                 action_callback = render_dialogue_mission_action_effect(
                     entry["effect"]
                 )
@@ -7053,7 +7102,7 @@ def render_talk_topic(
                     action_callback = render_dialogue_stolen_item_action_effect(
                         entry["effect"]
                     )
-            elif (
+            elif action_callback is None and (
                 set(entry) <= {"text", "topic", "condition", "effect"} and
                 converted_condition is not None
             ):

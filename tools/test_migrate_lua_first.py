@@ -12598,6 +12598,11 @@ assert(not available())
         rendered = migrate_lua_first.render_talk_topic(topic, result)
         self.assertIsNotNone(rendered)
         assert rendered is not None
+        self.assertIn("on_action = function(context, trial_success)", rendered)
+        self.assertIn(
+            "services.npcs.missions.open_selected_reward_trade(beta, alpha)",
+            rendered,
+        )
         self.assertIn(
             "services.npcs.missions.selected_has_generic_rewards(beta)",
             rendered,
@@ -12611,10 +12616,79 @@ assert(not available())
             'condition = false, text = "How about some items as payment?"',
             rendered,
         )
-        self.assertTrue(
-            any("native WRAP mission_reward" in todo.text for todo in result.todos),
-            "condition migration must not imply that the reward effect migrated",
+        self.assertFalse(
+            any("mission_reward" in todo.message for todo in result.todos),
+            "the exact direct TALK reward action now uses the native typed operation",
         )
+
+        unsupported_shape = dict(unsupported_response)
+        unsupported_shape["opinion"] = {"trust": 1}
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_mission_reward_action(
+                unsupported_shape, payment_callback
+            ),
+            "additional response effects must keep WRAP mission_reward TODO",
+        )
+        unsupported_result = migrate_lua_first.MigrationResult()
+        unsupported_topic = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "talk_topic", "id": "mission_reward_extra_opinion",
+                "responses": [unsupported_shape],
+            }),
+            unsupported_result,
+        )
+        self.assertIsNotNone(unsupported_topic)
+        assert unsupported_topic is not None
+        self.assertNotIn("open_selected_reward_trade", unsupported_topic)
+        self.assertTrue(any(
+            "adds beta's selected mission value to NPC debt" in todo.message
+            for todo in unsupported_result.todos
+        ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_direct_talk_mission_reward_action_guards_phase_and_exact_actors(self) -> None:
+        source_path = REPOSITORY_ROOT / (
+            "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
+        )
+        topic = next(
+            source.value for source in migrate_lua_first.load_objects([source_path])
+            if source.value.get("type") == "talk_topic" and
+            source.value.get("id") == "TALK_MISSION_SUCCESS"
+        )
+        response = next(
+            entry for entry in topic["responses"]
+            if entry.get("effect") == "mission_reward"
+        )
+        condition = migrate_lua_first.render_talk_topic_response_condition(
+            response["condition"]
+        )
+        self.assertIsNotNone(condition)
+        action = migrate_lua_first.render_talk_topic_mission_reward_action(
+            response, condition
+        )
+        self.assertIsNotNone(action)
+        assert action is not None
+        script = "\n".join([
+            "local avatar = {kind='creature', subtype='avatar', is_valid=function() return true end}",
+            "local npc = {kind='creature', subtype='npc', is_valid=function() return true end}",
+            "local called = 0",
+            "local context = {valid=function() return true end, speaker=function() return avatar end, interlocutor=function() return npc end}",
+            "function service_value(result) assert(result.ok); return result.value end",
+            "services = {npcs={missions={open_selected_reward_trade=function(provider, owner)",
+            "  assert(provider == npc and owner == avatar); called = called + 1; return {ok=true, value=true} end}}}",
+            "local callback = " + action.source,
+            "callback(context, false); assert(called == 0)",
+            "callback(context, true); assert(called == 1)",
+            "context.interlocutor=function() return {kind='creature', subtype='monster', is_valid=function() return true end} end",
+            "callback(context, true); assert(called == 1)",
+            "context.valid=function() return false end",
+            "callback(context, true); assert(called == 1)",
+        ])
+        result = subprocess.run(
+            [shutil.which("lua"), "-"], input=script, text=True,
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_mission_generic_rewards_keeps_non_npc_beta_lifetime_guard(self) -> None:
@@ -20034,6 +20108,7 @@ assert(not available())
             "state", "select", "offer", "add_assigned",
             "assign_selected", "succeed_selected", "fail_selected",
             "clear_selected", "claim_selected_reward",
+            "open_selected_reward_trade",
         ):
             self.assertIn(
                 f"function CcbNpcMissionsApi.{method}", declarations
