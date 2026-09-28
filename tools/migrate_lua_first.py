@@ -6493,6 +6493,32 @@ def render_talk_topic_response_condition(
     """
     if _depth > 16:
         return None
+    if isinstance(condition, dict) and set(condition) == {"math"}:
+        # Native u_skill reads dialogue alpha's effective practical skill.
+        # The Exodii device handoff uses only these static social thresholds;
+        # arbitrary math expressions still need a dedicated parser.
+        expressions = condition["math"]
+        if isinstance(expressions, list) and len(expressions) == 1 and isinstance(expressions[0], str):
+            skill_match = re.fullmatch(
+                r"u_skill\('social'\)\s*([<>])\s*([0-9]+)", expressions[0]
+            )
+            if skill_match is not None:
+                operator, threshold_text = skill_match.groups()
+                threshold = int(threshold_text)
+                if threshold <= NATIVE_INT_MAX:
+                    return LuaRaw(
+                        "function(dialogue_context)\n"
+                        "            if not dialogue_context:valid() then return false end\n"
+                        "            local alpha = dialogue_context:speaker()\n"
+                        '            if alpha == nil or alpha.kind ~= "creature" or '
+                        '(alpha.subtype ~= "avatar" and alpha.subtype ~= "character" '
+                        'and alpha.subtype ~= "npc") then return false end\n'
+                        "            if not alpha:is_valid() then return false end\n"
+                        '            local skill = services.skills.get(alpha, '
+                        'services.types.id("skill", "social"))\n'
+                        f"            return skill.ok and skill.value.practical_effective {operator} {threshold}\n"
+                        "        end"
+                    )
     if (
         isinstance(condition, dict) and set(condition) == {"not"} and
         condition["not"] == "is_by_radio"
@@ -6961,10 +6987,12 @@ def render_talk_topic(
             result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
             continue
         response: dict[str, Any] = {"text": entry["text"]}
+        converted_condition = None
         if isinstance(entry.get("topic"), str) and entry["topic"]:
             response["topic"] = entry["topic"]
         if "condition" in entry:
             condition = render_talk_topic_response_condition(entry["condition"])
+            converted_condition = condition
             if condition is None:
                 # A TODO condition must not silently make the response
                 # unconditional in the declarative Platform topic.
@@ -6993,6 +7021,15 @@ def render_talk_topic(
                     action_callback = render_dialogue_stolen_item_action_effect(
                         entry["effect"]
                     )
+            elif (
+                set(entry) <= {"text", "topic", "condition", "effect"} and
+                converted_condition is not None
+            ):
+                # Native evaluates the response condition before selection;
+                # the grant runs in the response effect phase after selection.
+                action_callback = render_dialogue_item_grant_action_effect(
+                    entry["effect"]
+                )
             if action_callback is None:
                 action_callback = render_talk_topic_npc_lose_morale_action(
                     entry, known_morale_ids,

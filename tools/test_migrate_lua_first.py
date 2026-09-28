@@ -19425,6 +19425,76 @@ assert(not available())
         self.assertNotIn("services.npcs.drop_stolen_items(beta)", rich_lua or "")
         self.assertTrue(rich_result.todos)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_real_exodii_device_handoff_uses_alpha_effective_social_skill(self) -> None:
+        source_path = (
+            REPOSITORY_ROOT / "data/json/npcs/exodii/exodii_merchant_missions.json"
+        )
+        topic = next(
+            source for source in migrate_lua_first.load_objects([source_path])
+            if source.value.get("id") == "TALK_EXODII_MERCHANT_mission_4_accepted"
+        )
+        grants = [
+            response for response in topic.value["responses"]
+            if isinstance(response, dict) and response.get("effect") == {
+                "u_spawn_item": "exodii_portable_tv"
+            }
+        ]
+        self.assertEqual(len(grants), 5)
+        callbacks = [
+            migrate_lua_first.render_talk_topic_response_condition(
+                response["condition"]
+            ) for response in grants
+        ]
+        self.assertTrue(all(callback is not None for callback in callbacks))
+        self.assertEqual(
+            [response["topic"].rsplit("_", 1)[-1] for response in grants],
+            ["0-2", "3-4", "5-6", "7-8", "9-10"],
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertEqual(rendered.count("context:grant_item_to_speaker("), 5)
+        self.assertNotIn("condition = false", rendered)
+        self.assertFalse(any("response effect" in todo.text for todo in result.todos))
+        self.assertFalse(any("response condition" in todo.text for todo in result.todos))
+
+        script = "\n".join([
+            'local level = 0',
+            'local alpha = {kind="creature", subtype="avatar", is_valid=function() return true end}',
+            'local context = {valid=function() return true end, speaker=function() return alpha end}',
+            'services = {types={id=function(kind, name) assert(kind=="skill" and name=="social"); return name end},',
+            'skills={get=function(actor, id) assert(actor==alpha and id=="social");',
+            'return {ok=true, value={practical_effective=level}} end}}',
+            'local callbacks = {' + ', '.join(
+                callback.source for callback in callbacks if callback is not None
+            ) + '}',
+            'for current=0,10 do',
+            '  level=current',
+            '  local selected=current<=2 and 1 or math.min(math.floor((current-3)/2)+2, 5)',
+            '  for index, callback in ipairs(callbacks) do',
+            '    assert(callback(context)==(index==selected), current .. ":" .. index)',
+            '  end',
+            'end',
+            'alpha.is_valid=function() return false end',
+            'for _, callback in ipairs(callbacks) do assert(not callback(context)) end',
+        ])
+        executed = subprocess.run(
+            ["lua", "-"], input=script, text=True, capture_output=True, timeout=10
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+
+        for unsupported in (
+            {"math": ["u_skill('social') >= 3"]},
+            {"math": ["npc_skill('social') < 3"]},
+            {"math": ["u_skill('speech') < 3"]},
+            {"math": ["u_skill('social') < 3", "u_skill('social') > 1"]},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_talk_topic_response_condition(unsupported)
+            )
+
     def test_real_talk_spend_cash_shape_and_monster_purchase_remain_bounded(self) -> None:
         talk_test_path = Path("data/json/npcs/TALK_TEST.json")
         talk_test_topics = json.loads(
