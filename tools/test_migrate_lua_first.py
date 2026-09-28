@@ -18810,7 +18810,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(main.count("services.characters.avatar()"), 5)
             self.assertNotIn("domain-service conversion", report)
 
-    def test_roll_remainder_runs_true_and_false_callbacks(self) -> None:
+    def test_roll_remainder_stays_todo_until_native_setters_match(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -18818,45 +18818,31 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     [
                         {
                             "type": "effect_on_condition",
-                            "id": "roll_remainder_success",
+                            "id": "roll_remainder_mutation",
                             "required_event": "game_start",
-                            "effect": {"message": "success"},
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "roll_remainder_failure",
-                            "required_event": "game_start",
-                            "effect": {"message": "failure"},
+                            "effect": {
+                                "u_roll_remainder": ["QUICK"],
+                                "type": "mutation",
+                            },
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "roll_remainder_callbacks",
                             "required_event": "game_start",
                             "effect": {
-                                "u_roll_remainder": ["MUT_A", "MUT_B"],
+                                "u_roll_remainder": ["QUICK"],
                                 "type": "mutation",
-                                "message": "You learned %s.",
                                 "true_eocs": "roll_remainder_success",
                                 "false_eocs": "roll_remainder_failure",
                             },
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "roll_remainder_bionic",
+                            "id": "roll_remainder_bionic_message",
                             "required_event": "game_start",
                             "effect": {
-                                "u_roll_remainder": ["BIO_A", "BIO_B"],
+                                "u_roll_remainder": ["BIO_A"],
                                 "type": "bionic",
-                                "message": "You learned %s.",
-                            },
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "roll_remainder_recipe",
-                            "required_event": "game_start",
-                            "effect": {
-                                "u_roll_remainder": ["RECIPE_A"],
-                                "type": "recipe",
                                 "message": "You learned %s.",
                             },
                         },
@@ -18880,40 +18866,17 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 6)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 4)
+            self.assertEqual(len(result.todos), 4)
+            self.assertNotIn("services.mutations.grant", main)
+            self.assertNotIn("services.bionics.grant", main)
+            self.assertNotIn("services.random.native_int", main)
             self.assertIn(
-                "migrated_eoc_roll_remainder_success(context, actor)", main
-            )
-            self.assertIn(
-                "migrated_eoc_roll_remainder_failure(context, actor)", main
-            )
-            self.assertIn(
-                'services.message(string.format("You learned %s.", remainder_name))',
+                "native remainder setters, typed Platform grants, and copied-dialogue callbacks",
                 main,
             )
-            self.assertIn("services.bionics.has(actor,", main)
-            self.assertIn("services.bionics.grant(actor, remainder)", main)
-            self.assertIn("services.recipes.learn(actor, remainder))", main)
-            self.assertNotIn("services.recipes.learn(actor, remainder, true)", main)
-            self.assertIn("service_value(services.recipes.get(\n", main)
-            self.assertIn("if actor.subtype == \"avatar\" then", main)
-            npc_roll = migrate_lua_first.render_eoc(
-                migrate_lua_first.SourceObject(
-                    Path("source.json"), 0, {
-                        "type": "effect_on_condition",
-                        "id": "npc_roll_remainder_spell",
-                        "required_event": "npc_becomes_hostile",
-                        "effect": {
-                            "npc_roll_remainder": ["SPELL_A"],
-                            "type": "spell",
-                            "message": "You learned %s.",
-                        },
-                    }),
-                migrate_lua_first.MigrationResult(),
-            )
-            self.assertNotIn("services.message", npc_roll)
-            self.assertNotIn("remainder-roll conversion", report)
+            self.assertIn("native-equivalent remainder setters and callbacks", report)
 
     def _migrate_teleport_source(self, objects: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as temporary:
@@ -24109,8 +24072,10 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
             self.assertIn(
-                "services.random.sample_integers(3, 9, 2, false)", main
+                "for value = 3, 9 do", main
             )
+            self.assertIn("services.random.native_int(\n            index - 1, #values - 1) + 1", main)
+            self.assertNotIn("services.random.sample_integers", main)
             self.assertIn(
                 'services.variables.set(\n        actor, "roll_a", samples[1])',
                 main,
@@ -24119,8 +24084,186 @@ assert(not pcall(function() return U_EXPRESSION end))
                 'services.variables.set(\n        actor, "roll_b", samples[2])',
                 main,
             )
+            rounded = migrate_lua_first.render_static_sample_range(
+                {
+                    "sample_range": {
+                        "count": 1.5,
+                        "min": -1.5,
+                        "max": 1.5,
+                        "target_vars": [
+                            {"u_val": "round_a"}, {"u_val": "round_b"},
+                        ],
+                    }
+                },
+                avatar_actor_proven=True,
+            )
+            self.assertIsNotNone(rounded)
+            rounded_source = "\n".join(rounded or [])
+            self.assertIn("for value = -2, 2 do", rounded_source)
+            self.assertIn("for index = 1, 2 do", rounded_source)
+            self.assertIsNone(
+                migrate_lua_first.render_static_sample_range(
+                    {
+                        "sample_range": {
+                            "count": 1,
+                            "min": 0,
+                            "max": 65536,
+                            "target_vars": [{"u_val": "wide"}],
+                        }
+                    },
+                    avatar_actor_proven=True,
+                )
+            )
+            self.assertIsNone(
+                migrate_lua_first.render_static_sample_range(
+                    {
+                        "sample_range": {
+                            "count": 1,
+                            "min": 0,
+                            "max": 1,
+                            "target_vars": [{"npc_val": "beta_only"}],
+                        }
+                    },
+                    avatar_actor_proven=True,
+                )
+            )
 
-    def test_dynamic_sample_range_clamps_runtime_bounds(self) -> None:
+            def render_single_sample(count: float, minimum: float, maximum: float):
+                return migrate_lua_first.render_static_sample_range(
+                    {
+                        "sample_range": {
+                            "count": count,
+                            "min": minimum,
+                            "max": maximum,
+                            "replace": True,
+                            "target_vars": [{"u_val": "rounding"}],
+                        }
+                    },
+                    avatar_actor_proven=True,
+                )
+
+            just_below_half = render_single_sample(
+                1, -0.49999999999999994, 0.49999999999999994
+            )
+            self.assertIsNotNone(just_below_half)
+            self.assertIn(
+                "services.random.native_int(0, 0)",
+                "\n".join(just_below_half or []),
+            )
+            exact_half = render_single_sample(1, -0.5, 0.5)
+            self.assertIsNotNone(exact_half)
+            self.assertIn(
+                "services.random.native_int(-1, 1)",
+                "\n".join(exact_half or []),
+            )
+            for count, expected in (
+                (0.49999999999999994, "for index = 1, 0 do"),
+                (-0.49999999999999994, "for index = 1, 0 do"),
+                (0.5, "for index = 1, 1 do"),
+            ):
+                rounded_count = render_single_sample(count, 0, 0)
+                self.assertIsNotNone(rounded_count)
+                self.assertIn(expected, "\n".join(rounded_count or []))
+            self.assertIsNone(render_single_sample(-0.5, 0, 0))
+
+    def test_sample_range_native_clamp_diagnostics_stay_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "sample_more_than_targets",
+                            "required_event": "game_start",
+                            "effect": {
+                                "sample_range": {
+                                    "count": 3,
+                                    "min": 0,
+                                    "max": 4,
+                                    "replace": True,
+                                    "target_vars": [
+                                        {"u_val": "target_a"},
+                                        {"u_val": "target_b"},
+                                    ],
+                                }
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "sample_more_than_population",
+                            "required_event": "game_start",
+                            "effect": {
+                                "sample_range": {
+                                    "count": 3,
+                                    "min": 0,
+                                    "max": 1,
+                                    "target_vars": [
+                                        {"u_val": "target_a"},
+                                        {"u_val": "target_b"},
+                                        {"u_val": "target_c"},
+                                    ],
+                                }
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "sample_range_clamp_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.random.native_int", main)
+            self.assertIn("sample_range needs a live alpha", main)
+            self.assertIn("bounded live-alpha native sample_range conversion", report)
+
+    def test_sample_range_stays_todo_with_synthetic_game_start_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "emit_game_start_again",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "game_start",
+                                "args": ["replayed version"],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "sample_on_game_start",
+                            "required_event": "game_start",
+                            "effect": {
+                                "sample_range": {
+                                    "count": 1,
+                                    "min": 1,
+                                    "max": 2,
+                                    "target_vars": [{"u_val": "sample"}],
+                                }
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "sample_range_replay_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertIn("services.native_events.emit(\"game_start\"", main)
+            self.assertNotIn("services.random.native_int", main)
+            self.assertIn("bounded live-alpha native sample_range conversion", report)
+
+    def test_dynamic_sample_range_stays_todo_without_native_rounding_proof(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -24145,13 +24288,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                 migrate_lua_first.load_objects([source]), "dynamic_sample_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertIn("local sample_count =", main)
-            self.assertIn("local sample_minimum =", main)
-            self.assertIn("local sample_maximum =", main)
-            self.assertIn("math.min(1000000000", main)
-            self.assertIn("services.random.sample_integers(", main)
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn("services.random.sample_integers", main)
+            self.assertNotIn("services.random.native_int", main)
+            self.assertIn("sample_range needs a live alpha", main)
+            self.assertIn("bounded live-alpha native sample_range conversion", report)
 
     def test_translates_batch_30_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
