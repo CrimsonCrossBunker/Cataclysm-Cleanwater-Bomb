@@ -493,21 +493,185 @@ assert(worn_calls==1 and has_calls==1)
         )
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
-                {"npc_role_nearby": "scout"}, avatar_actor_proven=True),
+                {"npc_role_nearby": "scout"},
+                proficiency_alpha_actor_proven=True),
             expected,
         )
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
                 {"npc_role_nearby": "scout", "range": 48},
-                avatar_actor_proven=True),
+                proficiency_alpha_actor_proven=True),
+            expected,
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_role_nearby": "scout"},
+                npc_melee_beta_actor_proven=True),
             expected,
         )
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_role_nearby": "scout"}, avatar_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"npc_role_nearby": "scout"}, npc_actor_proven=True))
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
-            {"npc_role_nearby": "scout", "range": 5}, avatar_actor_proven=True))
+            {"npc_role_nearby": "scout", "range": 5},
+            proficiency_alpha_actor_proven=True))
         self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
             {"npc_role_nearby": "scout"}, generic_character_actor_proven=True))
+
+    def test_npc_see_u_and_service_require_live_melee_pair(self) -> None:
+        see_expression = migrate_lua_first.render_eoc_condition_expression(
+            "npc_see_u", npc_melee_beta_actor_proven=True)
+        self.assertEqual(
+            see_expression,
+            "(function() local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            'if alpha == nil or alpha.kind ~= "creature" or '
+            'beta == nil or beta.kind ~= "creature" then return false end; '
+            "return service_value(services.creatures.can_see(beta, alpha)) "
+            "end)()",
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_see_u", npc_dialogue_pair_proven=True,
+                npc_actor_expression="context.actors.beta"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_see_u", npc_actor_proven=True,
+                npc_actor_expression="actor"))
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "inner"},
+                eoc_conditions={"inner": {"condition": "npc_see_u"}},
+                npc_melee_beta_actor_proven=True))
+
+        service_expression = (
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_service": 50.5}, npc_melee_beta_actor_proven=True)
+        )
+        self.assertIsNotNone(service_expression)
+        self.assertIn("services.effects.has(beta", service_expression)
+        self.assertIn('services.types.id("effect", "currently_busy")', service_expression)
+        self.assertNotIn("body_part", service_expression)
+        self.assertIn("services.characters.snapshot(alpha)).cash >= 50.5", service_expression)
+        negative_threshold = (
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_service": -2.5}, npc_melee_beta_actor_proven=True)
+        )
+        self.assertIn("services.characters.snapshot(alpha)).cash >= -2.5",
+                      negative_threshold)
+        # A monster interlocutor remains a Creature and native talker effects
+        # still resolve for it; neither selector adds an NPC-only subtype test.
+        self.assertNotIn('beta.subtype ~= "npc"', service_expression)
+        self.assertNotIn('beta.subtype ~= "npc"', see_expression)
+        for raw_threshold in (
+            "5", {"npc_val": "price"}, {"math": ["u_cash()"]}, [1, 2],
+        ):
+            with self.subTest(threshold=raw_threshold):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        {"npc_service": raw_threshold},
+                        npc_melee_beta_actor_proven=True))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_service": 50.5}, avatar_actor_proven=True,
+            npc_actor_proven=True, npc_actor_expression="actor"))
+
+    def test_npc_nearby_condition_event_sources_are_bounded(self) -> None:
+        cases = (
+            (
+                "live_game_start_role",
+                {"required_event": "game_start",
+                 "condition": {"npc_role_nearby": "scout"}},
+                True,
+                "services.npcs.has_role_nearby(actor, \"scout\", 48)",
+            ),
+            (
+                "live_melee_role",
+                {"required_event": "character_melee_attacks_character",
+                 "condition": {"npc_role_nearby": "scout"}},
+                True,
+                "services.npcs.has_role_nearby(actor, \"scout\", 48)",
+            ),
+            (
+                "melee_npc_see_u",
+                {"required_event": "character_melee_attacks_character",
+                 "condition": "npc_see_u"},
+                True,
+                "services.creatures.can_see(beta, alpha)",
+            ),
+            (
+                "melee_npc_service",
+                {"required_event": "character_melee_attacks_monster",
+                 "condition": {"npc_service": 40.5}},
+                True,
+                "services.characters.snapshot(alpha)).cash >= 40.5",
+            ),
+            (
+                "generic_event_role",
+                {"required_event": "character_takes_damage",
+                 "condition": {"npc_role_nearby": "scout"}},
+                False,
+                "services.npcs.has_role_nearby(actor, \"scout\", 48)",
+            ),
+            (
+                "death_role",
+                {"eoc_type": "AVATAR_DEATH",
+                 "condition": {"npc_role_nearby": "scout"}},
+                False,
+                "services.npcs.has_role_nearby(actor, \"scout\", 48)",
+            ),
+            (
+                "unpaired_npc_see_u",
+                {"required_event": "game_start", "condition": "npc_see_u"},
+                False,
+                "services.creatures.can_see(beta, alpha)",
+            ),
+            (
+                "unpaired_npc_service",
+                {"required_event": "game_start",
+                 "condition": {"npc_service": 10}},
+                False,
+                "services.effects.has(beta",
+            ),
+        )
+        for eoc_id, fields, should_lower, marker in cases:
+            with self.subTest(eoc=eoc_id):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), 0,
+                    {"type": "effect_on_condition", "id": eoc_id,
+                     **fields, "effect": {"message": "condition result"}},
+                )
+                rendered = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                )
+                self.assertEqual(marker in rendered, should_lower)
+                self.assertEqual(
+                    "condition TODO: translate the legacy condition into a Lua predicate"
+                    in rendered,
+                    not should_lower,
+                )
+
+        melee_source = migrate_lua_first.SourceObject(
+            Path("source.json"), 20, {
+                "type": "effect_on_condition", "id": "melee_live_pair",
+                "required_event": "character_melee_attacks_character",
+                "condition": "npc_see_u",
+                "effect": {"message": "condition result"},
+            },
+        )
+        for kwargs in (
+            {"eoc_referenced_ids": frozenset({"melee_live_pair"})},
+            {"dynamic_eoc_dispatch_present": True},
+        ):
+            with self.subTest(source_proof=kwargs):
+                rendered = migrate_lua_first.render_eoc(
+                    melee_source, migrate_lua_first.MigrationResult(), **kwargs,
+                )
+                self.assertNotIn("services.creatures.can_see(beta, alpha)", rendered)
+                self.assertIn(
+                    "condition TODO: translate the legacy condition into a Lua predicate",
+                    rendered,
+                )
 
     def test_opposite_actor_visibility_requires_exact_alpha_and_beta(self) -> None:
         beta_guard = (
@@ -517,11 +681,7 @@ assert(worn_calls==1 and has_calls==1)
         )
         alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
         queries = {
-            "npc_see_u": "services.creatures.can_see(context.actors.beta, actor)",
             "u_see_npc": "services.creatures.can_see(actor, context.actors.beta)",
-            "npc_see_u_loc": (
-                "services.creatures.has_line_of_sight(context.actors.beta, actor)"
-            ),
             "u_see_npc_loc": (
                 "services.creatures.has_line_of_sight(actor, context.actors.beta)"
             ),
@@ -545,15 +705,30 @@ assert(worn_calls==1 and has_calls==1)
                     condition,
                     npc_actor_expression="context.actors.beta"))
 
+        # The direct topic-pair source is not wired into render_talk_topic's
+        # EOC callback. npc_see_u is enabled only for the live melee event
+        # pair, whose second talker arrives as context.actors.interlocutor.
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_see_u", **proven_beta))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_see_u", npc_melee_beta_actor_proven=True),
+            "(function() local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            'if alpha == nil or alpha.kind ~= "creature" or '
+            'beta == nil or beta.kind ~= "creature" then return false end; '
+            "return service_value(services.creatures.can_see(beta, alpha)) "
+            "end)()",
+        )
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_opposite_actor_visibility_uses_event_alpha_handle(self) -> None:
         # The event alpha differs from the global avatar; only the proven
         # dialogue beta may be used as the opposite participant.
         for condition, observer, target in (
             ("u_see_npc", "event_alpha", "beta"),
-            ("npc_see_u", "beta", "event_alpha"),
             ("u_see_npc_loc", "event_alpha", "beta"),
-            ("npc_see_u_loc", "beta", "event_alpha"),
         ):
             with self.subTest(runtime_condition=condition):
                 predicate = migrate_lua_first.render_eoc_condition_expression(
@@ -739,6 +914,33 @@ assert(calls == 1)
 services.creatures.player_can_see = function() error("stale player-view target") end
 local ok, message = pcall(function() return PREDICATE end)
 assert(not ok and string.find(message, "stale player-view target", 1, true))
+""".replace("PREDICATE", predicate or "false")
+        result = subprocess.run(
+            ["lua", "-"], input=script, text=True,
+            capture_output=True, timeout=10
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_npc_see_u_melee_uses_live_interlocutor_without_npc_assumption(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            "npc_see_u", npc_melee_beta_actor_proven=True)
+        script = """
+local actor = { kind = "creature", subtype = "character" }
+local interlocutor = { kind = "creature", subtype = "monster" }
+local context = { actors = { interlocutor = interlocutor } }
+local calls = 0
+local function service_value(value) return value end
+local services = { creatures = { can_see = function(observer, target)
+    calls = calls + 1
+    assert(observer == interlocutor and target == actor)
+    return true
+end } }
+assert(PREDICATE)
+assert(calls == 1)
+context.actors.interlocutor = { kind = "item" }
+assert(not PREDICATE)
+assert(calls == 1)
 """.replace("PREDICATE", predicate or "false")
         result = subprocess.run(
             ["lua", "-"], input=script, text=True,

@@ -9957,8 +9957,8 @@ function CcbNpcsApi.find_unique(unique_id) end
 ---@return integer
 function CcbNpcsApi.count_allies(global) end
 ---@param origin GameHandle Exact observer/Character/Creature handle.
----@param role string
----@param radius? integer
+---@param role string Role ID of at most 256 bytes; embedded NUL is rejected.
+---@param radius? integer Same-z rl_dist radius; defaults to 48 and must be within 0..1000.
 ---@return CcbResult
 function CcbNpcsApi.has_role_nearby(origin, role, radius) end
 ---@param origin GameHandle Exact observer/Character/Creature handle.
@@ -10716,7 +10716,7 @@ function CcbEffectsApi.add(creature, effect, duration, options) end
 ---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
 ---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
+---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit to use native bp_null lookup, which matches effects on any body part.
 ---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
 ---@return CcbResult result `value` is boolean.
 function CcbEffectsApi.has(creature, effect, body_part, intensity) end

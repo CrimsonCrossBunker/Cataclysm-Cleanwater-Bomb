@@ -27697,8 +27697,24 @@ def render_eoc_condition_expression(
             'actor ~= nil and actor.kind == "creature" and '
             "service_value(services.creatures.player_can_see(actor))"
         )
+    if condition == "npc_see_u":
+        # Native f_see_opposite(true) reads the live beta Creature and asks
+        # whether it sees the alpha Creature.  Only the pre-damage melee
+        # event pair currently reaches generated EOCs with that exact beta;
+        # topic callbacks do not wire their beta through render_talk_topic.
+        if not npc_melee_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if alpha == nil or alpha.kind ~= \"creature\" or "
+            "beta == nil or beta.kind ~= \"creature\" then return false end; "
+            "return service_value(services.creatures.can_see(beta, alpha)) "
+            "end)()"
+        )
     opposite_visibility_conditions = {
-        "u_see_npc", "npc_see_u", "u_see_npc_loc", "npc_see_u_loc",
+        "u_see_npc", "u_see_npc_loc", "npc_see_u_loc",
     }
     if condition == "player_see_npc" or condition in opposite_visibility_conditions:
         # These native predicates read const_actor(true), which is the
@@ -28216,8 +28232,36 @@ def render_eoc_condition_expression(
         return None
     if not isinstance(condition, dict):
         return None
-    # `*_service` has the same NULL_ID-versus-any-body-part mismatch as the
-    # simple availability selectors above.
+    if set(condition) == {"npc_service"}:
+        # Native checks beta's currently_busy effect at bp_null (which means
+        # any body part) and compares alpha Character cash against a
+        # dbl_or_var.  The pre-damage melee events provide exactly those live
+        # alpha/beta Creatures; restrict this bounded lowering to numeric
+        # literals so RNG and dialogue-variable evaluation remain TODO.
+        if not npc_melee_beta_actor_proven:
+            return None
+        threshold = finite_number_literal(condition.get("npc_service"))
+        threshold_expression = (
+            lua_scalar_literal(threshold) if threshold is not None else None
+        )
+        if threshold_expression is None:
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if alpha == nil or alpha.kind ~= \"creature\" or "
+            "(alpha.subtype ~= \"avatar\" and alpha.subtype ~= \"character\" and "
+            "alpha.subtype ~= \"npc\") or beta == nil or "
+            "beta.kind ~= \"creature\" then return false end; "
+            "local busy = service_value(services.effects.has(beta, "
+            "services.types.id(\"effect\", \"currently_busy\"))); "
+            "if busy then return false end; "
+            "return service_value(services.characters.snapshot(alpha)).cash >= "
+            f"{threshold_expression} end)()"
+        )
+    # `u_service` and every unproven `npc_service` call need native beta and
+    # alpha actors; a topic proof is not wired into generated EOC callbacks.
     if set(condition) & {"u_service", "npc_service"}:
         return None
     if set(condition) & TRAIT_QUERY_SELECTORS:
@@ -28422,11 +28466,15 @@ def render_eoc_condition_expression(
                     f">= {int(threshold)}"
                 )
     if (
-        (avatar_actor_proven or generic_character_actor_proven) and
+        (proficiency_alpha_actor_proven or npc_melee_beta_actor_proven) and
         set(condition) <= {"npc_role_nearby", "range"} and
         bounded_utf8_string(condition.get("npc_role_nearby"), 256) and
         ("range" not in condition or condition.get("range") == 48)
     ):
+        # This service scans global NPCs from alpha's live position.  Do not
+        # use generic/avatar proof bits that also include dead or re-entered
+        # callbacks; only the live game_start avatar and pre-damage melee
+        # attacker proofs authorize the generation-checked Creature handle.
         return (
             "service_value(services.npcs.has_role_nearby(actor, "
             f"{lua_quote(condition['npc_role_nearby'])}, 48))"
