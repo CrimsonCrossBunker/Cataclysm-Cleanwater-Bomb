@@ -11294,6 +11294,14 @@ function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 ---@field present boolean Whether the Character is an NPC.
 ---@field following? boolean Present for NPCs; native FOLLOW or WAIT attitude.
 
+---@class CcbCharacterActivityStateSnapshot
+---@field active boolean Whether the current native player_activity is non-null.
+---@field id? GameId GameId<activity> for the current activity, when present.
+---@field level_index integer Native Character activity level index.
+
+---@class CcbCharacterTravelSnapshot
+---@field has_path boolean Whether the native overmap travel path is non-empty.
+
 ---@class CcbCharacterSnapshot
 ---@field name string
 ---@field x integer
@@ -11312,6 +11320,8 @@ function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 ---@field environment CcbCharacterEnvironmentSnapshot
 ---@field movement CcbCharacterMovementSnapshot
 ---@field npc_state CcbCharacterNpcStateSnapshot
+---@field activity CcbCharacterActivityStateSnapshot
+---@field travel CcbCharacterTravelSnapshot
 
 ---@class CcbCharacterEnvironmentSnapshot
 ---@field outside boolean Native is_creature_outside result, including its surface-z check.

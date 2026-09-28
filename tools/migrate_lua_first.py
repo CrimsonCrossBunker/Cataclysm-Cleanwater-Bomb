@@ -26602,6 +26602,9 @@ SAFE_SPACE_BETA_CONDITION_SELECTORS = frozenset({
     "at_safe_space", "npc_at_safe_space",
 })
 SAFE_SPACE_ALPHA_CONDITION_SELECTORS = frozenset({"u_at_safe_space"})
+NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS = frozenset({
+    "npc_has_activity", "npc_is_travelling",
+})
 
 
 def contains_safe_space_beta_condition(condition: Any) -> bool:
@@ -26631,6 +26634,23 @@ def contains_safe_space_alpha_condition(condition: Any) -> bool:
         )
     if isinstance(condition, list):
         return any(contains_safe_space_alpha_condition(entry) for entry in condition)
+    return False
+
+
+def contains_npc_activity_travel_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        # The bare activity name is an unknown native simple condition and
+        # lowers to false; only travelling is a beta-backed simple selector.
+        return condition == "npc_is_travelling"
+    if isinstance(condition, dict):
+        if NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_npc_activity_travel_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_npc_activity_travel_condition(entry) for entry in condition)
     return False
 
 
@@ -27673,6 +27693,21 @@ def render_eoc_condition_expression(
         # does not currently pass a live beta talker to generated functions;
         # a single event Character or content pair proof cannot stand in for it.
         return None
+    if isinstance(condition, str) and condition == "npc_has_activity":
+        # The native member parser requires an object key; its bare string
+        # form is an unknown simple condition and therefore evaluates false.
+        return "false"
+    if isinstance(condition, str) and condition == "npc_is_travelling":
+        # This simple native condition reads const_actor(true), not the EOC's
+        # event alpha or an unconnected dialogue-pair proof.
+        return None
+    if (
+        isinstance(condition, dict) and
+        NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS.intersection(condition)
+    ):
+        # npc_has_activity's valid member-object form also reads native beta;
+        # no current EOC callback proves a live Character in that slot.
+        return None
     # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
     # Native const_actor(true) does not fall back to alpha when beta is absent,
     # so only an expression that explicitly names the beta can be queried.
@@ -28054,11 +28089,6 @@ def render_eoc_condition_expression(
             return None
         if avatar_actor_proven and condition == "u_has_activity":
             return "service_value(services.activities.snapshot(actor)).active"
-        if npc_actor_proven and condition == "npc_has_activity":
-            return (
-                "service_value(services.activities.snapshot("
-                f"{npc_query_actor})).active"
-            )
         if weapon_actor_proven and condition == "u_has_weapon":
             return "character_has_weapon(actor)"
         if npc_query_actor is not None and condition == "npc_has_weapon":
@@ -28069,8 +28099,6 @@ def render_eoc_condition_expression(
             return f"character_can_drop_weapon({npc_query_actor})"
         if character_actor_proven and condition == "u_is_travelling":
             return "character_travel_has_path(actor)"
-        if npc_actor_proven and condition == "npc_is_travelling":
-            return f"character_travel_has_path({npc_query_actor})"
         if proficiency_alpha_actor_proven and condition == "u_at_safe_space":
             return "character_at_safe_space(actor)"
         if character_actor_proven and condition == "u_has_pickup_list":
@@ -30190,6 +30218,14 @@ def render_eoc(
                 "translate u_at_safe_space only for an event-exclusive live "
                 "avatar source; current bounded proof is an unreferenced "
                 "game_start EOC without dynamic dispatch"
+            )
+        elif contains_npc_activity_travel_condition(raw_condition):
+            condition_todo = (
+                "translate npc_has_activity member objects and "
+                "npc_is_travelling only after a supported EOC callback supplies "
+                "native beta as a live Character; event NPC actors are alpha, "
+                "the member string for npc_has_activity is ignored, and direct "
+                "talk-topic response EOC callbacks are not wired"
             )
         elif contains_safe_space_beta_condition(raw_condition):
             condition_todo = (

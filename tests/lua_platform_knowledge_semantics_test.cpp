@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "activity_type.h"
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -54,6 +55,8 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
     partner.normalize();
     player.setID( character_id( 4301 ), true );
     partner.setID( character_id( 4302 ), true );
+    partner.assign_activity( activity_id( "ACT_WAIT" ), 100 );
+    partner.omt_path.emplace_back( tripoint_abs_omt{ 4, 5, 0 } );
     cata::lua_platform::register_npc_handle_identity( partner );
     const on_out_of_scope retire( [&]() {
         cata::lua_platform::retire_npc_handle_identity( partner );
@@ -89,6 +92,37 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_snapshot = value_of(
                 services["characters"]["snapshot"], beta_handle ).as<sol::table>();
+        const sol::table avatar_activity = value_of(
+                services["activities"]["snapshot"], avatar_handle ).as<sol::table>();
+        const sol::table beta_activity = value_of(
+                services["activities"]["snapshot"], beta_handle ).as<sol::table>();
+        const conditional_t avatar_has_activity_condition( json_loader::from_string(
+                    R"({"u_has_activity":"ignored"})" ).get_object() );
+        const conditional_t beta_has_activity_condition( json_loader::from_string(
+                    R"({"npc_has_activity":"ignored"})" ).get_object() );
+        const conditional_t avatar_is_travelling_condition( "u_is_travelling" );
+        const conditional_t beta_is_travelling_condition( "npc_is_travelling" );
+        // The native NPC predicate uses the talker's current player_activity,
+        // not npc::has_activity()'s mission/attitude status; its member string
+        // does not select an activity id.
+        const bool avatar_has_activity = avatar_activity["active"].get<bool>();
+        const bool beta_has_activity = beta_activity["active"].get<bool>();
+        const bool avatar_is_travelling =
+            avatar_snapshot["travel"]["has_path"].get<bool>();
+        const bool beta_is_travelling =
+            beta_snapshot["travel"]["has_path"].get<bool>();
+        CHECK_FALSE( avatar_has_activity );
+        CHECK( beta_has_activity );
+        CHECK( avatar_has_activity_condition( conversation ) ==
+               avatar_has_activity );
+        CHECK( beta_has_activity_condition( conversation ) ==
+               beta_has_activity );
+        CHECK_FALSE( avatar_is_travelling );
+        CHECK( beta_is_travelling );
+        CHECK( avatar_is_travelling_condition( conversation ) ==
+               avatar_is_travelling );
+        CHECK( beta_is_travelling_condition( conversation ) ==
+               beta_is_travelling );
         // This fixture compares each native selector with the snapshot for
         // its intended participant.  Both default actors may share the same
         // safe state, so it does not independently prove role routing when
