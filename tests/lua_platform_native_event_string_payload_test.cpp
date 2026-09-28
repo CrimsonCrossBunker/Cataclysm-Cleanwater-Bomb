@@ -5,14 +5,17 @@
 #include <utility>
 #include <vector>
 
+#include "condition.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "dialogue.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
+#include "talker.h"
 
 namespace
 {
@@ -108,6 +111,64 @@ TEST_CASE( "lua_platform_native_event_preserves_long_string_payloads",
             std::string( "[entry,2,]" ) ) );
     CHECK( observer.changes[3] == std::make_pair( std::string( "boolean" ),
             std::string( "1" ) ) );
+}
+
+TEST_CASE( "lua_platform_event_has_beta_matches_native_dialogue_presence",
+           "[lua][platform][native_events][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
+                "event_has_beta_presence", 5902, lua );
+    const on_out_of_scope clear_runtimes( []() {
+        platform::clear_active_runtimes();
+    } );
+    owner->world_is_ready = true;
+
+    const sol::protected_function platform_has_beta = lua.load( R"(
+        return context ~= nil and
+            context.__ccb_event_beta_presence_proven == true and
+            context.actors ~= nil and
+            context.actors.interlocutor ~= nil
+    )" );
+    const conditional_t native_has_beta( "has_beta" );
+
+    for( const bool has_beta : { false, true } ) {
+        std::unique_ptr<talker> beta;
+        if( has_beta ) {
+            beta = std::make_unique<talker>();
+        }
+        dialogue native_dialogue( std::make_unique<talker>(), std::move( beta ) );
+        const bool native_result = native_has_beta( native_dialogue );
+
+        sol::table context = lua.create_table();
+        context["__ccb_event_beta_presence_proven"] = true;
+        sol::table actors = lua.create_table();
+        if( has_beta ) {
+            actors["interlocutor"] = platform::detail::platform_talker_to_lua(
+                                          *owner, *native_dialogue.const_actor( true ) );
+        }
+        context["actors"] = actors;
+        lua["context"] = context;
+
+        const sol::protected_function_result platform_result = platform_has_beta();
+        REQUIRE( platform_result.valid() );
+        CHECK( platform_result.get<bool>() == native_result );
+    }
+
+    // Generated EOCs intentionally fail closed when they lack the direct-event
+    // provenance marker, even if an unrelated caller supplied an interlocutor.
+    sol::table unproven_context = lua.create_table();
+    sol::table unproven_actors = lua.create_table();
+    unproven_actors["interlocutor"] = lua.create_table();
+    unproven_context["actors"] = unproven_actors;
+    lua["context"] = unproven_context;
+    const sol::protected_function_result unproven_result = platform_has_beta();
+    REQUIRE( unproven_result.valid() );
+    CHECK_FALSE( unproven_result.get<bool>() );
 }
 
 #endif

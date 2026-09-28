@@ -1461,7 +1461,7 @@ def _node_has_item_actor(node: Any) -> bool:
 
 GENERIC_TALKER_TYPE_CONDITIONS = frozenset({
     "u_is_avatar", "u_is_npc", "u_is_character", "u_is_monster",
-    "u_is_item", "u_is_furniture", "u_is_vehicle",
+    "u_is_item", "u_is_vehicle",
 })
 
 
@@ -27692,11 +27692,6 @@ def render_eoc_condition_expression(
                 return "actor ~= nil and actor.kind == \"item\""
             if condition == "u_is_vehicle":
                 return "actor ~= nil and actor.kind == \"vehicle\""
-            if condition == "u_is_furniture":
-                return (
-                    "context.data ~= nil and "
-                    "context.data[\"__ccb_talker_kind\"] == \"furniture\""
-                )
         if isinstance(condition, dict) and "u_has_effect" in condition:
             return render_effect_condition(condition, "actor", None)
         if isinstance(condition, dict) and set(condition) == {"u_has_species"}:
@@ -27736,12 +27731,12 @@ def render_eoc_condition_expression(
                 "return not service_value(services.effects.has(beta, busy)) "
                 "end)()"
             )
-        if condition == "npc_exists" and event_beta_presence_proven:
-            # conditional_t::f_exists(true) reads only d.has_beta. For a
-            # required_event EOC, event_bus passes the same optional second
-            # talker to the native EOC subscriber and Platform event bridge;
-            # event_to_lua exposes that pointer as actors.interlocutor. This
-            # checks presence only and does not claim the talker is an NPC.
+        if condition in {"has_beta", "npc_exists"} and event_beta_presence_proven:
+            # conditional_t::f_has_beta/f_exists(true) read only d.has_beta.
+            # For an event-exclusive EOC, event_bus passes the same optional
+            # second talker to the native subscriber and Platform event bridge;
+            # event_to_lua exposes it as actors.interlocutor. This checks
+            # presence only and does not claim the talker is an NPC.
             return (
                 "context ~= nil and "
                 "context.__ccb_event_beta_presence_proven == true and "
@@ -34883,13 +34878,15 @@ def render_eoc(
             f"{source.location}: EOC {eoc_id} unresolved fields: {', '.join(unresolved)}"
         )
     if (
-        generic_talker_actor_override and
+        not exact_avatar_actor_proven and
         _node_contains_string(value, "u_is_furniture")
     ):
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} furniture talker introspection "
-            "requires callback context __ccb_talker_kind=furniture"
+            "requires a live computer talker (furniture-backed in native dialogue); "
+            "current EOC callbacks "
+            "do not provide one (computer snapshots are detached)"
         )
     if (
         stable_handler and
