@@ -878,6 +878,14 @@ def safe_native_recipe_id(value: Any) -> bool:
     )
 
 
+def safe_native_proficiency_id_literal(value: Any) -> bool:
+    """Bound literal proficiency text without requiring a registered ID."""
+    return (
+        bounded_utf8_string(value, 256) and
+        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
+    )
+
+
 def bounded_utf8_string(
     value: Any, maximum: int, *, allow_empty: bool = False
 ) -> bool:
@@ -26273,6 +26281,8 @@ TRAINING_OFFER_CONDITION_SELECTORS = frozenset({
     "u_train_spells", "npc_train_spells",
 })
 
+NPC_PROFICIENCY_CONDITION_SELECTORS = frozenset({"npc_has_proficiency"})
+
 
 def contains_training_offer_condition(condition: Any) -> bool:
     if isinstance(condition, str):
@@ -26286,6 +26296,19 @@ def contains_training_offer_condition(condition: Any) -> bool:
         )
     if isinstance(condition, list):
         return any(contains_training_offer_condition(entry) for entry in condition)
+    return False
+
+
+def contains_npc_proficiency_condition(condition: Any) -> bool:
+    if isinstance(condition, dict):
+        if NPC_PROFICIENCY_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_npc_proficiency_condition(condition[key])
+            for key in ("and", "or", "not", "test_eoc") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_npc_proficiency_condition(entry) for entry in condition)
     return False
 
 
@@ -28925,8 +28948,28 @@ def render_eoc_condition_expression(
                 f"actor, {lua_quote(raw_id)}))"
             )
     if "npc_has_proficiency" in condition:
-        # Native reads dialogue beta. The migrated direct-topic EOC action
-        # callback does not yet supply a plain-table beta context.
+        raw_id = condition.get("npc_has_proficiency")
+        if (
+            npc_melee_beta_actor_proven and
+            set(condition) == {"npc_has_proficiency"} and
+            safe_native_proficiency_id_literal(raw_id)
+        ):
+            # Native calls knows_proficiency on const_actor(true). The narrow
+            # melee event bridge exposes that same live Creature as
+            # interlocutor; non-Character talkers (including monsters) use
+            # the native base false result and must not reach the Character
+            # only service. Dynamic str_or_var IDs remain TODO.
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+                "and beta.subtype ~= \"npc\") then return false end; "
+                "if not beta:is_valid() then return false end; "
+                "return service_value(services.proficiencies.has_id_text(beta, "
+                f"{lua_quote(raw_id)})) "
+                "end)()"
+            )
         return None
     for npc_key, u_key in (
         ("npc_has_martial_art", "u_has_martial_art"),
@@ -29886,6 +29929,14 @@ def render_eoc(
                 "EOC callback supplies the native alpha and beta as live "
                 "Character handles; talk-topic response EOC callbacks are "
                 "not yet wired"
+            )
+        elif contains_npc_proficiency_condition(raw_condition):
+            condition_todo = (
+                "translate npc_has_proficiency only for an event-exclusive "
+                "pre-damage melee EOC with its live interlocutor and a bounded "
+                "literal proficiency ID; preserve the native false result for "
+                "monster/base talkers, and leave dynamic str_or_var IDs, other "
+                "beta sources, and re-entered EOCs as TODO"
             )
         elif isinstance(raw_condition, str) and raw_condition in {
             "has_available_mission", "has_many_available_missions",

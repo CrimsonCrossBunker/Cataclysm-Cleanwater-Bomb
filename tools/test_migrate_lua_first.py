@@ -3238,6 +3238,110 @@ assert(observed[#observed] == 'KNOWN')
                 )
             )
 
+        beta_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_proficiency": "prof_unregistered_condition_test"},
+            npc_melee_beta_actor_proven=True,
+        )
+        self.assertIn("context.actors.interlocutor", beta_expression)
+        self.assertIn('beta.subtype ~= "avatar"', beta_expression)
+        self.assertIn('beta.subtype ~= "character"', beta_expression)
+        self.assertIn('beta.subtype ~= "npc"', beta_expression)
+        self.assertIn("if not beta:is_valid() then return false end", beta_expression)
+        self.assertIn(
+            'services.proficiencies.has_id_text(beta, "prof_unregistered_condition_test")',
+            beta_expression,
+        )
+        for unsupported in (
+            {"npc_has_proficiency": {"context_val": "prof_id"}},
+            {"npc_has_proficiency": "prof_knapping", "extra": True},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    unsupported, npc_melee_beta_actor_proven=True,
+                )
+            )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_proficiency": "prof_knapping"},
+            )
+        )
+
+    def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
+        def render(
+            eoc_id: str, required_event: str, condition: object,
+            *, referenced: bool = False, dynamic_dispatch: bool = False,
+        ) -> tuple[str, str]:
+            source = migrate_lua_first.SourceObject(
+                Path("source.json"), 0, {
+                    "type": "effect_on_condition",
+                    "id": eoc_id,
+                    "required_event": required_event,
+                    "condition": condition,
+                    "effect": {"message": "checked proficiency"},
+                },
+            )
+            result = migrate_lua_first.MigrationResult()
+            main = migrate_lua_first.render_eoc(
+                source, result,
+                eoc_referenced_ids=frozenset({eoc_id}) if referenced else frozenset(),
+                dynamic_eoc_dispatch_present=dynamic_dispatch,
+            )
+            return main, "\n".join(result.todos)
+
+        character_main, character_todos = render(
+            "melee_character_proficiency", "character_melee_attacks_character",
+            {"npc_has_proficiency": "prof_knapping"},
+        )
+        self.assertIn(
+            'services.proficiencies.has_id_text(beta, "prof_knapping")',
+            character_main,
+        )
+        self.assertNotIn("melee_character_proficiency condition TODO", character_todos)
+
+        # The event bridge also supplies monsters as interlocutors. The
+        # generated Character subtype guard must return native talker::false
+        # before calling the Character-only proficiency service.
+        monster_main, monster_todos = render(
+            "melee_monster_proficiency", "character_melee_attacks_monster",
+            {"npc_has_proficiency": "prof_knapping"},
+        )
+        self.assertIn('beta.subtype ~= "character"', monster_main)
+        self.assertIn('beta.subtype ~= "npc"', monster_main)
+        self.assertIn('return false end; ', monster_main)
+        self.assertIn(
+            'services.proficiencies.has_id_text(beta, "prof_knapping")',
+            monster_main,
+        )
+        self.assertNotIn("melee_monster_proficiency condition TODO", monster_todos)
+
+        unsupported_cases = (
+            (
+                "alpha_is_not_beta", "npc_becomes_hostile",
+                {"npc_has_proficiency": "prof_knapping"}, {},
+            ),
+            (
+                "dynamic_proficiency_id", "character_melee_attacks_character",
+                {"npc_has_proficiency": {"context_val": "prof_id"}}, {},
+            ),
+            (
+                "referenced_melee_proficiency", "character_melee_attacks_character",
+                {"npc_has_proficiency": "prof_knapping"}, {"referenced": True},
+            ),
+            (
+                "dynamically_dispatched_melee_proficiency",
+                "character_melee_attacks_character",
+                {"npc_has_proficiency": "prof_knapping"},
+                {"dynamic_dispatch": True},
+            ),
+        )
+        for eoc_id, event, condition, options in unsupported_cases:
+            with self.subTest(eoc_id=eoc_id):
+                main, todos = render(eoc_id, event, condition, **options)
+                self.assertNotIn("services.proficiencies.has_id_text", main)
+                self.assertIn(
+                    "npc_has_proficiency only for an event-exclusive", todos,
+                )
+
     def test_game_start_proficiency_proof_survives_boolean_composition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
