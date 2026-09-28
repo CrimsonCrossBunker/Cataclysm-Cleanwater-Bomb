@@ -21917,7 +21917,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(main.count("services.characters.avatar()"), 5)
             self.assertNotIn("domain-service conversion", report)
 
-    def test_roll_remainder_stays_todo_until_native_setters_match(self) -> None:
+    def test_roll_remainder_grants_only_literal_unbranched_character_effect(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -21976,9 +21976,16 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 4)
-            self.assertEqual(len(result.todos), 4)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.todos), 3)
+            self.assertEqual(
+                main.count("services.progression.grant_random_missing"), 1
+            )
+            self.assertIn(
+                'services.progression.grant_random_missing(actor, "mutation", '
+                '{ services.types.id("mutation", "QUICK") })', main,
+            )
             self.assertNotIn("services.mutations.grant", main)
             self.assertNotIn("services.bionics.grant", main)
             self.assertNotIn("services.random.native_int", main)
@@ -21987,6 +21994,57 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn("native-equivalent remainder setters and callbacks", report)
+
+    def test_real_xedra_roll_remainder_recurrence_and_avatar_event(self) -> None:
+        source = REPOSITORY_ROOT / "data/mods/Xedra_Evolved/eocs/initialization.json"
+        objects = migrate_lua_first.load_objects([source])
+        expected = {
+            "EOC_INVENTOR_RECIPE_GAIN": 1,
+            "EOC_INVENTOR_START_RECIPES": 3,
+            "EOC_DREAMSMITH_START_RECIPES": 3,
+        }
+        for identifier, grant_count in expected.items():
+            with self.subTest(identifier=identifier):
+                entry = next(
+                    item for item in objects if item.value.get("id") == identifier
+                )
+                result = migrate_lua_first.MigrationResult()
+                main = migrate_lua_first.render_eoc(entry, result)
+                self.assertEqual(result.todos, [])
+                self.assertEqual(
+                    main.count("services.progression.grant_random_missing"),
+                    grant_count,
+                )
+                self.assertIn('grant_random_missing(actor, "recipe"', main)
+                if identifier == "EOC_INVENTOR_RECIPE_GAIN":
+                    self.assertIn("local actor = actor_override", main)
+                    self.assertIn("runtime.character_recurring(", main)
+                else:
+                    self.assertIn('context.actors["avatar_id"]', main)
+                    self.assertIn('runtime.on("game:game_avatar_new"', main)
+
+    def test_roll_remainder_rejects_unproven_actor_and_dynamic_parameters(self) -> None:
+        base = {"u_roll_remainder": ["QUICK"], "type": "mutation"}
+        render = migrate_lua_first.render_static_roll_remainder_effect
+        self.assertIsNone(render(base, "u_roll_remainder", False, False))
+        self.assertIsNone(render(
+            {**base, "message": "You gained %s."}, "u_roll_remainder",
+            True, False, actor_expression="actor",
+        ))
+        self.assertIsNone(render(
+            {**base, "true_eocs": "EOC_GRANTED"}, "u_roll_remainder",
+            True, False, actor_expression="actor",
+        ))
+        for invalid in (
+            {**base, "type": {"u_val": "kind"}},
+            {**base, "u_roll_remainder": ["QUICK"] * 65},
+            {**base, "u_roll_remainder": [{"u_val": "candidate"}]},
+        ):
+            with self.subTest(invalid=invalid):
+                self.assertIsNone(render(
+                    invalid, "u_roll_remainder", True, False,
+                    actor_expression="actor",
+                ))
 
     def _migrate_teleport_source(self, objects: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as temporary:

@@ -22441,19 +22441,43 @@ def render_static_roll_remainder_effect(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool, npc_actor_proven: bool,
     eoc_function_names: dict[str, str] | None = None,
+    *, actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Keep remainder rolls manual until typed grants match native setters.
+    """Lower literal grants only when the native effect has no side branches.
 
-    Native ``f_roll_remainder`` uses ``Character::set_mutation`` for mutations,
-    native bionic/spell/recipe setters, and runs EOC vectors on a copied
-    dialogue.  Platform's typed grant APIs validate and report failure, and
-    some emit extra state/events.  Calling them through ``service_value`` can
-    therefore turn a native no-op into a Lua error or change observable state.
-    A matching native-int candidate selector alone is not enough to prove this
-    effect equivalent.
+    The progression service preserves the native missing-candidate selection
+    and setter semantics.  Messages and copied-dialogue EOC vectors require
+    separate lowering and remain fail-closed here.
     """
-    del effect, key, avatar_actor_proven, npc_actor_proven, eoc_function_names
-    return None
+    del avatar_actor_proven, npc_actor_proven, eoc_function_names
+    if key not in {"u_roll_remainder", "npc_roll_remainder"}:
+        return None
+    if actor_expression is None or set(effect) != {key, "type"}:
+        return None
+    kind = effect["type"]
+    ids = effect[key]
+    if not isinstance(kind, str) or kind not in {
+        "mutation", "spell", "recipe", "bionic"
+    }:
+        return None
+    if (
+        not isinstance(ids, list) or not 1 <= len(ids) <= 64 or
+        not all(
+            safe_platform_id(identifier) and
+            bounded_utf8_string(identifier, 256) and
+            not any(ord(char) < 32 or ord(char) == 127 for char in identifier)
+            for identifier in ids
+        )
+    ):
+        return None
+    typed_ids = ", ".join(
+        f'services.types.id({lua_quote(kind)}, {lua_quote(identifier)})'
+        for identifier in ids
+    )
+    return [
+        "    service_value(services.progression.grant_random_missing("
+        f"{actor_expression}, {lua_quote(kind)}, {{ {typed_ids} }}))"
+    ]
 
 
 def render_static_dimension_travel_effect(
@@ -34139,6 +34163,14 @@ def render_eoc(
                     effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
                     eoc_function_names or {},
+                    actor_expression=(
+                        alpha_effect_target[0] if key.startswith("u_") and
+                        alpha_effect_target is not None and
+                        alpha_effect_target[1] == "character" else
+                        beta_effect_target[0] if key.startswith("npc_") and
+                        beta_effect_target is not None and
+                        beta_effect_target[1] == "character" else None
+                    ),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
