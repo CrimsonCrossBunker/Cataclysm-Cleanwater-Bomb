@@ -21481,15 +21481,49 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 2)
             self.assertNotIn("services.relocation.travel_to_dimension(", main)
-            self.assertIn("TODO: preserve native dimension validation", main)
+            self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
             self.assertNotIn(
                 'services.variables.resolve(context.data, actor, "u", "target")',
                 main,
             )
             self.assertIn(
-                "dimension-validation, radius, actor, and failure-message parity",
+                "invalid-ID/filter, radius truncation, dialogue-alpha actor/target_location, "
+                "and translated-message parity",
                 report,
             )
+
+    def test_real_portal_dimension_travel_keeps_native_actor_and_message_semantics(
+        self,
+    ) -> None:
+        source_path = (
+            REPOSITORY_ROOT / "data/json/effects_on_condition/nether_eocs/"
+            "portal_storm_effect_on_condition.json"
+        )
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([source_path])
+            if entry.value.get("id") == "EOC_PORTAL_HIGHLANDS"
+        )
+        dimension_effect = next(
+            effect for effect in source.value["effect"]
+            if isinstance(effect, dict) and "u_travel_to_dimension" in effect
+        )
+        self.assertEqual(dimension_effect["u_travel_to_dimension"], "highlands")
+        self.assertEqual(dimension_effect["npc_travel_radius"], 0)
+        self.assertEqual(dimension_effect["npc_travel_filter"], "none")
+        self.assertTrue(dimension_effect["fail_message"])
+        self.assertTrue(dimension_effect["success_message"])
+
+        result = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(source, result)
+        self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
+        self.assertIn("dialogue-alpha NPC/item/vehicle targeting including target_location", main)
+        self.assertNotIn("services.relocation.travel_to_dimension(", main)
+        dimension_todos = [
+            todo for todo in result.todos
+            if "u_travel_to_dimension needs native invalid-ID/filter" in todo.message
+        ]
+        self.assertEqual(len(dimension_todos), 1)
+        self.assertEqual(dimension_todos[0].category, "manual_rewrite")
 
     def test_synthetic_game_start_keeps_space_movement_fail_closed(self) -> None:
         result = self._migrate_teleport_source(
@@ -21522,12 +21556,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
         self.assertIn('services.native_events.emit("game_start"', main)
         self.assertIn("TODO: preserve native teleport", main)
-        self.assertIn("TODO: preserve native dimension validation", main)
+        self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
         self.assertNotIn("services.relocation.move(", main)
         self.assertNotIn("services.relocation.travel_to_dimension(", main)
         self.assertIn("teleport_to_point map loading/recentering", report)
         self.assertIn(
-            "dimension-validation, radius, actor, and failure-message parity",
+            "invalid-ID/filter, radius truncation, dialogue-alpha actor/target_location, "
+            "and translated-message parity",
             report,
         )
 
@@ -21578,9 +21613,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("TODO: translate item fault mutation", main)
             self.assertIn("TODO: translate random item-fault mutation", main)
             self.assertNotIn("services.items.transform", main)
-            self.assertIn("TODO: translate transform_line", main)
-            self.assertIn("TODO: preserve native dimension validation", main)
-            self.assertNotIn("services.world.transform_line", main)
+            self.assertIn("TODO: native transform_line loads a temporary map", main)
+            self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
+            self.assertNotIn("services.world.transform_line(", main)
             self.assertNotIn("services.gameplay.environment.set_light_level", main)
             self.assertIn("services.items.activate", main)
             self.assertNotIn("services.items.set_fault", main)
@@ -26526,7 +26561,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
             self.assertEqual(len(result.todos), 2)
-            self.assertNotIn("services.world.transform_line", main)
+            self.assertNotIn("services.world.transform_line(", main)
             self.assertIn(
                 "native transform_line loads a temporary map from the line origin",
                 main,
@@ -26622,11 +26657,17 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "absolute-ms var_info values",
                 main,
             )
-            self.assertIn("scope-correct reflection operation", main)
+            self.assertIn("missing/legacy-string conversion or variable scopes", main)
             self.assertNotIn("services.variables.get(", main)
             self.assertNotIn("scale_by(2)", main)
-            self.assertEqual(main.count("TODO: mirror_coordinates needs"), 3)
-            self.assertIn("safe absolute-ms reflection and variable-scope semantics", report)
+            self.assertEqual(
+                main.count("TODO: mirror_coordinates reads and writes arbitrary native"),
+                3,
+            )
+            self.assertIn(
+                "native missing/legacy-value conversion and exact input/output var_info scope semantics",
+                report,
+            )
             self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
     def test_mirror_coordinates_does_not_treat_hostile_event_actor_as_beta(self) -> None:
@@ -26644,9 +26685,116 @@ assert(not pcall(function() return U_EXPRESSION end))
 
         rendered = migrate_lua_first.render_eoc(source, result)
 
-        self.assertIn("scope-correct reflection operation", rendered)
+        self.assertIn("missing/legacy-string conversion or variable scopes", rendered)
         self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
         self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
+
+    def test_real_copy_mirror_and_transform_line_call_sites_stay_fail_closed(
+        self,
+    ) -> None:
+        def walk(value: Any):
+            if isinstance(value, dict):
+                yield value
+                for nested in value.values():
+                    yield from walk(nested)
+            elif isinstance(value, list):
+                for nested in value:
+                    yield from walk(nested)
+
+        def direct_eoc_probe(
+            actual: migrate_lua_first.SourceObject,
+            effect: dict[str, Any],
+            probe_id: str,
+        ) -> migrate_lua_first.SourceObject:
+            return migrate_lua_first.SourceObject(actual.path, actual.index, {
+                "type": "effect_on_condition",
+                "id": probe_id,
+                "required_event": "game_start",
+                "effect": effect,
+            })
+
+        ship_path = (
+            REPOSITORY_ROOT / "data/mods/aftershock_exoplanet/EOC/ship_eoc.json"
+        )
+        ship_source = next(
+            entry for entry in migrate_lua_first.load_objects([ship_path])
+            if entry.value.get("id") == "EOC_SHIP_AUTO_CONTROL"
+        )
+        copy_effect = next(
+            node for node in walk(ship_source.value)
+            if "copy_location" in node
+        )
+        self.assertEqual(copy_effect["copy_location"], {"global_val": "ship"})
+        self.assertEqual(copy_effect["new_loc"], {"global_val": "ship_new"})
+        self.assertEqual(copy_effect["time_in_future"], "infinite")
+        copy_result = migrate_lua_first.MigrationResult()
+        copy_main = migrate_lua_first.render_eoc(
+            direct_eoc_probe(ship_source, copy_effect, "real_ship_copy_probe"),
+            copy_result,
+        )
+        self.assertIn("copy_location reads source and destination var_info values", copy_main)
+        self.assertIn("delay must be 1 turn..10000 days", copy_main)
+        self.assertNotIn("services.world.schedule_location_copy(", copy_main)
+
+        telekinesis_path = (
+            REPOSITORY_ROOT / "data/mods/aftershock_exoplanet/spells/psionics/"
+            "telekinesis_eocs.json"
+        )
+        shove_source = next(
+            entry for entry in migrate_lua_first.load_objects([telekinesis_path])
+            if entry.value.get("id") == "EOC_AFS_TELEKINETIC_FORCE_SHOVE_PUSH_CHECKER"
+        )
+        inline_picker = next(
+            node for node in walk(shove_source.value)
+            if node.get("id") == "EOC_AFS_TELEKINETIC_PUSH_DIRECTION_PICKER"
+        )
+        picker_effects = inline_picker["effect"]
+        self.assertEqual(
+            picker_effects[0]["u_location_variable"],
+            {"context_val": "u_pos"},
+        )
+        self.assertEqual(
+            picker_effects[1]["npc_choose_adjacent_highlight"],
+            {"context_val": "push_direction_incorrect"},
+        )
+        mirror_effect = picker_effects[2]
+        self.assertEqual(
+            mirror_effect["mirror_coordinates"],
+            {"context_val": "push_direction_correct"},
+        )
+        mirror_result = migrate_lua_first.MigrationResult()
+        mirror_main = migrate_lua_first.render_eoc(
+            direct_eoc_probe(shove_source, mirror_effect, "real_mirror_probe"),
+            mirror_result,
+        )
+        self.assertIn("missing/legacy-string conversion or variable scopes", mirror_main)
+        self.assertNotIn("services.coords", mirror_main)
+        self.assertTrue(any(todo.category == "platform_gap" for todo in mirror_result.todos))
+
+        transform_path = (
+            REPOSITORY_ROOT / "data/json/monster_special_attacks/spells.json"
+        )
+        reflection_source = next(
+            entry for entry in migrate_lua_first.load_objects([transform_path])
+            if entry.value.get("id") == "EOC_mon_reflection_attack"
+        )
+        transform_effect = next(
+            node for node in walk(reflection_source.value)
+            if "transform_line" in node
+        )
+        self.assertEqual(transform_effect["transform_line"], "clear_portal_walls")
+        self.assertEqual(transform_effect["first"], {"global_val": "first"})
+        self.assertEqual(transform_effect["second"], {"global_val": "second"})
+        transform_result = migrate_lua_first.MigrationResult()
+        transform_main = migrate_lua_first.render_eoc(
+            direct_eoc_probe(
+                reflection_source, transform_effect, "real_transform_line_probe"
+            ),
+            transform_result,
+        )
+        self.assertIn("native transform_line loads a temporary map from the line origin", transform_main)
+        self.assertNotIn("services.world.transform_line(", transform_main)
+        self.assertTrue(any(todo.category == "manual_rewrite" for todo in transform_result.todos))
 
     def test_translates_literal_line_of_sight_condition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
