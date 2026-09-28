@@ -28272,7 +28272,6 @@ def render_eoc_condition_expression(
                     training_pair_proven,
                     npc_dialogue_pair_proven,
                     event_beta_presence_proven,
-                    npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -28394,6 +28393,7 @@ def render_eoc_condition_expression(
                 training_pair_proven,
                 npc_dialogue_pair_proven,
                 event_beta_presence_proven,
+                proficiency_alpha_actor_proven,
                 npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
             )
             for entry in entries
@@ -28413,6 +28413,7 @@ def render_eoc_condition_expression(
             training_pair_proven,
             npc_dialogue_pair_proven,
             event_beta_presence_proven,
+            proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
         )
         return None if rendered is None else f"not ({rendered})"

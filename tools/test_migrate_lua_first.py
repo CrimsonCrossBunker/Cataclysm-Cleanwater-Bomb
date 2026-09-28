@@ -3032,6 +3032,80 @@ assert(observed[#observed] == 'KNOWN')
                 )
             )
 
+    def test_game_start_proficiency_proof_survives_boolean_composition(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "nested_proficiency_condition",
+                        "required_event": "game_start",
+                        "condition": {
+                            "and": [
+                                {"u_has_proficiency": "prof_knapping"},
+                                {"or": [
+                                    {"not": {
+                                        "u_has_proficiency": "prof_knapping",
+                                    }},
+                                    {"u_has_proficiency": "prof_knapping"},
+                                ]},
+                            ],
+                        },
+                        "effect": {"message": "nested proficiency"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "nested_proficiency_mod",
+            )
+            main = result.files[Path("main.lua")]
+            expected = (
+                'services.proficiencies.has_id_text(actor, "prof_knapping")'
+            )
+            self.assertEqual(main.count(expected), 3)
+            self.assertNotIn(
+                "EOC nested_proficiency_condition condition TODO",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
+
+    def test_eoc_child_does_not_inherit_proficiency_event_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "proficiency_child_condition",
+                        "condition": {"u_has_proficiency": "prof_knapping"},
+                        "effect": {"message": "child condition"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "test_eoc_proficiency_parent",
+                        "required_event": "game_start",
+                        "condition": {
+                            "test_eoc": "proficiency_child_condition",
+                        },
+                        "effect": {"message": "parent condition"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "test_eoc_proficiency_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertNotIn("services.proficiencies.has_id_text", main)
+            self.assertIn(
+                "EOC test_eoc_proficiency_parent condition TODO",
+                report,
+            )
+
     def test_proficiency_event_actor_proof_does_not_survive_eoc_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
