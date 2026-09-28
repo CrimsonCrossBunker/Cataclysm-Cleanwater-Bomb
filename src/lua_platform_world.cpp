@@ -2283,6 +2283,15 @@ sol::table spawn_item(
             native, calendar::turn,
             count_by_charges ?
             static_cast<int>( quantity ) : -1 );
+        if( created.has_flag( json_flag_PRESERVE_SPAWN_LOC ) ) {
+            created.preserve_location( absolute );
+        }
+        if( !count_by_charges ) {
+            const itype_id default_ammo = created.ammo_default();
+            if( !default_ammo.is_null() ) {
+                created.ammo_set( default_ammo );
+            }
+        }
         item_location added =
             here.add_item_or_charges_ret_loc(
                 local, std::move( created ), false );

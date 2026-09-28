@@ -16851,12 +16851,12 @@ assert(not available())
             self.assertNotIn("services.inventory.give(", main)
             self.assertNotIn("services.inventory.give_group(", main)
             self.assertNotIn("services.world.spawn_item(", main)
+            self.assertIn("an earlier EOC effect may relocate the Avatar", main)
             self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
             self.assertIn("loc is a legacy var_info lookup", main)
-            self.assertIn("the native target defaults to alpha's runtime position", main)
             self.assertIn("off-screen tinymaps", main)
             self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
-            self.assertIn("native map_spawn_item loc is a legacy var_info lookup", report)
+            self.assertIn("loc is a legacy var_info lookup", report)
             self.assertIn(
                 "player_weapon_away is registered as a native TALK response action",
                 main,
@@ -16928,6 +16928,107 @@ assert(not available())
             self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
             self.assertIn("services.npcs.stop_temporary_following(wrapped_beta_npc)", main)
             self.assertNotIn("needs review", report)
+
+    def test_map_spawn_item_lowers_only_bounded_live_avatar_direct_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "direct_bounded_map_spawn",
+                            "required_event": "game_start",
+                            "effect": {"map_spawn_item": "radio", "count": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_map_spawn_count",
+                            "required_event": "game_start",
+                            "effect": {
+                                "map_spawn_item": "radio",
+                                "count": {"math": ["_count"]},
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "group_map_spawn",
+                            "required_event": "game_start",
+                            "effect": {
+                                "map_spawn_item": "radio",
+                                "use_item_group": True,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unproven_map_spawn_actor",
+                            "effect": {"map_spawn_item": "radio"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "late_map_spawn_after_noop",
+                            "required_event": "game_start",
+                            "effect": ["nothing", {"map_spawn_item": "radio"}],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "map_spawn_item_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.world.spawn_item("), 1)
+            self.assertIn(
+                'services.types.id("item", "radio"), 2)', main
+            )
+            self.assertIn("dynamic ids/counts, item groups, containers", main)
+            self.assertIn("does not prove the event-exclusive live Avatar", main)
+            self.assertIn("an earlier EOC effect may relocate the Avatar", main)
+            todo_by_effect = {
+                effect_id: next(
+                    todo.category for todo in result.todos
+                    if f"EOC {effect_id} effect #" in todo.message
+                )
+                for effect_id in (
+                    "dynamic_map_spawn_count",
+                    "group_map_spawn",
+                    "unproven_map_spawn_actor",
+                    "late_map_spawn_after_noop",
+                )
+            }
+            self.assertEqual(
+                todo_by_effect,
+                {
+                    "dynamic_map_spawn_count": "platform_gap",
+                    "group_map_spawn": "platform_gap",
+                    "unproven_map_spawn_actor": "manual_rewrite",
+                    "late_map_spawn_after_noop": "platform_gap",
+                },
+            )
+
+    def test_real_example_map_spawn_item_location_remains_todo(self) -> None:
+        entries = json.loads(
+            (REPOSITORY_ROOT / "data/json/effects_on_condition/example_eocs.json")
+            .read_text(encoding="utf-8")
+        )
+        example = next(
+            entry for entry in entries
+            if entry.get("id") == "EOC_map_item_test2"
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([example]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "real_map_spawn_item_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("services.world.spawn_item(", main)
+            self.assertIn("loc is a legacy var_info lookup", main)
+            self.assertIn("requires a loaded position", report)
 
     def test_referenced_game_start_spawn_item_remains_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
