@@ -6343,6 +6343,15 @@ function PlatformDialogueContext:has_reason() end
 ---@return string
 function PlatformDialogueContext:reason() end
 
+---Open the native Avatar item-offer menu for the current interlocutor.
+---Only available in a writable `on_action` callback. The interlocutor's native
+---`give_item_to` result (including cancellation or refusal text) is stored in
+---the dialogue reason and returned unchanged. Non-NPC talkers use their native
+---override; the base talker returns "Nope.".
+---@param use_item boolean True asks the interlocutor to use, consume, or equip the offered item; false asks it to carry the item.
+---@return string native_reason
+function PlatformDialogueContext:offer_item_to_interlocutor(use_item) end
+
 ---@param kind string
 ---@param difficulty integer
 ---@param skill? string

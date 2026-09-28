@@ -11474,6 +11474,92 @@ assert(not available())
         self.assertNotIn("services.npcs.ai_rules(beta)", topic_main)
         self.assertTrue(topic_result.todos)
 
+    def test_talk_topic_item_offer_lowers_only_native_source_shape(self) -> None:
+        source_path = Path("data/json/npcs/common_chat/TALK_COMMON_ALLY.json")
+        topics = json.loads((REPOSITORY_ROOT / source_path).read_text())
+        ally_topic = next(
+            topic for topic in topics
+            if topic.get("type") == "talk_topic" and any(
+                response.get("effect") in (
+                    "npc_gets_item", "npc_gets_item_to_use",
+                )
+                for response in topic.get("responses", [])
+                if isinstance(response, dict)
+            )
+        )
+        native_offers = [
+            response for response in ally_topic["responses"]
+            if isinstance(response, dict) and response.get("effect") in (
+                "npc_gets_item", "npc_gets_item_to_use",
+            )
+        ]
+        self.assertEqual(
+            [response["effect"] for response in native_offers],
+            ["npc_gets_item_to_use", "npc_gets_item"],
+        )
+        self.assertTrue(all(
+            set(response) == {"text", "condition", "topic", "effect"}
+            and response["condition"] == {"not": "is_by_radio"}
+            for response in native_offers
+        ))
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, ally_topic), result
+        )
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("return not dialogue_context:by_radio()", rendered)
+        self.assertIn(
+            "dialogue_context:offer_item_to_interlocutor(true)", rendered
+        )
+        self.assertIn(
+            "dialogue_context:offer_item_to_interlocutor(false)", rendered
+        )
+        self.assertIn("on_action = function(dialogue_context, trial_success)", rendered)
+        self.assertNotIn("on_select = function(dialogue_context, trial_success)", rendered)
+
+        unsupported_responses = (
+            {
+                "text": "Offer under a skill check",
+                "effect": "npc_gets_item",
+                "trial": {"type": "PERSUADE"},
+            },
+            {
+                "text": "Offer with an unrendered condition",
+                "effect": "npc_gets_item_to_use",
+                "condition": {"and": [{"not": "is_by_radio"}]},
+            },
+            {
+                "text": "Offer with an object effect",
+                "effect": {"effect": "npc_gets_item"},
+            },
+        )
+        for response in unsupported_responses:
+            with self.subTest(response=response):
+                unsupported_result = migrate_lua_first.MigrationResult()
+                unsupported_topic = migrate_lua_first.SourceObject(
+                    Path("synthetic.json"), 1, {
+                        "type": "talk_topic",
+                        "id": "unsupported_item_offer_shape",
+                        "responses": [response],
+                    },
+                )
+                unsupported_rendered = migrate_lua_first.render_talk_topic(
+                    unsupported_topic, unsupported_result
+                )
+                self.assertIsNotNone(unsupported_rendered)
+                assert unsupported_rendered is not None
+                self.assertNotIn("offer_item_to_interlocutor", unsupported_rendered)
+                self.assertTrue(unsupported_result.todos)
+                todo_text = "\n".join(
+                    todo.message for todo in unsupported_result.todos
+                )
+                if isinstance(response["effect"], str):
+                    self.assertIn("native item offers lower only for direct string", todo_text)
+                else:
+                    self.assertIn("object-shaped forms are not lowered", todo_text)
+
     def test_talk_topic_stolen_item_condition_uses_native_participant_order(self) -> None:
         for selector in ("u_has_stolen_item", "npc_has_stolen_item"):
             with self.subTest(selector=selector):

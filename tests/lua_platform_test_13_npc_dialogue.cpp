@@ -1,6 +1,27 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 
+class platform_item_offer_test_talker : public talker_npc
+{
+    public:
+        platform_item_offer_test_talker( npc *const subject,
+                                         std::vector<std::string> results ) :
+            talker_npc( subject ), subject_( subject ), results_( std::move( results ) ) {}
+
+        std::string give_item_to( const bool use_item ) override {
+            use_item_calls.push_back( use_item );
+            trust_before_call.push_back( subject_->op_of_u.trust );
+            return results_.at( use_item_calls.size() - 1 );
+        }
+
+        std::vector<bool> use_item_calls;
+        std::vector<int> trust_before_call;
+
+    private:
+        npc *subject_;
+        std::vector<std::string> results_;
+};
+
 TEST_CASE( "lua_platform_exact_creature_subtypes_fail_closed", "[lua][platform]" )
 {
     const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
@@ -856,6 +877,149 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
         failing_context_valid();
     REQUIRE( invalidated_failure_context.valid() );
     CHECK_FALSE( invalidated_failure_context.get<bool>() );
+    cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",
+           "[lua][platform][dialogue][npc]" )
+{
+    // Native f_npc_gets_item assigns the exact beta give_item_to result.  Inject
+    // that virtual result here so acceptance, refusal, and cancellation are
+    // deterministic without opening the real titled item menu.
+    cata::lua_platform::clear_active_runtimes();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_item_offer", 91, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua.script( R"(
+        item_offer_events = {}
+        function item_offer_action(context, trial_success)
+            local call = #item_offer_events + 1
+            local use_item = call == 2
+            local result = context:offer_item_to_interlocutor(use_item)
+            item_offer_events[call] = {
+                use_item = use_item,
+                result = result,
+                reason = context:reason(),
+                trial_success = trial_success
+            }
+        end
+    )" );
+
+    sol::table responses = owner_lua.create_table();
+    for( int index = 1; index <= 3; ++index ) {
+        sol::table response = owner_lua.create_table();
+        response["text"] = "Offer item outcome " + std::to_string( index );
+        response["on_action"] = owner_lua["item_offer_action"];
+        responses[index] = response;
+    }
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_ITEM_OFFER_TEST";
+    descriptor["dynamic_line"] = "Item offer contract test";
+    descriptor["responses"] = responses;
+    const sol::table dialogue_api = ccb["dialogue"];
+    const sol::protected_function register_topic = dialogue_api["register_topic"];
+    const sol::protected_function_result registered =
+        register_topic( descriptor );
+    REQUIRE( registered.valid() );
+
+    npc speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1331 ), true );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1332 ), true );
+    auto injected_interlocutor = std::make_unique<platform_item_offer_test_talker>(
+                                     &interlocutor,
+    std::vector<std::string> { "accepted", "refused", "cancelled" } );
+    platform_item_offer_test_talker *const injected_interlocutor_ptr =
+        injected_interlocutor.get();
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    dialogue conversation( std::make_unique<talker_npc>( &speaker ),
+                           std::move( injected_interlocutor ) );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            conversation, runtime_identity, world_generation );
+    conversation.gen_responses( talk_topic( "TALK_CCB_ITEM_OFFER_TEST" ) );
+    REQUIRE( conversation.responses.size() == 3 );
+
+    const std::vector<std::string> expected_reasons = {
+        "accepted", "refused", "cancelled"
+    };
+    for( std::size_t index = 0; index < conversation.responses.size(); ++index ) {
+        talk_response &response = conversation.responses[index];
+        response.success.opinion.trust = 1;
+        const int trust_before_action = interlocutor.op_of_u.trust;
+        response.success.apply( conversation );
+        REQUIRE( injected_interlocutor_ptr->trust_before_call.size() >=
+                 index + 1 );
+        CHECK( injected_interlocutor_ptr->trust_before_call[index] ==
+               trust_before_action );
+        CHECK( conversation.reason == expected_reasons[index] );
+    }
+
+    REQUIRE( injected_interlocutor_ptr->use_item_calls.size() == 3 );
+    CHECK_FALSE( injected_interlocutor_ptr->use_item_calls[0] );
+    CHECK( injected_interlocutor_ptr->use_item_calls[1] );
+    CHECK_FALSE( injected_interlocutor_ptr->use_item_calls[2] );
+    const sol::table action_events = owner_lua["item_offer_events"];
+    REQUIRE( action_events.size() == expected_reasons.size() );
+    for( std::size_t index = 0; index < expected_reasons.size(); ++index ) {
+        const sol::table event = action_events.get<sol::table>( index + 1 );
+        CHECK( event["result"].get<std::string>() == expected_reasons[index] );
+        CHECK( event["reason"].get<std::string>() == expected_reasons[index] );
+        CHECK( event["trial_success"].get<bool>() );
+    }
+
+    using dialogue_context = cata::lua_platform::dialogue::context;
+    dialogue_context outside_action(
+        owner_lua.lua_state(), conversation, "TALK_CCB_ITEM_OFFER_TEST", true,
+        "dialogue context is stale", {}, session, runtime_identity,
+        world_generation );
+    CHECK_THROWS( outside_action.offer_item_to_interlocutor( false ) );
+    CHECK( injected_interlocutor_ptr->use_item_calls.size() == 3 );
+
+    dialogue non_npc_beta( std::make_unique<talker_topic>(),
+                           std::make_unique<talker_topic>() );
+    auto non_npc_session = cata::lua_platform::dialogue::begin_session(
+                               non_npc_beta, runtime_identity, world_generation );
+    non_npc_session = cata::lua_platform::dialogue::session_for(
+                          non_npc_beta, "TALK_CCB_ITEM_OFFER_TEST", runtime_identity,
+                          world_generation );
+    dialogue_context non_npc_context(
+        owner_lua.lua_state(), non_npc_beta, "TALK_CCB_ITEM_OFFER_TEST", true,
+        "dialogue context is stale", {}, non_npc_session, runtime_identity,
+        world_generation, true );
+    const std::string native_base_reason =
+        non_npc_beta.actor( true )->give_item_to( false );
+    CHECK( non_npc_context.offer_item_to_interlocutor( false ) == native_base_reason );
+    CHECK( non_npc_beta.reason == native_base_reason );
+
+    dialogue missing_beta( std::make_unique<talker_topic>(), nullptr );
+    auto missing_beta_session =
+        cata::lua_platform::dialogue::begin_session(
+            missing_beta, runtime_identity, world_generation );
+    missing_beta_session = cata::lua_platform::dialogue::session_for(
+                               missing_beta, "TALK_CCB_ITEM_OFFER_TEST", runtime_identity,
+                               world_generation );
+    dialogue_context missing_beta_context(
+        owner_lua.lua_state(), missing_beta, "TALK_CCB_ITEM_OFFER_TEST", true,
+        "dialogue context is stale", {}, missing_beta_session, runtime_identity,
+        world_generation, true );
+    CHECK_THROWS( missing_beta_context.offer_item_to_interlocutor( false ) );
+    cata::lua_platform::dialogue::end_session( non_npc_beta );
+    cata::lua_platform::dialogue::end_session( missing_beta );
     cata::lua_platform::dialogue::end_session( conversation );
 }
 
