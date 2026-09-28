@@ -1987,7 +1987,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     CHECK_FALSE( native_normal_claims[0] );
     CHECK_FALSE( native_normal_claims[1] );
     CHECK_FALSE( native_normal_switch_done );
-    CHECK( native_repeat.gen_repeat_response(
+    CHECK( native_repeat.response.gen_repeat_response(
                native_normal, repeat_item_id, native_normal_switch_done ) );
     REQUIRE( native_normal.responses.size() == 2 );
     CHECK( native_normal.responses[0].truetext.translated() == "Fallback" );
@@ -2001,7 +2001,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
                 native_debug, native_debug_switch_done );
     REQUIRE( native_debug_claims.size() == 2 );
     CHECK( native_debug_switch_done );
-    CHECK_FALSE( native_repeat.gen_repeat_response(
+    CHECK_FALSE( native_repeat.response.gen_repeat_response(
                      native_debug, repeat_item_id, native_debug_switch_done ) );
     REQUIRE( native_debug.responses.size() == 2 );
     CHECK( native_debug.responses[0].truetext.translated() == "False switch" );
