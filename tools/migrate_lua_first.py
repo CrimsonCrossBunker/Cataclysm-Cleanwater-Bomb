@@ -21649,76 +21649,9 @@ def render_static_transform_line_effect(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Render a bounded transform_line over two same-actor coordinates."""
-    if set(effect) != {"transform_line", "first", "second"}:
-        return None
-    transform = effect.get("transform_line")
-    if not safe_platform_id(transform):
-        return None
-    first = _coordinate_variable_descriptor(effect.get("first"))
-    second = _coordinate_variable_descriptor(effect.get("second"))
-    if first is None or second is None:
-        return None
-
-    def read_coordinate(
-        name: str, descriptor: tuple[str, str]
-    ) -> tuple[list[str], str, str] | None:
-        scope, variable = descriptor
-        if scope in {"u", "npc"}:
-            handle = _coordinate_variable_handle(
-                scope, avatar_actor_proven, npc_actor_proven
-            )
-            if handle is None:
-                return None
-            return (
-                [
-                    f"    local {name} = service_value(services.variables.get(",
-                    f"        {handle}, {lua_quote(variable)}))",
-                ],
-                f"{name}.value",
-                f"{name}.exists and {name}.value ~= nil",
-            )
-        if scope == "global":
-            return (
-                [
-                    f"    local {name} = service_value(services.variables.get_global(",
-                    f"        {lua_quote(variable)}))",
-                ],
-                f"{name}.value",
-                f"{name}.exists and {name}.value ~= nil",
-            )
-        if scope == "context":
-            return (
-                [f"    local {name} = context.data[{lua_quote(variable)}]"],
-                name,
-                f"{name} ~= nil",
-            )
-        if not (avatar_actor_proven or npc_actor_proven):
-            return None
-        return (
-            [
-                f"    local {name} = service_value(services.variables.resolve(",
-                f"        context.data, actor, \"var\", {lua_quote(variable)}))",
-            ],
-            f"{name}.value",
-            f"{name}.exists and {name}.value ~= nil",
-        )
-
-    first_read = read_coordinate("first", first)
-    second_read = read_coordinate("second", second)
-    if first_read is None or second_read is None:
-        return None
-    first_lines, first_value, first_condition = first_read
-    second_lines, second_value, second_condition = second_read
-    return [
-        *first_lines,
-        *second_lines,
-        f"    if {first_condition} and {second_condition} then",
-        "        services.world.transform_line(",
-        f"            {first_value}, {second_value}, services.types.id(\"ter_furn_transform\", "
-        f"{lua_quote(transform)}))",
-        "    end",
-    ]
+    """Keep transform_line fail-closed until the Platform can load distant maps."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def _combat_actor_expression(
@@ -24157,16 +24090,14 @@ def render_static_reveal_map(
     return [f"    services.overmap.reveal({target}, {radius_expression})"]
 
 
-def render_static_location_revert_or_copy(
+def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
 ) -> list[str] | None:
-    if key not in effect:
+    if key != "revert_location" or key not in effect:
         return None
     allowed = {key, "time_in_future", "key"}
-    if key == "copy_location":
-        allowed.add("new_loc")
     if set(effect) - allowed:
         return None
     target = _coordinate_source_expression(
@@ -24199,22 +24130,9 @@ def render_static_location_revert_or_copy(
     if target is None or delay is None or event_key_expression is None:
         return None
     target_omt = f"({target}):project_to(\"omt\")"
-    if key == "revert_location":
-        return [
-            "    services.world.schedule_location_revert(",
-            f"        {target_omt}, {delay}, {event_key_expression})",
-        ]
-    source = _coordinate_source_expression(
-        effect.get("new_loc"), avatar_actor_proven, npc_actor_proven
-    )
-    if source is None:
-        return None
-    # In the legacy effect, the member value is the snapshot source and
-    # ``new_loc`` is the destination.  Keep that order for the Platform API.
     return [
-        "    services.world.schedule_location_copy(",
-        f"        {target_omt}, ({source}):project_to(\"omt\"), "
-        f"{delay}, {event_key_expression})",
+        "    services.world.schedule_location_revert(",
+        f"        {target_omt}, {delay}, {event_key_expression})",
     ]
 
 
@@ -32017,12 +31935,10 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, dict) and
-                ("revert_location" in effect or "copy_location" in effect)
-            ):
-                key = "revert_location" if "revert_location" in effect else "copy_location"
-                rendered = render_static_location_revert_or_copy(effect, key)
+            elif isinstance(effect, dict) and "revert_location" in effect:
+                rendered = render_static_location_revert(
+                    effect, "revert_location"
+                )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
@@ -32037,6 +31953,26 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
+            elif isinstance(effect, dict) and "copy_location" in effect:
+                copy_gap = (
+                    "copy_location reads source and destination var_info values as "
+                    "absolute map squares and schedules four timed submap copies "
+                    "with linked-item offsets and translocator state, then "
+                    "invalidates the destination map cache immediately; "
+                    "services.world.schedule_location_copy models "
+                    "those mutations but may generate a missing source OMT, unlike "
+                    "the native loaded-submap lookup. The current EOC source does not "
+                    "prove typed coordinates or Platform bounds: its delay must be "
+                    "1 turn..10000 days and its key at most 256 bytes, while native "
+                    "accepts zero/negative delays and maps 'infinite' to INT_MAX turns"
+                )
+                lines.append(f"    -- TODO: {copy_gap}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{copy_gap}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_transform_radius" in effect or "npc_transform_radius" in effect)
@@ -33466,13 +33402,16 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate transform_line through an explicit "
-                        "world transformation service."
+                        "    -- TODO: native transform_line loads a temporary map "
+                        "from the line origin and can transform off-screen tiles; "
+                        "services.world.transform_line requires both endpoints in "
+                        "the currently loaded map."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "transform_line can load a distant map, while the Platform "
+                        "operation only accepts loaded-map endpoints"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_travel_to_dimension" in effect:
@@ -33688,13 +33627,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: mirror_coordinates needs a typed "
-                        "absolute-ms reflection operation and exact beta proof."
+                        "    -- TODO: mirror_coordinates reads and writes native "
+                        "absolute-ms var_info values; the Platform has no equivalent "
+                        "scope-correct reflection operation."
                     )
                     result.add_todo(
                         "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs safe absolute-ms reflection and variable-scope semantics"
+                        "needs absolute-ms reflection and exact input/output "
+                        "variable-scope semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:
