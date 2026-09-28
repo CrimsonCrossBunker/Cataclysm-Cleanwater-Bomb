@@ -29565,7 +29565,7 @@ assert(context.data.picked==selected)
         )
         self.assertIn("native npc_map_run_eocs uses mutable actor(true)", main)
         self.assertIn("copied dialogue/context", main)
-        self.assertIn("missing-beta diagnostic", main)
+        self.assertIn("debug diagnostic when beta is absent", main)
         self.assertIn("closest_points_first order", report)
         self.assertIn("map_reentry", main)
         for selector in ("u_map_run_eocs", "npc_map_run_eocs"):
@@ -29573,6 +29573,84 @@ assert(context.data.picked==selected)
                 any(selector in todo_record.message for todo_record in result.todos),
                 f"missing classified TODO for {selector}",
             )
+
+    def test_real_map_run_eocs_callers_keep_coordinate_dependent_shapes_todo(self) -> None:
+        bombastic_path = (
+            REPOSITORY_ROOT / "data/mods/BombasticPerks/perkdata/closetland.json"
+        )
+        earthshaper_path = (
+            REPOSITORY_ROOT / "data/mods/Magiclysm/Spells/earthshaper.json"
+        )
+
+        def collect_map_effects(value: Any) -> list[dict[str, Any]]:
+            found: list[dict[str, Any]] = []
+
+            def visit(node: Any) -> None:
+                if isinstance(node, dict):
+                    if "u_map_run_eocs" in node or "npc_map_run_eocs" in node:
+                        found.append(node)
+                    for child in node.values():
+                        visit(child)
+                elif isinstance(node, list):
+                    for child in node:
+                        visit(child)
+
+            visit(value)
+            return found
+
+        bombastic = json.loads(bombastic_path.read_text(encoding="utf-8"))
+        earthshaper = json.loads(earthshaper_path.read_text(encoding="utf-8"))
+        bombastic_calls = collect_map_effects(bombastic)
+        earthshaper_calls = collect_map_effects(earthshaper)
+
+        self.assertTrue(bombastic_calls)
+        self.assertTrue(earthshaper_calls)
+        self.assertTrue(all("npc_map_run_eocs" not in call for call in (
+            *bombastic_calls, *earthshaper_calls,
+        )))
+        self.assertTrue(any(
+            "store_coordinates_in" in call and "condition" in call and
+            call.get("stop_at_first") is False
+            for call in bombastic_calls
+        ))
+        self.assertTrue(any(
+            "target_var" in call and "store_coordinates_in" in call and
+            "condition" in call and call.get("stop_at_first") is False
+            for call in earthshaper_calls
+        ))
+
+        native_dialogue = (REPOSITORY_ROOT / "src/npctalk.cpp").read_text(
+            encoding="utf-8"
+        )
+        native_activation = (REPOSITORY_ROOT / "src/effect_on_condition.cpp").read_text(
+            encoding="utf-8"
+        )
+        map_function = native_dialogue.split(
+            "talk_effect_fun_t::func f_map_run_eocs(", 1
+        )[1].split("\ntalk_effect_fun_t::func f_set_talker", 1)[0]
+        activation_function = native_activation.split(
+            "bool effect_on_condition::activate(", 1
+        )[1].split("\nbool effect_on_condition::activate_activation_only", 1)[0]
+        self.assertIn("closest_points_first( pos, range.evaluate( d ) )", map_function)
+        self.assertIn("if( cond( d ) )", map_function)
+        self.assertIn("eoc_id->activate( d )", map_function)
+        self.assertIn("dialogue d_eoc( d )", activation_function)
+        self.assertIn("false_effect.apply( d_eoc )", activation_function)
+        self.assertIn("global && run_for_npcs", activation_function)
+
+        result = migrate_lua_first.migrate(
+            migrate_lua_first.load_objects([bombastic_path, earthshaper_path]),
+            "map_run_eocs_real_corpus",
+        )
+        main = result.files[Path("main.lua")]
+        self.assertIn("native u_map_run_eocs uses closest_points_first order", main)
+        self.assertIn("global run_for_npcs", main)
+        self.assertIn("typed abs_ms target/read/write scope remains unproven", main)
+        self.assertTrue(any(
+            "u_map_run_eocs" in todo_record.message and
+            "EOC_EARTHSHAPER_REMOVE_CORPSES" in todo_record.message
+            for todo_record in result.todos
+        ))
 
     def test_item_eoc_traversals_remain_todo_with_proven_actors_and_callbacks(self) -> None:
         callback_names = {
