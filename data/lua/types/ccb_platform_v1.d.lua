@@ -9858,7 +9858,17 @@ function CcbNpcGroomingApi.open_style(provider, client, area) end
 function CcbNpcGroomingApi.provide(provider, client, service) end
 
 ---@class CcbNpcTrainingOfferings
----@field style_count integer Native count of teachable martial-art styles offered to this student.
+---@field teacher GameHandle Exact teacher Character.
+---@field student GameHandle Exact student Character.
+---@field skills GameId[] Complete skill offers in native order.
+---@field proficiencies GameId[] Complete proficiency offers in native order.
+---@field styles GameId[] Complete teachable martial-art style offers in native order.
+---@field spells GameId[] Complete teachable spell offers in native order.
+---@field skill_count integer Number of offered skills.
+---@field proficiency_count integer Number of offered proficiencies.
+---@field style_count integer Number of offered teachable martial-art styles.
+---@field spell_count integer Number of offered teachable spells.
+---@field has_any boolean Whether any of the four offer lists is non-empty.
 
 ---@class CcbNpcTrainingApi
 local CcbNpcTrainingApi = {}

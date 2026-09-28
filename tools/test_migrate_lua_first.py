@@ -10389,43 +10389,19 @@ assert(not available())
                 main,
             )
 
-    def test_train_styles_requires_explicit_native_talker_pair(self) -> None:
-        for condition, teacher, student in (
-            ("u_train_styles", "actor", "context.actors.beta"),
-            ("npc_train_styles", "context.actors.beta", "actor"),
-        ):
-            with self.subTest(condition=condition):
-                expression = migrate_lua_first.render_eoc_condition_expression(
-                    condition,
-                    generic_character_actor_proven=True,
-                    npc_actor_expression="context.actors.beta",
+    def test_train_styles_require_a_connected_live_pair_callback(self) -> None:
+        for selector in ("u_train_styles", "npc_train_styles"):
+            with self.subTest(selector=selector):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        selector,
+                        avatar_actor_proven=True,
+                        npc_actor_proven=True,
+                        generic_character_actor_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                        training_pair_proven=True,
+                    )
                 )
-                self.assertEqual(
-                    expression,
-                    "context ~= nil and context.actors ~= nil and "
-                    "context.actors.beta ~= nil and "
-                    'actor ~= nil and (actor.subtype == "avatar" or '
-                    'actor.subtype == "character" or actor.subtype == "npc") and '
-                    '(context.actors.beta.subtype == "avatar" or '
-                    'context.actors.beta.subtype == "character" or '
-                    'context.actors.beta.subtype == "npc") and '
-                    f"service_value(services.npcs.training.offerings({teacher}, "
-                    f"{student})).style_count > 0",
-                )
-        self.assertIsNone(
-            migrate_lua_first.render_eoc_condition_expression(
-                "u_train_styles",
-                avatar_actor_proven=True,
-                npc_actor_expression=None,
-            )
-        )
-        self.assertIsNone(
-            migrate_lua_first.render_eoc_condition_expression(
-                "npc_train_styles",
-                npc_actor_proven=True,
-                npc_actor_expression="actor",
-            )
-        )
 
     def test_dynamic_or_unproven_u_has_profession_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14665,68 +14641,63 @@ assert(not available())
                 main,
             )
 
-    def test_spell_training_requires_a_proven_talker_pair(self) -> None:
-        avatar_train = migrate_lua_first.render_eoc_condition_expression(
-            "u_train_spells",
-            npc_actor_expression="context.actors.beta",
-            generic_character_actor_proven=True,
-            training_pair_proven=True,
-        )
-        npc_train = migrate_lua_first.render_eoc_condition_expression(
-            "npc_train_spells",
-            npc_actor_expression="context.actors.beta",
-            generic_character_actor_proven=True,
-            training_pair_proven=True,
-        )
-
-        self.assertIsNotNone(avatar_train)
-        self.assertIn(
-            "services.characters.training_offers(actor, context.actors.beta)",
-            avatar_train,
-        )
-        self.assertIsNotNone(npc_train)
-        self.assertIn(
-            "services.characters.training_offers(context.actors.beta, actor)",
-            npc_train,
-        )
-        self.assertIsNone(
-            migrate_lua_first.render_eoc_condition_expression(
-                "npc_train_spells",
-                npc_actor_proven=True,
-                npc_actor_expression="actor",
-                training_pair_proven=False,
-            )
-        )
-
+    def test_training_offer_conditions_remain_todo_until_pair_callback_is_wired(self) -> None:
+        for selector in (
+            "u_train_styles", "npc_train_styles",
+            "u_train_spells", "npc_train_spells",
+        ):
+            with self.subTest(selector=selector):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        selector,
+                        avatar_actor_proven=True,
+                        npc_actor_proven=True,
+                        generic_character_actor_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                        training_pair_proven=True,
+                    )
+                )
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps([
                     {
                         "type": "talk_topic",
-                        "id": "TALK_SPELL_TRAINING",
-                        "responses": [{
-                            "text": "train",
-                            "topic": "TALK_DONE",
-                            "effect": {"run_eocs": "paired_spell_training"},
-                        }],
+                        "id": "TALK_TRAINING_CALLBACKS",
+                        "responses": [
+                            {
+                                "text": "run callback effect",
+                                "topic": "TALK_DONE",
+                                "effect": {"run_eocs": "paired_training"},
+                            },
+                            {
+                                "text": "run legacy callback fields",
+                                "topic": "TALK_DONE",
+                                "true_eocs": "paired_training",
+                                "false_eocs": "paired_training",
+                            },
+                        ],
                     },
                     {
                         "type": "effect_on_condition",
-                        "id": "paired_spell_training",
+                        "id": "paired_training",
                         "condition": {
                             "and": [
+                                "u_train_styles",
+                                "npc_train_styles",
                                 "u_train_spells",
-                                {"not": "npc_train_spells"},
+                                "npc_train_spells",
                             ],
                         },
                         "effect": [],
                     },
                     {
                         "type": "effect_on_condition",
-                        "id": "single_actor_spell_training",
+                        "id": "single_actor_training",
                         "required_event": "npc_becomes_hostile",
-                        "condition": "npc_train_spells",
+                        "condition": {
+                            "or": ["npc_train_styles", "npc_train_spells"],
+                        },
                         "effect": [],
                     },
                 ]),
@@ -14734,18 +14705,25 @@ assert(not available())
             )
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]),
-                "spell_training_mod",
+                "training_pair_mod",
             )
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertEqual(main.count("services.characters.training_offers("), 2)
-        self.assertIn("spell_count > 0", main)
+        self.assertNotIn("services.characters.training_offers(", main)
+        self.assertNotIn("services.npcs.training.offerings(", main)
         self.assertTrue(any(
-            "EOC single_actor_spell_training condition TODO" in entry
+            "EOC paired_training condition TODO" in entry and
+            "supported EOC callback supplies the native alpha and beta" in entry
             for entry in result.todos
         ))
-        self.assertIn("condition TODO", report)
+        self.assertTrue(any(
+            "EOC single_actor_training condition TODO" in entry and
+            "supported EOC callback supplies the native alpha and beta" in entry
+            for entry in result.todos
+        ))
+        self.assertIn("topic TALK_TRAINING_CALLBACKS response effect needs a native callback", report)
+        self.assertIn("response fields need Lua conversion: false_eocs, true_eocs", report)
 
     def test_translates_senses_species_and_turn_cost(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

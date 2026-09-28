@@ -12,6 +12,7 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
+#include "character_martial_arts.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "flag.h"
@@ -22,6 +23,8 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "magic.h"
+#include "martialarts.h"
 #include "npc.h"
 #include "rng.h"
 #include "skill.h"
@@ -34,11 +37,15 @@ class runtime;
 
 static const itype_id itype_longsword( "longsword" );
 static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
+static const matype_id matype_style_judo( "style_judo" );
+static const matype_id matype_style_karate( "style_karate" );
 static const proficiency_id proficiency_prof_carving( "prof_carving" );
 static const skill_id skill_fabrication( "fabrication" );
+static const spell_id spell_test_spell_lava( "test_spell_lava" );
+static const spell_id spell_test_spell_pew( "test_spell_pew" );
 
 TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
-           "[lua][platform][skills][semantic]" )
+           "[lua][platform][skills][training][semantic]" )
 {
     cata::lua_platform::clear_active_runtimes();
     avatar player;
@@ -129,6 +136,55 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     }
                 }
             }
+            player.martial_arts_data->clear_styles();
+            partner.martial_arts_data->clear_styles();
+            const matype_id &training_style = is_npc ? matype_style_judo :
+                                                  matype_style_karate;
+            teacher.martial_arts_data->add_martialart( training_style );
+            const spell_id &training_spell = is_npc ? spell_test_spell_lava :
+                                                spell_test_spell_pew;
+            teacher.magic->learn_spell( training_spell, teacher, true );
+            const conditional_t styles_condition( prefix + "train_styles" );
+            const conditional_t spells_condition( prefix + "train_spells" );
+            const auto compare_training_offers = [&]() {
+                const bool native_styles = styles_condition( conversation );
+                const bool native_spells = spells_condition( conversation );
+                const std::vector<matype_id> style_offers =
+                    teacher.styles_offered_to( &student );
+                const std::vector<spell_id> spell_offers =
+                    teacher.spells_offered_to( &student );
+                const sol::table offers = value_of(
+                                              services["characters"]["training_offers"],
+                                              teacher_handle, student_handle ).as<sol::table>();
+                const sol::table npc_offers = value_of(
+                                                  services["npcs"]["training"]["offerings"],
+                                                  teacher_handle, student_handle ).as<sol::table>();
+                CHECK( native_styles == !style_offers.empty() );
+                CHECK( native_spells == !spell_offers.empty() );
+                CHECK( native_styles == ( offers["style_count"].get<int>() > 0 ) );
+                CHECK( native_spells == ( offers["spell_count"].get<int>() > 0 ) );
+                CHECK( native_styles == ( npc_offers["style_count"].get<int>() > 0 ) );
+                CHECK( offers["style_count"].get<int>() ==
+                       static_cast<int>( style_offers.size() ) );
+                CHECK( offers["spell_count"].get<int>() ==
+                       static_cast<int>( spell_offers.size() ) );
+                CHECK( npc_offers["style_count"].get<int>() ==
+                       static_cast<int>( style_offers.size() ) );
+                CHECK( npc_offers["spell_count"].get<int>() ==
+                       offers["spell_count"].get<int>() );
+            };
+            compare_training_offers();
+            CHECK( styles_condition( conversation ) );
+            CHECK( spells_condition( conversation ) );
+            for( const matype_id &offered : teacher.styles_offered_to( &student ) ) {
+                student.martial_arts_data->add_martialart( offered );
+            }
+            for( const spell_id &offered : teacher.spells_offered_to( &student ) ) {
+                student.magic->learn_spell( offered, student, true );
+            }
+            compare_training_offers();
+            CHECK_FALSE( styles_condition( conversation ) );
+            CHECK_FALSE( spells_condition( conversation ) );
             REQUIRE( teacher.wear_item( item( itype_test_hazmat_shirt ), false ).has_value() );
             for( const auto &part_expected : std::vector<std::pair<std::string, bool>> {
                      { "torso", true }, { "head", false }
