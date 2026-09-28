@@ -19189,8 +19189,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.npcs.drop_stolen_items(", main)
             self.assertIn("services.trade.quote(provider, recipient", main)
             self.assertIn("services.trade.commit(quote.token", main)
-            self.assertIn("monster-purchase conversion", report)
-            self.assertIn("cash-payment conversion", report)
+            self.assertIn(
+                "native u_buy_monster requires an alpha avatar and beta NPC", report
+            )
+            self.assertIn(
+                "native u_spend_cash calls dialogue actor(true).buy_from", report
+            )
             self.assertEqual(main.count("services.inventory.remove_type("), 1)
             self.assertIn('services.types.id("item", "rock")', main)
             self.assertIn(
@@ -24879,29 +24883,61 @@ assert(not pcall(function() return U_EXPRESSION end))
                 self.assertIn(reason, main)
                 self.assertIn(reason, report)
 
-    def test_legacy_item_trade_talk_topic_callbacks_remain_todo(self) -> None:
+    def test_legacy_trade_action_talk_topic_callbacks_remain_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
-                json.dumps({
-                    "type": "talk_topic",
-                    "id": "legacy_item_trade_topic",
-                    "dynamic_line": "Trade.",
-                    "responses": [
-                        {
-                            "text": "Quote",
-                            "effect": {"quote_npc_trade_item": "coin"},
-                        },
-                        {
-                            "text": "Buy",
-                            "effect": {"u_buy_item": "apple", "cost": 50},
-                        },
-                        {
-                            "text": "Sell",
-                            "effect": {"u_sell_item": "rock", "cost": 25},
-                        },
-                    ],
-                }),
+                json.dumps([
+                    {
+                        "type": "talk_topic",
+                        "id": "legacy_item_trade_topic",
+                        "dynamic_line": "Trade.",
+                        "responses": [
+                            {
+                                "text": "Quote",
+                                "effect": {"quote_npc_trade_item": "coin"},
+                            },
+                            {
+                                "text": "Buy",
+                                "effect": {"u_buy_item": "apple", "cost": 50},
+                            },
+                            {
+                                "text": "Sell",
+                                "effect": {"u_sell_item": "rock", "cost": 25},
+                            },
+                            {"text": "Donate", "effect": {"u_bulk_donate": 2}},
+                            {"text": "NPC donate", "effect": "npc_bulk_donate"},
+                            {"text": "Trade", "effect": {"u_bulk_trade_accept": 2}},
+                            {"text": "NPC trade", "effect": "npc_bulk_trade_accept"},
+                            {
+                                "text": "Buy monster",
+                                "effect": {
+                                    "u_buy_monster": "mon_dog",
+                                    "cost": 50,
+                                    "count": 1,
+                                },
+                            },
+                            {
+                                "text": "Spend cash",
+                                "effect": {
+                                    "u_spend_cash": 50,
+                                    "true_eocs": "spend_success",
+                                    "false_eocs": "spend_failure",
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "spend_success",
+                        "effect": "nothing",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "spend_failure",
+                        "effect": "nothing",
+                    },
+                ]),
                 encoding="utf-8",
             )
             result = migrate_lua_first.migrate(
@@ -24910,17 +24946,24 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 1)
             self.assertNotIn("on_select", main)
             self.assertNotIn("services.trade.quote(", main)
             self.assertNotIn("services.trade.commit(", main)
             self.assertNotIn("services.inventory.give(", main)
             self.assertNotIn("services.inventory.remove_type(", main)
+            self.assertNotIn("services.spawns.monster(", main)
             for reason in (
                 "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
                 "native u_buy_item requires a live beta NPC for buy_from(cost)",
                 "native u_sell_item consumes alpha inventory by item type/count or charges",
+                "native u_bulk_donate selects by dialogue cur_item type",
+                "native npc_bulk_donate selects by dialogue cur_item type",
+                "native u_bulk_trade_accept selects by dialogue cur_item type",
+                "native npc_bulk_trade_accept selects by dialogue cur_item type",
+                "native u_buy_monster requires an alpha avatar and beta NPC",
+                "native u_spend_cash calls dialogue actor(true).buy_from",
             ):
                 self.assertIn(reason, report)
 
@@ -34767,88 +34810,41 @@ assert(context.conditions.check==original and context.conditions.check() and con
             self.assertIn("direct talk-topic beta Character proof", report)
             self.assertEqual(len(result.partial), 1)
 
-    def test_trade_commit_migration_requires_one_explicit_same_event_shape(self) -> None:
-        descriptor = {
-            "seller_handle": {"context_handle": "seller"},
-            "buyer_handle": {"context_handle": "buyer"},
-            "lines": [
-                {
-                    "direction": "seller_to_buyer",
-                    "item_handle": {"context_handle": "item"},
-                    "source_holder": {
-                        "character_handle": {"context_handle": "seller"},
-                        "slot": "inventory",
-                    },
-                    "destination_holder": {
-                        "character_handle": {"context_handle": "buyer"},
-                        "slot": "inventory",
-                    },
-                    "quantity": 3,
-                }
-            ],
-            "settlement": {"strategy": "npc_debt", "currency": "cash"},
-        }
-        rendered = migrate_lua_first.render_static_bulk_trade_effect(
-            {"u_bulk_trade_accept": descriptor},
-            "u_bulk_trade_accept",
-            True,
-            True,
-            True,
-        )
-        self.assertIsNotNone(rendered)
-        main = "\n".join(rendered or [])
-        self.assertIn("services.trade.quote", main)
-        self.assertIn("services.trade.commit", main)
-        self.assertIn('context.data["seller"]', main)
-        self.assertIn('context.data["item"]', main)
-        self.assertIn('strategy = "npc_debt"', main)
-        self.assertEqual(main.count("local trade_quote ="), 1)
-        self.assertNotIn("services.characters.avatar()", main)
-        self.assertNotIn("actor", main)
+    def test_native_bulk_trade_selectors_remain_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "native_bulk_trade",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": [
+                        "u_bulk_donate",
+                        {"npc_bulk_donate": 2},
+                        {"u_bulk_trade_accept": 2},
+                        {"npc_bulk_trade_accept": 2},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "native_bulk_trade_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-        missing_settlement = dict(descriptor)
-        missing_settlement.pop("settlement")
-        self.assertIsNone(
-            migrate_lua_first.render_static_bulk_trade_effect(
-                {"u_bulk_trade_accept": missing_settlement},
-                "u_bulk_trade_accept",
-                True,
-                True,
-                True,
-            )
-        )
-        dynamic_quantity = dict(descriptor)
-        dynamic_quantity["lines"] = [
-            {
-                **descriptor["lines"][0],
-                "quantity": {"context_handle": "quantity"},
-            }
-        ]
-        self.assertIsNone(
-            migrate_lua_first.render_static_bulk_trade_effect(
-                {"u_bulk_trade_accept": dynamic_quantity},
-                "u_bulk_trade_accept",
-                True,
-                True,
-                True,
-            )
-        )
-        self.assertIsNone(
-            migrate_lua_first.render_static_quote_trade_effect(
-                {"quote_npc_trade_item": "legacy_item_id"},
-                "quote_npc_trade_item",
-                True,
-                True,
-            )
-        )
-        self.assertIsNone(
-            migrate_lua_first.render_static_quote_trade_effect(
-                {"quote_npc_trade_item": descriptor},
-                "quote_npc_trade_item",
-                True,
-                True,
-            )
-        )
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            for key in (
+                "u_bulk_donate", "npc_bulk_donate",
+                "u_bulk_trade_accept", "npc_bulk_trade_accept",
+            ):
+                reason = migrate_lua_first._legacy_trade_action_todo(key)
+                self.assertIsNotNone(reason)
+                self.assertIn(f"TODO: {reason}.", main)
+                self.assertIn(reason, report)
+            self.assertNotIn("services.trade.quote(", main)
+            self.assertNotIn("services.trade.commit(", main)
 
     def test_equipment_migration_requires_explicit_item_and_holder_transaction(self) -> None:
         wield_descriptor = {
