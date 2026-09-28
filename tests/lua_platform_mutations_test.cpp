@@ -16,6 +16,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
@@ -121,6 +122,17 @@ struct mutation_fixture {
         }
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "mutation_acceptance" );
+        for( const talk_effect_fun_t &operation : effect.effects ) {
+            operation( context );
+        }
+    }
+
+    void legacy_alpha_only_effect( const std::string &source, Character &alpha ) {
+        dialogue context( get_talker_for( alpha ) );
+        REQUIRE_FALSE( context.has_actor( true ) );
+        talk_effect_t effect;
+        effect.parse_sub_effect(
+            json_loader::from_string( source ).get_object(), "mutation_acceptance" );
         for( const talk_effect_fun_t &operation : effect.effects ) {
             operation( context );
         }
@@ -977,6 +989,105 @@ TEST_CASE( "lua_platform_mutations_seeded_category_matches_legacy_effect",
     // must not pass just because the untargeted actor remained unchanged.
     if( category == "CATTLE" && !use_vitamins && true_random ) {
         CHECK_FALSE( actual.empty() );
+    }
+}
+
+TEST_CASE( "lua_platform_mutations_alpha_only_npc_fallback_matches_native_state",
+           "[lua][platform][mutations][semantic]" )
+{
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+    const override_option no_picker( "SHOW_MUTATION_SELECTOR", "false" );
+    mutation_fixture legacy( 4700 );
+    mutation_fixture platform( 4800 );
+    Character &old_npc = legacy.target( true );
+    Character &new_npc = platform.target( true );
+    const auto untouched_player = platform.target( false ).get_mutations();
+    // The native hostile event builds a one-actor dialogue. actor(true) logs
+    // about missing beta and falls back to this NPC alpha; the Platform
+    // comparison is intentionally limited to mutation state, not diagnostics.
+    const std::string diagnostic = capture_debugmsg_during( [&]() {
+        rng_set_engine_seed( 4242 );
+        legacy.legacy_alpha_only_effect(
+            R"({"npc_mutate_category":"CATTLE","use_vitamins":false,"true_random":true})",
+            old_npc );
+    } );
+    CHECK( diagnostic.find( "Tried to use an invalid beta talker." ) != std::string::npos );
+    rng_set_engine_seed( 4242 );
+    sol::protected_function_result call = platform.services["mutations"]["mutate_category"](
+            platform.handle( true ),
+            cata::lua_platform::script_game_id( "mutation_category", "CATTLE" ), false, true );
+    REQUIRE( call.valid() );
+    sol::table result = call;
+    REQUIRE( result["ok"].get<bool>() );
+    const auto expected = old_npc.get_mutations();
+    const auto actual = new_npc.get_mutations();
+    CHECK( std::set<trait_id>( actual.begin(), actual.end() ) ==
+           std::set<trait_id>( expected.begin(), expected.end() ) );
+    CHECK_FALSE( actual.empty() );
+    CHECK( platform.target( false ).get_mutations() == untouched_player );
+}
+
+TEST_CASE( "lua_platform_mutate_and_towards_match_seeded_native_effects",
+           "[lua][platform][mutations][semantic]" )
+{
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+    const override_option no_picker( "SHOW_MUTATION_SELECTOR", "false" );
+    const bool npc_target = GENERATE( false, true );
+    const std::string prefix = npc_target ? "npc_" : "u_";
+
+    SECTION( "random chance mutation" ) {
+        mutation_fixture legacy( 4900 );
+        mutation_fixture platform( 5000 );
+        rng_set_engine_seed( 4311 );
+        legacy.legacy_effect( R"({")" + prefix + R"(mutate":1,"use_vitamins":false})" );
+        rng_set_engine_seed( 4311 );
+        sol::protected_function_result call = platform.services["mutations"]["mutate"](
+                platform.handle( npc_target ), 1, false );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        const auto expected = legacy.target( npc_target ).get_mutations();
+        const auto actual = platform.target( npc_target ).get_mutations();
+        CHECK( std::set<trait_id>( actual.begin(), actual.end() ) ==
+               std::set<trait_id>( expected.begin(), expected.end() ) );
+        CHECK_FALSE( actual.empty() );
+        CHECK( platform.target( !npc_target ).get_mutations().empty() );
+    }
+
+    SECTION( "directed mutation" ) {
+        mutation_fixture legacy( 5100 );
+        mutation_fixture platform( 5200 );
+        legacy.target( npc_target ).unset_mutation( trait_VULNERABLECHILL );
+        platform.target( npc_target ).unset_mutation( trait_VULNERABLECHILL );
+        const std::string effect = R"({")" + prefix +
+                                   R"(mutate_towards":"VULNERABLECHILL",)"
+                                   R"("category":"ANY","use_vitamins":false})";
+        rng_set_engine_seed( 4322 );
+        legacy.legacy_effect( effect );
+        rng_set_engine_seed( 4322 );
+        sol::protected_function_result call = platform.services["mutations"]["mutate_towards"](
+                platform.handle( npc_target ),
+                cata::lua_platform::script_game_id( "mutation", "VULNERABLECHILL" ),
+                cata::lua_platform::script_game_id( "mutation_category", "ANY" ), false );
+        REQUIRE( call.valid() );
+        sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        const auto expected = legacy.target( npc_target ).get_mutations();
+        const auto actual = platform.target( npc_target ).get_mutations();
+        CHECK( std::set<trait_id>( actual.begin(), actual.end() ) ==
+               std::set<trait_id>( expected.begin(), expected.end() ) );
+        CHECK( platform.target( npc_target ).has_trait( trait_VULNERABLECHILL ) );
+        CHECK( platform.target( !npc_target ).get_mutations().empty() );
     }
 }
 

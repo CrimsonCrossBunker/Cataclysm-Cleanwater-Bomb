@@ -8481,6 +8481,85 @@ assert(#events == 9)
             self.assertNotIn('services.gameplay.math.evaluate("u_strength()"', main)
             self.assertNotIn("run_eoc", main)
 
+    def test_mutation_effects_require_event_exclusive_actor_sources(self) -> None:
+        cases = (
+            (
+                "static_avatar_callback",
+                [
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_mutation_callback",
+                        "required_event": "game_start",
+                        "effect": {"u_mutate": 1},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_mutation_caller",
+                        "required_event": "game_start",
+                        "effect": {"run_eocs": "static_mutation_callback"},
+                    },
+                ],
+            ),
+            (
+                "static_npc_callback",
+                [
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_npc_mutation_callback",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_mutate_category": "HUMAN"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_npc_mutation_caller",
+                        "required_event": "game_start",
+                        "effect": {
+                            "run_eocs": "static_npc_mutation_callback"
+                        },
+                    },
+                ],
+            ),
+            (
+                "dynamic_selector",
+                [
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_mutation_callback",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_mutate_towards": "VULNERABLECHILL",
+                            "category": "ANY",
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_mutation_caller",
+                        "required_event": "game_start",
+                        "effect": {
+                            "run_eoc_selector": {
+                                "global_val": "selected_eoc"
+                            }
+                        },
+                    },
+                ],
+            ),
+        )
+        for mod_id, objects in cases:
+            with self.subTest(mod_id=mod_id), tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / "source.json"
+                source.write_text(json.dumps(objects), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]), mod_id
+                )
+                main = result.files[Path("main.lua")]
+
+                self.assertNotIn("services.mutations.mutate(", main)
+                self.assertNotIn("services.mutations.mutate_category(", main)
+                self.assertNotIn("services.mutations.mutate_towards(", main)
+                self.assertIn(
+                    "TODO: prove the mutation actor source", main
+                )
+
     def test_translates_literal_stat_threshold_conditions_with_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
