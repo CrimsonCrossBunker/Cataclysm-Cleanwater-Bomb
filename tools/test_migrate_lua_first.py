@@ -24343,12 +24343,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "npc_becomes_hostile", "character_takes_damage",
             },
         ):
+            event_result = migrate_lua_first.MigrationResult()
+            generic_result = migrate_lua_first.MigrationResult()
             event_only = migrate_lua_first.render_eoc(
-                event_source, migrate_lua_first.MigrationResult(),
+                event_source, event_result,
                 vehicle_override_ids=frozenset({"event_vehicle_services"}),
             )
             generic_pair = migrate_lua_first.render_eoc(
-                generic_source, migrate_lua_first.MigrationResult(),
+                generic_source, generic_result,
                 vehicle_override_ids=frozenset({"generic_pair_vehicle_services"}),
                 talker_pair_ids=frozenset({"generic_pair_vehicle_services"}),
             )
@@ -24357,6 +24359,15 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.vehicles.", unproven)
             self.assertIn("direct talk-topic beta NPC", unproven)
             self.assertIn("native WRAP vehicle/order flow also differs", unproven)
+        for result in (event_result, generic_result):
+            service_todos = [
+                todo for todo in result.todos
+                if "native WRAP vehicle/order flow" in todo.message
+            ]
+            self.assertEqual(len(service_todos), len(effects))
+            self.assertTrue(
+                all(todo.category == "manual_rewrite" for todo in service_todos)
+            )
 
         # The fixture supplies direct beta proof and an exact vehicle override;
         # migration remains TODO because the service changes order flow.
@@ -24372,6 +24383,47 @@ assert(not pcall(function() return U_EXPRESSION end))
             "native start begins the existing paid order",
         ):
             self.assertIn(reason, direct_pair)
+
+    def test_vehicle_service_object_shapes_are_not_native_effects(self) -> None:
+        effect_keys = (
+            "quote_vehicle_full_repair", "select_vehicle_part_service",
+            "start_vehicle_full_repair",
+        )
+        effect_values = ({}, {"action": "repair"}, True)
+        eoc = {
+            "type": "effect_on_condition",
+            "id": "dialogue_vehicle_object_services",
+            "effect": [
+                {key: value}
+                for key, value in zip(effect_keys, effect_values)
+            ],
+        }
+        source = migrate_lua_first.SourceObject(Path("source.json"), 0, eoc)
+        topic = migrate_lua_first.SourceObject(Path("source.json"), 1, {
+            "type": "talk_topic",
+            "id": "topic_dialogue_vehicle_object_services",
+            "responses": [{"true_eocs": eoc["id"]}],
+        })
+        pair_proven_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, source]
+        )
+        result = migrate_lua_first.MigrationResult()
+        output = migrate_lua_first.render_eoc(
+            source,
+            result,
+            npc_dialogue_mission_pair_ids=pair_proven_ids,
+            vehicle_override_ids=frozenset({eoc["id"]}),
+        )
+
+        self.assertNotIn("services.vehicles.", output)
+        for key in effect_keys:
+            self.assertIn(f"native WRAP {key} accepts only a string effect", output)
+        vehicle_todos = [
+            todo for todo in result.todos
+            if "accepts only a string effect" in todo.message
+        ]
+        self.assertEqual(len(vehicle_todos), len(effect_keys))
+        self.assertTrue(all(todo.category == "semantic_choice" for todo in vehicle_todos))
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

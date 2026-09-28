@@ -21308,45 +21308,6 @@ def render_static_sell_item_effect(
     return None
 
 
-def render_static_vehicle_service_effect(
-    effect: Any, key: str, npc_actor_proven: bool,
-    vehicle_actor_proven: bool = False,
-) -> list[str] | None:
-    if key not in {
-        "quote_vehicle_full_repair", "select_vehicle_part_service",
-        "start_vehicle_full_repair",
-    } or not vehicle_actor_proven:
-        return None
-    if isinstance(effect, str):
-        # The native WRAP consumes existing marked vehicle/order state.  The
-        # similarly named Platform services also perform marking, multiplier,
-        # quote, or payment steps, so the string cannot lower faithfully.
-        return None
-    elif isinstance(effect, dict):
-        payload = effect
-    else:
-        return None
-    if payload and set(payload) - {key}:
-        return None
-    service = {
-        "quote_vehicle_full_repair": "quote_full_repair",
-        "select_vehicle_part_service": "open_part_service",
-        "start_vehicle_full_repair": "start_full_repair",
-    }[key]
-    vehicle_expression = (
-        "actor" if vehicle_actor_proven else "context.actors.vehicle"
-    )
-    mechanic_expression = "context.actors.character"
-    return [
-        f"    local service_vehicle = {vehicle_expression}",
-        f"    local mechanic = {mechanic_expression}",
-        "    if service_vehicle ~= nil and service_vehicle:is_valid() "
-        "and mechanic ~= nil and mechanic:is_valid() then",
-        f"        service_value(services.vehicles.{service}(service_vehicle, mechanic))",
-        "    end",
-    ]
-
-
 def render_static_level_spell_class_effect(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool, npc_actor_proven: bool,
@@ -31937,34 +31898,20 @@ def render_eoc(
                     "start_vehicle_full_repair",
                 }
             ):
+                todo_category = "manual_rewrite"
                 if isinstance(effect, str):
                     vehicle_key = effect
-                    vehicle_effect: Any = effect
-                else:
-                    vehicle_key = next(key for key in (
-                        "quote_vehicle_full_repair", "select_vehicle_part_service",
-                        "start_vehicle_full_repair",
-                    ) if key in effect)
-                    vehicle_effect = effect
-                rendered = render_static_vehicle_service_effect(
-                    vehicle_effect, vehicle_key, npc_event_character_actor_proven,
-                    vehicle_actor_override,
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    if isinstance(effect, str) and not static_wrapped_beta_npc:
+                    if not static_wrapped_beta_npc:
                         reason = (
                             "needs direct talk-topic beta NPC proof; the native WRAP "
                             "vehicle/order flow also differs from the Platform service"
                         )
-                    elif isinstance(effect, str) and not vehicle_actor_override:
+                    elif not vehicle_actor_override:
                         reason = (
                             "needs an exact vehicle handle; the native WRAP vehicle/order "
                             "flow differs from the Platform service"
                         )
-                    elif isinstance(effect, str):
+                    else:
                         reason = {
                             "quote_vehicle_full_repair": (
                                 "native quote uses the existing marked vehicle and repair "
@@ -31981,17 +31928,25 @@ def render_eoc(
                                 "Platform service requotes and charges the mechanic"
                             ),
                         }[vehicle_key]
-                    else:
-                        reason = "needs vehicle service conversion"
-                    lines.append(
-                        f"    -- TODO: preserve native {vehicle_key}: {reason}."
+                else:
+                    vehicle_key = next(key for key in (
+                        "quote_vehicle_full_repair", "select_vehicle_part_service",
+                        "start_vehicle_full_repair",
+                    ) if key in effect)
+                    todo_category = "semantic_choice"
+                    reason = (
+                        f"native WRAP {vehicle_key} accepts only a string effect; "
+                        "this object-shaped form has no native effect semantics"
                     )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        f"{reason}"
-                    )
-                    all_effects_converted = False
+                lines.append(
+                    f"    -- TODO: preserve native {vehicle_key}: {reason}."
+                )
+                result.add_todo(
+                    todo_category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{reason}"
+                )
+                all_effects_converted = False
             elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
             }:
