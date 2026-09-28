@@ -1478,6 +1478,21 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     CHECK( service_after( npc_forget_call ) == native_npc_forgotten );
     CHECK( beta.knows_recipe( &regular ) == native_npc_forgotten );
 
+    // The melee event's interlocutor may be any Character. Verify that native
+    // npc_* talker dispatch and the Platform service agree when beta is Avatar.
+    alpha.forget_recipe( &regular );
+    dialogue avatar_beta_pair( get_talker_for( beta ), get_talker_for( alpha ) );
+    run_native_effect( "npc_learn_recipe", regular_id.str(), avatar_beta_pair,
+                       false, "" );
+    const bool native_avatar_beta_learned = alpha.knows_recipe( &regular );
+    REQUIRE( native_avatar_beta_learned );
+    alpha.forget_recipe( &regular );
+    sol::protected_function_result avatar_beta_learn_call = learn(
+                alpha_handle,
+                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+    CHECK( service_after( avatar_beta_learn_call ) == native_avatar_beta_learned );
+    CHECK( alpha.knows_recipe( &regular ) == native_avatar_beta_learned );
+
     const cata::lua_platform::script_game_id category_id(
         "crafting_category", regular.category.str() );
     alpha.learn_recipe( &regular );
