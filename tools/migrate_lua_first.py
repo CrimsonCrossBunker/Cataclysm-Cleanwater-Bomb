@@ -30060,16 +30060,16 @@ def render_eoc(
     targeting_npc_actor_proven = npc_alpha_fallback_event_actor_proven
     # The morale adapters require a live Character handle and native morale
     # effects read dialogue alpha/beta rather than an ambient global actor.
-    # Limit avatar mutations to the live game_start alpha and npc_add_morale
-    # to the one no-beta hostile event whose mutable actor(true) falls back to
-    # that event's NPC alpha.  The latter preserves mutation only; native also
-    # emits a debug diagnostic for the missing beta talker.
+    # Limit avatar mutations to the live game_start alpha and npc morale
+    # mutations to the one no-beta hostile event whose mutable actor(true)
+    # falls back to that event's NPC alpha. This preserves mutation only;
+    # native also emits a debug diagnostic for the missing beta talker.
     morale_avatar_actor_proven = (
         event_exclusive_source_proven and not inline_eoc and
         required_event == "game_start" and game_start_avatar_source_proven and
         not avatar_fatal_hook and not avatar_death_hook
     )
-    morale_npc_add_fallback_actor_proven = (
+    morale_npc_fallback_actor_proven = (
         event_exclusive_source_proven and not inline_eoc and
         required_event == "npc_becomes_hostile" and
         npc_event_character_actor_proven and not npc_fatal_hook and
@@ -31663,7 +31663,7 @@ def render_eoc(
             ):
                 key = "u_add_morale" if "u_add_morale" in effect else "npc_add_morale"
                 target_expression = (
-                    "actor" if key == "npc_add_morale" and morale_npc_add_fallback_actor_proven
+                    "actor" if key == "npc_add_morale" and morale_npc_fallback_actor_proven
                     else "actor" if key == "u_add_morale" and morale_avatar_actor_proven
                     else None
                 )
@@ -31685,17 +31685,22 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                morale_avatar_actor_proven and
                 isinstance(effect, dict) and
-                set(effect) == {"u_lose_morale"} and
-                safe_platform_id(effect.get("u_lose_morale")) and
-                effect["u_lose_morale"] in known_morale_ids
+                (
+                    (set(effect) == {"u_lose_morale"} and morale_avatar_actor_proven) or
+                    (set(effect) == {"npc_lose_morale"} and morale_npc_fallback_actor_proven)
+                ) and
+                safe_platform_id(effect.get(
+                    "u_lose_morale", effect.get("npc_lose_morale")
+                )) and
+                effect.get("u_lose_morale", effect.get("npc_lose_morale")) in known_morale_ids
             ):
+                morale_id = effect.get("u_lose_morale", effect.get("npc_lose_morale"))
                 lines.append("    services.morale.remove(")
                 lines.append("        actor,")
                 lines.append(
                     "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['u_lose_morale'])}))"
+                    f"{lua_quote(morale_id)}))"
                 )
                 converted_effect = True
             elif (
@@ -31704,8 +31709,8 @@ def render_eoc(
             ):
                 lines.append(
                     "    -- TODO: preserve native alpha/beta selection and a "
-                    "registered morale ID; npc_lose_morale requires beta and "
-                    "has no fallback."
+                    "registered morale ID; npc_lose_morale falls back to alpha "
+                    "only when native beta is absent."
                 )
                 result.add_todo(
                     "manual_rewrite",

@@ -8193,6 +8193,12 @@ assert(#events == 9)
                     },
                     {
                         "type": "effect_on_condition",
+                        "id": "npc_other_morale_remove",
+                        "required_event": "character_takes_damage",
+                        "effect": {"npc_lose_morale": "morale_feeling_good"},
+                    },
+                    {
+                        "type": "effect_on_condition",
                         "id": "avatar_fractional_morale",
                         "required_event": "game_start",
                         "effect": {
@@ -8239,9 +8245,10 @@ assert(#events == 9)
         self.assertIn("capped = true", main)
         self.assertIn("-12, -20)", main)
         self.assertEqual(main.count("services.morale.add("), 2)
-        self.assertEqual(main.count("services.morale.remove("), 1)
-        self.assertIn("npc_hostile_morale_remove effect #0", todo_text)
+        self.assertEqual(main.count("services.morale.remove("), 2)
+        self.assertNotIn("npc_hostile_morale_remove effect #0", todo_text)
         self.assertIn("npc_other_morale_add effect #0", todo_text)
+        self.assertIn("npc_other_morale_remove effect #0", todo_text)
         self.assertIn("avatar_fractional_morale effect #0", todo_text)
         self.assertIn("avatar_overflow_morale effect #0", todo_text)
         self.assertIn("avatar_negative_morale_duration effect #0", todo_text)

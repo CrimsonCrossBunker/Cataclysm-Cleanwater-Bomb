@@ -159,6 +159,25 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
             CHECK( old_player.has_morale( type ) != 0 );
             CHECK( old_npc.has_morale( type ) == 0 );
             CHECK( new_npc.has_morale( type ) == 0 );
+
+            // f_lose_morale also calls mutable dialogue::actor(true), even
+            // though its callback takes a const dialogue reference.
+            talk_effect_t fallback_remove_effect;
+            fallback_remove_effect.parse_sub_effect(
+                json_loader::from_string(
+                    R"({"npc_lose_morale": "morale_feeling_good"})"
+                ).get_object(), "morale_semantics" );
+            for( const talk_effect_fun_t &effect : fallback_remove_effect.effects ) {
+                effect( no_beta_dialogue );
+            }
+            sol::protected_function fallback_remove = services["morale"]["remove"];
+            sol::protected_function_result remove_call = fallback_remove(
+                        handle, cata::lua_platform::script_game_id( "morale", type.str() ) );
+            REQUIRE( remove_call.valid() );
+            sol::table remove_result = remove_call;
+            REQUIRE( remove_result["ok"].get<bool>() );
+            CHECK( old_player.has_morale( type ) == 0 );
+            CHECK( new_player.has_morale( type ) == 0 );
         }
         completed = true;
     } );
