@@ -22371,7 +22371,29 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         self.assertEqual(result.converted, [])
         self.assertEqual(len(result.partial), 1)
         self.assertTrue(any(
-            "end, goal_condition need explicit Lua phase/goal handlers"
+            "legacy fields end, goal_condition cannot pass through content.Mission"
+            in todo.message for todo in result.todos
+        ))
+
+    def test_real_legacy_mission_deadline_is_not_silently_dropped(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/mods/classic_zombies/missiondef.json"
+        source = next(
+            item for item in migrate_lua_first.load_objects([source_path])
+            if item.value.get("id") == "MISSION_REACH_REFUGEE_CENTER"
+        )
+        self.assertEqual(source.value["deadline"], "1 seconds")
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_generic_platform_content(
+            source, result, "Mission", "mission_definition",
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(result.converted, [])
+        self.assertEqual(len(result.partial), 1)
+        self.assertTrue(any(
+            "legacy fields deadline cannot pass through content.Mission"
+            in todo.message and "deadline values need a bounded conversion"
             in todo.message for todo in result.todos
         ))
 

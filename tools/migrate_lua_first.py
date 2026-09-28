@@ -9532,19 +9532,21 @@ def render_generic_platform_content(
     object_id = stable_id(value, f"anonymous_{source.index}")
     if label == "mission_definition":
         legacy_lifecycle = [
-            key for key in ("start", "end", "fail", "goal_condition")
+            key for key in ("start", "end", "fail", "goal_condition", "deadline")
             if key in value
         ]
         if legacy_lifecycle:
             # content.Mission accepts Lua phase handler IDs, not the native
-            # mission_definition effect/condition objects. Passing those
-            # objects through the generic table silently drops the callbacks.
+            # mission_definition effect/condition objects. Its deadline table
+            # also differs from native duration/expression values. Passing
+            # these through the generic table loses behavior.
             result.partial.append(f"{source.location}: {label} {object_id}")
             result.add_todo(
                 "manual_rewrite",
-                f"{source.location}: {label} {object_id} legacy lifecycle fields "
-                f"{', '.join(legacy_lifecycle)} need explicit Lua phase/goal "
-                "handlers before content.Mission can replace this definition"
+                f"{source.location}: {label} {object_id} legacy fields "
+                f"{', '.join(legacy_lifecycle)} cannot pass through "
+                "content.Mission: phase/goal objects need Lua handlers and "
+                "deadline values need a bounded conversion"
             )
             return None
     raw_id = value.get("id")
