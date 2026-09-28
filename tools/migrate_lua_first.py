@@ -863,6 +863,20 @@ def safe_native_martial_art_id(value: Any) -> bool:
     )
 
 
+def safe_native_recipe_id(value: Any) -> bool:
+    """Bound a static recipe id literal; registry membership remains a source precondition."""
+    if not safe_platform_id(value):
+        return False
+    try:
+        encoded_length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
+    return (
+        encoded_length <= 256 and
+        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
+    )
+
+
 def bounded_utf8_string(
     value: Any, maximum: int, *, allow_empty: bool = False
 ) -> bool:
@@ -25878,10 +25892,6 @@ def render_dynamic_simple_character_effect(
         "npc_add_bionic": ("bionics.grant", "bionic"),
         "u_lose_bionic": ("bionics.remove_type", "bionic"),
         "npc_lose_bionic": ("bionics.remove_type", "bionic"),
-        "u_learn_recipe": ("recipes.learn", "recipe"),
-        "npc_learn_recipe": ("recipes.learn", "recipe"),
-        "u_forget_recipe": ("recipes.forget", "recipe"),
-        "npc_forget_recipe": ("recipes.forget", "recipe"),
         "u_learn_martial_art": ("martial_arts.learn", "martial_art"),
         "npc_learn_martial_art": ("martial_arts.learn", "martial_art"),
         "u_forget_martial_art": ("martial_arts.forget", "martial_art"),
@@ -30065,7 +30075,7 @@ def render_eoc(
     # disable this proof corpus-wide when one is present.
     # Only an event-exclusive function in a corpus without dynamic dispatch
     # may use its event bridge's interlocutor as native beta-presence evidence.
-    event_beta_presence_proven = (
+    event_exclusive_source_proven = (
         has_event_trigger and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
@@ -30081,6 +30091,7 @@ def render_eoc(
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    event_beta_presence_proven = event_exclusive_source_proven
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
@@ -30851,11 +30862,16 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                event_exclusive_source_proven and
+                required_event == "game_start" and
+                game_start_avatar_actor_is_proven() and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_recipe"} and
-                safe_platform_id(effect.get("u_learn_recipe"))
+                safe_native_recipe_id(effect.get("u_learn_recipe"))
             ):
+                # Native recipe talkers dereference recipe_id; this textual
+                # bound does not validate registry membership, which remains
+                # a precondition of the source content.
                 lines.append("    services.recipes.learn(")
                 lines.append("        actor,")
                 lines.append(
@@ -30864,41 +30880,20 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                event_exclusive_source_proven and
+                required_event == "game_start" and
+                game_start_avatar_actor_is_proven() and
                 isinstance(effect, dict) and
-                set(effect) in (
-                    {"u_forget_recipe", "category"},
-                    {"u_forget_recipe", "subcategory"},
-                    {"u_forget_recipe", "category", "subcategory"},
-                ) and
-                safe_platform_id(effect.get("u_forget_recipe")) and
                 (
-                    effect.get("category") is True or
-                    "subcategory" in effect
-                ) and
-                (
-                    "subcategory" not in effect or
-                    safe_platform_id(effect.get("subcategory"))
-                )
-            ):
-                lines.append("    services.recipes.forget_category(")
-                lines.append("        actor,")
-                category_suffix = "," if "subcategory" in effect else ")"
-                lines.append(
-                    "        services.types.id(\"crafting_category\", "
-                    f"{lua_quote(effect['u_forget_recipe'])}){category_suffix}"
-                )
-                if "subcategory" in effect:
-                    lines.append(
-                        f"        {lua_quote(effect['subcategory'])})"
+                    set(effect) == {"u_forget_recipe"} or
+                    (
+                        set(effect) == {"u_forget_recipe", "category"} and
+                        effect.get("category") is False
                     )
-                converted_effect = True
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_forget_recipe"} and
-                safe_platform_id(effect.get("u_forget_recipe"))
+                ) and
+                safe_native_recipe_id(effect.get("u_forget_recipe"))
             ):
+                # As above, the source literal must resolve to a registered recipe.
                 lines.append("    services.recipes.forget(")
                 lines.append("        actor,")
                 lines.append(
@@ -30959,32 +30954,6 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_learn_recipe"} and
-                safe_platform_id(effect.get("npc_learn_recipe"))
-            ):
-                lines.append("    services.recipes.learn(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"recipe\", "
-                    f"{lua_quote(effect['npc_learn_recipe'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_forget_recipe"} and
-                safe_platform_id(effect.get("npc_forget_recipe"))
-            ):
-                lines.append("    services.recipes.forget(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"recipe\", "
-                    f"{lua_quote(effect['npc_forget_recipe'])}))"
-                )
-                converted_effect = True
-            elif (
                 isinstance(effect, dict) and
                 any(key in effect for key in (
                     "u_add_bionic", "npc_add_bionic", "u_lose_bionic",
@@ -31020,7 +30989,18 @@ def render_eoc(
                     "u_learn_martial_art", "npc_learn_martial_art",
                     "u_forget_martial_art", "npc_forget_martial_art",
                 }
-                rendered = None if unresolved_beta_variable or unproven_martial_art_effect else (
+                unproven_recipe_effect = key in {
+                    "u_learn_recipe", "npc_learn_recipe",
+                    "u_forget_recipe", "npc_forget_recipe",
+                }
+                unproven_recipe_category_effect = (
+                    key in {"u_forget_recipe", "npc_forget_recipe"} and
+                    (effect.get("category") is True or "subcategory" in effect)
+                )
+                rendered = None if (
+                    unresolved_beta_variable or unproven_martial_art_effect or
+                    unproven_recipe_effect
+                ) else (
                     render_dynamic_simple_character_effect(
                         effect, key, target,
                         avatar_expression=(
@@ -31036,13 +31016,48 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate dynamic character id through typed services."
-                    )
+                    if unproven_recipe_effect:
+                        recipe_todo_reasons: list[str] = []
+                        if key.startswith("npc_"):
+                            recipe_todo_reasons.append(
+                                "npc_ recipe mutation needs exact native beta talker proof; "
+                                "an event Character does not prove dialogue beta"
+                            )
+                        elif not (
+                            event_exclusive_source_proven and
+                            required_event == "game_start" and
+                            game_start_avatar_actor_is_proven()
+                        ):
+                            recipe_todo_reasons.append(
+                                "u_ recipe mutation needs an event-exclusive game_start avatar"
+                            )
+                        if unproven_recipe_category_effect:
+                            recipe_todo_reasons.append(
+                                "category recipe forget needs a proven registered crafting "
+                                "category and a subcategory of at most 256 UTF-8 bytes; "
+                                "unknown category IDs remain TODO"
+                            )
+                        else:
+                            recipe_todo_reasons.append(
+                                "direct recipe mutation needs a static recipe ID literal; "
+                                "registered recipe IDs remain a source-content precondition"
+                            )
+                        recipe_todo = "; ".join(recipe_todo_reasons)
+                        lines.append(
+                            "    -- TODO: " + recipe_todo + "."
+                        )
+                    else:
+                        lines.append(
+                            "    -- TODO: translate dynamic character id through typed services."
+                        )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        + (
+                            recipe_todo
+                            if unproven_recipe_effect else
+                            "needs domain-service conversion"
+                        )
                     )
                     all_effects_converted = False
             elif (
@@ -32242,19 +32257,14 @@ def render_eoc(
                     if "u_consume_item_sum" in effect
                     else "npc_consume_item_sum"
                 )
-                event_exclusive_actor_source_proven = (
-                    has_event_trigger and
-                    eoc_id not in eoc_referenced_ids and
-                    not dynamic_eoc_dispatch_present
-                )
                 rendered = render_static_inventory_consume_sum(
                     effect, key,
                     (
-                        event_exclusive_actor_source_proven and
+                        event_exclusive_source_proven and
                         required_event == "game_start" and avatar_actor_proven
                     ),
                     (
-                        event_exclusive_actor_source_proven and
+                        event_exclusive_source_proven and
                         required_event == "npc_becomes_hostile" and
                         npc_event_character_actor_proven and
                         npc_actor_expression == "actor" and

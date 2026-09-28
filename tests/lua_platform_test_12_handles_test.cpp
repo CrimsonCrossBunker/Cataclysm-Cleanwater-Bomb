@@ -13,6 +13,7 @@
 #include <item_uid.h>
 #include <json_loader.h>
 #include <lua_platform_bindings_values.h>
+#include <lua_platform_crafting.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>
 #include <lua_platform_vehicles.h>
@@ -24,6 +25,7 @@
 #include <pimpl.h>
 #include <player_helpers.h>
 #include <pocket_type.h>
+#include <recipe.h>
 #include <ret_val.h>
 #include <type_id.h>
 #include <units.h>
@@ -1322,6 +1324,186 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                               { { "bandages", 1.0 } } ) );
     CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
                               { { "bandages", 1.0 } } ) );
+}
+
+TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
+           "[lua][platform][recipes][mutation][semantic]" )
+{
+    clear_avatar();
+    struct cleanup_avatar_state {
+        ~cleanup_avatar_state() {
+            clear_avatar();
+        }
+    } cleanup;
+
+    avatar &alpha = get_avatar();
+    alpha.normalize();
+    alpha.setID( character_id( 6498 ), true );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 6499 ), true );
+    cata::lua_platform::register_npc_handle_identity( beta );
+    struct cleanup_npc_handle_identity {
+        npc &value;
+        ~cleanup_npc_handle_identity() {
+            cata::lua_platform::retire_npc_handle_identity( value );
+        }
+    } retire_beta_identity{ beta };
+
+    const recipe_id regular_id( "cudgel_test_no_tools" );
+    const recipe_id never_learn_id( "faction_base_bare_bones_NPC_camp_0" );
+    REQUIRE( regular_id.is_valid() );
+    REQUIRE( never_learn_id.is_valid() );
+    const recipe &regular = regular_id.obj();
+    const recipe &never_learn = never_learn_id.obj();
+    REQUIRE( regular.category.is_valid() );
+    REQUIRE_FALSE( regular.subcategory.empty() );
+    REQUIRE( never_learn.never_learn );
+
+    constexpr std::size_t world_generation = 67;
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 67 );
+    const cata::lua_platform::game_handle alpha_handle =
+        cata::lua_platform::game_handle::from_creature(
+            alpha,
+            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle beta_handle =
+        cata::lua_platform::game_handle::from_creature(
+            beta,
+            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = [world_generation]() {
+        return world_generation;
+    };
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_crafting_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+
+    const sol::protected_function learn = services["recipes"]["learn"];
+    const sol::protected_function forget = services["recipes"]["forget"];
+    const sol::protected_function forget_category =
+        services["recipes"]["forget_category"];
+    const auto service_after = []( sol::protected_function_result &call ) {
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        return value["after"].get<bool>();
+    };
+    const auto run_native_effect = [&]( const std::string &selector,
+                                        const std::string &id,
+                                        dialogue &context,
+                                        const bool category,
+                                        const std::string &subcategory ) {
+        std::string source = std::string( "{\"" ) + selector + "\":\"" + id + "\"";
+        if( category ) {
+            source += ",\"category\":true";
+        }
+        if( !subcategory.empty() ) {
+            source += std::string( ",\"subcategory\":\"" ) + subcategory + "\"";
+        }
+        source += "}";
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect(
+            json_loader::from_string( source ).get_object(),
+            "recipe_mutation_semantic_test" );
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( context );
+        }
+    };
+
+    dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
+    alpha.forget_recipe( &regular );
+    run_native_effect( "u_learn_recipe", regular_id.str(), native_pair, false, "" );
+    const bool native_avatar_learned = alpha.knows_recipe( &regular );
+    REQUIRE( native_avatar_learned );
+    alpha.forget_recipe( &regular );
+    sol::protected_function_result avatar_learn_call = learn(
+                alpha_handle,
+                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+    CHECK( service_after( avatar_learn_call ) == native_avatar_learned );
+    CHECK( alpha.knows_recipe( &regular ) == native_avatar_learned );
+
+    alpha.learn_recipe( &regular );
+    run_native_effect( "u_forget_recipe", regular_id.str(), native_pair, false, "" );
+    const bool native_avatar_forgotten = alpha.knows_recipe( &regular );
+    REQUIRE_FALSE( native_avatar_forgotten );
+    alpha.learn_recipe( &regular );
+    sol::protected_function_result avatar_forget_call = forget(
+                alpha_handle,
+                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+    CHECK( service_after( avatar_forget_call ) == native_avatar_forgotten );
+    CHECK( alpha.knows_recipe( &regular ) == native_avatar_forgotten );
+
+    alpha.forget_recipe( &never_learn );
+    run_native_effect( "u_learn_recipe", never_learn_id.str(), native_pair, false, "" );
+    const bool native_never_learned = alpha.knows_recipe( &never_learn );
+    REQUIRE_FALSE( native_never_learned );
+    sol::protected_function_result never_learn_call = learn(
+                alpha_handle,
+                cata::lua_platform::script_game_id( "recipe", never_learn_id.str() ), false );
+    CHECK_FALSE( service_after( never_learn_call ) );
+    CHECK( alpha.knows_recipe( &never_learn ) == native_never_learned );
+
+    beta.forget_recipe( &regular );
+    run_native_effect( "npc_learn_recipe", regular_id.str(), native_pair, false, "" );
+    const bool native_npc_learned = beta.knows_recipe( &regular );
+    REQUIRE( native_npc_learned );
+    beta.forget_recipe( &regular );
+    sol::protected_function_result npc_learn_call = learn(
+                beta_handle,
+                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+    CHECK( service_after( npc_learn_call ) == native_npc_learned );
+    CHECK( beta.knows_recipe( &regular ) == native_npc_learned );
+
+    beta.learn_recipe( &regular );
+    run_native_effect( "npc_forget_recipe", regular_id.str(), native_pair, false, "" );
+    const bool native_npc_forgotten = beta.knows_recipe( &regular );
+    REQUIRE_FALSE( native_npc_forgotten );
+    beta.learn_recipe( &regular );
+    sol::protected_function_result npc_forget_call = forget(
+                beta_handle,
+                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+    CHECK( service_after( npc_forget_call ) == native_npc_forgotten );
+    CHECK( beta.knows_recipe( &regular ) == native_npc_forgotten );
+
+    const cata::lua_platform::script_game_id category_id(
+        "crafting_category", regular.category.str() );
+    alpha.learn_recipe( &regular );
+    run_native_effect( "u_forget_recipe", regular.category.str(), native_pair,
+                       true, "" );
+    REQUIRE_FALSE( alpha.knows_recipe( &regular ) );
+    alpha.learn_recipe( &regular );
+    sol::protected_function_result category_forget_call = forget_category(
+                alpha_handle, category_id );
+    REQUIRE( category_forget_call.valid() );
+    const sol::table category_envelope = category_forget_call.get<sol::table>();
+    CHECK( category_envelope["ok"].get<bool>() );
+    CHECK_FALSE( alpha.knows_recipe( &regular ) );
+
+    alpha.learn_recipe( &regular );
+    run_native_effect( "u_forget_recipe", regular.category.str(), native_pair,
+                       false, regular.subcategory );
+    REQUIRE_FALSE( alpha.knows_recipe( &regular ) );
+    alpha.learn_recipe( &regular );
+    sol::protected_function_result subcategory_forget_call = forget_category(
+                alpha_handle, category_id, regular.subcategory );
+    REQUIRE( subcategory_forget_call.valid() );
+    const sol::table subcategory_envelope =
+        subcategory_forget_call.get<sol::table>();
+    CHECK( subcategory_envelope["ok"].get<bool>() );
+    CHECK_FALSE( alpha.knows_recipe( &regular ) );
 }
 
 TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
