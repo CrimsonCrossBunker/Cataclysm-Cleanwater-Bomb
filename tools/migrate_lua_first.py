@@ -112,7 +112,6 @@ WOUND_NAME_MAX_BYTES = 1024
 WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
 MAX_WORLD_CHANGE_DELAY_TURNS = 10000 * 24 * 60 * 60
-MAX_ACTIVITY_DURATION_TURNS = 2147483647 // 100
 MAX_RUN_EOC_ITERATIONS = 10000
 MAX_TEST_EOC_INLINE_DEPTH = 32
 NATIVE_MAX_EFFECT_INTENSITY = 1000000
@@ -5328,14 +5327,9 @@ def render_static_false_effect(
             rendered = render_static_light_override(effect)
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
-        for activity_key in ("u_assign_activity", "npc_assign_activity"):
-            if activity_key in effect:
-                target = _eoc_actor_expression(
-                    activity_key, avatar_actor_proven, npc_actor_proven
-                )
-                rendered = render_static_character_activity(effect, activity_key, target)
-                if rendered is not None:
-                    return [line.replace("    ", "        ", 1) for line in rendered]
+        # A false-effect callback does not prove an exact Character target for
+        # both participant slots.  Even the target-practice special case must
+        # stay explicit until that branch has a source-specific actor proof.
         if "u_sell_item" in effect:
             rendered = render_static_sell_item_effect(
                 effect, npc_actor_proven,
@@ -24979,7 +24973,7 @@ def render_static_character_activity(
     key: str,
     target_expression: str | None,
 ) -> list[str] | None:
-    """Render a plain time-based u_/npc_assign_activity shape."""
+    """Render only the native target-practice actor with a proven Character."""
     if target_expression is None or not safe_platform_id(effect.get(key)):
         return None
     comment_keys = {
@@ -24988,27 +24982,11 @@ def render_static_character_activity(
     }
     if set(effect) - {key, "duration"} - comment_keys:
         return None
-    if effect[key] == "ACT_TARGET_PRACTICE":
-        if "duration" in effect:
-            return None
-        return [
-            f"    services.activities.target_practice({target_expression})"
-        ]
-    duration = parse_turns(effect.get("duration"))
-    duration_expression = (
-        f"services.time.duration({duration}, \"turn\")"
-        if duration is not None and 1 <= duration <= MAX_ACTIVITY_DURATION_TURNS
-        else _duration_expression(
-            effect.get("duration"), minimum=1, actor_expression=target_expression
-        )
-    )
-    if duration_expression is None:
+    # Native parses duration but does not evaluate it on this special branch.
+    if effect[key] != "ACT_TARGET_PRACTICE":
         return None
     return [
-        "    services.activities.assign_timed(",
-        f"        {target_expression}, services.types.id(\"activity\", "
-        f"{lua_quote(effect[key])}),",
-        f"        {duration_expression})",
+        f"    services.activities.target_practice({target_expression})"
     ]
 
 
@@ -33307,14 +33285,20 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    actor_unproven = target_expression is None
                     lines.append(
-                        "    -- TODO: translate the activity id and duration into "
-                        "a plain typed activity service."
+                        "    -- TODO: activity assignment needs a source-proven "
+                        "Character and the native activity actor, handlers, "
+                        "EOC policy, and duration semantics."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "manual_rewrite" if actor_unproven else "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        (
+                            "needs source-proven Character activity target"
+                            if actor_unproven else
+                            "needs native activity assignment semantics for this id"
+                        )
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "math" in effect:

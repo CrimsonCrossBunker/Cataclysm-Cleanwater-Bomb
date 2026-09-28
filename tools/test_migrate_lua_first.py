@@ -6442,7 +6442,7 @@ assert(#events == 9)
             self.assertNotIn('math.apply("_math_context = 6"', main)
             self.assertNotIn('math.apply("v_math_target = 7"', main)
 
-    def test_bounded_plain_activity_assignment_uses_typed_service(self) -> None:
+    def test_plain_activity_assignment_without_native_metadata_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -6477,17 +6477,109 @@ assert(#events == 9)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertIn(
-                'services.activities.assign_timed(\n'
-                '        actor, services.types.id("activity", "ACT_WAIT"),\n'
-                '        services.time.duration(600, "turn"))',
-                main,
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertTrue(
+                all(todo.category == "platform_gap" for todo in result.todos)
             )
-            self.assertIn('services.time.duration(1200, "turn")', main)
-            self.assertNotIn("services.activities.assign(actor)", main)
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertNotIn("services.activities.assign_timed(", main)
+            self.assertNotIn("services.activities.target_practice(", main)
+            self.assertEqual(
+                report.count("needs native activity assignment semantics for this id"),
+                2,
+            )
+
+            wait_activity = next(
+                source.value for source in migrate_lua_first.load_objects([
+                    REPOSITORY_ROOT / "data/json/player_activities.json"
+                ]) if source.value.get("id") == "ACT_WAIT"
+            )
+            self.assertEqual(wait_activity["based_on"], "time")
+            self.assertTrue(wait_activity["auto_needs"])
+            phone_activity = next(
+                source.value for source in migrate_lua_first.load_objects([
+                    REPOSITORY_ROOT / "data/json/player_activities.json"
+                ]) if source.value.get("id") == "ACT_PHONE_RECOVERY_BASIC"
+            )
+            self.assertEqual(
+                phone_activity["completion_eoc"],
+                "EOC_SMARTPHONE_RECOVERY_BASIC_2",
+            )
+            phone_eoc = next(
+                source.value for source in migrate_lua_first.load_objects([
+                    REPOSITORY_ROOT /
+                    "data/json/effects_on_condition/computer_eocs.json"
+                ]) if source.value.get("id") == "EOC_SMARTPHONE_RECOVERY_BASIC"
+            )
+            self.assertIsNone(
+                migrate_lua_first.render_static_character_activity(
+                    phone_eoc["effect"][0], "u_assign_activity", "actor"
+                )
+            )
+
+    def test_target_practice_activity_uses_its_native_actor(self) -> None:
+        recipe_path = REPOSITORY_ROOT / "data/json/recipes/practice/ranged.json"
+        recipe = next(
+            source.value for source in migrate_lua_first.load_objects([recipe_path])
+            if source.value.get("id") == "prac_target"
+        )
+        native_effect = recipe["result_eocs"][0]["effect"][0]
+        self.assertEqual(
+            native_effect, {"u_assign_activity": "ACT_TARGET_PRACTICE"}
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_character_activity(
+                native_effect, "u_assign_activity", "actor"
+            ),
+            ["    services.activities.target_practice(actor)"],
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_false_effect(
+                native_effect, True, False, {}
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_target_practice",
+                        "required_event": "game_start",
+                        "effect": native_effect,
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_target_practice",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_assign_activity": "ACT_TARGET_PRACTICE"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unproven_target_practice",
+                        "effect": native_effect,
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "target_practice_mod"
+            )
+            main = result.files[Path("main.lua")]
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
+            actor_todos = [
+                todo for todo in result.todos
+                if "needs source-proven Character activity target" in todo.message
+            ]
+            self.assertEqual(len(actor_todos), 1)
+            self.assertEqual(actor_todos[0].category, "manual_rewrite")
+            self.assertEqual(
+                main.count("services.activities.target_practice(actor)"), 2
+            )
+            self.assertNotIn("services.activities.assign_timed(", main)
 
     def test_dynamic_random_conditions_are_bounded_and_invalid_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
