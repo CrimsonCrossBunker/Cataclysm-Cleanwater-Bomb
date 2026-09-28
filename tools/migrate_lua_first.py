@@ -31556,6 +31556,21 @@ def render_eoc(
                 lines.append("    end")
                 converted_effect = True
             elif (
+                isinstance(effect, dict) and
+                (set(effect) == {"u_set_flag"} or
+                 set(effect) == {"u_unset_flag"})
+            ):
+                lines.append(
+                    "    -- TODO: native u_*_flag targets alpha's exact item talker; "
+                    "supported Character and item-target callbacks do not provide an alpha item handle."
+                )
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "requires a proven native alpha item talker"
+                )
+                all_effects_converted = False
+            elif (
                 item_event_character_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"set_browsed"} and

@@ -4774,6 +4774,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             source = Path(temporary) / "source.json"
             cases = [
                 ("game_start", {"npc_set_flag": "FILTHY"}),
+                ("game_start", {"u_set_flag": "FILTHY"}),
+                ("game_start", {"u_unset_flag": "WET"}),
                 ("character_kills_monster", {"npc_unset_flag": "WET"}),
                 ("character_wields_item", {"u_set_flag": "FILTHY"}),
                 ("character_wears_item", {"u_unset_flag": "WET"}),
@@ -4812,7 +4814,13 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertNotIn("services.items.set_flag", main)
             self.assertEqual(
                 report.count("effect #0 needs domain-service conversion"),
-                len(cases),
+                len(cases) - 4,
+            )
+            self.assertEqual(
+                report.count("requires a proven native alpha item talker"), 4
+            )
+            self.assertEqual(
+                main.count("native u_*_flag targets alpha's exact item talker"), 4
             )
 
     def test_item_traversal_branches_inherit_item_actor_for_npc_flags(self) -> None:
