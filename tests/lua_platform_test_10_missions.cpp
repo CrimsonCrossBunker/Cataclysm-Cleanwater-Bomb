@@ -1,8 +1,11 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "avatar.h"
 #include "condition.h"
+#include "dialogue.h"
 #include "json_loader.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_test_support.h"
+#include "npc.h"
 
 TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
            "[lua][platform][missions]" )
@@ -503,6 +506,18 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         REQUIRE( envelope["ok"].get<bool>() );
         return envelope["value"].get<bool>();
     };
+    const conditional_t native_generic_rewards_condition(
+        "mission_has_generic_rewards" );
+    dialogue mission_dialogue(
+        get_talker_for( owner ), get_talker_for( *provider ) );
+    const auto compare_selected_generic_rewards = [&]() {
+        const bool native_result = native_generic_rewards_condition(
+                                       mission_dialogue );
+        const bool platform_result = boolean_from(
+                                        selected_has_generic_rewards(
+                                            provider_handle ) );
+        CHECK( native_result == platform_result );
+    };
 
     const sol::protected_function npc_snapshot = services["npcs"]["get"];
     CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 0 );
@@ -560,6 +575,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
                            provider_handle, "NOT_A_MISSION_GOAL" ) ) ==
            "invalid_mission_goal" );
     CHECK( boolean_from( selected_has_generic_rewards( provider_handle ) ) );
+    // Native mission_has_generic_rewards reads beta's current selected
+    // mission; compare the live mission result against the typed query.
+    compare_selected_generic_rewards();
     CHECK( error_code( add_assigned(
                            provider_handle, stale_owner_handle, mission_id ) ) ==
            "stale_runtime" );
@@ -681,6 +699,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         ["token"].get<cata::lua_platform::mission_token>();
     value_from( select( provider_handle, no_generic_token ) );
     CHECK_FALSE( boolean_from( selected_has_generic_rewards( provider_handle ) ) );
+    compare_selected_generic_rewards();
     value_from( succeed_selected(
                     provider_handle, owner_handle, true ) );
     const int owed_before_no_generic = provider->op_of_u.owed;
@@ -942,6 +961,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( boolean_from( selected_has_goal(
                              provider_handle, "MGOAL_CONDITION" ) ) );
     CHECK( boolean_from( selected_has_generic_rewards( provider_handle ) ) );
+    compare_selected_generic_rewards();
     provider->chatbin.missions.push_back( foreign );
     CHECK( error_code( select( provider_handle, foreign_token ) ) ==
            "not_provided_here" );

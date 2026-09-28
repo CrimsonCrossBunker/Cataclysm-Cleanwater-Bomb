@@ -12480,21 +12480,13 @@ assert(not available())
                 )
                 self.assertTrue(eoc_result.todos)
 
-    def test_mission_generic_rewards_requires_proven_dialogue_beta(self) -> None:
-        expression = migrate_lua_first.render_eoc_condition_expression(
-            "mission_has_generic_rewards",
-            npc_actor_expression="context.actors.beta",
-            npc_dialogue_pair_proven=True,
-        )
-        self.assertIsNotNone(expression)
-        self.assertIn(
-            "services.npcs.missions.selected_has_generic_rewards(beta)",
-            expression,
-        )
-        self.assertIn('beta.subtype ~= "npc"', expression)
-
+    def test_eoc_mission_generic_rewards_remains_todo_without_native_callback(self) -> None:
         for kwargs in (
-            {"npc_actor_expression": "context.actors.beta"},
+            {},
+            {
+                "npc_actor_expression": "context.actors.beta",
+                "npc_dialogue_pair_proven": True,
+            },
             {
                 "npc_actor_expression": "actor",
                 "npc_dialogue_pair_proven": True,
@@ -12507,34 +12499,85 @@ assert(not available())
                     )
                 )
 
-        source = json.loads(
-            (REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_MISSION.json")
-            .read_text(encoding="utf-8")
+    def test_talk_topic_mission_generic_rewards_uses_beta_selection(self) -> None:
+        callback = migrate_lua_first.render_talk_topic_response_condition(
+            "mission_has_generic_rewards"
         )
-        migrated_real_conditions = 0
+        self.assertIsNotNone(callback)
+        assert callback is not None
+        self.assertIn("dialogue_context:valid()", callback.source)
+        self.assertIn(
+            "dialogue_context:interlocutor()", callback.source
+        )
+        self.assertIn("if beta == nil then return false end", callback.source)
+        self.assertIn(
+            'if beta.kind ~= "creature" or beta.subtype ~= "npc" then return true end',
+            callback.source,
+        )
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            callback.source,
+        )
+        self.assertIn("return selected.ok and selected.value == true", callback.source)
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition({
+                "mission_has_generic_rewards": "unexpected member shape",
+            }),
+            "the native parser exposes this as a string condition, not a member object",
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition({
+                "and": ["mission_has_generic_rewards", {"unknown_condition": True}],
+            }),
+            "a compound with an unsupported peer remains fail-closed",
+        )
 
-        def check_real_condition(value: object) -> None:
-            nonlocal migrated_real_conditions
-            if value == "mission_has_generic_rewards":
-                migrated_real_conditions += 1
-                self.assertIsNotNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        value,
-                        npc_actor_expression="context.actors.beta",
-                        npc_dialogue_pair_proven=True,
-                    )
-                )
-            elif isinstance(value, dict):
-                for child in value.values():
-                    check_real_condition(child)
-            elif isinstance(value, list):
-                for child in value:
-                    check_real_condition(child)
+        source_path = REPOSITORY_ROOT / (
+            "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
+        )
+        topics = migrate_lua_first.load_objects([source_path])
+        topic = next(
+            source for source in topics
+            if source.value.get("type") == "talk_topic" and
+            source.value.get("id") == "TALK_MISSION_SUCCESS"
+        )
+        plain_response = next(
+            response for response in topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == "mission_has_generic_rewards"
+        )
+        plain_callback = migrate_lua_first.render_talk_topic_response_condition(
+            plain_response["condition"]
+        )
+        self.assertIsNotNone(plain_callback)
 
-        for topic in source:
-            for response in topic.get("responses", []):
-                check_real_condition(response.get("condition"))
-        self.assertGreater(migrated_real_conditions, 0)
+        unsupported_response = next(
+            response for response in topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("text", "").startswith("How about some items as payment?")
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                unsupported_response["condition"]
+            ),
+            "the real reward-choice compound still needs the unsupported npc_friend query",
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            rendered,
+        )
+        self.assertNotIn(
+            'condition = false, text = "Glad to help.  I need no payment."',
+            rendered,
+        )
+        self.assertIn(
+            'condition = false, text = "How about some items as payment?"',
+            rendered,
+        )
 
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
@@ -18015,11 +18058,31 @@ assert(not available())
             isinstance(response.get("condition"), dict) and
             "npc_train_styles" in json.dumps(response["condition"])
         )
+        mission_callback = migrate_lua_first.render_talk_topic_response_condition(
+            mission_response["condition"]
+        )
+        self.assertIsNotNone(mission_callback)
+        assert mission_callback is not None
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            mission_callback.source,
+        )
+        self.assertIn(
+            "services.characters.training_offers(beta, alpha)",
+            mission_callback.source,
+        )
+        unsupported_mission_response = next(
+            response for response in mission_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("text", "").startswith(
+                "How about some items as payment?"
+            )
+        )
         self.assertIsNone(
             migrate_lua_first.render_talk_topic_response_condition(
-                mission_response["condition"]
+                unsupported_mission_response["condition"]
             ),
-            "the actual compound also asks about selected mission state and stays TODO",
+            "the real reward choice still depends on unsupported npc_friend semantics",
         )
         mission_result = migrate_lua_first.MigrationResult()
         mission_rendered = migrate_lua_first.render_talk_topic(
@@ -18027,7 +18090,14 @@ assert(not available())
         )
         self.assertIsNotNone(mission_rendered)
         assert mission_rendered is not None
-        self.assertIn("condition = false", mission_rendered)
+        self.assertNotIn(
+            'condition = false, text = "Maybe you can teach me something as payment?"',
+            mission_rendered,
+        )
+        self.assertIn(
+            'condition = false, text = "How about some items as payment?"',
+            mission_rendered,
+        )
         self.assertTrue(any(
             "response condition needs Lua conversion" in todo.text
             for todo in mission_result.todos
