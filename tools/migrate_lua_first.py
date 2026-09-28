@@ -4527,115 +4527,19 @@ def render_static_weighted_list_eocs(
 def render_static_spawn_item_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Give a bounded literal/dynamic item or item-group to the u actor."""
-    if not avatar_actor_proven or "u_spawn_item" not in effect:
-        return None
-    if set(effect) - {
-        "u_spawn_item", "count", "use_item_group", "force_equip",
-        "suppress_message", "container", "flags",
-    }:
-        return None
-    use_group = effect.get("use_item_group", False)
-    force_equip = effect.get("force_equip", False)
-    suppress_message = effect.get("suppress_message", False)
-    if not all(
-        isinstance(value, bool)
-        for value in (use_group, force_equip, suppress_message)
-    ):
-        return None
-    # ``force_equip`` has no exact Item handle or source/displacement holder.
-    # It must remain a migration TODO until the source supplies the complete
-    # services.equipment transaction descriptor.
-    if force_equip:
-        return None
-    kind = "item_group" if use_group else "item"
-    item_expression = _dynamic_id_expression(
-        effect.get("u_spawn_item"), kind, "actor"
-    )
-    raw_count = effect.get("count", 1)
-    if isinstance(raw_count, list):
-        if len(raw_count) != 2:
-            return None
-        count_bounds = [
-            render_eoc_numeric_expression(bound, "1", "actor")
-            for bound in raw_count
-        ]
-        if any(bound is None for bound in count_bounds):
-            return None
-        lower = (
-            "math.max(1, math.min(100, math.floor((" +
-            str(count_bounds[0]) + ") + 0.5)))"
-        )
-        upper = (
-            "math.max(1, math.min(100, math.floor((" +
-            str(count_bounds[1]) + ") + 0.5)))"
-        )
-        count_expression = (
-            "(function() local lower = " + lower +
-            "; local upper = " + upper +
-            "; return services.random.int(math.min(lower, upper), "
-            "math.max(lower, upper)) end)()"
-        )
-    elif (
-        isinstance(raw_count, int) and
-        not isinstance(raw_count, bool) and
-        1 <= raw_count <= 100
-    ):
-        count_expression = str(raw_count)
-    else:
-        count_expression = render_eoc_numeric_expression(
-            raw_count, "1", "actor"
-        )
-    if item_expression is None or count_expression is None:
-        return None
-    if not isinstance(raw_count, list) and not (
-        isinstance(raw_count, int) and
-        not isinstance(raw_count, bool) and
-        1 <= raw_count <= 100
-    ):
-        count_expression = (
-            "math.max(1, math.min(100, math.floor((" +
-            count_expression + ") + 0.5)))"
-        )
-    option_values: list[str] = []
-    if "container" in effect:
-        if use_group:
-            return None
-        container = _dynamic_id_expression(
-            effect["container"], "item", "actor"
-        )
-        if container is None:
-            return None
-        option_values.append(f"container = {container}")
-    if "flags" in effect:
-        flags = effect["flags"]
-        if (
-            not isinstance(flags, list) or len(flags) > 128 or
-            not all(bounded_platform_id(flag) for flag in flags)
-        ):
-            return None
-        option_values.append(
-            "flags = { " + ", ".join(
-                f"services.types.id(\"json_flag\", {lua_quote(flag)})"
-                for flag in flags
-            ) + " }"
-        )
-    options = "{ " + ", ".join(option_values) + " }"
-    if use_group:
-        suffix = f", {options}" if option_values else ""
-        return [
-            "    service_value(services.inventory.give_group(",
-            f"        actor, {item_expression}{suffix}))",
-        ]
-    if option_values:
-        return [
-            "    service_value(services.inventory.give(",
-            f"        actor, {item_expression}, {count_expression}, {options}))",
-        ]
-    return [
-        "    service_value(services.inventory.give(",
-        f"        actor, {item_expression}, {count_expression}))",
-    ]
+    """Keep native ``receive_item`` out of migration until its full semantics exist.
+
+    ``services.inventory.give`` and ``give_group`` insert without native
+    ``i_add_or_drop`` behavior, and they do not reproduce default-ammo,
+    preserve-spawn-location, conditional beta-popup, and all container/flag
+    branches.  Clamping dynamic counts or substituting these services changes
+    native behavior, so no ``u_spawn_item`` shape is currently lowered.  A
+    future native-backed operation must own item construction and accept the
+    evaluated item/group, count, container, flags, force-equip and popup inputs
+    together with the exact alpha destination and optional beta popup source.
+    """
+    del effect, avatar_actor_proven
+    return None
 
 
 def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
@@ -30382,6 +30286,19 @@ def render_eoc(
                             "translate the inventory consumption through the typed "
                             "inventory service"
                         )
+                    elif isinstance(false_value, dict) and "u_spawn_item" in false_value:
+                        false_todo = (
+                            "native u_spawn_item uses receive_item/i_add_or_drop; "
+                            "inventory give APIs omit native drop/equip, default-ammo, "
+                            "spawn-location, item-group, container, flag, count, and "
+                            "beta-popup behavior"
+                        )
+                    elif isinstance(false_value, dict) and "map_spawn_item" in false_value:
+                        false_todo = (
+                            "map_spawn_item needs a typed absolute map-square position "
+                            "and native off-screen tinymap plus item-initialization "
+                            "semantics that services.world.spawn_item does not provide"
+                        )
                     elif isinstance(false_value, dict) and any(
                         key in false_value for key in (
                             "u_set_field", "npc_set_field",
@@ -32116,171 +32033,37 @@ def render_eoc(
                 # Deliberate no-op.
                 converted_effect = True
             elif isinstance(effect, dict) and "u_spawn_item" in effect:
-                rendered = render_static_spawn_item_effect(
-                    effect, avatar_actor_proven
+                spawn_gap = (
+                    "native u_spawn_item uses receive_item/i_add_or_drop; the typed "
+                    "inventory give APIs do not preserve native drop/equip fallback, "
+                    "default ammo, PRESERVE_SPAWN_LOC, item-group/container/flags/count, "
+                    "force_equip, and beta-dependent popup behavior"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the bounded item spawn through "
-                        "the typed inventory service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
-                    )
-                    all_effects_converted = False
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) <= {
-                    "u_spawn_item", "count", "use_item_group", "force_equip",
-                    "suppress_message",
-                } and
-                "u_spawn_item" in effect and
-                safe_platform_id(effect.get("u_spawn_item")) and
-                not effect.get("force_equip", False) and
-                (
-                    "count" not in effect or
-                    (
-                        isinstance(effect.get("count"), int) and
-                        not isinstance(effect.get("count"), bool) and
-                        1 <= effect["count"] <= 100
-                    )
-                ) and (
-                    "use_item_group" not in effect or
-                    isinstance(effect.get("use_item_group"), bool)
-                ) and (
-                    "force_equip" not in effect or
-                    isinstance(effect.get("force_equip"), bool)
-                ) and (
-                    "suppress_message" not in effect or
-                    isinstance(effect.get("suppress_message"), bool)
+                lines.append(f"    -- TODO: {spawn_gap}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {spawn_gap}"
                 )
-            ):
-                count = effect.get("count", 1)
-                if effect.get("use_item_group", False):
-                    lines.append(
-                        "    service_value(services.inventory.give_group(actor, "
-                        f"services.types.id(\"item_group\", {lua_quote(effect['u_spawn_item'])}), "
-                        "))"
-                    )
-                else:
-                    lines.append(
-                        "    service_value(services.inventory.give(actor, "
-                        f"services.types.id(\"item\", {lua_quote(effect['u_spawn_item'])}), "
-                        f"{count}))"
-                    )
-                converted_effect = True
-            elif (
-                isinstance(effect, dict) and
-                set(effect) <= {"map_spawn_item", "count", "loc"} and
-                "map_spawn_item" in effect and
-                safe_platform_id(effect.get("map_spawn_item")) and
-                (
-                    "count" not in effect or
-                    (
-                        isinstance(effect.get("count"), int) and
-                        not isinstance(effect.get("count"), bool) and
-                        1 <= effect["count"] <= 100
-                    )
-                ) and
-                (
-                    (
-                        isinstance(effect.get("loc"), dict) and
-                        set(effect["loc"]) == {"context_val"} and
-                        isinstance(effect["loc"].get("context_val"), str) and
-                        safe_platform_id(effect["loc"]["context_val"])
-                    ) or
-                    (
-                        "loc" not in effect and
-                        avatar_actor_proven
-                    )
-                )
-            ):
-                count = effect.get("count", 1)
-                if "loc" in effect:
-                    loc_expr = f"context.data[{lua_quote(effect['loc']['context_val'])}]"
-                else:
-                    loc_expr = "service_value(services.characters.snapshot(actor)).creature.position"
-                lines.append(
-                    f"    services.world.spawn_item({loc_expr}, "
-                    f"services.types.id(\"item\", {lua_quote(effect['map_spawn_item'])}), {count})"
-                )
-                converted_effect = True
+                all_effects_converted = False
             elif isinstance(effect, dict) and "map_spawn_item" in effect:
-                if set(effect) <= {"map_spawn_item", "count", "loc"}:
-                    item_expression = _dynamic_id_expression(
-                        effect.get("map_spawn_item"), "item", "actor"
-                    )
-                    count_expression = render_eoc_numeric_expression(
-                        effect.get("count", 1), "1", "actor"
-                    )
-                    location = (
-                        _coordinate_source_expression(
-                            effect.get("loc"), avatar_actor_proven,
-                            npc_event_character_actor_proven,
-                        )
-                        if "loc" in effect else
-                        "service_value(services.characters.snapshot(actor)).creature.position"
-                        if avatar_actor_proven else None
-                    )
-                    if item_expression is not None and count_expression is not None and location is not None:
-                        count_expression = (
-                            "math.max(1, math.min(100, math.floor("
-                            f"({count_expression}) + 0.5)))"
-                        )
-                        lines.append(
-                            f"    services.world.spawn_item({location}, "
-                            f"{item_expression}, {count_expression})"
-                        )
-                        converted_effect = True
-            elif (
-                avatar_actor_proven and isinstance(effect, dict) and
-                "u_spawn_item" in effect and
-                not effect.get("force_equip", False)
-            ):
-                allowed = {
-                    "u_spawn_item", "count", "use_item_group", "force_equip",
-                    "suppress_message",
-                }
-                if set(effect) <= allowed:
-                    use_group = effect.get("use_item_group", False)
-                    force_equip = effect.get("force_equip", False)
-                    suppress_message = effect.get("suppress_message", False)
-                    if (
-                        isinstance(use_group, bool) and
-                        isinstance(force_equip, bool) and
-                        isinstance(suppress_message, bool)
-                    ):
-                        kind = "item_group" if use_group else "item"
-                        item_expression = _dynamic_id_expression(
-                            effect.get("u_spawn_item"), kind, "actor"
-                        )
-                        count_value = effect.get("count", 1)
-                        count_expression = render_eoc_numeric_expression(
-                            count_value, "1", "actor"
-                        )
-                        if item_expression is not None and count_expression is not None:
-                            count_expression = (
-                                "math.max(1, math.min(100, math.floor("
-                                f"({count_expression}) + 0.5)))"
-                            )
-                            if use_group:
-                                lines.append(
-                                    "    service_value(services.inventory.give_group("
-                                    f"actor, {item_expression}))"
-                                )
-                            else:
-                                lines.append(
-                                    "    service_value(services.inventory.give("
-                                    f"actor, {item_expression}, {count_expression}, "
-                                    f"))"
-                                )
-                            converted_effect = True
+                position_gap = (
+                    "loc is a legacy var_info lookup and does not prove a typed "
+                    "absolute map-square TripointCoord"
+                    if "loc" in effect else
+                    "the native target defaults to alpha's runtime position"
+                )
+                map_gap = (
+                    f"native map_spawn_item {position_gap}; map_add_item may load "
+                    "off-screen tinymaps, while services.world.spawn_item requires "
+                    "a loaded typed position and does not reproduce native item "
+                    "initialization, item-group, container, flags, or count behavior"
+                )
+                lines.append(f"    -- TODO: {map_gap}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {map_gap}"
+                )
+                all_effects_converted = False
             elif avatar_actor_proven and effect == "player_weapon_away":
                 lines.append(
                     "    -- TODO: player_weapon_away needs the exact wielded Item "

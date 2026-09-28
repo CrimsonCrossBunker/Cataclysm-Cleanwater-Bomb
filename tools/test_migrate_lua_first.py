@@ -15622,14 +15622,15 @@ assert(not available())
 
             self.assertEqual(len(result.converted), 1)
             self.assertTrue(result.partial)
-            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "aspirin"), 2))', main)
-            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "water_clean"), 1))', main)
-            self.assertIn('services.world.spawn_item(context.data["loc"], services.types.id("item", "flashlight"), 1)', main)
-            self.assertIn(
-                'services.world.spawn_item(service_value(services.characters.snapshot(actor)).creature.position, '
-                'services.types.id("item", "radio"), 1)',
-                main,
-            )
+            self.assertNotIn("services.inventory.give(", main)
+            self.assertNotIn("services.inventory.give_group(", main)
+            self.assertNotIn("services.world.spawn_item(", main)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
+            self.assertIn("loc is a legacy var_info lookup", main)
+            self.assertIn("the native target defaults to alpha's runtime position", main)
+            self.assertIn("off-screen tinymaps", main)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
+            self.assertIn("native map_spawn_item loc is a legacy var_info lookup", report)
             self.assertIn(
                 "player_weapon_away needs the exact wielded Item handle",
                 main,
@@ -15667,6 +15668,35 @@ assert(not available())
             self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
             self.assertIn("services.npcs.stop_temporary_following(wrapped_beta_npc)", main)
             self.assertNotIn("needs review", report)
+
+    def test_referenced_game_start_spawn_item_remains_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_game_start_spawn_item",
+                        "required_event": "game_start",
+                        "effect": {"u_spawn_item": "battery"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "spawn_item_caller",
+                        "effect": {"run_eocs": "referenced_game_start_spawn_item"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            self.assertFalse(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+            result = migrate_lua_first.migrate(objects, "referenced_spawn_item")
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.inventory.give(", main)
+            self.assertIn("EOC referenced_game_start_spawn_item effect #0", todo_text)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", todo_text)
 
     def test_translates_foreach_with_native_definition_pages(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -28213,7 +28243,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn("services.wounds.add", main)
             self.assertIn('services.variables.remove(actor, "fallback", { include_before = false })', main)
 
-    def test_false_effect_reuses_inventory_spawn_recipe_and_world_renderers(
+    def test_false_effect_keeps_spawn_item_as_a_native_semantics_todo(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -28281,7 +28311,9 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn("domain-service conversion", report)
-            self.assertIn("services.inventory.give", main)
+            self.assertNotIn("services.inventory.give", main)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
             self.assertNotIn("services.inventory.remove", main)
             self.assertIn("services.activities.cancel", main)
             self.assertIn("services.mutations.grant", main)
@@ -31131,9 +31163,10 @@ assert(calls==3 and context.data.entry=='zombie')
             )
             main = result.files[Path("main.lua")]
 
-            self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
-            self.assertIn('services.gameplay.math.evaluate("rand(3) + 1", actor', main)
-            self.assertIn("services.inventory.give", main)
+            self.assertNotIn('services.types.id("item"', main)
+            self.assertNotIn("services.gameplay.math.evaluate", main)
+            self.assertNotIn("services.inventory.give", main)
+            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
 
     def test_domain_renderers_accept_comments_dynamic_ids_and_native_activities(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -32446,11 +32479,19 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     {"u_wield": missing}, True, False
                 )
             )
-        self.assertIsNone(
-            migrate_lua_first.render_static_spawn_item_effect(
-                {"u_spawn_item": "rock", "force_equip": True}, True
-            )
-        )
+        for spawn in (
+            {"u_spawn_item": "rock"},
+            {"u_spawn_item": "rock", "count": 2},
+            {"u_spawn_item": "rock", "force_equip": True},
+            {"u_spawn_item": "group_reward", "use_item_group": True},
+            {"u_spawn_item": {"context_val": "item_id"}},
+        ):
+            with self.subTest(spawn=spawn):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_spawn_item_effect(
+                        spawn, True
+                    )
+                )
 
 
 def load_tests(loader, tests, pattern):
