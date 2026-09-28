@@ -7744,6 +7744,12 @@ function CcbCharactersApi.is_in_vehicle(character) end
 ---@return CcbResult result `value` is true when the native wetness routine ran.
 function CcbCharactersApi.add_wet(character, amount) end
 
+---Add an integer trust delta to the exact Character's faction.
+---@param character GameHandle Exact live Character handle with a faction.
+---@param amount integer Integer delta in -1000000..1000000.
+---@return CcbResult
+function CcbCharactersApi.add_faction_trust(character, amount) end
+
 ---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
 ---@param trainer GameHandle Exact live trainer Character handle.
 ---@param student GameHandle Exact live student Character handle.

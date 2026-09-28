@@ -25462,41 +25462,45 @@ FACTION_RELATIONSHIP_NAMES = frozenset({
 def render_static_faction_trust(
     effect: dict[str, Any], target_expression: str | None
 ) -> list[str] | None:
-    """Render a bounded NPC-faction trust delta."""
+    """Render an integral literal trust delta for a proven NPC alpha fallback."""
     if target_expression is None or set(effect) != {"u_add_faction_trust"}:
         return None
-    raw_amount = effect["u_add_faction_trust"]
+    literal = finite_number_literal(effect["u_add_faction_trust"])
     if (
-        not isinstance(raw_amount, int) or isinstance(raw_amount, bool) or
-        not -1000000 <= raw_amount <= 1000000
+        literal is None or literal != math.trunc(literal) or
+        not -1000000 <= literal <= 1000000
     ):
         return None
+    amount = math.trunc(literal)
     return [
+        "    -- npc_becomes_hostile supplies a live NPC alpha with no beta;",
+        "    -- native actor(true) falls back to alpha (its debugmsg is omitted).",
         "    service_value(services.characters.add_faction_trust(",
-        f"        {target_expression}, {raw_amount}))",
+        f"        {target_expression}, {amount}))",
     ]
 
 
 def render_static_faction_rep(
     effect: dict[str, Any], npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Render a bounded provider-faction reputation delta."""
+    """Render a bounded literal provider-faction delta with native int truncation."""
     if not npc_actor_proven or set(effect) != {"u_faction_rep"}:
         return None
-    raw_amount = effect.get("u_faction_rep")
-    amount = _traversal_integer_expression(
-        raw_amount, -1000000, 1000000, "actor"
-    )
-    if amount is None:
+    literal = finite_number_literal(effect.get("u_faction_rep"))
+    if literal is None:
         return None
-    if finite_number_literal(raw_amount) is None:
-        amount = (
-            "math.max(-1000000, math.min(1000000, "
-            f"({amount})))"
-        )
+    amount = math.trunc(literal)
+    if not -1000000 <= amount <= 1000000:
+        return None
     return [
-        "    service_value(services.npcs.add_faction_rep(",
-        f"        actor, {int(amount)}))",
+        "    -- npc_becomes_hostile supplies a live NPC alpha with no beta;",
+        "    -- native actor(true) falls back to alpha (its debugmsg is omitted).",
+        "    -- Both paths leave lone-wolf faction reputation unchanged.",
+        "    if actor ~= nil and",
+        '        service_value(services.creatures.snapshot(actor)).kind == "npc" then',
+        "        service_value(services.npcs.add_faction_rep(",
+        f"            actor, {amount}))",
+        "    end",
     ]
 
 
@@ -28590,6 +28594,7 @@ def render_eoc(
     game_start_event_emitted_by_eoc: bool = False,
     known_recipe_ids: frozenset[str] = frozenset(),
     character_melee_event_emitted_by_eoc: bool = True,
+    npc_becomes_hostile_event_emitted_by_eoc: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -28884,7 +28889,9 @@ def render_eoc(
     # context.actors.npc.  A static or dynamic child call can supply another
     # dialogue, while action-level EOC callbacks are not emitted by
     # render_talk_topic (its bounded response condition is not an EOC
-    # context), so neither source proves actor(true) for this branch.
+    # context), so neither source proves actor(true) for this branch. A
+    # same-corpus trigger_event for npc_becomes_hostile can reenter this
+    # listener with a different event payload, so it also disables the proof.
     # Native emits a debug message on the alpha fallback; this lowering
     # preserves the rule-state mutation and no-op target selection only.
     npc_ai_rule_mutation_actor_proven = (
@@ -28893,6 +28900,7 @@ def render_eoc(
         npc_event_character_actor_proven and
         npc_talker_ui_actor_expression == "actor" and
         not talker_pair_override and
+        not npc_becomes_hostile_event_emitted_by_eoc and
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
@@ -33533,7 +33541,7 @@ def render_eoc(
                 "u_faction_rep" in effect
             ):
                 rendered = render_static_faction_rep(
-                    effect, npc_event_character_actor_proven
+                    effect, npc_alpha_fallback_event_actor_proven
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -33553,13 +33561,13 @@ def render_eoc(
                 isinstance(effect, dict) and
                 "u_add_faction_trust" in effect
             ):
-                # Native `u_add_faction_trust` calls d.actor(true): the beta
-                # participant.  Reject an inferred fallback that could name
-                # alpha instead of passing an exact beta/NPC handle.
+                # Both native faction mutations call dialogue::actor(true).
+                # Only the event-exclusive npc_becomes_hostile path proves its
+                # missing-beta alpha fallback is the same live NPC handle.
                 trust_target = (
-                    npc_actor_expression
-                    if npc_actor_expression in {"actor", "context.actors.beta"}
-                    else None
+                    "actor"
+                    if npc_alpha_fallback_event_actor_proven and
+                    npc_actor_expression == "actor" else None
                 )
                 rendered = render_static_faction_trust(
                     effect, trust_target,
@@ -34553,6 +34561,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
     game_start_event_emitted_by_eoc = _has_static_event_emission(
         objects, "game_start"
     )
+    npc_becomes_hostile_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "npc_becomes_hostile"
+    )
     character_melee_event_emitted_by_eoc = _has_static_event_emission(
         objects, "character_melee_attacks_character"
     )
@@ -34892,6 +34903,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     game_start_event_emitted_by_eoc,
                     known_recipe_ids,
                     character_melee_event_emitted_by_eoc,
+                    npc_becomes_hostile_event_emitted_by_eoc,
                 )
             )
         elif kind == "tool_quality":
