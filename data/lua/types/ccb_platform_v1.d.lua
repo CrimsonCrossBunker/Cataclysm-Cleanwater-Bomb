@@ -11065,12 +11065,14 @@ function CcbPlatformMartialArtsApi.technique_definition(id) end
 
 
 ---Learn one martial-art style without coupling the mutation to presentation.
+---Uses the native effect's typed-id storage semantics; registry presence is not checked.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<martial_art>
 ---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.
 function CcbPlatformMartialArtsApi.learn(character, id) end
 
 ---Forget one martial-art style through the character's native style collection.
+---Uses the native effect's typed-id matching semantics; registry presence is not checked.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<martial_art>
 ---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.

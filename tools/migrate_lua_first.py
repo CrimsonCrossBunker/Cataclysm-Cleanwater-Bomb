@@ -850,6 +850,19 @@ def safe_platform_id(value: Any) -> bool:
     )
 
 
+def safe_native_martial_art_id(value: Any) -> bool:
+    if not safe_platform_id(value):
+        return False
+    try:
+        encoded_length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
+    return (
+        encoded_length <= 256 and
+        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
+    )
+
+
 def bounded_utf8_string(
     value: Any, maximum: int, *, allow_empty: bool = False
 ) -> bool:
@@ -1666,38 +1679,40 @@ def _collect_eoc_references(
 
 
 def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
-    """Fail closed when run_eocs can select a target from runtime data.
+    """Fail closed when EOC dispatch does not have a fixed target set.
 
     Static references are collected separately.  A variable-backed EOC id can
     name any generated function, so an event EOC may also be called as a child
-    with a different native beta than its event interlocutor.
+    with a different native actor than its event participant.  This covers
+    both immediate EOC calls and interactive selectors.
     """
-    def dynamic_reference(value: Any) -> bool:
-        if isinstance(value, str) or not isinstance(value, dict):
+    def fixed_reference(value: Any) -> bool:
+        if isinstance(value, str):
+            return True
+        if not isinstance(value, dict):
             return False
-        # A localized/string literal is still a fixed reference; all other
-        # accepted table forms resolve through runtime data or a registry.
-        if (
+        if set(value) == {"id"} and isinstance(value.get("id"), str):
+            return True
+        return (
             "str" in value and set(value) <= {"str", "i18n", "//~"} and
             bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
             value.get("i18n") is not True and
             ("i18n" not in value or isinstance(value["i18n"], bool)) and
             ("//~" not in value or isinstance(value["//~"], str))
-        ):
-            return False
-        return render_eoc_string_expression(value) is not None
+        )
 
     def walk(value: Any) -> bool:
         if isinstance(value, list):
             return any(walk(entry) for entry in value)
         if not isinstance(value, dict):
             return False
-        if "run_eocs" in value:
-            raw = value["run_eocs"]
+        for field in ("run_eocs", "run_eoc_selector"):
+            if field not in value:
+                continue
+            raw = value[field]
             references = [raw] if isinstance(raw, (str, dict)) else raw
-            if (
-                isinstance(references, list) and
-                any(dynamic_reference(entry) for entry in references)
+            if not isinstance(references, list) or any(
+                not fixed_reference(entry) for entry in references
             ):
                 return True
         return any(walk(entry) for entry in value.values())
@@ -29635,6 +29650,16 @@ def render_eoc(
     avatar_actor_proven = (
         avatar_actor_proven or global_recurrence
     )
+    # The martial-art effect service requires a live avatar handle. Keep this
+    # selector to game_start, whose native EOC alpha is the avatar before
+    # gameplay begins; death, generic, and recurrence callbacks do not provide
+    # the same liveness proof for this generation-checked service.
+    martial_art_avatar_actor_proven = (
+        required_event == "game_start" and
+        game_start_avatar_actor_is_proven() and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     item_event_character_actor_proven = (
         isinstance(required_event, str) and
         required_event in PROVEN_ITEM_ACTOR_EVENTS
@@ -30843,10 +30868,10 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                martial_art_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_martial_art"} and
-                safe_platform_id(effect.get("u_learn_martial_art"))
+                safe_native_martial_art_id(effect.get("u_learn_martial_art"))
             ):
                 lines.append("    services.martial_arts.learn(")
                 lines.append("        actor,")
@@ -30856,10 +30881,10 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                martial_art_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_forget_martial_art"} and
-                safe_platform_id(effect.get("u_forget_martial_art"))
+                safe_native_martial_art_id(effect.get("u_forget_martial_art"))
             ):
                 lines.append("    services.martial_arts.forget(")
                 lines.append("        actor,")
@@ -30921,32 +30946,6 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_learn_martial_art"} and
-                safe_platform_id(effect.get("npc_learn_martial_art"))
-            ):
-                lines.append("    services.martial_arts.learn(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"martial_art\", "
-                    f"{lua_quote(effect['npc_learn_martial_art'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_forget_martial_art"} and
-                safe_platform_id(effect.get("npc_forget_martial_art"))
-            ):
-                lines.append("    services.martial_arts.forget(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"martial_art\", "
-                    f"{lua_quote(effect['npc_forget_martial_art'])}))"
-                )
-                converted_effect = True
-            elif (
                 isinstance(effect, dict) and
                 any(key in effect for key in (
                     "u_add_bionic", "npc_add_bionic", "u_lose_bionic",
@@ -30973,7 +30972,16 @@ def render_eoc(
                     key.startswith("u_") and exact_npc_actor_proven and
                     _node_has_key(effect.get(key), "npc_val")
                 )
-                rendered = None if unresolved_beta_variable else (
+                # Martial-art effects use a generation-checked Character
+                # handle. Their bounded static lowering above proves a live
+                # game_start avatar alpha and a native-safe literal ID. Do not
+                # let this generic helper widen that proof to dead or
+                # non-avatar event actors, control-byte IDs, or npc_* selectors.
+                unproven_martial_art_effect = key in {
+                    "u_learn_martial_art", "npc_learn_martial_art",
+                    "u_forget_martial_art", "npc_forget_martial_art",
+                }
+                rendered = None if unresolved_beta_variable or unproven_martial_art_effect else (
                     render_dynamic_simple_character_effect(
                         effect, key, target,
                         avatar_expression=(

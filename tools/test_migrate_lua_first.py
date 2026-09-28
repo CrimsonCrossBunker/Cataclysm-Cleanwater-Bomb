@@ -6460,7 +6460,7 @@ assert(#events == 9)
                 2,
             )
 
-    def test_translates_avatar_martial_art_learning_and_forgetting(self) -> None:
+    def test_translates_live_avatar_martial_art_learning_and_forgetting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -6478,6 +6478,12 @@ assert(#events == 9)
                             "required_event": "game_start",
                             "effect": {"u_forget_martial_art": "style_karate"},
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "learn_unregistered_style",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style_from_mod"},
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -6487,7 +6493,7 @@ assert(#events == 9)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.converted), 3)
             self.assertEqual(result.partial, [])
             self.assertIn("services.martial_arts.learn", main)
             self.assertIn("services.martial_arts.forget", main)
@@ -6497,45 +6503,221 @@ assert(#events == 9)
                 'services.types.id("martial_art", "style_karate")',
                 main,
             )
+            self.assertIn(
+                'services.types.id("martial_art", "style_from_mod")',
+                main,
+            )
             self.assertNotIn("run_eoc", main)
 
-    def test_u_martial_art_uses_npc_event_alpha(self) -> None:
+    def test_martial_art_effects_require_live_game_start_avatar_alpha(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
-                json.dumps({
-                    "type": "effect_on_condition",
-                    "id": "npc_alpha_martial_art",
-                    "required_event": "npc_becomes_hostile",
-                    "effect": [
-                        {"u_learn_martial_art": "style_karate"},
-                        {"u_forget_martial_art": "style_karate"},
-                    ],
-                }),
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dead_avatar_dies",
+                            "required_event": "avatar_dies",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dead_game_avatar_death",
+                            "required_event": "game_avatar_death",
+                            "effect": {"u_forget_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "ambiguous_game_over",
+                            "required_event": "game_over",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_alpha_u_martial_art",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "prevention_hook_martial_art",
+                            "eoc_type": "PREVENT_DEATH",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "control_character_style_id",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style\ninvalid"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "overlong_style_id",
+                            "required_event": "game_start",
+                            "effect": {"u_forget_martial_art": "s" * 257},
+                        },
+                    ]
+                ),
                 encoding="utf-8",
             )
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]),
-                "npc_alpha_martial_art_mod",
+                "martial_art_liveness_mod",
             )
             main = result.files[Path("main.lua")]
 
-        self.assertEqual(result.converted, ["npc_alpha_martial_art"])
-        self.assertEqual(result.partial, [])
-        self.assertIn(
-            'services.martial_arts.learn(actor, services.types.id("martial_art", "style_karate"))',
-            main,
+        self.assertEqual(result.converted, [])
+        self.assertNotIn("services.martial_arts.learn(", main)
+        self.assertNotIn("services.martial_arts.forget(", main)
+        self.assertIn("TODO", main)
+
+    def test_dynamic_eoc_dispatch_requires_a_fixed_target_shape(self) -> None:
+        fixed = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "run_eoc_selector": [
+                    "fixed_selector_callback",
+                    {"str": "localized_static_callback", "i18n": False},
+                ],
+            },
         )
-        self.assertIn(
-            'services.martial_arts.forget(actor, services.types.id("martial_art", "style_karate"))',
-            main,
-        )
-        self.assertNotIn(
-            "services.martial_arts.learn(services.characters.avatar()", main
-        )
-        self.assertNotIn(
-            "services.martial_arts.forget(services.characters.avatar()", main
-        )
+        self.assertFalse(migrate_lua_first._has_dynamic_eoc_dispatch([fixed]))
+
+        for index, value in enumerate((
+            {"run_eoc_selector": {"global_val": "selected_eoc"}},
+            {"run_eoc_selector": {"id": "callback", "global_val": "selected_eoc"}},
+            {"run_eocs": 42},
+        ), start=1):
+            with self.subTest(index=index):
+                source = migrate_lua_first.SourceObject(Path("source.json"), index, value)
+                self.assertTrue(migrate_lua_first._has_dynamic_eoc_dispatch([source]))
+
+    def test_martial_art_game_start_handler_must_be_event_exclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_martial_art_callback",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_martial_art_caller",
+                            "required_event": "game_start",
+                            "effect": {"run_eocs": "static_martial_art_callback"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_selector_martial_art_callback",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "static_selector_martial_art_caller",
+                            "required_event": "game_start",
+                            "effect": {
+                                "run_eoc_selector": [
+                                    "static_selector_martial_art_callback",
+                                ],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_martial_art_callback",
+                            "required_event": "game_start",
+                            "effect": {"u_forget_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_martial_art_caller",
+                            "required_event": "game_start",
+                            "effect": {
+                                "run_eocs": {
+                                    "global_val": "selected_eoc",
+                                    "default": "",
+                                }
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_selector_martial_art_callback",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_selector_martial_art_caller",
+                            "required_event": "game_start",
+                            "effect": {
+                                "run_eoc_selector": {
+                                    "global_val": "selected_eoc",
+                                },
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "malformed_dispatch_martial_art_callback",
+                            "required_event": "game_start",
+                            "effect": {"u_forget_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "malformed_dispatch_martial_art_caller",
+                            "required_event": "game_start",
+                            "effect": {"run_eocs": 42},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "martial_art_callback_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+        self.assertNotIn("services.martial_arts.learn(", main)
+        self.assertNotIn("services.martial_arts.forget(", main)
+        self.assertIn("TODO", main)
+
+    def test_npc_martial_art_siblings_stay_manual_without_beta_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_hostility_martial_art",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": [
+                        {"npc_learn_martial_art": "style_karate"},
+                        {"npc_forget_martial_art": "style_karate"},
+                    ],
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_death_martial_art",
+                    "eoc_type": "NPC_DEATH",
+                    "effect": [
+                        {"npc_learn_martial_art": "style_karate"},
+                        {"npc_forget_martial_art": "style_karate"},
+                    ],
+                },
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_martial_art_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+        self.assertEqual(result.converted, [])
+        self.assertNotIn("services.martial_arts.learn(", main)
+        self.assertNotIn("services.martial_arts.forget(", main)
+        self.assertIn("TODO", main)
 
     def test_translates_bounded_avatar_morale_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
