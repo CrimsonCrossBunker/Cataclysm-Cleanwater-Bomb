@@ -203,4 +203,76 @@ TEST_CASE( "lua_platform_gameplay_math_keeps_native_scope_and_operation_modes",
     }
 }
 
+TEST_CASE( "lua_platform_math_condition_matches_native_concatenated_expression",
+           "[lua][platform][gameplay][math][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+
+    avatar alpha;
+    npc beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 6411 ), true );
+    beta.setID( character_id( 6412 ), true );
+    alpha.set_value( "math_condition_alpha", 7.0 );
+    beta.set_value( "math_condition_beta", 13.0 );
+    platform::register_npc_handle_identity( beta );
+    const on_out_of_scope retire_beta( [&]() {
+        platform::retire_npc_handle_identity( beta );
+    } );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
+                "math_condition_semantics", 6413, lua );
+    const on_out_of_scope clear_runtimes( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( owner, lua, ccb );
+    platform::set_active_runtimes( { owner } );
+    owner->world_is_ready = true;
+
+    const std::size_t world_generation = platform::detail::runtime_world_generation_storage();
+    lua["ccb"] = ccb;
+    lua["alpha_owner"] = platform::game_handle::from_creature(
+                             alpha, { "avatar", 6411, 0, 0, 0, {} },
+                             owner->handle_runtime(), world_generation );
+    lua["beta_owner"] = platform::game_handle::from_creature(
+                            beta, { "npc", 6412, 0, 0, 0, {} },
+                            owner->handle_runtime(), world_generation );
+    const std::string expression =
+        "u_math_condition_alpha + n_math_condition_beta > 15";
+    lua["math_condition_expression"] = expression;
+    const sol::protected_function platform_condition = lua.load( R"(
+        local result = ccb.services.gameplay.math.evaluate(
+            math_condition_expression, alpha_owner, {}, beta_owner)
+        assert(result.ok)
+        return result.value ~= 0
+    )" );
+
+    const conditional_t native_condition( json_loader::from_string(
+            R"({"math":["u_math_condition_alpha"," + ","n_math_condition_beta"," > ","15"]})"
+        ).get_object() );
+    finalize_conditions();
+    dialogue native_dialogue( get_talker_for( alpha ), get_talker_for( beta ) );
+    const bool native_result = native_condition( native_dialogue );
+
+    bool platform_result = false;
+    {
+        platform::detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = platform_condition();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+        platform_result = result.get<bool>();
+    }
+    CHECK( native_result );
+    CHECK( platform_result );
+    CHECK( native_result == platform_result );
+}
+
 #endif // CATA_ENABLE_LUA_PLATFORM
