@@ -4907,7 +4907,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": f"weapon_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "bounded weapon predicate"},
                         }
@@ -4987,7 +4987,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": f"unsafe_weapon_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "must remain partial"},
                         }
@@ -5032,7 +5032,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": f"item_flag_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "effect": effect,
                         }
                         for index, (event, effect) in enumerate(cases)
@@ -5125,7 +5125,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": f"unsafe_item_flag_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "effect": effect,
                         }
                         for index, (event, effect) in enumerate(cases)
@@ -5402,7 +5402,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     {
                         "type": "effect_on_condition",
                         "id": f"unsafe_wound_{index}",
-                        "required_event": event,
+                        "eoc_type": "EVENT", "required_event": event,
                         "effect": effect,
                     }
                     for index, (event, effect) in enumerate(cases)
@@ -5678,7 +5678,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 objects.append({
                     "type": "effect_on_condition",
                     "id": f"native_remove_{index}",
-                    "required_event": event,
+                    "eoc_type": "EVENT", "required_event": event,
                     "effect": {selector: name},
                 })
             for index, name in enumerate(invalid_names):
@@ -10134,7 +10134,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": f"loc_{index}",
-                        "required_event": event,
+                        "eoc_type": "EVENT", "required_event": event,
                         "condition": condition,
                         "effect": {"message": "loc"},
                     }
@@ -10257,7 +10257,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": f"cnst_{index}",
-                        "required_event": event,
+                        "eoc_type": "EVENT", "required_event": event,
                         "condition": condition,
                         "effect": {"message": "cnst"},
                     }
@@ -13624,7 +13624,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"profession_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "must stay partial"},
                         }
@@ -13715,7 +13715,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"flag_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "must stay partial"},
                         }
@@ -13800,7 +13800,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"wearing_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "must stay partial"},
                         }
@@ -13972,7 +13972,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"mission_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "mission active"},
                         }
@@ -14022,7 +14022,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"mission_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "must stay partial"},
                         }
@@ -14092,7 +14092,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": f"camp_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "has camp"},
                         }
@@ -21864,7 +21864,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     [{
                         "type": "effect_on_condition",
                         "id": f"static_{name}_teleport",
-                        "required_event": required_event,
+                        "eoc_type": "EVENT", "required_event": required_event,
                         "effect": effect,
                         **extra_fields,
                     }]
@@ -22523,7 +22523,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": f"unsafe_item_fault_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "effect": effect,
                         }
                         for index, (event, effect) in enumerate(cases)
@@ -23531,7 +23531,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": f"inventory_gap_{index}",
-                            "required_event": event,
+                            "eoc_type": "EVENT", "required_event": event,
                             "condition": condition,
                             "effect": {"message": "inventory condition"},
                         }
@@ -31343,7 +31343,7 @@ assert(context.data.picked==selected)
             {
                 "type": "effect_on_condition",
                 "id": key + "_owner",
-                "required_event": owner_events[key],
+                "eoc_type": "EVENT", "required_event": owner_events[key],
                 "effect": effect,
             }
             for key, effect in effects.items()
@@ -37179,7 +37179,7 @@ log={};beta.subtype='avatar';give();assert(#log==0)
                 main = migrate_lua_first.render_eoc(
                     migrate_lua_first.SourceObject(Path("source.json"), 0, {
                         "type": "effect_on_condition", "id": "equipment_event",
-                        "required_event": event,
+                        "eoc_type": "EVENT", "required_event": event,
                         "effect": [{"give_equipment": {"allowance": [["TRUST", 2]]}}],
                     }), result)
                 self.assertIn("both original talkers' modifiers", main)
