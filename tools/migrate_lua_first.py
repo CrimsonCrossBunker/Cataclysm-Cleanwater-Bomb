@@ -1752,6 +1752,27 @@ def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
     return any(walk(source.value) for source in objects)
 
 
+def _has_synthetic_game_start_trigger(objects: Iterable[SourceObject]) -> bool:
+    """Detect corpus-authored native game_start events conservatively.
+
+    The canonical game-start sender proves a live avatar alpha for that event
+    path.  A migrated ``trigger_event`` can also emit game_start from a Lua
+    action, so event name alone then no longer proves the originating callback
+    actor or call context.  Disable that narrow live-avatar lowering across the
+    corpus whenever a literal synthetic game_start emission is present.
+    """
+    def walk(value: Any) -> bool:
+        if isinstance(value, dict):
+            if value.get("trigger_event") == "game_start":
+                return True
+            return any(walk(entry) for entry in value.values())
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        return False
+
+    return any(walk(source.value) for source in objects)
+
+
 def _content_callback_actor_provenance(
     objects: Iterable[SourceObject],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
@@ -21670,129 +21691,18 @@ def render_static_roll_remainder_effect(
     avatar_actor_proven: bool, npc_actor_proven: bool,
     eoc_function_names: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Render a literal remainder roll through matching typed services."""
-    actor_proven = (
-        avatar_actor_proven
-        if key == "u_roll_remainder" else npc_actor_proven
-    )
-    if not actor_proven or set(effect) - {
-        key, "type", "true_eocs", "false_eocs", "message"
-    }:
-        return None
-    message_expression = None
-    if "message" in effect:
-        message_expression = render_eoc_string_expression(
-            effect["message"], "actor",
-        )
-        if message_expression is None:
-            return None
-    callback_names = eoc_function_names or {}
-    true_refs = _validated_eoc_references(
-        effect.get("true_eocs", []), callback_names, allow_empty=True
-    )
-    false_refs = _validated_eoc_references(
-        effect.get("false_eocs", []), callback_names, allow_empty=True
-    )
-    if true_refs is None or false_refs is None:
-        return None
-    raw = effect.get(key)
-    kind = effect.get("type")
-    if (
-        not isinstance(raw, list) or not raw or len(raw) > 64 or
-        not all(safe_platform_id(value) for value in raw) or
-        kind not in {"bionic", "mutation", "spell", "recipe"}
-    ):
-        return None
-    actor_expression = "actor"
-    type_name = {
-        "bionic": "bionic",
-        "mutation": "mutation",
-        "spell": "spell",
-        "recipe": "recipe",
-    }[kind]
-    lines = [
-        "    local remainder_candidates = {}",
-    ]
-    for value in raw:
-        id_expression = (
-            "services.types.id(\"" + type_name + "\", " +
-            lua_quote(value) + ")"
-        )
-        query = {
-            "bionic": "services.bionics.has",
-            "mutation": "services.mutations.has",
-            "spell": "services.spells.knows",
-            "recipe": "services.recipes.knows",
-        }[kind]
-        lines.extend([
-            "    if not service_value(" + query + "(" +
-            f"{actor_expression}, {id_expression})) then",
-            f"        remainder_candidates[#remainder_candidates + 1] = {id_expression}",
-            "    end",
-        ])
-    lines.extend([
-        "    if #remainder_candidates > 0 then",
-        "        local remainder = remainder_candidates[services.random.int(1, #remainder_candidates)]",
-    ])
-    if kind == "bionic":
-        lines.append(
-            f"        service_value(services.bionics.grant({actor_expression}, remainder))"
-        )
-    elif kind == "mutation":
-        lines.append(
-            f"        service_value(services.mutations.grant({actor_expression}, remainder))"
-        )
-    elif kind == "spell":
-        lines.append(
-            f"        service_value(services.spells.learn({actor_expression}, remainder, {{ force = true }}))"
-        )
-    else:
-        lines.append(
-            f"        service_value(services.recipes.learn({actor_expression}, remainder))"
-        )
-    if message_expression is not None and key == "u_roll_remainder":
-        lines.extend([
-            "        local remainder_name = tostring(remainder)",
-        ])
-        definition_service = {
-            "bionic": "bionics",
-            "mutation": "mutations",
-            "spell": "spells",
-        }.get(kind)
-        if definition_service is not None:
-            lines.extend([
-                f"        local remainder_definition = services.{definition_service}.definition(remainder)",
-                "        if remainder_definition ~= nil and remainder_definition.name ~= nil then",
-                "            remainder_name = remainder_definition.name",
-                "        end",
-            ])
-        elif kind == "recipe":
-            lines.extend([
-                "        local remainder_definition = service_value(services.recipes.get(",
-                f"            {actor_expression}, remainder))",
-                "        if remainder_definition.result_name ~= nil then",
-                "            remainder_name = remainder_definition.result_name",
-                "        end",
-            ])
-        lines.append(
-            "        if actor.subtype == \"avatar\" then",
-        )
-        lines.append(
-            f"            services.message(string.format({message_expression}, remainder_name))"
-        )
-        lines.append("        end")
-    for reference in true_refs:
-        lines.append(
-            f"        {callback_names[reference]}(context, {actor_expression})"
-        )
-    if false_refs:
-        lines.append("    else")
-        for reference in false_refs:
-            lines.append(
-                f"        {callback_names[reference]}(context, {actor_expression})"
-            )
-    lines.append("    end")
-    return lines
+    """Keep remainder rolls manual until typed grants match native setters.
+
+    Native ``f_roll_remainder`` uses ``Character::set_mutation`` for mutations,
+    native bionic/spell/recipe setters, and runs EOC vectors on a copied
+    dialogue.  Platform's typed grant APIs validate and report failure, and
+    some emit extra state/events.  Calling them through ``service_value`` can
+    therefore turn a native no-op into a Lua error or change observable state.
+    A matching native-int candidate selector alone is not enough to prove this
+    effect equivalent.
+    """
+    del effect, key, avatar_actor_proven, npc_actor_proven, eoc_function_names
+    return None
 
 
 def render_static_dimension_travel_effect(
@@ -25923,15 +25833,14 @@ def render_static_character_string_var(
 def render_static_sample_range(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
-    npc_actor_proven: bool,
 ) -> list[str] | None:
     """Render bounded literal sample_range assignments.
 
-    The legacy handler rounds its numeric inputs, clamps the sample count to
-    both the population (when sampling without replacement) and the number of
-    target variables, then writes one integer to each selected variable.  This
-    slice keeps those rules explicit and uses the isolated Platform RNG rather
-    than inventing a generic EOC evaluator.
+    The legacy handler rounds its numeric inputs and reports before clamping a
+    sample count that exceeds the population or target variables.  Keep those
+    diagnostic cases manual.  For counts that need no clamp, the emitted
+    bounded Fisher-Yates loop uses ``native_int`` with the same inclusive
+    bounds as native RNG calls, preserving draw order and state.
     """
     if set(effect) != {"sample_range"}:
         return None
@@ -25948,11 +25857,12 @@ def render_static_sample_range(
 
     def rounded_integer(value: int | float) -> int | None:
         numeric = float(value)
-        rounded = (
-            math.floor(numeric + 0.5)
-            if numeric >= 0
-            else math.ceil(numeric - 0.5)
-        )
+        fraction, integral = math.modf(numeric)
+        rounded = math.trunc(integral)
+        if fraction >= 0.5:
+            rounded += 1
+        elif fraction <= -0.5:
+            rounded -= 1
         if not math.isfinite(float(rounded)) or abs(rounded) > 1000000000:
             return None
         return int(rounded)
@@ -25975,13 +25885,7 @@ def render_static_sample_range(
         return None
 
     def target_expression(scope: str) -> str | None:
-        if scope == "u":
-            if avatar_actor_proven:
-                return "actor"
-            if npc_actor_proven:
-                return "services.characters.avatar()"
-            return None
-        if npc_actor_proven:
+        if scope == "u" and avatar_actor_proven:
             return "actor"
         return None
 
@@ -25992,14 +25896,34 @@ def render_static_sample_range(
     if any(handle is None for handle, _ in targets):
         return None
     population = maximum - minimum + 1
-    effective_count = min(count, len(targets))
-    if not replace:
-        effective_count = min(effective_count, population)
-    rendered = [
-        "    local samples = services.random.sample_integers("
-        f"{minimum}, {maximum}, {effective_count}, "
-        f"{'true' if replace else 'false'})"
-    ]
+    # Native allocates a full values vector for no-replacement sampling.
+    # Keep generated Lua within a reviewable memory bound as well.
+    if not replace and population > 65536:
+        return None
+    if count > len(targets) or (not replace and count > population):
+        return None
+    effective_count = count
+    if replace:
+        rendered = [
+            "    local samples = {}",
+            f"    for index = 1, {effective_count} do",
+            f"        samples[index] = services.random.native_int({minimum}, {maximum})",
+            "    end",
+        ]
+    else:
+        rendered = [
+            "    local values = {}",
+            f"    for value = {minimum}, {maximum} do",
+            "        values[#values + 1] = value",
+            "    end",
+            "    local samples = {}",
+            f"    for index = 1, {effective_count} do",
+            "        local swap_index = services.random.native_int(",
+            "            index - 1, #values - 1) + 1",
+            "        values[index], values[swap_index] = values[swap_index], values[index]",
+            "        samples[index] = values[index]",
+            "    end",
+        ]
     for index, (handle, name) in enumerate(targets[:effective_count], start=1):
         rendered.extend(
             [
@@ -26008,94 +25932,6 @@ def render_static_sample_range(
             ]
         )
     return rendered
-
-
-def render_dynamic_sample_range(
-    effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-) -> list[str] | None:
-    """Render variable-backed sample_range bounds with native-size clamps."""
-    if set(effect) != {"sample_range"}:
-        return None
-    sample = effect.get("sample_range")
-    if not isinstance(sample, dict) or set(sample) - {
-        "count", "min", "max", "replace", "target_vars",
-    }:
-        return None
-    replace = sample.get("replace", False)
-    if not isinstance(replace, bool):
-        return None
-    target_vars = sample.get("target_vars")
-    if not isinstance(target_vars, list) or not target_vars or len(target_vars) > 64:
-        return None
-    descriptors = [_static_character_variable_descriptor(value) for value in target_vars]
-    if any(descriptor is None for descriptor in descriptors):
-        return None
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-
-    def bounded_expression(value: Any, minimum: int, maximum: int) -> str | None:
-        expression = _traversal_integer_expression(
-            value, minimum, maximum, actor_expression
-        )
-        if expression is None:
-            return None
-        if finite_number_literal(value) is None:
-            return (
-                f"math.max({minimum}, math.min({maximum}, ({expression})))"
-            )
-        return expression
-
-    count = bounded_expression(sample.get("count"), 0, 1000000000)
-    minimum = bounded_expression(sample.get("min"), -1000000000, 1000000000)
-    maximum = bounded_expression(sample.get("max"), -1000000000, 1000000000)
-    if count is None or minimum is None or maximum is None:
-        return None
-
-    def target_expression(scope: str) -> str | None:
-        if scope == "u":
-            if avatar_actor_proven:
-                return "actor"
-            if npc_actor_proven:
-                return "services.characters.avatar()"
-            return None
-        if npc_actor_proven:
-            return "actor"
-        return None
-
-    targets = [
-        (target_expression(descriptor[0]), descriptor[1])
-        for descriptor in descriptors
-    ]
-    if any(handle is None for handle, _ in targets):
-        return None
-    target_literal = ", ".join(
-        "{ handle = " + handle + ", name = " + lua_quote(name) + " }"
-        for handle, name in targets
-    )
-    options = "true" if replace else "false"
-    return [
-        f"    local sample_count = {count}",
-        f"    local sample_minimum = {minimum}",
-        f"    local sample_maximum = {maximum}",
-        "    if sample_minimum <= sample_maximum then",
-        f"        local sample_targets = {{ {target_literal} }}",
-        "        local effective_count = math.min(sample_count, #sample_targets)",
-        "        if not " + options + " then",
-        "            effective_count = math.min(",
-        "                effective_count, sample_maximum - sample_minimum + 1)",
-        "        end",
-        "        local samples = services.random.sample_integers(",
-        f"            sample_minimum, sample_maximum, effective_count, {options})",
-        "        for index = 1, effective_count do",
-        "            services.variables.set(",
-        "                sample_targets[index].handle, sample_targets[index].name, samples[index])",
-        "        end",
-        "    end",
-    ]
 
 
 def render_static_timed_event_reschedule(
@@ -29254,6 +29090,7 @@ def render_eoc(
     known_mutation_ids: frozenset[str] = frozenset(),
     known_mutation_category_ids: frozenset[str] = frozenset(),
     dynamic_eoc_dispatch_present: bool = False,
+    synthetic_game_start_trigger_present: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29845,6 +29682,13 @@ def render_eoc(
         game_start_avatar_actor_is_proven() and not inline_eoc and
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
+    )
+    # sample_range writes Character variables and consumes the native global
+    # RNG. Its bounded conversion requires the same event-exclusive live alpha
+    # as the proficiency service, plus no content-authored game_start replay.
+    sample_range_alpha_actor_proven = (
+        proficiency_alpha_actor_proven and
+        not synthetic_game_start_trigger_present
     )
     event_beta_presence_proven = event_exclusive_source_proven
     # A named getter evaluates its closure against the current dialogue's
@@ -33488,13 +33332,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate remainder selection through "
-                        "typed mutation/spell/recipe services."
+                        "    -- TODO: native remainder setters, typed Platform "
+                        "grants, and copied-dialogue callbacks need an exact adapter."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded remainder-roll conversion"
+                        "needs native-equivalent remainder setters and callbacks"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_guard_pos" in effect or "npc_set_guard_pos" in effect):
@@ -33894,25 +33738,20 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "sample_range" in effect:
                 rendered = render_static_sample_range(
-                    effect, avatar_actor_proven, npc_event_character_actor_proven
+                    effect, sample_range_alpha_actor_proven
                 )
-                if rendered is None:
-                    rendered = render_dynamic_sample_range(
-                        effect, avatar_actor_proven,
-                        npc_event_character_actor_proven,
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate sample_range into bounded "
-                        "random and variable services."
+                        "    -- TODO: sample_range needs a live alpha, static "
+                        "numeric inputs, bounded population, and native RNG order."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a bounded live-alpha native sample_range conversion"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "set_string_var" in effect:
@@ -34962,6 +34801,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
     raw_referenced_eoc_ids = _collect_eoc_references(
         objects, raw_eoc_ids
     )
+    synthetic_game_start_trigger_present = _has_synthetic_game_start_trigger(
+        objects
+    )
     (
         objects,
         character_override_ids,
@@ -35287,6 +35129,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     known_mutation_ids,
                     known_mutation_category_ids,
                     dynamic_eoc_dispatch_present,
+                    synthetic_game_start_trigger_present,
                 )
             )
         elif kind == "tool_quality":
