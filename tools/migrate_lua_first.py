@@ -6479,8 +6479,9 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     as ``interlocutor()``. Assigned-mission predicates read the active native
     dialogue vector. NPC-prefixed mission predicates use the live beta and the
     existing typed NPC mission services. Direct ``npc_*`` state conditions use
-    that live beta Character's typed snapshot. Unprefixed alpha mission
-    predicates and Boolean compositions remain fail-closed in the caller.
+    that live beta Character's typed snapshot. ``u_*`` alpha mission
+    predicates and Boolean compositions remain
+    fail-closed in the caller. Native unprefixed mission aliases select beta.
     """
     if (
         isinstance(condition, dict) and set(condition) == {"not"} and
@@ -6559,6 +6560,9 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
         "npc_has_no_available_mission": ("available", "== 0"),
         "npc_has_available_mission": ("available", "== 1"),
         "npc_has_many_available_missions": ("available", ">= 2"),
+        "has_no_available_mission": ("available", "== 0"),
+        "has_available_mission": ("available", "== 1"),
+        "has_many_available_missions": ("available", ">= 2"),
     }
     if isinstance( condition, str ) and condition in mission_count_conditions:
         collection, comparison = mission_count_conditions[condition]
@@ -6590,6 +6594,9 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
         "npc_mission_complete": "complete",
         "npc_mission_incomplete": "incomplete",
         "npc_mission_failed": "failed",
+        "mission_complete": "complete",
+        "mission_incomplete": "incomplete",
+        "mission_failed": "failed",
     }
     if isinstance( condition, str ) and condition in mission_status_conditions:
         predicate = mission_status_conditions[condition]
@@ -6606,7 +6613,9 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
             "            return selected.ok and selected.value == true\n"
             "        end"
         )
-    if isinstance(condition, dict) and set(condition) == {"npc_mission_goal"}:
+    if isinstance(condition, dict) and set(condition) in (
+        {"npc_mission_goal"}, {"mission_goal"}
+    ):
         goal_key = next(iter(condition))
         goal = condition[goal_key]
         if not isinstance( goal, str ) or goal not in NATIVE_MISSION_GOALS:

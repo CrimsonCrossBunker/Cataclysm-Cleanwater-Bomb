@@ -11828,9 +11828,15 @@ assert(not available())
             "npc_has_no_available_mission": "available_count(beta)",
             "npc_has_available_mission": "available_count(beta)",
             "npc_has_many_available_missions": "available_count(beta)",
+            "has_no_available_mission": "available_count(beta)",
+            "has_available_mission": "available_count(beta)",
+            "has_many_available_missions": "available_count(beta)",
             "npc_mission_complete": 'selected_condition(beta, owner, "complete")',
             "npc_mission_incomplete": 'selected_condition(beta, owner, "incomplete")',
             "npc_mission_failed": 'selected_condition(beta, owner, "failed")',
+            "mission_complete": 'selected_condition(beta, owner, "complete")',
+            "mission_incomplete": 'selected_condition(beta, owner, "incomplete")',
+            "mission_failed": 'selected_condition(beta, owner, "failed")',
         }
         for condition, query in query_by_condition.items():
             with self.subTest(condition=condition):
@@ -11839,23 +11845,20 @@ assert(not available())
                 )
                 self.assertIsNotNone(callback)
                 assert callback is not None
-                self.assertIn("dialogue_context:valid()", callback.value)
+                self.assertIn("dialogue_context:valid()", callback.source)
                 if query != "assigned_mission_count()":
-                    self.assertIn("dialogue_context:interlocutor()", callback.value)
-                self.assertIn(query, callback.value)
+                    self.assertIn("dialogue_context:interlocutor()", callback.source)
+                self.assertIn(query, callback.source)
 
         for condition in ("mission_goal", "npc_mission_goal"):
             callback = migrate_lua_first.render_talk_topic_response_condition(
                 {condition: "MGOAL_ASSASSINATE"}
             )
-            if condition == "mission_goal":
-                self.assertIsNone(callback)
-            else:
-                self.assertIsNotNone(callback)
-                assert callback is not None
-                self.assertIn(
-                    'selected_has_goal(beta, "MGOAL_ASSASSINATE")', callback.value
-                )
+            self.assertIsNotNone(callback)
+            assert callback is not None
+            self.assertIn(
+                'selected_has_goal(beta, "MGOAL_ASSASSINATE")', callback.source
+            )
             self.assertIsNone(
                 migrate_lua_first.render_talk_topic_response_condition(
                     {condition: {"var": "mission_goal"}}
@@ -11868,9 +11871,9 @@ assert(not available())
             )
 
         for alpha_condition in (
-            "has_no_available_mission", "has_available_mission",
-            "has_many_available_missions", "mission_complete",
-            "mission_incomplete", "mission_failed",
+            "u_has_no_available_mission", "u_has_available_mission",
+            "u_has_many_available_missions", "u_mission_complete",
+            "u_mission_incomplete", "u_mission_failed",
         ):
             with self.subTest(alpha_condition=alpha_condition):
                 self.assertIsNone(
@@ -11882,6 +11885,7 @@ assert(not available())
         topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
                 "type": "talk_topic", "id": "direct_mission_topic",
+                "dynamic_line": "What can I do for you?",
                 "responses": [
                     {"text": condition, "condition": condition}
                     for condition in query_by_condition
@@ -11960,18 +11964,16 @@ assert(not available())
                 self.assertIsNotNone(rendered)
                 assert rendered is not None
                 if source["id"] == "TALK_TEST_MISSION_GOAL":
-                    self.assertNotIn("selected_has_goal", rendered)
-                    self.assertIn("condition = false", rendered)
-                    self.assertTrue(result.todos)
+                    self.assertIn("selected_has_goal", rendered)
                 elif source["id"] == "TALK_MISSION_LIST":
-                    self.assertNotIn("services.npcs.missions.available_count", rendered)
+                    self.assertIn("services.npcs.missions.available_count", rendered)
                     self.assertIn("condition = false", rendered)
-                    # This native predicate selects alpha, whose exact mission query remains TODO.
+                    # The negated beta predicate remains a Boolean-composition TODO.
                     self.assertTrue(result.todos)
                 elif source["id"] == "TALK_MISSION_INQUIRE":
-                    self.assertNotIn("services.npcs.missions.selected_condition", rendered)
+                    self.assertIn("services.npcs.missions.selected_condition", rendered)
                     self.assertIn("condition = false", rendered)
-                    # This native predicate selects alpha; mission EOC actions stay TODO too.
+                    # Composite conditions and mission EOC actions stay TODO.
                     self.assertTrue(result.todos)
                 else:
                     self.assertIn("assigned_mission_count()", rendered)
