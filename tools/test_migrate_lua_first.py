@@ -25231,6 +25231,9 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "services.targeting.choose_adjacent_where_at(",
                 main,
             )
+            self.assertEqual(
+                main.count("services.targeting.choose_adjacent_where_at("), 2
+            )
             self.assertIn(
                 'center, "", ""',
                 main,
@@ -34088,6 +34091,79 @@ assert(context.conditions.check==original and context.conditions.check() and con
             )
             self.assertIn("localized_u_adjacent", report)
             self.assertIn("localized_npc_adjacent", report)
+
+    def test_targeting_actor_proofs_do_not_leak_into_referenced_eocs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_avatar_targeting",
+                        "required_event": "game_start",
+                        "effect": [
+                            {
+                                "u_query_tile": "anywhere",
+                                "target_var": {"context_val": "picked_tile"},
+                            },
+                            {
+                                "u_choose_adjacent_highlight": {
+                                    "context_val": "picked_adjacent",
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_npc_targeting",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {
+                            "npc_choose_adjacent_highlight": {
+                                "npc_val": "picked_npc_adjacent",
+                            },
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "targeting_child_caller",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {
+                            "run_eocs": [
+                                "referenced_avatar_targeting",
+                                "referenced_npc_targeting",
+                            ],
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "targeting_child_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            # Native run_eocs reuses the current dialogue: on the melee event
+            # its beta is the struck Character, while the generated child gets
+            # the caller's alpha as actor_override. Do not reuse either target
+            # event's standalone avatar/NPC proof for these callable children.
+            self.assertNotIn("services.targeting.choose_map_square(", main)
+            self.assertNotIn("services.targeting.choose_visible_map_square(", main)
+            self.assertNotIn("services.targeting.choose_adjacent_where_at(", main)
+            self.assertEqual(
+                main.count(
+                    "TODO: translate the tile query through the typed targeting service."
+                ),
+                1,
+            )
+            self.assertEqual(
+                main.count(
+                    "TODO: translate adjacent highlighting through the typed targeting service."
+                ),
+                2,
+            )
+            self.assertIn("referenced_avatar_targeting", report)
+            self.assertIn("referenced_npc_targeting", report)
 
     def test_vehicle_inheritance_lowers_only_typed_collection_patches(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
