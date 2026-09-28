@@ -1238,6 +1238,12 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     const int faction_respects_before = shared_faction->respects_u;
     const int faction_trust_before = shared_faction->trusts_u;
     const int faction_power_before = shared_faction->power;
+    on_out_of_scope restore_faction( [&]() {
+        shared_faction->likes_u = faction_likes_before;
+        shared_faction->respects_u = faction_respects_before;
+        shared_faction->trusts_u = faction_trust_before;
+        shared_faction->power = faction_power_before;
+    } );
     native_effect.apply( native_conversation );
     CHECK( native_mission->is_complete( owner.getID() ) );
     const int native_value_delta =
