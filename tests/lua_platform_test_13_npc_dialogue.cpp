@@ -630,6 +630,235 @@ TEST_CASE( "lua_platform_dialogue_response_callbacks_reject_stale_topics",
     cata::lua_platform::dialogue::clear_response_callbacks();
 }
 
+TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_sessions",
+           "[lua][platform][dialogue]" )
+{
+    cata::lua_platform::dialogue::clear_response_callbacks();
+    npc speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1220 ), true );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1221 ), true );
+    dialogue conversation(
+        std::make_unique<talker_npc>( &speaker ),
+        std::make_unique<talker_npc>( &interlocutor ) );
+    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
+    constexpr std::size_t world_generation = 1;
+    cata::lua_platform::dialogue::begin_session(
+        conversation, runtime, world_generation );
+    const cata::lua_platform::dialogue::dialogue_session_ptr first_session =
+        cata::lua_platform::dialogue::session_for(
+            conversation, "TALK_ACTION_ONE", runtime, world_generation );
+    int callback_calls = 0;
+    const std::uint64_t stale_action =
+        cata::lua_platform::dialogue::register_response_action_callback(
+            cata::lua_platform::dialogue::response_callback_origin::platform,
+            [&callback_calls]( dialogue &, bool ) {
+        ++callback_calls;
+    }, first_session, "TALK_ACTION_ONE" );
+
+    cata::lua_platform::dialogue::session_for(
+        conversation, "TALK_ACTION_TWO", runtime, world_generation );
+    cata::lua_platform::dialogue::apply_response_action_callback(
+        conversation, stale_action, true );
+    CHECK( callback_calls == 0 );
+
+    const cata::lua_platform::dialogue::dialogue_session_ptr current_session =
+        cata::lua_platform::dialogue::session_for(
+            conversation, "TALK_ACTION_TWO", runtime, world_generation );
+    const std::uint64_t retired_action =
+        cata::lua_platform::dialogue::register_response_action_callback(
+            cata::lua_platform::dialogue::response_callback_origin::platform,
+            [&callback_calls]( dialogue &, bool ) {
+        ++callback_calls;
+    }, current_session, "TALK_ACTION_TWO" );
+    cata::lua_platform::dialogue::retire_sessions_for_world( world_generation );
+    cata::lua_platform::dialogue::apply_response_action_callback(
+        conversation, retired_action, true );
+    CHECK( callback_calls == 0 );
+
+    cata::lua_platform::dialogue::begin_session(
+        conversation, runtime, world_generation );
+    const cata::lua_platform::dialogue::dialogue_session_ptr replacement_session =
+        cata::lua_platform::dialogue::session_for(
+            conversation, "TALK_ACTION_TWO", runtime, world_generation );
+    const std::uint64_t cleared_action =
+        cata::lua_platform::dialogue::register_response_action_callback(
+            cata::lua_platform::dialogue::response_callback_origin::platform,
+            [&callback_calls]( dialogue &, bool ) {
+        ++callback_calls;
+    }, replacement_session, "TALK_ACTION_TWO" );
+    cata::lua_platform::dialogue::clear_response_callbacks(
+        cata::lua_platform::dialogue::response_callback_origin::platform );
+    cata::lua_platform::dialogue::apply_response_action_callback(
+        conversation, cleared_action, false );
+    CHECK( callback_calls == 0 );
+    cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_select",
+           "[lua][platform][dialogue][runtime]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_action_stage", 83, owner_lua );
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+
+    npc speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1222 ), true );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1223 ), true );
+    interlocutor.op_of_u.anger = interlocutor.hostile_anger_level() - 1;
+    CHECK_FALSE( interlocutor.turned_hostile() );
+    owner_lua.set_function( "native_interlocutor_trust", [&interlocutor]() {
+        return interlocutor.op_of_u.trust;
+    } );
+    owner_lua.set_function( "native_interlocutor_hostile", [&interlocutor]() {
+        return interlocutor.turned_hostile();
+    } );
+    owner_lua.script( R"(
+        action_events = {}
+        function action_stage_callback(context, trial_success)
+            action_events[#action_events + 1] = {
+                trial_success = trial_success,
+                topic = context:topic(),
+                trust = native_interlocutor_trust(),
+                hostile = native_interlocutor_hostile(),
+                valid = context:valid()
+            }
+            action_context = context
+            return "TALK_ACTION_RETURN_MUST_BE_IGNORED"
+        end
+        function select_stage_callback(context, trial_success, fallback_topic)
+            select_stage_trust = native_interlocutor_trust()
+            select_stage_hostile = native_interlocutor_hostile()
+            return "TALK_SELECTED_AFTER_ACTION"
+        end
+        function action_context_is_valid()
+            return action_context:valid()
+        end
+        function error_action_stage_callback(context)
+            failing_action_context = context
+            error("expected action-stage callback failure")
+        end
+        function failing_action_context_is_valid()
+            return failing_action_context:valid()
+        end
+    )" );
+
+    sol::table response_one = owner_lua.create_table();
+    response_one["text"] = "Run successful action";
+    response_one["on_action"] = owner_lua["action_stage_callback"];
+    response_one["on_select"] = owner_lua["select_stage_callback"];
+    sol::table response_two = owner_lua.create_table();
+    response_two["text"] = "Run failed action";
+    response_two["on_action"] = owner_lua["action_stage_callback"];
+    sol::table response_three = owner_lua.create_table();
+    response_three["text"] = "Run a failing action callback";
+    response_three["on_action"] = owner_lua["error_action_stage_callback"];
+    sol::table response_four = owner_lua.create_table();
+    response_four["text"] = "Run action before runtime shutdown";
+    response_four["on_action"] = owner_lua["action_stage_callback"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response_one;
+    responses[2] = response_two;
+    responses[3] = response_three;
+    responses[4] = response_four;
+    sol::table topic = owner_lua.create_table();
+    topic["id"] = "TALK_CCB_ACTION_STAGE";
+    topic["dynamic_line"] = "Action stage test";
+    topic["responses"] = responses;
+    const sol::table dialogue_api = ccb["dialogue"];
+    const sol::protected_function register_topic = dialogue_api["register_topic"];
+    const sol::protected_function_result registered =
+        register_topic( topic );
+    REQUIRE( registered.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    dialogue conversation(
+        std::make_unique<talker_npc>( &speaker ),
+        std::make_unique<talker_npc>( &interlocutor ) );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    cata::lua_platform::dialogue::begin_session(
+        conversation, runtime_identity, world_generation );
+    conversation.gen_responses( talk_topic( "TALK_CCB_ACTION_STAGE" ) );
+    REQUIRE( conversation.responses.size() == 4 );
+
+    talk_response &success_response = conversation.responses[0];
+    REQUIRE( success_response.lua_response_id.has_value() );
+    success_response.success.opinion.trust = 7;
+    success_response.success.opinion.anger = 2;
+
+    talk_response &failure_response = conversation.responses[1];
+    CHECK_FALSE( failure_response.lua_response_id.has_value() );
+    const talk_topic failure_topic = failure_response.failure.apply( conversation );
+    CHECK( failure_topic.id == "TALK_NONE" );
+
+    talk_response &failing_response = conversation.responses[2];
+    CHECK_FALSE( failing_response.lua_response_id.has_value() );
+    const talk_topic failure_callback_topic = failing_response.failure.apply( conversation );
+    CHECK( failure_callback_topic.id == "TALK_NONE" );
+
+    const talk_topic native_success_topic = success_response.success.apply( conversation );
+    CHECK( native_success_topic.id == "TALK_DONE" );
+    CHECK( interlocutor.op_of_u.trust == 7 );
+    CHECK( interlocutor.turned_hostile() );
+    const talk_topic selected_topic =
+        cata::lua_platform::dialogue::apply_response_callback(
+            conversation, *success_response.lua_response_id,
+            native_success_topic, true );
+    CHECK( selected_topic.id == "TALK_SELECTED_AFTER_ACTION" );
+    const talk_topic duplicate_branch_topic = success_response.failure.apply( conversation );
+    CHECK( duplicate_branch_topic.id == "TALK_DONE" );
+
+    talk_response &runtime_response = conversation.responses[3];
+    CHECK_FALSE( runtime_response.lua_response_id.has_value() );
+    cata::lua_platform::clear_active_runtimes();
+    const talk_topic after_runtime_shutdown = runtime_response.success.apply( conversation );
+    CHECK( after_runtime_shutdown.id == "TALK_DONE" );
+
+    const sol::table action_events = owner_lua["action_events"];
+    REQUIRE( action_events.size() == 2 );
+    const sol::table failure_event = action_events.get<sol::table>( 1 );
+    CHECK_FALSE( failure_event["trial_success"].get<bool>() );
+    CHECK( failure_event["topic"].get<std::string>() == "TALK_CCB_ACTION_STAGE" );
+    CHECK( failure_event["trust"].get<int>() == 0 );
+    CHECK_FALSE( failure_event["hostile"].get<bool>() );
+    CHECK( failure_event["valid"].get<bool>() );
+    const sol::table success_event = action_events.get<sol::table>( 2 );
+    CHECK( success_event["trial_success"].get<bool>() );
+    CHECK( success_event["topic"].get<std::string>() == "TALK_CCB_ACTION_STAGE" );
+    CHECK( success_event["trust"].get<int>() == 0 );
+    CHECK_FALSE( success_event["hostile"].get<bool>() );
+    CHECK( success_event["valid"].get<bool>() );
+    CHECK( owner_lua["select_stage_trust"].get<int>() == 7 );
+    CHECK( owner_lua["select_stage_hostile"].get<bool>() );
+    const sol::protected_function context_valid = owner_lua["action_context_is_valid"];
+    const sol::protected_function_result stale_context = context_valid();
+    REQUIRE( stale_context.valid() );
+    CHECK_FALSE( stale_context.get<bool>() );
+    const sol::protected_function failing_context_valid =
+        owner_lua["failing_action_context_is_valid"];
+    const sol::protected_function_result invalidated_failure_context =
+        failing_context_valid();
+    REQUIRE( invalidated_failure_context.valid() );
+    CHECK_FALSE( invalidated_failure_context.get<bool>() );
+    cata::lua_platform::dialogue::end_session( conversation );
+}
+
 TEST_CASE( "lua_platform_dialogue_participants_keep_exact_npc_identity",
            "[lua][platform][dialogue][npc]" )
 {

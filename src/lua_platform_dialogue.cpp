@@ -726,8 +726,18 @@ struct stored_response_callback {
     std::string topic;
 };
 
+struct stored_response_action_callback {
+    response_callback_origin origin;
+    response_action_callback callback;
+    dialogue_session_ptr session;
+    std::string topic;
+};
+
 std::unordered_map<std::uint64_t, stored_response_callback> response_callbacks;
 std::uint64_t next_response_callback_id = 1;
+std::unordered_map<std::uint64_t, stored_response_action_callback>
+response_action_callbacks;
+std::uint64_t next_response_action_callback_id = 1;
 
 } // namespace
 
@@ -763,9 +773,24 @@ std::uint64_t register_response_callback( const response_callback_origin origin,
     return id;
 }
 
+std::uint64_t register_response_action_callback( const response_callback_origin origin,
+        response_action_callback callback, dialogue_session_ptr session,
+        std::string topic )
+{
+    if( next_response_action_callback_id == 0 ) {
+        throw std::runtime_error( "dialogue response action callback id space is exhausted" );
+    }
+    const std::uint64_t id = next_response_action_callback_id++;
+    response_action_callbacks.emplace( id, stored_response_action_callback{
+        origin, std::move( callback ), std::move( session ), std::move( topic )
+    } );
+    return id;
+}
+
 void clear_response_callbacks()
 {
     response_callbacks.clear();
+    response_action_callbacks.clear();
 }
 
 void clear_response_callbacks( const response_callback_origin origin )
@@ -773,6 +798,14 @@ void clear_response_callbacks( const response_callback_origin origin )
     for( auto iter = response_callbacks.begin(); iter != response_callbacks.end(); ) {
         if( iter->second.origin == origin ) {
             iter = response_callbacks.erase( iter );
+        } else {
+            ++iter;
+        }
+    }
+    for( auto iter = response_action_callbacks.begin();
+         iter != response_action_callbacks.end(); ) {
+        if( iter->second.origin == origin ) {
+            iter = response_action_callbacks.erase( iter );
         } else {
             ++iter;
         }
@@ -792,6 +825,21 @@ talk_topic apply_response_callback( ::dialogue &d, const std::uint64_t response_
         return fallback;
     }
     return stored.callback( d, fallback, trial_success );
+}
+
+void apply_response_action_callback( ::dialogue &d, const std::uint64_t response_id,
+                                     const bool trial_success )
+{
+    const auto found = response_action_callbacks.find( response_id );
+    if( found == response_action_callbacks.end() ) {
+        return;
+    }
+    stored_response_action_callback stored = std::move( found->second );
+    response_action_callbacks.erase( found );
+    if( stored.session && !stored.session->active_for( stored.topic, &d ) ) {
+        return;
+    }
+    stored.callback( d, trial_success );
 }
 
 talk_response response_from_table( const sol::table &descriptor,

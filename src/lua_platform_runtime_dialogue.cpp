@@ -54,6 +54,10 @@ talk_topic invoke_platform_dialogue_response_callback(
     std::weak_ptr<runtime> weak_owner, std::string topic_id,
     sol::protected_function callback, ::dialogue &d, const talk_topic &fallback,
     bool trial_success );
+void invoke_platform_dialogue_action_callback(
+    std::weak_ptr<runtime> weak_owner, std::string topic_id,
+    cata::lua_platform::dialogue::dialogue_session_ptr session,
+    sol::protected_function callback, ::dialogue &d, bool trial_success );
 
 platform_canvas_context::platform_canvas_context( const int width, const int height,
         const std::int64_t elapsed_ms, const std::int64_t delta_ms,
@@ -1213,7 +1217,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             "condition", "show_always", "show_condition", "show_reason",
             "failure_explanation", "failure_topic", "switch", "default",
             "false_text", "text_condition", "trial", "success_topic",
-            "on_success", "on_failure", "success_consequence",
+            "on_action", "on_success", "on_failure", "success_consequence",
             "failure_consequence", "success_opinion", "failure_opinion",
             "success_mission_opinion", "failure_mission_opinion",
             "topic_item", "topic_reason", "success_item", "failure_item",
@@ -1487,6 +1491,40 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         optional_callback( on_success, "on_success" );
     const std::optional<sol::protected_function> failure_callback =
         optional_callback( on_failure, "on_failure" );
+    const sol::object on_action = descriptor.raw_get<sol::object>( "on_action" );
+    const std::optional<sol::protected_function> action_callback =
+        optional_callback( on_action, "on_action" );
+    if( action_callback ) {
+        const std::weak_ptr<runtime> weak_owner( owner );
+        const cata::lua_platform::game_handle_runtime runtime_identity =
+            owner->handle_runtime();
+        const cata::lua_platform::dialogue::dialogue_session_ptr session =
+            cata::lua_platform::dialogue::session_for(
+                d, topic_id, runtime_identity,
+                detail::runtime_world_generation_storage() );
+        const std::uint64_t action_id =
+            cata::lua_platform::dialogue::register_response_action_callback(
+                cata::lua_platform::dialogue::response_callback_origin::platform,
+                [weak_owner, topic_id, session, callback = *action_callback](
+                    ::dialogue & active_dialogue, const bool trial_success ) mutable {
+            invoke_platform_dialogue_action_callback(
+                weak_owner, topic_id, session, callback, active_dialogue,
+                trial_success );
+        }, session, topic_id );
+        // Both branches share a one-shot ID; native response selection applies only one.
+        generated.response.success.set_effect(
+            talk_effect_fun_t( talk_effect_fun_t::func(
+                [action_id]( ::dialogue &active_dialogue ) {
+                    cata::lua_platform::dialogue::apply_response_action_callback(
+                        active_dialogue, action_id, true );
+                } ) ) );
+        generated.response.failure.set_effect(
+            talk_effect_fun_t( talk_effect_fun_t::func(
+                [action_id]( ::dialogue &active_dialogue ) {
+                    cata::lua_platform::dialogue::apply_response_action_callback(
+                        active_dialogue, action_id, false );
+                } ) ) );
+    }
     if( on_select || success_callback || failure_callback ) {
         const std::weak_ptr<runtime> weak_owner( owner );
         const cata::lua_platform::game_handle_runtime runtime_identity =
@@ -2039,6 +2077,56 @@ void extend_platform_dialogue_responses( ::dialogue &d, const talk_topic &topic 
                                             << topic.id << "': " << exception.what();
             }
         }
+    }
+}
+
+void invoke_platform_dialogue_action_callback(
+    const std::weak_ptr<runtime> weak_owner, const std::string topic_id,
+    const cata::lua_platform::dialogue::dialogue_session_ptr session,
+    sol::protected_function callback, ::dialogue &d, const bool trial_success )
+{
+    const std::shared_ptr<runtime> owner = weak_owner.lock();
+    if( !owner ) {
+        return;
+    }
+
+    std::shared_ptr<platform_dialogue_context> context;
+    const on_out_of_scope invalidate_context( [&]() {
+        if( context ) {
+            context->invalidate();
+        }
+    } );
+    try {
+        if( !owner->world_is_ready || owner->lua == nullptr || !session ||
+            !session->active_for( topic_id, &d ) ||
+            session->validation_error( &d, owner->handle_runtime(),
+                                       detail::runtime_world_generation_storage() ) ) {
+            return;
+        }
+        if( owner->callback_depth >= 16 ) {
+            throw std::runtime_error( "dialogue callback recursion limit reached" );
+        }
+        context = make_platform_dialogue_context( *owner, d, topic_id );
+        callback_scope scope( *owner );
+        const sol::protected_function_result result = callback( context, trial_success );
+        context->invalidate();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() > 0 ) {
+            DebugLog( D_WARNING, D_MAIN ) << "Lua-first Mod '" << owner->mod_id
+                                          << "' dialogue on_action '" << topic_id
+                                          << "' returned values; use on_select to change topics";
+        }
+    } catch( const std::exception &exception ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << owner->mod_id
+                                    << "' dialogue on_action '" << topic_id
+                                    << "': " << exception.what();
+    } catch( ... ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << owner->mod_id
+                                    << "' dialogue on_action '" << topic_id
+                                    << "' failed with an unknown exception";
     }
 }
 

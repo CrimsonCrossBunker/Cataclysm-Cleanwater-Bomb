@@ -155,14 +155,20 @@ enum class response_callback_origin : int {
 
 using response_callback = std::function<talk_topic( ::dialogue &,
                           const talk_topic &, bool )>;
+using response_action_callback = std::function<void( ::dialogue &, bool )>;
 
 std::uint64_t register_response_callback( response_callback_origin origin,
         response_callback callback, dialogue_session_ptr session = {},
+        std::string topic = {} );
+std::uint64_t register_response_action_callback( response_callback_origin origin,
+        response_action_callback callback, dialogue_session_ptr session = {},
         std::string topic = {} );
 void clear_response_callbacks();
 void clear_response_callbacks( response_callback_origin origin );
 talk_topic apply_response_callback( ::dialogue &d, std::uint64_t response_id,
                                     const talk_topic &fallback, bool trial_success );
+void apply_response_action_callback( ::dialogue &d, std::uint64_t response_id,
+                                     bool trial_success );
 
 struct response_descriptor_options {
     std::string_view api_name;
