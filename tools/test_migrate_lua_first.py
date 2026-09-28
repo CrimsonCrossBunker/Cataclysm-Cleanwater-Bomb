@@ -17489,11 +17489,12 @@ assert(not available())
             self.assertNotIn("services.hordes.advance", main)
             self.assertNotIn("services.overmap.reveal_route", main)
             self.assertIn(
-                "reveal_route has no transactional Platform API",
+                "native reveal_route reads two var_info abs_ms endpoints and "
+                "projects them to OMT",
                 main,
             )
             self.assertIn(
-                "reveal_route has no transactional Platform API",
+                "services.overmap.reveal accepts one typed abs_omt center",
                 report,
             )
             self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
@@ -23045,7 +23046,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                 main,
             )
             self.assertIn(
-                "native radius truncates a double and honors CIRCLEDIST", main
+                "native overmapbuffer::reveal honors CIRCLEDIST", main
+            )
+            self.assertIn(
+                "can load/create missing overmap data even when radius is 0", main
+            )
+            self.assertIn(
+                "always uses square geometry, and skips missing overmaps", main
             )
             reveal_todos = [
                 todo for todo in result.todos
@@ -23083,6 +23090,59 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
+
+    def test_real_magiclysm_route_and_reveal_map_keep_native_overmap_todo(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
+        sources = migrate_lua_first.load_objects([source_path])
+        normalized, *_ = migrate_lua_first.normalize_inline_eocs(sources, False)
+        source = next(
+            entry for entry in normalized
+            if entry.value.get("type") == "effect_on_condition" and
+            entry.value.get("id") == "EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS"
+        )
+        effects = source.value["effect"]
+        reveal_map = next(
+            effect for effect in effects
+            if isinstance(effect, dict) and "reveal_map" in effect
+        )
+        reveal_route = next(
+            effect for effect in effects
+            if isinstance(effect, dict) and "reveal_route" in effect
+        )
+        self.assertEqual(reveal_map["reveal_map"], {"context_val": "forge_location"})
+        self.assertEqual(reveal_map["radius"], 4)
+        self.assertEqual(
+            reveal_route["reveal_route"],
+            {"context_val": "current_location_nearest_road"},
+        )
+        self.assertEqual(reveal_route["target_var"], {"context_val": "forge_location"})
+        self.assertEqual(reveal_route["radius"], 0)
+        self.assertIs(reveal_route["road_only"], False)
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(source, result)
+        todo_text = "\n".join(todo.message for todo in result.todos)
+        self.assertNotIn("services.overmap.reveal(", rendered)
+        self.assertNotIn("services.overmap.reveal_route(", rendered)
+        self.assertIn("guesses the source connection", todo_text)
+        self.assertIn("reveals around every path node", todo_text)
+        self.assertIn("can load/create missing overmap data even when radius is 0", todo_text)
+
+        zero_radius_source = migrate_lua_first.SourceObject(
+            source.path, source.index, {
+                **source.value,
+                "effect": [{**reveal_map, "radius": 0}],
+            },
+        )
+        zero_radius_result = migrate_lua_first.MigrationResult()
+        zero_radius_rendered = migrate_lua_first.render_eoc(
+            zero_radius_source, zero_radius_result,
+        )
+        self.assertNotIn("services.overmap.reveal(", zero_radius_rendered)
+        self.assertIn(
+            "can load/create missing overmap data even when radius is 0",
+            "\n".join(todo.message for todo in zero_radius_result.todos),
+        )
 
     def test_static_consume_item_sum_lowers_event_exclusive_mutations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

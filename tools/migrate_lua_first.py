@@ -32051,14 +32051,25 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
+                reveal_route_gap = (
+                    "native reveal_route reads two var_info abs_ms endpoints and "
+                    "projects them to OMT, guesses the source connection, and "
+                    "greedily searches within a four-overmap radius; road_only "
+                    "rejects off-connection tiles, while road_only=false penalizes "
+                    "them and rejects rivers. It truncates the double radius to "
+                    "int and reveals around every path node using native "
+                    "CIRCLEDIST behavior, loading terrain as needed. "
+                    "services.overmap.reveal accepts one typed abs_omt center, an "
+                    "integer radius in 0..30, and only reveals existing tiles in "
+                    "a square; it cannot preserve route search or per-node reveal"
+                )
                 lines.append(
-                    "    -- TODO: reveal_route has no transactional Platform API; "
-                    "preserve this legacy effect for manual conversion."
+                    "    -- TODO: " + reveal_route_gap + "."
                 )
                 result.add_todo(
                     "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "reveal_route has no transactional Platform API"
+                    + reveal_route_gap
                 )
                 all_effects_converted = False
             elif (
@@ -32407,10 +32418,12 @@ def render_eoc(
             elif isinstance(effect, dict) and "reveal_map" in effect:
                 reveal_gap = (
                     "native reveal_map reads its target_var as abs_ms and projects "
-                    "to OMT, while services.overmap.reveal requires typed abs_omt; "
-                    "native radius truncates a double and honors CIRCLEDIST, whereas "
-                    "the Platform service is limited to existing overmaps and always "
-                    "uses square-radius semantics"
+                    "to OMT; dbl_or_var radius truncates to int and native "
+                    "overmapbuffer::reveal honors CIRCLEDIST and can load/create "
+                    "missing overmap data even when radius is 0. "
+                    "services.overmap.reveal requires typed abs_omt and integer "
+                    "radius 0..30, always uses square geometry, and skips missing "
+                    "overmaps"
                 )
                 lines.append(f"    -- TODO: {reveal_gap}.")
                 result.add_todo(
