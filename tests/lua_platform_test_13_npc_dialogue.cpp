@@ -1,6 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "condition.h"
+#include "avatar.h"
+#include "dialogue.h"
+#include "item.h"
+#include "json_loader.h"
+#include "map.h"
+#include "npctalk.h"
+#include "talker.h"
+#include "type_id.h"
 
 class platform_item_offer_test_talker : public talker_npc
 {
@@ -21,6 +29,17 @@ class platform_item_offer_test_talker : public talker_npc
     private:
         npc *subject_;
         std::vector<std::string> results_;
+};
+
+class platform_dialogue_silent_npc_talker : public talker_npc
+{
+    public:
+        explicit platform_dialogue_silent_npc_talker( npc *const subject ) :
+            talker_npc( subject ) {}
+
+        std::string disp_name() const override {
+            return {};
+        }
 };
 
 TEST_CASE( "lua_platform_exact_creature_subtypes_fail_closed", "[lua][platform]" )
@@ -879,6 +898,135 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
     REQUIRE( invalidated_failure_context.valid() );
     CHECK_FALSE( invalidated_failure_context.get<bool>() );
     cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
+           "[lua][platform][dialogue][items][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    clear_map_without_vision();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+        clear_map_without_vision();
+    } );
+
+    map &here = get_map();
+    avatar native_speaker;
+    native_speaker.normalize();
+    native_speaker.setID( character_id( 1550 ), true );
+    native_speaker.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    avatar platform_speaker;
+    platform_speaker.normalize();
+    platform_speaker.setID( character_id( 1551 ), true );
+    platform_speaker.setpos( here, tripoint_bub_ms( 65, 60, 0 ) );
+    npc native_interlocutor;
+    native_interlocutor.normalize();
+    native_interlocutor.setID( character_id( 1552 ), true );
+    native_interlocutor.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    npc platform_interlocutor;
+    platform_interlocutor.normalize();
+    platform_interlocutor.setID( character_id( 1553 ), true );
+    platform_interlocutor.setpos( here, tripoint_bub_ms( 66, 60, 0 ) );
+    cata::lua_platform::register_npc_handle_identity( native_interlocutor );
+    cata::lua_platform::register_npc_handle_identity( platform_interlocutor );
+    on_out_of_scope retire_npc_identities( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( native_interlocutor );
+        cata::lua_platform::retire_npc_handle_identity( platform_interlocutor );
+    } );
+
+    constexpr std::string_view topic_id = "TALK_CCB_ITEM_GRANT";
+    constexpr std::string_view item_id = "bottle_plastic";
+    const itype_id native_item_type( std::string( item_id ) );
+    REQUIRE( native_item_type.is_valid() );
+    REQUIRE_FALSE( item::count_by_charges( native_item_type ) );
+
+    dialogue native_conversation(
+        get_talker_for( native_speaker ),
+        std::make_unique<platform_dialogue_silent_npc_talker>(
+            &native_interlocutor ) );
+    talk_effect_t native_effect;
+    native_effect.parse_sub_effect(
+        json_loader::from_string(
+            R"({"u_spawn_item":"bottle_plastic"})" ).get_object(),
+        "dialogue_item_grant_semantic_test" );
+    for( const talk_effect_fun_t &operation : native_effect.effects ) {
+        operation( native_conversation );
+    }
+
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_item_grant", 92, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    owner_lua.script( R"(
+        local services = ccb.services
+        function grant_native_item(context, trial_success)
+            if not trial_success or not context:valid() then return end
+            saved_item_grant_context = context
+            context:grant_item_to_speaker(services.types.id("item", "bottle_plastic"))
+        end
+        function item_grant_context_is_valid()
+            return saved_item_grant_context:valid()
+        end
+        function reuse_item_grant_context()
+            saved_item_grant_context:grant_item_to_speaker(
+                services.types.id("item", "bottle_plastic"))
+        end
+    )" );
+    sol::table response = owner_lua.create_table();
+    response["text"] = "Receive a plastic bottle";
+    response["on_action"] = owner_lua["grant_native_item"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = std::string( topic_id );
+    descriptor["dynamic_line"] = "Item grant semantic test";
+    descriptor["responses"] = responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( descriptor );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue platform_conversation(
+        get_talker_for( platform_speaker ),
+        std::make_unique<platform_dialogue_silent_npc_talker>(
+            &platform_interlocutor ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            platform_conversation, runtime_identity, world_generation );
+    platform_conversation.gen_responses( talk_topic( std::string( topic_id ) ) );
+    REQUIRE( platform_conversation.responses.size() == 1 );
+
+    cata::lua_platform::dialogue::context outside_action(
+        owner_lua.lua_state(), platform_conversation, std::string( topic_id ), true,
+        "dialogue context is stale", {}, session, runtime_identity,
+        world_generation );
+    CHECK_THROWS( outside_action.grant_item_to_speaker(
+                      cata::lua_platform::script_game_id(
+                          "item", std::string( item_id ) ) ) );
+    CHECK_FALSE( platform_speaker.has_amount( native_item_type, 1 ) );
+
+    platform_conversation.responses.front().success.apply( platform_conversation );
+    CHECK( native_speaker.has_amount( native_item_type, 1 ) );
+    CHECK( platform_speaker.has_amount( native_item_type, 1 ) );
+    CHECK_FALSE( native_interlocutor.has_amount( native_item_type, 1 ) );
+    CHECK_FALSE( platform_interlocutor.has_amount( native_item_type, 1 ) );
+    const sol::protected_function context_valid =
+        owner_lua["item_grant_context_is_valid"];
+    const sol::protected_function_result stale_context = context_valid();
+    REQUIRE( stale_context.valid() );
+    CHECK_FALSE( stale_context.get<bool>() );
+    const sol::protected_function reuse_context =
+        owner_lua["reuse_item_grant_context"];
+    const sol::protected_function_result rejected_reuse = reuse_context();
+    CHECK_FALSE( rejected_reuse.valid() );
+    cata::lua_platform::dialogue::end_session( platform_conversation );
 }
 
 TEST_CASE( "lua_platform_dialogue_safe_space_query_matches_native_beta_condition",

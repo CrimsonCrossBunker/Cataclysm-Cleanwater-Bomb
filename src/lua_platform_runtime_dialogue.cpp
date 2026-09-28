@@ -22,12 +22,13 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "game.h"
-#include "map.h"
-#include "lua_platform_bindings_coords.h"
 #include "item_category.h"
 #include "itype.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_values.h"
 #include "lua_platform_canvas.h"
 #include "lua_platform_dialogue.h"
+#include "map.h"
 #include "music.h"
 #include "npc_opinion.h"
 #include "output.h"
@@ -774,6 +775,8 @@ void detail::install_runtime_dialogue_presentation_api(
         &platform_dialogue_context::interlocutor_at_safe_space,
         "assigned_mission_count",
         &platform_dialogue_context::assigned_mission_count,
+        "grant_item_to_speaker",
+        &platform_dialogue_context::grant_item_to_speaker,
         "by_radio", &platform_dialogue_context::by_radio,
         "has_reason", &platform_dialogue_context::has_reason,
         "reason", &platform_dialogue_context::reason,
