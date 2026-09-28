@@ -31,6 +31,7 @@
 #include "lua_platform_sol.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "npc.h"
 #include "npctalk.h"
 #include "point.h"
@@ -334,6 +335,7 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const on_out_of_scope cleanup( []() {
         clear_npcs();
         clear_avatar();
+        clear_map_without_vision();
     } );
     avatar &player = get_avatar();
     npc &alpha = spawn_npc( player.pos_bub().xy() + point::south, "thug" );
@@ -342,6 +344,9 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     beta.set_fac( faction_id( "hells_raiders" ) );
     alpha.set_attitude( NPCATT_FOLLOW );
     beta.set_attitude( NPCATT_KILL );
+    beta.rules.set_flag( ally_rule::allow_pick_up );
+    beta.rules.set_flag( ally_rule::allow_bash );
+    beta.rules.set_specific_override_state( ally_rule::allow_bash, false );
     alpha.op_of_u.owed = 3;
     beta.op_of_u.owed = 8;
     faction *alpha_faction = alpha.get_faction();
@@ -365,6 +370,18 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const conditional_t trust_condition( json_loader::from_string(
             R"({"u_has_faction_trust":8})" ).get_object() );
     const conditional_t friend_condition( "u_friend" );
+    const conditional_t npc_friend_condition( "npc_friend" );
+    const conditional_t npc_hostile_condition( "npc_hostile" );
+    const conditional_t npc_pickup_rule_condition( json_loader::from_string(
+                R"({"npc_rule":"allow_pick_up"})" ).get_object() );
+    const conditional_t npc_bash_rule_condition( json_loader::from_string(
+                R"({"npc_rule":"allow_bash"})" ).get_object() );
+    const conditional_t npc_unknown_rule_condition( json_loader::from_string(
+                R"({"npc_rule":"UNKNOWN_RULE"})" ).get_object() );
+    const conditional_t npc_bash_override_condition( json_loader::from_string(
+                R"({"npc_override":"allow_bash"})" ).get_object() );
+    const conditional_t npc_unknown_override_condition( json_loader::from_string(
+                R"({"npc_override":"UNKNOWN_RULE"})" ).get_object() );
 
     namespace platform = cata::lua_platform;
     sol::state lua;
@@ -403,6 +420,12 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const sol::table beta_result = beta_call;
     REQUIRE( beta_result["ok"].get<bool>() );
     const sol::table beta_snapshot = beta_result["value"];
+    const sol::protected_function ai_rules = services["npcs"]["ai_rules"];
+    const sol::protected_function_result beta_rules_call = ai_rules( beta_handle );
+    REQUIRE( beta_rules_call.valid() );
+    const sol::table beta_rules_result = beta_rules_call;
+    REQUIRE( beta_rules_result["ok"].get<bool>() );
+    const sol::table beta_ai_rules = beta_rules_result["value"];
     const sol::protected_function for_character =
         services["factions"]["for_character"];
     sol::protected_function_result alpha_faction_call = for_character( alpha_handle );
@@ -422,6 +445,21 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
         faction_snapshot["reputation"]["trusts"].get<int>() >= 8;
     const bool friend_from_platform =
         alpha_snapshot["friendly"].get<bool>();
+    const sol::table beta_allies = beta_ai_rules["allies"];
+    const sol::table beta_overrides = beta_ai_rules["overrides"];
+    const auto contains_rule = []( const sol::table &rules,
+                                   const std::string &name ) {
+        for( std::size_t index = 1; index <= rules.size(); ++index ) {
+            if( rules[index].get<std::string>() == name ) {
+                return true;
+            }
+        }
+        return false;
+    };
+    const sol::object bash_override =
+        beta_overrides.get<sol::object>( "allow_bash" );
+    const sol::object unknown_override =
+        beta_overrides.get<sol::object>( "UNKNOWN_RULE" );
     CHECK( beta_snapshot["opinion"]["owed"].get<int>() == 8 );
     CHECK( alpha_faction_snapshot["reputation"]["trusts"].get<int>() == 1 );
     CHECK( faction_snapshot["reputation"]["trusts"].get<int>() == 8 );
@@ -432,5 +470,57 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     CHECK( friend_condition( context ) == friend_from_platform );
     CHECK( friend_from_platform );
     CHECK_FALSE( beta_snapshot["friendly"].get<bool>() );
+    CHECK( npc_friend_condition( context ) ==
+           beta_snapshot["friendly"].get<bool>() );
+    CHECK( npc_hostile_condition( context ) ==
+           beta_snapshot["enemy"].get<bool>() );
+    CHECK( npc_hostile_condition( context ) );
+    CHECK( npc_pickup_rule_condition( context ) ==
+           contains_rule( beta_allies, "allow_pick_up" ) );
+    CHECK( npc_pickup_rule_condition( context ) );
+    CHECK( npc_bash_rule_condition( context ) ==
+           contains_rule( beta_allies, "allow_bash" ) );
+    CHECK_FALSE( npc_bash_rule_condition( context ) );
+    CHECK( bash_override.get_type() != sol::type::nil );
+    CHECK_FALSE( bash_override.as<bool>() );
+    CHECK( npc_bash_override_condition( context ) ==
+           ( bash_override.get_type() != sol::type::nil ) );
+    CHECK( npc_bash_override_condition( context ) );
+    CHECK( unknown_override.get_type() == sol::type::nil );
+    CHECK( npc_unknown_rule_condition( context ) ==
+           contains_rule( beta_allies, "UNKNOWN_RULE" ) );
+    CHECK_FALSE( npc_unknown_rule_condition( context ) );
+    CHECK( npc_unknown_override_condition( context ) ==
+           ( unknown_override.get_type() != sol::type::nil ) );
+    CHECK_FALSE( npc_unknown_override_condition( context ) );
+
+    dialogue avatar_beta_context( get_talker_for( alpha ),
+                                  get_talker_for( player ) );
+    CHECK_FALSE( npc_friend_condition( avatar_beta_context ) );
+    CHECK_FALSE( npc_hostile_condition( avatar_beta_context ) );
+    CHECK_FALSE( npc_pickup_rule_condition( avatar_beta_context ) );
+    CHECK_FALSE( npc_bash_override_condition( avatar_beta_context ) );
+
+    monster &monster_beta = spawn_test_monster(
+                                "mon_zombie", player.pos_bub() + tripoint::east );
+    dialogue monster_beta_context( get_talker_for( alpha ),
+                                   get_talker_for( monster_beta ) );
+    CHECK_FALSE( npc_friend_condition( monster_beta_context ) );
+    CHECK_FALSE( npc_hostile_condition( monster_beta_context ) );
+    CHECK_FALSE( npc_pickup_rule_condition( monster_beta_context ) );
+    CHECK_FALSE( npc_bash_override_condition( monster_beta_context ) );
+
+    beta.set_attitude( NPCATT_FOLLOW );
+    sol::protected_function_result following_call = get_npc( beta_handle );
+    REQUIRE( following_call.valid() );
+    const sol::table following_result = following_call;
+    REQUIRE( following_result["ok"].get<bool>() );
+    const sol::table following_snapshot = following_result["value"];
+    CHECK( npc_friend_condition( context ) ==
+           following_snapshot["friendly"].get<bool>() );
+    CHECK( npc_friend_condition( context ) );
+    CHECK( npc_hostile_condition( context ) ==
+           following_snapshot["enemy"].get<bool>() );
+    CHECK_FALSE( npc_hostile_condition( context ) );
 }
 #endif

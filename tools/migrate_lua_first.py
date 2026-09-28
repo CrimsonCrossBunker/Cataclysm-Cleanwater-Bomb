@@ -27639,6 +27639,7 @@ def render_eoc_condition_expression(
     npc_dialogue_pair_proven: bool = False,
     event_beta_presence_proven: bool = False,
     proficiency_alpha_actor_proven: bool = False,
+    npc_melee_beta_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -27982,21 +27983,25 @@ def render_eoc_condition_expression(
                     'actor.subtype == "npc" and '
                     "service_value(services.npcs.get(actor)).friendly"
                 )
+        if condition in ("npc_friend", "npc_hostile"):
+            # These native aliases call const_actor(true); an NPC-shaped
+            # alpha/event actor or a statically inferred talk-topic pair is
+            # not a beta handle connected to this generated runtime.  The
+            # caller grants this proof only to event-exclusive melee EOCs,
+            # whose native and Platform bridges both carry the live target as
+            # actors.interlocutor before damage is applied.
+            if not npc_melee_beta_actor_proven:
+                return None
+            field = "friendly" if condition == "npc_friend" else "enemy"
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+                "if beta.subtype ~= \"npc\" then return false end; "
+                f"return service_value(services.npcs.get(beta)).{field} "
+                "end)()"
+            )
         if npc_query_actor is not None:
-            if condition == "npc_friend":
-                return (
-                    f"{npc_query_actor_ref} ~= nil and "
-                    f"{npc_query_actor_ref}.subtype == \"npc\" and "
-                    "service_value(services.npcs.get(" +
-                    npc_query_actor + ")).friendly"
-                )
-            if condition == "npc_hostile":
-                return (
-                    f"{npc_query_actor_ref} ~= nil and "
-                    f"{npc_query_actor_ref}.subtype == \"npc\" and "
-                    "service_value(services.npcs.get(" +
-                    npc_query_actor + ")).enemy"
-                )
             if condition == "npc_is_alive":
                 return (
                     "not service_value(services.creatures.snapshot(" +
@@ -28378,6 +28383,7 @@ def render_eoc_condition_expression(
                 npc_dialogue_pair_proven,
                 event_beta_presence_proven,
                 proficiency_alpha_actor_proven,
+                npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
             )
             for entry in entries
         ]
@@ -28397,6 +28403,7 @@ def render_eoc_condition_expression(
             npc_dialogue_pair_proven,
             event_beta_presence_proven,
             proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -29085,34 +29092,35 @@ def render_eoc_condition_expression(
             # const_talker implementation returns false for every rule.
             return "false"
     for rule_key in ("npc_rule", "npc_override"):
-        if (
-            npc_actor_proven and
-            set(condition) == {rule_key} and
-            npc_query_actor is not None
-        ):
+        if set(condition) == {rule_key}:
+            # Native str_or_var resolves through dialogue beta, and
+            # const_talker::has_ai_rule is false for non-NPC talkers.  Match
+            # both details and treat unknown rule names as absent, as native
+            # ally_rule_strs lookup does.
+            if not npc_melee_beta_actor_proven:
+                return None
             requested_rule = render_eoc_string_expression(
-                condition[rule_key], npc_query_actor
+                condition[rule_key], "beta"
             )
             if requested_rule is None:
                 return None
-            ai_rules = (
-                "service_value(services.npcs.ai_rules(" +
-                npc_query_actor + "))"
-            )
-            npc_guard = (
-                f"{npc_query_actor_ref} ~= nil and "
-                f"{npc_query_actor_ref}.subtype == \"npc\" and "
-            )
             if rule_key == "npc_rule":
-                return (
-                    f"({npc_guard}(function(requested_rule) "
-                    "for _, active_rule in "
-                    f"ipairs({ai_rules}.allies) do "
-                    "if active_rule == requested_rule then return true end "
-                    f"end return false end)({requested_rule}))"
+                query = (
+                    "for _, active_rule in ipairs(ai_rules.allies) do "
+                    "if active_rule == requested_rule then return true end end; "
+                    "return false"
                 )
+            else:
+                query = "return ai_rules.overrides[requested_rule] ~= nil"
             return (
-                f"({npc_guard}{ai_rules}.overrides[{requested_rule}] ~= nil)"
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                f"local requested_rule = {requested_rule}; "
+                "local ai_rules = service_value(services.npcs.ai_rules(beta)); "
+                f"{query} "
+                "end)()"
             )
     for bodytype_key, actor_proven in (
         ("u_bodytype", avatar_actor_proven),
@@ -30041,13 +30049,25 @@ def render_eoc(
         lines.append("    local actor = actor_override or services.characters.avatar()")
     if avatar_fatal_hook or npc_fatal_hook:
         lines.append("    local prevent_death = false")
-    # EOC event/fatal actor proof is not Character/NPC proof for a beta actor.
-    # Separately, the event bridge preserves the exact presence of the native
-    # optional beta talker as ``context.actors.interlocutor``.  The direct
-    # event handler stamps a private marker; copied child contexts do not
-    # inherit it.  Only this boolean fact is safe for npc_exists and it does
-    # not authorize NPC services.
+    # Keep the general beta-Character proof disabled; event presence alone
+    # does not establish a live NPC beta or authorize other npc_* selectors.
     npc_condition_beta_actor_proven = False
+    # Most event EOCs do not prove a usable native beta: an event's alpha
+    # Character is not interchangeable with const_actor(true), and direct
+    # talk-topic callbacks are not connected by render_talk_topic.  The two
+    # melee attack events are a narrow exception: src/melee.cpp calls
+    # send_with_talker(alpha, target) before damage, and the Platform bridge
+    # exposes that same live target as actors.interlocutor.  Require an
+    # event-exclusive EOC so run_eocs, run_eoc_selector, and test_eoc cannot
+    # re-enter it with another pair.
+    npc_melee_beta_actor_proven = (
+        has_event_trigger and
+        required_event in {
+            "character_melee_attacks_character",
+            "character_melee_attacks_monster",
+        } and not inline_eoc and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     # A referenced EOC is also callable by run_eocs, run_eoc_selector, or
     # test_eoc and can receive a different child context. Dynamic dispatch in
     # either run_eocs or run_eoc_selector can target any generated EOC, so
@@ -30101,6 +30121,7 @@ def render_eoc(
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -30146,6 +30167,7 @@ def render_eoc(
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
