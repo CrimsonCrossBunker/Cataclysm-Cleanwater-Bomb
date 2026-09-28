@@ -5478,7 +5478,7 @@ def render_static_false_effect(
         key: str | None = next(
             (name for name in (
                 "u_add_effect", "npc_add_effect", "u_add_wound", "npc_add_wound",
-                "u_remove_wound", "npc_remove_wound", "u_add_morale", "npc_add_morale",
+                "u_remove_wound", "npc_remove_wound",
             ) if name in effect),
             None,
         )
@@ -5526,10 +5526,6 @@ def render_static_false_effect(
                     rendered = render_dynamic_character_wound(
                         effect, key, target, key.endswith("remove_wound")
                     )
-            else:
-                rendered = render_static_character_morale(effect, key, target)
-                if rendered is None:
-                    rendered = render_dynamic_character_morale(effect, key, target)
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
         key = next(
@@ -5561,16 +5557,10 @@ def render_static_false_effect(
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
-        for morale_key in ("u_lose_morale", "npc_lose_morale"):
-            if morale_key in effect and set(effect) == {morale_key}:
-                target = _eoc_actor_expression(
-                    morale_key, avatar_actor_proven, npc_actor_proven
-                )
-                if target is not None and safe_platform_id(effect[morale_key]):
-                    return [
-                        "        services.morale.remove(",
-                        f"            {target}, services.types.id(\"morale\", {lua_quote(effect[morale_key])}))",
-                    ]
+        # Morale effects use the dialogue's mutable/const alpha-beta slots.
+        # This helper is also used for conditional/foreach child effects and
+        # receives broad actor facts rather than a source-specific dispatch
+        # proof, so those shapes deliberately remain TODO here.
         if effect == "u_prevent_death" and avatar_actor_proven:
             return ["        services.characters.prevent_death(actor)"]
         comment_keys = {
@@ -19713,7 +19703,12 @@ def render_static_character_morale(
     key: str,
     target_expression: str | None,
 ) -> list[str] | None:
-    """Render one static u_/npc_add_morale without preserving EOC syntax."""
+    """Render one static morale addition with native integer/time bounds.
+
+    The source ID must name a registered morale type at runtime.  The shared
+    ``safe_platform_id`` check validates text shape only; unknown native morale
+    IDs are outside this lowering's equivalence claim.
+    """
     if target_expression is None or not safe_platform_id(effect.get(key)):
         return None
     allowed_keys = {
@@ -19768,38 +19763,6 @@ def render_static_character_morale(
     else:
         result[-1] += ")"
     return result
-
-
-def render_dynamic_character_morale(
-    effect: dict[str, Any], key: str, target_expression: str | None,
-) -> list[str] | None:
-    """Render variable-backed morale id/amounts through services.morale."""
-    if target_expression is None or key not in effect:
-        return None
-    if set(effect) - {key, "bonus", "max_bonus", "duration", "decay_start", "capped"}:
-        return None
-    morale_id = _dynamic_id_expression(effect[key], "morale", target_expression)
-    bonus = render_eoc_numeric_expression(effect.get("bonus", 0), "0", target_expression)
-    maximum = render_eoc_numeric_expression(effect.get("max_bonus", 0), "0", target_expression)
-    if morale_id is None or bonus is None or maximum is None:
-        return None
-    options: list[str] = []
-    for name in ("duration", "decay_start"):
-        if name in effect:
-            duration = _duration_expression(effect[name], minimum=0, actor_expression=target_expression)
-            if duration is None:
-                return None
-            options.append(f"{name} = {duration}")
-    capped = effect.get("capped", False)
-    if not isinstance(capped, bool):
-        return None
-    if capped:
-        options.append("capped = true")
-    suffix = ", { " + ", ".join(options) + " }" if options else ""
-    return [
-        "    services.morale.add(",
-        f"        {target_expression}, {morale_id}, {bonus}, {maximum}{suffix})",
-    ]
 
 
 def _effect_numeric_expression(
@@ -30079,6 +30042,23 @@ def render_eoc(
         has_event_trigger and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # The morale adapters require a live Character handle and native morale
+    # effects read dialogue alpha/beta rather than an ambient global actor.
+    # Limit avatar mutations to the live game_start alpha and npc_add_morale
+    # to the one no-beta hostile event whose mutable actor(true) falls back to
+    # that event's NPC alpha.  The latter preserves mutation only; native also
+    # emits a debug diagnostic for the missing beta talker.
+    morale_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "game_start" and game_start_avatar_actor_is_proven() and
+        not avatar_fatal_hook and not avatar_death_hook
+    )
+    morale_npc_add_fallback_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and not npc_fatal_hook and
+        npc_talker_ui_actor_expression == "actor" and not talker_pair_override
+    )
     # Native u_has_proficiency reads dialogue alpha. Restrict the current
     # lowerer to game_start, where the avatar is live and source-proven; other
     # avatar hooks can run after death or lack an equivalent live handle.
@@ -31437,24 +31417,20 @@ def render_eoc(
             ):
                 key = "u_add_morale" if "u_add_morale" in effect else "npc_add_morale"
                 target_expression = (
-                    "actor" if key == "npc_add_morale" and npc_event_character_actor_proven
-                    else "actor" if key == "u_add_morale" and avatar_actor_proven
+                    "actor" if key == "npc_add_morale" and morale_npc_add_fallback_actor_proven
+                    else "actor" if key == "u_add_morale" and morale_avatar_actor_proven
                     else None
                 )
                 rendered = render_static_character_morale(
                     effect, key, target_expression
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_morale(
-                        effect, key, target_expression
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the morale amount, target, or "
-                        "options into bounded Lua values."
+                        "    -- TODO: preserve the native morale alpha/beta "
+                        "target and bounded integer/time parameters."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -31463,7 +31439,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                avatar_actor_proven and
+                morale_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_lose_morale"} and
                 safe_platform_id(effect.get("u_lose_morale"))
@@ -31476,40 +31452,19 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
                 isinstance(effect, dict) and
-                set(effect) == {"npc_add_morale", "bonus", "max_bonus"} and
-                safe_platform_id(effect.get("npc_add_morale")) and
-                isinstance(effect.get("bonus"), int) and
-                not isinstance(effect.get("bonus"), bool) and
-                NATIVE_INT_MIN <= effect["bonus"] <= NATIVE_INT_MAX and
-                isinstance(effect.get("max_bonus"), int) and
-                not isinstance(effect.get("max_bonus"), bool) and
-                NATIVE_INT_MIN <= effect["max_bonus"] <= NATIVE_INT_MAX
+                ("u_lose_morale" in effect or "npc_lose_morale" in effect)
             ):
-                lines.append("    services.morale.add(")
-                lines.append("        actor,")
                 lines.append(
-                    "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['npc_add_morale'])}),"
+                    "    -- TODO: preserve the native const dialogue alpha/beta "
+                    "target; npc_lose_morale requires beta and has no fallback."
                 )
-                lines.append(
-                    f"        {effect['bonus']}, {effect['max_bonus']})"
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "needs exact native morale actor provenance"
                 )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_lose_morale"} and
-                safe_platform_id(effect.get("npc_lose_morale"))
-            ):
-                lines.append("    services.morale.remove(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['npc_lose_morale'])}))"
-                )
-                converted_effect = True
+                all_effects_converted = False
             elif (
                 item_event_character_actor_proven and
                 isinstance(effect, dict) and

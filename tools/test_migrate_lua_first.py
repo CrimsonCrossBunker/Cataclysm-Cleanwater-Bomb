@@ -7051,6 +7051,176 @@ assert(#events == 9)
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("run_eoc", main)
 
+    def test_morale_migration_uses_bounded_live_alpha_and_mutable_npc_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_morale_bounds",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_add_morale": "morale_feeling_good",
+                            "bonus": -2147483648,
+                            "max_bonus": 2147483647,
+                            "duration": "0 turns",
+                            "decay_start": "2 hours",
+                            "capped": True,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_morale_remove",
+                        "required_event": "game_start",
+                        "effect": {"u_lose_morale": "morale_feeling_good"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_hostile_morale_add",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {
+                            "npc_add_morale": "morale_feeling_good",
+                            "bonus": -12,
+                            "max_bonus": -20,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_hostile_morale_remove",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_lose_morale": "morale_feeling_good"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_other_morale_add",
+                        "required_event": "character_takes_damage",
+                        "effect": {
+                            "npc_add_morale": "morale_feeling_good",
+                            "bonus": 1,
+                            "max_bonus": 2,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_fractional_morale",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_add_morale": "morale_feeling_good",
+                            "bonus": 1.5,
+                            "max_bonus": 2,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_overflow_morale",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_add_morale": "morale_feeling_good",
+                            "bonus": 2147483648,
+                            "max_bonus": 2,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_negative_morale_duration",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_add_morale": "morale_feeling_good",
+                            "bonus": 1,
+                            "max_bonus": 2,
+                            "duration": "-1 turns",
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bounded_morale_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+        self.assertIn("services.morale.add", main)
+        self.assertIn("services.morale.remove", main)
+        self.assertIn("-2147483648, 2147483647", main)
+        self.assertIn('duration = services.time.duration(0, "turn")', main)
+        self.assertIn('decay_start = services.time.duration(7200, "turn")', main)
+        self.assertIn("capped = true", main)
+        self.assertIn("-12, -20)", main)
+        self.assertEqual(main.count("services.morale.add("), 2)
+        self.assertEqual(main.count("services.morale.remove("), 1)
+        self.assertIn("npc_hostile_morale_remove effect #0", todo_text)
+        self.assertIn("npc_other_morale_add effect #0", todo_text)
+        self.assertIn("avatar_fractional_morale effect #0", todo_text)
+        self.assertIn("avatar_overflow_morale effect #0", todo_text)
+        self.assertIn("avatar_negative_morale_duration effect #0", todo_text)
+
+    def test_morale_game_start_effects_require_event_exclusive_dispatch(self) -> None:
+        for caller_effect in (
+            {"run_eocs": "referenced_morale"},
+            {"run_eoc_selector": {"global_val": "selected_eoc"}},
+        ):
+            with tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / "source.json"
+                source.write_text(
+                    json.dumps([
+                        {
+                            "type": "effect_on_condition",
+                            "id": "referenced_morale",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_morale": "morale_feeling_good",
+                                "bonus": 10,
+                                "max_bonus": 20,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "morale_caller",
+                            "required_event": "game_start",
+                            "effect": caller_effect,
+                        },
+                    ]),
+                    encoding="utf-8",
+                )
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]), "morale_dispatch_mod"
+                )
+                main = result.files[Path("main.lua")]
+                todo_text = "\n".join(todo.text for todo in result.todos)
+
+                self.assertNotIn("services.morale.add(", main)
+                self.assertIn("referenced_morale effect #0", todo_text)
+
+    def test_morale_false_effect_stays_todo_without_alpha_beta_source_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "false_branch_morale",
+                    "required_event": "game_start",
+                    "condition": {"or": []},
+                    "false_effect": {
+                        "u_add_morale": "morale_feeling_good",
+                        "bonus": 1,
+                        "max_bonus": 2,
+                    },
+                    "effect": "nothing",
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "false_morale_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertNotIn("services.morale.add(", main)
+        self.assertIn("false_branch_morale false_effect", report)
+        self.assertTrue(result.todos)
+
     def test_translates_npc_predicates_for_proven_npc_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -25416,7 +25586,7 @@ assert(context.data.picked==selected)
             self.assertIn("services.inventory.resources", main)
             self.assertIn('services.types.id("body_part", "torso")', main)
             self.assertIn("services.effects.add", main)
-            self.assertIn("services.morale.add", main)
+            self.assertNotIn("services.morale.add", main)
             self.assertIn("services.wounds.add", main)
             self.assertIn("TODO: manually translate dynamic or non-native-range", main)
             self.assertNotIn("services.weather.append_light_event(", main)
@@ -27316,7 +27486,6 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                         "false_effect": [
                             {"u_add_effect": {"context_val": "effect_id"}, "duration": "1 turn"},
                             {"u_add_wound": {"context_val": "body_part"}, "wound_id": {"context_val": "wound_id"}},
-                            {"u_add_morale": {"context_val": "morale_id"}, "bonus": 1, "max_bonus": 2},
                             {"u_lose_var": "fallback"},
                         ],
                         "effect": "nothing",
@@ -27333,7 +27502,6 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertEqual(result.todos, [])
             self.assertIn("services.effects.add", main)
             self.assertIn("services.wounds.add", main)
-            self.assertIn("services.morale.add", main)
             self.assertIn('services.variables.remove(actor, "fallback", { include_before = false })', main)
 
     def test_false_effect_reuses_inventory_spawn_recipe_and_world_renderers(
