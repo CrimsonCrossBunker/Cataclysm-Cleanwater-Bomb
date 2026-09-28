@@ -24445,9 +24445,11 @@ def _render_static_map_state_edit(
     present = [key for key in mutation_keys if key in effect]
     if not present:
         return None
-    # Native trap placement is a no-op for unloaded/out-of-bounds tiles and
-    # for terrain with a built-in trap.  map.tile/map.edit cannot currently
-    # express both cases without turning those inputs into errors.
+    # Native f_set_trap projects its absolute center into the loaded bubble,
+    # visits the requested radius, then calls trap_set directly.  trap_set
+    # logs and returns without mutation for out-of-bounds/unloaded tiles and
+    # built-in-trap terrain; map.tile/map.edit report those refused edits as
+    # errors instead.
     if "set_trap" in present:
         return None
     # Native set_furniture calls furn_set(dest, id, false, avoid_creatures)
@@ -32096,8 +32098,10 @@ def render_eoc(
                     converted_effect = True
                 else:
                     trap_gap = (
-                        "set_trap needs the native loaded-area and built-in-trap "
-                        "no-op behavior, which map.edit cannot express"
+                        "set_trap needs native radius-based trap_set semantics, "
+                        "including its no-mutation/debug behavior for "
+                        "out-of-bounds, unloaded, and built-in-trap tiles; "
+                        "map.tile/map.edit cannot express that"
                     )
                     lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
