@@ -9553,7 +9553,82 @@ assert(not available())
                 'services.npcs.set_ai_policy(actor, "cbm_reserve", "CBM_RESERVE_ALL")',
                 main,
             )
+            self.assertIn(
+                'if actor ~= nil and actor.kind == "creature" and actor.subtype == "npc" then',
+                main,
+            )
             self.assertIn("needs domain-service conversion", report)
+
+    def test_npc_ai_rule_mutations_require_event_exclusive_npc_actor(self) -> None:
+        rule_effects = [
+            {"clear_npc_rule": "allow_sleep"},
+            {"set_npc_rule": "allow_bash"},
+            {"toggle_npc_rule": "allow_pick_up"},
+            {"set_npc_aim_rule": "AIM_PRECISE"},
+            {"set_npc_engagement_rule": "ENGAGE_ALL"},
+            {"set_npc_cbm_recharge_rule": "CBM_RECHARGE_ALL"},
+            {"set_npc_cbm_reserve_rule": "CBM_RESERVE_ALL"},
+        ]
+        cases = {
+            "untriggered_actor": [
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_untriggered",
+                    "effect": rule_effects,
+                }
+            ],
+            "npc_fatal_actor": [
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_fatal",
+                    "eoc_type": "NPC_DEATH",
+                    "effect": rule_effects,
+                }
+            ],
+            "referenced_event_actor": [
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_reused",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": rule_effects,
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_parent",
+                    "required_event": "game_start",
+                    "effect": {"run_eocs": "npc_rule_reused"},
+                },
+            ],
+            "dynamic_dispatch": [
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_event",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": rule_effects,
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_rule_dynamic_parent",
+                    "required_event": "game_start",
+                    "effect": {
+                        "run_eoc_selector": {"global_val": "selected_eoc"}
+                    },
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            for case_id, objects in cases.items():
+                source.write_text(json.dumps(objects), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]),
+                    f"npc_rule_{case_id}_mod",
+                )
+                main = result.files[Path("main.lua")]
+                report = result.files[Path("MIGRATION_REPORT.md")]
+                self.assertNotIn("services.npcs.set_ally_rule", main)
+                self.assertNotIn("services.npcs.set_ai_policy", main)
+                self.assertIn("needs domain-service conversion", report)
 
 
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:

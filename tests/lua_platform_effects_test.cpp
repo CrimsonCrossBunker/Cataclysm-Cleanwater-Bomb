@@ -2310,6 +2310,80 @@ TEST_CASE( "lua_platform_ally_rule_toggle_uses_effective_override_state",
     }
 }
 
+TEST_CASE( "lua_platform_npc_rule_setters_match_native_effects",
+           "[lua][platform][npc][semantic]" )
+{
+    effect_fixture fixture;
+    cata::lua_platform::install_npc_api(
+    fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {}, []() {} );
+
+    struct rule_case {
+        std::string native_effect;
+        std::string family;
+        std::string rule;
+        int requested_enabled = -1;
+    };
+    const std::vector<rule_case> cases = {
+        { R"({"set_npc_rule":"allow_sleep"})", "allies", "allow_sleep", 1 },
+        { R"({"clear_npc_rule":"allow_sleep"})", "allies", "allow_sleep", 0 },
+        { R"({"toggle_npc_rule":"allow_sleep"})", "allies", "allow_sleep", -1 },
+        { R"({"set_npc_aim_rule":"AIM_PRECISE"})", "aim", "AIM_PRECISE" },
+        { R"({"set_npc_engagement_rule":"ENGAGE_ALL"})", "engagement", "ENGAGE_ALL" },
+        { R"({"set_npc_cbm_recharge_rule":"CBM_RECHARGE_ALL"})",
+          "cbm_recharge", "CBM_RECHARGE_ALL" },
+        { R"({"set_npc_cbm_reserve_rule":"CBM_RESERVE_ALL"})",
+          "cbm_reserve", "CBM_RESERVE_ALL" },
+    };
+    const auto rule_state = [&]() {
+        return std::tuple{
+            fixture.other.rules.has_flag( ally_rule::allow_sleep, false ),
+            fixture.other.rules.aim,
+            fixture.other.rules.engagement,
+            fixture.other.rules.cbm_recharge,
+            fixture.other.rules.cbm_reserve,
+        };
+    };
+
+    for( const rule_case &entry : cases ) {
+        fixture.other.rules = npc_follower_rules();
+        dialogue native_context( get_talker_for( fixture.other ),
+                                 std::unique_ptr<talker>() );
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect(
+            json_loader::from_string( entry.native_effect ).get_object(),
+            "effect_acceptance" );
+        finalize_conditions();
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( native_context );
+        }
+        const auto native_state = rule_state();
+
+        fixture.other.rules = npc_follower_rules();
+        if( entry.family == "allies" ) {
+            sol::protected_function set_rule = fixture.services["npcs"]["set_ally_rule"];
+            sol::protected_function_result call = entry.requested_enabled < 0 ?
+                    set_rule( fixture.handle( true ), entry.rule, sol::lua_nil ) :
+                    set_rule( fixture.handle( true ), entry.rule,
+                              entry.requested_enabled != 0 );
+            REQUIRE( call.valid() );
+            sol::table result = call;
+            REQUIRE( result["ok"].get<bool>() );
+        } else {
+            sol::protected_function set_policy = fixture.services["npcs"]["set_ai_policy"];
+            sol::protected_function_result call = set_policy(
+                    fixture.handle( true ), entry.family, entry.rule );
+            REQUIRE( call.valid() );
+            sol::table result = call;
+            REQUIRE( result["ok"].get<bool>() );
+        }
+        CHECK( rule_state() == native_state );
+    }
+}
+
 TEST_CASE( "lua_platform_request_talk_repeated_request_has_no_notification",
            "[lua][platform][npc][semantic]" )
 {
