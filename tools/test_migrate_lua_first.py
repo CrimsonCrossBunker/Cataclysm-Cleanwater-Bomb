@@ -12500,6 +12500,21 @@ assert(not available())
                 )
 
     def test_talk_topic_mission_generic_rewards_uses_beta_selection(self) -> None:
+        friend_callback = migrate_lua_first.render_talk_topic_response_condition(
+            "npc_friend"
+        )
+        self.assertIsNotNone(friend_callback)
+        assert friend_callback is not None
+        self.assertIn("dialogue_context:interlocutor()", friend_callback.source)
+        self.assertIn('beta.subtype ~= "npc"', friend_callback.source)
+        self.assertIn("if not beta:is_valid() then return false end", friend_callback.source)
+        self.assertIn("services.npcs.get(beta)", friend_callback.source)
+        self.assertIn("snapshot.value.friendly == true", friend_callback.source)
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition("u_friend"),
+            "the alpha alias has no matching speaker snapshot query",
+        )
+
         callback = migrate_lua_first.render_talk_topic_response_condition(
             "mission_has_generic_rewards"
         )
@@ -12559,11 +12574,18 @@ assert(not available())
             if isinstance(response, dict) and
             response.get("text", "").startswith("How about some items as payment?")
         )
-        self.assertIsNone(
-            migrate_lua_first.render_talk_topic_response_condition(
-                unsupported_response["condition"]
-            ),
-            "the real reward-choice compound still needs the unsupported npc_friend query",
+        payment_callback = migrate_lua_first.render_talk_topic_response_condition(
+            unsupported_response["condition"]
+        )
+        self.assertIsNotNone(payment_callback)
+        assert payment_callback is not None
+        self.assertIn("dialogue_context:valid()", payment_callback.source)
+        self.assertIn("dialogue_context:interlocutor()", payment_callback.source)
+        self.assertIn("services.npcs.get(beta)", payment_callback.source)
+        self.assertIn("snapshot.value.friendly == true", payment_callback.source)
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            payment_callback.source,
         )
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_talk_topic(topic, result)
@@ -12573,13 +12595,18 @@ assert(not available())
             "services.npcs.missions.selected_has_generic_rewards(beta)",
             rendered,
         )
+        self.assertIn("services.npcs.get(beta)", rendered)
         self.assertNotIn(
             'condition = false, text = "Glad to help.  I need no payment."',
             rendered,
         )
-        self.assertIn(
+        self.assertNotIn(
             'condition = false, text = "How about some items as payment?"',
             rendered,
+        )
+        self.assertTrue(
+            any("native WRAP mission_reward" in todo.text for todo in result.todos),
+            "condition migration must not imply that the reward effect migrated",
         )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
