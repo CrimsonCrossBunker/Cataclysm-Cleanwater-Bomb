@@ -157,6 +157,44 @@ void require_translation_text( const std::string_view text )
     }
 }
 
+game_message_type parse_platform_message_type( const std::string_view name,
+        const std::string_view api_name )
+{
+    if( name == "good" ) {
+        return m_good;
+    }
+    if( name == "bad" ) {
+        return m_bad;
+    }
+    if( name == "mixed" ) {
+        return m_mixed;
+    }
+    if( name == "warning" ) {
+        return m_warning;
+    }
+    if( name == "info" ) {
+        return m_info;
+    }
+    if( name == "neutral" ) {
+        return m_neutral;
+    }
+    if( name == "debug" ) {
+        return m_debug;
+    }
+    if( name == "headshot" ) {
+        return m_headshot;
+    }
+    if( name == "critical" ) {
+        return m_critical;
+    }
+    if( name == "grazing" ) {
+        return m_grazing;
+    }
+    throw std::invalid_argument(
+        std::string( api_name ) + " received unknown message type '" +
+        std::string( name ) + "'" );
+}
+
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
                                  const std::size_t minimum,
@@ -252,9 +290,13 @@ struct use_context_data {
         }
     }
 
-    void message( const std::string &value ) const {
+    void message( const std::string &value,
+                  const sol::optional<std::string> &type ) const {
         require_active();
-        character->add_msg_if_player( value );
+        character->add_msg_if_player(
+            game_message_params( parse_platform_message_type(
+                                     type.value_or( "neutral" ), "ItemUseContext:message" ) ),
+            value );
     }
 
     std::string player_name() const {
@@ -2836,38 +2878,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["lore"] = std::move( lore );
 
     const auto platform_message_type = []( const std::string & name ) {
-        if( name == "good" ) {
-            return m_good;
-        }
-        if( name == "bad" ) {
-            return m_bad;
-        }
-        if( name == "mixed" ) {
-            return m_mixed;
-        }
-        if( name == "warning" ) {
-            return m_warning;
-        }
-        if( name == "info" ) {
-            return m_info;
-        }
-        if( name == "neutral" ) {
-            return m_neutral;
-        }
-        if( name == "debug" ) {
-            return m_debug;
-        }
-        if( name == "headshot" ) {
-            return m_headshot;
-        }
-        if( name == "critical" ) {
-            return m_critical;
-        }
-        if( name == "grazing" ) {
-            return m_grazing;
-        }
-        throw std::invalid_argument(
-            "services.messages received unknown message type '" + name + "'" );
+        return parse_platform_message_type( name, "services.messages" );
     };
     const auto add_audible_message = [weak, require_write,
                                             platform_message_type]( const std::string & message,

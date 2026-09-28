@@ -24316,6 +24316,67 @@ assert(not pcall(function() return U_EXPRESSION end))
             rendered,
         )
 
+    def test_real_efile_map_use_chain_keeps_map_cache_eoc_fail_closed(self) -> None:
+        item_path = REPOSITORY_ROOT / "data/json/items/software.json"
+        efile_map = next(
+            entry for entry in migrate_lua_first.load_objects([item_path])
+            if entry.value.get("id") == "efile_map"
+        )
+        self.assertEqual(
+            efile_map.value["use_action"],
+            {
+                "type": "effect_on_conditions",
+                "effect_on_conditions": ["EOC_CHECK_MAP_CACHE"],
+            },
+        )
+        self.assertIn(
+            "PRESERVE_SPAWN_LOC",
+            efile_map.value["extend"]["flags"],
+        )
+
+        eoc_path = REPOSITORY_ROOT / "data/json/effects_on_condition/computer_eocs.json"
+        eoc = next(
+            entry for entry in migrate_lua_first.load_objects([eoc_path])
+            if entry.value.get("id") == "EOC_CHECK_MAP_CACHE"
+        )
+        branch = eoc.value["effect"][0]
+        self.assertEqual(
+            branch["if"]["compare_string"], ["read", {"npc_val": "map_cache"}]
+        )
+        effects = branch["else"]
+        self.assertEqual(
+            effects[0],
+            {
+                "location_variable_adjust": {"npc_val": "spawn_location"},
+                "z_adjust": 0,
+                "z_override": True,
+                "overmap_tile": True,
+            },
+        )
+        self.assertEqual(
+            effects[1],
+            {
+                "reveal_map": {"npc_val": "spawn_location"},
+                "radius": {"math": ["rng(11, 36)"]},
+            },
+        )
+        self.assertEqual(
+            effects[2], {"npc_add_var": "map_cache", "value": "read"}
+        )
+        self.assertEqual(
+            effects[3],
+            {
+                "u_message": "You found some useful data in the map cache and noted it.",
+                "type": "good",
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(eoc, result)
+        self.assertNotIn("services.overmap.reveal_native(", rendered)
+        todo_text = "\n".join(todo.message for todo in result.todos)
+        self.assertIn("needs conditional-control-flow conversion", todo_text)
+        self.assertIn("needs an explicit Platform trigger", todo_text)
+
     def test_static_consume_item_sum_lowers_event_exclusive_mutations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

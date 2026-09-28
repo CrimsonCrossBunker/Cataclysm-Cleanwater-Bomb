@@ -4510,6 +4510,17 @@ local WeaponCategoryDefinition = {}
 ---@return WeaponCategoryDefinition self
 function WeaponCategoryDefinition:proficiency(proficiency_id) end
 
+---@alias CcbPlatformMessageType
+---| 'neutral'
+---| 'good'
+---| 'bad'
+---| 'mixed'
+---| 'warning'
+---| 'info'
+---| 'debug'
+---| 'headshot'
+---| 'critical'
+---| 'grazing'
 ---Non-copyable borrowed callback context. Every member becomes stale after the
 ---item-use handler returns or fails; saving the userdata does not extend its lease.
 ---@class ItemUseContext
@@ -4522,7 +4533,9 @@ function WeaponCategoryDefinition:proficiency(proficiency_id) end
 local ItemUseContext = {}
 
 ---@param text string
-function ItemUseContext:message(text) end
+---@param type? CcbPlatformMessageType Optional native severity; defaults to neutral.
+---The message uses the using Character's add_msg_if_player path.
+function ItemUseContext:message(text, type) end
 
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
@@ -5139,15 +5152,15 @@ function CcbPlatformNativeEventsApi.emit(type_name, requested_args) end
 ---@class CcbPlatformMessagesApi
 local CcbPlatformMessagesApi = {}
 ---@param message string
----@param type? string One of the native message severity names.
+---@param type? CcbPlatformMessageType One of the native message severity names; defaults to neutral.
 ---@return boolean
 function CcbPlatformMessagesApi.add(message, type) end
 ---@param message string
----@param type? string
+---@param type? CcbPlatformMessageType
 ---@return any
 function CcbPlatformMessagesApi.add_from_outdoors(message, type) end
 ---@param message string
----@param type? string
+---@param type? CcbPlatformMessageType
 ---@return any
 function CcbPlatformMessagesApi.add_if_audible(message, type) end
 
