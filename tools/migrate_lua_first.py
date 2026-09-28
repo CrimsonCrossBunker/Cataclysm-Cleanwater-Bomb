@@ -20111,110 +20111,6 @@ def render_static_assign_mission_effect(
     return lines
 
 
-def render_static_finish_mission_effect(
-    effect: dict[str, Any], avatar_actor_proven: bool,
-) -> list[str] | None:
-    """Apply a literal finish/fail/step operation to an avatar mission."""
-    if set(effect) - {
-        "finish_mission", "success", "step",
-    }:
-        return None
-    if not avatar_actor_proven:
-        return None
-    avatar = "actor"
-    mission_id = _dynamic_id_expression(
-        effect.get("finish_mission"), "mission", avatar
-    )
-    if mission_id is None:
-        return None
-    has_step = "step" in effect
-    has_success = "success" in effect
-    if has_step == has_success:
-        return None
-    if has_step:
-        step = effect["step"]
-        if isinstance(step, int) and not isinstance(step, bool):
-            if not 0 <= step <= 1000000:
-                return None
-            step_expression = str(step)
-        else:
-            dynamic_step = render_eoc_numeric_expression(step, "0", avatar)
-            if dynamic_step is None:
-                return None
-            step_expression = (
-                "math.max(0, math.min(1000000, "
-                f"math.floor(({dynamic_step}) + 0.5)))"
-            )
-    elif not isinstance(effect["success"], bool):
-        return None
-    action_lines = (
-        [
-            "                service_value(services.missions.step_complete(",
-            f"                    actor, entry.token, {step_expression}))",
-        ] if has_step else [
-            "                service_value(services.missions.complete(" if effect["success"] else
-            "                service_value(services.missions.fail(",
-            "                    actor, entry.token))",
-        ]
-    )
-    return [
-        "    local mission_offset = 0",
-        "    local mission_done = false",
-        "    while true do",
-        "        local active_missions = services.missions.list(actor, {",
-        '            status = "active", offset = mission_offset, limit = 256,',
-        "        })",
-        "        for _, entry in ipairs(active_missions.items) do",
-        f"            if entry.id == {mission_id} then",
-        *action_lines,
-        "                mission_done = true",
-        "                break",
-        "            end",
-        "        end",
-        "        if mission_done or not active_missions.has_more or active_missions.returned == 0 then",
-        "            break",
-        "        end",
-        "        mission_offset = mission_offset + active_missions.returned",
-        "    end",
-    ]
-
-
-def render_static_remove_active_mission_effect(
-    effect: dict[str, Any], avatar_actor_proven: bool,
-) -> list[str] | None:
-    """Remove one literal active avatar mission without a legacy runner."""
-    if set(effect) != {"remove_active_mission"}:
-        return None
-    if not avatar_actor_proven:
-        return None
-    avatar = "actor"
-    mission_id = _dynamic_id_expression(
-        effect.get("remove_active_mission"), "mission", avatar
-    )
-    if mission_id is None:
-        return None
-    return [
-        "    local mission_offset = 0",
-        "    local mission_done = false",
-        "    while true do",
-        "        local active_missions = services.missions.list(actor, {",
-        '            status = "active", offset = mission_offset, limit = 256,',
-        "        })",
-        "        for _, entry in ipairs(active_missions.items) do",
-        f"            if entry.id == {mission_id} then",
-        "                service_value(services.missions.abandon(actor, entry.token))",
-        "                mission_done = true",
-        "                break",
-        "            end",
-        "        end",
-        "        if mission_done or not active_missions.has_more or active_missions.returned == 0 then",
-        "            break",
-        "        end",
-        "        mission_offset = mission_offset + active_missions.returned",
-        "    end",
-    ]
-
-
 def render_static_offer_mission_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
@@ -20262,38 +20158,6 @@ def render_static_add_mission_effect(
         "    service_value(services.npcs.missions.add_assigned(",
         f"        {npc_actor_expression}, actor, {mission_id}))",
     ]
-
-
-def render_static_selected_npc_mission_effect(
-    effect: str, npc_actor_proven: bool,
-    avatar_actor_proven: bool = False,
-    npc_actor_expression: str | None = None,
-) -> list[str] | None:
-    """Run a selected mission only with explicit provider and owner handles."""
-    if (
-        not npc_actor_proven or not avatar_actor_proven or
-        npc_actor_expression is None
-    ):
-        return None
-    action = {
-        "assign_mission": "assign_selected",
-        "mission_success": "succeed_selected",
-        "mission_failure": "fail_selected",
-        "clear_mission": "clear_selected",
-        # Dialogue's string-form ``remove_active_mission`` operates on the
-        # currently selected NPC mission, just like ``clear_mission``.  Keep
-        # the native selected-provider contract instead of treating it as an
-        # avatar mission-id mutation (the object form is handled separately).
-        "remove_active_mission": "clear_selected",
-        "mission_reward": "claim_selected_reward",
-    }.get(effect)
-    if action is None:
-        return None
-    call = f"services.npcs.missions.{action}({npc_actor_expression}, actor"
-    if action == "succeed_selected":
-        call += ", false"
-    call += ")"
-    return [f"    service_value({call})"]
 
 
 def render_static_camp_npc_effect(
@@ -33990,26 +33854,46 @@ def render_eoc(
                     rendered = render_static_assign_mission_effect(
                         effect, avatar_actor_proven
                     )
-                elif "finish_mission" in effect:
-                    rendered = render_static_finish_mission_effect(
-                        effect, avatar_actor_proven
-                    )
-                else:
-                    rendered = render_static_remove_active_mission_effect(
-                        effect, avatar_actor_proven
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
-                else:
+                elif "assign_mission" in effect:
                     lines.append(
-                        "    -- TODO: translate the mission lifecycle shape "
-                        "through typed mission services."
+                        "    -- TODO: assign_mission needs a proven avatar and "
+                        "a statically supported mission definition."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded mission lifecycle conversion"
+                        "needs a bounded avatar mission assignment"
+                    )
+                    all_effects_converted = False
+                elif "finish_mission" in effect:
+                    mission_gap = (
+                        "finish_mission scans avatar.get_active_missions() in native "
+                        "order and mutates the first mission-type match; native accepts "
+                        "only an integer step and otherwise reads success (default false). "
+                        "services.missions.list sorts mission instances, while typed "
+                        "step/complete/fail add range, active-state, or goal checks"
+                    )
+                    lines.append(f"    -- TODO: {mission_gap}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{mission_gap}"
+                    )
+                    all_effects_converted = False
+                else:
+                    mission_gap = (
+                        "object-form remove_active_mission scans avatar active missions "
+                        "by mission type and removes the first match; services.missions.list "
+                        "orders instances differently and abandon adds active-owner checks"
+                    )
+                    lines.append(f"    -- TODO: {mission_gap}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{mission_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "add_mission" in effect:
@@ -34067,21 +33951,22 @@ def render_eoc(
                     if static_wrapped_beta_npc:
                         reason = {
                             "mission_success": (
-                                "the Platform service requires an active, complete "
-                                "mission while the native WRAP only wraps the selection"
+                                "native wraps any non-null selection and adjusts "
+                                "provider/faction state; Platform also requires an "
+                                "assigned live selection and a complete goal unless force=true"
                             ),
                             "mission_failure": (
-                                "the Platform service requires an active mission "
-                                "assigned to this avatar while the native WRAP fails "
-                                "the selection"
+                                "native fails any non-null selection and adjusts "
+                                "provider opinion; Platform requires a unique live "
+                                "NPC-provided, owner-assigned active mission"
                             ),
                             "clear_mission": (
-                                "the Platform service rejects in-progress selections "
-                                "while the native WRAP clears any assigned selection"
+                                "native removes an assigned selection even while "
+                                "in progress; Platform only clears finished selections"
                             ),
                             "mission_reward": (
-                                "the native WRAP adds owed value and opens reward trade; "
-                                "the Platform generic-reward claim has different semantics"
+                                "native adds owed value and opens reward trade; Platform "
+                                "only claims an unclaimed generic reward on a successful mission"
                             ),
                         }.get(effect, "the selected mission action is not equivalent")
                         todo = f"TODO: preserve native {effect}: {reason}."
@@ -34105,27 +33990,18 @@ def render_eoc(
                         f"{detail}"
                     )
                     all_effects_converted = False
-            elif effect == "remove_active_mission" and (
-                npc_actor_proven or npc_actor_expression is not None
-            ):
-                rendered = render_static_selected_npc_mission_effect(
-                    effect, exact_npc_actor_proven,
-                    exact_avatar_actor_proven, npc_actor_expression
+            elif effect == "remove_active_mission":
+                invalid_shape = (
+                    "string-form remove_active_mission is not registered in the native "
+                    "WRAP map; use the object form with a mission type ID"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the selected NPC mission "
-                        "action through a typed provider service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs an exact NPC provider, avatar owner, and selected mission shape"
-                    )
-                    all_effects_converted = False
+                lines.append(f"    -- TODO: {invalid_shape}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{invalid_shape}"
+                )
+                all_effects_converted = False
             elif static_wrapped_beta_npc and effect == "set_npc_pickup":
                 # This WRAP effect opens the native pickup-rules service.
                 provider = npc_actor_expression or "actor"
