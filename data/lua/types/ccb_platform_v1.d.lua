@@ -459,6 +459,10 @@ function CcbOvermapApi.matches_location(position, location_id) end
 ---@return boolean Native `u_near_om_location` result, preserving candidate order and origin mapgen-argument lookups.
 function CcbOvermapApi.matches_location_near(origin, location_id, radius) end
 
+---@param position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) coordinate.
+---@return boolean True when every monster group at this overmap tile is safe.
+function CcbOvermapApi.is_safe(position) end
+
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}
 
@@ -7762,6 +7766,10 @@ function CcbCharactersApi.intimidation(character) end
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
 
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult result `value` is the NPC danger-cache safety result; non-NPC Characters return true.
+function CcbCharactersApi.is_safe(character) end
+
 ---@param observer GameHandle Exact live Character observer handle.
 ---@param options? CcbCharacterNearbyOptions
 ---@return CcbResult result
@@ -11307,6 +11315,7 @@ function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 
 ---@class CcbCharacterEnvironmentSnapshot
 ---@field outside boolean Native is_creature_outside result, including its surface-z check.
+---@field safe_space boolean Native overmap safe-state combined with NPC danger-cache safety.
 
 ---@class CcbMovementModesSnapshot
 ---@field items table

@@ -26635,6 +26635,42 @@ def contains_training_offer_condition(condition: Any) -> bool:
     return False
 
 
+SAFE_SPACE_BETA_CONDITION_SELECTORS = frozenset({
+    "at_safe_space", "npc_at_safe_space",
+})
+SAFE_SPACE_ALPHA_CONDITION_SELECTORS = frozenset({"u_at_safe_space"})
+
+
+def contains_safe_space_beta_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in SAFE_SPACE_BETA_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if SAFE_SPACE_BETA_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_safe_space_beta_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_safe_space_beta_condition(entry) for entry in condition)
+    return False
+
+
+def contains_safe_space_alpha_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in SAFE_SPACE_ALPHA_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if SAFE_SPACE_ALPHA_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_safe_space_alpha_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_safe_space_alpha_condition(entry) for entry in condition)
+    return False
+
+
 def render_static_perception_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
     npc_actor_proven: bool,
@@ -27665,6 +27701,14 @@ def render_eoc_condition_expression(
         # pass a live alpha/beta pair to generated EOC functions, so content
         # provenance alone cannot authorize either training service here.
         return None
+    if (
+        isinstance(condition, str) and
+        condition in SAFE_SPACE_BETA_CONDITION_SELECTORS
+    ):
+        # Native at_safe_space reads const_actor(true).  The EOC/topic adapter
+        # does not currently pass a live beta talker to generated functions;
+        # a single event Character or content pair proof cannot stand in for it.
+        return None
     # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
     # Native const_actor(true) does not fall back to alpha when beta is absent,
     # so only an expression that explicitly names the beta can be queried.
@@ -28059,12 +28103,8 @@ def render_eoc_condition_expression(
             return "character_travel_has_path(actor)"
         if npc_actor_proven and condition == "npc_is_travelling":
             return f"character_travel_has_path({npc_query_actor})"
-        if character_actor_proven and condition == "u_at_safe_space":
+        if proficiency_alpha_actor_proven and condition == "u_at_safe_space":
             return "character_at_safe_space(actor)"
-        if npc_query_actor is not None and condition == "at_safe_space":
-            return f"character_at_safe_space({npc_query_actor})"
-        if npc_query_actor is not None and condition == "npc_at_safe_space":
-            return f"character_at_safe_space({npc_query_actor})"
         if character_actor_proven and condition == "u_has_pickup_list":
             return "character_has_pickup_whitelist(actor)"
         if npc_query_actor is not None and condition == "has_pickup_list":
@@ -30142,6 +30182,19 @@ def render_eoc(
                 "EOC callback supplies the native alpha and beta as live "
                 "Character handles; talk-topic response EOC callbacks are "
                 "not yet wired"
+            )
+        elif contains_safe_space_alpha_condition(raw_condition):
+            condition_todo = (
+                "translate u_at_safe_space only for an event-exclusive live "
+                "avatar source; current bounded proof is an unreferenced "
+                "game_start EOC without dynamic dispatch"
+            )
+        elif contains_safe_space_beta_condition(raw_condition):
+            condition_todo = (
+                "translate at_safe_space/npc_at_safe_space only after a "
+                "supported EOC callback supplies native beta as a live "
+                "Character interlocutor; talk-topic response EOC callbacks "
+                "are not yet wired"
             )
         elif contains_line_of_sight_condition(raw_condition):
             condition_todo = (
@@ -36285,10 +36338,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 "",
                 "local function character_at_safe_space(character)",
                 "    local snapshot = service_value(services.characters.snapshot(character))",
-                "    local position = services.coords.project_to(",
-                "        snapshot.creature.position, \"omt\")",
-                "    return services.overmap.is_safe(position) and",
-                "        service_value(services.characters.is_safe(character))",
+                "    return snapshot.environment.safe_space",
                 "end",
             )
         )
