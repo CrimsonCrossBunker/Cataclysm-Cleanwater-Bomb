@@ -21586,34 +21586,9 @@ def render_static_clear_dimension_effect(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Clear one saved dimension through the relocation service.
-
-    The native operation accepts a dimension id rather than an actor.  Literal,
-    context, and global values are therefore safe in any callback; ``u_val``
-    and ``npc_val`` retain their usual actor-proof requirement.
-    """
-    if "clear_dimension" not in effect or set(effect) != {"clear_dimension"}:
-        return None
-    raw = effect.get("clear_dimension")
-    actor_expression = "actor"
-    if isinstance(raw, dict) and len(raw) == 1:
-        scope = next(iter(raw))
-        if scope == "u_val" and not avatar_actor_proven:
-            return None
-        if scope == "npc_val" and not npc_actor_proven:
-            return None
-        if scope in {"global_val", "context_val", "var_val"}:
-            actor_expression = (
-                "actor" if (avatar_actor_proven or npc_actor_proven)
-                else "services.characters.avatar()"
-            )
-    expression = render_eoc_string_expression(raw, actor_expression)
-    if expression is None:
-        return None
-    return [
-        "    service_value(services.relocation.clear_dimension(",
-        f"        {expression}))",
-    ]
+    """Native file-query deletion is not the typed dimension deletion service."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_transform_line_effect(
@@ -24193,39 +24168,9 @@ def render_static_location_revert_or_copy(
 def render_static_place_override(
     effect: dict[str, Any], actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a temporary world place-name override with variable support."""
-    if "place_override" not in effect or set(effect) - {
-        "place_override", "default", "length", "key",
-    }:
-        return None
-    actor = actor_expression or "actor"
-    name = effect.get("place_override")
-    if isinstance(name, str):
-        name_expression = lua_quote(name)
-    else:
-        name_expression = render_eoc_string_expression(name, actor)
-        if name_expression is None:
-            return None
-    default = effect.get("default", "")
-    if not isinstance(default, str) or not bounded_utf8_string(default, 8192, allow_empty=True):
-        return None
-    if not isinstance(name, str):
-        name_expression = f"({name_expression} or {lua_quote(default)})"
-    raw_length = effect.get("length", 0)
-    length = (
-        f"services.time.duration({MAX_WORLD_CHANGE_DELAY_TURNS}, \"turn\")"
-        if raw_length == "infinite" else
-        _duration_expression(raw_length, actor_expression=actor)
-    )
-    if length is None:
-        return None
-    key = effect.get("key", "")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
-        return None
-    return [
-        "    services.world.override_place_name(",
-        f"        {name_expression}, {length}, {lua_quote(key)})",
-    ]
+    """Native translated text and unrestricted duration need an exact bridge."""
+    del effect, actor_expression
+    return None
 
 
 def render_static_transform_radius(
@@ -33499,13 +33444,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate clear_dimension through the "
-                        "typed relocation service."
+                        "    -- TODO: native clear_dimension queries saved directories "
+                        "by filename match, then deletes a raw path; the typed service "
+                        "requires a registered, inactive dimension ID."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs native directory-query/deletion semantics or a "
+                        "deliberate content rewrite"
                     )
                     all_effects_converted = False
             elif effect == "open_dialogue" and npc_alpha_fallback_event_actor_proven:
@@ -33537,12 +33484,14 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate place_override through the typed world service."
+                        "    -- TODO: native place_override translates its text and "
+                        "schedules the requested duration; the typed world service "
+                        "rejects empty/long names and out-of-range durations."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs translated-text and duration-range parity"
                     )
                     all_effects_converted = False
             elif (
