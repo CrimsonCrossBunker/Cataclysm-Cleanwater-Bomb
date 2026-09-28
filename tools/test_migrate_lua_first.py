@@ -6486,7 +6486,7 @@ assert(#events == 9)
             )
             self.assertNotIn("run_eoc", main)
 
-    def test_translates_avatar_recipe_and_literal_category_forgetting(self) -> None:
+    def test_translates_avatar_direct_recipe_forgetting_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -6497,6 +6497,15 @@ assert(#events == 9)
                             "id": "forget_recipe",
                             "required_event": "game_start",
                             "effect": {"u_forget_recipe": "cudgel_test_no_tools"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "forget_recipe_category_false",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_forget_recipe": "cudgel_test_no_tools",
+                                "category": False,
+                            },
                         },
                         {
                             "type": "effect_on_condition",
@@ -6525,24 +6534,22 @@ assert(#events == 9)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(
+                migrate_lua_first.safe_native_recipe_id("cudgel_test_no_tools")
+            )
+            self.assertFalse(
+                migrate_lua_first.safe_native_recipe_id("r" * 257)
+            )
             self.assertIn("services.recipes.forget", main)
+            self.assertEqual(main.count("services.recipes.forget("), 2)
             self.assertIn(
                 'services.types.id("recipe", "cudgel_test_no_tools")',
                 main,
             )
-            self.assertEqual(main.count("services.recipes.forget_category"), 2)
-            self.assertEqual(
-                main.count(
-                    'services.types.id("crafting_category", "CC_FOOD")'
-                ),
-                2,
-            )
-            self.assertIn(
-                '"CSC_FOOD_DRINKS")',
-                main,
-            )
+            self.assertNotIn("services.recipes.forget_category", main)
+            self.assertIn("registered crafting category", main)
             self.assertNotIn("run_eoc", main)
 
     def test_dynamic_recipe_category_forgetting_stays_partial(self) -> None:
@@ -6586,10 +6593,145 @@ assert(#events == 9)
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 2)
             self.assertNotIn("services.recipes.forget_category", main)
-            self.assertEqual(
-                report.count("effect #0 needs domain-service conversion"),
-                2,
+            self.assertEqual(len(result.todos), 2)
+            self.assertIn("registered crafting category", report)
+
+    def test_unknown_category_and_overlong_subcategory_forgetting_stay_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unknown_category",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_forget_recipe": "CC_NOT_REGISTERED",
+                            "category": True,
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "overlong_subcategory",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_forget_recipe": "CC_FOOD",
+                            "subcategory": "s" * 257,
+                        },
+                    },
+                ]),
+                encoding="utf-8",
             )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "recipe_category_bounds"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.recipes.forget_category", main)
+            self.assertIn("unknown category IDs remain TODO", report)
+            self.assertIn("at most 256 UTF-8 bytes", report)
+
+    def test_recipe_mutations_require_event_exclusive_game_start_avatar(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_recipe",
+                        "required_event": "game_start",
+                        "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "recipe_caller",
+                        "effect": {"run_eocs": "referenced_recipe"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            self.assertFalse(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+            result = migrate_lua_first.migrate(objects, "recipe_reference_mod")
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.recipes.learn(", main)
+            self.assertIn("EOC referenced_recipe effect #0", todo_text)
+            self.assertIn("event-exclusive game_start avatar", todo_text)
+
+    def test_recipe_mutations_remain_todo_with_dynamic_selector_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_selector_recipe",
+                        "required_event": "game_start",
+                        "effect": {"u_forget_recipe": "cudgel_test_no_tools"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_selector_dispatcher",
+                        "effect": {
+                            "run_eoc_selector": {
+                                "global_val": "selected_eoc",
+                            },
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            self.assertTrue(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+            result = migrate_lua_first.migrate(objects, "recipe_dynamic_selector_mod")
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.recipes.forget(", main)
+            self.assertNotIn("services.recipes.forget_category(", main)
+            self.assertIn("EOC dynamic_selector_recipe effect #0", todo_text)
+            self.assertIn("event-exclusive game_start avatar", todo_text)
+
+    def test_npc_recipe_mutations_stay_todo_without_beta_talker_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_learn_recipe",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_learn_recipe": "cudgel_test_no_tools"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_forget_recipe",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {
+                            "npc_forget_recipe": "CC_WEAPON",
+                            "category": True,
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_recipe_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.recipes.learn(", main)
+            self.assertNotIn("services.recipes.forget(", main)
+            self.assertNotIn("services.recipes.forget_category(", main)
+            self.assertIn("EOC npc_learn_recipe effect #0", todo_text)
+            self.assertIn("EOC npc_forget_recipe effect #0", todo_text)
+            self.assertIn("npc_ recipe mutation needs exact native beta talker proof", todo_text)
+            self.assertIn("registered crafting category", todo_text)
 
     def test_translates_live_avatar_martial_art_learning_and_forgetting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -9712,9 +9854,13 @@ assert(not available())
             self.assertEqual(len(result.partial), 3)
             self.assertIn("services.bionics.grant(", main)
             self.assertIn("services.bionics.remove_type(", main)
-            self.assertIn("services.recipes.learn(", main)
-            self.assertIn("services.recipes.forget(", main)
+            self.assertNotIn("services.recipes.learn(", main)
+            self.assertNotIn("services.recipes.forget(", main)
             self.assertIn("services.martial_arts.learn(", main)
+            self.assertIn(
+                "npc_ recipe mutation needs exact native beta talker proof",
+                report,
+            )
             self.assertNotIn("services.npcs.ai_rules(actor)", main)
             for eoc_id in (
                 "npc_male_eoc", "npc_female_eoc", "npc_char_eoc", "npc_npc_eoc",
