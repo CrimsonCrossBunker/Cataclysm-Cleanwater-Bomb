@@ -8,10 +8,14 @@
 #include "condition.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "flexbuffer_json.h"
+#include "global_vars.h"
+#include "json_loader.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
@@ -169,6 +173,73 @@ TEST_CASE( "lua_platform_event_has_beta_matches_native_dialogue_presence",
     const sol::protected_function_result unproven_result = platform_has_beta();
     REQUIRE( unproven_result.valid() );
     CHECK_FALSE( unproven_result.get<bool>() );
+}
+
+TEST_CASE( "lua_platform_expects_vars_matches_native_context_key_presence",
+           "[lua][platform][conditions][semantic]" )
+{
+    global_variables::impl_t native_context;
+    native_context.emplace( "false_value", diag_value( false ) );
+    native_context.emplace( "zero_value", diag_value( 0 ) );
+    native_context.emplace( "empty_value", diag_value( std::string() ) );
+    native_context.emplace( "void_value", diag_value{} );
+    dialogue native_dialogue( std::make_unique<talker>(), nullptr, {}, native_context );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table context = lua.create_table();
+    sol::table data = lua.create_table();
+    data["false_value"] = false;
+    data["zero_value"] = 0;
+    data["empty_value"] = "";
+    // Platform's non-nil sentinel represents native empty/null values in
+    // child contexts.  Presence, rather than truthiness, is what matters.
+    data["void_value"] = lua.create_table();
+    context["data"] = data;
+    lua["context"] = context;
+    const sol::protected_function platform_expects_vars = lua.load( R"(
+        return function(keys)
+            for _, key in ipairs(keys) do
+                if context.data[key] == nil then return false end
+            end
+            return true
+        end
+    )" );
+
+    const auto compare = [&]( const std::string &json, const std::vector<std::string> &keys ) {
+        const conditional_t native_condition(
+            json_loader::from_string( json ).get_object() );
+        sol::table required = lua.create_table();
+        for( const std::string &key : keys ) {
+            required.add( key );
+        }
+        const sol::protected_function_result platform_result = platform_expects_vars( required );
+        REQUIRE( platform_result.valid() );
+        CHECK( native_condition( native_dialogue ) == platform_result.get<bool>() );
+    };
+
+    compare( R"({"expects_vars":["false_value"]})", { "false_value" } );
+    compare( R"({"expects_vars":["zero_value"]})", { "zero_value" } );
+    compare( R"({"expects_vars":["empty_value"]})", { "empty_value" } );
+    compare( R"({"expects_vars":["void_value"]})", { "void_value" } );
+    compare( R"({"expects_vars":[]})", {} );
+
+    const conditional_t missing_condition(
+        json_loader::from_string( R"({"expects_vars":["missing"]})" ).get_object() );
+    // The boolean result matches. Native additionally emits this diagnostic;
+    // the Platform expression has no corresponding debug-message service.
+    bool native_missing = true;
+    const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+        native_missing = missing_condition( native_dialogue );
+    } );
+    sol::table missing = lua.create_table();
+    missing.add( "missing" );
+    const sol::protected_function_result platform_missing =
+        platform_expects_vars( missing );
+    REQUIRE( platform_missing.valid() );
+    CHECK_FALSE( native_missing );
+    CHECK_FALSE( platform_missing.get<bool>() );
+    CHECK( native_diagnostic.find( "Missing required variables: missing" ) != std::string::npos );
 }
 
 #endif

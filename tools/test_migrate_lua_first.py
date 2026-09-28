@@ -6146,6 +6146,25 @@ assert(#events == 9)
             self.assertNotIn("run_eoc", main)
             self.assertIn("needs domain-service conversion", report)
 
+    def test_expects_vars_requires_literal_keys_and_preserves_empty_list(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.render_static_context_presence_condition(
+                {"expects_vars": []}
+            ),
+            "true",
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_context_presence_condition(
+                {"expects_vars": ["ready", "empty"]}
+            ),
+            'context.data["ready"] ~= nil and context.data["empty"] ~= nil',
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_context_presence_condition(
+                {"expects_vars": [{"context_val": "key_name"}]}
+            )
+        )
+
     def test_dynamic_context_and_math_conditions_remain_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

@@ -26194,15 +26194,18 @@ def render_static_faction_relationship(
 
 
 def render_static_context_presence_condition(condition: dict[str, Any]) -> str | None:
-    """Render literal event-context presence checks without EOC variables."""
+    """Render literal context-key checks; missing-key debugmsg is not mirrored."""
     if set(condition) != {"expects_vars"}:
         return None
     values = condition.get("expects_vars")
     if (
-        not isinstance(values, list) or not values or len(values) > 64 or
+        not isinstance(values, list) or len(values) > 64 or
         not all(bounded_utf8_string(value, 256) for value in values)
     ):
         return None
+    if not values:
+        # Native f_expects_vars captures an empty vector and returns true.
+        return "true"
     return " and ".join(
         f"context.data[{lua_quote(value)}] ~= nil" for value in values
     )
