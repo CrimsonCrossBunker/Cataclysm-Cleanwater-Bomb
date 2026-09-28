@@ -24048,12 +24048,13 @@ def _render_static_map_state_edit(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Render one atomic map.edit for a statically typed abs_ms target.
+    """Render one atomic map.edit for supported edits at a typed abs_ms target.
 
-    This helper accepts a deliberately small legacy shape.  Multiple map-state
-    members in one descriptor are collected into one changes table, so a
-    terrain/furniture/trap/field update for the same tile has one revision
-    check and one native atomic edit.
+    This helper accepts a deliberately small legacy shape.  Supported
+    terrain/field members in one descriptor are collected into one changes
+    table, so edits for the same tile share one revision check and native
+    atomic operation.  Furniture and trap remain fail-closed because their
+    native no-op/failure behavior is not represented by map.edit.
     """
     del avatar_actor_proven, npc_event_character_actor_proven
     if not isinstance(effect, dict):
@@ -24069,6 +24070,13 @@ def _render_static_map_state_edit(
     # for terrain with a built-in trap.  map.tile/map.edit cannot currently
     # express both cases without turning those inputs into errors.
     if "set_trap" in present:
+        return None
+    # Native set_furniture calls furn_set(dest, id, false, avoid_creatures)
+    # for every point in its runtime-centered radius (default 1, circular
+    # unless square=true).  Even radius=0 cannot prove the point is in the
+    # loaded bubble, and furn_set's bounds, creature, and failed-placement
+    # behavior differs from map.edit's loaded-token validation and rollback.
+    if "set_furniture" in present:
         return None
     comment_keys = {
         name for name in effect
@@ -24180,73 +24188,13 @@ def render_static_mapgen_update(
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
 ) -> list[str] | None:
-    allowed_keys = {
-        "mapgen_update", "target_var", "cancel_on_collision",
-        "mirror_horizontal", "mirror_vertical", "rotation",
-        "offset_x", "offset_y", "offset_z",
-    }
-    if (
-        not isinstance(effect, dict) or
-        "mapgen_update" not in effect or
-        {"time_in_future", "delay", "mission", "key"}.intersection(effect) or
-        set(effect) - allowed_keys
-    ):
-        return None
-    if "target_var" not in effect:
-        return None
-    raw_updates = effect["mapgen_update"]
-    update_values = raw_updates if isinstance(raw_updates, list) else [raw_updates]
-    if not update_values or len(update_values) > 64:
-        return None
-    for update_id in update_values:
-        if not bounded_platform_id(update_id):
-            return None
-    target = _explicit_abs_omt_expression(effect["target_var"])
-    if target is None:
-        return None
-    cancel_on_collision = effect.get("cancel_on_collision", True)
-    if cancel_on_collision is not True:
-        return None
-    options: list[str] = ["cancel_on_collision = true"]
-    for option in ("mirror_horizontal", "mirror_vertical"):
-        value = effect.get(option, False)
-        if not isinstance(value, bool) or value:
-            return None
-    rotation = effect.get("rotation", 0)
-    if (
-        not isinstance(rotation, int) or isinstance(rotation, bool) or
-        rotation != 0
-    ):
-        return None
-    offsets: list[int] = []
-    for name in ("offset_x", "offset_y", "offset_z"):
-        offset = _literal_integer_or_none(
-            effect.get(name, 0), -1000, 1000
-        )
-        if offset is None:
-            return None
-        offsets.append(offset)
-    lines = [
-        f"    local abs_omt = {target}",
-    ]
-    if any(offsets):
-        lines.append(
-            "    abs_omt = abs_omt:add(services.coords.tripoint_rel_omt("
-            f"{offsets[0]}, {offsets[1]}, {offsets[2]}))"
-        )
-    lines.extend([
-        "    local target_token = service_value(services.overmap.tile_token(",
-        "        abs_omt))",
-    ])
-    for index, update_id in enumerate(update_values, start=1):
-        update_token = "update_token" if index == 1 else f"update_token_{index}"
-        lines.extend([
-            f"    local {update_token} = service_value(services.mapgen.update_token(",
-            f"        services.types.id(\"update_mapgen\", {lua_quote(update_id)})))",
-            "    service_value(services.mapgen.apply(",
-            f"        target_token, {update_token}, {{ {', '.join(options)} }}))",
-        ])
-    return lines
+    # Native target_var is a var_info lookup yielding an absolute map-square
+    # tripoint, which is then projected to OMT.  The Platform API instead
+    # requires a typed OMT token and runs a transaction that rejects missions,
+    # unsafe operators, and incomplete loaded footprints.  No legacy shape is
+    # currently proven to preserve those targeting and best-effort semantics.
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_reveal_map(
@@ -32016,6 +31964,22 @@ def render_eoc(
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
+                elif "set_furniture" in effect:
+                    furniture_gap = (
+                        "set_furniture uses the native radius neighborhood "
+                        "(default radius=1, circular unless square=true) and "
+                        "calls furn_set(dest, id, false, avoid_creatures); its loaded/bounds, "
+                        "avoid_creatures, and failed-placement behavior differs "
+                        "from map.edit's loaded MapTileToken and transactional "
+                        "validation"
+                    )
+                    lines.append(f"    -- TODO: {furniture_gap}.")
+                    result.add_todo(
+                        "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{furniture_gap}"
+                    )
+                    all_effects_converted = False
                 else:
                     lines.append(
                         "    -- TODO: " + _map_mutation_todo() + "."
@@ -32034,19 +31998,19 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: Platform-only mapgen_update lowering "
-                        "requires static absolute OMT -> OvermapTileToken, "
-                        "static update_mapgen ID -> MapgenUpdateToken, and "
-                        "immediate transaction apply; dynamic IDs/coordinates, "
-                        "delay/mission/key, or collision=false must be rewritten "
-                        "by the author; unsupported mirror/rotation transforms "
-                        "must also be rewritten by the author."
+                    mapgen_gap = (
+                        "mapgen_update gets its target from a runtime var_info abs_ms "
+                        "lookup or mission target search; native execution can schedule "
+                        "timed updates and passes the selected mission to its best-effort "
+                        "runner. services.mapgen.apply is immediate and mission-free, "
+                        "requires a typed OMT, a registered transaction-safe update, and "
+                        "a complete loaded footprint, and returns errors where native "
+                        "misses are ignored"
                     )
+                    lines.append(f"    -- TODO: {mapgen_gap}.")
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {mapgen_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_map" in effect:
