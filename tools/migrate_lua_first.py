@@ -20432,7 +20432,14 @@ def render_static_teleport_effect(
     npc_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Keep native teleport effects fail-closed until a parity service exists."""
+    """Keep native teleport fail-closed until a native-equivalent typed path exists.
+
+    ``services.relocation.move`` requires a loaded tile and implements strict
+    movement.  Native ``f_teleport`` instead dispatches a talker to
+    ``teleport_to_point`` (or moves an item, vehicle, or zone), carries
+    force/force_safe behavior, translates linked Character items, and evaluates
+    success/failure ``translation_or_var`` messages.
+    """
     del (
         effect, monster_actor_proven, avatar_actor_proven,
         vehicle_actor_proven, npc_actor_proven, npc_actor_expression,
@@ -33072,14 +33079,20 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: preserve native teleport map loading, "
-                        "force policies, linked items, and talker behavior."
+                        "    -- TODO: preserve native teleport_to_point map "
+                        "loading/recentering, safe/force/force_safe behavior, "
+                        "Character linked-item translation, Creature/Item/Vehicle/Zone "
+                        "dispatch, and translated success/failure messages."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "teleport needs native map-loading, force-policy, "
-                        "linked-item, and talker parity"
+                        "teleport needs native teleport_to_point map "
+                        "loading/recentering and safe/force/force_safe behavior, "
+                        "Character linked-item translation, Creature/Item/Vehicle/Zone "
+                        "talker dispatch, and translation_or_var success/failure "
+                        "message evaluation; services.relocation.move only performs "
+                        "strict loaded-tile movement"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):
