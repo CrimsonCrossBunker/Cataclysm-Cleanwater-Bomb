@@ -19976,6 +19976,87 @@ assert(not pcall(function() return U_EXPRESSION end))
         )
         self.assertIn("needs domain-service conversion", report)
 
+    def test_u_message_melee_events_use_a_runtime_avatar_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "character_melee_u_message",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": {"u_message": "live Character attacker"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "monster_melee_u_message",
+                        "required_event": "character_melee_attacks_monster",
+                        "effect": {"u_message": "live monster attacker"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "no_beta_u_message",
+                        "required_event": "game_start",
+                        "effect": {"u_message": "no beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "prevent_death_u_message",
+                        "eoc_type": "PREVENT_DEATH",
+                        "effect": {"u_message": "dead avatar"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_death_u_message",
+                        "eoc_type": "AVATAR_DEATH",
+                        "effect": {"u_message": "avatar death"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_death_u_message",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"u_message": "dead NPC"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "u_message_melee_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn("character_melee_u_message", result.converted)
+        self.assertIn("monster_melee_u_message", result.converted)
+        for eoc_id in (
+            "no_beta_u_message", "prevent_death_u_message",
+            "avatar_death_u_message", "npc_death_u_message",
+        ):
+            self.assertTrue(any(
+                f"EOC {eoc_id} effect #0" in entry
+                for entry in result.todos
+            ), eoc_id)
+
+        # These Character attack events may have an NPC attacker.  The emitted
+        # guard must make that case a no-op before text expansion.
+        avatar_guard = (
+            'if message_target ~= nil and message_target.kind == "creature" and '
+            'message_target.subtype == "avatar" then'
+        )
+        self.assertEqual(main.count(avatar_guard), 2)
+        for text in ("live Character attacker", "live monster attacker"):
+            expansion = main.index(
+                f"services.text.expand_for(services.translate({json.dumps(text)})"
+            )
+            target = main.rfind("local message_target = actor", 0, expansion)
+            guard = main.find(avatar_guard, target, expansion)
+            self.assertGreaterEqual(target, 0)
+            self.assertGreaterEqual(guard, target)
+            self.assertLess(guard, expansion)
+        for text in ("no beta", "dead avatar", "avatar death", "dead NPC"):
+            self.assertNotIn(f"services.translate({json.dumps(text)})", main)
+        self.assertIn("needs domain-service conversion", report)
+
     def test_preserves_native_explosion_shrapnel_shapes_and_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

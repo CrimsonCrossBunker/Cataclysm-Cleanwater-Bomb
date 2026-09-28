@@ -29662,6 +29662,15 @@ def render_eoc(
         message_dialogue_pair = (
             alpha_effect_target[0], beta_effect_target[0]
         )
+    # These event contracts provide a live Character alpha, but the attacker
+    # may be an NPC.  A runtime Avatar guard preserves native u_message's
+    # add_msg_if_player behavior without inventing an avatar proof.
+    u_message_avatar_guarded_pair = (
+        required_event in {
+            "character_melee_attacks_character",
+            "character_melee_attacks_monster",
+        } and message_dialogue_pair is not None
+    )
     effect_actor_targets = {
         "u": alpha_effect_target,
         "npc": beta_effect_target,
@@ -30441,9 +30450,12 @@ def render_eoc(
                 }
             ):
                 # The avatar target is the player, so the u_ spelling is the
-                # same player message as the bare `message` effect.
+                # same player message as the bare `message` effect.  Melee
+                # events retain their exact live alpha/beta pair and receive
+                # a runtime Avatar guard because the attacker may be an NPC.
                 if (
-                    not exact_avatar_actor_proven
+                    not exact_avatar_actor_proven and
+                    not u_message_avatar_guarded_pair
                 ):
                     lines.append(
                         "    -- TODO: translate u_message only with an exact "
