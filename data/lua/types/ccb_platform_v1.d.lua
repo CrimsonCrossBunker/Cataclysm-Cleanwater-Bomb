@@ -9573,6 +9573,7 @@ function CcbInventoryApi.consume_sum(character, entries) end
 function CcbInventoryApi.consume_dialogue_sum(alpha, beta, participant, entries) end
 
 ---@alias CcbEquipmentOperation 'wield'|'wear'|'unequip'
+---@alias CcbEquipmentStowPath 'weapon_bionic'|'remove_weapon_i_add'
 
 ---@alias CcbEquipmentErrorCode
 ---| 'stale_runtime'
@@ -9629,6 +9630,15 @@ function CcbInventoryApi.consume_dialogue_sum(alpha, beta, participant, entries)
 ---@field value? CcbEquipmentValue Present only after the atomic equipment transaction commits.
 ---@field error? CcbEquipmentError Present when preflight, operation, or rollback rejects the request.
 
+---@class CcbEquipmentStowValue
+---@field invoked true True when the native stow branch was invoked; i_add may discard the physical Item when no pocket accepts it.
+---@field path CcbEquipmentStowPath 'weapon_bionic' deactivates the selected weapon bionic; 'remove_weapon_i_add' force-runs the native physical-item path.
+---@field bionic_deactivated? boolean Native deactivate_bionic result; false does not fall through to inventory stowing.
+
+---@class CcbEquipmentStowResult: CcbResult
+---@field value? CcbEquipmentStowValue Present when the native operation was invoked.
+---@field error? CcbEquipmentError Present when the exact actor handle is rejected.
+
 ---@class CcbEquipmentApi
 local CcbEquipmentApi = {}
 
@@ -9651,6 +9661,10 @@ function CcbEquipmentApi.wear(actor, item, source_holder, displaced_destination)
 ---@param destination_holder CcbItemHolder Explicit Character inventory holder for the unequipped Item; capacity is preflighted atomically.
 ---@return CcbEquipmentResult result `value` is published only after the complete unequip transaction commits; `error` preserves equipment/destination on rejection.
 function CcbEquipmentApi.unequip(actor, item, destination_holder) end
+
+---@param actor GameHandle Exact live avatar, Character, or NPC actor handle; never inferred.
+---@return CcbEquipmentStowResult result Mirrors native branch order and does not preflight with inventory.weapon_state.can_stow. Native i_add does not report whether the physical Item was stored; invoked only means that native code ran.
+function CcbEquipmentApi.stow_current_weapon(actor) end
 
 ---@class CcbNpcOpinion
 ---@field trust integer

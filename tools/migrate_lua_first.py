@@ -6423,9 +6423,10 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
     if effect == "player_weapon_away":
         return (
             "platform_gap",
-            "player_weapon_away needs a generic current-weapon operation that "
-            "deactivates the exact weapon bionic or force-moves a physical wielded "
-            "item through native remove_weapon/i_add behavior",
+            "native player_weapon_away runs inside talk_effect_t::apply before "
+            "opinion and hostility handling, while Platform on_select runs after "
+            "the native response effect returns; the current callback phase cannot "
+            "preserve that ordering",
         )
     if isinstance(effect, dict):
         for selector in ("goto_location", "player_weapon_away"):
@@ -31409,18 +31410,15 @@ def render_eoc(
                 )
                 all_effects_converted = False
             elif effect == "player_weapon_away":
-                weapon_gap = (
-                    "player_weapon_away needs a generic current-weapon operation "
-                    "for the global avatar that "
-                    "deactivates the exact weapon bionic or force-moves a "
-                    "physical wielded item through native remove_weapon/i_add behavior"
+                reason = (
+                    "player_weapon_away is registered as a native TALK response "
+                    "action, not an EOC effect; do not infer EOC semantics from "
+                    "the shared label"
                 )
-                lines.append(
-                    f"    -- TODO: {weapon_gap}."
-                )
+                lines.append( f"    -- TODO: {reason}." )
                 result.add_todo(
-                    "platform_gap",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {weapon_gap}"
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
             elif isinstance(effect, dict) and "player_weapon_away" in effect:

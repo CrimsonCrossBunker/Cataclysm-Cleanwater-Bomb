@@ -16858,17 +16858,17 @@ assert(not available())
             self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
             self.assertIn("native map_spawn_item loc is a legacy var_info lookup", report)
             self.assertIn(
-                "player_weapon_away needs a generic current-weapon operation",
+                "player_weapon_away is registered as a native TALK response action",
                 main,
             )
             self.assertNotIn("services.items.transfer", main)
             weapon_todos = [
                 todo for todo in result.todos
-                if "player_weapon_away needs a generic current-weapon operation"
+                if "player_weapon_away is registered as a native TALK response action"
                 in todo.message
             ]
             self.assertEqual(len(weapon_todos), 1)
-            self.assertEqual(weapon_todos[0].category, "platform_gap")
+            self.assertEqual(weapon_todos[0].category, "semantic_choice")
             self.assertIn(
                 "native WRAP player_weapon_away accepts only a string",
                 main,
@@ -17750,9 +17750,22 @@ assert(not available())
                         self.assertNotIn("services.npcs.destinations(", rendered)
                         self.assertNotIn("services.npcs.set_goal(", rendered)
                     else:
-                        self.assertNotIn("services.equipment.unequip(", rendered)
+                        self.assertNotIn(
+                            "services.equipment.stow_current_weapon(", rendered
+                        )
                         self.assertIn(
                             "services.inventory.weapon_state(avatar)", rendered
+                        )
+                        self.assertIn(
+                            "on_select runs after the native response effect returns",
+                            effect_todos[0].message,
+                        )
+                        self.assertEqual(
+                            matching[0].get("opinion"),
+                            {"trust": 2, "fear": -2},
+                        )
+                        self.assertEqual(
+                            matching[0].get("condition"), "u_can_stow_weapon"
                         )
         self.assertEqual(
             selector_counts,

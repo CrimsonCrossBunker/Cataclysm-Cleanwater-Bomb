@@ -6091,6 +6091,44 @@ sol::table perform_equipment_transaction(
     return result;
 }
 
+sol::table equipment_stow_current_weapon(
+    sol::this_state lua, const game_handle &actor_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state_view( lua );
+    std::optional<game_handle_error> error;
+    Character *actor = resolve_exact_character(
+                           actor_handle, runtime_generation,
+                           world_generation, error );
+    if( actor == nullptr ) {
+        return make_game_error_result( state_view, *error );
+    }
+    if( const std::optional<game_handle_error> identity_error =
+            require_equipment_character_identity(
+                actor_handle, *actor, "actor" ) ) {
+        return make_game_error_result( state_view, *identity_error );
+    }
+
+    sol::table value = state_view.create_table();
+    value["invoked"] = true;
+    // Match player_weapon_away's action directly; can_stash_weapon is only a
+    // response condition and is not a precondition on the native effect.
+    const std::optional<bionic *> weapon_bionic =
+        actor->find_bionic_by_uid( actor->get_weapon_bionic_uid() );
+    if( weapon_bionic ) {
+        value["path"] = "weapon_bionic";
+        value["bionic_deactivated"] =
+            actor->deactivate_bionic( **weapon_bionic );
+    } else {
+        value["path"] = "remove_weapon_i_add";
+        actor->i_add( actor->remove_weapon() );
+    }
+    bump_item_query_mutation_epoch();
+    return make_game_value_result(
+               state_view, sol::make_object( state_view, std::move( value ) ) );
+}
+
 } // namespace
 
 void bump_item_query_mutation_epoch()
@@ -7978,6 +8016,16 @@ void install_item_api(
                    lua_state, actor, item_handle, nullptr,
                    destination_holder, equipment_operation::unequip,
                    current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    equipment.set_function(
+        "stow_current_weapon",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle &actor ) {
+        require_item_write();
+        return equipment_stow_current_weapon(
+                   lua_state, actor, current_runtime_generation(),
                    current_world_generation() );
     } );
     services["equipment"] = std::move( equipment );
