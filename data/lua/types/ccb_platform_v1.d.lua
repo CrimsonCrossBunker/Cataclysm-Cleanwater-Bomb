@@ -6381,6 +6381,19 @@ function PlatformDialogueContext:clear_selected_mission() end
 ---non-NPC interlocutor or missing selection keeps the native no-op behavior.
 function PlatformDialogueContext:succeed_selected_mission() end
 
+---Apply the native TALK mission-failure operation to the current NPC
+---interlocutor's selected mission. This preserves its opinion penalty and
+---native mission failure processing. Only available during a writable
+---`on_action` callback; a non-NPC interlocutor or missing selection keeps
+---the native no-op behavior.
+function PlatformDialogueContext:fail_selected_mission() end
+
+---Apply the native TALK end-conversation operation to the current NPC
+---interlocutor, including its message and `TALK_DONE` first topic. Only
+---available during a writable `on_action` callback; non-NPC interlocutors
+---keep the native no-op behavior.
+function PlatformDialogueContext:end_interlocutor_conversation() end
+
 ---Grant one native-default item to the current native dialogue alpha.
 ---Only available in a writable `on_action` callback. Preserves native
 ---i_add_or_drop behavior, default ammunition, one charge for charge-counted

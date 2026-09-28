@@ -7072,6 +7072,31 @@ def render_talk_topic_clear_mission_action(entry: Any) -> LuaRaw | None:
     ]))
 
 
+def render_talk_topic_mission_failure_action(entry: Any) -> LuaRaw | None:
+    """Lower the Lighthouse mission-failure response's exact native sequence."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        entry.get("topic") != "TALK_DONE" or
+        entry.get("effect") != [
+            "mission_failure", "clear_mission", "end_conversation",
+        ]
+    ):
+        return None
+    # These are synchronous native TALK effects in this exact order. Each
+    # typed call resolves the live beta NPC in the writable response callback;
+    # trials, conditions, extra effects, and EOCs are deliberately excluded.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:fail_selected_mission()",
+        "    context:clear_selected_mission()",
+        "    context:end_interlocutor_conversation()",
+        "end",
+    ]))
+
+
 def render_talk_topic_item_offer_effect(response: Any) -> LuaRaw | None:
     """Lower an exact, condition-renderable native TALK item-offer response."""
     if not isinstance(response, dict) or set(response) - {
@@ -7170,9 +7195,11 @@ def render_talk_topic(
             if isinstance(entry.get(switch_field), bool):
                 response[switch_field] = entry[switch_field]
         if "effect" in entry:
-            action_callback = render_talk_topic_mission_success_action(
-                entry, converted_condition,
-            )
+            action_callback = render_talk_topic_mission_failure_action(entry)
+            if action_callback is None:
+                action_callback = render_talk_topic_mission_success_action(
+                    entry, converted_condition,
+                )
             if action_callback is None:
                 action_callback = render_talk_topic_mission_reward_action(
                     entry, converted_condition,

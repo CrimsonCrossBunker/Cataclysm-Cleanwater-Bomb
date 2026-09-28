@@ -1349,6 +1349,165 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     cata::lua_platform::dialogue::end_session( platform_conversation );
 }
 
+TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_effect",
+           "[lua][platform][dialogue][missions][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    avatar &owner = get_avatar();
+    owner.reset_all_missions();
+    mission::clear_all();
+    struct mission_failure_cleanup {
+        avatar &owner;
+        ~mission_failure_cleanup() {
+            cata::lua_platform::clear_active_runtimes();
+            owner.reset_all_missions();
+            mission::clear_all();
+        }
+    } cleanup{ owner };
+
+    npc native_interlocutor;
+    native_interlocutor.normalize();
+    native_interlocutor.setID( character_id( 1570 ), true );
+    native_interlocutor.op_of_u.trust = 3;
+    native_interlocutor.op_of_u.value = 4;
+    native_interlocutor.op_of_u.anger = 2;
+    native_interlocutor.chatbin.first_topic = "TALK_BEFORE_FAILURE";
+    npc platform_interlocutor;
+    platform_interlocutor.normalize();
+    platform_interlocutor.setID( character_id( 1571 ), true );
+    platform_interlocutor.op_of_u.trust = 3;
+    platform_interlocutor.op_of_u.value = 4;
+    platform_interlocutor.op_of_u.anger = 2;
+    platform_interlocutor.chatbin.first_topic = "TALK_BEFORE_FAILURE";
+    cata::lua_platform::register_npc_handle_identity( native_interlocutor );
+    cata::lua_platform::register_npc_handle_identity( platform_interlocutor );
+    on_out_of_scope retire_npc_identities( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( native_interlocutor );
+        cata::lua_platform::retire_npc_handle_identity( platform_interlocutor );
+    } );
+
+    const mission_type_id test_mission( "TEST_MISSION_GENERIC_REWARD" );
+    mission *const native_mission = mission::reserve_new(
+                                        test_mission, native_interlocutor.getID() );
+    mission *const platform_mission = mission::reserve_new(
+                                          test_mission, platform_interlocutor.getID() );
+    REQUIRE( native_mission != nullptr );
+    REQUIRE( platform_mission != nullptr );
+    native_mission->set_assigned_player_id( owner.getID() );
+    platform_mission->set_assigned_player_id( owner.getID() );
+    native_interlocutor.chatbin.missions_assigned = { native_mission };
+    native_interlocutor.chatbin.mission_selected = native_mission;
+    platform_interlocutor.chatbin.missions_assigned = { platform_mission };
+    platform_interlocutor.chatbin.mission_selected = platform_mission;
+
+    dialogue native_conversation(
+        get_talker_for( owner ), get_talker_for( native_interlocutor ) );
+    const JsonValue native_failure_json = json_loader::from_string(
+            R"({"effect":"mission_failure"})" );
+    talk_effect_t native_failure(
+        native_failure_json.get_object(), "effect", "dialogue_mission_failure_test" );
+    native_failure.apply( native_conversation );
+    CHECK( native_mission->has_failed() );
+    CHECK( native_interlocutor.op_of_u.trust == 2 );
+    CHECK( native_interlocutor.op_of_u.value == 3 );
+    CHECK( native_interlocutor.op_of_u.anger == 3 );
+    CHECK( native_interlocutor.chatbin.missions_assigned ==
+           std::vector<mission *>( { native_mission } ) );
+    CHECK( native_interlocutor.chatbin.mission_selected == native_mission );
+
+    const JsonValue native_clear_json = json_loader::from_string(
+            R"({"effect":"clear_mission"})" );
+    talk_effect_t native_clear(
+        native_clear_json.get_object(), "effect", "dialogue_mission_failure_test" );
+    native_clear.apply( native_conversation );
+    CHECK( native_interlocutor.chatbin.missions_assigned.empty() );
+    CHECK( native_interlocutor.chatbin.mission_selected == nullptr );
+    CHECK( native_interlocutor.chatbin.first_topic == "TALK_BEFORE_FAILURE" );
+
+    const JsonValue native_end_json = json_loader::from_string(
+            R"({"effect":"end_conversation"})" );
+    talk_effect_t native_end(
+        native_end_json.get_object(), "effect", "dialogue_mission_failure_test" );
+    native_end.apply( native_conversation );
+    CHECK( native_interlocutor.chatbin.first_topic == "TALK_DONE" );
+
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_mission_failure", 95, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    owner_lua.script( R"(
+        function fail_clear_end_selected_mission(context, trial_success)
+            if not trial_success or not context:valid() then return end
+            saved_mission_failure_context = context
+            context:fail_selected_mission()
+            context:clear_selected_mission()
+            context:end_interlocutor_conversation()
+        end
+        function mission_failure_context_is_valid()
+            return saved_mission_failure_context:valid()
+        end
+        function reuse_mission_failure_context()
+            saved_mission_failure_context:end_interlocutor_conversation()
+        end
+    )" );
+    sol::table response = owner_lua.create_table();
+    response["text"] = "I'm sorry";
+    response["topic"] = "TALK_DONE";
+    response["on_action"] = owner_lua["fail_clear_end_selected_mission"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_MISSION_FAILURE";
+    descriptor["dynamic_line"] = "Mission failure semantic test";
+    descriptor["responses"] = responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( descriptor );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue platform_conversation(
+        get_talker_for( owner ), get_talker_for( platform_interlocutor ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            platform_conversation, runtime_identity, world_generation );
+    platform_conversation.gen_responses( talk_topic( "TALK_CCB_MISSION_FAILURE" ) );
+    REQUIRE( platform_conversation.responses.size() == 1 );
+    CHECK( platform_interlocutor.chatbin.first_topic == "TALK_BEFORE_FAILURE" );
+
+    cata::lua_platform::dialogue::context outside_action(
+        owner_lua.lua_state(), platform_conversation, "TALK_CCB_MISSION_FAILURE", true,
+        "dialogue context is stale", {}, session, runtime_identity,
+        world_generation );
+    CHECK_THROWS( outside_action.fail_selected_mission() );
+    CHECK_FALSE( platform_mission->has_failed() );
+    CHECK( platform_interlocutor.chatbin.mission_selected == platform_mission );
+    platform_conversation.responses.front().success.apply( platform_conversation );
+
+    CHECK( platform_mission->has_failed() );
+    CHECK( platform_interlocutor.op_of_u.trust == 2 );
+    CHECK( platform_interlocutor.op_of_u.value == 3 );
+    CHECK( platform_interlocutor.op_of_u.anger == 3 );
+    CHECK( platform_interlocutor.chatbin.missions_assigned.empty() );
+    CHECK( platform_interlocutor.chatbin.mission_selected == nullptr );
+    CHECK( platform_interlocutor.chatbin.first_topic == "TALK_DONE" );
+    const sol::protected_function context_valid =
+        owner_lua["mission_failure_context_is_valid"];
+    const sol::protected_function_result stale_context = context_valid();
+    REQUIRE( stale_context.valid() );
+    CHECK_FALSE( stale_context.get<bool>() );
+    const sol::protected_function reuse_context =
+        owner_lua["reuse_mission_failure_context"];
+    CHECK_FALSE( reuse_context().valid() );
+    cata::lua_platform::dialogue::end_session( platform_conversation );
+}
+
 TEST_CASE( "lua_platform_dialogue_safe_space_query_matches_native_beta_condition",
            "[lua][platform][dialogue][runtime][semantic]" )
 {

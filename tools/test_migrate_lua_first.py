@@ -19762,6 +19762,52 @@ assert(not available())
             for todo in bundled_result.todos
         ))
 
+    def test_real_lighthouse_mission_failure_keeps_native_effect_order(self) -> None:
+        path = REPOSITORY_ROOT / "data/json/npcs/Lighthouse_Family/NPC_lighthouse_man.json"
+        topic = next(
+            entry for entry in json.loads(path.read_text(encoding="utf-8"))
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_lighthouse_man_fail"
+        )
+        self.assertEqual(len(topic["responses"]), 1)
+        response = topic["responses"][0]
+        self.assertEqual(response["topic"], "TALK_DONE")
+        self.assertEqual(response["effect"], [
+            "mission_failure", "clear_mission", "end_conversation",
+        ])
+
+        action = migrate_lua_first.render_talk_topic_mission_failure_action(response)
+        self.assertIsNotNone(action)
+        ordered_calls = [
+            "context:fail_selected_mission()",
+            "context:clear_selected_mission()",
+            "context:end_interlocutor_conversation()",
+        ]
+        self.assertEqual(
+            [action.source.index(call) for call in ordered_calls],
+            sorted(action.source.index(call) for call in ordered_calls),
+        )
+        self.assertIn("if not trial_success or not context:valid() then return end", action.source)
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 0, topic), result
+        )
+        self.assertIsNotNone(rendered)
+        self.assertEqual((rendered or "").count("context:fail_selected_mission()"), 1)
+        self.assertIn('topic = "TALK_DONE"', rendered or "")
+        self.assertFalse(result.todos)
+
+        for unsupported in (
+            {**response, "effect": ["clear_mission", "mission_failure", "end_conversation"]},
+            {**response, "topic": "TALK_NEXT"},
+            {**response, "condition": "mission_complete"},
+            {**response, "opinion": {"anger": 1}},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_talk_topic_mission_failure_action(unsupported)
+            )
+
     def test_real_talk_mission_success_preserves_switch_and_default_order(self) -> None:
         path = REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
         topic = next(
