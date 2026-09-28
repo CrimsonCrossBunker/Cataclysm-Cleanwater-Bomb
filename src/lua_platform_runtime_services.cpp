@@ -2181,9 +2181,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                    sol::this_state state, const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_write();
-        if( id.kind() != "martial_art" || !id.is_valid() ) {
+        if( id.kind() != "martial_art" ) {
             throw std::invalid_argument(
-                "services.martial_arts.learn requires a valid GameId<martial_art>" );
+                "services.martial_arts.learn requires GameId<martial_art>" );
         }
         sol::state_view lua_state( state );
         const cata::lua_platform::native_handle_result<Creature> resolved =
@@ -2211,9 +2211,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                    sol::this_state state, const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_write();
-        if( id.kind() != "martial_art" || !id.is_valid() ) {
+        if( id.kind() != "martial_art" ) {
             throw std::invalid_argument(
-                "services.martial_arts.forget requires a valid GameId<martial_art>" );
+                "services.martial_arts.forget requires GameId<martial_art>" );
         }
         sol::state_view lua_state( state );
         const cata::lua_platform::native_handle_result<Creature> resolved =
