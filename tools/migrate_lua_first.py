@@ -21440,11 +21440,14 @@ def render_static_follower_service_effect(
 def render_static_npc_item_selection(
     effect: str, npc_actor_proven: bool, avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Reject the legacy arbitrary avatar-inventory item picker.
+    """Keep the beta NPC's interactive avatar-item picker as a manual TODO.
 
-    The old effect searches the avatar inventory and chooses an item instance.
-    A Platform migration may only operate on a source-proven handle, so this
-    shape stays an explicit TODO even when an NPC event is otherwise proven.
+    These argument-less native effects call ``dialogue::actor(true)->give_item_to``.
+    For an NPC talker, that opens a picker over the global avatar inventory and
+    passes the selected item into native NPC consume/equip/transfer logic.
+    ``services.npcs.offer_item`` requires an exact live ItemHandle, which the
+    EOC source does not provide.  Keep both effects manual even when the NPC
+    event actor is proven.
     """
     if not npc_actor_proven or not avatar_actor_proven or effect not in {
         "npc_gets_item", "npc_gets_item_to_use",
@@ -34802,6 +34805,17 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    item_picker_todo = (
+                        f"native beta NPC {effect} opens the global avatar's "
+                        "interactive item picker; select and bind its exact "
+                        "ItemHandle before calling services.npcs.offer_item"
+                    )
+                    lines.append(f"    -- TODO: {item_picker_todo}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{item_picker_todo}"
+                    )
                     all_effects_converted = False
             elif effect == "take_control_menu":
                 reason = (
