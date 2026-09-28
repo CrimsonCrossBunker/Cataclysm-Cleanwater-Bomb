@@ -35528,9 +35528,11 @@ def render_eoc(
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} furniture talker introspection "
-            "requires a live computer talker (furniture-backed in native dialogue); "
-            "current EOC callbacks "
-            "do not provide one (computer snapshots are detached)"
+            "requires a proven primary computer talker; native computer use "
+            "places the terminal in the secondary dialogue slot. Current Lua "
+            "callbacks have no bound computer actor: dialogue talkers expose a "
+            "detached kind=computer snapshot without a handle, and computer "
+            "access exposes a scoped terminal context plus character handle"
         )
     if (
         stable_handler and

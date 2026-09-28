@@ -34363,11 +34363,88 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertNotIn("__ccb_talker_kind", main)
             self.assertIn(
-                "requires a live computer talker", report
+                "requires a proven primary computer talker", report
             )
             self.assertIn(
-                "computer snapshots are detached", report
+                "detached kind=computer snapshot without a handle", report
             )
+
+    def test_eoc_meta_talker_type_furniture_condition_remains_manual(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/mods/TEST_DATA/EOC.json"
+        sources = [
+            source
+            for source in migrate_lua_first.load_objects([source_path])
+            if source.value.get("id") == "EOC_meta_test_talker_type"
+        ]
+        self.assertEqual(len(sources), 1)
+
+        source = sources[0]
+        result = migrate_lua_first.migrate([source], "test_data")
+        source_entry = f"{source.location}: EOC EOC_meta_test_talker_type"
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn(source_entry, result.partial)
+        self.assertNotIn(source_entry, result.converted)
+        self.assertNotIn("required_event", source.value)
+        self.assertNotIn("recurrence", source.value)
+        self.assertNotIn('kind == "computer"', main)
+        self.assertIn(
+            f"{source_entry} furniture talker introspection requires a proven "
+            "primary computer talker",
+            report,
+        )
+        self.assertIn(
+            "native computer use places the terminal in the secondary dialogue slot",
+            report,
+        )
+        self.assertIn(
+            "Current Lua callbacks have no bound computer actor",
+            report,
+        )
+        self.assertIn(
+            "detached kind=computer snapshot without a handle",
+            report,
+        )
+        self.assertIn(
+            "computer access exposes a scoped terminal context plus character handle",
+            report,
+        )
+        self.assertIn(
+            f"{source_entry} needs an explicit Platform trigger",
+            report,
+        )
+
+        # Native computer use puts the avatar first and terminal second, while
+        # this test-only EOC is also invoked with a computer as the first actor.
+        condition_source = (REPOSITORY_ROOT / "src/condition.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "return d.const_actor( is_npc )->get_const_computer();",
+            condition_source,
+        )
+        computer_use = (REPOSITORY_ROOT / "src/game.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "dialogue d( get_talker_for( get_avatar() ), "
+            "get_talker_for( used ) );",
+            computer_use,
+        )
+
+        native_source = (REPOSITORY_ROOT / "tests/eoc_test.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "dialogue d_furniture( get_talker_for( comp ), "
+            "std::make_unique<talker>() );",
+            native_source,
+        )
+        self.assertIn(
+            'CHECK( globvars.get_global_value( "key_furniture" ) == "yes" );',
+            native_source,
+        )
 
     def test_unbound_mixed_eoc_keeps_a_fail_closed_condition_actor_contract(
         self,
