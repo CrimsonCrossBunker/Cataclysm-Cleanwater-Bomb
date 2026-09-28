@@ -372,6 +372,14 @@ def game_start_avatar_actor_is_proven(
     )
 
 
+def native_eoc_required_event(value: dict[str, Any]) -> str | None:
+    """Return the trigger that the native loader actually registers."""
+    if value.get("eoc_type") != "EVENT":
+        return None
+    event = value.get("required_event")
+    return event if isinstance(event, str) and event else None
+
+
 def render_static_item_fault_effect(
     effect: dict[str, Any],
     key: str,
@@ -1251,7 +1259,7 @@ def normalize_inline_eocs(
 
     normalized: list[SourceObject] = []
     for source in objects:
-        required_event = source.value.get("required_event")
+        required_event = native_eoc_required_event(source.value)
         inherited_actor_kind = "inherit"
         if (
             required_event == "game_start" and
@@ -1501,7 +1509,7 @@ def _eoc_actor_requirements(
         if source.value.get("type") not in EOC_TYPES:
             continue
         identifier = stable_id(source.value, f"anonymous_{source.index}")
-        event = source.value.get("required_event")
+        event = native_eoc_required_event(source.value)
         if (
             source.value.get("__inline_actor_kind") == "unproven" or
             (
@@ -29579,12 +29587,8 @@ def render_eoc(
     )
     stable_handler = isinstance(value.get("id"), str) and bool(value["id"])
     handler_id = f"migrated.{eoc_id}"
-    # Native EOC loading reads required_event only for EVENT; absent eoc_type
-    # defaults to ACTIVATION (or RECURRING when recurrence is present).
-    required_event = (
-        value.get("required_event") if value.get("eoc_type") == "EVENT" else None
-    )
-    has_event_trigger = isinstance(required_event, str) and bool(required_event)
+    required_event = native_eoc_required_event(value)
+    has_event_trigger = required_event is not None
     recurrence_value = value.get("recurrence")
     recurrence_expression = (
         render_recurrence_turns_expression(recurrence_value, "actor")
