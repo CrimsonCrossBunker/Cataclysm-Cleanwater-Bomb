@@ -6746,9 +6746,8 @@ def render_talk_topic_response_condition(
             "function(dialogue_context)\n"
             "            if not dialogue_context:valid() then return false end\n"
             "            local beta = dialogue_context:interlocutor()\n"
-            "            if beta == nil then return false end\n"
+            "            if beta == nil or not beta:is_valid() then return false end\n"
             '            if beta.kind ~= "creature" or beta.subtype ~= "npc" then return true end\n'
-            "            if not beta:is_valid() then return false end\n"
             "            local selected = services.npcs.missions.selected_has_generic_rewards(beta)\n"
             "            return selected.ok and selected.value == true\n"
             "        end"

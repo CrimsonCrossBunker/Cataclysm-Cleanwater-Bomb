@@ -12509,7 +12509,10 @@ assert(not available())
         self.assertIn(
             "dialogue_context:interlocutor()", callback.source
         )
-        self.assertIn("if beta == nil then return false end", callback.source)
+        self.assertIn(
+            "if beta == nil or not beta:is_valid() then return false end",
+            callback.source,
+        )
         self.assertIn(
             'if beta.kind ~= "creature" or beta.subtype ~= "npc" then return true end',
             callback.source,
@@ -12578,6 +12581,36 @@ assert(not available())
             'condition = false, text = "How about some items as payment?"',
             rendered,
         )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_mission_generic_rewards_keeps_non_npc_beta_lifetime_guard(self) -> None:
+        callback = migrate_lua_first.render_talk_topic_response_condition(
+            "mission_has_generic_rewards"
+        )
+        self.assertIsNotNone(callback)
+        assert callback is not None
+        script = "\n".join([
+            "local selected = false",
+            "local beta = nil",
+            "local context = { valid=function() return true end, interlocutor=function() return beta end }",
+            "services = {npcs={missions={selected_has_generic_rewards=function(actor)",
+            "  assert(actor==beta); return {ok=true, value=selected} end}}}",
+            "local predicate = " + callback.source,
+            "assert(not predicate(context))",
+            'beta={kind="item", is_valid=function() return false end}',
+            "assert(not predicate(context))",
+            "beta.is_valid=function() return true end",
+            "assert(predicate(context))",
+            'beta.kind="creature"; beta.subtype="npc"',
+            "assert(not predicate(context))",
+            "selected=true; assert(predicate(context))",
+            "beta.is_valid=function() return false end",
+            "assert(not predicate(context))",
+        ])
+        executed = subprocess.run(
+            ["lua", "-"], input=script, text=True, capture_output=True, timeout=10
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
 
     def test_dialogue_mission_aliases_do_not_fold_from_actor_provenance(self) -> None:
         mission_aliases = (
