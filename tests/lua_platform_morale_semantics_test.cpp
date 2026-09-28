@@ -135,6 +135,31 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
             CHECK( old_target.has_morale( type ) == 0 );
             CHECK( untouched.has_morale( type ) == 0 );
         }
+        if( !npc_target ) {
+            // Native mutable dialogue::actor(true) falls back to alpha when
+            // beta is absent.  Platform does not reproduce the native
+            // debugmsg; this compares only the resulting morale mutation.
+            dialogue no_beta_dialogue( get_talker_for( old_player ), nullptr );
+            talk_effect_t fallback_effect;
+            fallback_effect.parse_sub_effect(
+                json_loader::from_string(
+                    R"({"npc_add_morale": "morale_feeling_good", "bonus": -7, "max_bonus": -11})"
+                ).get_object(), "morale_semantics" );
+            for( const talk_effect_fun_t &effect : fallback_effect.effects ) {
+                effect( no_beta_dialogue );
+            }
+            sol::protected_function fallback_add = services["morale"]["add"];
+            sol::protected_function_result fallback_call = fallback_add(
+                        handle, cata::lua_platform::script_game_id( "morale", type.str() ),
+                        -7, -11, lua.create_table() );
+            REQUIRE( fallback_call.valid() );
+            sol::table fallback_result = fallback_call;
+            REQUIRE( fallback_result["ok"].get<bool>() );
+            CHECK( old_player.has_morale( type ) == new_player.has_morale( type ) );
+            CHECK( old_player.has_morale( type ) != 0 );
+            CHECK( old_npc.has_morale( type ) == 0 );
+            CHECK( new_npc.has_morale( type ) == 0 );
+        }
         completed = true;
     } );
     sol::protected_function_result registered = ccb["runtime"]["handler"]( "accept", lua["accept"] );
