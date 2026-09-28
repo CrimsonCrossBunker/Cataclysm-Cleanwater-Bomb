@@ -20134,7 +20134,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn('(context.actors.beta), selected_handle)', main)
             self.assertNotIn('actor, "install", selected_handle)', main)
 
-    def test_translates_bounded_follower_and_item_selection_actions(self) -> None:
+    def test_translates_bounded_follower_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -20147,8 +20147,6 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                             "bionic_install_allies",
                             "bionic_remove_allies",
                             "copy_npc_rules",
-                            "npc_gets_item",
-                            "npc_gets_item_to_use",
                         ],
                     }
                 ),
@@ -20158,27 +20156,74 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 migrate_lua_first.load_objects([source]), "selection_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
             self.assertEqual(main.count("services.npcs.visible_allies()"), 0)
             self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
             self.assertNotIn("services.npcs.copy_ai_rules(", main)
-            self.assertEqual(main.count("services.inventory.choose("), 0)
-            self.assertNotIn("services.npcs.offer_item(", main)
-            for effect in ("npc_gets_item", "npc_gets_item_to_use"):
-                todo = (
-                    f"native beta NPC {effect} opens the global avatar's "
-                    "interactive item picker; select and bind its exact "
-                    "ItemHandle before calling services.npcs.offer_item"
-                )
-                self.assertIn(f"-- TODO: {todo}.", main)
-                self.assertIn(todo, report)
-                self.assertTrue(
-                    any(effect in todo_record.message for todo_record in result.todos),
-                    f"missing classified TODO for {effect}",
-                )
+
+    def test_eoc_npc_item_offers_remain_outside_talk_response_lowering(self) -> None:
+        selectors = ["npc_gets_item", "npc_gets_item_to_use"]
+        scheduled = migrate_lua_first.SourceObject(
+            Path("scheduled_item_offer.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "scheduled_npc_item_offer",
+                "required_event": "npc_becomes_hostile",
+                "effect": selectors,
+            },
+        )
+        scheduled_result = migrate_lua_first.MigrationResult()
+        scheduled_main = migrate_lua_first.render_eoc(
+            scheduled, scheduled_result
+        )
+
+        nested = migrate_lua_first.SourceObject(
+            Path("nested_item_offer.json"), 1, {
+                "type": "effect_on_condition",
+                "id": "nested_npc_item_offer",
+                "effect": selectors,
+            },
+        )
+        nested_result = migrate_lua_first.MigrationResult()
+        nested_main = migrate_lua_first.render_eoc(
+            nested,
+            nested_result,
+            eoc_referenced_ids=frozenset({"nested_npc_item_offer"}),
+            npc_dialogue_mission_pair_ids=frozenset({"nested_npc_item_offer"}),
+        )
+
+        for rendered, result in (
+            (scheduled_main, scheduled_result),
+            (nested_main, nested_result),
+        ):
+            self.assertNotIn("offer_item_to_interlocutor(", rendered)
+            self.assertNotIn("services.npcs.offer_item(", rendered)
+            self.assertEqual(len(result.converted), 0)
+            selector_todos = [
+                todo for todo in result.todos if "native EOC" in todo.message
+            ]
+            self.assertEqual(len(selector_todos), 2)
+
+        self.assertIn(
+            "scheduled event processing constructs an alpha-only dialogue",
+            scheduled_main,
+        )
+        self.assertIn("missing-beta diagnostic is logged", scheduled_main)
+        self.assertIn(
+            "nested EOCs may inherit two talkers from their caller",
+            nested_main,
+        )
+        self.assertIn(
+            "cannot prove the active TALK response action", nested_main
+        )
+        for effect in selectors:
+            expected = (
+                f"native EOC {effect} calls "
+                "dialogue::actor(true)->give_item_to"
+            )
+            self.assertIn(expected, scheduled_main)
+            self.assertIn(expected, nested_main)
 
     def test_translates_bounded_npc_equipment_trade_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -36609,11 +36654,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 {"u_sell_item": "sample_item"},
                 True,
                 avatar_actor_proven=True,
-            )
-        )
-        self.assertIsNone(
-            migrate_lua_first.render_static_npc_item_selection(
-                "npc_gets_item", True, True
             )
         )
         self.assertEqual(
