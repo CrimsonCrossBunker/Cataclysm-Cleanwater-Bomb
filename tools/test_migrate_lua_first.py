@@ -10827,48 +10827,33 @@ assert(not available())
                 )
                 self.assertTrue(eoc_result.todos)
 
-    def test_selected_mission_status_requires_a_dialogue_provider(self) -> None:
-        predicates = {
-            "mission_complete": '"complete"',
-            "npc_mission_complete": '"complete"',
-            "mission_incomplete": '"incomplete"',
-            "npc_mission_incomplete": '"incomplete"',
-            "mission_failed": '"failed"',
-            "npc_mission_failed": '"failed"',
-        }
-        for condition, predicate in predicates.items():
+    def test_selected_mission_status_needs_a_rendered_dialogue_callback(self) -> None:
+        # Native beta aliases inspect beta's selected mission: complete and
+        # incomplete evaluate it against the current avatar, while failed
+        # checks has_failed(). Direct topic provenance is not executable yet
+        # because render_talk_topic drops response conditions and true_eocs.
+        predicates = (
+            "mission_complete", "npc_mission_complete",
+            "mission_incomplete", "npc_mission_incomplete",
+            "mission_failed", "npc_mission_failed",
+        )
+        for condition in predicates:
             with self.subTest(condition=condition):
-                expression = migrate_lua_first.render_eoc_condition_expression(
-                    condition,
-                    npc_actor_expression="context.actors.beta",
-                    npc_dialogue_pair_proven=True,
-                )
-                self.assertIsNotNone(expression)
-                self.assertIn(
-                    "services.npcs.missions.selected_condition(beta, alpha, "
-                    + predicate + "))",
-                    expression,
-                )
-                self.assertIn('alpha.subtype ~= "avatar"', expression)
-                self.assertIn('beta.subtype ~= "npc"', expression)
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        condition,
-                        npc_actor_expression="context.actors.beta",
+                for actor_expression, pair_proven in (
+                    ("context.actors.beta", True),
+                    ("context.actors.beta", False),
+                    ("actor", True),
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            condition,
+                            npc_actor_expression=actor_expression,
+                            npc_dialogue_pair_proven=pair_proven,
+                        )
                     )
-                )
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        condition,
-                        npc_actor_expression="actor",
-                        npc_dialogue_pair_proven=True,
-                    )
-                )
 
         for condition in (
-            "u_mission_complete",
-            "u_mission_incomplete",
-            "u_mission_failed",
+            "u_mission_complete", "u_mission_incomplete", "u_mission_failed",
         ):
             with self.subTest(condition=condition):
                 self.assertIsNone(
@@ -10880,40 +10865,78 @@ assert(not available())
                     )
                 )
 
-    def test_selected_mission_goal_requires_static_native_goal_and_dialogue_pair(self) -> None:
+        response_pairs = [
+            (condition, f"selected_status_pair_{index}")
+            for index, condition in enumerate(predicates)
+        ]
+        dialogue_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "selected_status_topic",
+                "responses": [{
+                    "text": f"Check {condition}",
+                    "condition": condition,
+                    "true_eocs": eoc_id,
+                } for condition, eoc_id in response_pairs],
+            },
+        )
+        condition_eocs = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index + 2, {
+                    "type": "effect_on_condition", "id": eoc_id,
+                    "condition": condition,
+                    "effect": {"message": "selected status"},
+                },
+            )
+            for index, (condition, eoc_id) in enumerate(response_pairs)
+        ]
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [dialogue_topic, *condition_eocs]
+        )
+        self.assertEqual(
+            pair_ids, frozenset(eoc_id for _, eoc_id in response_pairs)
+        )
+        topic_result = migrate_lua_first.MigrationResult()
+        rendered_topic = migrate_lua_first.render_talk_topic(
+            dialogue_topic, topic_result
+        )
+        self.assertIsNotNone(rendered_topic)
+        self.assertNotIn("condition", rendered_topic)
+        self.assertNotIn("true_eocs", rendered_topic)
+        self.assertTrue(topic_result.todos)
+        for eoc in condition_eocs:
+            with self.subTest(eoc=eoc.value["id"]):
+                eoc_result = migrate_lua_first.MigrationResult()
+                rendered_eoc = migrate_lua_first.render_eoc(
+                    eoc,
+                    eoc_result,
+                    talker_pair_ids=pair_ids,
+                    npc_dialogue_mission_pair_ids=pair_ids,
+                )
+                self.assertNotIn(
+                    "services.npcs.missions.selected_condition(", rendered_eoc
+                )
+                self.assertIn(
+                    "reachable topic callback supplies beta's selection",
+                    rendered_eoc,
+                )
+                self.assertTrue(eoc_result.todos)
+
+    def test_selected_mission_goals_need_a_rendered_dialogue_callback(self) -> None:
+        # Native uses str_or_var for the goal selector. Static enum names are
+        # bounded, but a variable/unknown value and the EOC callback path still
+        # need native conversion semantics that are not wired into topics.
         for condition in ("mission_goal", "npc_mission_goal"):
             for goal in migrate_lua_first.NATIVE_MISSION_GOALS:
                 with self.subTest(condition=condition, goal=goal):
-                    expression = migrate_lua_first.render_eoc_condition_expression(
-                        {condition: goal},
-                        npc_actor_expression="context.actors.beta",
-                        npc_dialogue_pair_proven=True,
-                    )
-                    self.assertIsNotNone(expression)
-                    self.assertIn(
-                        "services.npcs.missions.selected_has_goal(beta, "
-                        + migrate_lua_first.lua_quote(goal) + ")",
-                        expression,
-                    )
-                    self.assertIn('beta.subtype ~= "npc"', expression)
-
-        for condition in ("mission_goal", "npc_mission_goal"):
-            for unproven_args in (
-                {"npc_actor_expression": "context.actors.beta"},
-                {
-                    "npc_actor_expression": "actor",
-                    "npc_dialogue_pair_proven": True,
-                },
-            ):
-                with self.subTest(condition=condition, unproven_args=unproven_args):
                     self.assertIsNone(
                         migrate_lua_first.render_eoc_condition_expression(
-                            {condition: "MGOAL_CONDITION"}, **unproven_args
+                            {condition: goal},
+                            npc_actor_expression="context.actors.beta",
+                            npc_dialogue_pair_proven=True,
                         )
                     )
             for dynamic_goal in (
-                {"var": "mission_goal"},
-                "NOT_A_MISSION_GOAL",
+                {"var": "mission_goal"}, "NOT_A_MISSION_GOAL",
             ):
                 with self.subTest(condition=condition, dynamic_goal=dynamic_goal):
                     self.assertIsNone(
@@ -10923,6 +10946,79 @@ assert(not available())
                             npc_dialogue_pair_proven=True,
                         )
                     )
+            for unproven_args in (
+                {"npc_actor_expression": "context.actors.beta"},
+                {
+                    "npc_actor_expression": "actor",
+                    "npc_dialogue_pair_proven": True,
+                },
+            ):
+                with self.subTest(
+                    condition=condition, unproven_args=unproven_args
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            {condition: "MGOAL_CONDITION"}, **unproven_args
+                        )
+                    )
+
+        response_pairs = [
+            (condition, f"selected_goal_pair_{index}")
+            for index, condition in enumerate(
+                ("mission_goal", "npc_mission_goal")
+            )
+        ]
+        dialogue_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "selected_goal_topic",
+                "responses": [{
+                    "text": f"Check {condition}",
+                    "condition": {condition: "MGOAL_CONDITION"},
+                    "true_eocs": eoc_id,
+                } for condition, eoc_id in response_pairs],
+            },
+        )
+        goal_eocs = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index + 2, {
+                    "type": "effect_on_condition", "id": eoc_id,
+                    "condition": {condition: "MGOAL_CONDITION"},
+                    "effect": {"message": "selected goal"},
+                },
+            )
+            for index, (condition, eoc_id) in enumerate(response_pairs)
+        ]
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [dialogue_topic, *goal_eocs]
+        )
+        self.assertEqual(
+            pair_ids, frozenset(eoc_id for _, eoc_id in response_pairs)
+        )
+        topic_result = migrate_lua_first.MigrationResult()
+        rendered_topic = migrate_lua_first.render_talk_topic(
+            dialogue_topic, topic_result
+        )
+        self.assertIsNotNone(rendered_topic)
+        self.assertNotIn("condition", rendered_topic)
+        self.assertNotIn("true_eocs", rendered_topic)
+        self.assertTrue(topic_result.todos)
+        for eoc in goal_eocs:
+            with self.subTest(eoc=eoc.value["id"]):
+                eoc_result = migrate_lua_first.MigrationResult()
+                rendered_eoc = migrate_lua_first.render_eoc(
+                    eoc,
+                    eoc_result,
+                    talker_pair_ids=pair_ids,
+                    npc_dialogue_mission_pair_ids=pair_ids,
+                )
+                self.assertNotIn(
+                    "services.npcs.missions.selected_has_goal(", rendered_eoc
+                )
+                self.assertIn(
+                    "native str_or_var evaluation and enum conversion",
+                    rendered_eoc,
+                )
+                self.assertTrue(eoc_result.todos)
 
     def test_mission_generic_rewards_requires_proven_dialogue_beta(self) -> None:
         expression = migrate_lua_first.render_eoc_condition_expression(
