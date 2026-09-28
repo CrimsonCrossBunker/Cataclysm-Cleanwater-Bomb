@@ -800,6 +800,10 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
     response_one["text"] = "Run successful action";
     response_one["on_action"] = owner_lua["action_stage_callback"];
     response_one["on_select"] = owner_lua["select_stage_callback"];
+    sol::table success_opinion = owner_lua.create_table();
+    success_opinion["trust"] = 7;
+    success_opinion["anger"] = 2;
+    response_one["success_opinion"] = success_opinion;
     sol::table response_two = owner_lua.create_table();
     response_two["text"] = "Run failed action";
     response_two["on_action"] = owner_lua["action_stage_callback"];
@@ -840,8 +844,8 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
 
     talk_response &success_response = conversation.responses[0];
     REQUIRE( success_response.lua_response_id.has_value() );
-    success_response.success.opinion.trust = 7;
-    success_response.success.opinion.anger = 2;
+    CHECK( success_response.success.opinion.trust == 7 );
+    CHECK( success_response.success.opinion.anger == 2 );
 
     talk_response &failure_response = conversation.responses[1];
     CHECK_FALSE( failure_response.lua_response_id.has_value() );

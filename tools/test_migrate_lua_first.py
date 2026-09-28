@@ -19525,8 +19525,29 @@ assert(not available())
         rich_lua = migrate_lua_first.render_talk_topic(
             migrate_lua_first.SourceObject(source_path, 1, rich), rich_result,
         )
-        self.assertNotIn("services.npcs.drop_stolen_items(beta)", rich_lua or "")
-        self.assertTrue(rich_result.todos)
+        self.assertIn("services.npcs.drop_stolen_items(beta)", rich_lua or "")
+        self.assertIn("success_opinion = { anger = 5 }", rich_lua or "")
+        self.assertEqual(rich_result.todos, [])
+
+        for invalid_opinion in (
+            {"anger": True},
+            {"anger": migrate_lua_first.NATIVE_INT_MAX + 1},
+            {"unknown": 5},
+        ):
+            with self.subTest(opinion=invalid_opinion):
+                invalid = dict(rich["responses"][0])
+                invalid["opinion"] = invalid_opinion
+                invalid_topic = dict(rich)
+                invalid_topic["responses"] = [invalid]
+                invalid_result = migrate_lua_first.MigrationResult()
+                invalid_lua = migrate_lua_first.render_talk_topic(
+                    migrate_lua_first.SourceObject(source_path, 1, invalid_topic),
+                    invalid_result,
+                )
+                self.assertNotIn(
+                    "services.npcs.drop_stolen_items(beta)", invalid_lua or ""
+                )
+                self.assertTrue(invalid_result.todos)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_real_exodii_device_handoff_uses_alpha_effective_social_skill(self) -> None:

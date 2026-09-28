@@ -7005,6 +7005,7 @@ def render_talk_topic(
             continue
         response: dict[str, Any] = {"text": entry["text"]}
         converted_condition = None
+        converted_opinion = False
         if isinstance(entry.get("topic"), str) and entry["topic"]:
             response["topic"] = entry["topic"]
         if "condition" in entry:
@@ -7047,6 +7048,22 @@ def render_talk_topic(
                 action_callback = render_dialogue_item_grant_action_effect(
                     entry["effect"]
                 )
+            elif (
+                set(entry) == {"text", "topic", "condition", "effect", "opinion"} and
+                converted_condition is not None and
+                isinstance(entry["opinion"], dict) and entry["opinion"] and
+                set(entry["opinion"]) <= {"trust", "fear", "value", "anger", "owed", "sold"} and
+                all(type(value) is int and NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+                    for value in entry["opinion"].values())
+            ):
+                # Native talk_effect_t::apply runs the effect vector first,
+                # then applies the response's opinion to dialogue beta.
+                action_callback = render_dialogue_stolen_item_action_effect(
+                    entry["effect"]
+                )
+                if action_callback is not None:
+                    response["success_opinion"] = entry["opinion"]
+                    converted_opinion = True
             if action_callback is None:
                 action_callback = render_talk_topic_npc_lose_morale_action(
                     entry, known_morale_ids,
@@ -7095,7 +7112,10 @@ def render_talk_topic(
                         f"{response_effect_reason}"
                     )
         responses.append(response)
-        unsupported = set(entry) - {"text", "topic", "condition", "effect"}
+        supported_fields = {"text", "topic", "condition", "effect"}
+        if converted_opinion:
+            supported_fields.add("opinion")
+        unsupported = set(entry) - supported_fields
         if unsupported:
             result.add_todo(
                 "manual_rewrite",

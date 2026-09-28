@@ -6416,6 +6416,7 @@ function PlatformDialogueContext:remove(key) end
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
 ---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
 ---@field on_action? fun(context: PlatformDialogueContext, trial_success: boolean): nil Runs in the selected native success/failure effect stage before opinion and hostility checks; return values are ignored.
+---@field success_opinion? table<string, integer> Native success opinion deltas (`trust`, `fear`, `value`, `anger`, `owed`, `sold`), applied after `on_action`.
 ---@field on_select? fun(context: PlatformDialogueContext): string|{ topic?: string }|nil Runs after the native response effect and may override its next topic.
 
 ---@alias CcbPlatformDialogueResponses CcbPlatformDialogueResponseDescriptor[]|fun(context: PlatformDialogueContext): CcbPlatformDialogueResponseDescriptor[]
