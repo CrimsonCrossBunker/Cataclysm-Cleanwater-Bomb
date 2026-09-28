@@ -6352,6 +6352,7 @@ function PlatformDialogueContext:remove(key) end
 ---@class CcbPlatformDialogueResponseDescriptor
 ---@field text string Player response displayed by the native dialogue window.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
+---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
 ---@field on_select? fun(context: PlatformDialogueContext): string|{ topic?: string }|nil Runs after the native response effect and may override its next topic.
 
 ---@alias CcbPlatformDialogueResponses CcbPlatformDialogueResponseDescriptor[]|fun(context: PlatformDialogueContext): CcbPlatformDialogueResponseDescriptor[]
@@ -11316,12 +11317,27 @@ function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 ---@field hunger integer
 ---@field thirst integer
 ---@field sleepiness integer
+---@field stats CcbCharacterAttributesSnapshot
 ---@field senses CcbCharacterSensesSnapshot
 ---@field environment CcbCharacterEnvironmentSnapshot
 ---@field movement CcbCharacterMovementSnapshot
 ---@field npc_state CcbCharacterNpcStateSnapshot
 ---@field activity CcbCharacterActivityStateSnapshot
 ---@field travel CcbCharacterTravelSnapshot
+
+---@class CcbCharacterAttributesSnapshot
+---@field strength integer Current native strength.
+---@field dexterity integer Current native dexterity.
+---@field perception integer Current native perception.
+---@field intelligence integer Current native intelligence; matches Character::get_int()/talker int_cur().
+---@field strength_base integer Native base strength.
+---@field dexterity_base integer Native base dexterity.
+---@field perception_base integer Native base perception.
+---@field intelligence_base integer Native base intelligence.
+---@field strength_bonus integer Native strength bonus.
+---@field dexterity_bonus integer Native dexterity bonus.
+---@field perception_bonus integer Native perception bonus.
+---@field intelligence_bonus integer Native intelligence bonus.
 
 ---@class CcbCharacterEnvironmentSnapshot
 ---@field outside boolean Native is_creature_outside result, including its surface-z check.

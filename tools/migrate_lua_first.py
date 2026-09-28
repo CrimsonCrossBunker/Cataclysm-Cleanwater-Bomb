@@ -6521,6 +6521,36 @@ def _talk_text(value: Any) -> str | None:
     return None
 
 
+def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
+    """Render one source-proven response predicate against its live speaker.
+
+    Native ``u_has_intelligence`` reads ``const_actor(false)->int_cur()``.
+    Platform dialogue callbacks expose that same alpha participant as
+    ``PlatformDialogueContext:speaker()``.  A positive threshold makes the
+    native base-talker value of zero exactly false for non-Character talkers;
+    other condition shapes remain fail-closed in the caller.
+    """
+    if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:
+        return None
+    threshold = finite_number_literal(condition["u_has_intelligence"])
+    if threshold is None or threshold <= 0:
+        return None
+    callback = (
+        "function(dialogue_context)\n"
+        "            if not dialogue_context:valid() then return false end\n"
+        "            local speaker = dialogue_context:speaker()\n"
+        '            if speaker == nil or speaker.kind ~= "creature" then return false end\n'
+        '            if speaker.subtype ~= "avatar" and speaker.subtype ~= "character" and '
+        'speaker.subtype ~= "npc" then return false end\n'
+        "            if not speaker:is_valid() then return false end\n"
+        "            local snapshot = services.characters.snapshot(speaker)\n"
+        "            if not snapshot.ok then return false end\n"
+        f"            return snapshot.value.stats.intelligence >= {lua_number(threshold)}\n"
+        "        end"
+    )
+    return LuaRaw(callback)
+
+
 def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     topic_id = value.get("id")
@@ -6545,6 +6575,18 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
         response: dict[str, Any] = {"text": entry["text"]}
         if isinstance(entry.get("topic"), str) and entry["topic"]:
             response["topic"] = entry["topic"]
+        if "condition" in entry:
+            condition = render_talk_topic_response_condition(entry["condition"])
+            if condition is None:
+                # A TODO condition must not silently make the response
+                # unconditional in the declarative Platform topic.
+                response["condition"] = LuaRaw("false")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: talk topic {topic_id} response condition needs Lua conversion"
+                )
+            else:
+                response["condition"] = condition
         if "effect" in entry:
             callback = render_dialogue_trade_effect(
                 entry["effect"], result, source.location,
@@ -6558,7 +6600,7 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             else:
                 response["on_select"] = callback
         responses.append(response)
-        unsupported = set(entry) - {"text", "topic", "effect"}
+        unsupported = set(entry) - {"text", "topic", "condition", "effect"}
         if unsupported:
             result.add_todo(
                 "manual_rewrite",
@@ -27761,9 +27803,9 @@ def render_eoc_condition_expression(
             # These three predicates read dialogue::missions_assigned, which
             # avatar::talk_to initializes after the beta talker's
             # check_missions() and filters to the alpha avatar.
-            # render_talk_topic currently does
-            # not emit response conditions/true_eocs, so even an exact
-            # direct-topic source has no Platform callback with that state.
+            # render_talk_topic only lowers a direct static positive
+            # u_has_intelligence response condition; it does not expose the
+            # native dialogue mission vector to this predicate.
             return None
         if condition in {
             "has_available_mission", "has_many_available_missions",
@@ -27772,10 +27814,11 @@ def render_eoc_condition_expression(
             "npc_has_no_available_mission",
         }:
             # Native beta aliases read const_actor(true)->available_missions().
-            # NPC providers expose chatbin.missions, but talk_topic response
-            # conditions/true_eocs are not emitted as Platform callbacks. A
-            # subtype guard would also change has_no_available_mission for a
-            # non-NPC beta, whose base talker returns an empty list.
+            # NPC providers expose chatbin.missions, but the bounded response
+            # condition callback does not implement mission-state queries.
+            # Action true_eocs remain disconnected. A subtype guard would
+            # also change has_no_available_mission for a non-NPC beta, whose
+            # base talker returns an empty list.
             return None
         if condition in {
             "mission_complete", "mission_failed", "mission_incomplete",
@@ -27783,8 +27826,9 @@ def render_eoc_condition_expression(
             "npc_mission_incomplete",
         }:
             # These predicates inspect beta's selected mission. Even a
-            # direct topic pair has no executable callback until response
-            # conditions and true_eocs are emitted by render_talk_topic.
+            # direct topic pair has no executable mission-state callback:
+            # response conditions currently lower only static positive
+            # u_has_intelligence, and action true_eocs remain disconnected.
             return None
         if condition == "u_friend":
             # Native u_friend reads alpha and asks whether that exact actor is
@@ -28943,10 +28987,11 @@ def render_eoc_condition_expression(
         # compares a null mission regardless of the goal value.
         return "false"
     if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
-        # Both beta spellings query the selected mission, but direct topic
-        # response condition/true_eocs callbacks are not emitted yet. The
-        # native parameter is also str_or_var, so static IDs alone do not
-        # establish a reachable invocation path.
+        # Both beta spellings query the selected mission, but the response
+        # condition callback only supports static positive
+        # u_has_intelligence and action true_eocs are not emitted. The native
+        # parameter is also str_or_var, so static IDs alone do not establish
+        # a reachable invocation path.
         return None
     selected_mission_generic_rewards = (
         render_npc_selected_generic_rewards_condition(
@@ -29708,8 +29753,9 @@ def render_eoc(
     # unreferenced npc_becomes_hostile event: native event dispatch builds an
     # NPC alpha with no beta, and Platform exposes that event Character as
     # context.actors.npc.  A static or dynamic child call can supply another
-    # dialogue, while direct topic EOC callbacks are not emitted by
-    # render_talk_topic, so neither source proves actor(true) for this branch.
+    # dialogue, while action-level EOC callbacks are not emitted by
+    # render_talk_topic (its bounded response condition is not an EOC
+    # context), so neither source proves actor(true) for this branch.
     # Native emits a debug message on the alpha fallback; this lowering
     # preserves the rule-state mutation and no-op target selection only.
     npc_ai_rule_mutation_actor_proven = (
@@ -29941,8 +29987,8 @@ def render_eoc(
     npc_condition_beta_actor_proven = False
     # Most event EOCs do not prove a usable native beta: an event's alpha
     # Character is not interchangeable with const_actor(true), and direct
-    # talk-topic callbacks are not connected by render_talk_topic.  The two
-    # melee attack events are a narrow exception: src/melee.cpp calls
+    # talk-topic EOC callbacks are not connected by render_talk_topic. The
+    # two melee attack events are a narrow exception: src/melee.cpp calls
     # send_with_talker(alpha, target) before damage, and the Platform bridge
     # exposes that same live target as actors.interlocutor.  Require an
     # event-exclusive EOC so run_eocs, run_eoc_selector, and test_eoc cannot

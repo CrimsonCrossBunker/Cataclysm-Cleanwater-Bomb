@@ -46,6 +46,50 @@ static const mtype_id mon_zombie( "mon_zombie" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
 
+TEST_CASE( "lua_platform_character_snapshot_intelligence_matches_native_talker",
+           "[lua][platform][characters][conditions][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 709, 9 );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+        fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    const int original_intelligence_base = player.get_int_base();
+    player.set_int_base( 12 );
+    const on_out_of_scope restore_intelligence( [&player, original_intelligence_base]() {
+        player.set_int_base( original_intelligence_base );
+    } );
+
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    const sol::protected_function_result snapshot_call = fixture.lua.safe_script( R"(
+        local speaker = services.characters.avatar()
+        return services.characters.snapshot(speaker)
+    )", sol::script_pass_on_error );
+    REQUIRE( snapshot_call.valid() );
+    const sol::table snapshot_result = snapshot_call.get<sol::table>();
+    REQUIRE( snapshot_result["ok"].get<bool>() );
+    const sol::table snapshot = snapshot_result["value"].get<sol::table>();
+    const sol::table stats = snapshot["stats"].get<sol::table>();
+
+    const std::unique_ptr<talker> native_speaker = get_talker_for( player );
+    REQUIRE( native_speaker );
+    const int native_intelligence = native_speaker->int_cur();
+    CHECK( stats["intelligence"].get<int>() == native_intelligence );
+    // Compare both sides of the native response-condition threshold. The
+    // generated Platform predicate reads this same snapshot field.
+    for( const int threshold : { native_intelligence, native_intelligence + 1 } ) {
+        CHECK( ( native_intelligence >= threshold ) ==
+               ( stats["intelligence"].get<int>() >= threshold ) );
+    }
+}
+
 TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
            "[lua][platform][creatures][vision]" )
 {
