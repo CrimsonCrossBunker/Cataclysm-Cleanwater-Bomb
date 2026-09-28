@@ -3126,21 +3126,13 @@ def _validated_eoc_references(
 
 def _traversal_calls(
     references: list[str], eoc_function_names: dict[str, str], *,
-    item: bool = False, vehicle: bool = False, target: bool = True,
-    item_actor: str | None = None, owner_actor: str | None = None,
+    vehicle: bool = False, target: bool = True,
+    owner_actor: str | None = None,
 ) -> list[str]:
     lines: list[str] = []
     for reference in references:
         function_name = eoc_function_names[reference]
-        if item:
-            owner = item_actor or "nil"
-            lines.extend([
-                "        local previous_item = context.actors.item",
-                "        context.actors.item = target_item",
-                f"        {function_name}(context, {owner})",
-                "        context.actors.item = previous_item",
-            ])
-        elif vehicle:
+        if vehicle:
             lines.extend([
                 "        local previous_vehicle = context.actors.vehicle",
                 "        context.actors.vehicle = target",
@@ -3154,97 +3146,6 @@ def _traversal_calls(
                 f"        {function_name}(context, {owner_actor or 'nil'})"
             )
     return lines
-
-
-def _item_search_condition(value: Any, depth: int = 0) -> dict[str, Any] | str | None:
-    """Lower the bounded item/talker condition subset used by ``search_data``."""
-    if depth > 8:
-        return None
-    if value == "has_ammo":
-        return value
-    if not isinstance(value, dict) or len(value) != 1:
-        return None
-    key, payload = next(iter(value.items()))
-    if key == "math":
-        parts = payload if isinstance(payload, list) else [payload]
-        if not 0 < len(parts) <= 16 or not all(
-            bounded_utf8_string(part, 8192, allow_empty=False)
-            for part in parts
-        ):
-            return None
-        return {"math": "".join(parts)}
-    if key in {"and", "or"}:
-        if not isinstance(payload, list) or not 0 < len(payload) <= 16:
-            return None
-        children = [_item_search_condition(child, depth + 1) for child in payload]
-        if any(child is None for child in children):
-            return None
-        return {
-            "all" if key == "and" else "any": children,
-        }
-    if key == "not":
-        child = _item_search_condition(payload, depth + 1)
-        return None if child is None else {"not": child}
-    return None
-
-
-def _item_search_descriptors(
-    value: Any, *, allow_condition: bool = False
-) -> str | None:
-    """Render the bounded ``item_search_data`` subset as Platform filters."""
-    if not isinstance(value, list) or len(value) > 128:
-        return None
-    allowed = {
-        "id", "id_blacklist", "category", "material", "flags",
-        "excluded_flags", "uses_energy", "is_chargeable", "worn_only",
-        "wielded_only", "held_only",
-    }
-    if allow_condition:
-        allowed.add("condition")
-    normalized: list[dict[str, Any]] = []
-    for entry in value:
-        if not isinstance(entry, dict) or set(entry) - allowed:
-            return None
-        output: dict[str, Any] = {}
-        for key in (
-            "id", "id_blacklist", "category", "material", "flags",
-            "excluded_flags",
-        ):
-            if key not in entry:
-                continue
-            raw = entry[key]
-            values = raw if isinstance(raw, list) else [raw]
-            if not values or len(values) > 128 or not all(
-                bounded_utf8_string(item, PLATFORM_ID_MAX_BYTES, allow_empty=False)
-                for item in values
-            ):
-                return None
-            output[key] = values if isinstance(raw, list) else values[0]
-        for key in (
-            "uses_energy", "is_chargeable", "worn_only", "wielded_only",
-            "held_only",
-        ):
-            if key in entry and not isinstance(entry[key], bool):
-                return None
-            if key in entry:
-                output[key] = entry[key]
-        if "condition" in entry and allow_condition:
-            condition = _item_search_condition(entry["condition"])
-            if condition is None:
-                return None
-            output["condition"] = condition
-        normalized.append(output)
-    return _lua_literal(normalized)
-
-
-def _render_traversal_false_calls(
-    references: list[str], eoc_function_names: dict[str, str],
-    indent: str = "        ",
-) -> list[str]:
-    return [
-        indent + f"{eoc_function_names[reference]}(context, nil)"
-        for reference in references
-    ]
 
 
 def _traversal_integer_expression(
@@ -3275,12 +3176,14 @@ def render_static_traversal(
     eoc_function_names: dict[str, str],
     eoc_actor_requirements: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Lower all bounded ``*_run_*_eocs`` selectors to Lua iteration.
+    """Lower bounded non-item ``*_run_*_eocs`` selectors to Lua iteration.
 
     Each branch consumes detached pages and generation-safe handles from the
     Platform domain services.  The generated code never calls an EOC runner or
     passes a native pointer across Lua.  Inline EOC objects have already been
     normalised to private function names by :func:`normalize_inline_eocs`.
+    Item traversal remains TODO until Platform can preserve the native item
+    set, order, and item-talker callback semantics.
     """
     # This branch is actor-owned.  Do not invent an avatar when the source
     # event did not provide a proven Character handle; the caller will retain
@@ -3289,23 +3192,29 @@ def render_static_traversal(
         return None
     if key not in effect:
         return None
-    if key in {
-        "u_run_inv_eocs", "npc_run_inv_eocs",
-        "u_map_run_item_eocs", "npc_map_run_item_eocs",
-    }:
-        references: list[str] = []
-    else:
-        raw_references = effect.get(key)
-        if isinstance(raw_references, str):
-            raw_references = [raw_references]
-        references = _validated_eoc_references(raw_references, eoc_function_names)
-        if references is None:
-            return None
-        if eoc_actor_requirements is not None and any(
-            eoc_actor_requirements.get(reference) == "exact_avatar"
-            for reference in references
-        ):
-            return None
+    if key in {"u_run_inv_eocs", "npc_run_inv_eocs"}:
+        # Native Character::all_items_loc() walks wielded and worn roots in
+        # recursive postorder and excludes ordinary carried inventory, while
+        # services.items.page does not expose the same set and order.
+        return None
+    if key in {"u_map_run_item_eocs", "npc_map_run_item_eocs"}:
+        # Native map selection preserves points_in_radius/item-stack order,
+        # evaluates search_data with the cloned owner and selected item talkers,
+        # and gives manual_mult false_eocs only when the candidate set is empty.
+        # The Platform map page sorts by position/UID and the generic
+        # multi-picker path cannot preserve those callback/false-branch semantics.
+        return None
+    raw_references = effect.get(key)
+    if isinstance(raw_references, str):
+        raw_references = [raw_references]
+    references = _validated_eoc_references(raw_references, eoc_function_names)
+    if references is None:
+        return None
+    if eoc_actor_requirements is not None and any(
+        eoc_actor_requirements.get(reference) == "exact_avatar"
+        for reference in references
+    ):
+        return None
 
     if key in {"u_run_npc_eocs", "npc_run_npc_eocs"}:
         if actor_expression is None:
@@ -3660,14 +3569,6 @@ def render_static_traversal(
         ])
         return lines
 
-    if key in {"u_run_inv_eocs", "npc_run_inv_eocs"}:
-        # Native Character::all_items_loc() walks wielded and worn roots in
-        # postorder, while services.items.page currently exposes individual
-        # holder roots in preorder and traverses a broader pocket set.  Keep
-        # this lowering fail-closed until the item service can express that
-        # exact selector contract.
-        return None
-
     if key in {"u_map_run_eocs", "npc_map_run_eocs"}:
         allowed = {key, "target_var", "range", "store_coordinates_in", "stop_at_first", "condition"}
         if set(effect) - allowed:
@@ -3757,132 +3658,6 @@ def render_static_traversal(
             "            break",
             "        end",
             "        point_offset = point_offset + point_page.returned",
-            "    end",
-        ])
-        return lines
-
-    if key in {"u_map_run_item_eocs", "npc_map_run_item_eocs"}:
-        allowed = {key, "loc", "min_radius", "max_radius", "accessible", "true_eocs", "false_eocs", "search_data", "title"}
-        if set(effect) - allowed:
-            return None
-        mode = effect.get(key)
-        if mode not in {"all", "random", "manual", "manual_mult"}:
-            return None
-        true_refs = _validated_eoc_references(effect.get("true_eocs"), eoc_function_names)
-        false_refs = _validated_eoc_references(effect.get("false_eocs", []), eoc_function_names, allow_empty=True)
-        if true_refs is None or false_refs is None:
-            return None
-        filters = _item_search_descriptors(effect.get("search_data", []))
-        if filters is None:
-            return None
-        origin = _context_coordinate_expression(effect.get("loc"))
-        if origin is None:
-            if actor_expression is None:
-                return None
-            origin = f"service_value(services.characters.snapshot({actor_expression})).creature.position"
-        minimum = effect.get("min_radius", 0)
-        maximum = effect.get("max_radius", 0)
-        minimum_expression = _traversal_integer_expression(
-            minimum, 0, 1000000, actor_expression or "actor"
-        )
-        maximum_expression = _traversal_integer_expression(
-            maximum, 0, 1000000, actor_expression or "actor"
-        )
-        if minimum_expression is None or maximum_expression is None:
-            return None
-        accessible = effect.get("accessible", True)
-        if not isinstance(accessible, bool):
-            return None
-        calls_true = _traversal_calls(
-            true_refs, eoc_function_names, item=True, item_actor=actor_expression
-        )
-        indented_calls_true = [
-            line.replace("        ", "            ", 1)
-            for line in calls_true
-        ]
-        title = effect.get("title", "Select an item.")
-        if not bounded_utf8_string(title, 512, allow_empty=False):
-            return None
-        lines = [
-            "    context.actors = context.actors or {}",
-            "    local item_offset = 0",
-        ]
-        lines.extend([
-            "    local candidates = {}",
-            "    while true do",
-            f"        local item_page = services.world.items_nearby({origin}, {{ min_radius = {minimum_expression}, max_radius = {maximum_expression}, offset = item_offset, limit = 512, filters = {filters} }})",
-            "        for _, item_entry in ipairs(item_page.items) do",
-            "            candidates[#candidates + 1] = item_entry.handle",
-            "        end",
-            "        if not item_page.has_more or item_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        item_offset = item_offset + item_page.returned",
-            "    end",
-        ])
-        if mode == "all":
-            lines.extend([
-                "    for _, target_item in ipairs(candidates) do",
-                *calls_true,
-                "    end",
-            ])
-            if false_refs:
-                lines.extend([
-                    "    if #candidates == 0 then",
-                    *_render_traversal_false_calls(false_refs, eoc_function_names),
-                    "    end",
-                ])
-            # The literal ``all`` selector accepts every item, so native
-            # false_eocs are unreachable.
-            return lines
-        if false_refs:
-            # False callbacks are evaluated only when no candidate exists or
-            # the interactive selector is cancelled; the map service keeps
-            # the candidate list detached and generation-safe.
-            pass
-        if mode == "random":
-            lines.extend([
-                "    if #candidates > 0 then",
-                "        local target_item = candidates[services.random.int(1, #candidates)]",
-                *calls_true,
-                "    end",
-            ])
-            lines.extend([
-                "    if #candidates == 0 then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names),
-                "    end",
-            ])
-            return lines
-        lines.extend([
-            "    if #candidates > 0 then",
-        ])
-        options = "{ accessible = " + lua_boolean(accessible) + ", title = " + lua_quote(title) + " }"
-        if mode == "manual":
-            lines.extend([
-                "        local selection = service_value(services.inventory.choose_map(",
-                f"            {actor_expression}, candidates, {options}))",
-                "        if selection.item ~= nil then",
-                "            local target_item = selection.item",
-                *indented_calls_true,
-                "        elseif selection.cancelled then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names, "            "),
-                "        end",
-            ])
-        else:
-            lines.extend([
-                "        local selection = service_value(services.inventory.choose_many_map(",
-                f"            {actor_expression}, candidates, {options}))",
-                "        for _, selected in ipairs(selection.items) do",
-                "            local target_item = selected.item",
-                *indented_calls_true,
-                "        end",
-                "        if #selection.items == 0 then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names, "            "),
-                "        end",
-            ])
-        lines.extend([
-            "    else",
-            *_render_traversal_false_calls(false_refs, eoc_function_names),
             "    end",
         ])
         return lines
@@ -34601,22 +34376,59 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    traversal_kind = (
-                        "inventory" if "_run_inv_eocs" in key else
-                        "monster" if "_run_monster_eocs" in key else
-                        "vehicle" if "_run_vehicle_eocs" in key else
-                        "fixed-zone" if "_run_fixed_zone_eocs" in key else
-                        "map" if "_map_run_" in key else
-                        "NPC"
-                    )
-                    lines.append(
-                        f"    -- TODO: translate {traversal_kind} traversal "
-                        "through ordinary Lua callbacks."
-                    )
+                    item_traversal_todo = {
+                        "u_run_inv_eocs": (
+                            "native u_run_inv_eocs uses Character::all_items_loc "
+                            "(wielded and worn roots recursively in postorder, not "
+                            "carried inventory) and evaluates search_data with the "
+                            "owner/item talker context; services.items.page does not "
+                            "expose that exact set and order"
+                        ),
+                        "npc_run_inv_eocs": (
+                            "native npc_run_inv_eocs uses Character::all_items_loc "
+                            "(wielded and worn roots recursively in postorder, not "
+                            "carried inventory) and evaluates search_data with the "
+                            "owner/item talker context; services.items.page does not "
+                            "expose that exact set and order"
+                        ),
+                        "u_map_run_item_eocs": (
+                            "native u_map_run_item_eocs preserves points_in_radius "
+                            "and tile item order, cloning the alpha/beta owner talker "
+                            "and binding the selected item talker for search_data and "
+                            "callbacks; "
+                            "services.world.items_nearby sorts by position/UID, and "
+                            "manual_mult false_eocs only run when the candidate set is empty"
+                        ),
+                        "npc_map_run_item_eocs": (
+                            "native npc_map_run_item_eocs preserves points_in_radius "
+                            "and tile item order, cloning the alpha/beta owner talker "
+                            "and binding the selected item talker for search_data and "
+                            "callbacks; "
+                            "services.world.items_nearby sorts by position/UID, and "
+                            "manual_mult false_eocs only run when the candidate set is empty"
+                        ),
+                    }.get(key)
+                    if item_traversal_todo is not None:
+                        traversal_kind = "item traversal"
+                        traversal_todo = item_traversal_todo
+                    else:
+                        traversal_kind = (
+                            "inventory" if "_run_inv_eocs" in key else
+                            "monster" if "_run_monster_eocs" in key else
+                            "vehicle" if "_run_vehicle_eocs" in key else
+                            "fixed-zone" if "_run_fixed_zone_eocs" in key else
+                            "map" if "_map_run_" in key else
+                            "NPC"
+                        )
+                        traversal_todo = (
+                            f"translate {traversal_kind} traversal through ordinary "
+                            "Lua callbacks"
+                        )
+                    lines.append(f"    -- TODO: {traversal_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        f"needs a complete {traversal_kind} traversal conversion"
+                        f"{traversal_todo}"
                     )
                     all_effects_converted = False
             elif (

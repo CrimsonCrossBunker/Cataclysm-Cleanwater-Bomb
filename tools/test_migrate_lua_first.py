@@ -25721,7 +25721,7 @@ assert(context.data.picked==selected)
             self.assertIn("item_group_chance = 0", main)
             self.assertIn("item_spawn_iterations = 0", main)
 
-    def test_lowers_all_traversals_and_inline_callbacks_without_eoc_runner(self) -> None:
+    def test_lowers_supported_traversals_and_inline_callbacks_without_eoc_runner(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -25766,12 +25766,6 @@ assert(context.data.picked==selected)
                                         "context_val": "point_location"
                                     },
                                 },
-                                {
-                                    "u_map_run_item_eocs": "all",
-                                    "true_eocs": [
-                                        {"effect": {"message": "map item"}}
-                                    ],
-                                },
                             ],
                         }
                     ]
@@ -25807,11 +25801,111 @@ assert(context.data.picked==selected)
                 'context.data["point_location"] = point_entry.position', main
             )
             self.assertIn("migrated_eoc_", main)
-            self.assertIn("services.world.items_nearby", main)
-            self.assertIn("local item_offset = 0", main)
-            self.assertIn("item_page.has_more", main)
             self.assertIn("local migrated_eoc_", main)
             self.assertNotIn("run_eoc(", main)
+
+    def test_item_eoc_traversals_remain_todo_with_proven_actors_and_callbacks(self) -> None:
+        callback_names = {
+            "item_callback": "migrated_eoc_item_callback",
+            "empty_callback": "migrated_eoc_empty_callback",
+        }
+        item_effects = {
+            "u_run_inv_eocs": {
+                "u_run_inv_eocs": "all",
+                "true_eocs": [{"effect": {"message": "inventory callback"}}],
+            },
+            "npc_run_inv_eocs": {
+                "npc_run_inv_eocs": "random",
+                "true_eocs": [{"effect": {"message": "NPC inventory callback"}}],
+            },
+            "u_map_run_item_eocs": {
+                "u_map_run_item_eocs": "manual_mult",
+                "min_radius": 0,
+                "max_radius": 2,
+                "true_eocs": [{"effect": {"message": "selected map item"}}],
+                "false_eocs": [{"effect": {"message": "no map item"}}],
+            },
+            "npc_map_run_item_eocs": {
+                "npc_map_run_item_eocs": "all",
+                "min_radius": 0,
+                "max_radius": 2,
+                "true_eocs": [{"effect": {"message": "selected NPC map item"}}],
+                "false_eocs": [{"effect": {"message": "no NPC map item"}}],
+                "search_data": [{"id": ["rock"]}],
+            },
+        }
+        for key, effect in item_effects.items():
+            with self.subTest(key=key):
+                self.assertIsNone(migrate_lua_first.render_static_traversal(
+                    effect, key, "actor", callback_names,
+                ))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "player_inventory_owner",
+                        "required_event": "game_start",
+                        "effect": item_effects["u_run_inv_eocs"],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_inventory_owner",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": item_effects["npc_run_inv_eocs"],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "player_map_item_owner",
+                        "required_event": "game_start",
+                        "effect": item_effects["u_map_run_item_eocs"],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_map_item_owner",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": item_effects["npc_map_run_item_eocs"],
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "item_traversal_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.partial), 4)
+            for phrase in (
+                "native u_run_inv_eocs uses Character::all_items_loc",
+                "native npc_run_inv_eocs uses Character::all_items_loc",
+                "native u_map_run_item_eocs preserves points_in_radius",
+                "native npc_map_run_item_eocs preserves points_in_radius",
+            ):
+                self.assertIn(phrase, main)
+                self.assertIn(phrase, report)
+            self.assertIn(
+                "migrated_eoc_player_map_item_owner__true_eocs__0 = function(context, actor_override)",
+                main,
+            )
+            self.assertIn(
+                "migrated_eoc_player_map_item_owner__false_eocs__0 = function(context, actor_override)",
+                main,
+            )
+            self.assertNotIn("local item_page = services.world.items_nearby", main)
+            self.assertNotIn("services.items.page(", main)
+            self.assertNotIn("services.inventory.choose_map(", main)
+            self.assertNotIn("services.inventory.choose_many_map(", main)
+            self.assertNotIn("context.actors.item = target_item", main)
+            self.assertNotIn(
+                "migrated_eoc_player_map_item_owner__true_eocs__0(context,", main
+            )
+            self.assertNotIn(
+                "migrated_eoc_player_map_item_owner__false_eocs__0(context,", main
+            )
+            self.assertNotIn("if #selection.items == 0 then", main)
 
     def test_fixed_zone_traversals_match_zones_list_contract(self) -> None:
         callback_names = {"zone_callback": "migrated_eoc_zone_callback"}
