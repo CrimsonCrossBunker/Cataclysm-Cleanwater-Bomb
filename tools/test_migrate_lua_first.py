@@ -9790,6 +9790,203 @@ assert(not available())
             self.assertNotIn("services.npcs.ai_rules(actor)", main)
             self.assertNotIn("run_eoc", main)
 
+    def test_npc_beta_conditions_require_live_event_interlocutor(self) -> None:
+        for condition in (
+            "npc_friend",
+            "npc_hostile",
+            {"npc_rule": "allow_bash"},
+            {"npc_override": "UNKNOWN_RULE"},
+        ):
+            with self.subTest(condition=condition, source="unproven beta"):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_proven=True,
+                        npc_actor_expression="actor",
+                    )
+                )
+            with self.subTest(condition=condition, source="direct topic pair"):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_proven=True,
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
+                )
+
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_is_alive", npc_melee_beta_actor_proven=True
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_available", npc_melee_beta_actor_proven=True
+            )
+        )
+        for condition in (
+            "npc_friend",
+            "npc_hostile",
+            {"npc_rule": "UNKNOWN_RULE"},
+            {"npc_override": "UNKNOWN_RULE"},
+        ):
+            with self.subTest(condition=condition, source="melee beta"):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition, npc_melee_beta_actor_proven=True
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn("context.actors.interlocutor", expression)
+                self.assertIn("beta == nil", expression)
+                self.assertIn('beta.kind ~= "creature"', expression)
+                self.assertIn('beta.subtype ~= "npc"', expression)
+        self.assertIn(
+            "services.npcs.ai_rules(beta)",
+            migrate_lua_first.render_eoc_condition_expression(
+                {"npc_rule": {"npc_val": "rule_name"}},
+                npc_melee_beta_actor_proven=True,
+            ),
+        )
+
+        character_event = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "melee_character_beta_conditions",
+                "required_event": "character_melee_attacks_character",
+                "condition": {
+                    "and": [
+                        "npc_friend",
+                        "npc_hostile",
+                        {"npc_rule": {"npc_val": "rule_name"}},
+                        {"npc_override": "UNKNOWN_RULE"},
+                    ]
+                },
+                "effect": {"message": "checked beta"},
+            },
+        )
+        character_result = migrate_lua_first.MigrationResult()
+        character_main = migrate_lua_first.render_eoc(
+            character_event, character_result
+        )
+        self.assertIn("context.actors.interlocutor", character_main)
+        self.assertIn("services.npcs.get(beta)).friendly", character_main)
+        self.assertIn("services.npcs.get(beta)).enemy", character_main)
+        self.assertIn("services.npcs.ai_rules(beta)", character_main)
+        self.assertIn(
+            'services.variables.resolve(context.data, beta, "npc", "rule_name")',
+            character_main,
+        )
+        self.assertIn("beta == nil", character_main)
+        self.assertIn('beta.subtype ~= "npc"', character_main)
+        self.assertNotIn(
+            "EOC melee_character_beta_conditions condition TODO",
+            "\n".join(character_result.todos),
+        )
+
+        unrelated_npc_predicate = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "effect_on_condition",
+                "id": "melee_does_not_prove_general_npc_actor",
+                "required_event": "character_melee_attacks_character",
+                "condition": "npc_available",
+                "effect": {"message": "general NPC proof stays closed"},
+            },
+        )
+        unrelated_result = migrate_lua_first.MigrationResult()
+        unrelated_main = migrate_lua_first.render_eoc(
+            unrelated_npc_predicate, unrelated_result,
+        )
+        self.assertNotIn("services.npcs.get(actor)", unrelated_main)
+        self.assertIn("condition TODO", "\n".join(unrelated_result.todos))
+
+        monster_event = migrate_lua_first.SourceObject(
+            Path("source.json"), 2, {
+                "type": "effect_on_condition",
+                "id": "melee_monster_beta_conditions",
+                "required_event": "character_melee_attacks_monster",
+                "condition": {"npc_rule": "UNKNOWN_RULE"},
+                "effect": {"message": "monster is not an NPC"},
+            },
+        )
+        monster_result = migrate_lua_first.MigrationResult()
+        monster_main = migrate_lua_first.render_eoc(
+            monster_event, monster_result
+        )
+        self.assertIn("beta == nil", monster_main)
+        self.assertIn('beta.kind ~= "creature"', monster_main)
+        self.assertIn('beta.subtype ~= "npc"', monster_main)
+        self.assertIn("return false", monster_main)
+        self.assertIn("services.npcs.ai_rules(beta)", monster_main)
+
+        alpha_only_event = migrate_lua_first.SourceObject(
+            Path("source.json"), 3, {
+                "type": "effect_on_condition",
+                "id": "npc_alpha_is_not_beta",
+                "required_event": "npc_becomes_hostile",
+                "condition": {"npc_rule": "allow_bash"},
+                "effect": {"message": "no native beta"},
+            },
+        )
+        alpha_only_result = migrate_lua_first.MigrationResult()
+        alpha_only_main = migrate_lua_first.render_eoc(
+            alpha_only_event, alpha_only_result
+        )
+        self.assertIn(
+            "condition TODO: translate the legacy condition into a Lua predicate",
+            "\n".join(alpha_only_result.todos),
+        )
+        self.assertNotIn("services.npcs.ai_rules(actor)", alpha_only_main)
+
+        referenced_result = migrate_lua_first.MigrationResult()
+        referenced_main = migrate_lua_first.render_eoc(
+            character_event, referenced_result,
+            eoc_referenced_ids=frozenset({"melee_character_beta_conditions"}),
+        )
+        self.assertNotIn("services.npcs.ai_rules(beta)", referenced_main)
+        self.assertTrue(referenced_result.todos)
+
+        dynamic_result = migrate_lua_first.MigrationResult()
+        dynamic_main = migrate_lua_first.render_eoc(
+            character_event, dynamic_result,
+            dynamic_eoc_dispatch_present=True,
+        )
+        self.assertNotIn("services.npcs.ai_rules(beta)", dynamic_main)
+        self.assertTrue(dynamic_result.todos)
+
+        inline_result = migrate_lua_first.MigrationResult()
+        inline_main = migrate_lua_first.render_eoc(
+            character_event, inline_result, inline_eoc=True,
+        )
+        self.assertNotIn("services.npcs.ai_rules(beta)", inline_main)
+        self.assertTrue(inline_result.todos)
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 4, {
+                "type": "talk_topic",
+                "id": "unconnected_beta_condition_topic",
+                "responses": [{"true_eocs": "topic_beta_condition"}],
+            },
+        )
+        topic_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 5, {
+                "type": "effect_on_condition",
+                "id": "topic_beta_condition",
+                "condition": {"npc_override": "allow_bash"},
+                "effect": {"message": "direct topic beta"},
+            },
+        )
+        topic_pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, topic_eoc]
+        )
+        self.assertIn("topic_beta_condition", topic_pair_ids)
+        topic_result = migrate_lua_first.MigrationResult()
+        topic_main = migrate_lua_first.render_eoc(
+            topic_eoc, topic_result,
+            npc_dialogue_mission_pair_ids=topic_pair_ids,
+        )
+        self.assertNotIn("services.npcs.ai_rules(beta)", topic_main)
+        self.assertTrue(topic_result.todos)
+
     def test_assigned_mission_counts_require_an_exact_dialogue_pair(self) -> None:
         predicates = {
             "has_no_assigned_mission": "total == 0",
