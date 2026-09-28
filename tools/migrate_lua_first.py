@@ -3126,20 +3126,12 @@ def _validated_eoc_references(
 
 def _traversal_calls(
     references: list[str], eoc_function_names: dict[str, str], *,
-    vehicle: bool = False, target: bool = True,
-    owner_actor: str | None = None,
+    target: bool = True, owner_actor: str | None = None,
 ) -> list[str]:
     lines: list[str] = []
     for reference in references:
         function_name = eoc_function_names[reference]
-        if vehicle:
-            lines.extend([
-                "        local previous_vehicle = context.actors.vehicle",
-                "        context.actors.vehicle = target",
-                f"        {function_name}(context, target)",
-                "        context.actors.vehicle = previous_vehicle",
-            ])
-        elif target:
+        if target:
             lines.append(f"        {function_name}(context, target)")
         else:
             lines.append(
@@ -3178,12 +3170,11 @@ def render_static_traversal(
 ) -> list[str] | None:
     """Lower bounded non-item ``*_run_*_eocs`` selectors to Lua iteration.
 
-    Each branch consumes detached pages and generation-safe handles from the
-    Platform domain services.  The generated code never calls an EOC runner or
-    passes a native pointer across Lua.  Inline EOC objects have already been
-    normalised to private function names by :func:`normalize_inline_eocs`.
-    Item traversal remains TODO until Platform can preserve the native item
-    set, order, and item-talker callback semantics.
+    Each supported branch consumes detached pages and generation-safe handles
+    from the Platform domain services.  The generated code never calls an EOC
+    runner or passes a native pointer across Lua.  Inline EOC objects have
+    already been normalised to private function names by
+    :func:`normalize_inline_eocs`.
     """
     # This branch is actor-owned.  Do not invent an avatar when the source
     # event did not provide a proven Character handle; the caller will retain
@@ -3203,6 +3194,22 @@ def render_static_traversal(
         # and gives manual_mult false_eocs only when the candidate set is empty.
         # The Platform map page sorts by position/UID and the generic
         # multi-picker path cannot preserve those callback/false-branch semantics.
+        return None
+    if key in {"u_run_monster_eocs", "npc_run_monster_eocs"}:
+        # Native walks game::all_creatures() order and includes hallucination
+        # monsters.  services.creatures.nearby sorts by distance/type and
+        # defaults to excluding hallucinations.  Native also creates a
+        # fresh dialogue with the target monster as alpha for each callback;
+        # this ordinary Lua traversal cannot preserve that talker/context
+        # boundary.  The npc_* forms read mutable actor(true), which is beta
+        # and falls back to alpha with a debug diagnostic; an event alpha does
+        # not prove that beta slot.
+        return None
+    if key in {"u_run_vehicle_eocs", "npc_run_vehicle_eocs"}:
+        # Native walks map::get_vehicles() order, uses rl_dist, and creates a
+        # fresh dialogue with each vehicle as alpha.  services.world.vehicles
+        # sorts by position, while the former lowering used square_distance
+        # and a shared Lua callback context.
         return None
     raw_references = effect.get(key)
     if isinstance(raw_references, str):
@@ -3365,149 +3372,6 @@ def render_static_traversal(
             "        npc_offset = npc_offset + npc_page.returned",
             "    end",
         ])
-        return lines
-
-    if key in {"u_run_monster_eocs", "npc_run_monster_eocs"}:
-        if actor_expression is None:
-            return None
-        allowed = {key, "monster_range", "mtype_ids", "z_min", "z_max", "monster_must_see"}
-        if set(effect) - allowed:
-            return None
-        radius = effect.get("monster_range")
-        # The native selector omits the radius predicate when this field is
-        # absent.  Do not approximate that unbounded loaded-creature query by
-        # the Platform service's finite maximum radius.
-        if radius is None:
-            return None
-        radius_expression = (
-            _traversal_integer_expression(
-                radius, 0, 1000, actor_expression
-            )
-            if radius is not None else None
-        )
-        if radius_expression is None:
-            return None
-        ids = effect.get("mtype_ids", [])
-        id_expressions: list[str] = []
-        if not isinstance(ids, list) or len(ids) > 256:
-            return None
-        for value in ids:
-            expression = _traversal_string_expression(value, actor_expression)
-            if expression is None:
-                return None
-            id_expressions.append(expression)
-        z_expressions = {}
-        for name in ("z_min", "z_max"):
-            value = effect.get(name)
-            if value is not None:
-                expression = _traversal_integer_expression(
-                    value, -1000000, 1000000, actor_expression
-                )
-                if expression is None:
-                    return None
-                z_expressions[name] = expression
-        calls = _traversal_calls(references, eoc_function_names)
-        lines = [
-            f"    local monster_origin = service_value(services.characters.snapshot({actor_expression})).creature.position",
-            "    local monster_offset = 0",
-            "    while true do",
-            "        local monster_page = services.creatures.nearby(",
-            f"            {actor_expression}, {{",
-            "            origin = monster_origin,",
-            f"            radius = {radius_expression},",
-            "            kind = \"monster\",",
-            "            visible_only = false,",
-            "            include_avatar = false,",
-            "            include_hallucinations = false,",
-            "            offset = monster_offset,",
-            "            limit = 512,",
-            "        })",
-            "        for _, entry in ipairs(monster_page.items) do",
-            "            local target = entry.handle",
-            "            local target_z = entry.snapshot.position.z",
-            "            local target_type = entry.snapshot.type_id",
-        ]
-        if ids:
-            lines.extend([
-                "            local type_match = false",
-                "            for _, requested_type in ipairs({ " + ", ".join(id_expressions) + " }) do",
-                "                if target_type == requested_type then type_match = true; break end",
-                "            end",
-            ])
-        else:
-            lines.append("            local type_match = true")
-        lines.extend([
-            "            if type_match and (",
-            f"                {z_expressions['z_min']} <= target_z" if "z_min" in z_expressions else "                true",
-            ") and (",
-            f"                target_z <= {z_expressions['z_max']}" if "z_max" in z_expressions else "                true",
-            ") and (",
-            "                target_z == monster_origin.z" if radius is not None and "z_min" not in z_expressions and "z_max" not in z_expressions else "                true",
-            ") and (",
-            "                not " + lua_boolean(bool(effect.get("monster_must_see", False))) +
-            " or service_value(services.creatures.can_see(target, " + actor_expression + "))",
-            ") then",
-            *[line.replace("        ", "                ", 1) for line in calls],
-            "            end",
-            "        end",
-            "        if not monster_page.has_more or monster_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        monster_offset = monster_offset + monster_page.returned",
-            "    end",
-        ])
-        return lines
-
-    if key in {"u_run_vehicle_eocs", "npc_run_vehicle_eocs"}:
-        if actor_expression is None:
-            return None
-        allowed = {key, "vehicle_range", "z_min", "z_max"}
-        if set(effect) - allowed:
-            return None
-        radius = effect.get("vehicle_range")
-        radius_expression = _traversal_integer_expression(
-            radius, 0, 1000000, actor_expression
-        )
-        if radius_expression is None:
-            return None
-        z_expressions = {}
-        for name in ("z_min", "z_max"):
-            value = effect.get(name)
-            if value is not None:
-                expression = _traversal_integer_expression(
-                    value, -1000000, 1000000, actor_expression
-                )
-                if expression is None:
-                    return None
-                z_expressions[name] = expression
-        calls = _traversal_calls(references, eoc_function_names, vehicle=True)
-        lines = [
-            "    context.actors = context.actors or {}",
-            f"    local vehicle_origin = service_value(services.characters.snapshot({actor_expression})).creature.position",
-            "    local vehicle_offset = 0",
-            "    while true do",
-            "        local vehicle_page = services.world.vehicles({ offset = vehicle_offset, limit = 256 })",
-            "        for _, entry in ipairs(vehicle_page.items) do",
-            "            local target = entry.handle",
-            "            local target_z = entry.position.z",
-            "            local distance = vehicle_origin:square_distance(entry.position)",
-            "            if distance <= " + radius_expression + " and (",
-            f"                {z_expressions['z_min']} <= target_z" if "z_min" in z_expressions else "                true",
-            ") and (",
-            f"                target_z <= {z_expressions['z_max']}" if "z_max" in z_expressions else "                true",
-            ") then",
-            "                local previous_character = context.actors.character",
-            f"                context.actors.character = {actor_expression}",
-            *[line.replace("        ", "                ", 1) for line in calls],
-            "                context.actors.character = previous_character",
-            "            end",
-            "        end",
-            "        if not vehicle_page.has_more or vehicle_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        vehicle_offset = vehicle_offset + vehicle_page.returned",
-            "    end",
-        ]
         return lines
 
     if key in {"u_run_fixed_zone_eocs", "npc_run_fixed_zone_eocs"}:
@@ -34441,7 +34305,7 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    item_traversal_todo = {
+                    specific_traversal_todo = {
                         "u_run_inv_eocs": (
                             "native u_run_inv_eocs uses Character::all_items_loc "
                             "(wielded and worn roots recursively in postorder, not "
@@ -34472,10 +34336,49 @@ def render_eoc(
                             "services.world.items_nearby sorts by position/UID, and "
                             "manual_mult false_eocs only run when the candidate set is empty"
                         ),
+                        "u_run_monster_eocs": (
+                            "native u_run_monster_eocs walks game::all_creatures() order "
+                            "and includes hallucination monsters; monster_range is an "
+                            "integer-only optional filter whose absence means unbounded. "
+                            "services.creatures.nearby has a finite radius, sorts by "
+                            "distance/type, and defaults to excluding hallucinations; "
+                            "native z_min/z_max double values convert to int by truncation. "
+                            "Native creates a fresh dialogue with each monster as alpha, "
+                            "so target talker and per-callback context semantics also differ"
+                        ),
+                        "npc_run_monster_eocs": (
+                            "native npc_run_monster_eocs reads mutable actor(true) beta "
+                            "(falling back to alpha with a debug diagnostic if absent), "
+                            "then walks game::all_creatures() order and includes hallucination "
+                            "monsters; monster_range is an integer-only optional filter whose "
+                            "absence means unbounded. services.creatures.nearby has a finite "
+                            "radius, sorts by distance/type, and defaults to excluding "
+                            "hallucinations; native z_min/z_max double values convert to int "
+                            "by truncation. Native creates a fresh dialogue with each monster "
+                            "as alpha and copies its context"
+                        ),
+                        "u_run_vehicle_eocs": (
+                            "native u_run_vehicle_eocs walks map::get_vehicles() order and "
+                            "uses rl_dist; vehicle_range is an integer-only optional filter "
+                            "whose absence means unbounded. services.world.vehicles sorts by "
+                            "position and the former lowering used square_distance. Native "
+                            "z_min/z_max double values convert to int by truncation. It "
+                            "creates a fresh dialogue with each vehicle as alpha, which "
+                            "ordinary handle callbacks and a shared Lua context do not preserve"
+                        ),
+                        "npc_run_vehicle_eocs": (
+                            "native npc_run_vehicle_eocs reads mutable actor(true) beta "
+                            "(falling back to alpha with a debug diagnostic if absent), "
+                            "then walks map::get_vehicles() order and uses rl_dist; "
+                            "vehicle_range is an integer-only optional filter whose absence "
+                            "means unbounded. services.world.vehicles sorts by position and "
+                            "the former lowering used square_distance. Native creates a fresh "
+                            "dialogue with each vehicle as alpha and copies its context; "
+                            "native z_min/z_max double values convert to int by truncation"
+                        ),
                     }.get(key)
-                    if item_traversal_todo is not None:
-                        traversal_kind = "item traversal"
-                        traversal_todo = item_traversal_todo
+                    if specific_traversal_todo is not None:
+                        traversal_todo = specific_traversal_todo
                     else:
                         traversal_kind = (
                             "inventory" if "_run_inv_eocs" in key else

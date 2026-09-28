@@ -25850,7 +25850,9 @@ assert(context.data.picked==selected)
             self.assertIn("item_group_chance = 0", main)
             self.assertIn("item_spawn_iterations = 0", main)
 
-    def test_lowers_supported_traversals_and_inline_callbacks_without_eoc_runner(self) -> None:
+    def test_lowers_supported_npc_zone_and_point_traversals_without_eoc_runner(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -25867,18 +25869,6 @@ assert(context.data.picked==selected)
                                     ],
                                     "npc_range": 3,
                                     "local": True,
-                                },
-                                {
-                                    "u_run_monster_eocs": [
-                                        {"effect": {"message": "monster"}}
-                                    ],
-                                    "monster_range": 4,
-                                },
-                                {
-                                    "u_run_vehicle_eocs": [
-                                        {"effect": {"message": "vehicle"}}
-                                    ],
-                                    "vehicle_range": 5,
                                 },
                                 {
                                     "u_run_fixed_zone_eocs": [
@@ -25911,11 +25901,7 @@ assert(context.data.picked==selected)
             self.assertIn("services.creatures.nearby", main)
             self.assertIn("local npc_offset = 0", main)
             self.assertIn("npc_page.has_more", main)
-            self.assertIn("local monster_offset = 0", main)
-            self.assertIn("monster_page.has_more", main)
-            self.assertIn("services.world.vehicles", main)
-            self.assertIn("local vehicle_offset = 0", main)
-            self.assertIn("vehicle_page.has_more", main)
+            self.assertNotIn("services.world.vehicles", main)
             self.assertIn("services.zones.list", main)
             self.assertIn("local zone_offset = 0", main)
             self.assertIn("zone_page.has_more", main)
@@ -26035,6 +26021,99 @@ assert(context.data.picked==selected)
                 "migrated_eoc_player_map_item_owner__false_eocs__0(context,", main
             )
             self.assertNotIn("if #selection.items == 0 then", main)
+
+    def test_monster_vehicle_eoc_traversals_fail_closed_on_native_order_and_talkers(
+        self,
+    ) -> None:
+        callback_names = {
+            "monster_callback": "migrated_eoc_monster_callback",
+            "npc_monster_callback": "migrated_eoc_npc_monster_callback",
+            "vehicle_callback": "migrated_eoc_vehicle_callback",
+            "npc_vehicle_callback": "migrated_eoc_npc_vehicle_callback",
+        }
+        effects = {
+            "u_run_monster_eocs": {
+                "u_run_monster_eocs": ["monster_callback"],
+                "monster_range": 4,
+                "mtype_ids": ["mon_zombie"],
+                "monster_must_see": True,
+                "z_min": 0,
+            },
+            "npc_run_monster_eocs": {
+                "npc_run_monster_eocs": ["npc_monster_callback"],
+                "monster_range": 4,
+                "mtype_ids": ["mon_zombie"],
+                "monster_must_see": True,
+                "z_min": 0,
+            },
+            "u_run_vehicle_eocs": {
+                "u_run_vehicle_eocs": ["vehicle_callback"],
+                "vehicle_range": 5,
+                "z_min": -1,
+                "z_max": 2,
+            },
+            "npc_run_vehicle_eocs": {
+                "npc_run_vehicle_eocs": ["npc_vehicle_callback"],
+                "vehicle_range": 5,
+                "z_min": -1,
+                "z_max": 2,
+            },
+        }
+        owner_events = {
+            # These source shapes have proven event actors and static EOC
+            # callbacks; the TODO is required by traversal/talker semantics.
+            "u_run_monster_eocs": "game_start",
+            "npc_run_monster_eocs": "npc_becomes_hostile",
+            "u_run_vehicle_eocs": "game_start",
+            "npc_run_vehicle_eocs": "npc_becomes_hostile",
+        }
+        for key, effect in effects.items():
+            with self.subTest(key=key):
+                self.assertIsNone(migrate_lua_first.render_static_traversal(
+                    effect, key, "actor", callback_names,
+                ))
+
+        objects = [
+            {
+                "type": "effect_on_condition",
+                "id": callback_id,
+                "effect": {"message": callback_id},
+            }
+            for callback_id in callback_names
+        ]
+        objects.extend(
+            {
+                "type": "effect_on_condition",
+                "id": key + "_owner",
+                "required_event": owner_events[key],
+                "effect": effect,
+            }
+            for key, effect in effects.items()
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps(objects), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "creature_vehicle_traversal_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.partial), 4)
+            self.assertIn("game::all_creatures() order", main)
+            self.assertIn(
+                "map::get_vehicles() order and uses rl_dist", main
+            )
+            self.assertNotIn("services.creatures.nearby", main)
+            self.assertNotIn("services.world.vehicles", main)
+            self.assertNotIn("context.actors.vehicle = target", main)
+            for callback_id in callback_names:
+                self.assertIn(
+                    f'migrated_eoc_functions["{callback_id}"]', main
+                )
+                self.assertNotIn(
+                    f"migrated_eoc_{callback_id}(context, target)", main
+                )
 
     def test_fixed_zone_traversals_match_zones_list_contract(self) -> None:
         callback_names = {"zone_callback": "migrated_eoc_zone_callback"}
@@ -26198,7 +26277,7 @@ assert(context.data.picked==selected)
             self.assertNotIn("complete named-NPC traversal conversion", report)
             self.assertNotIn("services.creatures.nearby", main)
             self.assertNotIn("radius = 1000", main)
-            self.assertIn("TODO: translate monster traversal", main)
+            self.assertIn("game::all_creatures() order", main)
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn("services.inventory.filter", main)
