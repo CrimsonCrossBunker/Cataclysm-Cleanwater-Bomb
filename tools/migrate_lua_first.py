@@ -4392,19 +4392,27 @@ def render_static_eoc_selector(
     return None
 
 
+_WEIGHTED_LIST_EOC_TODO = (
+    "native weighted_list_eocs reads source-ordered [EOC, dbl_or_var] pairs, "
+    "narrows each dialogue-evaluated double weight to int, and drops nonpositive "
+    "results; weighted_int_list::pick consumes one global rng_bits() draw even "
+    "for a single survivor, then selects by raw_draw % total_weight across "
+    "cumulative source-order weights; the int total is unchecked and an "
+    "all-nonpositive list returns null before native dereference. It synchronously "
+    "activates the chosen EOC "
+    "via a copied dialogue, which activate() copies again. services.random.native_int "
+    "uses rng()'s uniform_int_distribution<int>, services.random.int uses the "
+    "isolated Platform stream, and neither is exact; Platform EOC callbacks also "
+    "lack the copied alpha/beta Dialogue"
+)
+
+
 def render_static_weighted_list_eocs(
     effect: dict[str, Any],
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    """Keep weighted EOC calls TODO until native selection and activation match.
-
-    Native ``weighted_int_list`` truncates evaluated double weights to int,
-    drops non-positive results, consumes the global ``rng_bits()`` stream even
-    for one surviving entry, then activates the selected EOC on a copied
-    dialogue.  The Platform random service and direct Lua callback do not
-    preserve that distribution, RNG state, or dialogue semantics.
-    """
+    """Keep fail-closed until the native modulo RNG and copied dialogue can match."""
     del effect, eoc_function_names, actor_expression
     return None
 
@@ -30092,11 +30100,7 @@ def render_eoc(
                         isinstance(false_value, dict) and
                         "weighted_list_eocs" in false_value
                     ):
-                        false_todo = (
-                            "native weighted_list_eocs truncates evaluated weights to "
-                            "positive ints, consumes global rng_bits(), and activates "
-                            "the selected EOC on a copied dialogue"
-                        )
+                        false_todo = _WEIGHTED_LIST_EOC_TODO
                         false_todo_category = "platform_gap"
                     semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
@@ -30161,17 +30165,11 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: weighted_list_eocs needs native positive-int "
-                        "weight truncation, global rng_bits selection, and copied-"
-                        "dialogue EOC activation."
-                    )
+                    lines.append(f"    -- TODO: {_WEIGHTED_LIST_EOC_TODO}.")
                     result.add_todo(
                         "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "weighted_list_eocs needs native positive-int weight "
-                        "truncation, global rng_bits selection, and copied-dialogue "
-                        "EOC activation"
+                        f"{_WEIGHTED_LIST_EOC_TODO}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "switch" in effect:
