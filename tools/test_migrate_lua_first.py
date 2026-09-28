@@ -11674,10 +11674,9 @@ assert(not available())
             for response in native_offers
         ))
 
-        # The shipped topic has multiple IDs; this renderer accepts one ID.
-        # Keep the real responses and test one native topic registration.
-        self.assertIsInstance(ally_topic["id"], list)
-        ally_topic = {**ally_topic, "id": ally_topic["id"][0]}
+        # The native loader accepts an ID array. The shipped singleton array
+        # has exactly one registration, so lower the unmodified source shape.
+        self.assertEqual(ally_topic["id"], ["TALK_ALLY_ORDERS"])
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_talk_topic(
             migrate_lua_first.SourceObject(source_path, 0, ally_topic), result
@@ -11694,6 +11693,14 @@ assert(not available())
         self.assertIn("on_action = function(dialogue_context, trial_success)", rendered)
         self.assertNotIn("on_select = function(dialogue_context, trial_success)", rendered)
 
+        multi_id_topic = {**ally_topic, "id": ["TALK_ALLY_ORDERS", "TALK_ALLY"]}
+        multi_id_result = migrate_lua_first.MigrationResult()
+        self.assertIsNone(migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, multi_id_topic),
+            multi_id_result,
+        ))
+        self.assertTrue(multi_id_result.todos)
+
         unsupported_responses = (
             {
                 "text": "Offer under a skill check",
@@ -11701,9 +11708,9 @@ assert(not available())
                 "trial": {"type": "PERSUADE"},
             },
             {
-                "text": "Offer with an unrendered condition",
+                "text": "Offer with an unsupported NPC trait condition",
                 "effect": "npc_gets_item_to_use",
-                "condition": {"and": [{"not": "is_by_radio"}]},
+                "condition": {"npc_has_trait": "HALLUCINATION"},
             },
             {
                 "text": "Offer with an object effect",

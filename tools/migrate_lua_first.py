@@ -7125,6 +7125,11 @@ def render_talk_topic(
 ) -> str | None:
     value = source.value
     topic_id = value.get("id")
+    if isinstance(topic_id, list) and len(topic_id) == 1:
+        # Native load_talk_topic registers each array entry independently. A
+        # singleton array therefore has the same registration semantics as a
+        # string ID; multiple aliases would require duplicate topic output.
+        topic_id = topic_id[0]
     if not safe_platform_id(topic_id):
         result.partial.append(f"{source.location}: talk topic <invalid id>")
         result.add_todo("manual_rewrite", f"{source.location}: talk topic needs a stable id")
