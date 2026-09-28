@@ -912,7 +912,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         CHECK( overmap["edit"].valid() );
         CHECK_FALSE( overmap["tile"].valid() );
         CHECK( overmap["reveal"].valid() );
-        CHECK_FALSE( overmap["reveal_route"].valid() );
+        CHECK( overmap["reveal_route"].valid() );
     }
 
     SECTION( "generated terrain" )

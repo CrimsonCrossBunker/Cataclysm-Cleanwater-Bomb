@@ -65,8 +65,9 @@ std::optional<game_handle_error> validate_overmap_tile_token(
 
 // Install bounded observation, search and mutation APIs. Most overmap scans
 // only inspect existing tiles; the explicit native-condition matchers call
-// overmap_buffer::ter() and may lazily load a saved overmap or create and
-// populate an overmap for the requested OMT to preserve legacy semantics.
+// overmap_buffer::ter(), and route reveal searches call it for path terrain.
+// These operations may lazily load a saved overmap or create and populate an
+// overmap for the requested OMT to preserve native semantics.
 void install_overmap_api(
     sol::table &services,
     std::function<game_handle_runtime()> current_runtime_generation,

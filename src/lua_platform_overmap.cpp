@@ -1924,6 +1924,35 @@ sol::table reveal_existing_overmap(
                    state, std::move( value ) ) );
 }
 
+bool reveal_overmap_route(
+    const script_tripoint_coord & start,
+    const script_tripoint_coord & end,
+    const sol::object & raw_radius,
+    const bool road_only )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.reveal_route";
+    const int radius = require_integer(
+                           raw_radius, std::string( api_name ), "radius" );
+    if( radius > maximum_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0..30" );
+    }
+    const tripoint_abs_omt native_start = require_absolute_omt(
+            start, std::string( api_name ) + " start" );
+    const tripoint_abs_omt native_end = require_absolute_omt(
+            end, std::string( api_name ) + " end" );
+
+    const bool found_route = overmap_buffer.reveal_route(
+                                 native_start, native_end, radius, road_only );
+    if( found_route ) {
+        // Native route search does not expose the path nodes, so invalidate
+        // tracked snapshots conservatively after a successful route reveal.
+        bump_all_tracked_overmap_tile_revisions();
+    }
+    return found_route;
+}
+
 } // namespace
 
 void notify_overmap_tile_mutation(
@@ -2262,6 +2291,17 @@ void install_overmap_api(
         require_write();
         return reveal_existing_overmap(
                    lua_state, center, radius );
+    } );
+    overmap.set_function(
+        "reveal_route",
+        [require_write](
+            const script_tripoint_coord & start,
+            const script_tripoint_coord & end,
+            const sol::object & radius,
+            const bool road_only ) {
+        require_write();
+        return reveal_overmap_route(
+                   start, end, radius, road_only );
     } );
     services["overmap"] = std::move( overmap );
 }

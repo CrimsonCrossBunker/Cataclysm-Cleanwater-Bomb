@@ -32140,16 +32140,16 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
                 reveal_route_gap = (
-                    "native reveal_route reads two var_info abs_ms endpoints and "
-                    "projects them to OMT, guesses the source connection, and "
-                    "greedily searches within a four-overmap radius; road_only "
-                    "rejects off-connection tiles, while road_only=false penalizes "
-                    "them and rejects rivers. It truncates the double radius to "
-                    "int and reveals around every path node using native "
-                    "CIRCLEDIST behavior, loading terrain as needed. "
-                    "services.overmap.reveal accepts one typed abs_omt center, an "
-                    "integer radius in 0..30, and only reveals existing tiles in "
-                    "a square; it cannot preserve route search or per-node reveal"
+                    "native reveal_route resolves two var_info abs_ms endpoints "
+                    "and projects them to OMT; services.overmap.reveal_route now "
+                    "preserves native connection guessing, the greedy search "
+                    "within a four-overmap radius, road_only filtering, and "
+                    "CIRCLEDIST reveal around each path node. This EOC's var_info "
+                    "context_val endpoints are not yet proven available as typed "
+                    "abs_omt values in Lua; the renderer also does not yet prove "
+                    "conversion of native dbl_or_var radius values into the "
+                    "service's 0..30 integer range or preserve the enclosing "
+                    "effect/context order"
                 )
                 lines.append(
                     "    -- TODO: " + reveal_route_gap + "."
