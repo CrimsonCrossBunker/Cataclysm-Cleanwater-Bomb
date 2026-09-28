@@ -591,6 +591,11 @@ bool context::has_interlocutor() const
     return require_state().interlocutor_snapshot.present;
 }
 
+std::size_t context::assigned_mission_count() const
+{
+    return require_state().dialogue_ref().missions_assigned.size();
+}
+
 bool context::by_radio() const
 {
     return require_state().dialogue_ref().by_radio;

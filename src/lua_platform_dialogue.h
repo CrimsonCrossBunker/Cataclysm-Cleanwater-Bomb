@@ -121,6 +121,7 @@ class context
         std::string topic_item() const;
         bool has_speaker() const;
         bool has_interlocutor() const;
+        std::size_t assigned_mission_count() const;
         bool by_radio() const;
         bool has_reason() const;
         std::string reason() const;
