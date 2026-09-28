@@ -356,9 +356,20 @@ def event_character_actor_fields() -> dict[str, str]:
     return result
 
 
-def game_start_avatar_actor_is_proven() -> bool:
-    """Fail closed if the reviewed canonical sender set ever changes."""
-    return game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
+def game_start_avatar_actor_is_proven(
+    game_start_event_emitted_by_eoc: bool,
+) -> bool:
+    """Require the reviewed native sender set and no in-corpus JSON replay.
+
+    This static corpus gate cannot observe trusted Lua calling
+    ``services.native_events.emit("game_start", ...)``.  It proves only that
+    no JSON-authored trigger can re-enter a game_start handler with another
+    dialogue actor.
+    """
+    return (
+        not game_start_event_emitted_by_eoc and
+        game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
+    )
 
 
 def render_static_item_fault_effect(
@@ -1014,6 +1025,7 @@ def _inline_actor_kind(member: str) -> str:
 
 def normalize_inline_eocs(
     objects: list[SourceObject],
+    game_start_event_emitted_by_eoc: bool,
 ) -> tuple[
     list[SourceObject], frozenset[str], frozenset[str], frozenset[str], frozenset[str]
 ]:
@@ -1232,7 +1244,9 @@ def normalize_inline_eocs(
                 continue
             replacement: list[Any] = []
             actor_kind = _inline_actor_kind(member)
-            if actor_kind == "inherit":
+            if inherited_actor_kind == "unproven":
+                actor_kind = "unproven"
+            elif actor_kind == "inherit":
                 actor_kind = inherited_actor_kind
             for index, entry in enumerate(raw):
                 if (
@@ -1281,12 +1295,17 @@ def normalize_inline_eocs(
         required_event = source.value.get("required_event")
         inherited_actor_kind = "inherit"
         if (
-            isinstance(required_event, str) and
-            (
-                required_event in AVATAR_ACTOR_EVENTS or
-                required_event == "game_start" and
-                game_start_avatar_actor_is_proven()
+            required_event == "game_start" and
+            not game_start_avatar_actor_is_proven(
+                game_start_event_emitted_by_eoc
             )
+        ):
+            # Do not let nested actor-shape inference recreate the source
+            # proof rejected by the corpus-level replay gate.
+            inherited_actor_kind = "unproven"
+        elif isinstance(required_event, str) and (
+            required_event in AVATAR_ACTOR_EVENTS or
+            required_event == "game_start"
         ):
             inherited_actor_kind = "avatar"
         value = walk(
@@ -1514,6 +1533,7 @@ def _eoc_actor_requirements(
     item_override_ids: frozenset[str],
     creature_override_ids: frozenset[str],
     vehicle_override_ids: frozenset[str],
+    game_start_event_emitted_by_eoc: bool = False,
 ) -> dict[str, str]:
     """Classify the actor lifetime required by each normalized EOC."""
     result: dict[str, str] = {}
@@ -1524,6 +1544,20 @@ def _eoc_actor_requirements(
         identifier = stable_id(source.value, f"anonymous_{source.index}")
         event = source.value.get("required_event")
         if (
+            source.value.get("__inline_actor_kind") == "unproven" or
+            (
+                event == "game_start" and
+                not game_start_avatar_actor_is_proven(
+                    game_start_event_emitted_by_eoc
+                )
+            )
+        ):
+            # A JSON replay can invoke a named start handler through run_eocs,
+            # traversal, or a delayed task with a different alpha. Keep that
+            # uncertainty explicit instead of inferring avatar from the event
+            # name or an actor-shaped predicate.
+            requirement = "unproven"
+        elif (
             not event and source.value.get("__inline_eoc") is not True and
             _node_has_key(source.value, "u_message")
         ):
@@ -1550,9 +1584,7 @@ def _eoc_actor_requirements(
         elif identifier in character_override_ids:
             requirement = "character"
         else:
-            if isinstance(event, str) and (
-                event == "game_start" or event in AVATAR_ACTOR_EVENTS
-            ):
+            if isinstance(event, str) and event in AVATAR_ACTOR_EVENTS:
                 requirement = "avatar"
             elif isinstance(event, str) and event in CREATURE_ACTOR_EVENTS:
                 requirement = "creature"
@@ -1608,7 +1640,9 @@ def _eoc_actor_requirements(
             inherited.discard("none")
             if not inherited:
                 continue
-            if "item" in inherited:
+            if "unproven" in inherited:
+                requirement = "unproven"
+            elif "item" in inherited:
                 requirement = "item"
             elif "vehicle" in inherited:
                 requirement = "vehicle"
@@ -1755,7 +1789,12 @@ def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
 def _has_static_event_emission(
     objects: Iterable[SourceObject], event_name: str,
 ) -> bool:
-    """Fail closed when JSON can synthesize a supposedly source-only event."""
+    """Find any JSON-authored static trigger for a source-only event.
+
+    This guards same-corpus EOC lowering against static re-entry.  It cannot
+    observe trusted Lua that emits an event through the Platform native-event
+    service, so live-actor proofs using this gate remain bounded source claims.
+    """
     def walk(value: Any) -> bool:
         if isinstance(value, list):
             return any(walk(entry) for entry in value)
@@ -3300,7 +3339,7 @@ def render_static_traversal(
     if references is None:
         return None
     if eoc_actor_requirements is not None and any(
-        eoc_actor_requirements.get(reference) == "exact_avatar"
+        eoc_actor_requirements.get(reference) in {"exact_avatar", "unproven"}
         for reference in references
     ):
         return None
@@ -3717,7 +3756,7 @@ def render_static_run_eocs(
         value for kind, value in reference_entries if kind == "static"
     ]
     if eoc_actor_requirements is not None and any(
-        eoc_actor_requirements.get(reference) == "exact_avatar"
+        eoc_actor_requirements.get(reference) in {"exact_avatar", "unproven"}
         for reference in references
     ):
         return None
@@ -3738,6 +3777,14 @@ def render_static_run_eocs(
         # talker.  This runner has no Character-kind proof for that override.
         return None
     has_dynamic_references = len(references) != len(reference_entries)
+    if has_dynamic_references and eoc_actor_requirements is not None and any(
+        requirement == "unproven"
+        for requirement in eoc_actor_requirements.values()
+    ):
+        # A dynamic selector may resolve to a game_start EOC whose alpha is
+        # not proven after an in-corpus replay. Do not let the generic
+        # function table bypass the static-reference requirement check.
+        return None
     false_references = _validated_eoc_references(
         effect.get("false_eocs", []), eoc_function_names, allow_empty=True
     )
@@ -4046,6 +4093,10 @@ def render_static_run_eocs(
         task_references = []
         for reference in references:
             requirement = eoc_actor_requirements.get(reference, "none")
+            if requirement == "unproven":
+                # Do not reinterpret a global callback as an avatar task when
+                # a JSON game_start replay can supply a different dialogue.
+                return None
             if requirement in {"none", "avatar", "character"}:
                 task_references.append(reference)
             elif reference in global_eoc_ids:
@@ -28898,6 +28949,12 @@ def render_eoc(
     # avatar/talker or trigger selection).  No unsupported branch is promoted
     # to a Platform gap without independent typed-service evidence.
     value = source.value
+    # One source-level gate governs every live game_start avatar proof below.
+    # The migration entry point computes this from the full JSON corpus before
+    # inline EOCs are normalized or any handler is rendered.
+    game_start_avatar_source_proven = game_start_avatar_actor_is_proven(
+        game_start_event_emitted_by_eoc
+    )
     eoc_id = stable_id(value, f"anonymous_{source.index}")
     function_name = (eoc_function_names or {}).get(
         eoc_id, lua_function_name(eoc_id)
@@ -28983,7 +29040,7 @@ def render_eoc(
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
         (
             required_event == "game_start" and
-            game_start_avatar_actor_is_proven()
+            game_start_avatar_source_proven
         ) or
         global_recurrence or
         value.get("__inline_actor_kind") == "avatar"
@@ -28998,7 +29055,7 @@ def render_eoc(
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
         (
             required_event == "game_start" and
-            game_start_avatar_actor_is_proven()
+            game_start_avatar_source_proven
         )
     )
     # Recurrence supplies the actor even though it has no required_event:
@@ -29015,7 +29072,7 @@ def render_eoc(
     # the same liveness proof for this generation-checked service.
     martial_art_avatar_actor_proven = (
         required_event == "game_start" and
-        game_start_avatar_actor_is_proven() and
+        game_start_avatar_source_proven and
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
@@ -29078,6 +29135,7 @@ def render_eoc(
     )
     shape_actor_override = (
         not required_event and not avatar_fatal_hook and not avatar_death_hook and
+        value.get("__inline_actor_kind") != "unproven" and
         (shape_has_u_actor != shape_has_npc_actor)
     )
     if shape_actor_override:
@@ -29207,15 +29265,15 @@ def render_eoc(
     # if the menu swaps the controlled character.  Only a standalone,
     # event-exclusive game_start EOC with this terminal effect has a proven
     # live Avatar and no later effects/conditions that could use stale handles.
-    # Static JSON trigger_event emitters are screened corpus-wide below; trusted
-    # Lua can still call services.native_events.emit("game_start", ...), so
-    # this remains bounded source support rather than full runtime proof.
+    # Static JSON trigger_event emitters are screened by the shared live-avatar
+    # proof. Trusted Lua can still emit game_start through Platform, so this is
+    # bounded source support rather than full runtime proof.
     take_control_menu_live_terminal_proven = (
         has_event_trigger and required_event == "game_start" and
-        game_start_avatar_actor_is_proven() and stable_handler and
+        game_start_avatar_source_proven and stable_handler and
         not inline_eoc and not avatar_fatal_hook and not avatar_death_hook and
         not npc_fatal_hook and eoc_id not in eoc_referenced_ids and
-        not dynamic_eoc_dispatch_present and not game_start_event_emitted_by_eoc and
+        not dynamic_eoc_dispatch_present and
         single_take_control_menu_effect and
         value.get("condition") is None and value.get("false_effect") is None and
         value.get("deactivate_condition") is None and recurrence_value is None and
@@ -29473,7 +29531,7 @@ def render_eoc(
     # emits a debug diagnostic for the missing beta talker.
     morale_avatar_actor_proven = (
         event_exclusive_source_proven and not inline_eoc and
-        required_event == "game_start" and game_start_avatar_actor_is_proven() and
+        required_event == "game_start" and game_start_avatar_source_proven and
         not avatar_fatal_hook and not avatar_death_hook
     )
     morale_npc_add_fallback_actor_proven = (
@@ -29492,7 +29550,7 @@ def render_eoc(
     # missing-beta diagnostic.
     mutation_avatar_actor_proven = (
         event_exclusive_source_proven and not inline_eoc and
-        required_event == "game_start" and game_start_avatar_actor_is_proven() and
+        required_event == "game_start" and game_start_avatar_source_proven and
         not avatar_fatal_hook and not avatar_death_hook and
         not talker_pair_override
     )
@@ -29514,7 +29572,7 @@ def render_eoc(
         event_exclusive_source_proven and not inline_eoc and
         not avatar_fatal_hook and not avatar_death_hook and not npc_fatal_hook and
         not talker_pair_override and (
-            required_event == "game_start" and game_start_avatar_actor_is_proven() or
+            required_event == "game_start" and game_start_avatar_source_proven or
             required_event in PROVEN_ITEM_ACTOR_EVENTS
         )
     )
@@ -29526,16 +29584,16 @@ def render_eoc(
     # effect closures, which may run with a child context.
     proficiency_alpha_actor_proven = (
         required_event == "game_start" and
-        game_start_avatar_actor_is_proven() and not inline_eoc and
+        game_start_avatar_source_proven and not inline_eoc and
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
     # sample_range writes Character variables and consumes the native global
     # RNG. Its bounded conversion requires the same event-exclusive live alpha
-    # as the proficiency service, plus no content-authored game_start replay.
+    # as the proficiency service; the shared source proof already excludes
+    # content-authored game_start replay.
     sample_range_alpha_actor_proven = (
-        proficiency_alpha_actor_proven and
-        not game_start_event_emitted_by_eoc
+        proficiency_alpha_actor_proven
     )
     event_beta_presence_proven = event_exclusive_source_proven
     # A named getter evaluates its closure against the current dialogue's
@@ -30424,7 +30482,7 @@ def render_eoc(
             elif (
                 event_exclusive_source_proven and
                 required_event == "game_start" and
-                game_start_avatar_actor_is_proven() and
+                game_start_avatar_source_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_recipe"} and
                 safe_native_recipe_id(effect.get("u_learn_recipe"))
@@ -30442,7 +30500,7 @@ def render_eoc(
             elif (
                 event_exclusive_source_proven and
                 required_event == "game_start" and
-                game_start_avatar_actor_is_proven() and
+                game_start_avatar_source_proven and
                 isinstance(effect, dict) and
                 (
                     set(effect) == {"u_forget_recipe"} or
@@ -30586,7 +30644,7 @@ def render_eoc(
                         elif not (
                             event_exclusive_source_proven and
                             required_event == "game_start" and
-                            game_start_avatar_actor_is_proven()
+                            game_start_avatar_source_proven
                         ):
                             recipe_todo_reasons.append(
                                 "u_ recipe mutation needs an event-exclusive game_start avatar"
@@ -34760,7 +34818,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
         item_override_ids,
         creature_override_ids,
         vehicle_override_ids,
-    ) = normalize_inline_eocs(objects)
+    ) = normalize_inline_eocs(
+        objects, game_start_event_emitted_by_eoc
+    )
     known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
     known_body_part_ids = core_body_part_catalog_ids()
     known_wound_ids = source_wound_catalog_ids(objects)
@@ -34783,6 +34843,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         item_override_ids,
         creature_override_ids,
         vehicle_override_ids,
+        game_start_event_emitted_by_eoc,
     )
     eoc_conditions = {
         stable_id(source.value, f"anonymous_{source.index}"): source.value
