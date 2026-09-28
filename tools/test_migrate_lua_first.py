@@ -17234,7 +17234,7 @@ assert(not available())
             )
             self.assertNotIn("needs a native Lua predicate", report)
 
-    def test_translates_bounded_avatar_mission_lifecycle_shapes(self) -> None:
+    def test_only_avatar_mission_assignment_has_bounded_lowering(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -17260,6 +17260,12 @@ assert(not available())
                         },
                         {
                             "type": "effect_on_condition",
+                            "id": "finish_default_failure_mission",
+                            "required_event": "game_start",
+                            "effect": {"finish_mission": "MISSION_DEFAULT"},
+                        },
+                        {
+                            "type": "effect_on_condition",
                             "id": "remove_literal_mission",
                             "required_event": "game_start",
                             "effect": {"remove_active_mission": "MISSION_TEST"},
@@ -17274,8 +17280,9 @@ assert(not available())
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.todos), 3)
             self.assertIn('services.missions.reserve(\n        services.types.id("mission", "MISSION_TEST"))', main)
             self.assertIn("services.missions.set_deadline(", main)
             self.assertIn("services.time.point(500)", main)
@@ -17284,12 +17291,16 @@ assert(not available())
                 main.index("services.missions.assign(actor, token)"),
                 main.index("services.missions.set_deadline("),
             )
-            self.assertIn("services.missions.complete(", main)
-            self.assertIn("services.missions.abandon(actor, entry.token)", main)
-            self.assertNotIn("mission lifecycle shape", main)
-            self.assertNotIn("domain-service conversion", report)
+            self.assertNotIn("services.missions.complete(", main)
+            self.assertNotIn("services.missions.fail(", main)
+            self.assertNotIn("services.missions.abandon(", main)
+            self.assertIn("native accepts only an integer step", main)
+            self.assertIn("success (default false)", main)
+            self.assertIn("services.missions.list orders instances differently", main)
+            self.assertIn("finish_mission scans avatar.get_active_missions()", report)
+            self.assertIn("object-form remove_active_mission scans avatar active missions", report)
 
-    def test_translates_variable_backed_avatar_mission_lifecycle_shapes(self) -> None:
+    def test_variable_backed_avatar_mission_mutations_stay_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -17331,19 +17342,19 @@ assert(not available())
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
-            self.assertIn('services.types.id("mission", tostring((context.data["mission_id"])', main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "mission_id")', main)
-            self.assertIn(
-                'services.missions.step_complete(\n                    actor, entry.token,',
-                main,
-            )
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.todos), 3)
+            self.assertNotIn('services.types.id("mission", tostring((context.data["mission_id"])', main)
+            self.assertNotIn('services.variables.resolve(context.data, actor, "u", "mission_id")', main)
             self.assertNotIn('services.missions.assign(actor, token)', main)
             self.assertNotIn('services.variables.get_global("mission_deadline")', main)
-            self.assertIn('services.missions.abandon(actor, entry.token)', main)
-            self.assertIn("mission lifecycle shape", report)
+            self.assertNotIn("services.missions.step_complete(", main)
+            self.assertNotIn("services.missions.abandon(", main)
+            self.assertIn("assign_mission needs a proven avatar", main)
+            self.assertIn("native accepts only an integer step", main)
+            self.assertIn("success (default false)", main)
+            self.assertIn("object-form remove_active_mission scans avatar active missions", report)
 
     def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
         lines = migrate_lua_first.render_static_assign_mission_effect(
@@ -17492,6 +17503,10 @@ assert(not available())
             self.assertNotIn("services.npcs.missions.clear_selected", main)
             self.assertNotIn("services.npcs.missions.claim_selected_reward", main)
             self.assertIn("typed provider service", main)
+            self.assertIn(
+                "string-form remove_active_mission is not registered in the native WRAP map",
+                main,
+            )
             self.assertNotIn("services.characters.avatar()", main)
 
     def test_npc_mission_wrappers_require_direct_talk_topic_pair(self) -> None:
@@ -17618,9 +17633,9 @@ assert(not available())
         ):
             self.assertNotIn(f"services.npcs.missions.{method}(", direct_pair)
         for reason in (
-            "requires an active, complete mission",
-            "requires an active mission assigned to this avatar",
-            "rejects in-progress selections",
+            "complete goal unless force=true",
+            "unique live NPC-provided, owner-assigned active mission",
+            "Platform only clears finished selections",
             "opens reward trade",
         ):
             self.assertIn(reason, direct_pair)
