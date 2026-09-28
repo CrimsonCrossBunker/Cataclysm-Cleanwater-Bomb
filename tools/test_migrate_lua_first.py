@@ -37530,8 +37530,14 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "map mutation requires one explicitly typed abs_ms coordinate; "
                 "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
             )
+            # Both furniture writes and the trap write fail their native
+            # mutation-semantics check before coordinate conversion is tried.
+            # The two terrain writes and the field write reach this guard.
             trap_gap = "set_trap needs native radius-based trap_set semantics"
-            self.assertEqual(main.count(todo), len(bad_coordinates) - 1)
+            self.assertEqual(main.count(todo), 3)
+            self.assertEqual(
+                main.count("set_furniture uses the native radius neighborhood"), 2
+            )
             self.assertEqual(main.count(trap_gap), 1)
             self.assertNotIn("services.map.tile(", main)
             self.assertNotIn("services.map.edit(", main)
