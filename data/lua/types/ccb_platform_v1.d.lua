@@ -6351,6 +6351,14 @@ function PlatformDialogueContext:interlocutor_at_safe_space() end
 ---@return integer
 function PlatformDialogueContext:assigned_mission_count() end
 
+---Grant one native-default item to the current native dialogue alpha.
+---Only available in a writable `on_action` callback. Preserves native
+---i_add_or_drop behavior, default ammunition, one charge for charge-counted
+---items, PRESERVE_SPAWN_LOC, and the beta-dependent native popup. This API
+---accepts only a typed item ID; it does not model item groups or EOC selectors.
+---@param item_type GameId GameId<item>
+function PlatformDialogueContext:grant_item_to_speaker(item_type) end
+
 ---@return boolean
 function PlatformDialogueContext:by_radio() end
 

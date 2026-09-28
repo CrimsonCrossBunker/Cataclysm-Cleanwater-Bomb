@@ -4420,16 +4420,13 @@ def render_static_weighted_list_eocs(
 def render_static_spawn_item_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep native ``receive_item`` out of migration until its full semantics exist.
+    """Keep EOC forms of native ``receive_item`` out of migration.
 
-    ``services.inventory.give`` and ``give_group`` insert without native
-    ``i_add_or_drop`` behavior, and they do not reproduce default-ammo,
-    preserve-spawn-location, conditional beta-popup, and all container/flag
-    branches.  Clamping dynamic counts or substituting these services changes
-    native behavior, so no ``u_spawn_item`` shape is currently lowered.  A
-    future native-backed operation must own item construction and accept the
-    evaluated item/group, count, container, flags, force-equip and popup inputs
-    together with the exact alpha destination and optional beta popup source.
+    Direct TALK singleton responses have a callback-scoped operation that
+    retains native dialogue alpha/beta and response phase. EOC callbacks do not
+    carry that Dialogue; general inventory insertion also does not preserve
+    ``i_add_or_drop`` behavior, default ammo, spawn location, popup, or the
+    count/group/container/flags/force-equip branches. Keep all EOC shapes TODO.
     """
     del effect, avatar_actor_proven
     return None
@@ -6703,11 +6700,29 @@ def render_talk_topic_response_condition(
 
 def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
     if isinstance(effect, list):
+        if any(
+            isinstance(nested, dict) and "u_spawn_item" in nested
+            for nested in effect
+        ):
+            return (
+                "manual_rewrite",
+                "combined effects containing u_spawn_item are not lowered; only "
+                "a single direct TALK response with one literal item ID uses the "
+                "callback-scoped native dialogue grant",
+            )
         for nested in effect:
             mission_todo = _talk_topic_effect_todo(nested)
             if mission_todo is not None and "mission" in mission_todo[1]:
                 return mission_todo
     if isinstance(effect, dict):
+        if "u_spawn_item" in effect:
+            return (
+                "manual_rewrite",
+                "parameterized u_spawn_item forms remain TODO; only a direct TALK "
+                "response containing exactly one literal item ID is lowered; "
+                "count, group, container, flags, force_equip, loc, and dynamic "
+                "values require their native semantics",
+            )
         selectors = set(effect) & {"npc_gets_item", "npc_gets_item_to_use"}
         if not selectors and set(effect) == {"effect"}:
             wrapped = effect["effect"]
@@ -6936,6 +6951,10 @@ def render_talk_topic(
                 )
                 if action_callback is None:
                     action_callback = render_dialogue_spend_cash_action_effect(
+                        entry["effect"]
+                    )
+                if action_callback is None:
+                    action_callback = render_dialogue_item_grant_action_effect(
                         entry["effect"]
                     )
             if action_callback is None:
@@ -20854,6 +20873,30 @@ def render_dialogue_mission_action_effect(effect: Any) -> LuaRaw | None:
     ]))
 
 
+def render_dialogue_item_grant_action_effect(effect: Any) -> LuaRaw | None:
+    """Grant one literal item through the active native TALK dialogue.
+
+    The callback-scoped context preserves dialogue alpha, the beta-dependent
+    popup, and the native response-effect phase. EOC callbacks and every
+    parameterized/group form remain TODO until they carry the same exact
+    dialogue and item-construction semantics.
+    """
+    if not isinstance(effect, dict) or set(effect) != {"u_spawn_item"}:
+        return None
+    item_id = effect["u_spawn_item"]
+    if not safe_platform_id(item_id) or not bounded_utf8_string(
+        item_id, PLATFORM_ID_MAX_BYTES, allow_empty=False
+    ):
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:grant_item_to_speaker(services.types.id(",
+        f"        \"item\", {lua_quote(item_id)}))",
+        "end",
+    ]))
+
+
 def render_dialogue_spend_cash_action_effect(effect: Any) -> LuaRaw | None:
     """Render an exact static beta-NPC payment in the native TALK action phase."""
     if not isinstance(effect, dict) or set(effect) != {"u_spend_cash"}:
@@ -30153,10 +30196,11 @@ def render_eoc(
                         )
                     elif isinstance(false_value, dict) and "u_spawn_item" in false_value:
                         false_todo = (
-                            "native u_spawn_item uses receive_item/i_add_or_drop; "
-                            "inventory give APIs omit native drop/equip, default-ammo, "
-                            "spawn-location, item-group, container, flag, count, and "
-                            "beta-popup behavior"
+                            "EOC u_spawn_item remains TODO because false-effect EOC "
+                            "callbacks do not carry the active native Dialogue; only "
+                            "a single literal direct TALK response is lowered, and "
+                            "count/group/container/flags/force_equip/loc/dynamic "
+                            "forms remain unsupported"
                         )
                     elif isinstance(false_value, dict) and "map_spawn_item" in false_value:
                         false_todo = (
@@ -32009,10 +32053,12 @@ def render_eoc(
                 converted_effect = True
             elif isinstance(effect, dict) and "u_spawn_item" in effect:
                 spawn_gap = (
-                    "native u_spawn_item uses receive_item/i_add_or_drop; the typed "
-                    "inventory give APIs do not preserve native drop/equip fallback, "
-                    "default ammo, PRESERVE_SPAWN_LOC, item-group/container/flags/count, "
-                    "force_equip, and beta-dependent popup behavior"
+                    "EOC u_spawn_item remains TODO: EOC callbacks do not carry the "
+                    "active native Dialogue needed for exact alpha/beta selection and "
+                    "popup ordering, while inventory give APIs do not preserve native "
+                    "i_add_or_drop; only a single literal direct TALK response is "
+                    "lowered, and count/group/container/flags/force_equip/loc/dynamic "
+                    "forms remain unsupported"
                 )
                 lines.append(f"    -- TODO: {spawn_gap}.")
                 result.add_todo(

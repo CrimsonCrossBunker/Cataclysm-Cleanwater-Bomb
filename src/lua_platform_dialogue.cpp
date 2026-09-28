@@ -1,13 +1,18 @@
 #include "lua_platform_dialogue.h"
 
 #include "lua_platform_state.h"
+#include <calendar.h>
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue.h>
+#include <flag.h>
 #include <item_uid.h>
+#include <lua_platform_bindings_values.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
+#include <lua_platform_items.h>
 #include <overmapbuffer.h>
+#include <output.h>
 #include <point.h>
 #include <safe_reference.h>
 #include <talker.h>
@@ -619,6 +624,54 @@ bool context::interlocutor_at_safe_space() const
 std::size_t context::assigned_mission_count() const
 {
     return require_state().dialogue_ref().missions_assigned.size();
+}
+
+void context::grant_item_to_speaker( const script_game_id &item_type ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( item_type.kind() != "item" || item_type.value().empty() ||
+        item_type.value().size() > 256 ||
+        item_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue grant_item_to_speaker requires a bounded GameId<item>" );
+    }
+    const itype_id native_type( item_type.value() );
+    if( !native_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue grant_item_to_speaker requires a registered item type" );
+    }
+    talker *const speaker = d.actor( false );
+    if( speaker == nullptr ) {
+        throw std::runtime_error(
+            "dialogue grant_item_to_speaker requires a live native speaker" );
+    }
+
+    // This is the no-parameter TALK u_spawn_item path: count defaults to one,
+    // the actor is dialogue alpha, and Character talkers own native
+    // i_add_or_drop (including its inventory/map fallback).
+    item received( native_type, calendar::turn );
+    if( received.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
+        received.preserve_location( speaker->pos_abs() );
+    }
+    if( received.count_by_charges() ) {
+        received.charges = 1;
+    } else {
+        const itype_id default_ammo = received.ammo_default();
+        if( !default_ammo.is_null() ) {
+            received.ammo_set( default_ammo );
+        }
+    }
+    speaker->i_add_or_drop( received );
+
+    if( d.has_beta ) {
+        talker *const interlocutor = d.actor( true );
+        if( interlocutor != nullptr && !interlocutor->disp_name().empty() ) {
+            //~ %1$s is the NPC name, %2$s is an item
+            popup( _( "%1$s gives you a %2$s." ), interlocutor->disp_name(),
+                   received.tname() );
+        }
+    }
+    bump_item_query_mutation_epoch();
 }
 
 bool context::by_radio() const

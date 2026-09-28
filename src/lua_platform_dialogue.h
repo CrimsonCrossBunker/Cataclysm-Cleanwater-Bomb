@@ -22,6 +22,11 @@ extern "C" {
 #include "lua_platform_hooks.h"
 #include "lua_platform_sol.h"
 
+namespace cata::lua_platform
+{
+class script_game_id;
+}
+
 namespace cata::lua_platform::dialogue
 {
 
@@ -124,6 +129,7 @@ class context
         bool has_interlocutor() const;
         bool interlocutor_at_safe_space() const;
         std::size_t assigned_mission_count() const;
+        void grant_item_to_speaker( const script_game_id &item_type ) const;
         bool by_radio() const;
         bool has_reason() const;
         std::string reason() const;

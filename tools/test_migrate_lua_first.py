@@ -17540,10 +17540,10 @@ assert(not available())
             self.assertNotIn("services.inventory.give_group(", main)
             self.assertNotIn("services.world.spawn_item(", main)
             self.assertIn("an earlier EOC effect may relocate the Avatar", main)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
+            self.assertIn("EOC u_spawn_item remains TODO", main)
             self.assertIn("loc is a legacy var_info lookup", main)
             self.assertIn("off-screen tinymaps", main)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
+            self.assertIn("EOC u_spawn_item remains TODO", report)
             self.assertIn("loc is a legacy var_info lookup", report)
             self.assertIn(
                 "player_weapon_away is registered as a native TALK response action",
@@ -17746,7 +17746,7 @@ assert(not available())
 
             self.assertNotIn("services.inventory.give(", main)
             self.assertIn("EOC referenced_game_start_spawn_item effect #0", todo_text)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", todo_text)
+            self.assertIn("EOC u_spawn_item remains TODO", todo_text)
 
     def test_translates_foreach_with_native_definition_pages(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -19185,6 +19185,73 @@ assert(not available())
                 self.assertNotIn("on_action =", unsupported_lua or "")
                 self.assertNotIn("on_select =", unsupported_lua or "")
                 self.assertTrue(unsupported_result.todos)
+
+    def test_real_talk_single_item_spawn_uses_native_dialogue_grant(self) -> None:
+        talk_test_path = Path("data/json/npcs/TALK_TEST.json")
+        talk_test_topics = json.loads(
+            (REPOSITORY_ROOT / talk_test_path).read_text(encoding="utf-8")
+        )
+        talk_test = next(
+            entry for entry in talk_test_topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_TEST_EFFECTS"
+        )
+        real_spawn = next(
+            response for response in talk_test["responses"]
+            if response.get("text") == "This is a u_spawn_item plastic bottle response"
+        )
+        self.assertEqual(real_spawn["effect"], {"u_spawn_item": "bottle_plastic"})
+        rendered = migrate_lua_first.render_dialogue_item_grant_action_effect(
+            real_spawn["effect"]
+        )
+        self.assertIsNotNone(rendered)
+        self.assertIn(
+            'context:grant_item_to_speaker(services.types.id(\n'
+            '        "item", "bottle_plastic"))',
+            rendered.source,
+        )
+
+        topic_result = migrate_lua_first.MigrationResult()
+        topic_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(talk_test_path, 0, talk_test),
+            topic_result,
+        )
+        self.assertIsNotNone(topic_rendered)
+        self.assertIn(
+            "on_action = function(context, trial_success)", topic_rendered or ""
+        )
+        self.assertIn("context:grant_item_to_speaker", topic_rendered or "")
+        self.assertNotIn("services.inventory.give(", topic_rendered or "")
+
+        combined = next(
+            response for response in talk_test["responses"]
+            if response.get("text") == "This is a multi-effect response"
+        )
+        combined_topic = dict(talk_test)
+        combined_topic["responses"] = [combined]
+        combined_result = migrate_lua_first.MigrationResult()
+        combined_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(talk_test_path, 0, combined_topic),
+            combined_result,
+        )
+        self.assertNotIn("on_action =", combined_rendered or "")
+        self.assertTrue(any(
+            "combined effects containing u_spawn_item are not lowered" in todo.message
+            for todo in combined_result.todos
+        ))
+        for unsupported in (
+            {"u_spawn_item": "bottle_plastic", "count": 2},
+            {"u_spawn_item": "bottle_plastic", "container": "bottle_glass"},
+            {"u_spawn_item": "bottle_plastic", "force_equip": True},
+            {"u_spawn_item": {"context_val": "item"}},
+            {"u_spawn_item": "é" * 129},
+        ):
+            with self.subTest(effect=unsupported):
+                self.assertIsNone(
+                    migrate_lua_first.render_dialogue_item_grant_action_effect(
+                        unsupported
+                    )
+                )
 
     def test_real_talk_spend_cash_shape_and_monster_purchase_remain_bounded(self) -> None:
         talk_test_path = Path("data/json/npcs/TALK_TEST.json")
@@ -33349,8 +33416,8 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertTrue(result.todos)
             self.assertNotIn("domain-service conversion", report)
             self.assertNotIn("services.inventory.give", main)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
+            self.assertIn("EOC u_spawn_item remains TODO", main)
+            self.assertIn("EOC u_spawn_item remains TODO", report)
             self.assertNotIn("services.inventory.remove", main)
             self.assertIn("services.activities.cancel", main)
             self.assertIn("services.mutations.grant", main)
@@ -36524,7 +36591,7 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertNotIn('services.types.id("item"', main)
             self.assertNotIn("services.gameplay.math.evaluate", main)
             self.assertNotIn("services.inventory.give", main)
-            self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", main)
+            self.assertIn("EOC u_spawn_item remains TODO", main)
 
     def test_domain_renderers_accept_comments_dynamic_ids_and_native_activities(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
