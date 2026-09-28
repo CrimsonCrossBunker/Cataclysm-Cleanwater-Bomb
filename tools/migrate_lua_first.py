@@ -24461,9 +24461,14 @@ def render_static_pickup_items(
 def render_static_inventory_consume_sum(
     effect: dict[str, Any],
     key: str,
-    live_avatar_alpha_proven: bool,
-    npc_event_alpha_fallback_proven: bool,
+    event_exclusive_live_avatar_alpha_proven: bool,
+    event_exclusive_npc_alpha_fallback_proven: bool,
 ) -> list[str] | None:
+    """Lower bounded inventory mutations only for event-exclusive actor sources.
+
+    This preserves item mutations, but does not reproduce the native debug
+    diagnostic emitted when mutable dialogue beta falls back to alpha.
+    """
     if (
         key not in {"u_consume_item_sum", "npc_consume_item_sum"} or
         set(effect) != {key}
@@ -24490,20 +24495,21 @@ def render_static_inventory_consume_sum(
         entries.append((item_id, amount))
 
     if key == "u_consume_item_sum":
-        if not live_avatar_alpha_proven:
+        if not event_exclusive_live_avatar_alpha_proven:
             return None
         participant = "alpha"
         alpha_expression = "actor"
         beta_expression = "nil"
         expected_subtype = "avatar"
     else:
-        if not npc_event_alpha_fallback_proven:
+        if not event_exclusive_npc_alpha_fallback_proven:
             return None
         # npc_becomes_hostile constructs a one-Character dialogue with the
         # live event NPC as alpha. Native mutable actor(true) falls back to
-        # alpha when beta is absent on this exact producer. Direct topic
-        # callbacks remain TODO until the generated runtime adapter exposes
-        # their actual alpha/beta talkers.
+        # alpha when beta is absent on this exact producer. Its debug
+        # diagnostic is not mirrored by the Platform mutation service. Direct
+        # topic callbacks remain TODO until the generated runtime adapter
+        # exposes their actual alpha/beta talkers.
         alpha_expression = "actor"
         beta_expression = "nil"
         participant = "beta"
@@ -24525,6 +24531,11 @@ def render_static_inventory_consume_sum(
         "            service_value(services.inventory.consume_dialogue_sum(",
         f"                consume_alpha, consume_beta, {lua_quote(participant)}, {{",
     ]
+    if participant == "beta":
+        lines.insert(
+            1,
+            "        -- Native missing-beta fallback debug logging is not mirrored.",
+        )
     lines.extend(
         "                    { item = services.types.id(\"item\", "
         f"{lua_quote(item_id)}), amount = {lua_number(amount)} }"
@@ -32184,10 +32195,19 @@ def render_eoc(
                     if "u_consume_item_sum" in effect
                     else "npc_consume_item_sum"
                 )
+                event_exclusive_actor_source_proven = (
+                    has_event_trigger and
+                    eoc_id not in eoc_referenced_ids and
+                    not dynamic_eoc_dispatch_present
+                )
                 rendered = render_static_inventory_consume_sum(
                     effect, key,
-                    required_event == "game_start" and avatar_actor_proven,
                     (
+                        event_exclusive_actor_source_proven and
+                        required_event == "game_start" and avatar_actor_proven
+                    ),
+                    (
+                        event_exclusive_actor_source_proven and
                         required_event == "npc_becomes_hostile" and
                         npc_event_character_actor_proven and
                         npc_actor_expression == "actor" and
@@ -32200,16 +32220,18 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: consume_item_sum needs a static bounded row list "
-                        "and a live native alpha/beta Character source; direct dialogue "
-                        "callbacks still lack a proven Platform talker adapter."
+                        "and an event-exclusive live native alpha/beta Character source; "
+                        "referenced or dynamically dispatched EOCs and direct dialogue "
+                        "callbacks remain unproven Platform talker contexts."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "consume_item_sum requires at most 128 static item rows with "
                         "finite positive literal amounts <= 1000000000 and a live "
-                        "native actor source; only game_start alpha-avatar and "
-                        "npc_becomes_hostile beta-to-alpha fallback are currently proven"
+                        "event-exclusive native actor source; only unreferenced, "
+                        "non-dynamic game_start alpha-avatar and npc_becomes_hostile "
+                        "beta-to-alpha fallback are currently proven"
                     )
                     all_effects_converted = False
             elif (

@@ -1324,7 +1324,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                               { { "bandages", 1.0 } } ) );
 }
 
-TEST_CASE( "lua_platform_consume_item_sum_matches_native_talker_effects",
+TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
            "[lua][platform][items][mutation][semantic]" )
 {
     clear_avatar();
@@ -1536,8 +1536,8 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_talker_effects",
     check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
     CHECK( count_map_items( unowned_decoy_pos, itype_battery, faction_id() ) == 9 );
 
-    // Re-stock both role candidates, then compare the Platform service to the
-    // real talk effects across owned inventory, map, and vehicle locations.
+    // Re-stock both role candidates, then compare Platform item mutations to
+    // the real talk effects across owned inventory, map, and vehicle locations.
     stock_target( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
     stock_target( beta, beta_faction, beta_map_pos, *beta_cargo );
     const sol::table weighted_entries = lua_entries( { { "battery", 14 }, { "rock", 1 } } );

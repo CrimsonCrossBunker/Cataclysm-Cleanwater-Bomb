@@ -9529,11 +9529,12 @@ function CcbInventoryApi.hand_in(character, recipient, item_type, count, charges
 ---@param entries table
 ---@return CcbResult
 function CcbInventoryApi.consume_sum(character, entries) end
----Apply native u_consume_item_sum/npc_consume_item_sum semantics to the selected dialogue Character.
+---Apply native u_consume_item_sum/npc_consume_item_sum inventory mutations to the selected Character.
 ---Scans owned recursive inventory, nearby map items, and loaded vehicle cargo as one unordered candidate set.
 ---Rows are processed in order with shared fractional coverage. Whole-item removal spills contents; charge stacks may be decremented in place. Mutation is incremental and has no rollback.
 ---Accepts an empty array or up to 128 dense rows with finite positive amounts <= 1000000000. Unknown item IDs are native no-match values.
 ---When the requested alpha/beta participant is absent, use the other provided participant, matching mutable dialogue::actor fallback.
+---Native debug logging for the missing-beta fallback is not reproduced.
 ---@param alpha GameHandle|nil Exact live dialogue alpha Character, when proven by the caller.
 ---@param beta GameHandle|nil Exact live dialogue beta Character, when proven by the caller.
 ---@param participant CcbInventoryDialogueParticipant Native role requested by the effect.

@@ -19002,7 +19002,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
-    def test_static_consume_item_sum_lowers_live_alpha_and_beta_fallback(self) -> None:
+    def test_static_consume_item_sum_lowers_event_exclusive_mutations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -19053,7 +19053,48 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn('consume_alpha, consume_beta, "beta"', main)
             self.assertIn('target.subtype == "avatar"', main)
             self.assertIn('target.subtype == "npc"', main)
+            self.assertIn(
+                "Native missing-beta fallback debug logging is not mirrored.",
+                main,
+            )
             self.assertNotIn("services.inventory.consume_sum(", main)
+
+    def test_referenced_game_start_consume_sum_remains_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_game_start_consume_sum",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_consume_item_sum": [
+                                {"item": "battery", "amount": 1}
+                            ]
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "game_start_consume_sum_caller",
+                        "effect": {
+                            "run_eocs": "referenced_game_start_consume_sum"
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            self.assertFalse(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+            result = migrate_lua_first.migrate(objects, "referenced_consume_sum")
+            main = result.files[Path("main.lua")]
+            todo_text = "\n".join(todo.text for todo in result.todos)
+
+            self.assertNotIn("services.inventory.consume_dialogue_sum(", main)
+            self.assertIn(
+                "EOC referenced_game_start_consume_sum effect #0", todo_text
+            )
+            self.assertIn("event-exclusive native actor source", todo_text)
 
     def test_direct_topic_consume_sum_stays_todo_without_runtime_talker_adapter(self) -> None:
         rendered = render_direct_npc_dialogue_pair({
