@@ -31194,6 +31194,45 @@ assert(context.data.picked==selected)
                     for todo in result.todos
                 ))
 
+    def test_real_single_entry_weighted_list_keeps_native_rng_todo(self) -> None:
+        source_path = Path(
+            "data/mods/MindOverMatter/effectoncondition/eoc_observed.json"
+        )
+        real_source = next(
+            entry for entry in migrate_lua_first.load_objects(
+                [REPOSITORY_ROOT / source_path]
+            ) if entry.value.get("id") == "EOC_OBSERVED_SIDE_EFFECTS"
+        )
+        weighted = real_source.value["effect"]["cases"][0]["effect"][
+            "weighted_list_eocs"
+        ]
+        self.assertEqual(
+            weighted, [["EOC_OBSERVED_EFFECT_HEARING_SOUNDS", 1]]
+        )
+
+        full_result = migrate_lua_first.MigrationResult()
+        full_rendered = migrate_lua_first.render_eoc(real_source, full_result)
+        self.assertIn("TODO: translate switch branches", full_rendered)
+
+        # Probe the actual source leaf directly so the unrelated unsupported
+        # switch wrapper cannot hide the weighted-list migration boundary.
+        leaf_value = dict(real_source.value)
+        leaf_value["effect"] = {"weighted_list_eocs": weighted}
+        leaf_source = migrate_lua_first.SourceObject(
+            real_source.path, real_source.index, leaf_value
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(leaf_source, result)
+        self.assertIn("one global rng_bits() draw even for a single survivor", rendered)
+        self.assertIn("copied alpha/beta Dialogue", rendered)
+        self.assertNotIn("services.random.int(", rendered)
+        self.assertNotIn("services.random.native_int(", rendered)
+        weighted_todo = next(
+            todo for todo in result.todos
+            if "native weighted_list_eocs reads source-ordered" in todo.message
+        )
+        self.assertEqual(weighted_todo.category, "platform_gap")
+
     def test_global_u_sound_false_effect_uses_proven_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
