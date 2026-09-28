@@ -26614,6 +26614,27 @@ def contains_line_of_sight_condition(condition: Any) -> bool:
     return False
 
 
+TRAINING_OFFER_CONDITION_SELECTORS = frozenset({
+    "u_train_styles", "npc_train_styles",
+    "u_train_spells", "npc_train_spells",
+})
+
+
+def contains_training_offer_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in TRAINING_OFFER_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if TRAINING_OFFER_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_training_offer_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_training_offer_condition(entry) for entry in condition)
+    return False
+
+
 def render_static_perception_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
     npc_actor_proven: bool,
@@ -27635,60 +27656,15 @@ def render_eoc_condition_expression(
         (" or " in npc_query_actor or " and " in npc_query_actor) else
         npc_query_actor
     )
-    if condition in ("u_train_spells", "npc_train_spells"):
-        if (
-            not training_pair_proven or
-            npc_actor_expression != "context.actors.beta"
-        ):
-            return None
-        if condition == "u_train_spells":
-            teacher, student = "actor", "context.actors.beta"
-        else:
-            teacher, student = "context.actors.beta", "actor"
-        alpha_is_character = (
-            'actor ~= nil and actor.kind == "creature" and '
-            '(actor.subtype == "avatar" or actor.subtype == "character" '
-            'or actor.subtype == "npc")'
-        )
-        beta_is_character = (
-            "context ~= nil and context.actors ~= nil and "
-            "context.actors.beta ~= nil and "
-            'context.actors.beta.kind == "creature" and '
-            '(context.actors.beta.subtype == "avatar" or '
-            'context.actors.beta.subtype == "character" or '
-            'context.actors.beta.subtype == "npc")'
-        )
-        return (
-            f"({alpha_is_character}) and ({beta_is_character}) and "
-            "service_value(services.characters.training_offers("
-            f"{teacher}, {student})).spell_count > 0"
-        )
-    if condition in ("u_train_styles", "npc_train_styles"):
-        # Native style-offer checks compare alpha and beta talkers.  Keep the
-        # mapping only when both are explicit Characters and beta is present;
-        # an NPC event's primary actor alone does not prove that pair.
-        if (
-            not generic_character_actor_proven or
-            npc_actor_expression != "context.actors.beta"
-        ):
-            return None
-        character_subtype = (
-            '({actor}.subtype == "avatar" or {actor}.subtype == "character" '
-            'or {actor}.subtype == "npc")'
-        )
-        teacher, student = (
-            ("actor", npc_actor_expression)
-            if condition == "u_train_styles" else
-            (npc_actor_expression, "actor")
-        )
-        return (
-            "context ~= nil and context.actors ~= nil and "
-            "context.actors.beta ~= nil and "
-            f"actor ~= nil and {character_subtype.format(actor='actor')} and "
-            f"{character_subtype.format(actor=npc_actor_expression)} and "
-            f"service_value(services.npcs.training.offerings({teacher}, "
-            f"{student})).style_count > 0"
-        )
+    if condition in (
+        "u_train_styles", "npc_train_styles",
+        "u_train_spells", "npc_train_spells",
+    ):
+        # Native predicates compare training offers between both const_dialogue
+        # talkers.  The current topic adapter does not invoke response EOCs or
+        # pass a live alpha/beta pair to generated EOC functions, so content
+        # provenance alone cannot authorize either training service here.
+        return None
     # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
     # Native const_actor(true) does not fall back to alpha when beta is absent,
     # so only an expression that explicitly names the beta can be queried.
@@ -30159,6 +30135,13 @@ def render_eoc(
             condition_todo = (
                 "translate u_has_camp only with an explicit camp handle and "
                 "authorized manager handle"
+            )
+        elif contains_training_offer_condition(raw_condition):
+            condition_todo = (
+                "translate train_styles/train_spells only after a supported "
+                "EOC callback supplies the native alpha and beta as live "
+                "Character handles; talk-topic response EOC callbacks are "
+                "not yet wired"
             )
         elif contains_line_of_sight_condition(raw_condition):
             condition_todo = (
