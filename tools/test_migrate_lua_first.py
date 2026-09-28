@@ -37282,8 +37282,9 @@ assert(context.conditions.check==original and context.conditions.check() and con
         })
         trap_main = migrate_lua_first.render_eoc(trap_source, trap_result)
         self.assertNotIn("services.map.edit(", trap_main)
-        self.assertIn("set_trap needs the native loaded-area and built-in-trap", trap_main)
-        trap_todo = next(todo for todo in trap_result.todos if "set_trap needs" in todo.message)
+        trap_gap = "set_trap needs native radius-based trap_set semantics"
+        self.assertIn(trap_gap, trap_main)
+        trap_todo = next(todo for todo in trap_result.todos if trap_gap in todo.message)
         self.assertEqual(trap_todo.category, "platform_gap")
 
         terrain = migrate_lua_first.render_static_set_terrain_or_furniture(
@@ -37348,6 +37349,62 @@ assert(context.conditions.check==original and context.conditions.check() and con
             "services.world.remove_field(",
         ):
             self.assertNotIn(legacy_map_write, main + holder_main)
+
+    def test_real_portal_storm_traps_keep_native_map_semantics(self) -> None:
+        source_path = (
+            REPOSITORY_ROOT / "data/json/effects_on_condition/nether_eocs/"
+            "portal_storm_effect_on_condition.json"
+        )
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([source_path])
+            if entry.value.get("id") == "EOC_PORTAL_STORM_DUNGEON_TELEPORTER"
+        )
+        effects = source.value["effect"]
+        trap_entries = [
+            (index, effect) for index, effect in enumerate(effects)
+            if isinstance(effect, dict) and "set_trap" in effect
+        ]
+        self.assertEqual([index for index, _ in trap_entries], [1, 5])
+        first_index, first_trap = trap_entries[0]
+        last_index, last_trap = trap_entries[1]
+        self.assertEqual(effects[first_index - 1], {
+            "u_location_variable": {"context_val": "portal_teleporter_loc"},
+        })
+        self.assertEqual(first_trap["location"], {
+            "context_val": "portal_teleporter_loc",
+        })
+        search_variable = effects[first_index + 1]
+        self.assertEqual(search_variable["u_location_variable"], {
+            "context_val": "portal_storm_dungeon_teleportation",
+        })
+        self.assertTrue(search_variable["target_params"]["random"])
+        self.assertEqual(effects[last_index - 1]["u_teleport"], {
+            "context_val": "portal_storm_dungeon_teleportation",
+        })
+        self.assertEqual(last_trap["location"], {
+            "context_val": "portal_storm_dungeon_teleportation",
+        })
+        self.assertEqual(first_trap["radius"], 0)
+        self.assertEqual(last_trap["radius"], 0)
+
+        # Native f_set_trap still projects each location into the current
+        # bubble and calls trap_set; map.edit cannot preserve trap_set's
+        # logged no-mutation cases.  This real chain also includes a random
+        # OMT target and teleport, so neither context location is an isolated
+        # proof of a map-tile edit.
+        self.assertIsNone(
+            migrate_lua_first.render_static_location_variable(
+                search_variable, "u_location_variable", True, False
+            )
+        )
+        result = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(source, result)
+        trap_gap = "set_trap needs native radius-based trap_set semantics"
+        self.assertEqual(main.count(trap_gap), 2)
+        self.assertNotIn("services.map.edit(", main)
+        trap_todos = [todo for todo in result.todos if trap_gap in todo.message]
+        self.assertEqual(len(trap_todos), 2)
+        self.assertTrue(all(todo.category == "platform_gap" for todo in trap_todos))
 
     def test_pickup_migration_keeps_unproven_var_info_as_manual_todo(
         self,
@@ -37473,7 +37530,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "map mutation requires one explicitly typed abs_ms coordinate; "
                 "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
             )
-            trap_gap = "set_trap needs the native loaded-area and built-in-trap"
+            trap_gap = "set_trap needs native radius-based trap_set semantics"
             self.assertEqual(main.count(todo), len(bad_coordinates) - 1)
             self.assertEqual(main.count(trap_gap), 1)
             self.assertNotIn("services.map.tile(", main)
