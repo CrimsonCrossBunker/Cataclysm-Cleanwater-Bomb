@@ -19232,8 +19232,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 main,
             )
             self.assertIn(
-                "services.npcs.add_faction_rep(\n        actor, 2)",
+                'services.creatures.snapshot(actor)).kind == "npc" then',
                 main,
+            )
+            self.assertIn(
+                "services.npcs.add_faction_rep(\n            actor, 2)", main
             )
             self.assertIn("local npc_state = service_value(services.npcs.get(actor))", main)
             self.assertIn("debt = debt + (npc_state.opinion.anger) * 1", main)
@@ -24449,7 +24452,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                 report,
             )
 
-    def test_proven_beta_faction_trust_uses_the_exact_npc_handle(self) -> None:
+    def test_proven_npc_event_faction_trust_preserves_alpha_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -24496,7 +24499,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("typed character-faction service", main)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_u_faction_trust_uses_only_an_exact_beta_talker(self) -> None:
+    def test_u_faction_trust_requires_the_native_alpha_fallback_source(self) -> None:
         exact_beta = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(
                 Path("source.json"), 0, {
@@ -24506,11 +24509,8 @@ assert(not pcall(function() return U_EXPRESSION end))
             migrate_lua_first.MigrationResult(),
             talker_pair_ids=frozenset({"beta_trust"}),
         )
-        self.assertIn(
-            "services.characters.add_faction_trust(\n"
-            "        context.actors.beta, 5)",
-            exact_beta,
-        )
+        self.assertNotIn("services.characters.add_faction_trust(", exact_beta)
+        self.assertIn("TODO: translate faction trust", exact_beta)
 
         fallback = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(
@@ -24527,6 +24527,212 @@ assert(not pcall(function() return U_EXPRESSION end))
         )
         self.assertNotIn("services.characters.add_faction_trust(", fallback)
         self.assertIn("TODO: translate faction trust", fallback)
+
+    def test_faction_numeric_effects_keep_only_static_native_integer_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "rep_fraction_truncates_toward_zero",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_faction_rep": -2.9},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trust_integral_float",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_add_faction_trust": 5.0},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trust_fraction_requires_current_state",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_add_faction_trust": -2.9},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_rep",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {
+                                "u_faction_rep": {"context_val": "delta"}
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_trust",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {
+                                "u_add_faction_trust": {"context_val": "delta"}
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "non_npc_event_rep",
+                            "required_event": "character_melee_attacks_character",
+                            "effect": {"u_faction_rep": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "rep_out_of_service_range",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_faction_rep": 1000001},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trust_out_of_service_range",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_add_faction_trust": -1000001.0},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "faction_numeric_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertIn(
+                "services.npcs.add_faction_rep(\n"
+                "            actor, -2)",
+                main,
+            )
+            self.assertIn(
+                "services.characters.add_faction_trust(\n"
+                "        actor, 5)",
+                main,
+            )
+            self.assertEqual(
+                main.count("services.npcs.add_faction_rep("), 1
+            )
+            self.assertEqual(
+                main.count("services.characters.add_faction_trust("), 1
+            )
+            self.assertIn("native actor(true) falls back to alpha", main)
+            self.assertNotIn("math.floor(", main)
+            self.assertNotIn("math.max(-1000000", main)
+            self.assertIn("TODO: translate faction trust", main)
+            self.assertIn("TODO: translate faction reputation", main)
+            self.assertNotIn("services.characters.avatar()", main)
+
+    def test_faction_numeric_event_proof_rejects_reentered_callbacks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "reentered_rep",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_faction_rep": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "reentered_trust",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_add_faction_trust": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "rep_child_caller",
+                            "required_event": "game_start",
+                            "effect": {"run_eocs": "reentered_rep"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "trust_child_caller",
+                            "required_event": "game_start",
+                            "effect": {"run_eocs": "reentered_trust"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "faction_reentry_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.npcs.add_faction_rep(", main)
+            self.assertNotIn("services.characters.add_faction_trust(", main)
+            self.assertIn("TODO: translate faction reputation", main)
+            self.assertIn("TODO: translate faction trust", main)
+
+    def test_faction_numeric_event_proof_rejects_same_corpus_reentry(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "hostility_rep",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_faction_rep": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "hostility_trust",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_add_faction_trust": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "emit_hostility_again",
+                            "required_event": "game_start",
+                            "effect": {
+                                "trigger_event": "npc_becomes_hostile",
+                                "args": ["unknown_npc", "unknown"],
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "faction_event_reentry_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.npcs.add_faction_rep(", main)
+            self.assertNotIn("services.characters.add_faction_trust(", main)
+            self.assertIn("TODO: translate faction reputation", main)
+            self.assertIn("TODO: translate faction trust", main)
+
+    def test_faction_numeric_event_proof_rejects_dynamic_child_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_child_target",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {"u_faction_rep": 2},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_child_dispatcher",
+                            "effect": {
+                                "run_eocs": {"context_val": "child_eoc"}
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "faction_dynamic_reentry_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.npcs.add_faction_rep(", main)
+            self.assertIn("TODO: translate faction reputation", main)
 
     def test_unproven_npc_faction_effects_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

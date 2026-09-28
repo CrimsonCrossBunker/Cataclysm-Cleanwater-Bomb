@@ -30,6 +30,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "faction.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "json_loader.h"
@@ -194,6 +195,124 @@ TEST_CASE( "lua_platform_first_topic_matches_native_beta_alpha_fallback",
     CHECK( result["value"]["before"].get<std::string>() == "TALK_BEFORE" );
     CHECK( result["value"]["after"].get<std::string>() == "TALK_AFTER" );
     CHECK( native.chatbin.first_topic == fixture.other.chatbin.first_topic );
+}
+
+TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
+           "[lua][platform][npc][faction][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.setID( character_id( 3199 ), true );
+    faction *const shared_faction = native.get_faction();
+    REQUIRE( shared_faction != nullptr );
+    REQUIRE( fixture.other.get_faction() == shared_faction );
+
+    struct faction_restore {
+        faction &value;
+        int likes;
+        int respects;
+        int trusts;
+        bool lone_wolf;
+        ~faction_restore() {
+            value.likes_u = likes;
+            value.respects_u = respects;
+            value.trusts_u = trusts;
+            value.lone_wolf_faction = lone_wolf;
+        }
+    } restore{ *shared_faction, shared_faction->likes_u, shared_faction->respects_u,
+               shared_faction->trusts_u, shared_faction->lone_wolf_faction };
+    shared_faction->lone_wolf_faction = false;
+
+    dialogue native_context( get_talker_for( native ) );
+    CHECK( native_context.has_alpha );
+    CHECK_FALSE( native_context.has_beta );
+    const auto run_native = [&]( const std::string &source ) {
+        const JsonValue value = json_loader::from_string( source );
+        talk_effect_t effect;
+        effect.parse_sub_effect( value.get_object(), "faction_numeric_semantics" );
+        for( const talk_effect_fun_t &operation : effect.effects ) {
+            operation( native_context );
+        }
+    };
+
+    shared_faction->likes_u = 10;
+    shared_faction->respects_u = 20;
+    shared_faction->trusts_u = 30;
+    run_native( R"({"u_faction_rep":-2.9})" );
+    const int native_likes = shared_faction->likes_u;
+    const int native_respects = shared_faction->respects_u;
+    const int native_rep_trust = shared_faction->trusts_u;
+    CHECK( native_likes == 8 );
+    CHECK( native_respects == 18 );
+    CHECK( native_rep_trust == 28 );
+
+    shared_faction->likes_u = 10;
+    shared_faction->respects_u = 20;
+    shared_faction->trusts_u = 30;
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+        npcs, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    const sol::protected_function add_rep = npcs["add_faction_rep"];
+    const sol::protected_function_result rep_call = add_rep( fixture.handle( true ), -2 );
+    REQUIRE( rep_call.valid() );
+    REQUIRE( rep_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( shared_faction->likes_u == native_likes );
+    CHECK( shared_faction->respects_u == native_respects );
+    CHECK( shared_faction->trusts_u == native_rep_trust );
+
+    shared_faction->trusts_u = -10;
+    run_native( R"({"u_add_faction_trust":5.0})" );
+    const int native_integral_trust = shared_faction->trusts_u;
+    CHECK( native_integral_trust == -5 );
+    shared_faction->trusts_u = -10;
+    cata::lua_platform::install_creature_api(
+        fixture.services, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    const sol::protected_function add_trust =
+        fixture.services["characters"]["add_faction_trust"];
+    const sol::protected_function_result trust_call = add_trust(
+                fixture.handle( true ), 5 );
+    REQUIRE( trust_call.valid() );
+    REQUIRE( trust_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( shared_faction->trusts_u == native_integral_trust );
+
+    shared_faction->trusts_u = -10;
+    run_native( R"({"u_add_faction_trust":1.9})" );
+    const int native_fractional_trust = shared_faction->trusts_u;
+    shared_faction->trusts_u = -10;
+    const sol::protected_function_result truncated_delta_call = add_trust(
+                fixture.handle( true ), 1 );
+    REQUIRE( truncated_delta_call.valid() );
+    REQUIRE( truncated_delta_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( native_fractional_trust == -8 );
+    CHECK( shared_faction->trusts_u == -9 );
+
+    shared_faction->likes_u = 10;
+    shared_faction->respects_u = 20;
+    shared_faction->trusts_u = 30;
+    shared_faction->lone_wolf_faction = true;
+    run_native( R"({"u_faction_rep":4})" );
+    CHECK( shared_faction->likes_u == 10 );
+    CHECK( shared_faction->respects_u == 20 );
+    CHECK( shared_faction->trusts_u == 30 );
+    shared_faction->likes_u = 10;
+    shared_faction->respects_u = 20;
+    shared_faction->trusts_u = 30;
+    const sol::protected_function_result lone_wolf_call = add_rep(
+                fixture.handle( true ), 4 );
+    REQUIRE( lone_wolf_call.valid() );
+    REQUIRE( lone_wolf_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( shared_faction->likes_u == 10 );
+    CHECK( shared_faction->respects_u == 20 );
+    CHECK( shared_faction->trusts_u == 30 );
 }
 
 TEST_CASE( "native_open_dialogue_skips_ui_for_non_avatar_alpha",
