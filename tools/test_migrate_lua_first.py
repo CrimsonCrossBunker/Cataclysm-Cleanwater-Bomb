@@ -879,7 +879,7 @@ assert(calls == 1)
         npc_event_eoc = migrate_lua_first.SourceObject(
             Path("source.json"), 2, {
                 "type": "effect_on_condition", "id": "single_npc_visibility",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": "player_see_npc",
                 "effect": {"message": "visible"},
             },
@@ -4524,7 +4524,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": "npc_effect",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_effect": "downed"},
                             "effect": {"message": "npc"},
                         },
@@ -4663,7 +4663,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         event_eoc = migrate_lua_first.SourceObject(
             Path("source.json"), 4, {
                 "type": "effect_on_condition", "id": "unpaired_npc_effect",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": {"and": [
                     {
                         "npc_has_effect": "bleed", "bodypart": "arm_l",
@@ -4810,7 +4810,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": "player_view_beta",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "player_see_npc",
                             "effect": {"message": "visible"},
                         },
@@ -5269,7 +5269,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {
                     "type": "effect_on_condition",
                     "id": "add_hostile_npc_wound",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": {
                         "npc_add_wound": "arm_l",
                         "wound_id": "scratch",
@@ -5278,7 +5278,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {
                     "type": "effect_on_condition",
                     "id": "remove_hostile_npc_wound",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": {
                         "npc_remove_wound": "arm_l",
                         "wound_id": ["scratch"],
@@ -5739,7 +5739,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": "trigger_event_unproven_beta",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "trigger_event": "u_var_changed",
                                 "args": ["beta", {"npc_val": "payload"}],
@@ -6105,7 +6105,7 @@ assert(#events == 9)
                 },
                 {
                     "type": "effect_on_condition", "id": "npc_add_literal",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": {"npc_add_var": "context_val", "time": True},
                 },
                 {
@@ -6120,7 +6120,7 @@ assert(#events == 9)
                 },
                 {
                     "type": "effect_on_condition", "id": "npc_remove_literal",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": {"npc_lose_var": "context_val"},
                 },
             ]), encoding="utf-8")
@@ -6392,7 +6392,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "math_alpha_only",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"math": ["n_math_without_beta = 4"]},
                         },
                         {
@@ -6467,7 +6467,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_activity",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_assign_activity": "ACT_WAIT",
                                 "duration": "20 minutes",
@@ -6560,7 +6560,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_target_practice",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_assign_activity": "ACT_TARGET_PRACTICE"},
                     },
                     {
@@ -7635,13 +7635,13 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_learn_recipe",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_learn_recipe": "cudgel_test_no_tools"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_forget_recipe",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_forget_recipe": "CC_WEAPON",
                             "category": True,
@@ -7906,7 +7906,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_alpha_u_martial_art",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_learn_martial_art": "style_karate"},
                         },
                         {
@@ -8062,7 +8062,7 @@ assert(#events == 9)
                 {
                     "type": "effect_on_condition",
                     "id": "npc_hostility_martial_art",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": [
                         {"npc_learn_martial_art": "style_karate"},
                         {"npc_forget_martial_art": "style_karate"},
@@ -8175,7 +8175,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_hostile_morale_add",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_add_morale": "morale_feeling_good",
                             "bonus": -12,
@@ -8185,7 +8185,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_hostile_morale_remove",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_lose_morale": "morale_feeling_good"},
                     },
                     {
@@ -8454,7 +8454,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_hostile",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "condition": {
                             "and": [
                                 "npc_is_travelling",
@@ -8545,25 +8545,25 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_u_wet",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"u_add_wet": 12},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_fractional_wet",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"u_add_wet": 2.5},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_dynamic_wet",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"u_add_wet": {"context_val": "amount"}},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_beta_wet",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_add_wet": 12},
                     },
                     {
@@ -8865,7 +8865,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_effect",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_add_effect": "downed",
                                 "duration": 40,
@@ -8875,7 +8875,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_effect_permanent",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_add_effect": "bleed",
                                 "duration": "PERMANENT",
@@ -8905,13 +8905,13 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_trait",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_add_trait": "TOUGH"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_lose_trait",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_lose_trait": "TOUGH"},
                         },
                         {
@@ -9236,7 +9236,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_mutate",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_mutate": 1},
                                 {"npc_mutate_category": "HUMAN"},
@@ -9291,13 +9291,13 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_npc_mutation_chance",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_mutate": {"npc_val": "chance"}},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_npc_mutation_selectors",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_mutate_category": {"u_val": "next_category"}},
                                 {
@@ -9445,7 +9445,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "static_npc_mutation_callback",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_mutate_category": "HUMAN"},
                     },
                     {
@@ -9536,28 +9536,28 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_strong",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_strength": 8},
                             "effect": {"message": "npc strong"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_dext",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_dexterity": 6},
                             "effect": {"message": "npc dexterous"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_int",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_intelligence": 7},
                             "effect": {"message": "npc smart"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_per",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_perception": 9},
                             "effect": {"message": "npc perceptive"},
                         },
@@ -9644,14 +9644,14 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_warm",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_warm",
                             "effect": {"message": "npc warm"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_deaf",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_deaf",
                             "effect": {"message": "npc deaf"},
                         },
@@ -9732,14 +9732,14 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_alive_proven",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_alive",
                             "effect": {"message": "npc alive proven"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "hostile_alive",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "u_is_alive",
                             "effect": {"message": "hostile alive"},
                         },
@@ -9798,7 +9798,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_temp",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "npc_has_part_temp": 0,
                                 "bodypart": "arm_l",
@@ -9815,7 +9815,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_underwater",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_underwater",
                             "effect": {"message": "npc underwater"},
                         },
@@ -10307,7 +10307,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "trait",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"npc_has_trait": "ELFAEYES"},
@@ -10320,7 +10320,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "any_trait",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "npc_has_any_trait": ["ELFAEYES", "URSINE_EYE"]
                             },
@@ -10329,14 +10329,14 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "martial",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_martial_art": "style_karate"},
                             "effect": {"message": "martial"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "using_martial",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "npc_using_martial_art": "style_karate"
                             },
@@ -10345,35 +10345,35 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "proficiency",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_proficiency": "prof_knapping"},
                             "effect": {"message": "prof"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "bionics",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_bionics": "bio_armor_arms"},
                             "effect": {"message": "bionics"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "item",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_item": "bandages"},
                             "effect": {"message": "item"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "move",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_move_mode": "crouch"},
                             "effect": {"message": "move"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_trait",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "npc_has_trait": {"u_val": "trait_var"}
                             },
@@ -10382,42 +10382,42 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "safe_space",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_at_safe_space",
                             "effect": {"message": "safe"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_profession",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_profession": "unemployed"},
                             "effect": {"message": "prof"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_flag",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_flag": "MUTE"},
                             "effect": {"message": "flag"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_wearing",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_is_wearing": "backpack"},
                             "effect": {"message": "wearing"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_pickup",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_has_pickup_list",
                             "effect": {"message": "pickup"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_class",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_has_class": "NC_BOUNTY_HUNTER"},
                             "effect": {"message": "class"},
                         },
@@ -10495,7 +10495,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_msg",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_message": "hello"},
                         },
                         {
@@ -10519,13 +10519,13 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_activate",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_activate_trait": "ELFAEYES"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_deactivate",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_deactivate_trait": "ELFAEYES"},
                         },
                         {
@@ -10654,70 +10654,70 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_male_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_male",
                             "effect": {"message": "npc_male"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_female_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_female",
                             "effect": {"message": "npc_female"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_char_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_character",
                             "effect": {"message": "npc_char"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_npc_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_npc",
                             "effect": {"message": "npc_npc"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_outside_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_outside",
                             "effect": {"message": "npc_outside"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_aim_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_aim_rule": "AIM_WHEN_CONVENIENT"},
                             "effect": {"message": "npc_aim"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_engage_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_engagement_rule": "ENGAGE_ALL"},
                             "effect": {"message": "npc_engage"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_reserve_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_cbm_reserve_rule": "CBM_RESERVE_ALL"},
                             "effect": {"message": "npc_reserve"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_recharge_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_cbm_recharge_rule": "CBM_RECHARGE_ALL"},
                             "effect": {"message": "npc_recharge"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "invalid_aim_eoc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_aim_rule": "UNKNOWN_RULE"},
                             "effect": {"message": "invalid_aim"},
                         },
@@ -10886,7 +10886,7 @@ assert(#events == 9)
             event_eoc = migrate_lua_first.SourceObject(
                 Path("source.json"), 10 + index, {
                     "type": "effect_on_condition", "id": f"event_{condition}",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "condition": condition, "effect": {"message": "state"},
                 },
             )
@@ -11118,7 +11118,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "npc_rule_effects",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             {"clear_npc_rule": "allow_sleep"},
                             {"set_npc_rule": "allow_bash"},
@@ -11210,7 +11210,7 @@ assert(not available())
                 {
                     "type": "effect_on_condition",
                     "id": "npc_rule_reused",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": rule_effects,
                 },
                 {
@@ -11224,7 +11224,7 @@ assert(not available())
                 {
                     "type": "effect_on_condition",
                     "id": "npc_rule_event",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": rule_effects,
                 },
                 {
@@ -11288,7 +11288,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_entity_and_effects",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     "npc_exists",
@@ -11315,7 +11315,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "unproven_presence",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "u_has_items",
                             "effect": {"message": "unproven"},
                         },
@@ -11385,7 +11385,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_movement_vehicle_and_missions",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"not": {"npc_rule": "RULE"}},
@@ -11580,7 +11580,7 @@ assert(not available())
             Path("source.json"), 3, {
                 "type": "effect_on_condition",
                 "id": "npc_alpha_is_not_beta",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": {"npc_rule": "allow_bash"},
                 "effect": {"message": "no native beta"},
             },
@@ -13021,7 +13021,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "event_beta_safe_space",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "condition": "npc_at_safe_space",
                         "effect": [],
                     },
@@ -13212,7 +13212,7 @@ assert(not available())
                 json.dumps({
                     "type": "effect_on_condition",
                     "id": "npc_activity_event_without_beta",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "condition": "npc_has_activity",
                     "effect": {"message": "native beta activity"},
                 }),
@@ -13847,7 +13847,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_outside_proven",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": "npc_is_outside",
                             "effect": {"message": "npc outside"},
                         },
@@ -14153,7 +14153,7 @@ assert(not available())
                 json.dumps({
                     "type": "effect_on_condition",
                     "id": "npc_assigned_camp",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "condition": "npc_has_assigned_camp",
                     "effect": {"message": "assigned"},
                 }),
@@ -14258,7 +14258,7 @@ assert(not available())
         alpha_only = migrate_lua_first.SourceObject(
             Path("source.json"), 10, {
                 "type": "effect_on_condition", "id": "alpha_assigned_camp",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": "npc_has_assigned_camp",
                 "effect": {"message": "alpha is not beta"},
             },
@@ -17689,7 +17689,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_attitude_effects",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "npc_wants_to_talk",
                                 "u_wants_to_talk",
@@ -18128,7 +18128,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "single_actor_training",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "condition": {
                             "or": ["npc_train_styles", "npc_train_spells"],
                         },
@@ -18320,7 +18320,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_senses_and_wake",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     "npc_can_see",
@@ -18439,7 +18439,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_denials_and_attitudes",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"not": "npc_train_skills"},
@@ -18488,7 +18488,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "exact_npc_refusal",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": "deny_equipment",
                         },
                         {
@@ -18520,7 +18520,7 @@ assert(not available())
             migrate_lua_first.SourceObject(
                 Path("source.json"), 0, {
                     "type": "effect_on_condition", "id": "event_wrapped",
-                    "required_event": "npc_becomes_hostile", "effect": effects,
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": effects,
                 },
             ),
             migrate_lua_first.MigrationResult(),
@@ -18791,7 +18791,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_teleport_and_damage",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"u_teleport": {}},
                                 {"npc_teleport": {}},
@@ -19150,7 +19150,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_perception",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     "u_see_npc_loc",
@@ -20087,7 +20087,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "npc_mission_provider",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             {"offer_mission": ["MISSION_ONE", "MISSION_TWO"]},
                             "assign_mission",
@@ -20182,7 +20182,7 @@ assert(not available())
         ]
         event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "event_missions",
-            "required_event": "npc_becomes_hostile", "effect": effects,
+            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": effects,
         })
         generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "generic_pair_missions",
@@ -20283,7 +20283,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "camp_worker_actions",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             "start_camp",
                             "assign_camp",
@@ -20422,7 +20422,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "legacy_camp_task_actions",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 "start_camp",
                                 "assign_camp",
@@ -20818,7 +20818,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "npc_service_menu_rules",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": "npc_rules_menu",
                     },
                 ]),
@@ -20848,7 +20848,7 @@ assert(not available())
         event_only = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition", "id": "hostile_npc_talker_actions",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "effect": ["npc_rules_menu", "npc_wants_to_talk"],
             }), event_result)
         self.assertIn("local actor = actor_override or context.actors.npc", event_only)
@@ -20892,7 +20892,7 @@ assert(not available())
     def test_non_wrapped_npc_talker_actions_reject_unproven_generic_pair(self) -> None:
         eoc = migrate_lua_first.SourceObject(Path("source.json"), 1, {
             "type": "effect_on_condition", "id": "generic_pair_npc_talker_actions",
-            "required_event": "npc_becomes_hostile",
+            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
             "effect": ["npc_rules_menu", "npc_wants_to_talk"],
         })
         topic = migrate_lua_first.SourceObject(Path("source.json"), 0, {
@@ -20987,7 +20987,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_open_noop",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": "open_dialogue",
                     },
                     {
@@ -21028,7 +21028,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "npc_radio_without_avatar_handle",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": "npc_make_radio_representative",
                     }
                 ),
@@ -21095,7 +21095,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_event_query",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"u_query": "Continue?"},
                             "effect": {"message": "npc query"},
                         },
@@ -21202,7 +21202,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "npc_pickup",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_pickup_items": {"context_val": "npc_pos"},
                                 "max_mass": 2500,
@@ -21428,7 +21428,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_selection_services",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             "bionic_install_allies",
                             "bionic_remove_allies",
@@ -21455,7 +21455,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             Path("scheduled_item_offer.json"), 0, {
                 "type": "effect_on_condition",
                 "id": "scheduled_npc_item_offer",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "effect": selectors,
             },
         )
@@ -21519,7 +21519,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_equipment_trade",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             "drop_stolen_item",
                             {"give_equipment": {"allowance": 500}},
@@ -21672,7 +21672,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_roll_remainder_spell",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_roll_remainder": ["SPELL_A"],
                                 "type": "spell",
@@ -21816,7 +21816,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {
                     "type": "effect_on_condition",
                     "id": "bounded_npc_teleport",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": [
                         {"npc_teleport": {"npc_val": "npc_pos"}},
                     ],
@@ -22152,7 +22152,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_fault_and_item",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"custom_light_level": 50},
                                 {"u_activate": "item_id"},
@@ -22565,7 +22565,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_body_part_pick_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_pick_bodypart": {"npc_val": "picked"},
                                 "wounded": False,
@@ -22612,7 +22612,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "unsafe_body_part_pick_filter",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_pick_bodypart": {"npc_val": "picked"},
                                 "whitelist_flag": "WET",
@@ -22621,7 +22621,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "unsafe_body_part_pick_type_filters",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_pick_bodypart": {"npc_val": "picked"},
                                 "whitelist_type": ["arm"],
@@ -23615,7 +23615,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "player_weapon_drop_npc_event",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": "player_weapon_drop",
                         },
                     ]
@@ -23718,7 +23718,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         single_npc_event = migrate_lua_first.SourceObject(
             Path("source.json"), 2, {
                 "type": "effect_on_condition", "id": "single_npc_stolen_item",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": "npc_has_stolen_item",
                 "effect": {"message": "stolen"},
             },
@@ -23898,7 +23898,7 @@ assert(calls == 0)
                         {
                             "type": "effect_on_condition",
                             "id": "drop_stolen_item_npc_event",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": "drop_stolen_item",
                         },
                     ]
@@ -23944,7 +23944,7 @@ assert(calls == 0)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_drop_weapon_npc_event",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": "drop_weapon",
                         },
                         {
@@ -24138,7 +24138,7 @@ assert(calls == 1)
         npc_event_eoc = migrate_lua_first.SourceObject(
             Path("source.json"), 2, {
                 "type": "effect_on_condition", "id": "single_npc_stow",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "condition": "npc_can_stow_weapon",
                 "effect": {"message": "stowed"},
             },
@@ -24280,7 +24280,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_world_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_consume_item": "water_clean", "count": 1},
                                 {
@@ -24567,7 +24567,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "static_npc_consume_sum",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {
                                     "npc_consume_item_sum": [
@@ -25345,7 +25345,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "character_actions_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_attack": "technique"},
                                 {"u_attack": "technique"},
@@ -25571,7 +25571,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "hostile_npc_mutations",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_lose_category": "CATTLE"},
                                 {"npc_lose_mutation_type": "ACCLIMATIZATION"},
@@ -25626,7 +25626,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "hostile_npc_mutations",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"npc_lose_category": "CATTLE"},
                                 {"npc_lose_mutation_type": "ACCLIMATIZATION"},
@@ -25697,7 +25697,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "dynamic_combat_options",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             {
                                 "npc_attack": {"context_val": "technique"},
@@ -26334,7 +26334,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "sound_query_message",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "message": "sound gates the query",
                             "sound": True,
@@ -26383,7 +26383,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "exact_npc_message",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_message": "ignored by native"},
                     },
                     {
@@ -26807,7 +26807,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "visibility_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"and": ["npc_see_u", "u_see_npc"]},
                             "effect": {"message": "visible"},
                         },
@@ -26854,7 +26854,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "npc_omt",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_at_om_location": "forest"},
                             "effect": {"message": "npc"},
                         },
@@ -26945,7 +26945,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "npc_near_omt",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "npc_near_om_location": "forest",
                                 "range": 1,
@@ -27074,7 +27074,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "ordinary_event_has_no_beta",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "condition": {"npc_near_om_location": "field"},
                         "effect": {"message": "ordinary event"},
                     },
@@ -27235,7 +27235,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "npc_location_visibility",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"npc_can_see_location": {"context_val": "point"}},
@@ -27283,7 +27283,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "population_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"npc_near_om_location": "forest", "range": 2},
@@ -27579,7 +27579,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition",
             "id": "hostile_npc_mirror",
-            "required_event": "npc_becomes_hostile",
+            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
             "effect": [{
                 "mirror_coordinates": {"npc_val": "output"},
                 "center_var": {"npc_val": "center"},
@@ -27827,7 +27827,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         ]
         event_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "event_vehicle_services",
-            "required_event": "npc_becomes_hostile", "effect": effects,
+            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": effects,
         })
         generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "generic_pair_vehicle_services",
@@ -28010,13 +28010,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "npc_faction_trust",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": 5},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "npc_faction_relation",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_set_fac_relation": "knows your voice",
                                 "set_value_to": False,
@@ -28086,25 +28086,25 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "rep_fraction_truncates_toward_zero",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_faction_rep": -2.9},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "trust_integral_float",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": 5.0},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "trust_fraction_requires_current_state",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": -2.9},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_rep",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "u_faction_rep": {"context_val": "delta"}
                             },
@@ -28112,7 +28112,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_trust",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "u_add_faction_trust": {"context_val": "delta"}
                             },
@@ -28127,13 +28127,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "rep_out_of_service_range",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_faction_rep": 1000001},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "trust_out_of_service_range",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": -1000001.0},
                         },
                     ]
@@ -28177,13 +28177,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "reentered_rep",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_faction_rep": 2},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "reentered_trust",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": 2},
                         },
                         {
@@ -28221,13 +28221,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "hostility_rep",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_faction_rep": 2},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "hostility_trust",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_add_faction_trust": 2},
                         },
                         {
@@ -28262,7 +28262,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_child_target",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"u_faction_rep": 2},
                         },
                         {
@@ -28293,7 +28293,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_npc_faction_trust",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "u_add_faction_trust": {"context_val": "delta"}
                             },
@@ -28301,7 +28301,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "invalid_npc_faction_relation",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_set_fac_relation": "ally"},
                         },
                     ]
@@ -28332,7 +28332,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "u_faction_relation",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "u_set_fac_relation": "knows your voice",
                                 "set_value_to": True,
@@ -28667,7 +28667,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "eoc_batch_30_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     {"npc_has_item": "id1"},
@@ -28718,7 +28718,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "legacy_item_trade",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": [
                             {
                                 "quote_npc_trade_item": "coin",
@@ -28931,7 +28931,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "eoc_batch_31_npc",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {
                                 "and": [
                                     "npc_allies",
@@ -29048,7 +29048,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "static_npc_location_variable",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_location_variable": {"npc_val": "npc_loc"},
                                 "x_adjust": -1,
@@ -29057,7 +29057,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "static_npc_query_tile_noop",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_query_tile": "anywhere",
                                 "target_var": {"npc_val": "unused_tile"},
@@ -29066,7 +29066,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "static_npc_query_omt_noop",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_query_omt": {"npc_val": "unused_omt"},
                                 "message": "unused",
@@ -29126,7 +29126,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "static_npc_adjacent",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {
                                 "npc_choose_adjacent_highlight": {"npc_val": "adjacent"},
                             },
@@ -31053,7 +31053,7 @@ assert(context.data.picked==selected)
             {
                 "type": "effect_on_condition",
                 "id": "npc_map",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "effect": {
                     "npc_map_run_eocs": {"effect": {"u_message": "NPC tile"}},
                     "range": 1,
@@ -31226,7 +31226,7 @@ assert(context.data.picked==selected)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_inventory_owner",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": item_effects["npc_run_inv_eocs"],
                     },
                     {
@@ -31238,7 +31238,7 @@ assert(context.data.picked==selected)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_map_item_owner",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": item_effects["npc_map_run_item_eocs"],
                     },
                 ]),
@@ -32512,7 +32512,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "npc_delayed_target",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": {"npc_add_wet": 10},
                         },
                         {
@@ -33270,7 +33270,7 @@ assert(#messages==2 and messages[2]=="target")
             Path("source.json"), 0, {
                 "type": "effect_on_condition",
                 "id": "npc_alpha_named_beta_condition",
-                "required_event": "npc_becomes_hostile",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                 "effect": {
                     "set_condition": "named",
                     "condition": {"npc_has_trait": "QUICK"},
@@ -36488,7 +36488,7 @@ assert(#calls==0)
                 root = Path(temporary)
                 (root / "source.json").write_text(json.dumps([{
                     "type": "effect_on_condition", "id": "control_gap",
-                    "required_event": "npc_becomes_hostile", "effect": [effect],
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": [effect],
                 }]), encoding="utf-8")
                 result = migrate_lua_first.migrate(
                     migrate_lua_first.load_objects([root / "source.json"]), "control_gap")
@@ -36606,7 +36606,7 @@ assert(#calls==0)
                 json.dumps({
                     "type": "effect_on_condition",
                     "id": "control_with_callbacks",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": {
                         "take_control": {},
                         "true_eocs": "after_control",
@@ -36785,7 +36785,7 @@ assert(#calls==1)
             migrate_lua_first.SourceObject(
                 Path("source.json"), 0, {
                     "type": "effect_on_condition", "id": "strings",
-                    "required_event": "npc_becomes_hostile", "effect": [
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": [
                         {"npc_change_class": {"context_val": "value"}},
                         {"npc_change_faction": {"context_val": "value"}},
                     ]}), migrate_lua_first.MigrationResult())
@@ -36827,19 +36827,19 @@ end
                     {
                         "type": "effect_on_condition",
                         "id": "safe_topic",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_first_topic": "TALK_SAFE"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "dynamic_topic",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_first_topic": {"context_val": "topic"}},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "unsafe_topic",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_first_topic": "TALK_SAFE\nruntime.handler(\"injected\")",
                         },
@@ -36847,7 +36847,7 @@ end
                     {
                         "type": "effect_on_condition",
                         "id": "empty_topic",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_first_topic": ""},
                     },
                     {
@@ -36859,7 +36859,7 @@ end
                     {
                         "type": "effect_on_condition",
                         "id": "nested_topic",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {"npc_first_topic": "TALK_NESTED"},
                     },
                     {
@@ -36898,7 +36898,7 @@ end
     def test_radio_representative_routes_owner_and_propagates_failure(self) -> None:
         rendered = migrate_lua_first.render_eoc(migrate_lua_first.SourceObject(
             Path("source.json"), 0, {"type": "effect_on_condition", "id": "radio",
-                                     "required_event": "npc_becomes_hostile",
+                                     "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                                      "effect": ["npc_make_radio_representative"]}),
             migrate_lua_first.MigrationResult())
         script = r"""
@@ -37032,7 +37032,7 @@ prices={};draws={};limits={};assert(choose()==nil and #limits==0)
         event_only = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition", "id": "event_equipment_gift",
-                "required_event": "npc_becomes_hostile", "effect": "give_equipment",
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": "give_equipment",
             }), event_result)
         self.assertNotIn("services.trade.quote(provider, recipient", event_only)
         self.assertIn("TODO: translate the equipment allowance", event_only)
@@ -37054,7 +37054,7 @@ prices={};draws={};limits={};assert(choose()==nil and #limits==0)
         event_only = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition", "id": "event_object_equipment_gift",
-                "required_event": "npc_becomes_hostile", "effect": effect,
+                "eoc_type": "EVENT", "required_event": "npc_becomes_hostile", "effect": effect,
             }), event_result)
         self.assertNotIn("services.trade.quote(provider, recipient", event_only)
         self.assertIn("TODO: translate the equipment allowance", event_only)
@@ -38206,7 +38206,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     {
                         "type": "effect_on_condition",
                         "id": "centered_adjacent",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_choose_adjacent_highlight": {
                                 "context_val": "direction"
@@ -38259,7 +38259,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     {
                         "type": "effect_on_condition",
                         "id": "localized_npc_adjacent",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_choose_adjacent_highlight": {"context_val": "picked"},
                             "failure_message": "No valid tile",
@@ -38308,7 +38308,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     {
                         "type": "effect_on_condition",
                         "id": "referenced_npc_targeting",
-                        "required_event": "npc_becomes_hostile",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                         "effect": {
                             "npc_choose_adjacent_highlight": {
                                 "npc_val": "picked_npc_adjacent",
@@ -39056,7 +39056,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                         {
                             "type": "effect_on_condition",
                             "id": "remove_item_with_npc_event",
-                            "required_event": "npc_becomes_hostile",
+                            "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "effect": [
                                 {"u_remove_item_with": "rock"},
                                 {"npc_remove_item_with": "bandages"},
@@ -39137,7 +39137,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 json.dumps({
                     "type": "effect_on_condition",
                     "id": "native_bulk_trade",
-                    "required_event": "npc_becomes_hostile",
+                    "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                     "effect": [
                         "u_bulk_donate",
                         {"npc_bulk_donate": 2},
