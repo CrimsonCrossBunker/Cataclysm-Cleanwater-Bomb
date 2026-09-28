@@ -19948,14 +19948,14 @@ assert(not available())
             self.assertNotIn("services.npcs.missions.fail_selected", main)
             self.assertNotIn("services.npcs.missions.clear_selected", main)
             self.assertNotIn("services.npcs.missions.claim_selected_reward", main)
-            self.assertIn("typed provider service", main)
+            self.assertIn("direct dialogue beta NPC", main)
             self.assertIn(
                 "string-form remove_active_mission is not registered in the native WRAP map",
                 main,
             )
             self.assertNotIn("services.characters.avatar()", main)
 
-    def test_npc_mission_wrappers_require_direct_talk_topic_pair(self) -> None:
+    def test_npc_mission_wrappers_do_not_infer_pair_from_event_sets(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -19997,24 +19997,16 @@ assert(not available())
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
             self.assertTrue(result.todos)
-            self.assertIn(
-                'services.npcs.missions.offer(\n'
-                '        context.actors.beta, '
-                'services.types.id("mission", "MISSION_OFFER"))',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.missions.add_assigned(\n'
-                '        context.actors.beta, actor, '
-                'services.types.id("mission", "MISSION_ASSIGNED"))',
-                main,
-            )
+            self.assertNotIn("services.npcs.missions.offer(", main)
+            self.assertNotIn("services.npcs.missions.add_assigned(", main)
+            self.assertIn("translate mission offering through the typed NPC mission provider service", main)
+            self.assertIn("translate NPC mission assignment through the typed mission provider service", main)
             for method in (
                 "assign_selected", "succeed_selected", "fail_selected",
                 "clear_selected", "claim_selected_reward",
             ):
                 self.assertNotIn(f"services.npcs.missions.{method}(", main)
-            self.assertIn("direct talk-topic beta NPC", main)
+            self.assertIn("direct dialogue beta NPC", main)
             self.assertNotIn("services.characters.avatar()", main)
 
     def test_static_npc_mission_wrappers_preserve_native_semantics(self) -> None:
@@ -20055,7 +20047,7 @@ assert(not available())
                 "clear_selected", "claim_selected_reward",
             ):
                 self.assertNotIn(f"services.npcs.missions.{method}(", unproven)
-            self.assertIn("direct talk-topic beta NPC", unproven)
+            self.assertIn("direct dialogue beta NPC", unproven)
 
         direct_pair = render_direct_npc_dialogue_pair({
             "type": "effect_on_condition", "id": "dialogue_missions",
