@@ -6198,12 +6198,57 @@ assert(#events == 9)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
             self.assertNotIn("context.data[", main)
-            self.assertIn("u_score", main)
-            self.assertIn("condition TODO: translate the legacy condition into a Lua predicate", report)
+            self.assertNotIn("services.gameplay.math.evaluate", main)
+            self.assertIn("finite numeric-literal comparisons", report)
+
+    def test_math_conditions_lower_only_finite_literal_comparisons(self) -> None:
+        expression = migrate_lua_first.render_static_condition_math(
+            {"math": ["2", " > ", "1"]}
+        )
+        self.assertEqual(
+            expression,
+            f"{migrate_lua_first.lua_number(2.0)} > "
+            f"{migrate_lua_first.lua_number(1.0)}",
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_condition_math(
+                {"math": ["1.25e2", " >= ", "125"]}
+            ),
+            "125 >= 125",
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"math": ["1 >= 0"]}
+            ),
+            "1 >= 0",
+        )
+        for source in (
+            "u_health() > 0",
+            "n_score > 0",
+            "_context_score > 0",
+            "1 / 0 > 0",
+            "NaN > 0",
+            "١ > 0",
+            "1e309 > 0",
+            "1e-999 > 0",
+            "1 + 2 > 0",
+            "9" * 400 + " > 0",
+        ):
+            with self.subTest(source=source):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_condition_math(
+                        {"math": [source]}
+                    )
+                )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"math": ["n_score > 0"]}, avatar_actor_proven=True
+            )
+        )
 
     def test_math_effects_require_native_scope_and_proven_character_roles(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

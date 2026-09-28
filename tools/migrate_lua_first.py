@@ -26212,36 +26212,28 @@ def render_static_context_presence_condition(condition: dict[str, Any]) -> str |
 
 
 def render_static_condition_math(
-    condition: dict[str, Any], actor_proven: bool = False
+    condition: dict[str, Any]
 ) -> str | None:
-    """Render only finite numeric comparisons from the legacy math condition."""
+    """Render only finite numeric-literal comparisons from legacy math conditions."""
     if set(condition) != {"math"}:
         return None
     raw = condition.get("math")
-    if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
+    if not isinstance(raw, list) or not raw or not all(
+        isinstance(part, str) for part in raw
+    ):
         return None
-    raw = ["".join(raw)]
+    expression = "".join(raw)
+    if len(expression) > 8192 or "\0" in expression:
+        return None
+    number = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
     match = re.fullmatch(
-        r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*"
-        r"(==|!=|<=|>=|<|>)\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*",
-        raw[0],
+        rf"[ \t\r\n]*({number})[ \t\r\n]*"
+        rf"(==|!=|<=|>=|<|>)[ \t\r\n]*"
+        rf"({number})[ \t\r\n]*",
+        expression,
     )
     if match is None:
-        expression = raw[0].strip()
-        if not expression or len(expression) > 8192 or "\0" in expression:
-            return None
-        if not actor_proven and re.search(
-            r"\b(?:u_|npc_|n_|u_val\s*\(|npc_val\s*\(|n_val\s*\()", expression
-        ):
-            return None
-        actor_expression = (
-            "actor" if actor_proven else "services.characters.avatar()"
-        )
-        return (
-            "service_value(services.gameplay.math.evaluate("
-            f"{lua_quote(expression)}, {actor_expression}, context.data)) ~= 0"
-        )
+        return None
     try:
         left = float(match.group(1))
         right = float(match.group(3))
@@ -26249,6 +26241,13 @@ def render_static_condition_math(
         return None
     if not math.isfinite(left) or not math.isfinite(right):
         return None
+    for literal, value in zip((match.group(1), match.group(3)), (left, right)):
+        significand = literal.lstrip("+-").split("e", 1)[0].split("E", 1)[0]
+        nonzero_literal = any(digit in "123456789" for digit in significand)
+        if nonzero_literal and (value == 0.0 or abs(value) < sys.float_info.min):
+            # The native stream parser may reject underflow while Lua parses
+            # the emitted double as zero/subnormal; keep that boundary TODO.
+            return None
     return f"{lua_number(left)} {match.group(2)} {lua_number(right)}"
 
 
@@ -27988,13 +27987,7 @@ def render_eoc_condition_expression(
     rendered_presence = render_static_context_presence_condition(condition)
     if rendered_presence is not None:
         return rendered_presence
-    rendered_math = (
-        None if npc_actor_expression not in (None, "actor") else
-        render_static_condition_math(
-            condition,
-            avatar_actor_proven or weapon_actor_proven or npc_actor_proven,
-        )
-    )
+    rendered_math = render_static_condition_math(condition)
     if rendered_math is not None:
         return rendered_math
     rendered_line_of_sight = render_static_line_of_sight_condition(condition)
@@ -29928,7 +29921,14 @@ def render_eoc(
     false_effect_converted = True
     if condition_expression is None:
         condition_todo = "translate the legacy condition into a Lua predicate"
-        if isinstance(raw_condition, str) and raw_condition in {
+        if isinstance(raw_condition, dict) and set(raw_condition) == {"math"}:
+            condition_todo = (
+                "translate math only for finite numeric-literal comparisons; "
+                "dynamic variables or functions, arithmetic, non-finite or "
+                "underflowing literals, and native debugmsg/false versus Platform "
+                "math exceptions do not have proven parity"
+            )
+        elif isinstance(raw_condition, str) and raw_condition in {
             "mission_complete", "mission_failed", "mission_incomplete",
             "npc_mission_complete", "npc_mission_failed",
             "npc_mission_incomplete",
