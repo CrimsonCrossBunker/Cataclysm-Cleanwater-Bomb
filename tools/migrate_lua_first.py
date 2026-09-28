@@ -123,6 +123,7 @@ MAX_CHARACTER_DAMAGE_MULTIPLIER = 1000.0
 MAX_CHARACTER_HIT_OPTION = 1000000
 MAX_CHARACTER_PART_TEMPERATURE = 1000000.0
 MAX_MUTATION_RANDOM_CHANCE = 1000000
+MAX_HORDE_BROADCAST_POWER = 10000
 NATIVE_MAX_SKILL = 10
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_GAME_START_SENDER_SITES = (("src/game.cpp", "send"),)
@@ -22989,6 +22990,58 @@ def render_static_location_variable(
     return lines
 
 
+def render_static_horde_signal_broadcast(
+    effect: dict[str, Any],
+    previous_effect: Any,
+    avatar_actor_proven: bool,
+    npc_actor_proven: bool,
+) -> list[str] | None:
+    """Lower only a signal with a proven typed context position and power."""
+    if set(effect) != {"signal_hordes", "signal_power"}:
+        return None
+    target = effect.get("signal_hordes")
+    target_expression = _context_coordinate_expression(target)
+    if target_expression is None:
+        return None
+    numeric_power = finite_number_literal(effect.get("signal_power"))
+    if numeric_power is None:
+        return None
+    # Native f_signal_hordes passes a double to an int parameter, truncating
+    # toward zero.  Do that here only after the literal and bounded result are
+    # both proven, so dynamic values cannot bypass the typed service limit.
+    signal_power = math.trunc(float(numeric_power))
+    if signal_power < 0 or signal_power > MAX_HORDE_BROADCAST_POWER:
+        return None
+    if not isinstance(previous_effect, dict):
+        return None
+    for key in ("u_location_variable", "npc_location_variable"):
+        if (
+            set(previous_effect) != {key} or
+            previous_effect.get(key) != target
+        ):
+            continue
+        if render_static_location_variable(
+            previous_effect, key,
+            avatar_actor_proven, npc_actor_proven,
+        ) is None:
+            continue
+        return [
+            "    services.hordes.broadcast_signal(",
+            f"        {target_expression}, {signal_power}",
+            "    )",
+        ]
+    return None
+
+
+def _signal_hordes_has_native_var_info_target(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    for scope in ("u_val", "npc_val", "global_val", "var_val", "context_val"):
+        if scope in value:
+            return lua_quotable_native_variable_string(value[scope])
+    return False
+
+
 def render_static_query_tile(
     effect: dict[str, Any],
     key: str,
@@ -31425,24 +31478,38 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
-                if isinstance(effect.get("signal_hordes"), dict):
-                    category = "platform_gap"
+                rendered_signal = render_static_horde_signal_broadcast(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    avatar_actor_proven,
+                    npc_event_character_actor_proven,
+                )
+                if rendered_signal is not None:
+                    lines.extend(rendered_signal)
+                    converted_effect = True
+                elif _signal_hordes_has_native_var_info_target(
+                    effect.get("signal_hordes")
+                ):
+                    category = "manual_rewrite"
                     reason = (
-                        "signal_hordes needs a typed overmap broadcast service for "
-                        "an absolute map-square target and evaluated signal strength"
+                        "signal_hordes needs an immediately preceding proven "
+                        "context location and a finite static signal_power that "
+                        "truncates into 0..10000"
                     )
                 else:
                     category = "semantic_choice"
                     reason = (
-                        "native signal_hordes requires an object var_info target; "
+                        "native signal_hordes requires an object var_info target "
+                        "with a variable scope; "
                         "this shape has no native effect semantics"
                     )
-                lines.append(f"    -- TODO: {reason}.")
-                result.add_todo(
-                    category,
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
-                )
-                all_effects_converted = False
+                if rendered_signal is None:
+                    lines.append(f"    -- TODO: {reason}.")
+                    result.add_todo(
+                        category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
                 lines.append(
                     "    -- TODO: reveal_route has no transactional Platform API; "

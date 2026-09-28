@@ -8256,6 +8256,7 @@ function CcbZonesApi.remove(token) end
 ---@field maximum_limit integer Maximum number of horde results per query.
 ---@field maximum_offset integer Maximum horde query offset.
 ---@field maximum_tracking_intensity integer Maximum supported horde tracking intensity.
+---@field maximum_signal_power integer Maximum supported broadcast signal power.
 ---@field maximum_legacy_population integer Maximum supported legacy horde population.
 ---@field flavors string[] Supported horde flavors.
 ---@field existing_only boolean Whether live horde entities/groups are restricted to existing overmaps.
@@ -8420,6 +8421,11 @@ function CcbZonesApi.remove(token) end
 ---@field status "committed" Status of the single removal commit.
 ---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
 
+---@class CcbHordeSignalResult
+---@field status "broadcast" Status of the completed signal broadcast.
+---@field center TripointCoord Absolute map-square origin after native submap normalization.
+---@field signal_power integer Broadcast signal power.
+
 ---@class CcbHordeLegacyGroupRemoveResult: CcbHordeLegacyGroupSnapshot
 ---@field status "committed" Status of the single removal commit.
 ---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
@@ -8547,6 +8553,11 @@ function CcbHordesApi.spawn_entity(position, monster) end
 ---@param intensity integer Tracking intensity from 0 through CcbHordeLimits.maximum_tracking_intensity.
 ---@return CcbResult result `value` is a CcbHordeAlertResult; the token remains valid after commit.
 function CcbHordesApi.alert_entity(token, destination, intensity) end
+
+---@param center TripointCoord Absolute map-square signal source; native behavior normalizes through absolute submap coordinates.
+---@param signal_power integer Signal power from 0 through CcbHordeLimits.maximum_signal_power.
+---@return CcbResult result `value` is a CcbHordeSignalResult.
+function CcbHordesApi.broadcast_signal(center, signal_power) end
 
 ---@param token HordeEntityToken Exact generation-bound entity token.
 ---@return CcbResult result `value` is a CcbHordeEntityRemoveResult; the token is stale after commit.

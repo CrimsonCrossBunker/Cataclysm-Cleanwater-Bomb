@@ -16717,6 +16717,7 @@ assert(not available())
                                 {"set_trap": "tr_beartrap", "loc": {"context_val": "loc"}},
                                 {"set_trap": "tr_rollmat"},
                                 {"signal_hordes": 50, "loc": {"context_val": "loc"}},
+                                {"signal_hordes": {}, "signal_power": 10},
                                 {
                                     "signal_hordes": {"context_val": "loc"},
                                     "signal_power": {"math": ["_signal_power"]},
@@ -16799,28 +16800,28 @@ assert(not available())
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.hordes.signal", main)
             self.assertEqual(
-                main.count("signal_hordes needs a typed overmap broadcast service"),
+                main.count("signal_hordes needs an immediately preceding proven"),
                 1,
             )
             self.assertEqual(
-                report.count("signal_hordes needs a typed overmap broadcast service"),
+                report.count("signal_hordes needs an immediately preceding proven"),
                 1,
             )
             signal_todos = [
                 todo for todo in result.todos if "signal_hordes" in todo.message
             ]
-            self.assertEqual(len(signal_todos), 2)
+            self.assertEqual(len(signal_todos), 3)
             self.assertEqual(
                 sorted(todo.category for todo in signal_todos),
-                ["platform_gap", "semantic_choice"],
+                ["manual_rewrite", "semantic_choice", "semantic_choice"],
             )
             self.assertIn(
-                "native signal_hordes requires an object var_info target",
+                "native signal_hordes requires an object var_info target with a variable scope",
                 main,
             )
             self.assertEqual(
-                report.count("native signal_hordes requires an object var_info target"),
-                1,
+                report.count("native signal_hordes requires an object var_info target with a variable scope"),
+                2,
             )
             self.assertNotIn("services.hordes.advance", main)
             self.assertNotIn("services.overmap.reveal_route", main)
@@ -17692,35 +17693,128 @@ assert(not available())
         self.assertNotIn("services.npcs.destinations(", invalid_output)
         self.assertNotIn("services.inventory.weapon_state(", invalid_output)
 
-    def test_real_scenario_horde_signal_remains_a_typed_service_gap(self) -> None:
-        path = (
-            REPOSITORY_ROOT
-            / "data/json/effects_on_condition/scenario_specific_eocs.json"
-        )
-        source = next(
-            entry for entry in migrate_lua_first.load_objects([path])
-            if entry.value.get("id") == "EOC_scenario_eldritch_ire"
-        )
-        signal = next(
-            effect for effect in source.value["effect"]
-            if isinstance(effect, dict) and "signal_hordes" in effect
-        )
-        self.assertEqual(
-            signal["signal_hordes"],
-            {"context_val": "zombie_horde_target_scen"},
-        )
-        self.assertEqual(signal["signal_power"], {"math": ["7000 + 1000"]})
+    def test_signal_hordes_lowers_only_proven_context_and_bounded_power(self) -> None:
+        for case_index, (power, expected) in enumerate(((12.75, 12), (-0.75, 0))):
+            source = migrate_lua_first.SourceObject(
+                Path("signal.json"), case_index, {
+                    "type": "effect_on_condition",
+                    "id": f"bounded_signal_{case_index}",
+                    "global": True,
+                    "recurrence": ["6 hours", "12 hours"],
+                    "effect": [
+                        {"u_location_variable": {"context_val": "signal_center"}},
+                        {
+                            "signal_hordes": {"context_val": "signal_center"},
+                            "signal_power": power,
+                        },
+                    ],
+                },
+            )
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            self.assertIn(
+                "services.hordes.broadcast_signal(\n"
+                f"        context.data[\"signal_center\"], {expected}\n"
+                "    )",
+                rendered,
+            )
+            self.assertFalse(
+                [todo for todo in result.todos if "signal_hordes" in todo.message]
+            )
 
-        result = migrate_lua_first.MigrationResult()
-        rendered = migrate_lua_first.render_eoc(source, result)
-        gap_todos = [
-            todo for todo in result.todos
-            if "signal_hordes needs a typed overmap broadcast service" in todo.message
-        ]
-        self.assertEqual(len(gap_todos), 1)
-        self.assertEqual(gap_todos[0].category, "platform_gap")
-        self.assertNotIn("services.hordes.alert_entity(", rendered)
-        self.assertNotIn("services.hordes.signal(", rendered)
+        unresolved_cases = (
+            (
+                "dynamic_power",
+                [
+                    {"u_location_variable": {"context_val": "signal_center"}},
+                    {
+                        "signal_hordes": {"context_val": "signal_center"},
+                        "signal_power": {"math": ["7000 + 1000"]},
+                    },
+                ],
+            ),
+            (
+                "nonadjacent_location_write",
+                [
+                    {"u_location_variable": {"context_val": "signal_center"}},
+                    {"u_message": "A native effect separates the location write."},
+                    {
+                        "signal_hordes": {"context_val": "signal_center"},
+                        "signal_power": 12,
+                    },
+                ],
+            ),
+            (
+                "over_limit_power",
+                [
+                    {"u_location_variable": {"context_val": "signal_center"}},
+                    {
+                        "signal_hordes": {"context_val": "signal_center"},
+                        "signal_power": 10001,
+                    },
+                ],
+            ),
+        )
+        for case_id, effects in unresolved_cases:
+            source = migrate_lua_first.SourceObject(
+                Path("signal.json"), 0, {
+                    "type": "effect_on_condition",
+                    "id": case_id,
+                    "global": True,
+                    "recurrence": ["6 hours", "12 hours"],
+                    "effect": effects,
+                },
+            )
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            signal_todos = [
+                todo for todo in result.todos if "signal_hordes" in todo.message
+            ]
+            self.assertEqual(len(signal_todos), 1)
+            self.assertEqual(signal_todos[0].category, "manual_rewrite")
+            self.assertNotIn("services.hordes.broadcast_signal(", rendered)
+
+    def test_real_horde_signal_json_keeps_unproven_numeric_shapes_as_todos(self) -> None:
+        source_cases = (
+            (
+                REPOSITORY_ROOT
+                / "data/json/effects_on_condition/scenario_specific_eocs.json",
+                "EOC_scenario_eldritch_ire",
+                {"math": ["7000 + 1000"]},
+            ),
+            (
+                REPOSITORY_ROOT
+                / "data/json/monster_special_attacks/spells.json",
+                "EOC_ZOMBIE_SUMMONER_SUMMON_HORDES",
+                {"math": ["_summon_effect"]},
+            ),
+        )
+        for path, eoc_id, expected_power in source_cases:
+            source = next(
+                entry for entry in migrate_lua_first.load_objects([path])
+                if entry.value.get("id") == eoc_id
+            )
+            signal = next(
+                effect for effect in source.value["effect"]
+                if isinstance(effect, dict) and "signal_hordes" in effect
+            )
+            self.assertEqual(signal["signal_power"], expected_power)
+            self.assertEqual(
+                signal["signal_hordes"],
+                {"context_val": "zombie_horde_target_scen"}
+                if eoc_id == "EOC_scenario_eldritch_ire" else
+                {"context_val": "zombie_horde_target"},
+            )
+
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            signal_todos = [
+                todo for todo in result.todos if "signal_hordes" in todo.message
+            ]
+            self.assertEqual(len(signal_todos), 1)
+            self.assertEqual(signal_todos[0].category, "manual_rewrite")
+            self.assertNotIn("services.hordes.broadcast_signal(", rendered)
+            self.assertNotIn("services.hordes.alert_entity(", rendered)
 
     def test_avatar_goal_and_guard_effects_keep_native_noop_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

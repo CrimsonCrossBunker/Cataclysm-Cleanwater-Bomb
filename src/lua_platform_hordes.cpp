@@ -51,6 +51,7 @@ constexpr std::size_t maximum_offset = 1000000;
 constexpr int maximum_query_radius = 30;
 constexpr int maximum_query_radius_z = 5;
 constexpr int maximum_tracking_intensity = 1000000;
+constexpr int maximum_signal_power = 10000;
 constexpr unsigned int maximum_legacy_population = 1000000;
 constexpr std::size_t maximum_conditions = 64;
 constexpr std::size_t maximum_legacy_monsters = 64;
@@ -1865,6 +1866,66 @@ sol::table alert_entity(
                    state, std::move( value ) ) );
 }
 
+sol::table broadcast_signal(
+    sol::this_state lua,
+    const script_tripoint_coord &center,
+    const sol::object &requested_power )
+{
+    constexpr std::string_view api_name =
+        "services.hordes.broadcast_signal";
+    const lua_Integer power_value = require_integer(
+                                       requested_power,
+                                       std::string( api_name ),
+                                       "signal_power" );
+    if( power_value < 0 || power_value > maximum_signal_power ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " signal_power must be within 0..10000" );
+    }
+    const int signal_power = static_cast<int>( power_value );
+    const tripoint_abs_ms native_center =
+        require_absolute_ms(
+            center, std::string( api_name ) );
+    const tripoint_abs_sm submap_center =
+        project_to<coords::sm>( native_center );
+    const std::int64_t min_coordinate = std::numeric_limits<int>::min();
+    const std::int64_t max_coordinate = std::numeric_limits<int>::max();
+    const std::int64_t submap_x = submap_center.x();
+    const std::int64_t submap_y = submap_center.y();
+    const std::int64_t map_square_x =
+        static_cast<std::int64_t>( submap_center.x() ) * SEEX;
+    const std::int64_t map_square_y =
+        static_cast<std::int64_t>( submap_center.y() ) * SEEX;
+    if( submap_x - signal_power < min_coordinate ||
+        submap_x + signal_power > max_coordinate ||
+        submap_y - signal_power < min_coordinate ||
+        submap_y + signal_power > max_coordinate ||
+        map_square_x < min_coordinate || map_square_x > max_coordinate ||
+        map_square_y < min_coordinate || map_square_y > max_coordinate ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " center and signal_power exceed safe absolute-coordinate bounds" );
+    }
+
+    overmap_buffer.signal_hordes(
+        submap_center, signal_power );
+
+    const tripoint_abs_ms broadcast_center =
+        project_to<coords::ms>( submap_center );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["status"] = "broadcast";
+    value["center"] = script_tripoint_coord::from_native(
+                           coords::origin::abs,
+                           coords::scale::map_square,
+                           broadcast_center.raw() );
+    value["signal_power"] = signal_power;
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table remove_entity(
     sol::this_state lua,
     const horde_entity_token &token,
@@ -2315,6 +2376,8 @@ sol::table horde_limits( sol::this_state lua )
         maximum_offset;
     result["maximum_tracking_intensity"] =
         maximum_tracking_intensity;
+    result["maximum_signal_power"] =
+        maximum_signal_power;
     result["maximum_legacy_population"] =
         maximum_legacy_population;
     result["flavors"] = std::move( flavors );
@@ -2567,6 +2630,16 @@ void install_horde_api(
                    destination, intensity,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    hordes.set_function(
+        "broadcast_signal",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord &center,
+            const sol::object &signal_power ) {
+        require_write();
+        return broadcast_signal(
+                   lua_state, center, signal_power );
     } );
     hordes.set_function(
         "remove_entity",

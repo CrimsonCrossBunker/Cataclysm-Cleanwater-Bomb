@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "mongroup.h"
+#include "overmapbuffer.h"
 
 TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
            "[lua][platform][hordes][contract]" )
@@ -32,12 +33,150 @@ TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
     CHECK( hordes["summary"].get_type() == sol::type::function );
     CHECK( hordes["spawn_entity"].get_type() == sol::type::function );
     CHECK( hordes["alert_entity"].get_type() == sol::type::function );
+    CHECK( hordes["broadcast_signal"].get_type() == sol::type::function );
     CHECK( hordes["remove_entity"].get_type() == sol::type::function );
     CHECK( hordes["spawn_legacy_group"].get_type() == sol::type::function );
     CHECK( hordes["update_legacy_group"].get_type() == sol::type::function );
     CHECK( hordes["remove_legacy_group"].get_type() == sol::type::function );
     CHECK_FALSE( hordes["signal"].valid() );
     CHECK_FALSE( hordes["advance"].valid() );
+    const sol::table limits = hordes["limits"]();
+    CHECK( limits["maximum_signal_power"].get<int>() == 10000 );
+}
+
+TEST_CASE( "lua_platform_hordes_broadcast_signal_matches_native_path",
+           "[lua][platform][hordes][semantic]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime active_runtime(
+        runtime_owner, 1 );
+    cata::lua_platform::install_horde_api(
+        services,
+    [active_runtime]() {
+        return active_runtime;
+    },
+    []() {
+        return std::size_t( 1 );
+    },
+    []() {}, []() {} );
+
+    const sol::table hordes = services["hordes"];
+    const auto make_position = []( const tripoint_abs_ms & position ) {
+        return cata::lua_platform::script_tripoint_coord::from_native(
+                   coords::origin::abs, coords::scale::map_square,
+                   position.raw() );
+    };
+    const tripoint_abs_ms native_center =
+        project_to<coords::ms>( get_map().get_abs_sub() );
+    const tripoint_abs_ms platform_center(
+        native_center.x() + 4 * SEEX, native_center.y(), native_center.z() );
+    constexpr int signal_power = 1;
+
+    const sol::protected_function_result native_spawn_result =
+        hordes["spawn_entity"](
+            make_position( native_center ),
+            cata::lua_platform::script_game_id( "monster", "mon_zombie" ) );
+    REQUIRE( native_spawn_result.valid() );
+    const sol::table native_spawn_envelope =
+        native_spawn_result.get<sol::table>();
+    REQUIRE( native_spawn_envelope["ok"].get<bool>() );
+    const sol::userdata native_token =
+        native_spawn_envelope["value"].get<sol::table>()["token"];
+    REQUIRE( native_token.valid() );
+    on_out_of_scope native_cleanup( [&hordes, native_token]() {
+        hordes["remove_entity"]( native_token );
+    } );
+
+    const sol::protected_function_result platform_spawn_result =
+        hordes["spawn_entity"](
+            make_position( platform_center ),
+            cata::lua_platform::script_game_id( "monster", "mon_zombie" ) );
+    REQUIRE( platform_spawn_result.valid() );
+    const sol::table platform_spawn_envelope =
+        platform_spawn_result.get<sol::table>();
+    REQUIRE( platform_spawn_envelope["ok"].get<bool>() );
+    const sol::userdata platform_token =
+        platform_spawn_envelope["value"].get<sol::table>()["token"];
+    REQUIRE( platform_token.valid() );
+    on_out_of_scope platform_cleanup( [&hordes, platform_token]() {
+        hordes["remove_entity"]( platform_token );
+    } );
+
+    const auto read_entity = [&hordes]( const sol::userdata &token ) {
+        const sol::protected_function_result result =
+            hordes["entity"]( token );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        return envelope["value"].get<sol::table>();
+    };
+
+    overmap_buffer.signal_hordes(
+        project_to<coords::sm>( native_center ), signal_power );
+    const tripoint_abs_ms native_broadcast_center = project_to<coords::ms>(
+            project_to<coords::sm>( native_center ) );
+    const sol::table native_entity = read_entity( native_token );
+    CHECK( native_entity["destination"].get<
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( native_broadcast_center ) );
+    CHECK( native_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
+
+    const sol::protected_function_result broadcast_result =
+        hordes["broadcast_signal"](
+            make_position( platform_center ), signal_power );
+    REQUIRE( broadcast_result.valid() );
+    const sol::table broadcast_envelope = broadcast_result.get<sol::table>();
+    REQUIRE( broadcast_envelope["ok"].get<bool>() );
+    const sol::table broadcast_value = broadcast_envelope["value"];
+    const tripoint_abs_ms expected_platform_center = project_to<coords::ms>(
+            project_to<coords::sm>( platform_center ) );
+    CHECK( broadcast_value["status"].get<std::string>() == "broadcast" );
+    CHECK( broadcast_value["center"].get<
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( expected_platform_center ) );
+    CHECK( broadcast_value["signal_power"].get<int>() == signal_power );
+    const sol::table platform_entity = read_entity( platform_token );
+    CHECK( platform_entity["destination"].get<
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( expected_platform_center ) );
+    CHECK( platform_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
+    const sol::table native_entity_after = read_entity( native_token );
+    CHECK( native_entity_after["destination"].get<
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( native_broadcast_center ) );
+}
+
+TEST_CASE( "lua_platform_hordes_broadcast_signal_rejects_unbounded_inputs",
+           "[lua][platform][hordes]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_horde_api(
+        services,
+    []() {
+        return cata::lua_platform::game_handle_runtime();
+    },
+    []() {
+        return std::size_t( 1 );
+    },
+    []() {}, []() {} );
+
+    const sol::table hordes = services["hordes"];
+    const sol::protected_function broadcast = hordes["broadcast_signal"];
+    const auto make_position = []( const coords::origin origin ) {
+        return cata::lua_platform::script_tripoint_coord::from_native(
+                   origin, coords::scale::map_square,
+                   tripoint( 100, 100, 0 ) );
+    };
+    const auto absolute = make_position( coords::origin::abs );
+    CHECK_FALSE( broadcast( absolute, -1 ).valid() );
+    CHECK_FALSE( broadcast( absolute, 10001 ).valid() );
+    CHECK_FALSE( broadcast( absolute, 1.5 ).valid() );
+    CHECK_FALSE( broadcast(
+                     make_position( coords::origin::relative ), 1 ).valid() );
 }
 
 TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
