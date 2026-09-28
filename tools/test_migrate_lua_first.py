@@ -6950,10 +6950,18 @@ assert(#events == 9)
             "id": "selector",
             "required_event": "game_start",
             "effect": {
-                "run_eoc_selector": ["selector_option"],
+                "run_eoc_selector": [
+                    "selector_option",
+                    {"global_val": "dynamic_selector_option"},
+                ],
+                "title": {"str": "Choose an option"},
+                "names": ["First", "Second"],
+                "descriptions": ["First description", "Second description"],
+                "variables": [{"selected": 8}],
                 "hide_failing": True,
                 "allow_cancel": False,
-                "keys": ["x"],
+                "hilight_disabled": True,
+                "keys": ["a", "b"],
             },
         })
 
@@ -6963,13 +6971,14 @@ assert(#events == 9)
         )
 
         self.assertIn(
-            "TODO: run_eoc_selector needs equivalent EOC condition, menu, "
-            "and translated-text behavior.", rendered,
+            "TODO: run_eoc_selector needs native condition filtering, "
+            "translated/tag-expanded menu text, context variables, test-mode "
+            "behavior, and copied-dialogue activation.", rendered,
         )
         self.assertNotIn("ccb.presentation.choose", rendered)
         selector_todo = next(
             todo for todo in result.todos
-            if "full native selector condition and menu semantics" in todo.message
+            if "test-mode behavior, and copied-dialogue activation" in todo.message
         )
         self.assertEqual(selector_todo.category, "platform_gap")
 
@@ -27426,123 +27435,123 @@ assert(context.data.picked==selected)
             self.assertIn("strength = 1", main)
             self.assertNotIn("needs review", report)
 
-    def test_lowers_weighted_inline_eocs_to_bounded_lua_random_selection(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary) / "source.json"
-            source.write_text(
-                json.dumps(
-                    [
-                        {
-                            "type": "effect_on_condition",
-                            "id": "weighted_owner",
-                            "required_event": "game_start",
-                            "effect": {
-                                "weighted_list_eocs": [
-                                    [{"effect": {"message": "first"}}, 2],
-                                    [{"effect": {"message": "second"}}, 1],
-                                ]
-                            },
-                        }
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            result = migrate_lua_first.migrate(
-                migrate_lua_first.load_objects([source]), "weighted_mod"
-            )
-            main = result.files[Path("main.lua")]
-
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.random.int(1, 3)", main)
-            self.assertIn("weighted_cursor", main)
-            self.assertNotIn("run_eoc(", main)
-
-    def test_weighted_eoc_dynamic_weights_are_bounded(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary) / "source.json"
-            source.write_text(
-                json.dumps(
-                    [
-                        {
-                            "type": "effect_on_condition",
-                            "id": "weighted_dynamic_first",
-                            "required_event": "game_start",
-                            "effect": {"message": "first"},
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "weighted_dynamic_second",
-                            "required_event": "game_start",
-                            "effect": {"message": "second"},
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "weighted_dynamic_owner",
-                            "required_event": "game_start",
-                            "effect": {
-                                "weighted_list_eocs": [
-                                    ["weighted_dynamic_first", {"context_val": "weight"}],
-                                    ["weighted_dynamic_second", 1],
-                                ]
-                            },
-                        },
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            result = migrate_lua_first.migrate(
-                migrate_lua_first.load_objects([source]), "weighted_dynamic_mod"
-            )
-            main = result.files[Path("main.lua")]
-
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("math.min(1000000000", main)
-            self.assertIn("weighted_cursor", main)
-
-    def test_false_effect_supports_weighted_eoc_callbacks(self) -> None:
+    def test_weighted_list_eocs_fails_closed_for_direct_and_nested_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps([
                     {
                         "type": "effect_on_condition",
-                        "id": "false_weighted_first",
+                        "id": "weighted_option_a",
                         "effect": {"message": "first"},
                     },
                     {
                         "type": "effect_on_condition",
-                        "id": "false_weighted_second",
+                        "id": "weighted_option_b",
                         "effect": {"message": "second"},
                     },
                     {
                         "type": "effect_on_condition",
-                        "id": "false_weighted_owner",
+                        "id": "weighted_direct",
                         "required_event": "game_start",
-                        "condition": {"u_has_cash": 1000000},
-                        "false_effect": {
-                            "weighted_list_eocs": [
-                                ["false_weighted_first", 2],
-                                ["false_weighted_second", 1],
-                            ]
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 2], ["weighted_option_b", 1],
+                        ]},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_single_entry",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 1],
+                        ]},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_nonpositive_and_fractional",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 0.5],
+                            ["weighted_option_b", -1],
+                            ["weighted_option_a", 1],
+                        ]},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_all_nonpositive",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 0.5],
+                            ["weighted_option_b", -1],
+                        ]},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_in_if",
+                        "required_event": "game_start",
+                        "effect": {
+                            "if": "u_is_outside",
+                            "then": {"weighted_list_eocs": [
+                                ["weighted_option_a", 2],
+                                ["weighted_option_b", 1],
+                            ]},
                         },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_in_switch",
+                        "required_event": "game_start",
+                        "effect": {
+                            "switch": {"global_val": "choice"},
+                            "cases": [{
+                                "case": 1,
+                                "effect": {"weighted_list_eocs": [
+                                    ["weighted_option_a", 2],
+                                    ["weighted_option_b", 1],
+                                ]},
+                            }],
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_in_false_effect",
+                        "required_event": "game_start",
+                        "condition": "u_is_outside",
+                        "false_effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 2], ["weighted_option_b", 1],
+                        ]},
                         "effect": "nothing",
                     },
                 ]),
                 encoding="utf-8",
             )
             result = migrate_lua_first.migrate(
-                migrate_lua_first.load_objects([source]), "false_weighted_mod"
+                migrate_lua_first.load_objects([source]), "weighted_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
+            todos = "\n".join(todo.message for todo in result.todos)
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.random.int(1, 3)", main)
-            self.assertIn("weighted_cursor", main)
-            self.assertNotIn("weighted-callback conversion", report)
+        self.assertNotIn("weighted_cursor", main)
+        self.assertNotIn("services.random.int(", main)
+        self.assertIn("global rng_bits selection", main)
+        for owner in (
+            "weighted_direct", "weighted_single_entry",
+            "weighted_nonpositive_and_fractional", "weighted_all_nonpositive",
+            "weighted_in_if",
+            "weighted_in_switch", "weighted_in_false_effect",
+        ):
+            self.assertIn(f"EOC {owner}", todos)
+        weighted_todos = [
+            todo for todo in result.todos
+            if "weighted_list_eocs needs native positive-int weight" in todo.message
+        ]
+        self.assertTrue(weighted_todos)
+        self.assertTrue(all(todo.category == "platform_gap" for todo in weighted_todos))
+        false_weighted_todo = next(
+            todo for todo in result.todos
+            if "EOC weighted_in_false_effect false_effect #0" in todo.message
+        )
+        self.assertEqual(false_weighted_todo.category, "platform_gap")
 
     def test_global_u_sound_false_effect_uses_proven_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
