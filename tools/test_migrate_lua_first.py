@@ -3265,6 +3265,15 @@ assert(observed[#observed] == 'KNOWN')
                 {"npc_has_proficiency": "prof_knapping"},
             )
         )
+        for bare_string in (
+            "npc_has_proficiency",
+            "unrecognized_npc_has_proficiency_condition",
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    bare_string, npc_melee_beta_actor_proven=True,
+                )
+            )
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(

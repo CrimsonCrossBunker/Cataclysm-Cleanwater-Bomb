@@ -28947,7 +28947,7 @@ def render_eoc_condition_expression(
                 "service_value(services.proficiencies.has_id_text("
                 f"actor, {lua_quote(raw_id)}))"
             )
-    if "npc_has_proficiency" in condition:
+    if isinstance(condition, dict) and "npc_has_proficiency" in condition:
         raw_id = condition.get("npc_has_proficiency")
         if (
             npc_melee_beta_actor_proven and
