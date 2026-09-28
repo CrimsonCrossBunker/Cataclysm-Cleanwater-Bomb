@@ -4468,6 +4468,98 @@ sol::table hand_in_inventory_items(
     return result;
 }
 
+sol::table transfer_inventory_items_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &recipient_handle, const script_game_id &type,
+    const std::int64_t requested_count,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "services.inventory.transfer_by_type";
+    require_id_kind( type, "item", std::string( api_name ) );
+    if( requested_count <= 0 ||
+        requested_count > maximum_inventory_resource_quantity ||
+        requested_count > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.inventory.transfer_by_type count must be within 1..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                              character_handle, runtime_generation,
+                              world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    Character *recipient = resolve_exact_character(
+                               recipient_handle, runtime_generation,
+                               world_generation, error );
+    if( recipient == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native_type( type.value() );
+    const int count = static_cast<int>( requested_count );
+    const bool use_charge_path = item::count_by_charges( native_type ) &&
+                                 character->has_charges( native_type, count );
+    const bool use_item_path = !use_charge_path &&
+                               character->has_amount( native_type, count );
+    const std::string_view transfer_kind = use_charge_path ? "charges" :
+                                           use_item_path ? "items" : "none";
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["count"] = count;
+    value["matched"] = transfer_kind != "none";
+    value["kind"] = std::string( transfer_kind );
+    if( transfer_kind == "none" ) {
+        value["fragments"] = 0;
+        value["notice"] = string_format(
+                              to_translation( "You don't have a %1$s!" ).translated(),
+                              item::nname( native_type ) );
+        return make_game_value_result(
+               state, sol::make_object( std::move( value ) ) );
+    }
+
+    // Resolve ownership only once native inventory selection has succeeded;
+    // the missing-item branch above does not require a recipient faction.
+    faction *recipient_faction = recipient->get_faction();
+    if( recipient_faction == nullptr ) {
+        return make_game_error_result( state, {
+            "missing_faction",
+            "The recipient Character has no faction to own transferred items"
+        } );
+    }
+    std::list<item> transferred = use_charge_path ?
+                                 character->use_charges( native_type, count ) :
+                                 character->use_amount( native_type, count );
+    const std::size_t fragment_count = transferred.size();
+    for( item &entry : transferred ) {
+        entry.set_owner( recipient_faction->id );
+        // Match the native f_u_sell_item call, which passes each lvalue
+        // fragment to Character::i_add and lets that API take its copy.
+        recipient->i_add( entry );
+    }
+    character->invalidate_crafting_inventory();
+    recipient->invalidate_crafting_inventory();
+    bump_item_query_mutation_epoch();
+
+    value["fragments"] = fragment_count;
+    if( count == 1 ) {
+        value["notice"] = string_format(
+                              to_translation( "You give %1$s a %2$s." ).translated(),
+                              recipient->disp_name(), item::nname( native_type ) );
+    } else {
+        value["notice"] = string_format(
+                              to_translation( "You give %1$s %2$d %3$s." ).translated(),
+                              recipient->disp_name(), count,
+                              item::nname( native_type, count ) );
+    }
+    return make_game_value_result(
+               state, sol::make_object( std::move( value ) ) );
+}
+
 sol::table consume_inventory_sum(
     sol::this_state lua, const game_handle &character_handle,
     const sol::table &requested_entries,
@@ -7942,6 +8034,20 @@ void install_item_api(
         return hand_in_inventory_items(
                    lua_state, character, recipient, type,
                    count.value_or( 0 ), charges.value_or( 0 ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "transfer_by_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle &character,
+            const game_handle &recipient,
+            const script_game_id &type,
+            const std::int64_t count ) {
+        require_item_write();
+        return transfer_inventory_items_by_type(
+                   lua_state, character, recipient, type, count,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
