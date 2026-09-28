@@ -19864,50 +19864,12 @@ def render_static_teleport_effect(
     npc_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a proven Avatar/Monster/Vehicle/NPC teleport to an explicit abs_ms tile.
-
-    All legacy teleport variants other than the exact actor-shaped forms
-    remain an explicit migration TODO.
-    """
-    teleport_key = next(
-        (key for key in ("u_teleport", "npc_teleport") if key in effect),
-        None,
+    """Keep native teleport effects fail-closed until a parity service exists."""
+    del (
+        effect, monster_actor_proven, avatar_actor_proven,
+        vehicle_actor_proven, npc_actor_proven, npc_actor_expression,
     )
-    if teleport_key is None or set(effect) != {teleport_key}:
-        return None
-    if teleport_key == "u_teleport":
-        if not (
-            monster_actor_proven or avatar_actor_proven or vehicle_actor_proven
-        ):
-            return None
-        actor_expression = "actor"
-    else:
-        if not npc_actor_proven:
-            return None
-        actor_expression = npc_actor_expression or "actor"
-    coordinate_expression = _explicit_abs_ms_expression(effect[teleport_key])
-    if coordinate_expression is None:
-        coordinate_expression = _explicit_abs_omt_expression(
-            effect[teleport_key]
-        )
-        if (
-            coordinate_expression is None or
-            teleport_key != "u_teleport" or
-            not avatar_actor_proven
-        ):
-            return None
-        return [
-            "    local token = service_value(services.overmap.tile_token(",
-            f"        {coordinate_expression}))",
-            "    service_value(services.relocation.travel_to_omt(",
-            f"        {actor_expression}, token, {{ strict = true }}))",
-        ]
-    return [
-        "    local token = service_value(services.map.tile(",
-        f"        {coordinate_expression}))",
-        "    service_value(services.relocation.move(",
-        f"        {actor_expression}, token, {{ strict = true }}))",
-    ]
+    return None
 
 
 def render_static_npc_goal_effect(
@@ -21851,100 +21813,9 @@ def render_static_dimension_travel_effect(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Render literal avatar dimension travel through the native workflow.
-
-    Dimension travel is a world swap, so dynamic targets, message templates,
-    target-location variables, and unproven actors stay fail-closed.  The
-    bounded service mirrors the native radius/filter/vehicle options and
-    leaves ordinary Lua responsible for any follow-up state.
-    """
-    if not avatar_actor_proven or "u_travel_to_dimension" not in effect:
-        return None
-    target = effect.get("u_travel_to_dimension")
-    target_expression: str
-    if safe_platform_id(target):
-        target_expression = lua_quote(target)
-    else:
-        target_expression = render_eoc_string_expression(target, "actor")
-        if target_expression is None:
-            return None
-    allowed = {
-        "u_travel_to_dimension", "npc_travel_radius", "npc_travel_filter",
-        "item_travel_radius", "take_vehicle", "success_message", "fail_message",
-    }
-    if set(effect) - allowed:
-        return None
-    npc_radius = effect.get("npc_travel_radius", 0)
-    item_radius = effect.get("item_travel_radius", -1)
-    npc_filter = effect.get("npc_travel_filter", "all")
-    take_vehicle = effect.get("take_vehicle", False)
-    success = effect.get("success_message")
-    failure = effect.get("fail_message")
-    success_expression = (
-        render_eoc_string_expression(success, "actor")
-        if isinstance(success, dict) else
-        lua_quote(success) if isinstance(success, str) else None
-    )
-    failure_expression = (
-        render_eoc_string_expression(failure, "actor")
-        if isinstance(failure, dict) else
-        lua_quote(failure) if isinstance(failure, str) else None
-    )
-    if (success is not None and success_expression is None) or (
-        failure is not None and failure_expression is None
-    ):
-        return None
-
-    def radius_expression(value: Any, minimum: int, maximum: int) -> str | None:
-        literal = _literal_integer_or_none(value, minimum, maximum)
-        if literal is not None:
-            return str(literal)
-        dynamic = render_eoc_numeric_expression(value, str(minimum), "actor")
-        if dynamic is None:
-            return None
-        return f"math.max({minimum}, math.min({maximum}, math.floor(({dynamic}) + 0.5)))"
-
-    npc_radius_expression = radius_expression(npc_radius, 0, 60)
-    item_radius_expression = radius_expression(item_radius, -1, 60)
-    if (
-        npc_radius_expression is None or item_radius_expression is None or
-        not isinstance(npc_filter, str) or
-        npc_filter not in {"all", "follower", "enemy", "none"} or
-        not isinstance(take_vehicle, bool)
-    ):
-        return None
-    option_parts: list[str] = []
-    if npc_radius_expression != "0":
-        option_parts.append(f"npc_travel_radius = {npc_radius_expression}")
-    if npc_filter != "all":
-        option_parts.append(f"npc_travel_filter = {lua_quote(npc_filter)}")
-    if item_radius_expression != "-1":
-        option_parts.append(f"item_travel_radius = {item_radius_expression}")
-    if take_vehicle:
-        option_parts.append("take_vehicle = true")
-    if option_parts:
-        lines = [
-            "    local dimension_result = service_value(services.relocation.travel_to_dimension(",
-            f"        {target_expression}, {{ " + ", ".join(option_parts) + " }))",
-        ]
-    else:
-        lines = [
-            "    local dimension_result = service_value(services.relocation.travel_to_dimension(",
-            f"        {target_expression}))",
-        ]
-    if success_expression is not None:
-        lines.extend([
-            "    if dimension_result.changed then",
-            f"        services.message({success_expression})",
-            "    end",
-        ])
-    if failure_expression is not None:
-        lines.extend([
-            "    if not dimension_result.changed then",
-            f"        services.message({failure_expression})",
-            "    end",
-        ])
-    return lines
+    """Keep native dimension travel fail-closed until its result paths match."""
+    del effect, avatar_actor_proven
+    return None
 
 
 def render_static_clear_dimension_effect(
@@ -32978,13 +32849,14 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate teleport through a typed "
-                        "creature-relocation service."
+                        "    -- TODO: preserve native teleport map loading, "
+                        "force policies, linked items, and talker behavior."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "teleport needs native map-loading, force-policy, "
+                        "linked-item, and talker parity"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):
@@ -33811,13 +33683,14 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate u_travel_to_dimension with an explicit "
-                        "dimension target and relocation policy."
+                        "    -- TODO: preserve native dimension validation, radius "
+                        "truncation, actor selection, and failure messages."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "u_travel_to_dimension needs native dimension-validation, "
+                        "radius, actor, and failure-message parity"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "clear_dimension" in effect:
