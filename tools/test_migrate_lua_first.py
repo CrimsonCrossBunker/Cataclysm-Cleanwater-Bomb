@@ -10594,28 +10594,27 @@ assert(not available())
         self.assertNotIn("services.npcs.ai_rules(beta)", topic_main)
         self.assertTrue(topic_result.todos)
 
-    def test_assigned_mission_counts_require_an_exact_dialogue_pair(self) -> None:
-        predicates = {
-            "has_no_assigned_mission": "total == 0",
-            "has_assigned_mission": "total == 1",
-            "has_many_assigned_missions": "total >= 2",
-        }
-        for condition, comparison in predicates.items():
+    def test_assigned_mission_counts_need_a_rendered_dialogue_callback(self) -> None:
+        # Native f_no_assigned_mission/f_has_assigned_mission/
+        # f_has_many_assigned_missions distinguish 0, exactly 1, and >= 2
+        # entries in dialogue::missions_assigned. avatar::talk_to first calls
+        # the beta talker's check_missions(), then filters its assigned list to
+        # alpha's avatar id. The topic renderer drops response conditions and
+        # true_eocs, so source pairing alone cannot reproduce this state.
+        predicates = (
+            "has_no_assigned_mission",
+            "has_assigned_mission",
+            "has_many_assigned_missions",
+        )
+        for condition in predicates:
             with self.subTest(condition=condition):
-                expression = migrate_lua_first.render_eoc_condition_expression(
-                    condition,
-                    npc_actor_expression="context.actors.beta",
-                    npc_dialogue_pair_proven=True,
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_expression="context.actors.beta",
+                        npc_dialogue_pair_proven=True,
+                    )
                 )
-                self.assertIsNotNone(expression)
-                self.assertIn(
-                    "services.npcs.missions.assigned_for_owner(beta, alpha)",
-                    expression,
-                )
-                self.assertIn(comparison, expression)
-                self.assertIn('alpha.subtype ~= "avatar"', expression)
-                self.assertIn('beta.subtype ~= "npc"', expression)
-
                 self.assertIsNone(
                     migrate_lua_first.render_eoc_condition_expression(
                         condition,
@@ -10633,7 +10632,11 @@ assert(not available())
         dialogue_topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
                 "type": "talk_topic", "id": "dialogue_topic",
-                "responses": [{"true_eocs": "assigned_pair"}],
+                "responses": [{
+                    "text": "Ask about assignments",
+                    "condition": "has_assigned_mission",
+                    "true_eocs": "assigned_pair",
+                }],
             },
         )
         assigned_eoc = migrate_lua_first.SourceObject(
@@ -10648,16 +10651,31 @@ assert(not available())
                 [dialogue_topic, assigned_eoc]
             )
         self.assertEqual(exact_dialogue_ids, frozenset({"assigned_pair"}))
+
+        topic_result = migrate_lua_first.MigrationResult()
+        rendered_topic = migrate_lua_first.render_talk_topic(
+            dialogue_topic, topic_result
+        )
+        self.assertIsNotNone(rendered_topic)
+        self.assertNotIn("true_eocs", rendered_topic)
+        self.assertNotIn("condition", rendered_topic)
+        self.assertTrue(topic_result.todos)
+
+        pair_result = migrate_lua_first.MigrationResult()
         paired = migrate_lua_first.render_eoc(
             assigned_eoc,
-            migrate_lua_first.MigrationResult(),
+            pair_result,
             talker_pair_ids=frozenset({"assigned_pair"}),
             npc_dialogue_mission_pair_ids=exact_dialogue_ids,
         )
+        self.assertNotIn("services.npcs.missions.assigned_for_owner(", paired)
         self.assertIn(
-            "services.npcs.missions.assigned_for_owner(beta, alpha)", paired
+            "condition TODO: translate the legacy condition", paired
         )
+        self.assertTrue(pair_result.todos)
 
+        # Event-only, generic-pair, delayed, and rebound sources also remain
+        # TODO; none establishes the actual native dialogue mission vector.
         competing_sources = (
             {
                 "type": "SPELL", "effect": "effect_on_condition",
@@ -10688,10 +10706,10 @@ assert(not available())
                     migrate_lua_first._npc_dialogue_mission_pair_provenance(
                         [dialogue_topic, assigned_eoc, competing]
                     )
-                self.assertNotIn("assigned_pair", eligible)
+                fail_closed_result = migrate_lua_first.MigrationResult()
                 fail_closed = migrate_lua_first.render_eoc(
                     assigned_eoc,
-                    migrate_lua_first.MigrationResult(),
+                    fail_closed_result,
                     talker_pair_ids=frozenset({"assigned_pair"}),
                     npc_dialogue_mission_pair_ids=eligible,
                 )
@@ -10702,27 +10720,6 @@ assert(not available())
                     "condition TODO: translate the legacy condition",
                     fail_closed,
                 )
-
-        delayed_parent = migrate_lua_first.SourceObject(
-            Path("source.json"), 10, {
-                "type": "effect_on_condition", "id": "delayed_parent",
-                "effect": {
-                    "run_eocs": "assigned_pair",
-                    "time_in_future": ["1 minute", "2 minutes"],
-                },
-            },
-        )
-        delayed_topic = migrate_lua_first.SourceObject(
-            Path("source.json"), 11, {
-                "type": "talk_topic", "id": "delayed_parent_topic",
-                "responses": [{"true_eocs": "delayed_parent"}],
-            },
-        )
-        delayed_closure = \
-            migrate_lua_first._npc_dialogue_mission_pair_provenance(
-                [dialogue_topic, assigned_eoc, delayed_parent, delayed_topic]
-            )
-        self.assertNotIn("assigned_pair", delayed_closure)
 
     def test_available_mission_counts_require_a_dialogue_provider(self) -> None:
         predicates = {

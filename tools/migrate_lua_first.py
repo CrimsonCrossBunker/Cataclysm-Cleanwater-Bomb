@@ -27276,40 +27276,6 @@ def render_trait_condition(
     return query(raw)
 
 
-def render_npc_assigned_mission_count_condition(
-    condition: str, npc_dialogue_pair_proven: bool,
-    npc_actor_expression: str | None,
-) -> str | None:
-    """Lower assigned-count aliases only for an exact dialogue actor pair."""
-    if (
-        not npc_dialogue_pair_proven or
-        npc_actor_expression != "context.actors.beta"
-    ):
-        return None
-    if condition == "has_no_assigned_mission":
-        comparison, count = "==", 0
-    elif condition == "has_assigned_mission":
-        comparison, count = "==", 1
-    elif condition == "has_many_assigned_missions":
-        comparison, count = ">=", 2
-    else:
-        return None
-    return (
-        "(function() "
-        "local actors = context and context.actors; "
-        "local alpha = actors and actors.alpha; "
-        "local beta = actors and actors.beta; "
-        "if alpha == nil or alpha.kind ~= \"creature\" or "
-        "alpha.subtype ~= \"avatar\" or beta == nil or "
-        "beta.kind ~= \"creature\" or beta.subtype ~= \"npc\" then "
-        "return false end; "
-        "local dialogue_missions = service_value("
-        "services.npcs.missions.assigned_for_owner(beta, alpha)); "
-        f"return dialogue_missions.total {comparison} {count} "
-        "end)()"
-    )
-
-
 def render_npc_available_mission_count_condition(
     condition: str, npc_dialogue_pair_proven: bool,
     npc_actor_expression: str | None,
@@ -27940,13 +27906,6 @@ def render_eoc_condition_expression(
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
-        assigned_mission_count = \
-            render_npc_assigned_mission_count_condition(
-                condition, npc_dialogue_pair_proven,
-                npc_actor_expression,
-            )
-        if assigned_mission_count is not None:
-            return assigned_mission_count
         available_mission_count = \
             render_npc_available_mission_count_condition(
                 condition, npc_dialogue_pair_proven,
@@ -28002,15 +27961,24 @@ def render_eoc_condition_expression(
             return "not services.gameplay.environment.is_night()"
         if condition in {
             "has_assigned_mission", "has_many_assigned_missions",
-            "has_no_assigned_mission", "has_available_mission",
+            "has_no_assigned_mission",
+        }:
+            # These three predicates read dialogue::missions_assigned, which
+            # avatar::talk_to initializes after the beta talker's
+            # check_missions() and filters to the alpha avatar.
+            # render_talk_topic currently does
+            # not emit response conditions/true_eocs, so even an exact
+            # direct-topic source has no Platform callback with that state.
+            return None
+        if condition in {
+            "has_available_mission",
             "has_many_available_missions", "has_no_available_mission",
             "mission_complete", "mission_failed", "mission_incomplete",
             "npc_has_available_mission", "npc_has_many_available_missions",
             "npc_has_no_available_mission", "npc_mission_complete",
             "npc_mission_failed", "npc_mission_incomplete",
         }:
-            # These aliases read beta or dialogue mission state. Actor
-            # provenance alone does not prove either one is empty.
+            # Actor provenance alone does not prove beta or dialogue state.
             return None
         if condition == "u_friend":
             # Native u_friend reads alpha and asks whether that exact actor is
