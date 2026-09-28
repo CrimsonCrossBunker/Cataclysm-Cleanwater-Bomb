@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "lua_platform_values.h"
 #include "player_helpers.h"
 #include "talker_npc.h"
 
@@ -1203,6 +1204,84 @@ TEST_CASE( "lua_platform_trade_commit_stale_actor_item_epoch",
         CHECK( fixture.live_item->charges == source_charges );
         CHECK_FALSE( token.registered() );
     }
+}
+
+TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_and_ownership",
+           "[lua][platform][inventory][semantic]" )
+{
+    // Native f_u_sell_item in npctalk.cpp consumes charges first, falls back
+    // to item-count removal, then owns each fragment to beta's faction before
+    // i_add. The migration limits this service to zero-cost, non-nested cases.
+    platform_trade_quote_fixture fixture( 161, 511, 121101, 121102 );
+    REQUIRE( fixture.ready() );
+    cata::lua_platform::install_item_api(
+        fixture.services,
+    [&fixture]() {
+        return fixture.active_runtime;
+    },
+    [&fixture]() {
+        return fixture.active_world_generation;
+    },
+    []() {}, []() {} );
+    const sol::protected_function transfer =
+        fixture.services["inventory"]["transfer_by_type"];
+    const int debt_before = fixture.buyer->op_of_u.owed;
+
+    const sol::protected_function_result charge_result = transfer(
+            fixture.seller_handle, fixture.buyer_handle,
+            cata::lua_platform::script_game_id( "item", "9mm" ), 3 );
+    REQUIRE( charge_result.valid() );
+    const sol::table charge_envelope = charge_result.get<sol::table>();
+    REQUIRE( charge_envelope["ok"].get<bool>() );
+    const sol::table charge_value = charge_envelope["value"];
+    CHECK( charge_value["matched"].get<bool>() );
+    CHECK( charge_value["kind"].get<std::string>() == "charges" );
+    CHECK( fixture.live_item->charges == 5 );
+    const auto transferred_charges = fixture.buyer->items_with(
+    []( const item &entry ) {
+        return entry.typeId() == itype_id( "9mm" );
+    } );
+    REQUIRE( transferred_charges.size() == 1 );
+    CHECK( transferred_charges.front()->charges == 3 );
+    CHECK( transferred_charges.front()->is_owned_by( *fixture.buyer ) );
+    CHECK( fixture.buyer->op_of_u.owed == debt_before );
+
+    fixture.seller.inv->add_item(
+        item( itype_id( "2x4" ), calendar::turn_zero ), false, false, false );
+    const sol::protected_function_result item_result = transfer(
+            fixture.seller_handle, fixture.buyer_handle,
+            cata::lua_platform::script_game_id( "item", "2x4" ), 1 );
+    REQUIRE( item_result.valid() );
+    const sol::table item_envelope = item_result.get<sol::table>();
+    REQUIRE( item_envelope["ok"].get<bool>() );
+    const sol::table item_value = item_envelope["value"];
+    CHECK( item_value["matched"].get<bool>() );
+    CHECK( item_value["kind"].get<std::string>() == "items" );
+    const auto transferred_items = fixture.buyer->items_with(
+    []( const item &entry ) {
+        return entry.typeId() == itype_id( "2x4" );
+    } );
+    REQUIRE( transferred_items.size() == 1 );
+    CHECK( transferred_items.front()->is_owned_by( *fixture.buyer ) );
+    CHECK( fixture.buyer->op_of_u.owed == debt_before );
+
+    const int charge_count_before_failure = fixture.live_item->charges;
+    const std::size_t item_count_before_failure = transferred_items.size();
+    const sol::protected_function_result missing_result = transfer(
+            fixture.seller_handle, fixture.buyer_handle,
+            cata::lua_platform::script_game_id( "item", "2x4" ), 2 );
+    REQUIRE( missing_result.valid() );
+    const sol::table missing_envelope = missing_result.get<sol::table>();
+    REQUIRE( missing_envelope["ok"].get<bool>() );
+    const sol::table missing_value = missing_envelope["value"];
+    CHECK_FALSE( missing_value["matched"].get<bool>() );
+    CHECK( missing_value["kind"].get<std::string>() == "none" );
+    CHECK( missing_value["notice"].get<std::string>().find( "don't have" ) !=
+           std::string::npos );
+    CHECK( fixture.live_item->charges == charge_count_before_failure );
+    CHECK( fixture.buyer->items_with( []( const item &entry ) {
+        return entry.typeId() == itype_id( "2x4" );
+    } ).size() == item_count_before_failure );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

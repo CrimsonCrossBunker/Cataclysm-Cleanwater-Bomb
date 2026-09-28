@@ -37291,10 +37291,35 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertIsNone(
             migrate_lua_first.render_static_sell_item_effect(
                 {"u_sell_item": "sample_item"},
-                True,
-                avatar_actor_proven=True,
+                "actor",
+                None,
             )
         )
+        sale = migrate_lua_first.render_static_sell_item_effect(
+            {"u_sell_item": "sample_item", "count": 3},
+            "actor", "context.actors.beta",
+        )
+        self.assertIsNotNone(sale)
+        self.assertTrue(any(
+            "services.inventory.transfer_by_type(" in line for line in sale
+        ))
+        for unsupported in (
+            {"u_sell_item": "sample_item", "count": 1.5},
+            {"u_sell_item": "sample_item", "count": {"u_val": "count"}},
+            {"u_sell_item": "sample_item", "count": 3, "cost": 1},
+            {"u_sell_item": "sample_item", "count": 3,
+             "cost": {"math": ["dynamic_cost"]}},
+            {"u_sell_item": "sample_item", "count": 0},
+            {"u_sell_item": "sample_item", "count": 3, "true_eocs": ["callback"]},
+            {"u_sell_item": "sample_item", "count": 3,
+             "false_eocs": ["callback"]},
+            {"u_sell_item": {"context_val": "item_type"}, "count": 3},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_static_sell_item_effect(
+                    unsupported, "actor", "context.actors.beta"
+                )
+            )
         self.assertEqual(
             migrate_lua_first.render_static_inventory_consume(
                 {"u_consume_item": "apple"},
@@ -37632,6 +37657,166 @@ assert(context.conditions.check==original and context.conditions.check() and con
                         spawn, True
                     )
                 )
+
+    def test_u_sell_item_real_drivebelt_eoc_stays_todo_without_phase_binding(self) -> None:
+        eoc_objects = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT /
+            "data/json/effects_on_condition/npc_eocs/generic_npc_eocs.json",
+        ])
+        mission_objects = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT /
+            "data/json/npcs/lumbermill_employees/lumbermill_missions.json",
+        ])
+        npc_objects = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT /
+            "data/json/npcs/lumbermill_employees/lumbermill_employees.json",
+        ])
+        eoc = next(
+            source for source in eoc_objects
+            if source.value.get("id") == "EOC_MISSION_GET_DRIVEBELTS_done"
+        )
+        mission = next(
+            source for source in mission_objects
+            if source.value.get("id") == "MISSION_GET_DRIVEBELTS"
+        )
+        merchant = next(
+            source for source in npc_objects
+            if source.value.get("id") == "NPC_lumbermill_merchant"
+        )
+        self.assertEqual(
+            mission.value["end"]["effect"]["run_eocs"], eoc.value["id"]
+        )
+        self.assertEqual(
+            merchant.value["mission_offered"], mission.value["id"]
+        )
+        self.assertEqual(
+            eoc.value["effect"], [{"u_sell_item": "drivebelt", "count": 3}]
+        )
+        self.assertEqual(
+            eoc.value["false_effect"], [
+                {"u_sell_item": "drivebelt_makeshift", "count": 3}
+            ]
+        )
+
+        with_offered_npc = [*eoc_objects, *mission_objects, *npc_objects]
+        migrated = migrate_lua_first.migrate(
+            with_offered_npc, "u_sell_item_drivebelt_mission"
+        )
+        main = migrated.files[Path("main.lua")]
+        self.assertNotIn("finish_with(", main)
+        self.assertNotIn('"end_handler"', main)
+        function_name = (
+            "migrated_eoc_EOC_MISSION_GET_DRIVEBELTS_done = function"
+        )
+        body_start = main.index(function_name)
+        body_end = main.index(
+            'migrated_eoc_functions["EOC_MISSION_GET_DRIVEBELTS_done"]',
+            body_start,
+        )
+        body = main[body_start:body_end]
+        self.assertNotIn("services.inventory.transfer_by_type(", body)
+        self.assertEqual(
+            body.count(
+                "TODO: native u_sell_item consumes alpha inventory by item type/count or charges"
+            ),
+            2,
+        )
+
+        without_npc_offer = [*eoc_objects, *mission_objects]
+        incomplete = migrate_lua_first.migrate(
+            without_npc_offer, "u_sell_item_drivebelt_without_npc"
+        )
+        incomplete_main = incomplete.files[Path("main.lua")]
+        incomplete_start = incomplete_main.index(function_name)
+        incomplete_end = incomplete_main.index(
+            'migrated_eoc_functions["EOC_MISSION_GET_DRIVEBELTS_done"]',
+            incomplete_start,
+        )
+        incomplete_body = incomplete_main[incomplete_start:incomplete_end]
+        self.assertNotIn(
+            "services.inventory.transfer_by_type(", incomplete_body
+        )
+        self.assertIn("TODO: native u_sell_item", incomplete_body)
+
+    def test_u_sell_item_lowers_only_event_bound_live_character_pair(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("event.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "event_pair_sale",
+            "required_event": "character_melee_attacks_character",
+            "condition": {
+                "u_has_items": {"item": "sample_item", "count": 1}
+            },
+            "effect": {"u_sell_item": "sample_item", "count": 1},
+            "false_effect": {
+                "u_sell_item": "fallback_item", "count": 1
+            },
+        })
+
+        def rendered_source(
+            objects: list[migrate_lua_first.SourceObject],
+        ) -> tuple[str, str]:
+            # src/event.h registers the first Character field as attacker;
+            # provide that source-audited map in the sparse-checkout test.
+            with patch.object(
+                migrate_lua_first, "event_character_actor_fields",
+                return_value={
+                    "character_melee_attacks_character": "attacker"
+                },
+            ):
+                result = migrate_lua_first.migrate(
+                    objects, "u_sell_item_event_pair"
+                )
+            main = result.files[Path("main.lua")]
+            start = main.index("migrated_eoc_event_pair_sale = function")
+            end = main.index(
+                'migrated_eoc_functions["event_pair_sale"]', start
+            )
+            return main, main[start:end]
+
+        main, body = rendered_source([source])
+        self.assertEqual(body.count("services.inventory.transfer_by_type("), 2)
+        self.assertEqual(
+            body.count("context.actors.interlocutor"), 2
+        )
+        self.assertIn('context.actors["attacker"]', body)
+        self.assertIn(
+            'runtime.on("game:character_melee_attacks_character", '
+            '"migrated.event_pair_sale")',
+            main,
+        )
+        self.assertNotIn("TODO: native u_sell_item", body)
+
+        reentry_source = migrate_lua_first.SourceObject(Path("emitter.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "reenter_melee_event",
+            "required_event": "game_start",
+            "effect": {"trigger_event": "character_melee_attacks_character"},
+        })
+        _, reentered_body = rendered_source([source, reentry_source])
+        self.assertNotIn(
+            "services.inventory.transfer_by_type(", reentered_body
+        )
+        self.assertIn(
+            "TODO: native u_sell_item consumes alpha inventory by item type/count or charges",
+            reentered_body,
+        )
+
+        child_call_source = migrate_lua_first.SourceObject(
+            Path("child.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "call_melee_event_as_child",
+                "required_event": "game_start",
+                "effect": {"run_eocs": "event_pair_sale"},
+            }
+        )
+        _, child_called_body = rendered_source([source, child_call_source])
+        self.assertNotIn(
+            "services.inventory.transfer_by_type(", child_called_body
+        )
+        self.assertIn(
+            "TODO: native u_sell_item consumes alpha inventory by item type/count or charges",
+            child_called_body,
+        )
 
 
 def load_tests(loader, tests, pattern):

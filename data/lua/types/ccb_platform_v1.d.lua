@@ -9613,6 +9613,19 @@ function CcbInventoryApi.remove_type(character, item_type) end
 ---@param charges? integer
 ---@return CcbResult
 function CcbInventoryApi.hand_in(character, recipient, item_type, count, charges) end
+---@class CcbInventoryTransferByTypeResult
+---@field id GameId GameId<item> whose type was transferred.
+---@field count integer Native positive item count, interpreted as charges for charge-counted types when enough charges are available.
+---@field matched boolean Whether the native charge-first/amount-fallback inventory search found enough stock.
+---@field kind "charges"|"items"|"none" Which native inventory branch supplied the transferred fragments.
+---@field fragments integer Number of item fragments returned by the native inventory operation.
+---@field notice string Native success or missing-item popup text.
+---@param character GameHandle Exact live Character inventory source.
+---@param recipient GameHandle Exact live Character recipient; transferred fragments receive this Character's faction as owner.
+---@param item_type GameId GameId<item>
+---@param count integer Positive quantity within 1..1000000000; charge-counted items transfer matching charges first, then native item-count fallback.
+---@return CcbResult result `value` is a CcbInventoryTransferByTypeResult. An insufficient-stock request is a successful service call with `matched = false` and no inventory mutation.
+function CcbInventoryApi.transfer_by_type(character, recipient, item_type, count) end
 ---@param character GameHandle Exact live Character handle.
 ---@param entries table
 ---@return CcbResult

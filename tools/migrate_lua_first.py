@@ -3197,10 +3197,10 @@ def _legacy_trade_action_todo(key: str) -> str | None:
         ),
         "u_sell_item": (
             "native u_sell_item consumes alpha inventory by item type/count or "
-            "charges, requires beta faction/debt behavior, assigns beta faction "
-            "ownership, shows success/failure popups, applies the explicit cost "
-            "as debt on success, and runs false/true EOCs; Platform transfer needs "
-            "the exact selected Item instance"
+            "charges, assigns each fragment to beta's faction, and requires a "
+            "proven live alpha/beta Character call pair; it also applies cost and "
+            "delegates nested EOCs. Unbound phase callbacks, dynamic/fractional "
+            "counts, nonzero cost, and nested EOCs remain TODO"
         ),
         "u_bulk_donate": (
             "native u_bulk_donate selects by dialogue cur_item type, visits alpha "
@@ -4793,6 +4793,7 @@ def render_static_false_effect(
     npc_actor_expression: str | None = None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    sell_item_pair_proven: bool = False,
 ) -> list[str] | None:
     """Render the small, branch-free false-effect subset inline.
 
@@ -4899,8 +4900,9 @@ def render_static_false_effect(
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "u_sell_item" in effect:
         rendered = render_static_sell_item_effect(
-            effect, npc_actor_proven, npc_actor_expression,
-            avatar_actor_proven,
+            effect,
+            ( actor_expression or "actor" ) if sell_item_pair_proven else None,
+            "context.actors.interlocutor" if sell_item_pair_proven else None,
         )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5432,8 +5434,11 @@ def render_static_false_effect(
         # stay explicit until that branch has a source-specific actor proof.
         if "u_sell_item" in effect:
             rendered = render_static_sell_item_effect(
-                effect, npc_actor_proven,
-                avatar_actor_proven=avatar_actor_proven,
+                effect,
+                ( actor_expression or "actor" )
+                if sell_item_pair_proven else None,
+                "context.actors.interlocutor"
+                if sell_item_pair_proven else None,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -21898,13 +21903,40 @@ def render_static_buy_item_effect(
 
 
 def render_static_sell_item_effect(
-    effect: dict[str, Any], npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
-    avatar_actor_proven: bool = False,
+    effect: dict[str, Any], alpha_actor_expression: str | None,
+    beta_actor_expression: str | None,
 ) -> list[str] | None:
-    """Keep type-id sales as TODOs until the selected Item can be proven."""
-    del effect, npc_actor_proven, npc_actor_expression, avatar_actor_proven
-    return None
+    """Transfer a bounded literal inventory amount between proven talkers."""
+    if (
+        alpha_actor_expression is None or beta_actor_expression is None or
+        not isinstance(effect, dict) or "u_sell_item" not in effect
+    ):
+        return None
+    comment_keys = {
+        key for key in effect
+        if isinstance(key, str) and key.startswith("//")
+    }
+    if set(effect) - comment_keys - {"u_sell_item", "count", "cost"}:
+        return None
+    item_type = effect.get("u_sell_item")
+    count = effect.get("count", 1)
+    cost = effect.get("cost", 0)
+    if (
+        not bounded_platform_id(item_type) or
+        not isinstance(count, int) or isinstance(count, bool) or
+        not 1 <= count <= 1000000000 or
+        isinstance(cost, bool) or not isinstance(cost, (int, float)) or
+        not math.isfinite(float(cost)) or cost != 0
+    ):
+        return None
+    return [
+        "    local transfer = service_value(services.inventory.transfer_by_type(",
+        f"        {alpha_actor_expression}, {beta_actor_expression}, ",
+        "services.types.id(\"item\", " + f"{lua_quote(item_type)}), {count}))",
+        "    if transfer.notice ~= nil and transfer.notice ~= \"\" then",
+        "        ccb.presentation.notice(transfer.notice)",
+        "    end",
+    ]
 
 
 def render_static_level_spell_class_effect(
@@ -29683,6 +29715,19 @@ def render_eoc(
         } and not inline_eoc and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # A narrowly migratable u_sell_item callback needs the actual runtime
+    # EOC bridge to carry both native dialogue Characters.  The melee-to-
+    # Character sender supplies alpha and its live target as interlocutor;
+    # legacy mission end.effect references are not Platform finish_with
+    # handlers and therefore cannot use mission source pair provenance alone.
+    sell_item_pair_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character" and
+        event_actor_field == "attacker" and
+        not character_melee_event_emitted_by_eoc and
+        value.get("eoc_type", "EVENT") == "EVENT" and
+        value.get("global") is not True and "recurrence" not in value
+    )
     raw_eoc_effects = value.get("effect", [])
     if isinstance(raw_eoc_effects, (dict, str)):
         raw_eoc_effects = [raw_eoc_effects]
@@ -30021,6 +30066,7 @@ def render_eoc(
                     npc_actor_expression,
                     effect_actor_targets,
                     character_effect_actor_targets,
+                    sell_item_pair_proven=sell_item_pair_proven,
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
@@ -33513,9 +33559,10 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_sell_item" in effect:
                 rendered = render_static_sell_item_effect(
-                    effect, npc_event_character_actor_proven,
-                    npc_actor_expression,
-                    avatar_actor_proven,
+                    effect,
+                    actor_expression if sell_item_pair_proven else None,
+                    "context.actors.interlocutor"
+                    if sell_item_pair_proven else None,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
