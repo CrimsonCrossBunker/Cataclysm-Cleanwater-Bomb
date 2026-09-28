@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -18,12 +19,15 @@
 #include "condition.h"
 #include "coordinates.h"
 #include "dialogue.h"
+#include "effect.h"
 #include "faction.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "item_location.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_creatures.h"
+#include "lua_platform_effects.h"
 #include "lua_platform_factions.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
@@ -32,6 +36,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "monster.h"
 #include "npc.h"
 #include "npctalk.h"
 #include "point.h"
@@ -522,5 +527,134 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     CHECK( npc_hostile_condition( context ) ==
            following_snapshot["enemy"].get<bool>() );
     CHECK_FALSE( npc_hostile_condition( context ) );
+}
+
+TEST_CASE( "lua_migrated_npc_nearby_and_service_conditions_match_native",
+           "[lua][platform][npc][conditions][semantic]" )
+{
+    clear_avatar();
+    clear_npcs();
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    avatar &player = get_avatar();
+    get_map().build_map_cache( player.pos_bub().z() );
+    npc &beta = spawn_npc( player.pos_bub().xy() + point::east, "thug" );
+    npc &far_role = spawn_npc( player.pos_bub().xy() + point( 49, 0 ), "thug" );
+    monster &monster_beta = spawn_test_monster(
+                                "mon_zombie", player.pos_bub() + tripoint::north );
+    beta.companion_mission_role_id = "scout";
+    far_role.companion_mission_role_id = "out_of_range";
+    player.cash = 101;
+    dialogue context( get_talker_for( player ), get_talker_for( beta ) );
+    const conditional_t role_condition( json_loader::from_string(
+            R"({"npc_role_nearby":"scout"})" ).get_object() );
+    const conditional_t see_condition( "npc_see_u" );
+    const conditional_t service_condition( json_loader::from_string(
+            R"({"npc_service":100.5})" ).get_object() );
+
+    namespace platform = cata::lua_platform;
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const platform::game_handle_runtime_owner_ptr owner =
+        platform::make_game_handle_runtime_owner();
+    const platform::game_handle_runtime runtime{ owner, 1 };
+    const auto current_world = []() {
+        return std::size_t( 1 );
+    };
+    platform::install_value_type_api( lua, services, []() {} );
+    platform::install_game_handle_api( lua, services, [runtime]() {
+        return runtime;
+    }, current_world, []() {} );
+    platform::install_npc_api( services, [runtime]() {
+        return runtime;
+    }, current_world, []() {}, []() {}, []() {} );
+    platform::install_creature_api( services, [runtime]() {
+        return runtime;
+    }, current_world, []() {}, []() {} );
+    platform::install_effect_api( services, [runtime]() {
+        return runtime;
+    }, current_world, []() {}, []() {} );
+    platform::register_npc_handle_identity( beta );
+    const platform::game_handle avatar_handle = platform::game_handle::from_creature(
+            player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+    const platform::game_handle beta_handle = platform::game_handle::from_creature(
+            beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+    const tripoint_abs_ms monster_position = get_map().get_abs( monster_beta.pos_bub() );
+    const platform::game_handle monster_handle = platform::game_handle::from_creature(
+            monster_beta, { "monster", monster_beta.uid().get_value(),
+                            monster_position.x(), monster_position.y(), monster_position.z(), {} },
+            runtime, 1 );
+    const on_out_of_scope retire_beta( [&]() {
+        platform::retire_npc_handle_identity( beta );
+    } );
+
+    const auto role_nearby_from_platform = [&]() {
+        const sol::protected_function has_role_nearby =
+            services["npcs"]["has_role_nearby"];
+        const sol::protected_function_result call =
+            has_role_nearby( avatar_handle, "scout", 48 );
+        REQUIRE( call.valid() );
+        const sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<bool>();
+    };
+    const auto sees_alpha_from_platform = [&]( const platform::game_handle &observer ) {
+        const sol::protected_function can_see = services["creatures"]["can_see"];
+        const sol::protected_function_result call =
+            can_see( observer, avatar_handle );
+        REQUIRE( call.valid() );
+        const sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<bool>();
+    };
+    const auto service_from_platform = [&](
+            const platform::game_handle &interlocutor,
+            const double minimum_cash ) {
+        const sol::protected_function has_effect = services["effects"]["has"];
+        const sol::protected_function_result busy_call = has_effect(
+                    interlocutor,
+                    platform::script_game_id( "effect", "currently_busy" ) );
+        REQUIRE( busy_call.valid() );
+        const sol::table busy_result = busy_call;
+        REQUIRE( busy_result["ok"].get<bool>() );
+        const sol::protected_function snapshot = services["characters"]["snapshot"];
+        const sol::protected_function_result cash_call = snapshot( avatar_handle );
+        REQUIRE( cash_call.valid() );
+        const sol::table cash_result = cash_call;
+        REQUIRE( cash_result["ok"].get<bool>() );
+        const sol::table cash_snapshot = cash_result["value"];
+        return !busy_result["value"].get<bool>() &&
+               cash_snapshot["cash"].get<int>() >= minimum_cash;
+    };
+
+    CHECK( role_condition( context ) == role_nearby_from_platform() );
+    CHECK( role_condition( context ) );
+    CHECK( see_condition( context ) == sees_alpha_from_platform( beta_handle ) );
+    dialogue monster_context( get_talker_for( player ), get_talker_for( monster_beta ) );
+    CHECK( see_condition( monster_context ) == sees_alpha_from_platform( monster_handle ) );
+    CHECK( service_condition( monster_context ) ==
+           service_from_platform( monster_handle, 100.5 ) );
+    CHECK( service_condition( monster_context ) );
+
+    const efftype_id currently_busy( "currently_busy" );
+    beta.add_effect( currently_busy, 10_turns, body_part_arm_l.id(), false, 1, true );
+    CHECK( service_condition( context ) == service_from_platform( beta_handle, 100.5 ) );
+    CHECK_FALSE( service_condition( context ) );
+    beta.remove_effect( currently_busy, body_part_arm_l.id() );
+    CHECK( service_condition( context ) == service_from_platform( beta_handle, 100.5 ) );
+    CHECK( service_condition( context ) );
+    player.cash = 100;
+    CHECK( service_condition( context ) == service_from_platform( beta_handle, 100.5 ) );
+    CHECK_FALSE( service_condition( context ) );
+
+    beta.companion_mission_role_id.clear();
+    far_role.companion_mission_role_id = "scout";
+    CHECK( role_condition( context ) == role_nearby_from_platform() );
+    CHECK_FALSE( role_condition( context ) );
 }
 #endif
