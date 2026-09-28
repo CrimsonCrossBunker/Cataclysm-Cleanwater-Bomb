@@ -7086,7 +7086,9 @@ assert(#events == 9)
             self.assertEqual(len(result.partial), 1)
             self.assertIn("context.actors.npc", main)
             self.assertIn(
-                "EOC npc_hostile condition TODO: translate the legacy condition into a Lua predicate",
+                "EOC npc_hostile condition TODO: translate npc_has_activity "
+                "member objects and npc_is_travelling only after a supported "
+                "EOC callback supplies native beta as a live Character",
                 report,
             )
             self.assertNotIn("character_travel_has_path(actor)", main)
@@ -10375,16 +10377,9 @@ assert(not available())
                 )
 
         beta_predicates = {
-            "npc_has_activity": (
-                "service_value(services.activities.snapshot("
-                "context.actors.beta)).active"
-            ),
             "npc_has_weapon": "character_has_weapon(context.actors.beta)",
             "npc_can_drop_weapon": (
                 "character_can_drop_weapon(context.actors.beta)"
-            ),
-            "npc_is_travelling": (
-                "character_travel_has_path(context.actors.beta)"
             ),
             "npc_is_warm": (
                 "service_value(services.characters.snapshot("
@@ -10555,6 +10550,103 @@ assert(not available())
             "response fields need Lua conversion: false_eocs, true_eocs",
             report,
         )
+
+    def test_npc_activity_and_travel_conditions_preserve_native_roles(self) -> None:
+        for selector in ("npc_is_travelling",):
+            for actor_expression in ("actor", "context.actors.beta"):
+                with self.subTest(
+                    selector=selector, actor_expression=actor_expression
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            selector,
+                            npc_actor_proven=True,
+                            npc_actor_expression=actor_expression,
+                            npc_dialogue_pair_proven=True,
+                            event_beta_presence_proven=True,
+                        )
+                    )
+
+        # This member form is the native f_has_activity parser.  The member
+        # string is ignored, but the query still reads const_actor(true).
+        for condition in (
+            {"npc_has_activity": "ignored"},
+            {"not": {"npc_has_activity": "ignored"}},
+        ):
+            for actor_expression in ("actor", "context.actors.beta"):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition,
+                        npc_actor_proven=True,
+                        npc_actor_expression=actor_expression,
+                        npc_dialogue_pair_proven=True,
+                        event_beta_presence_proven=True,
+                    )
+                )
+        # The bare string is not a registered simple native condition.
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "npc_has_activity",
+                npc_actor_proven=True,
+                npc_actor_expression="actor",
+                npc_dialogue_pair_proven=True,
+            ),
+            "false",
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_activity_member_event",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": {"npc_has_activity": "ignored"},
+                        "effect": {"message": "activity"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_travel_event",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": "npc_is_travelling",
+                        "effect": {"message": "travel"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_activity_bare_event",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": "npc_has_activity",
+                        "effect": {"message": "bare activity"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_activity_travel_mod",
+            )
+            main = result.files[Path("main.lua")]
+            todos = "\n".join(todo.text for todo in result.todos)
+
+        self.assertNotIn("services.activities.snapshot(actor)", main)
+        self.assertNotIn("character_travel_has_path(actor)", main)
+        self.assertIn("if not (false) then", main)
+        self.assertNotIn(
+            "EOC npc_activity_bare_event condition TODO:",
+            todos,
+        )
+        for eoc_id in ("npc_activity_member_event", "npc_travel_event"):
+            todo_prefix = (
+                f"EOC {eoc_id} condition TODO: translate "
+                "npc_has_activity member objects and npc_is_travelling only "
+                "after a supported EOC callback supplies native beta as a "
+                "live Character"
+            )
+            self.assertIn(
+                todo_prefix,
+                todos,
+            )
 
     def test_avatar_safe_space_requires_live_event_exclusive_avatar_proof(self) -> None:
         self.assertIsNone(
