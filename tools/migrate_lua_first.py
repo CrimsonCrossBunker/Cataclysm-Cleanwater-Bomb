@@ -3293,6 +3293,26 @@ def _camp_selector_todo(effect: Any) -> tuple[TodoCategory, str] | None:
     return _CAMP_SELECTOR_TODOS.get(effect) if isinstance(effect, str) else None
 
 
+def _distribute_food_auto_todo(effect: Any) -> str | None:
+    """Describe the native zone and food-inventory transaction we cannot lower."""
+    if not isinstance(effect, str) or effect != "distribute_food_auto":
+        return None
+    return (
+        "native distribute_food_auto emits debugmsg and returns if the NPC has no camp at its "
+        "current OMT or fails allowed_access_by, then adds enabled CAMP_FOOD and CAMP_STORAGE "
+        "zones over the NPC's 3x3 map-square area and runs distribute_food(false). That call "
+        "validates sort zones around the global avatar and may query_yn to open zone setup; "
+        "missing zones also produce an NPC-distribution debugmsg, while no suitable food "
+        "returns false quietly and the wrapper ignores the result. Successful distribution "
+        "consumes eligible ground and vehicle food with native nutrition and spoilage rules, "
+        "then credits the camp owner's faction. Cleanup removes every same-faction CAMP_FOOD "
+        "and CAMP_STORAGE zone, including pre-existing zones, rather than only the temporary "
+        "pair. Platform camps.food.add/consume mutate supply directly and services.zones only "
+        "manage zones; neither preserves this inventory transaction, diagnostics/UI behavior, "
+        "or destructive cleanup"
+    )
+
+
 def _camp_selector_object_todo(effect: Any) -> str | None:
     """Reject object forms for camp selectors registered as native strings."""
     if not isinstance(effect, dict):
@@ -6488,15 +6508,17 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
                 camp_todo = _camp_selector_todo(entry["effect"])
                 camp_object_todo = _camp_selector_object_todo(entry["effect"])
+                food_todo = _distribute_food_auto_todo(entry["effect"])
                 response_effect_reason = _talk_topic_effect_todo_reason(
                     entry["effect"]
                 )
                 result.add_todo(
                     camp_todo[0] if camp_todo is not None else
+                    "platform_gap" if food_todo is not None else
                     "semantic_choice" if camp_object_todo is not None else
                     "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} response effect "
-                    f"{camp_todo[1] if camp_todo is not None else camp_object_todo or trade_todo or response_effect_reason or 'needs a native callback'}"
+                    f"{camp_todo[1] if camp_todo is not None else food_todo or camp_object_todo or trade_todo or response_effect_reason or 'needs a native callback'}"
                 )
             else:
                 response["on_select"] = callback
@@ -6547,10 +6569,18 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             )
             if callback is None:
                 trade_todo = _legacy_trade_action_effect_todo(raw_effect)
+                speaker_effect_value = raw_effect
+                if (
+                    isinstance(raw_effect, dict) and
+                    set(raw_effect) <= {"effect", "opinion", "mission_opinion"} and
+                    isinstance(raw_effect.get("effect"), str)
+                ):
+                    speaker_effect_value = raw_effect["effect"]
+                food_todo = _distribute_food_auto_todo(speaker_effect_value)
                 result.add_todo(
-                    "manual_rewrite",
+                    "platform_gap" if food_todo is not None else "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} speaker_effect "
-                    f"{trade_todo or 'needs a native callback'}"
+                    f"{food_todo or trade_todo or 'needs a native callback'}"
                 )
             else:
                 callbacks.append(callback)
@@ -32093,20 +32123,13 @@ def render_eoc(
                 ])
                 converted_effect = True
             elif effect == "distribute_food_auto":
-                # This legacy operation discovers a camp from the NPC's
-                # position and then enters the old camp-food workflow.  The
-                # Platform food API requires an explicit camp and manager,
-                # while the storage side requires an exact holder.  No
-                # source-backed participant is available here, so do not
-                # lower it to an activity or silently select a camp.
-                lines.append(
-                    "    -- TODO: distribute_food_auto requires explicit camp, "
-                    "manager, and storage holder handles."
-                )
+                food_todo = _distribute_food_auto_todo(effect)
+                assert food_todo is not None
+                lines.append(f"    -- TODO: {food_todo}.")
                 result.add_todo(
-                    "manual_rewrite",
+                    "platform_gap",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs explicit camp, manager, and storage holder handles"
+                    f"{food_todo}"
                 )
                 all_effects_converted = False
             elif effect == "lightning":
