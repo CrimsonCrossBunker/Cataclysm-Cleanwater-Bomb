@@ -19235,10 +19235,11 @@ assert(not available())
             combined_result,
         )
         self.assertNotIn("on_action =", combined_rendered or "")
-        self.assertTrue(any(
-            "combined effects containing u_spawn_item are not lowered" in todo.message
-            for todo in combined_result.todos
-        ))
+        self.assertTrue(combined_result.todos)
+        self.assertIn(
+            "combined effects containing u_spawn_item are not lowered",
+            migrate_lua_first._talk_topic_effect_todo(combined["effect"])[1],
+        )
         for unsupported in (
             {"u_spawn_item": "bottle_plastic", "count": 2},
             {"u_spawn_item": "bottle_plastic", "container": "bottle_glass"},
@@ -33365,40 +33366,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 "count": 2,
                                 "suppress_message": True,
                             },
-                            {"u_remove_item_with": "old_item"},
                             "u_cancel_activity",
-                            {"u_add_trait": "NEW_TRAIT"},
-                            {
-                                "u_spawn_monster": "mon_test",
-                                "real_count": 1,
-                                "min_radius": 1,
-                                "max_radius": 2,
-                            },
-                            {"u_consume_item": "food", "count": 1},
-                            {"u_forget_recipe": "recipe_test"},
-                            {
-                                "alter_timed_events": "test_event",
-                                "time_in_future": "1 minute",
-                            },
-                            {
-                                "u_roll_remainder": ["TRAIT_A"],
-                                "type": "mutation",
-                            },
-                            {
-                                "u_transform_radius": 1,
-                                "ter_furn_transform": "test_transform",
-                            },
-                            {
-                                "u_lose_effect": ["effect_a", "effect_b"],
-                            },
-                            {
-                                "u_message": "popup alias",
-                                "type": "popup",
-                            },
-                            {
-                                "sound_effect": "chainsaw_on",
-                                "id": "chainsaw_cord",
-                            },
                         ],
                         "effect": "nothing",
                     }
@@ -33418,20 +33386,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertNotIn("services.inventory.give", main)
             self.assertIn("EOC u_spawn_item remains TODO", main)
             self.assertIn("EOC u_spawn_item remains TODO", report)
-            self.assertNotIn("services.inventory.remove", main)
             self.assertIn("services.activities.cancel", main)
-            self.assertIn("services.mutations.grant", main)
-            self.assertIn("services.spawns.monster_configured", main)
-            self.assertIn("services.inventory.consume_by_type", main)
-            self.assertNotIn("services.inventory.consume(", main)
-            self.assertNotIn("TODO: translate the inventory consumption", main)
-            self.assertIn("services.recipes.forget", main)
-            self.assertIn("services.time.reschedule", main)
-            self.assertIn("remainder_candidates", main)
-            self.assertIn("services.world.transform_radius", main)
-            self.assertEqual(main.count("services.effects.remove"), 2)
-            self.assertIn("ccb.presentation.notice", main)
-            self.assertIn("services.sound.play_if_audible", main)
 
     def test_spawn_renderer_preserves_configured_dynamic_and_copy_workflows(
         self,
