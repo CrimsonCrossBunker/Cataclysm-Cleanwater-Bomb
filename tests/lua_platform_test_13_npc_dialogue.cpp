@@ -3,6 +3,7 @@
 #include "lua_platform_dialogue.h"
 #include "condition.h"
 #include "avatar.h"
+#include "calendar.h"
 #include "dialogue.h"
 #include "faction.h"
 #include "item.h"
@@ -1916,6 +1917,170 @@ TEST_CASE( "lua_platform_dialogue_move_retires_source_and_target_sessions",
         CHECK( moved_session->active_for(
                    "TALK_MOVE_ASSIGN", runtime, world_generation, &target ) );
     }
+}
+
+TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_native",
+           "[lua][platform][dialogue][runtime][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    struct dialogue_debug_cleanup {
+        ~dialogue_debug_cleanup() {
+            cata::lua_platform::clear_active_runtimes();
+        }
+    } cleanup;
+
+    avatar speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1570 ), true );
+    REQUIRE_FALSE( speaker.has_trait( trait_id( "SPIRITUAL" ) ) );
+    const itype_id repeat_item_id( "test_rock" );
+    speaker.i_add( item( repeat_item_id, calendar::turn ) );
+    REQUIRE( speaker.has_amount( repeat_item_id, 1 ) );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1571 ), true );
+
+    const JsonValue false_switch_json = json_loader::from_string(
+            R"({
+              "text": "False switch",
+              "condition": { "u_has_trait": "SPIRITUAL" },
+              "switch": true
+            })" );
+    const JsonValue default_switch_json = json_loader::from_string(
+            R"({
+              "text": "Fallback",
+              "switch": true,
+              "default": true
+            })" );
+    const JsonValue repeat_json = json_loader::from_string(
+            R"({
+              "for_item": "test_rock",
+              "response": { "text": "Repeat item", "switch": true }
+            })" );
+    json_talk_response native_false_switch(
+        false_switch_json.get_object(), "dialogue_debug_condition_test" );
+    json_talk_response native_default_switch(
+        default_switch_json.get_object(), "dialogue_debug_condition_test" );
+    json_talk_repeat_response native_repeat(
+        repeat_json.get_object(), "dialogue_debug_condition_test" );
+    const auto generate_native = [&]( dialogue &conversation, bool &switch_done ) {
+        switch_done = false;
+        std::vector<bool> switch_claims;
+        for( json_talk_response *const response : {
+                 &native_false_switch, &native_default_switch
+             } ) {
+            const bool claims_switch = response->gen_responses( conversation, switch_done );
+            switch_claims.push_back( claims_switch );
+            if( claims_switch ) {
+                switch_done = true;
+            }
+        }
+        return switch_claims;
+    };
+
+    dialogue native_normal(
+        get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    bool native_normal_switch_done = false;
+    const std::vector<bool> native_normal_claims = generate_native(
+                native_normal, native_normal_switch_done );
+    REQUIRE( native_normal_claims.size() == 2 );
+    CHECK_FALSE( native_normal_claims[0] );
+    CHECK_FALSE( native_normal_claims[1] );
+    CHECK_FALSE( native_normal_switch_done );
+    CHECK( native_repeat.gen_repeat_response(
+               native_normal, repeat_item_id, native_normal_switch_done ) );
+    REQUIRE( native_normal.responses.size() == 2 );
+    CHECK( native_normal.responses[0].truetext.translated() == "Fallback" );
+    CHECK( native_normal.responses[1].truetext.translated() == "Repeat item" );
+
+    dialogue native_debug(
+        get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    native_debug.debug_ignore_conditionals = true;
+    bool native_debug_switch_done = false;
+    const std::vector<bool> native_debug_claims = generate_native(
+                native_debug, native_debug_switch_done );
+    REQUIRE( native_debug_claims.size() == 2 );
+    CHECK( native_debug_switch_done );
+    CHECK_FALSE( native_repeat.gen_repeat_response(
+                     native_debug, repeat_item_id, native_debug_switch_done ) );
+    REQUIRE( native_debug.responses.size() == 2 );
+    CHECK( native_debug.responses[0].truetext.translated() == "False switch" );
+    CHECK( native_debug.responses[1].truetext.translated() == "Fallback" );
+    CHECK( native_debug.responses[0].ignore_conditionals );
+    CHECK_FALSE( native_debug.responses[1].ignore_conditionals );
+    CHECK( native_debug_claims[0] );
+    CHECK_FALSE( native_debug_claims[1] );
+
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_debug_conditions", 96, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    sol::table false_switch = owner_lua.create_table();
+    false_switch["text"] = "False switch";
+    false_switch["condition"] = false;
+    false_switch["switch"] = true;
+    sol::table default_switch = owner_lua.create_table();
+    default_switch["text"] = "Fallback";
+    default_switch["switch"] = true;
+    default_switch["default"] = true;
+    sol::table responses = owner_lua.create_table();
+    responses[1] = false_switch;
+    responses[2] = default_switch;
+    sol::table repeat_response = owner_lua.create_table();
+    repeat_response["text"] = "Repeat item";
+    repeat_response["switch"] = true;
+    sol::table repeat_descriptor = owner_lua.create_table();
+    repeat_descriptor["item"] = "test_rock";
+    repeat_descriptor["response"] = repeat_response;
+    sol::table repeat_responses = owner_lua.create_table();
+    repeat_responses[1] = repeat_descriptor;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_DEBUG_CONDITION";
+    descriptor["dynamic_line"] = "Debug condition parity test";
+    descriptor["responses"] = responses;
+    descriptor["repeat_responses"] = repeat_responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( descriptor );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    const auto generate_platform = [&]( dialogue &conversation ) {
+        const cata::lua_platform::dialogue::dialogue_session_ptr session =
+            cata::lua_platform::dialogue::begin_session(
+                conversation, runtime_identity, world_generation );
+        conversation.gen_responses( talk_topic( "TALK_CCB_DEBUG_CONDITION" ) );
+        return session;
+    };
+
+    dialogue platform_normal(
+        get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr normal_session =
+        generate_platform( platform_normal );
+    REQUIRE( normal_session );
+    REQUIRE( platform_normal.responses.size() == 2 );
+    CHECK( platform_normal.responses[0].truetext.translated() == "Fallback" );
+    CHECK( platform_normal.responses[1].truetext.translated() == "Repeat item" );
+    cata::lua_platform::dialogue::end_session( platform_normal );
+
+    dialogue platform_debug(
+        get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    platform_debug.debug_ignore_conditionals = true;
+    const cata::lua_platform::dialogue::dialogue_session_ptr debug_session =
+        generate_platform( platform_debug );
+    REQUIRE( debug_session );
+    REQUIRE( platform_debug.responses.size() == 2 );
+    CHECK( platform_debug.responses[0].truetext.translated() == "False switch" );
+    CHECK( platform_debug.responses[1].truetext.translated() == "Fallback" );
+    CHECK( platform_debug.responses[0].ignore_conditionals );
+    CHECK_FALSE( platform_debug.responses[1].ignore_conditionals );
+    cata::lua_platform::dialogue::end_session( platform_debug );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

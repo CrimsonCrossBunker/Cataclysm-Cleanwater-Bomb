@@ -1209,7 +1209,8 @@ struct declarative_platform_dialogue_response {
 
 declarative_platform_dialogue_response declarative_platform_dialogue_response_from_table(
     const std::shared_ptr<runtime> &owner, const std::string &topic_id,
-    ::dialogue &d, const sol::table &descriptor )
+    ::dialogue &d, const sol::table &descriptor,
+    const bool debug_ignore_conditionals )
 {
     std::optional<sol::protected_function> on_select;
     declarative_platform_dialogue_response generated;
@@ -1254,6 +1255,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         show_anyway = show_anyway || evaluate_platform_dialogue_boolean(
                           owner, d, topic_id, show_condition, "response show_condition" );
     }
+    show_anyway = show_anyway || debug_ignore_conditionals;
     generated.response.show_reason = descriptor.get_or(
                                          "show_reason", descriptor.get_or(
                                                  "failure_explanation", std::string() ) );
@@ -1592,16 +1594,18 @@ void add_declarative_platform_dialogue_response(
     const bool insert_before_standard_exits, const bool insert_front,
     const std::optional<itype_id> &repeat_item, bool &switch_done )
 {
+    // Native repeat responses do not use json_talk_response's debug override.
+    const bool debug_ignore_conditionals = d.debug_ignore_conditionals && !repeat_item;
     declarative_platform_dialogue_response generated =
         declarative_platform_dialogue_response_from_table(
-            owner, topic_id, d, descriptor );
+            owner, topic_id, d, descriptor, debug_ignore_conditionals );
     if( repeat_item ) {
         generated.response.success.next_topic.item_type = *repeat_item;
         generated.response.failure.next_topic.item_type = *repeat_item;
     }
     if( generated.response.truetext.empty() ||
         ( generated.switch_response && switch_done &&
-          !d.debug_ignore_conditionals ) ) {
+          !debug_ignore_conditionals ) ) {
         return;
     }
     d.add_gen_response( generated.response, insert_front,
@@ -1609,7 +1613,7 @@ void add_declarative_platform_dialogue_response(
                         generated.condition_result,
                         insert_before_standard_exits );
     if( generated.switch_response && !generated.default_response &&
-        generated.condition_result ) {
+        ( generated.condition_result || debug_ignore_conditionals ) ) {
         switch_done = true;
     }
 }
