@@ -647,7 +647,7 @@ assert(worn_calls==1 and has_calls==1)
                 )
                 self.assertEqual(marker in rendered, should_lower)
                 self.assertEqual(
-                    "condition TODO: translate the legacy condition into a Lua predicate"
+                    "-- TODO: translate the legacy condition into a Lua predicate"
                     in rendered,
                     not should_lower,
                 )
@@ -670,7 +670,7 @@ assert(worn_calls==1 and has_calls==1)
                 )
                 self.assertNotIn("services.creatures.can_see(beta, alpha)", rendered)
                 self.assertIn(
-                    "condition TODO: translate the legacy condition into a Lua predicate",
+                    "-- TODO: translate the legacy condition into a Lua predicate",
                     rendered,
                 )
 
@@ -23606,6 +23606,44 @@ assert(calls == 1)
             capture_output=True, timeout=10,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_unconverted_eoc_guards_stop_effects_before_execution(self) -> None:
+        for gate, raw_gate in (
+            ("condition", "unsupported_native_condition"),
+            ("deactivate_condition", "unsupported_native_condition"),
+        ):
+            with self.subTest(gate=gate):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), 0, {
+                        "type": "effect_on_condition", "id": "unknown_guard",
+                        "required_event": "character_melee_attacks_character",
+                        gate: raw_gate,
+                        "effect": {"message": "must not execute"},
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertIn("    do return false end", rendered)
+                self.assertLess(
+                    rendered.index("    do return false end"),
+                    rendered.index("services.message("),
+                )
+                self.assertTrue(result.todos)
+                script = """
+local calls = 0
+local services = { message = function() calls = calls + 1 end }
+local runtime = { handler = function() end, on = function() end }
+local migrated_eoc_functions = {}
+RENDERED
+assert(migrated_eoc_unknown_guard({ actors = { attacker = {} } }) == false)
+assert(calls == 0)
+""".replace("RENDERED", rendered)
+                run = subprocess.run(
+                    ["lua", "-"], input=script, text=True,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_drop_stolen_items_requires_direct_talk_topic_beta_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

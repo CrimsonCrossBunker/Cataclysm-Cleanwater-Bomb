@@ -30163,6 +30163,15 @@ def render_eoc(
                 "        return false",
                 "    end",
             ])
+    if "deactivate_condition" in value and deactivate_expression is None:
+        lines.extend([
+            "    -- TODO: translate deactivate_condition before running effects.",
+            "    do return false end",
+        ])
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: EOC {eoc_id} deactivate_condition needs Lua conversion"
+        )
     raw_condition = value.get("condition", True)
     empty_math_condition = (
         isinstance(raw_condition, dict) and
@@ -30338,6 +30347,9 @@ def render_eoc(
                 "Character handle and native lazy overmap lookup"
             )
         lines.append(f"    -- TODO: {condition_todo}.")
+        # Unknown truth cannot choose either native branch. Keep the generated
+        # callback inert even when later effect statements were rendered.
+        lines.append("    do return false end")
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} condition TODO: {condition_todo}"
