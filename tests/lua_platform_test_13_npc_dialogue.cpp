@@ -4,6 +4,7 @@
 #include "condition.h"
 #include "avatar.h"
 #include "dialogue.h"
+#include "faction.h"
 #include "item.h"
 #include "json_loader.h"
 #include "mission.h"
@@ -1169,6 +1170,174 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
     CHECK_FALSE( stale_context.get<bool>() );
     const sol::protected_function reuse_context =
         owner_lua["reuse_clear_mission_context"];
+    CHECK_FALSE( reuse_context().valid() );
+    cata::lua_platform::dialogue::end_session( platform_conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
+           "[lua][platform][dialogue][missions][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    avatar &owner = get_avatar();
+    owner.reset_all_missions();
+    mission::clear_all();
+    struct mission_success_cleanup {
+        avatar &owner;
+        ~mission_success_cleanup() {
+            cata::lua_platform::clear_active_runtimes();
+            owner.reset_all_missions();
+            mission::clear_all();
+        }
+    } cleanup{ owner };
+
+    npc native_interlocutor;
+    native_interlocutor.normalize();
+    native_interlocutor.setID( character_id( 1564 ), true );
+    native_interlocutor.set_fac( faction_id( "tacoma_commune" ) );
+    native_interlocutor.op_of_u.value = 4;
+    native_interlocutor.op_of_u.anger = 2;
+    npc platform_interlocutor;
+    platform_interlocutor.normalize();
+    platform_interlocutor.setID( character_id( 1565 ), true );
+    platform_interlocutor.set_fac( faction_id( "tacoma_commune" ) );
+    platform_interlocutor.op_of_u.value = 4;
+    platform_interlocutor.op_of_u.anger = 2;
+    cata::lua_platform::register_npc_handle_identity( native_interlocutor );
+    cata::lua_platform::register_npc_handle_identity( platform_interlocutor );
+    on_out_of_scope retire_npc_identities( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( native_interlocutor );
+        cata::lua_platform::retire_npc_handle_identity( platform_interlocutor );
+    } );
+
+    faction *const shared_faction = native_interlocutor.get_faction();
+    REQUIRE( shared_faction != nullptr );
+    REQUIRE( platform_interlocutor.get_faction() == shared_faction );
+    const mission_type_id test_mission( "TEST_MISSION_GENERIC_REWARD" );
+    mission *const native_mission = mission::reserve_new(
+                                        test_mission, native_interlocutor.getID() );
+    mission *const platform_mission = mission::reserve_new(
+                                          test_mission, platform_interlocutor.getID() );
+    REQUIRE( native_mission != nullptr );
+    REQUIRE( platform_mission != nullptr );
+    native_mission->set_assigned_player_id( owner.getID() );
+    platform_mission->set_assigned_player_id( owner.getID() );
+    native_interlocutor.chatbin.missions_assigned = { native_mission };
+    native_interlocutor.chatbin.mission_selected = native_mission;
+    platform_interlocutor.chatbin.missions_assigned = { platform_mission };
+    platform_interlocutor.chatbin.mission_selected = platform_mission;
+
+    dialogue native_conversation(
+        get_talker_for( owner ), get_talker_for( native_interlocutor ) );
+    const JsonValue native_effect_json = json_loader::from_string(
+            R"({"effect":"mission_success"})" );
+    talk_effect_t native_effect(
+        native_effect_json.get_object(), "effect", "dialogue_mission_success_test" );
+    const int native_value_before = native_interlocutor.op_of_u.value;
+    const int native_anger_before = native_interlocutor.op_of_u.anger;
+    const int faction_likes_before = shared_faction->likes_u;
+    const int faction_respects_before = shared_faction->respects_u;
+    const int faction_trust_before = shared_faction->trusts_u;
+    const int faction_power_before = shared_faction->power;
+    native_effect.apply( native_conversation );
+    CHECK( native_mission->is_complete( owner.getID() ) );
+    const int native_value_delta =
+        native_interlocutor.op_of_u.value - native_value_before;
+    const int native_anger_delta =
+        native_interlocutor.op_of_u.anger - native_anger_before;
+    const int native_faction_likes_delta = shared_faction->likes_u - faction_likes_before;
+    const int native_faction_respects_delta =
+        shared_faction->respects_u - faction_respects_before;
+    const int native_faction_trust_delta =
+        shared_faction->trusts_u - faction_trust_before;
+    const int native_faction_power_delta = shared_faction->power - faction_power_before;
+    CHECK( native_value_delta > 0 );
+    CHECK( native_anger_delta == -1 );
+    CHECK( native_faction_likes_delta > 0 );
+    CHECK( native_faction_respects_delta == native_faction_likes_delta );
+    CHECK( native_faction_trust_delta == native_faction_likes_delta );
+    CHECK( native_faction_power_delta == native_faction_likes_delta );
+
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_mission_success", 94, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    owner_lua.script( R"(
+        function succeed_native_selected_mission(context, trial_success)
+            if not trial_success or not context:valid() then return end
+            saved_mission_success_context = context
+            context:succeed_selected_mission()
+        end
+        function mission_success_context_is_valid()
+            return saved_mission_success_context:valid()
+        end
+        function reuse_mission_success_context()
+            saved_mission_success_context:succeed_selected_mission()
+        end
+    )" );
+    sol::table response = owner_lua.create_table();
+    response["text"] = "Mission complete";
+    response["on_action"] = owner_lua["succeed_native_selected_mission"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_MISSION_SUCCESS";
+    descriptor["dynamic_line"] = "Mission success semantic test";
+    descriptor["responses"] = responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( descriptor );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue platform_conversation(
+        get_talker_for( owner ), get_talker_for( platform_interlocutor ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            platform_conversation, runtime_identity, world_generation );
+    platform_conversation.gen_responses( talk_topic( "TALK_CCB_MISSION_SUCCESS" ) );
+    REQUIRE( platform_conversation.responses.size() == 1 );
+
+    const int platform_value_before = platform_interlocutor.op_of_u.value;
+    const int platform_anger_before = platform_interlocutor.op_of_u.anger;
+    const int platform_likes_before = shared_faction->likes_u;
+    const int platform_respects_before = shared_faction->respects_u;
+    const int platform_trust_before = shared_faction->trusts_u;
+    const int platform_power_before = shared_faction->power;
+    cata::lua_platform::dialogue::context outside_action(
+        owner_lua.lua_state(), platform_conversation,
+        "TALK_CCB_MISSION_SUCCESS", true, "dialogue context is stale", {},
+        session, runtime_identity, world_generation );
+    CHECK_THROWS( outside_action.succeed_selected_mission() );
+    CHECK_FALSE( platform_mission->is_complete( owner.getID() ) );
+    CHECK( platform_interlocutor.op_of_u.value == platform_value_before );
+    platform_conversation.responses.front().success.apply( platform_conversation );
+
+    CHECK( platform_mission->is_complete( owner.getID() ) );
+    CHECK( platform_interlocutor.op_of_u.value - platform_value_before ==
+           native_value_delta );
+    CHECK( platform_interlocutor.op_of_u.anger - platform_anger_before ==
+           native_anger_delta );
+    CHECK( shared_faction->likes_u - platform_likes_before ==
+           native_faction_likes_delta );
+    CHECK( shared_faction->respects_u - platform_respects_before ==
+           native_faction_respects_delta );
+    CHECK( shared_faction->trusts_u - platform_trust_before ==
+           native_faction_trust_delta );
+    CHECK( shared_faction->power - platform_power_before ==
+           native_faction_power_delta );
+    const sol::protected_function context_valid =
+        owner_lua["mission_success_context_is_valid"];
+    const sol::protected_function_result stale_context = context_valid();
+    REQUIRE( stale_context.valid() );
+    CHECK_FALSE( stale_context.get<bool>() );
+    const sol::protected_function reuse_context =
+        owner_lua["reuse_mission_success_context"];
     CHECK_FALSE( reuse_context().valid() );
     cata::lua_platform::dialogue::end_session( platform_conversation );
 }

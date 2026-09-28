@@ -777,6 +777,8 @@ void detail::install_runtime_dialogue_presentation_api(
         &platform_dialogue_context::assigned_mission_count,
         "clear_selected_mission",
         &platform_dialogue_context::clear_selected_mission,
+        "succeed_selected_mission",
+        &platform_dialogue_context::succeed_selected_mission,
         "grant_item_to_speaker",
         &platform_dialogue_context::grant_item_to_speaker,
         "by_radio", &platform_dialogue_context::by_radio,

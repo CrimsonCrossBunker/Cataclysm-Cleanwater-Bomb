@@ -643,6 +643,22 @@ void context::clear_selected_mission() const
     }
 }
 
+void context::succeed_selected_mission() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::mission_success( *provider );
+    }
+}
+
 void context::grant_item_to_speaker( const script_game_id &item_type ) const
 {
     ::dialogue &d = require_action_write_state().dialogue_ref();

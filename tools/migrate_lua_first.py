@@ -6846,6 +6846,14 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
     if isinstance(effect, str) and effect in {
         "mission_success", "mission_failure", "clear_mission",
     }:
+        if effect == "mission_success":
+            return (
+                "manual_rewrite",
+                "only a direct TALK mission_success response with a converted "
+                "condition and native switch/default ordering is lowered through "
+                "the callback-scoped beta operation; trial branches, opinion fields, "
+                "combined effects, and EOCs remain TODO",
+            )
         if effect == "clear_mission":
             return (
                 "manual_rewrite",
@@ -7003,6 +7011,35 @@ def render_talk_topic_mission_reward_action(
     ]))
 
 
+def render_talk_topic_mission_success_action(
+    entry: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Run the native beta mission-success operation for an exact switch response."""
+    required_fields = {"text", "topic", "condition", "switch", "effect"}
+    if (
+        not isinstance(entry, dict) or
+        set(entry) not in (required_fields, required_fields | {"default"}) or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        converted_condition is None or
+        entry.get("switch") is not True or
+        ("default" in entry and entry["default"] is not True) or
+        entry.get("effect") != "mission_success"
+    ):
+        return None
+    # The real mission response table uses ordered switch responses. The
+    # Platform runtime implements the same switch/default evaluation order;
+    # the callback invokes the native beta operation only after selection.
+    # Trials, opinions, combined effects, and EOCs remain outside this shape.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:succeed_selected_mission()",
+        "end",
+    ]))
+
+
 def render_talk_topic_clear_mission_action(entry: Any) -> LuaRaw | None:
     """Lower one standalone direct TALK clear_mission response."""
     if (
@@ -7116,10 +7153,17 @@ def render_talk_topic(
                 )
             else:
                 response["condition"] = condition
+        for switch_field in ("switch", "default"):
+            if isinstance(entry.get(switch_field), bool):
+                response[switch_field] = entry[switch_field]
         if "effect" in entry:
-            action_callback = render_talk_topic_mission_reward_action(
+            action_callback = render_talk_topic_mission_success_action(
                 entry, converted_condition,
             )
+            if action_callback is None:
+                action_callback = render_talk_topic_mission_reward_action(
+                    entry, converted_condition,
+                )
             if action_callback is None:
                 action_callback = render_talk_topic_clear_mission_action(entry)
             if action_callback is None and set(entry) <= {"text", "topic", "effect"}:
@@ -7211,7 +7255,9 @@ def render_talk_topic(
                         f"{response_effect_reason}"
                     )
         responses.append(response)
-        supported_fields = {"text", "topic", "condition", "effect"}
+        supported_fields = {
+            "text", "topic", "condition", "effect", "switch", "default",
+        }
         if converted_opinion:
             supported_fields.add("opinion")
         unsupported = set(entry) - supported_fields

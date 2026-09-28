@@ -6375,6 +6375,12 @@ function PlatformDialogueContext:assigned_mission_count() end
 ---interlocutors and missing/unassigned selections keep the native no-op behavior.
 function PlatformDialogueContext:clear_selected_mission() end
 
+---Apply the native TALK mission-success operation to the current NPC interlocutor's
+---selected mission. This preserves native mission wrap-up, NPC opinion, and faction
+---reputation changes. Only available during a writable `on_action` callback; a
+---non-NPC interlocutor or missing selection keeps the native no-op behavior.
+function PlatformDialogueContext:succeed_selected_mission() end
+
 ---Grant one native-default item to the current native dialogue alpha.
 ---Only available in a writable `on_action` callback. Preserves native
 ---i_add_or_drop behavior, default ammunition, one charge for charge-counted
@@ -6439,6 +6445,8 @@ function PlatformDialogueContext:remove(key) end
 ---@field text string Player response displayed by the native dialogue window.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
 ---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
+---@field switch? boolean Stop later switch responses after this response matches.
+---@field default? boolean This switch response is the fallback when no earlier switch response matched.
 ---@field on_action? fun(context: PlatformDialogueContext, trial_success: boolean): nil Runs in the selected native success/failure effect stage before opinion and hostility checks; return values are ignored.
 ---@field success_opinion? table<string, integer> Native success opinion deltas (`trust`, `fear`, `value`, `anger`, `owed`, `sold`), applied after `on_action`.
 ---@field on_select? fun(context: PlatformDialogueContext): string|{ topic?: string }|nil Runs after the native response effect and may override its next topic.

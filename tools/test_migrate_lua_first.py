@@ -19530,6 +19530,85 @@ assert(not available())
             for todo in bundled_result.todos
         ))
 
+    def test_real_talk_mission_success_preserves_switch_and_default_order(self) -> None:
+        path = REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
+        topic = next(
+            entry for entry in json.loads(path.read_text(encoding="utf-8"))
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_MISSION_INQUIRE"
+        )
+        success_responses = [
+            response for response in topic["responses"]
+            if isinstance(response, dict) and
+            response.get("effect") == "mission_success"
+        ]
+        self.assertEqual(len(success_responses), 11)
+        self.assertTrue(all(response.get("switch") is True
+                            for response in success_responses))
+        self.assertEqual(sum(response.get("default") is True
+                             for response in success_responses), 1)
+        self.assertIs(topic["responses"][-1], success_responses[-1])
+        self.assertIs(success_responses[-1].get("default"), True)
+
+        for response in success_responses:
+            condition = migrate_lua_first.render_talk_topic_response_condition(
+                response.get("condition")
+            )
+            action = migrate_lua_first.render_talk_topic_mission_success_action(
+                response, condition
+            )
+            self.assertIsNotNone(action)
+            self.assertIn("context:succeed_selected_mission()", action.source)
+            self.assertIn("if not trial_success or not context:valid()", action.source)
+
+        rendered_result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 0, topic), rendered_result
+        )
+        self.assertIsNotNone(rendered)
+        self.assertEqual(
+            (rendered or "").count("context:succeed_selected_mission()"),
+            len(success_responses),
+        )
+        self.assertEqual((rendered or "").count("switch = true"), 11)
+        self.assertEqual((rendered or "").count("default = true"), 1)
+        self.assertIn('selected_condition(beta, owner, "complete")', rendered or "")
+        self.assertIn('selected_has_goal(beta, "MGOAL_GO_TO_TYPE")', rendered or "")
+
+        nested_trial_response = next(
+            response for response in topic["responses"]
+            if isinstance(response, dict) and "success" in response and
+            isinstance(response["success"], dict) and
+            response["success"].get("effect") == "mission_success"
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_mission_success_action(
+                nested_trial_response,
+                migrate_lua_first.render_talk_topic_response_condition(
+                    nested_trial_response.get("condition")
+                ),
+            )
+        )
+        for extra_field in (
+            {"trial": {"type": "PERSUADE", "difficulty": 10}},
+            {"opinion": {"anger": -1}},
+            {"effect": ["mission_success", "clear_mission"]},
+            {"switch": False},
+            {"default": False},
+        ):
+            unsupported = {
+                **success_responses[0],
+                **extra_field,
+            }
+            self.assertIsNone(
+                migrate_lua_first.render_talk_topic_mission_success_action(
+                    unsupported,
+                    migrate_lua_first.render_talk_topic_response_condition(
+                        unsupported.get("condition")
+                    ),
+                )
+            )
+
     def test_direct_talk_spend_cash_uses_exact_native_payment_action(self) -> None:
         responses = [
             {
