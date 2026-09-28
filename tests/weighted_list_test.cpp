@@ -305,6 +305,38 @@ TEST_CASE( "weighted_list_weights_after_remove", "[weighted_list]" )
     }
 }
 
+TEST_CASE( "weighted_int_list_native_eoc_selection_uses_raw_bits_modulo",
+           "[weighted_list][rng]" )
+{
+    weighted_int_list<std::string> list;
+    list.add( "first", 2 );
+    list.add( "second", 3 );
+    list.add( "third", 1 );
+
+    CHECK( *list.pick( 0U ) == "first" );
+    CHECK( *list.pick( 1U ) == "first" );
+    CHECK( *list.pick( 2U ) == "second" );
+    CHECK( *list.pick( 4U ) == "second" );
+    CHECK( *list.pick( 5U ) == "third" );
+    CHECK( *list.pick( 6U ) == "first" );
+
+    const cata_default_random_engine saved_engine = rng_get_engine();
+    constexpr unsigned int seed = 417;
+    rng_set_engine_seed( seed );
+    weighted_int_list<int> singleton;
+    singleton.add( 7, 1 );
+    const int *const picked = singleton.pick();
+    const cata_default_random_engine after_singleton_pick = rng_get_engine();
+
+    rng_set_engine_seed( seed );
+    static_cast<void>( rng_bits() );
+    const cata_default_random_engine after_one_raw_draw = rng_get_engine();
+    rng_get_engine() = saved_engine;
+
+    CHECK( picked != nullptr && *picked == 7 );
+    CHECK( after_singleton_pick == after_one_raw_draw );
+}
+
 TEST_CASE( "weighted_list_add_or_replace_for_zero", "[weighted_list]" )
 {
     constexpr int VALUE = 12;

@@ -30276,7 +30276,9 @@ assert(context.data.picked==selected)
 
         self.assertNotIn("weighted_cursor", main)
         self.assertNotIn("services.random.int(", main)
-        self.assertIn("global rng_bits selection", main)
+        self.assertNotIn("services.random.native_int(", main)
+        self.assertIn("raw_draw % total_weight", main)
+        self.assertIn("copied alpha/beta Dialogue", main)
         for owner in (
             "weighted_direct", "weighted_single_entry",
             "weighted_nonpositive_and_fractional", "weighted_all_nonpositive",
@@ -30286,7 +30288,7 @@ assert(context.data.picked==selected)
             self.assertIn(f"EOC {owner}", todos)
         weighted_todos = [
             todo for todo in result.todos
-            if "weighted_list_eocs needs native positive-int weight" in todo.message
+            if "native weighted_list_eocs reads source-ordered" in todo.message
         ]
         self.assertTrue(weighted_todos)
         self.assertTrue(all(todo.category == "platform_gap" for todo in weighted_todos))
@@ -30295,6 +30297,52 @@ assert(context.data.picked==selected)
             if "EOC weighted_in_false_effect false_effect #0" in todo.message
         )
         self.assertEqual(false_weighted_todo.category, "platform_gap")
+
+    def test_real_weighted_list_eocs_keep_rng_and_inline_dialogue_todos(self) -> None:
+        corpus_cases = (
+            (
+                Path("data/json/effects_on_condition/npc_eocs/generic_npc_eocs.json"),
+                "EOC_GIVE_RANDOM_MISSION",
+                "inline",
+            ),
+            (
+                Path("data/json/effects_on_condition/mutation_eocs/changing_eocs.json"),
+                "changing_initiate_check",
+                "dynamic_weight",
+            ),
+        )
+        for source_path, eoc_id, shape in corpus_cases:
+            with self.subTest(eoc_id=eoc_id, shape=shape):
+                entries = json.loads(
+                    (REPOSITORY_ROOT / source_path).read_text(encoding="utf-8")
+                )
+                eoc = next(
+                    entry for entry in entries
+                    if entry.get("type") == "effect_on_condition" and
+                    entry.get("id") == eoc_id
+                )
+                weighted = next(
+                    effect["weighted_list_eocs"]
+                    for effect in eoc.get("effect", [])
+                    if isinstance(effect, dict) and "weighted_list_eocs" in effect
+                )
+                if shape == "inline":
+                    self.assertTrue(all(isinstance(pair[0], dict) for pair in weighted))
+                    self.assertTrue(all(pair[1] == 1 for pair in weighted))
+                else:
+                    self.assertTrue(any(isinstance(pair[1], dict) for pair in weighted))
+
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(
+                    migrate_lua_first.SourceObject(source_path, 0, eoc), result
+                )
+                self.assertIn("raw_draw % total_weight", rendered)
+                self.assertIn("copied alpha/beta Dialogue", rendered)
+                self.assertNotIn("services.random.native_int(", rendered)
+                self.assertTrue(any(
+                    todo.category == "platform_gap" and eoc_id in todo.message
+                    for todo in result.todos
+                ))
 
     def test_global_u_sound_false_effect_uses_proven_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
