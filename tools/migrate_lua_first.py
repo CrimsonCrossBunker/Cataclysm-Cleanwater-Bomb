@@ -6468,7 +6468,9 @@ def _render_talk_topic_npc_state_condition(condition: Any) -> str | None:
     return None
 
 
-def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
+def render_talk_topic_response_condition(
+    condition: Any, _depth: int = 0,
+) -> LuaRaw | None:
     """Render one source-proven response predicate against its live speaker.
 
     Native ``u_has_intelligence`` reads ``const_actor(false)->int_cur()``.
@@ -6483,6 +6485,8 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     predicates and Boolean compositions remain
     fail-closed in the caller. Native unprefixed mission aliases select beta.
     """
+    if _depth > 16:
+        return None
     if (
         isinstance(condition, dict) and set(condition) == {"not"} and
         condition["not"] == "is_by_radio"
@@ -6493,6 +6497,42 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
             "            return not dialogue_context:by_radio()\n"
             "        end"
         )
+    if isinstance(condition, dict) and len(condition) == 1:
+        if "not" in condition and isinstance(condition["not"], (str, dict)):
+            child = render_talk_topic_response_condition(
+                condition["not"], _depth + 1,
+            )
+            if child is not None:
+                return LuaRaw(
+                    "function(dialogue_context)\n"
+                    "            if not dialogue_context:valid() then return false end\n"
+                    f"            return not ({child.source})(dialogue_context)\n"
+                    "        end"
+                )
+        for operator, separator, empty_result in (
+            ("and", " and ", "true"), ("or", " or ", "false"),
+        ):
+            entries = condition.get(operator)
+            if not isinstance(entries, list) or len(entries) > 32:
+                continue
+            if not all(isinstance(entry, (str, dict)) for entry in entries):
+                return None
+            children = [
+                render_talk_topic_response_condition(entry, _depth + 1)
+                for entry in entries
+            ]
+            if any(child is None for child in children):
+                return None
+            expression = separator.join(
+                f"({child.source})(dialogue_context)"
+                for child in children if child is not None
+            ) or empty_result
+            return LuaRaw(
+                "function(dialogue_context)\n"
+                "            if not dialogue_context:valid() then return false end\n"
+                f"            return {expression}\n"
+                "        end"
+            )
     npc_state_expression = _render_talk_topic_npc_state_condition(condition)
     if npc_state_expression is not None:
         return LuaRaw(

@@ -11881,6 +11881,11 @@ assert(not available())
                         alpha_condition
                     )
                 )
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition({
+                "and": ["mission_complete", {"unsupported_condition": True}],
+            })
+        )
 
         topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
@@ -11967,13 +11972,15 @@ assert(not available())
                     self.assertIn("selected_has_goal", rendered)
                 elif source["id"] == "TALK_MISSION_LIST":
                     self.assertIn("services.npcs.missions.available_count", rendered)
-                    self.assertIn("condition = false", rendered)
-                    # The negated beta predicate remains a Boolean-composition TODO.
+                    self.assertNotIn("condition = false", rendered)
+                    self.assertIn("return not (function(dialogue_context)", rendered)
+                    # This topic still has a dynamic-line conversion TODO.
                     self.assertTrue(result.todos)
                 elif source["id"] == "TALK_MISSION_INQUIRE":
                     self.assertIn("services.npcs.missions.selected_condition", rendered)
-                    self.assertIn("condition = false", rendered)
-                    # Composite conditions and mission EOC actions stay TODO.
+                    self.assertIn("selected_has_goal", rendered)
+                    self.assertNotIn("condition = false", rendered)
+                    # The mission effects still need their own action migration.
                     self.assertTrue(result.todos)
                 else:
                     self.assertIn("assigned_mission_count()", rendered)
