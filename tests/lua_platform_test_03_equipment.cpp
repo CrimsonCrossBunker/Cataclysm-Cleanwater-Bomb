@@ -1,4 +1,5 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "bionics.h"
 #include "lua_platform_test_support.h"
 #include "npc.h"
 #include <talker_character.h>
@@ -118,6 +119,111 @@ TEST_CASE( "lua_platform_inventory_weapon_state_matches_native_stow_condition",
     REQUIRE( fixture.actor.Character::wield(
                  wielded_value, std::nullopt, false ) );
     check_native_match();
+}
+
+TEST_CASE( "lua_platform_equipment_stow_current_physical_weapon",
+           "[lua][platform][equipment][weapon][semantic]" )
+{
+    platform_equipment_fixture fixture( 208, 1, 6208 );
+    item weapon( itype_id( "rock" ), calendar::turn_zero );
+    const std::int64_t weapon_uid = weapon.uid().get_value();
+    REQUIRE( fixture.actor.Character::wield(
+                 weapon, std::nullopt, false ) );
+
+    const sol::protected_function stow_current_weapon =
+        fixture.services["equipment"]["stow_current_weapon"];
+    const sol::protected_function_result result = stow_current_weapon(
+                fixture.actor_handle );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["invoked"].get<bool>() );
+    CHECK( value["path"].get<std::string>() == "remove_weapon_i_add" );
+    CHECK_FALSE( value["bionic_deactivated"].valid() );
+    CHECK_FALSE( fixture.actor.has_weapon() );
+    bool weapon_is_in_inventory = false;
+    for( const item *entry : fixture.actor.inv_dump() ) {
+        weapon_is_in_inventory = weapon_is_in_inventory ||
+                                 ( entry != nullptr &&
+                                   entry->uid().get_value() == weapon_uid );
+    }
+    CHECK( weapon_is_in_inventory );
+}
+
+TEST_CASE( "lua_platform_equipment_stow_current_weapon_without_weapon",
+           "[lua][platform][equipment][weapon][semantic]" )
+{
+    platform_equipment_fixture fixture( 210, 1, 6210 );
+    REQUIRE_FALSE( fixture.actor.has_weapon() );
+    const sol::protected_function stow_current_weapon =
+        fixture.services["equipment"]["stow_current_weapon"];
+    const sol::protected_function_result result = stow_current_weapon(
+                fixture.actor_handle );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["invoked"].get<bool>() );
+    CHECK( value["path"].get<std::string>() == "remove_weapon_i_add" );
+    CHECK_FALSE( value["bionic_deactivated"].valid() );
+    CHECK_FALSE( fixture.actor.has_weapon() );
+}
+
+TEST_CASE( "lua_platform_equipment_stow_current_weapon_bionic_branch",
+           "[lua][platform][equipment][weapon][bionic][semantic]" )
+{
+    platform_equipment_fixture fixture( 209, 1, 6209 );
+    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.set_power_level( fixture.actor.get_max_power_level() );
+    fixture.actor.add_bionic( bionic_id( "bio_blade" ) );
+    bionic &weapon_bionic = fixture.actor.bionic_at_index(
+                                fixture.actor.get_bionics().size() - 1 );
+    REQUIRE( fixture.actor.activate_bionic( weapon_bionic ) );
+    REQUIRE( fixture.actor.is_using_bionic_weapon() );
+
+    const sol::protected_function stow_current_weapon =
+        fixture.services["equipment"]["stow_current_weapon"];
+    const sol::protected_function_result result = stow_current_weapon(
+                fixture.actor_handle );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["invoked"].get<bool>() );
+    CHECK( value["path"].get<std::string>() == "weapon_bionic" );
+    CHECK( value["bionic_deactivated"].get<bool>() );
+    CHECK_FALSE( fixture.actor.has_weapon() );
+    CHECK_FALSE( fixture.actor.is_using_bionic_weapon() );
+}
+
+TEST_CASE( "lua_platform_equipment_stow_current_weapon_failed_bionic_no_fallback",
+           "[lua][platform][equipment][weapon][bionic][semantic]" )
+{
+    platform_equipment_fixture fixture( 212, 1, 6212 );
+    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.set_power_level( fixture.actor.get_max_power_level() );
+    fixture.actor.add_bionic( bionic_id( "bio_blade" ) );
+    bionic &weapon_bionic = fixture.actor.bionic_at_index(
+                                fixture.actor.get_bionics().size() - 1 );
+    REQUIRE( fixture.actor.activate_bionic( weapon_bionic ) );
+    weapon_bionic.incapacitated_time = 1_turns;
+
+    const sol::protected_function stow_current_weapon =
+        fixture.services["equipment"]["stow_current_weapon"];
+    const sol::protected_function_result result = stow_current_weapon(
+                fixture.actor_handle );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["invoked"].get<bool>() );
+    CHECK( value["path"].get<std::string>() == "weapon_bionic" );
+    CHECK_FALSE( value["bionic_deactivated"].get<bool>() );
+    CHECK( fixture.actor.has_weapon() );
+    CHECK( fixture.actor.is_using_bionic_weapon() );
 }
 
 TEST_CASE( "lua_platform_inventory_has_stolen_from_matches_native_condition",
