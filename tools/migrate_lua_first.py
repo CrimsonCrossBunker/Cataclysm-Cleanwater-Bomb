@@ -4243,7 +4243,13 @@ def render_static_eoc_selector(
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    """Keep selectors fail-closed until all native menu state can be lowered."""
+    """Keep selectors fail-closed until native menu and activation state match.
+
+    Native selectors filter each target EOC's condition, evaluate translated
+    and tag-expanded labels, apply selected context variables, have a distinct
+    test-mode path, then activate on a copied dialogue.  No Platform adapter
+    currently reproduces that combination.
+    """
     del effect, eoc_function_names, actor_expression
     return None
 
@@ -4253,64 +4259,16 @@ def render_static_weighted_list_eocs(
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    if set(effect) != {"weighted_list_eocs"}:
-        return None
-    if actor_expression is None:
-        return None
-    raw = effect.get("weighted_list_eocs")
-    if not isinstance(raw, list) or not raw or len(raw) > 256:
-        return None
-    entries: list[tuple[str, str]] = []
-    for entry in raw:
-        if not isinstance(entry, list) or len(entry) != 2:
-            return None
-        reference = entry[0]
-        if not isinstance(reference, str) or reference not in eoc_function_names:
-            return None
-        weight = finite_number_literal(entry[1])
-        if weight is not None:
-            if weight <= 0 or weight != math.trunc(float(weight)):
-                return None
-            weight_expression = str(int(weight))
-        else:
-            dynamic = render_eoc_numeric_expression(
-                entry[1], "1", actor_expression
-            )
-            if dynamic is None:
-                return None
-            weight_expression = (
-                "math.max(1, math.min(1000000000, math.floor((" +
-                dynamic + ") + 0.5)))"
-            )
-        entries.append((reference, weight_expression))
-    total_expression = " + ".join(
-        f"({weight})" for _, weight in entries
-    )
-    all_literal_weights = all(weight.isdigit() for _, weight in entries)
-    if all_literal_weights:
-        total = sum(int(weight) for _, weight in entries)
-        if total <= 0 or total > NATIVE_INT_MAX:
-            return None
-        total_expression = str(total)
-    roll_maximum = (
-        total_expression if all_literal_weights else
-        "math.max(1, math.min(1000000000, math.floor((" +
-        total_expression + ") + 0.5)))"
-    )
-    lines = [
-        f"    local weighted_roll = services.random.int(1, {roll_maximum})",
-        "    local weighted_cursor = 0",
-    ]
-    callback_actor = actor_expression
-    for reference, weight in entries:
-        lines.extend([
-            f"    weighted_cursor = weighted_cursor + ({weight})",
-            "    if weighted_roll <= weighted_cursor then",
-            f"        {eoc_function_names[reference]}(context, {callback_actor})",
-            "        break",
-            "    end",
-        ])
-    return lines
+    """Keep weighted EOC calls TODO until native selection and activation match.
+
+    Native ``weighted_int_list`` truncates evaluated double weights to int,
+    drops non-positive results, consumes the global ``rng_bits()`` stream even
+    for one surviving entry, then activates the selected EOC on a copied
+    dialogue.  The Platform random service and direct Lua callback do not
+    preserve that distribution, RNG state, or dialogue semantics.
+    """
+    del effect, eoc_function_names, actor_expression
+    return None
 
 
 def render_static_spawn_item_effect(
@@ -29863,6 +29821,7 @@ def render_eoc(
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
+                    false_todo_category = "manual_rewrite"
                     trade_todo = _legacy_item_trade_effect_todo(false_value)
                     if trade_todo is not None:
                         false_todo = trade_todo
@@ -29915,6 +29874,16 @@ def render_eoc(
                             "with native RNG and exact target handles; parse_tags, "
                             "string_input, variable values, and var_val targets remain TODO"
                         )
+                    if (
+                        isinstance(false_value, dict) and
+                        "weighted_list_eocs" in false_value
+                    ):
+                        false_todo = (
+                            "native weighted_list_eocs truncates evaluated weights to "
+                            "positive ints, consumes global rng_bits(), and activates "
+                            "the selected EOC on a copied dialogue"
+                        )
+                        false_todo_category = "platform_gap"
                     semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
                         false_todo = semantic_choice
@@ -29922,7 +29891,7 @@ def render_eoc(
                         f"        -- TODO: {false_todo}."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        false_todo_category,
                         f"{source.location}: EOC {eoc_id} false_effect "
                         f"#{false_index} TODO: {false_todo}"
                     )
@@ -29979,13 +29948,16 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate weighted EOC selection into "
-                        "ordinary Lua random control flow."
+                        "    -- TODO: weighted_list_eocs needs native positive-int "
+                        "weight truncation, global rng_bits selection, and copied-"
+                        "dialogue EOC activation."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs weighted-callback conversion"
+                        "weighted_list_eocs needs native positive-int weight "
+                        "truncation, global rng_bits selection, and copied-dialogue "
+                        "EOC activation"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "switch" in effect:
@@ -30172,13 +30144,17 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: run_eoc_selector needs equivalent EOC "
-                        "condition, menu, and translated-text behavior."
+                        "    -- TODO: run_eoc_selector needs native condition "
+                        "filtering, translated/tag-expanded menu text, context "
+                        "variables, test-mode behavior, and copied-dialogue "
+                        "activation."
                     )
                     result.add_todo(
                         "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs full native selector condition and menu semantics"
+                        "run_eoc_selector needs native condition filtering, "
+                        "translated/tag-expanded menu text, context variables, "
+                        "test-mode behavior, and copied-dialogue activation"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "foreach" in effect:
