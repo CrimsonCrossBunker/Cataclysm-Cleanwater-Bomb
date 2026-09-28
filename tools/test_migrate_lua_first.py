@@ -17067,7 +17067,7 @@ assert(not available())
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                "TODO: translate teleport through a typed creature-relocation service.",
+                "TODO: preserve native teleport map loading",
                 main,
             )
             self.assertIn("TODO: translate the NPC goal", main)
@@ -18886,7 +18886,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 migrate_lua_first.load_objects([source]), "teleport_mod"
             )
 
-    def test_translates_proven_character_teleport_targets(self) -> None:
+    def test_keeps_proven_character_teleport_targets_fail_closed(self) -> None:
         result = self._migrate_teleport_source(
             [
                 {
@@ -18916,153 +18916,56 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
         self.assertEqual(len(result.converted), 0)
         self.assertEqual(len(result.partial), 2)
-        self.assertIn("TODO: translate teleport", main)
+        self.assertIn("TODO: preserve native teleport", main)
         self.assertNotIn("services.map.tile(", main)
         self.assertNotIn("services.relocation.move(", main)
         self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertIn("needs domain-service conversion", report)
+        self.assertIn("native map-loading, force-policy", report)
 
-    def test_translates_exact_monster_abs_ms_teleport(self) -> None:
-        result = self._migrate_teleport_source(
-            [
-                {
-                    "type": "effect_on_condition",
-                    "id": "monster_abs_ms_teleport",
-                    "required_event": "monster_takes_damage",
-                    "effect": {"u_teleport": {"abs_ms": [10, 20, 30]}},
-                }
-            ]
-        )
-        main = result.files[Path("main.lua")]
-        report = result.files[Path("MIGRATION_REPORT.md")]
+    def test_keeps_static_teleport_targets_fail_closed_for_proven_actors(self) -> None:
+        cases = [
+            (
+                "monster", "monster_takes_damage",
+                {"u_teleport": {"abs_ms": [10, 20, 30]}}, {},
+            ),
+            (
+                "avatar", "avatar_moves",
+                {"u_teleport": {"abs_ms": [11, 21, 0]}}, {},
+            ),
+            (
+                "avatar_omt", "avatar_moves",
+                {"u_teleport": {"abs_omt": [14, 24, 0]}}, {},
+            ),
+            (
+                "npc", "npc_becomes_hostile",
+                {"npc_teleport": {"abs_ms": [12, 22, 0]}}, {},
+            ),
+            (
+                "vehicle", "character_takes_damage",
+                {"u_teleport": {"abs_ms": [13, 23, 0]}},
+                {"__inline_actor_kind": "vehicle"},
+            ),
+        ]
+        for name, required_event, effect, extra_fields in cases:
+            with self.subTest(name=name):
+                result = self._migrate_teleport_source(
+                    [{
+                        "type": "effect_on_condition",
+                        "id": f"static_{name}_teleport",
+                        "required_event": required_event,
+                        "effect": effect,
+                        **extra_fields,
+                    }]
+                )
+                main = result.files[Path("main.lua")]
+                report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertEqual(len(result.converted), 1)
-        self.assertEqual(result.partial, [])
-        self.assertIn("services.coords.tripoint_abs_ms(10, 20, 30)", main)
-        self.assertEqual(main.count("services.map.tile("), 1)
-        self.assertEqual(main.count("services.relocation.move("), 1)
-        self.assertIn(
-            "services.relocation.move(\n        actor, token, { strict = true }))",
-            main,
-        )
-        self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertNotIn("TODO: translate teleport", main)
-        self.assertNotIn("TODO: translate teleport", report)
-
-    def test_translates_exact_avatar_abs_ms_teleport(self) -> None:
-        result = self._migrate_teleport_source(
-            [
-                {
-                    "type": "effect_on_condition",
-                    "id": "avatar_abs_ms_teleport",
-                    "required_event": "avatar_moves",
-                    "effect": {"u_teleport": {"abs_ms": [11, 21, 0]}},
-                }
-            ]
-        )
-        main = result.files[Path("main.lua")]
-        report = result.files[Path("MIGRATION_REPORT.md")]
-
-        self.assertEqual(len(result.converted), 1)
-        self.assertEqual(result.partial, [])
-        self.assertIn("services.coords.tripoint_abs_ms(11, 21, 0)", main)
-        self.assertEqual(main.count("services.map.tile("), 1)
-        self.assertEqual(main.count("services.relocation.move("), 1)
-        self.assertIn(
-            "services.relocation.move(\n        actor, token, { strict = true }))",
-            main,
-        )
-        self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertNotIn("TODO: translate teleport", main)
-        self.assertNotIn("TODO: translate teleport", report)
-
-    def test_translates_exact_avatar_abs_omt_travel(self) -> None:
-        result = self._migrate_teleport_source(
-            [
-                {
-                    "type": "effect_on_condition",
-                    "id": "avatar_abs_omt_teleport",
-                    "required_event": "avatar_moves",
-                    "effect": {"u_teleport": {"abs_omt": [14, 24, 0]}},
-                }
-            ]
-        )
-        main = result.files[Path("main.lua")]
-        report = result.files[Path("MIGRATION_REPORT.md")]
-
-        self.assertEqual(len(result.converted), 1)
-        self.assertEqual(result.partial, [])
-        self.assertIn("services.coords.tripoint_abs_omt(14, 24, 0)", main)
-        self.assertIn("services.overmap.tile_token(", main)
-        self.assertIn(
-            "services.relocation.travel_to_omt(\n"
-            "        actor, token, { strict = true }))",
-            main,
-        )
-        self.assertNotIn("overmap_at", main)
-        self.assertNotIn("services.relocation.move(", main)
-        self.assertNotIn("TODO: translate teleport", main)
-        self.assertNotIn("TODO: translate teleport", report)
-
-    def test_translates_exact_npc_abs_ms_teleport(self) -> None:
-        result = self._migrate_teleport_source(
-            [
-                {
-                    "type": "effect_on_condition",
-                    "id": "npc_abs_ms_teleport",
-                    "required_event": "npc_becomes_hostile",
-                    "effect": {"npc_teleport": {"abs_ms": [12, 22, 0]}},
-                }
-            ]
-        )
-        main = result.files[Path("main.lua")]
-        report = result.files[Path("MIGRATION_REPORT.md")]
-
-        self.assertEqual(len(result.converted), 1)
-        self.assertEqual(result.partial, [])
-        self.assertIn("services.coords.tripoint_abs_ms(12, 22, 0)", main)
-        self.assertEqual(main.count("services.map.tile("), 1)
-        self.assertEqual(main.count("services.relocation.move("), 1)
-        self.assertIn(
-            "local actor = actor_override or context.actors.npc",
-            main,
-        )
-        self.assertIn(
-            "services.relocation.move(\n        actor, token, { strict = true }))",
-            main,
-        )
-        self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertNotIn("TODO: translate teleport", main)
-        self.assertNotIn("TODO: translate teleport", report)
-
-    def test_translates_exact_vehicle_abs_ms_teleport(self) -> None:
-        result = self._migrate_teleport_source(
-            [
-                {
-                    "type": "effect_on_condition",
-                    "id": "vehicle_abs_ms_teleport",
-                    "required_event": "character_takes_damage",
-                    "effect": {"u_teleport": {"abs_ms": [13, 23, 0]}},
-                    "__inline_actor_kind": "vehicle",
-                }
-            ]
-        )
-        main = result.files[Path("main.lua")]
-        report = result.files[Path("MIGRATION_REPORT.md")]
-
-        self.assertEqual(len(result.converted), 1)
-        self.assertEqual(result.partial, [])
-        self.assertIn("services.coords.tripoint_abs_ms(13, 23, 0)", main)
-        self.assertEqual(main.count("services.map.tile("), 1)
-        self.assertEqual(main.count("services.relocation.move("), 1)
-        self.assertIn(
-            "services.relocation.move(\n        actor, token, { strict = true }))",
-            main,
-        )
-        self.assertNotIn("services.relocation.vehicle_at(", main)
-        self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertNotIn("TODO: translate teleport", main)
-        self.assertNotIn("TODO: translate teleport", report)
+                self.assertIn("TODO: preserve native teleport", main)
+                self.assertNotIn("services.map.tile(", main)
+                self.assertNotIn("services.overmap.tile_token(", main)
+                self.assertNotIn("services.relocation.move(", main)
+                self.assertNotIn("services.relocation.travel_to_omt(", main)
+                self.assertIn("map-loading, force-policy", report)
 
     def test_marks_non_monster_teleport_shapes_for_migration(self) -> None:
         explicit_effect = {"u_teleport": {"abs_ms": [10, 20, 30]}}
@@ -19197,13 +19100,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 )
                 main = result.files[Path("main.lua")]
 
-                self.assertIn("TODO: translate teleport", main)
+                self.assertIn("TODO: preserve native teleport", main)
                 self.assertNotIn("services.relocation.travel_to_omt(", main)
                 self.assertNotIn("services.map.tile(", main)
                 self.assertNotIn("services.relocation.move(", main)
                 self.assertNotIn("services.relocation.creature_at(", main)
 
-    def test_translates_literal_and_variable_avatar_dimension_travel(self) -> None:
+    def test_keeps_literal_and_variable_avatar_dimension_travel_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -19240,16 +19143,58 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(main.count("services.relocation.travel_to_dimension("), 3)
-            self.assertIn('"nether"', main)
-            self.assertIn('npc_travel_filter = "follower"', main)
-            self.assertIn("item_travel_radius = 4", main)
-            self.assertIn("take_vehicle = true", main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "target")', main)
-            self.assertNotIn("TODO: translate u_travel_to_dimension", main)
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.relocation.travel_to_dimension(", main)
+            self.assertIn("TODO: preserve native dimension validation", main)
+            self.assertNotIn(
+                'services.variables.resolve(context.data, actor, "u", "target")',
+                main,
+            )
+            self.assertIn(
+                "dimension-validation, radius, actor, and failure-message parity",
+                report,
+            )
+
+    def test_synthetic_game_start_keeps_space_movement_fail_closed(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "synthetic_game_start_dispatch",
+                    "required_event": "character_wakes_up",
+                    "effect": {
+                        "trigger_event": "game_start",
+                        "args": ["synthetic-game-version"],
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "synthetic_game_start_teleport",
+                    "required_event": "game_start",
+                    "effect": {"u_teleport": {"abs_ms": [7, 8, 0]}},
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "synthetic_game_start_dimension",
+                    "required_event": "game_start",
+                    "effect": {"u_travel_to_dimension": "nether"},
+                },
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn('services.native_events.emit("game_start"', main)
+        self.assertIn("TODO: preserve native teleport", main)
+        self.assertIn("TODO: preserve native dimension validation", main)
+        self.assertNotIn("services.relocation.move(", main)
+        self.assertNotIn("services.relocation.travel_to_dimension(", main)
+        self.assertIn("native map-loading, force-policy", report)
+        self.assertIn(
+            "dimension-validation, radius, actor, and failure-message parity",
+            report,
+        )
 
     def test_reports_missing_item_transform_service_without_crashing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -19299,7 +19244,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("TODO: translate random item-fault mutation", main)
             self.assertNotIn("services.items.transform", main)
             self.assertIn("TODO: translate transform_line", main)
-            self.assertIn("TODO: translate u_travel_to_dimension", main)
+            self.assertIn("TODO: preserve native dimension validation", main)
             self.assertNotIn("services.world.transform_line", main)
             self.assertNotIn("services.gameplay.environment.set_light_level", main)
             self.assertIn("services.items.activate", main)
@@ -27173,7 +27118,7 @@ assert(context.data.picked==selected)
             self.assertTrue(
                 any(
                     "event_character_mutation effect #2 "
-                    "needs domain-service conversion" in todo
+                    "teleport needs native map-loading, force-policy" in todo
                     for todo in result.todos
                 )
             )
@@ -27181,8 +27126,8 @@ assert(context.data.picked==selected)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.effects.remove", main)
             self.assertIn(
-                "TODO: translate teleport through a typed "
-                "creature-relocation service.",
+                "TODO: preserve native teleport map loading, "
+                "force policies, linked items, and talker behavior.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -30125,7 +30070,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertNotIn(
                 'services.variables.get(\n        actor, "destination")', main
             )
-            self.assertIn("TODO: translate teleport", main)
+            self.assertIn("TODO: preserve native teleport", main)
             self.assertIn('target = context.data["target"]', main)
             self.assertIn('direction = context.data["direction"]', main)
 
@@ -32970,21 +32915,22 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn("services.overmap.reveal(", main)
             self.assertNotIn("services.variables.get_global(\"target\")", main)
             self.assertIn(
-                "TODO: translate teleport through a typed "
-                "creature-relocation service.",
+                "TODO: preserve native teleport map loading, "
+                "force policies, linked items, and talker behavior.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
             self.assertNotIn("services.relocation.move", main)
             self.assertTrue(
                 any(
-                    "dynamic_world_targets effect #1 "
-                    "needs domain-service conversion" in todo
+                    "dynamic_world_targets effect #1 teleport needs native "
+                    "map-loading, force-policy" in todo
                     for todo in result.todos
                 )
             )
             self.assertIn(
-                "dynamic_world_targets effect #1 needs domain-service conversion",
+                "dynamic_world_targets effect #1 teleport needs native map-loading, "
+                "force-policy, linked-item, and talker parity",
                 report,
             )
 
