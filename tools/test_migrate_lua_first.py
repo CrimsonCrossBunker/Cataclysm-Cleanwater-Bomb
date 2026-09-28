@@ -32055,6 +32055,44 @@ assert(#calls==0)
                 self.assertEqual(len(result.partial), 1)
                 self.assertIn(reason, result.files[Path("main.lua")])
 
+    def test_native_dimension_clear_and_place_override_do_not_use_typed_shortcuts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "clear_saved_dimension",
+                        "required_event": "game_start",
+                        "effect": {"clear_dimension": "test_dimension"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "translated_place",
+                        "required_event": "game_start",
+                        "effect": {
+                            "place_override": "Translated place name",
+                            "length": "1 day",
+                            "key": "place_test",
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "world_effect_review"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.relocation.clear_dimension(", main)
+            self.assertNotIn("services.world.override_place_name(", main)
+            self.assertIn("queries saved directories by filename match", main)
+            self.assertIn("translates its text", main)
+            self.assertIn("native directory-query/deletion semantics", report)
+            self.assertIn("translated-text and duration-range parity", report)
+
     def test_take_control_menu_lowers_only_terminal_live_game_start(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
