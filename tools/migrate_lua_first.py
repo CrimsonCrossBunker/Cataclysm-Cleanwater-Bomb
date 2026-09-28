@@ -3252,6 +3252,67 @@ def _legacy_trade_action_effect_todo(effect: Any) -> str | None:
     return None
 
 
+_CAMP_SELECTOR_TODOS: dict[str, tuple[TodoCategory, str]] = {
+    "start_camp": (
+        "platform_gap",
+        "native start_camp derives camp recipes from the current OMT and mapgen arguments, "
+        "opens a type picker, rejects camps within 3 OMT and mapgen collisions, then "
+        "creates the camp and initializes hidden_missions; services.camps.create requires "
+        "explicit owner, manager, position, name, and type and does not preserve that workflow",
+    ),
+    "assign_camp": (
+        "platform_gap",
+        "native assign_camp finds the camp under the NPC, resets NPC mission/attitude/guard/path "
+        "state, assigns the worker, and opens job_assignment_ui; services.camps.assign_worker "
+        "requires explicit camp/manager/worker handles and only changes the assignment",
+    ),
+    "return_to_camp_duties": (
+        "platform_gap",
+        "native return_to_camp_duties resets camp-resident mission, guards, goals, and travel path "
+        "while retaining the assigned camp; services.camps.recall_worker instead unassigns the "
+        "worker and no typed service restores this duty state",
+    ),
+    "abandon_camp": (
+        "platform_gap",
+        "native abandon_camp emergency-recalls companion missions, stops assigned workers' guards, "
+        "then removes the camp; services.camps.remove rejects assigned workers and active or "
+        "recoverable Platform tasks, so composing it would not preserve the native transaction",
+    ),
+    "basecamp_mission": (
+        "platform_gap",
+        "native basecamp_mission checks access, sets radio state, loads the camp map, forms storage "
+        "zones, builds and displays a live mission picker, runs the selected mission, then saves "
+        "and unloads the map; Platform camp tasks accept explicit resource_work, recipe_work, or "
+        "upgrade_work descriptors and do not replace that selector",
+    ),
+}
+
+
+def _camp_selector_todo(effect: Any) -> tuple[TodoCategory, str] | None:
+    """Describe camp selectors whose native workflows have no exact lowering."""
+    return _CAMP_SELECTOR_TODOS.get(effect) if isinstance(effect, str) else None
+
+
+def _camp_selector_object_todo(effect: Any) -> str | None:
+    """Reject object forms for camp selectors registered as native strings."""
+    if not isinstance(effect, dict):
+        return None
+    selectors = set(effect) & _CAMP_SELECTOR_TODOS.keys()
+    if (
+        not selectors and set(effect) == {"effect"} and
+        isinstance(effect["effect"], str) and effect["effect"] in _CAMP_SELECTOR_TODOS
+    ):
+        selectors = {effect["effect"]}
+    if not selectors:
+        return None
+    names = ", ".join(sorted(selectors))
+    return (
+        f"{names} is registered by native talk_effect_t as a string selector; "
+        "object-valued forms are not accepted by its sub-effect parser and need "
+        "the intended operation verified before choosing a Lua rewrite"
+    )
+
+
 def render_dialogue_trade_effect(
     effect: Any,
     result: MigrationResult,
@@ -6425,13 +6486,17 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             )
             if callback is None:
                 trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
+                camp_todo = _camp_selector_todo(entry["effect"])
+                camp_object_todo = _camp_selector_object_todo(entry["effect"])
                 response_effect_reason = _talk_topic_effect_todo_reason(
                     entry["effect"]
                 )
                 result.add_todo(
+                    camp_todo[0] if camp_todo is not None else
+                    "semantic_choice" if camp_object_todo is not None else
                     "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} response effect "
-                    f"{trade_todo or response_effect_reason or 'needs a native callback'}"
+                    f"{camp_todo[1] if camp_todo is not None else camp_object_todo or trade_todo or response_effect_reason or 'needs a native callback'}"
                 )
             else:
                 response["on_select"] = callback
@@ -20206,24 +20271,6 @@ def render_static_add_mission_effect(
     ]
 
 
-def render_static_camp_npc_effect(
-    effect: str, npc_actor_proven: bool,
-) -> list[str] | None:
-    """Reject legacy camp actions without all explicit camp participants.
-
-    No current JSON/EOC camp shape proves both a camp handle and an authorized
-    manager (and camp-food distribution also needs an exact storage holder),
-    so resource/food actions stay visible TODOs instead of using position or
-    actor inference.
-    """
-    # The legacy effect supplies at most an event actor.  It does not prove the
-    # camp handle, authorized manager, and exact worker required by Platform.
-    # Keep the shape as a visible TODO instead of selecting a camp by position
-    # or silently substituting the avatar/current worker.
-    del effect, npc_actor_proven
-    return None
-
-
 def render_static_camp_create_effect(
     effect: dict[str, Any],
 ) -> list[str] | None:
@@ -32130,30 +32177,14 @@ def render_eoc(
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
-            elif (
-                isinstance(effect, str) and
-                effect in {
-                    "start_camp", "assign_camp", "return_to_camp_duties",
-                    "abandon_camp",
-                }
-            ):
-                rendered = render_static_camp_npc_effect(
-                    effect, npc_event_character_actor_proven
+            elif (camp_selector_todo := _camp_selector_todo(effect)) is not None:
+                category, reason = camp_selector_todo
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the camp-worker action only with "
-                        "explicit camp, manager, and worker handles."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs proven camp, manager, and worker handles"
-                    )
-                    all_effects_converted = False
+                all_effects_converted = False
             elif isinstance(effect, dict) and "trigger_event" in effect:
                 rendered, reason = render_static_trigger_event(
                     effect,
@@ -32574,31 +32605,11 @@ def render_eoc(
                     "blueprint/holders and static Item requests"
                 )
                 all_effects_converted = False
-            elif effect == "basecamp_mission":
-                lines.append(
-                    "    -- TODO: translate basecamp_mission only with explicit "
-                    "camp, manager, and worker handles."
-                )
-                lines.append(
-                    "    -- TODO: Camp_Upgrade/UI and other implicit upgrade shapes also "
-                    "need explicit target, blueprint, and source/destination holder Item handles."
-                )
+            elif (camp_object_todo := _camp_selector_object_todo(effect)) is not None:
+                lines.append(f"    -- TODO: {camp_object_todo}.")
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs proven camp, manager, and worker handles; upgrade-shaped "
-                    "Camp_Upgrade/UI inputs also need explicit target, blueprint, and holders"
-                )
-                all_effects_converted = False
-            elif isinstance(effect, dict) and "basecamp_mission" in effect:
-                lines.append(
-                    "    -- TODO: translate basecamp_mission only with explicit "
-                    "camp, manager, and worker handles."
-                )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs proven camp, manager, and worker handles"
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {camp_object_todo}"
                 )
                 all_effects_converted = False
             elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and static_wrapped_beta_npc:

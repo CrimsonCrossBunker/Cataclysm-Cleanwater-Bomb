@@ -17519,9 +17519,8 @@ assert(not available())
                 main,
             )
             self.assertIn('runtime.trigger("game:custom_event")', main)
-            self.assertNotIn("services.camps.", main)
             self.assertIn(
-                "explicit camp, manager, and worker handles", main
+                "native return_to_camp_duties resets camp-resident mission", main
             )
             self.assertNotIn("needs review", report)
 
@@ -18081,7 +18080,7 @@ assert(not available())
             "function CcbNpcMissionsApi.avatar", declarations
         )
 
-    def test_translates_bounded_camp_worker_actions(self) -> None:
+    def test_camp_selector_strings_are_precise_platform_gap_todos(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -18095,6 +18094,7 @@ assert(not available())
                             "assign_camp",
                             "return_to_camp_duties",
                             "abandon_camp",
+                            "basecamp_mission",
                         ],
                     }
                 ),
@@ -18108,13 +18108,115 @@ assert(not available())
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
-            self.assertNotIn("services.camps.", main)
-            self.assertIn(
-                "explicit camp, manager, and worker handles", main
+            self.assertEqual(len(result.todos), 5)
+            self.assertEqual(
+                [todo.category for todo in result.todos], ["platform_gap"] * 5
             )
-            self.assertIn(
-                "needs proven camp, manager, and worker handles", report
+            self.assertNotIn("service_value(services.camps.", main)
+            for reason_fragment in (
+                "derives camp recipes from the current OMT and mapgen arguments",
+                "opens job_assignment_ui",
+                "while retaining the assigned camp",
+                "emergency-recalls companion missions",
+                "forms storage zones",
+            ):
+                self.assertIn(reason_fragment, main)
+                self.assertIn(reason_fragment, report)
+
+    def test_real_camp_dialogue_selectors_keep_native_workflow_todos(self) -> None:
+        selectors = {
+            "start_camp", "assign_camp", "return_to_camp_duties",
+            "abandon_camp", "basecamp_mission",
+        }
+        sources = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/npcs/TALK_FACTION_CAMP.json",
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_ALLY.json",
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_OTHER.json",
+        ])
+        seen: set[str] = set()
+        for source in sources:
+            responses = source.value.get("responses")
+            if not isinstance(responses, list):
+                continue
+            present = {
+                response.get("effect")
+                for response in responses
+                if isinstance(response, dict) and
+                isinstance(response.get("effect"), str) and
+                response.get("effect") in selectors
+            }
+            if not present:
+                continue
+            topic_responses = [
+                response for response in responses
+                if isinstance(response, dict) and
+                isinstance(response.get("effect"), str) and
+                response.get("effect") in present
+            ]
+            topic = migrate_lua_first.SourceObject(
+                source.path, source.index,
+                {**source.value, "responses": topic_responses},
             )
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_talk_topic(topic, result)
+            self.assertIsNotNone(rendered)
+            self.assertNotIn("on_select", rendered)
+            self.assertNotIn("service_value(services.camps.", rendered)
+            for selector in present:
+                category, reason = migrate_lua_first._CAMP_SELECTOR_TODOS[selector]
+                self.assertTrue(
+                    any(
+                        todo.category == category and reason in todo.message
+                        for todo in result.todos
+                    ),
+                    f"{source.location}: missing precise TODO for {selector}",
+                )
+                seen.add(selector)
+        self.assertEqual(seen, selectors)
+
+    def test_camp_selector_objects_are_native_syntax_errors_not_platform_gaps(self) -> None:
+        for selector in migrate_lua_first._CAMP_SELECTOR_TODOS:
+            reason = migrate_lua_first._camp_selector_object_todo({selector: "value"})
+            self.assertIsNotNone(reason)
+            self.assertIn("registered by native talk_effect_t as a string selector", reason)
+            self.assertIsNone(migrate_lua_first._camp_selector_todo({selector: "value"}))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "invalid_camp_effect_object",
+                    "required_event": "game_start",
+                    "effect": {"assign_camp": "camp_1"},
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "invalid_camp_effect_mod"
+            )
+            main = result.files[Path("main.lua")]
+            self.assertEqual([todo.category for todo in result.todos], ["semantic_choice"])
+            self.assertIn("object-valued forms are not accepted", main)
+
+            topic = migrate_lua_first.SourceObject(
+                Path("invalid_topic.json"), 0, {
+                    "type": "talk_topic",
+                    "id": "invalid_camp_topic_object",
+                    "dynamic_line": "Camp?",
+                    "responses": [{
+                        "text": "Assign the NPC.",
+                        "effect": {"assign_camp": "camp_1"},
+                    }],
+                },
+            )
+            topic_result = migrate_lua_first.MigrationResult()
+            topic_rendered = migrate_lua_first.render_talk_topic(topic, topic_result)
+            self.assertIsNotNone(topic_rendered)
+            self.assertEqual(
+                [todo.category for todo in topic_result.todos], ["semantic_choice"]
+            )
+            self.assertIn("object-valued forms are not accepted", topic_result.todos[0].message)
 
     def test_camp_task_infrastructure_never_invents_task_participants(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -18152,23 +18254,28 @@ assert(not available())
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 2)
-            self.assertNotIn("services.camps.tasks", main)
+            self.assertNotIn("service_value(services.camps.", main)
             self.assertNotIn("worker_reservation", main)
             self.assertNotIn("services.characters.avatar()", main)
-            self.assertGreaterEqual(
-                report.count("needs proven camp, manager, and worker handles"), 2
+            self.assertEqual(
+                [todo.category for todo in result.todos],
+                ["platform_gap"] * 5 + ["semantic_choice"],
             )
+            self.assertIn("native basecamp_mission checks access", report)
 
-    def test_camp_task_renderer_requires_explicit_identity_proof(self) -> None:
-        for effect in (
-            "start_camp",
-            "assign_camp",
-            "return_to_camp_duties",
-            "abandon_camp",
-        ):
-            self.assertIsNone(
-                migrate_lua_first.render_static_camp_npc_effect(effect, True)
-            )
+    def test_camp_selector_todo_reasons_cover_native_decision_points(self) -> None:
+        decision_points = {
+            "start_camp": ("3 OMT", "mapgen collisions", "hidden_missions"),
+            "assign_camp": ("job_assignment_ui", "mission/attitude/guard/path"),
+            "return_to_camp_duties": ("retaining the assigned camp", "unassigns"),
+            "abandon_camp": ("emergency-recalls", "recoverable Platform tasks"),
+            "basecamp_mission": ("forms storage zones", "saves and unloads the map"),
+        }
+        for selector, fragments in decision_points.items():
+            category, reason = migrate_lua_first._CAMP_SELECTOR_TODOS[selector]
+            self.assertEqual(category, "platform_gap")
+            for fragment in fragments:
+                self.assertIn(fragment, reason)
 
     def test_platform_camp_create_renderer_requires_explicit_identity_and_type(self) -> None:
         proven = {
@@ -18227,8 +18334,9 @@ assert(not available())
         )
 
     def test_legacy_camp_start_and_expansion_shapes_stay_precise_todos(self) -> None:
-        self.assertIsNone(
-            migrate_lua_first.render_static_camp_npc_effect("start_camp", True)
+        self.assertIn(
+            "mapgen collisions",
+            migrate_lua_first._camp_selector_todo("start_camp")[1],
         )
         self.assertIsNone(
             migrate_lua_first.render_static_camp_create_effect(
@@ -18272,19 +18380,15 @@ assert(not available())
             migrate_lua_first.render_static_resource_work_effect(missing_worker)
         )
 
-    def test_legacy_camp_resource_shapes_remain_explicit_todos(self) -> None:
-        for effect in (
-            "basecamp_mission",
-            "distribute_food_auto",
-            {"platform_resource_work": {"duration_turns": 10}},
-        ):
-            if isinstance(effect, str):
-                rendered = migrate_lua_first.render_static_camp_npc_effect(effect, True)
-            else:
-                rendered = migrate_lua_first.render_static_resource_work_effect(
-                    effect["platform_resource_work"]
-                )
-            self.assertIsNone(rendered)
+    def test_legacy_camp_task_selector_and_incomplete_resource_work_stay_todos(self) -> None:
+        self.assertIsNotNone(
+            migrate_lua_first._camp_selector_todo("basecamp_mission")
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_resource_work_effect(
+                {"duration_turns": 10}
+            )
+        )
 
     def test_recipe_work_renderer_requires_explicit_holders_and_items(self) -> None:
         proven = {
@@ -18351,8 +18455,8 @@ assert(not available())
                 {"recipe_id": "bread", "batch": 1, "duration_turns": 10}
             )
         )
-        self.assertIsNone(
-            migrate_lua_first.render_static_camp_npc_effect("basecamp_mission", True)
+        self.assertIsNotNone(
+            migrate_lua_first._camp_selector_todo("basecamp_mission")
         )
 
     def test_upgrade_work_renderer_requires_explicit_target_and_holders(self) -> None:
@@ -19240,9 +19344,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             self.assertIn("local npc_state = service_value(services.npcs.get(actor))", main)
             self.assertIn("debt = debt + (npc_state.opinion.anger) * 1", main)
-            self.assertNotIn("services.camps.", main)
+            self.assertNotIn("service_value(services.camps.", main)
             self.assertIn(
-                "basecamp_mission only with explicit camp, manager, and worker handles",
+                "native basecamp_mission checks access, sets radio state",
                 main,
             )
             self.assertIn(
@@ -24493,7 +24597,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("services.missions.reserve", main)
             self.assertIn("services.missions.assign(actor, token)", main)
             self.assertNotIn("services.missions.assign(token)", main)
-            self.assertNotIn("services.camps.", main)
+            self.assertNotIn("service_value(services.camps.", main)
             self.assertNotIn("services.bionics.adjust", main)
             self.assertNotIn("services.vehicles.", main)
             self.assertNotIn("services.map.", main)
