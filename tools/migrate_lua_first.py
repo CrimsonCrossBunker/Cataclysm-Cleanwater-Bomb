@@ -6963,7 +6963,7 @@ def render_talk_topic(
                         entry["effect"]
                     )
                 if action_callback is None:
-                    action_callback = render_dialogue_drop_stolen_items_action_effect(
+                    action_callback = render_dialogue_stolen_item_action_effect(
                         entry["effect"]
                     )
             if action_callback is None:
@@ -20906,15 +20906,20 @@ def render_dialogue_item_grant_action_effect(effect: Any) -> LuaRaw | None:
     ]))
 
 
-def render_dialogue_drop_stolen_items_action_effect(effect: Any) -> LuaRaw | None:
-    """Run the native stolen-item return for a direct TALK response.
+def render_dialogue_stolen_item_action_effect(effect: Any) -> LuaRaw | None:
+    """Run a native stolen-item resolution for a direct TALK response.
 
-    The native string effect invokes its NPC function on dialogue beta, while
-    the function itself searches the current player's inventory.  A direct
+    The native string effects invoke their NPC functions on dialogue beta.
+    Returning stolen items searches the current player's inventory. A direct
     response callback retains beta; EOC and compound response paths do not
     establish the same invocation order and remain for manual conversion.
     """
-    if effect != "drop_stolen_item":
+    services = {
+        "drop_stolen_item": "drop_stolen_items",
+        "remove_stolen_status": "clear_stolen_item_claim",
+    }
+    service = services.get(effect) if isinstance(effect, str) else None
+    if service is None:
         return None
     return LuaRaw("\n".join([
         "function(context, trial_success)",
@@ -20922,7 +20927,7 @@ def render_dialogue_drop_stolen_items_action_effect(effect: Any) -> LuaRaw | Non
         "    local beta = context:interlocutor()",
         '    if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return end',
         "    if not beta:is_valid() then return end",
-        "    service_value(services.npcs.drop_stolen_items(beta))",
+        f"    service_value(services.npcs.{service}(beta))",
         "end",
     ]))
 

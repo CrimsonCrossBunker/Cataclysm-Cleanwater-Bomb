@@ -19275,6 +19275,23 @@ assert(not available())
         self.assertIn("services.npcs.drop_stolen_items(beta)", direct_lua)
         self.assertEqual(direct_result.todos, [])
 
+        allowed = next(
+            entry for entry in topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_ALLOW_KEEP_ITEM"
+        )
+        self.assertEqual(
+            allowed["responses"][0]["effect"], "remove_stolen_status"
+        )
+        allowed_result = migrate_lua_first.MigrationResult()
+        allowed_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 2, allowed),
+            allowed_result,
+        )
+        self.assertIn("on_action = function(context, trial_success)", allowed_lua or "")
+        self.assertIn("services.npcs.clear_stolen_item_claim(beta)", allowed_lua or "")
+        self.assertEqual(allowed_result.todos, [])
+
         rich_topic = next(
             entry for entry in topics
             if entry.get("type") == "talk_topic" and
