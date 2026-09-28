@@ -34669,21 +34669,27 @@ def render_eoc(
                             "manual_mult false_eocs only run when the candidate set is empty"
                         ),
                         "u_map_run_eocs": (
-                            "native u_map_run_eocs uses closest_points_first order, "
-                            "writes optional var_info coordinates before each tile, "
-                            "reevaluates condition before each EOC, and activates each "
-                            "EOC with a copied dialogue/context; the generated loop "
-                            "does not preserve that per-callback context isolation or "
-                            "prove typed abs_ms variable reads/writes"
+                            "native u_map_run_eocs uses closest_points_first order "
+                            "and dbl_or_var range, writes optional var_info "
+                            "coordinates before each tile, reevaluates condition "
+                            "before each EOC, and calls effect_on_condition::activate "
+                            "with a copied dialogue/context; activation also evaluates the "
+                            "referenced EOC's own condition/false_effect and may fan "
+                            "out through global run_for_npcs. Callback metadata only "
+                            "proves actor class, not complete activation parity, and "
+                            "typed abs_ms target/read/write scope remains unproven"
                         ),
                         "npc_map_run_eocs": (
                             "native npc_map_run_eocs uses mutable actor(true), which "
                             "falls back to alpha with a debug diagnostic when beta is "
                             "absent, then uses closest_points_first order, optional "
-                            "var_info writes, per-EOC condition checks, and a copied "
-                            "dialogue/context for each callback; the generated loop "
-                            "does not preserve those callback semantics or prove typed "
-                            "abs_ms variable reads/writes"
+                            "var_info writes, per-EOC condition checks, and "
+                            "effect_on_condition::activate with a copied dialogue/context. "
+                            "Activation also evaluates the referenced EOC's own "
+                            "condition/false_effect and may fan out through global "
+                            "run_for_npcs. Callback metadata only proves actor class, "
+                            "not complete activation parity, and typed abs_ms "
+                            "target/read/write scope remains unproven"
                         ),
                         "u_run_monster_eocs": (
                             "native u_run_monster_eocs walks game::all_creatures() order "
