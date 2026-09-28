@@ -1,9 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <string>
 
+#include "cata_scope_helpers.h"
+#include "character_id.h"
 #include "condition.h"
 #include "json_loader.h"
 #include "lua_platform_test_map_support.h"
+#include "npc.h"
 
 TEST_CASE( "lua_platform_native_overmap_condition_queries_preserve_terrain_and_camp_rules",
            "[lua][platform][overmap][conditions]" )
@@ -128,6 +131,86 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
     compare_near( R"({"u_near_om_location":"FACTION_CAMP_START","range":1})",
                   "FACTION_CAMP_START", 1 );
     compare_near( R"({"u_near_om_location":"FACTION_CAMP_ANY","range":2})",
+                  "FACTION_CAMP_ANY", 2 );
+}
+
+TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
+           "[lua][platform][overmap][conditions][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 823, 53 );
+    REQUIRE( fixture.edit_ready );
+
+    avatar &player = get_avatar();
+    npc partner;
+    partner.normalize();
+    partner.setID( character_id( 8231 ), true );
+
+    const tripoint_abs_omt beta_position_omt{
+        fixture.source_omt.x(), fixture.source_omt.y(),
+        fixture.source_omt.z() + 1
+    };
+    const tripoint_om_omt beta_local(
+        fixture.source_local.xy(), beta_position_omt.z() );
+    const oter_id beta_preimage = fixture.source_overmap->ter( beta_local );
+    const on_out_of_scope restore_beta_terrain( [&]() {
+        if( fixture.source_overmap->ter( beta_local ) != beta_preimage ) {
+            fixture.source_overmap->ter_set( beta_local, beta_preimage );
+        }
+    } );
+    fixture.source_overmap->ter_set( fixture.source_local, oter_id( "field" ) );
+    fixture.source_overmap->ter_set( beta_local, oter_id( "forest" ) );
+    // Keep alpha on a field at z=0 and put beta on a forest at z=1 so the
+    // native beta result cannot accidentally pass through alpha's position.
+    partner.setpos( project_to<coords::ms>( beta_position_omt ), false );
+    CHECK( player.pos_abs_omt() == fixture.source_omt );
+    CHECK( partner.pos_abs_omt() == beta_position_omt );
+
+    dialogue conversation( get_talker_for( player ), get_talker_for( partner ) );
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    const cata::lua_platform::script_tripoint_coord beta_center =
+        fixture.abs_omt_position( partner.pos_abs_omt() );
+    const sol::protected_function matches_location =
+        fixture.services["overmap"]["matches_location"];
+    const auto compare_at = [&]( const std::string &condition_json,
+    const std::string &location ) {
+        const conditional_t native_condition( json_loader::from_string(
+                condition_json ).get_object() );
+        const bool native_result = native_condition( conversation );
+        const sol::protected_function_result platform_result =
+            matches_location( beta_center, location );
+        REQUIRE( platform_result.valid() );
+        CHECK( platform_result.get<bool>() == native_result );
+    };
+    compare_at( R"({"npc_at_om_location":"forest"})", "forest" );
+    compare_at( R"({"npc_at_om_location":"field"})", "field" );
+    compare_at( R"({"npc_at_om_location":"FACTION_CAMP_ANY"})",
+                "FACTION_CAMP_ANY" );
+
+    const sol::protected_function matches_near =
+        fixture.services["overmap"]["matches_location_near"];
+    const auto compare_near = [&]( const std::string &condition_json,
+    const std::string &location, const int native_radius ) {
+        const conditional_t native_condition( json_loader::from_string(
+                condition_json ).get_object() );
+        const bool native_result = native_condition( conversation );
+        const sol::protected_function_result platform_result =
+            matches_near( beta_center, location, native_radius );
+        REQUIRE( platform_result.valid() );
+        CHECK( platform_result.get<bool>() == native_result );
+    };
+    compare_near( R"({"npc_near_om_location":"forest","range":0})",
+                  "forest", 0 );
+    compare_near( R"({"npc_near_om_location":"field","range":0})",
+                  "field", 0 );
+    compare_near( R"({"npc_near_om_location":"forest","range":1.9})",
+                  "forest", 1 );
+    compare_near( R"({"npc_near_om_location":"forest","range":-0.9})",
+                  "forest", 0 );
+    compare_near(
+        R"({"npc_near_om_location":"FACTION_CAMP_START","range":1})",
+        "FACTION_CAMP_START", 1 );
+    compare_near( R"({"npc_near_om_location":"FACTION_CAMP_ANY","range":2})",
                   "FACTION_CAMP_ANY", 2 );
 }
 

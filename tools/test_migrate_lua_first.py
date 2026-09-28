@@ -22162,11 +22162,22 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.coords.tripoint_rel_omt(dx, dy, 0)", main)
             self.assertNotIn("services.overmap.matches(", main)
             self.assertIn(
-                "EOC npc_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
+                "EOC npc_omt condition TODO: translate npc_*_om_location only "
+                "for an event-exclusive character_melee_attacks_character or "
+                "character_melee_attacks_monster EOC with its live Creature "
+                "interlocutor and bounded literal location/radius; other event "
+                "actors prove alpha only, and direct talk-topic response EOC "
+                "callbacks are not wired",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertIn(
-                "EOC npc_near_omt condition TODO: translate npc_*_om_location only with a proven beta talker",
+                "EOC npc_near_omt condition TODO: translate "
+                "npc_*_om_location only for an event-exclusive "
+                "character_melee_attacks_character or "
+                "character_melee_attacks_monster EOC with its live Creature "
+                "interlocutor and bounded literal location/radius; other event "
+                "actors prove alpha only, and direct talk-topic response EOC "
+                "callbacks are not wired",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertIn('"FACTION_CAMP_START", 1)', main)
@@ -22197,6 +22208,108 @@ assert(not pcall(function() return U_EXPRESSION end))
                     rendered,
                 )
                 self.assertNotIn("services.overmap.matches_location(", rendered)
+
+    def test_npc_overmap_conditions_use_only_live_melee_interlocutors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_character_beta_omt",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": {"npc_at_om_location": "forest"},
+                        "effect": {"message": "character beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_monster_beta_near_omt",
+                        "required_event": "character_melee_attacks_monster",
+                        "condition": {
+                            "npc_near_om_location": "FACTION_CAMP_ANY",
+                            "range": 2,
+                        },
+                        "effect": {"message": "monster beta"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "kill_event_has_no_talker_beta",
+                        "required_event": "character_kills_character",
+                        "condition": {"npc_at_om_location": "forest"},
+                        "effect": {"message": "kill event"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "ordinary_event_has_no_beta",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": {"npc_near_om_location": "field"},
+                        "effect": {"message": "ordinary event"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_dynamic_beta_radius",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": {
+                            "npc_near_om_location": "forest",
+                            "range": {"context_val": "radius"},
+                        },
+                        "effect": {"message": "dynamic radius"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_large_beta_radius",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": {
+                            "npc_near_om_location": "forest",
+                            "range": 31,
+                        },
+                        "effect": {"message": "large radius"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "melee_dynamic_beta_location",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": {
+                            "npc_at_om_location": {"context_val": "location"},
+                        },
+                        "effect": {"message": "dynamic location"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "npc_overmap_interlocutor_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn("melee_character_beta_omt", result.converted)
+        self.assertIn("melee_monster_beta_near_omt", result.converted)
+        for eoc_id in (
+            "kill_event_has_no_talker_beta",
+            "ordinary_event_has_no_beta",
+            "melee_dynamic_beta_radius",
+            "melee_large_beta_radius",
+            "melee_dynamic_beta_location",
+        ):
+            self.assertTrue(any(
+                f"EOC {eoc_id} condition TODO:" in entry
+                for entry in result.todos
+            ), eoc_id)
+        self.assertIn("services.overmap.matches_location(", main)
+        self.assertIn("services.overmap.matches_location_near(", main)
+        self.assertIn(
+            "local beta = context and context.actors and context.actors.interlocutor",
+            main,
+        )
+        self.assertIn("services.creatures.snapshot(beta)", main)
+        self.assertNotIn("services.creatures.snapshot(actor)", main)
+        self.assertNotIn('beta.subtype ~= "npc"', main)
+        self.assertIn(
+            "EOC kill_event_has_no_talker_beta condition TODO: translate npc_*_om_location",
+            report,
+        )
 
     def test_generic_talker_position_predicates_remain_unlowered(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
