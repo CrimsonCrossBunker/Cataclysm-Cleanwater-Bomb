@@ -11881,6 +11881,17 @@ assert(not available())
                         alpha_condition
                     )
                 )
+        for absent_native_alias in (
+            "npc_has_no_assigned_mission",
+            "npc_has_assigned_mission",
+            "npc_has_many_assigned_missions",
+        ):
+            with self.subTest(absent_native_alias=absent_native_alias):
+                self.assertIsNone(
+                    migrate_lua_first.render_talk_topic_response_condition(
+                        absent_native_alias
+                    )
+                )
         self.assertIsNone(
             migrate_lua_first.render_talk_topic_response_condition({
                 "and": ["mission_complete", {"unsupported_condition": True}],
@@ -12096,7 +12107,7 @@ assert(not available())
         )
         self.assertNotIn("services.npcs.missions.assigned_for_owner(", paired)
         self.assertIn(
-            "condition TODO: translate the legacy condition", paired
+            "TODO: translate the legacy condition into a Lua predicate", paired
         )
         self.assertTrue(pair_result.todos)
 
@@ -12143,17 +12154,17 @@ assert(not available())
                     "services.npcs.missions.assigned_for_owner(", fail_closed
                 )
                 self.assertIn(
-                    "condition TODO: translate the legacy condition",
+                    "TODO: translate the legacy condition into a Lua predicate",
                     fail_closed,
                 )
 
     def test_npc_available_mission_counts_use_the_exact_beta_actor(self) -> None:
-        # NPC aliases ask const_actor(true)->available_missions():
+        # Unprefixed and npc_* aliases both ask
+        # const_actor(true)->available_missions():
         # zero, exactly one, or at least two. talker_npc_const returns the raw
         # chatbin.missions vector, which services.npcs.missions.available_count
-        # also counts. Unprefixed aliases inspect alpha and stay TODO until an
-        # exact alpha mission query is available. Action-level true_eocs remain
-        # disconnected.
+        # also counts. The native u_* alpha forms have no exact callback query;
+        # EOC conditions remain TODO because EOC callbacks lack the Dialogue.
         predicates = {
             "npc_has_no_available_mission": "available_count == 0",
             "npc_has_available_mission": "available_count == 1",
@@ -12255,8 +12266,8 @@ assert(not available())
     def test_npc_selected_mission_status_uses_the_exact_beta_actor(self) -> None:
         # Native beta aliases inspect beta's selected mission: complete and
         # incomplete evaluate it against the current avatar, while failed
-        # checks has_failed(). Unprefixed aliases inspect alpha and remain TODO.
-        # Action-level true_eocs remain disconnected.
+        # checks has_failed(). Both unprefixed and npc_* spellings are beta
+        # aliases; EOC conditions remain TODO without a live dialogue.
         predicates = (
             "npc_mission_complete", "npc_mission_incomplete",
             "npc_mission_failed",
@@ -12280,10 +12291,13 @@ assert(not available())
             "mission_complete", "mission_incomplete", "mission_failed",
         ):
             with self.subTest(condition=condition):
-                self.assertIsNone(
-                    migrate_lua_first.render_talk_topic_response_condition(
-                        condition
-                    )
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    condition
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn(
+                    'selected_condition(beta, owner, "', callback.source
                 )
                 self.assertIsNone(
                     migrate_lua_first.render_eoc_condition_expression(
@@ -12356,8 +12370,8 @@ assert(not available())
 
     def test_npc_selected_mission_goal_uses_the_exact_beta_actor(self) -> None:
         # Native uses str_or_var for the goal selector. Static enum names are
-        # bounded for NPC beta aliases. Alpha aliases, dynamic/unknown values,
-        # and EOC callback paths remain outside the supported topic callback.
+        # bounded for both beta spellings. Dynamic/unknown values and EOC
+        # callback paths remain outside the supported topic callback.
         for condition in ("mission_goal", "npc_mission_goal"):
             for goal in migrate_lua_first.NATIVE_MISSION_GOALS:
                 with self.subTest(condition=condition, goal=goal):
@@ -12371,12 +12385,9 @@ assert(not available())
             static_topic_condition = migrate_lua_first.render_talk_topic_response_condition(
                 {condition: "MGOAL_ASSASSINATE"}
             )
-            if condition == "mission_goal":
-                self.assertIsNone(static_topic_condition)
-            else:
-                self.assertIsNotNone(static_topic_condition)
-                assert static_topic_condition is not None
-                self.assertIn("selected_has_goal(beta", static_topic_condition.value)
+            self.assertIsNotNone(static_topic_condition)
+            assert static_topic_condition is not None
+            self.assertIn("selected_has_goal(beta", static_topic_condition.source)
             for dynamic_goal in (
                 {"var": "mission_goal"}, "NOT_A_MISSION_GOAL",
             ):

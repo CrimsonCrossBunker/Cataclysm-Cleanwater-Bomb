@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "condition.h"
+#include "json_loader.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_test_support.h"
 
@@ -752,6 +753,32 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     mission_dialogue.missions_assigned = {
         owned_for_dialogue, second_owned_for_dialogue
     };
+    const conditional_t no_available_mission( "has_no_available_mission" );
+    const conditional_t one_available_mission( "has_available_mission" );
+    const conditional_t many_available_missions( "has_many_available_missions" );
+    const conditional_t npc_no_available_mission( "npc_has_no_available_mission" );
+    const conditional_t npc_one_available_mission( "npc_has_available_mission" );
+    const conditional_t npc_many_available_missions( "npc_has_many_available_missions" );
+    const auto check_available_count = [&]( const std::size_t expected ) {
+        const std::size_t native_count =
+            mission_dialogue.const_actor( true )->available_missions().size();
+        CHECK( native_count == expected );
+        CHECK( integer_from( available_count( provider_handle ) ) == native_count );
+        CHECK( no_available_mission( mission_dialogue ) == ( native_count == 0 ) );
+        CHECK( one_available_mission( mission_dialogue ) == ( native_count == 1 ) );
+        CHECK( many_available_missions( mission_dialogue ) == ( native_count >= 2 ) );
+        CHECK( npc_no_available_mission( mission_dialogue ) == ( native_count == 0 ) );
+        CHECK( npc_one_available_mission( mission_dialogue ) == ( native_count == 1 ) );
+        CHECK( npc_many_available_missions( mission_dialogue ) == ( native_count >= 2 ) );
+    };
+    provider->chatbin.missions.clear();
+    check_available_count( 0 );
+    provider->chatbin.missions.push_back( owned_for_dialogue );
+    check_available_count( 1 );
+    provider->chatbin.missions.push_back( second_owned_for_dialogue );
+    check_available_count( 2 );
+    provider->chatbin.missions.clear();
+
     using dialogue_context = cata::lua_platform::dialogue::context;
     const cata::lua_platform::dialogue::dialogue_session_ptr mission_session =
         cata::lua_platform::dialogue::begin_session(
@@ -810,6 +837,49 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     provider->chatbin.mission_selected = owned_by_other;
     CHECK( value_from( state( provider_handle ) )["selected"].get<sol::table>()
            ["uid"].get<int>() == owned_by_other->get_id() );
+    avatar &current_avatar = get_avatar();
+    const cata::lua_platform::game_handle current_avatar_handle =
+        cata::lua_platform::game_handle::from_creature(
+            current_avatar,
+    { "avatar", current_avatar.getID().get_value(), 0, 0, 0, {} },
+    runtime, active_world );
+    dialogue selected_mission_dialogue(
+        get_talker_for( current_avatar ), get_talker_for( *provider ) );
+    const conditional_t mission_complete( "mission_complete" );
+    const conditional_t npc_mission_complete( "npc_mission_complete" );
+    const conditional_t mission_incomplete( "mission_incomplete" );
+    const conditional_t npc_mission_incomplete( "npc_mission_incomplete" );
+    const conditional_t mission_failed( "mission_failed" );
+    const conditional_t npc_mission_failed( "npc_mission_failed" );
+    const conditional_t mission_goal( json_loader::from_string(
+                                          R"({"mission_goal":"MGOAL_CONDITION"})" )
+                                      .get_object() );
+    const conditional_t npc_mission_goal( json_loader::from_string(
+                                              R"({"npc_mission_goal":"MGOAL_CONDITION"})" )
+                                          .get_object() );
+    // Native mission status aliases select beta's mission; complete/incomplete
+    // then evaluate it with get_avatar(), which is the explicit service owner.
+    const auto compare_selected_status = [&]( const char *predicate,
+            const conditional_t &native_condition ) {
+        CHECK( native_condition( selected_mission_dialogue ) ==
+               boolean_from( selected_condition(
+                                 provider_handle, current_avatar_handle,
+                                 predicate ) ) );
+    };
+    const auto check_selected_conditions = [&]() {
+        compare_selected_status( "complete", mission_complete );
+        compare_selected_status( "complete", npc_mission_complete );
+        compare_selected_status( "incomplete", mission_incomplete );
+        compare_selected_status( "incomplete", npc_mission_incomplete );
+        compare_selected_status( "failed", mission_failed );
+        compare_selected_status( "failed", npc_mission_failed );
+        const bool api_goal = boolean_from(
+                                  selected_has_goal( provider_handle,
+                                          "MGOAL_CONDITION" ) );
+        CHECK( mission_goal( selected_mission_dialogue ) == api_goal );
+        CHECK( npc_mission_goal( selected_mission_dialogue ) == api_goal );
+    };
+    check_selected_conditions();
     provider->chatbin.mission_selected = nullptr;
     provider->chatbin.missions_assigned.clear();
 
