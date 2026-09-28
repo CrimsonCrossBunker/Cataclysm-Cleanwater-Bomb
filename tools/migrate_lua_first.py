@@ -30079,8 +30079,10 @@ def render_eoc(
     # exposes that same live target as actors.interlocutor.  Require an
     # event-exclusive EOC so run_eocs, run_eoc_selector, and test_eoc cannot
     # re-enter it with another pair.
+    # Native EOC loading defaults a missing eoc_type to ACTIVATION and only
+    # reads required_event for EVENT, so event-shaped JSON alone is not proof.
     npc_melee_beta_actor_proven = (
-        has_event_trigger and
+        has_event_trigger and value.get("eoc_type") == "EVENT" and
         required_event in {
             "character_melee_attacks_character",
             "character_melee_attacks_monster",

@@ -588,21 +588,24 @@ assert(worn_calls==1 and has_calls==1)
             ),
             (
                 "live_melee_role",
-                {"required_event": "character_melee_attacks_character",
+                {"eoc_type": "EVENT",
+                 "required_event": "character_melee_attacks_character",
                  "condition": {"npc_role_nearby": "scout"}},
                 True,
                 "services.npcs.has_role_nearby(actor, \"scout\", 48)",
             ),
             (
                 "melee_npc_see_u",
-                {"required_event": "character_melee_attacks_character",
+                {"eoc_type": "EVENT",
+                 "required_event": "character_melee_attacks_character",
                  "condition": "npc_see_u"},
                 True,
                 "services.creatures.can_see(beta, alpha)",
             ),
             (
                 "melee_npc_service",
-                {"required_event": "character_melee_attacks_monster",
+                {"eoc_type": "EVENT",
+                 "required_event": "character_melee_attacks_monster",
                  "condition": {"npc_service": 40.5}},
                 True,
                 "services.characters.snapshot(alpha)).cash >= 40.5",
@@ -655,6 +658,7 @@ assert(worn_calls==1 and has_calls==1)
         melee_source = migrate_lua_first.SourceObject(
             Path("source.json"), 20, {
                 "type": "effect_on_condition", "id": "melee_live_pair",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": "npc_see_u",
                 "effect": {"message": "condition result"},
@@ -2381,7 +2385,8 @@ assert(adds==1 and random_calls==2 and reads==READS)
                 with self.subTest(event=event, kind=kind, dynamic=dynamic), tempfile.TemporaryDirectory() as temporary:
                     source = Path(temporary) / "eoc.json"
                     source.write_text(json.dumps({
-                        "type": "effect_on_condition", "id": "remove_all", "required_event": event,
+                        "type": "effect_on_condition", "id": "remove_all",
+                        "eoc_type": "EVENT", "required_event": event,
                         "effect": [{"npc_lose_effect": "bleed",
                                     "target_part": {"context_val": "part"} if dynamic else "ALL"}],
                     }))
@@ -3285,6 +3290,7 @@ assert(observed[#observed] == 'KNOWN')
                 Path("source.json"), 0, {
                     "type": "effect_on_condition",
                     "id": eoc_id,
+                    "eoc_type": "EVENT",
                     "required_event": required_event,
                     "condition": condition,
                     "effect": {"message": "checked proficiency"},
@@ -3296,7 +3302,7 @@ assert(observed[#observed] == 'KNOWN')
                 eoc_referenced_ids=frozenset({eoc_id}) if referenced else frozenset(),
                 dynamic_eoc_dispatch_present=dynamic_dispatch,
             )
-            return main, "\n".join(result.todos)
+            return main, "\n".join(todo.message for todo in result.todos)
 
         character_main, character_todos = render(
             "melee_character_proficiency", "character_melee_attacks_character",
@@ -6376,6 +6382,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "math_character_pair",
+                            "eoc_type": "EVENT",
                             "required_event": "character_melee_attacks_character",
                             "effect": [
                                 {"math": ["u_math_alpha = 2"]},
@@ -8631,6 +8638,7 @@ assert(#events == 9)
         event_beta = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition", "id": "event_beta_wet",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "effect": {"npc_add_wet": 30},
             }),
@@ -9024,6 +9032,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "character_melee_beta",
+                            "eoc_type": "EVENT",
                             "required_event": "character_melee_attacks_character",
                             "effect": {
                                 "npc_add_effect": "bleed",
@@ -11468,6 +11477,7 @@ assert(not available())
             Path("source.json"), 0, {
                 "type": "effect_on_condition",
                 "id": "melee_character_beta_conditions",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": {
                     "and": [
@@ -11496,13 +11506,14 @@ assert(not available())
         self.assertIn('beta.subtype ~= "npc"', character_main)
         self.assertNotIn(
             "EOC melee_character_beta_conditions condition TODO",
-            "\n".join(character_result.todos),
+            "\n".join(todo.message for todo in character_result.todos),
         )
 
         unrelated_npc_predicate = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
                 "type": "effect_on_condition",
                 "id": "melee_does_not_prove_general_npc_actor",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": "npc_available",
                 "effect": {"message": "general NPC proof stays closed"},
@@ -11513,12 +11524,13 @@ assert(not available())
             unrelated_npc_predicate, unrelated_result,
         )
         self.assertNotIn("services.npcs.get(actor)", unrelated_main)
-        self.assertIn("condition TODO", "\n".join(unrelated_result.todos))
+        self.assertIn("condition TODO", "\n".join(todo.message for todo in unrelated_result.todos))
 
         monster_event = migrate_lua_first.SourceObject(
             Path("source.json"), 2, {
                 "type": "effect_on_condition",
                 "id": "melee_monster_beta_conditions",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_monster",
                 "condition": {"npc_rule": "UNKNOWN_RULE"},
                 "effect": {"message": "monster is not an NPC"},
@@ -11533,6 +11545,36 @@ assert(not available())
         self.assertIn('beta.subtype ~= "npc"', monster_main)
         self.assertIn("return false", monster_main)
         self.assertIn("services.npcs.ai_rules(beta)", monster_main)
+
+        # Native EOC loading defaults missing eoc_type to ACTIVATION, and
+        # explicitly non-event EOCs cannot prove the callback's beta actor.
+        for offset, eoc_type in enumerate((None, "ACTIVATION")):
+            with self.subTest(eoc_type=eoc_type):
+                inactive_data = {
+                    "type": "effect_on_condition",
+                    "id": (
+                        "melee_beta_default_activation" if eoc_type is None
+                        else "melee_beta_explicit_activation"
+                    ),
+                    "required_event": "character_melee_attacks_character",
+                    "condition": "npc_friend",
+                    "effect": {"message": "non-event beta remains unproven"},
+                }
+                if eoc_type is not None:
+                    inactive_data["eoc_type"] = eoc_type
+                inactive_eoc = migrate_lua_first.SourceObject(
+                    Path("source.json"), 4 + offset, inactive_data,
+                )
+                inactive_result = migrate_lua_first.MigrationResult()
+                inactive_main = migrate_lua_first.render_eoc(
+                    inactive_eoc, inactive_result,
+                )
+                self.assertNotIn("services.npcs.get(beta)).friendly", inactive_main)
+                self.assertNotIn("services.npcs.ai_rules(beta)", inactive_main)
+                self.assertIn(
+                    "condition TODO",
+                    "\n".join(todo.message for todo in inactive_result.todos),
+                )
 
         alpha_only_event = migrate_lua_first.SourceObject(
             Path("source.json"), 3, {
@@ -11549,7 +11591,7 @@ assert(not available())
         )
         self.assertIn(
             "condition TODO: translate the legacy condition into a Lua predicate",
-            "\n".join(alpha_only_result.todos),
+            "\n".join(todo.message for todo in alpha_only_result.todos),
         )
         self.assertNotIn("services.npcs.ai_rules(actor)", alpha_only_main)
 
@@ -12986,6 +13028,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "event_character_safe_space",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": "at_safe_space",
                         "effect": [],
@@ -12993,6 +13036,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "event_monster_safe_space",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_monster",
                         "condition": "npc_at_safe_space",
                         "effect": [],
@@ -13463,6 +13507,7 @@ assert(not available())
                     migrate_lua_first.SourceObject(Path("source.json"), 0, {
                         "type": "effect_on_condition",
                         "id": "event_beta_presence",
+                        "eoc_type": "EVENT",
                         "required_event": event,
                         "condition": {
                             "and": ["has_beta", {"not": "npc_exists"}]
@@ -13483,6 +13528,7 @@ assert(not available())
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition",
                 "id": "event_beta_presence",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": "has_beta",
                 "effect": {"message": "event"},
@@ -13521,6 +13567,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "event_beta_presence",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": "has_beta",
                         "effect": {"message": "event"},
@@ -14183,6 +14230,7 @@ assert(not available())
         melee = migrate_lua_first.SourceObject(
             Path("source.json"), 9, {
                 "type": "effect_on_condition", "id": "melee_assigned_camp",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": "npc_has_assigned_camp",
                 "effect": {"message": "assigned"},
@@ -14193,7 +14241,7 @@ assert(not available())
         self.assertIn("context.actors.interlocutor", rendered)
         self.assertIn('beta.subtype ~= "npc"', rendered)
         self.assertIn("services.npcs.get(beta)", rendered)
-        self.assertNotIn("condition TODO", "\n".join(result.todos))
+        self.assertNotIn("condition TODO", "\n".join(todo.message for todo in result.todos))
 
         for kwargs in (
             {"eoc_referenced_ids": frozenset({"melee_assigned_camp"})},
@@ -14205,7 +14253,7 @@ assert(not available())
                     melee, blocked_result, **kwargs,
                 )
                 self.assertNotIn("services.npcs.get(beta)", blocked_rendered)
-                self.assertIn("condition TODO", "\n".join(blocked_result.todos))
+                self.assertIn("condition TODO", "\n".join(todo.message for todo in blocked_result.todos))
 
         alpha_only = migrate_lua_first.SourceObject(
             Path("source.json"), 10, {
@@ -14218,7 +14266,7 @@ assert(not available())
         alpha_result = migrate_lua_first.MigrationResult()
         alpha_rendered = migrate_lua_first.render_eoc(alpha_only, alpha_result)
         self.assertNotIn("services.npcs.get(actor)", alpha_rendered)
-        self.assertIn("condition TODO", "\n".join(alpha_result.todos))
+        self.assertIn("condition TODO", "\n".join(todo.message for todo in alpha_result.todos))
 
     def test_renders_butchery_requirement_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23613,6 +23661,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     Path("source.json"), 0, {
                         "type": "effect_on_condition",
                         "id": "melee_stolen_item",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": selector,
                         "effect": {"message": "stolen"},
@@ -23723,6 +23772,7 @@ assert(calls == 1)
                 source = migrate_lua_first.SourceObject(
                     Path("source.json"), 0, {
                         "type": "effect_on_condition", "id": "unknown_guard",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         gate: raw_gate,
                         "effect": {"message": "must not execute"},
@@ -26273,6 +26323,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         "id": "melee_avatar_beta_message",
                         # Native melee event carries a live alpha/beta pair
                         # before the attack applies damage.
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "effect": {
                             "npc_message": "live avatar beta",
@@ -26409,12 +26460,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "character_melee_message",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "effect": {"message": "live melee Character beta"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "monster_melee_message",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_monster",
                         "effect": {"message": "live melee monster beta"},
                     },
@@ -26465,12 +26518,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "character_melee_u_message",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "effect": {"u_message": "live Character attacker"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "monster_melee_u_message",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_monster",
                         "effect": {"u_message": "live monster attacker"},
                     },
@@ -26914,6 +26969,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "melee_character_beta_omt",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": {"npc_at_om_location": "forest"},
                         "effect": {"message": "character beta"},
@@ -26921,6 +26977,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "melee_monster_beta_near_omt",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_monster",
                         "condition": {
                             "npc_near_om_location": "FACTION_CAMP_ANY",
@@ -26945,6 +27002,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "melee_dynamic_beta_radius",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": {
                             "npc_near_om_location": "forest",
@@ -26955,6 +27013,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "melee_large_beta_radius",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": {
                             "npc_near_om_location": "forest",
@@ -26965,6 +27024,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "melee_dynamic_beta_location",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "condition": {
                             "npc_at_om_location": {"context_val": "location"},
@@ -27981,6 +28041,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                         {
                             "type": "effect_on_condition",
                             "id": "non_npc_event_rep",
+                            "eoc_type": "EVENT",
                             "required_event": "character_melee_attacks_character",
                             "effect": {"u_faction_rep": 2},
                         },
@@ -32043,6 +32104,7 @@ assert(context.data.picked==selected)
                 json.dumps({
                     "type": "effect_on_condition",
                     "id": "plain_character_sounds",
+                    "eoc_type": "EVENT",
                     "required_event": "character_melee_attacks_character",
                     "effect": [
                         {"u_make_sound": "alpha <u_name>"},
@@ -33195,6 +33257,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "monster_attack_predicates",
+                            "eoc_type": "EVENT",
                             "required_event": "character_melee_attacks_monster",
                             "condition": {
                                 "and": [
@@ -33211,6 +33274,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "character_attack_predicates",
+                            "eoc_type": "EVENT",
                             "required_event": "character_melee_attacks_character",
                             "condition": {
                                 "and": [
@@ -34555,6 +34619,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                     {
                         "type": "effect_on_condition",
                         "id": "attack_beta_mutations",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_monster",
                         "effect": [
                             {
@@ -34888,6 +34953,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition",
                 "id": "beta_target",
+                "eoc_type": "EVENT",
                 "required_event": "character_melee_attacks_character",
                 "condition": "npc_friend",
                 "effect": [],
@@ -38127,6 +38193,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                     {
                         "type": "effect_on_condition",
                         "id": "targeting_child_caller",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "effect": {
                             "run_eocs": [
@@ -39119,6 +39186,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
         source = migrate_lua_first.SourceObject(Path("event.json"), 0, {
             "type": "effect_on_condition",
             "id": "event_pair_sale",
+            "eoc_type": "EVENT",
             "required_event": "character_melee_attacks_character",
             "condition": {
                 "u_has_items": {"item": "sample_item", "count": 1}
