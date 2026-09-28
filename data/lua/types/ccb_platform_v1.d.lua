@@ -6306,6 +6306,11 @@ function PlatformDialogueContext:has_speaker() end
 ---@return boolean
 function PlatformDialogueContext:has_interlocutor() end
 
+---Return the native dialogue's assigned-mission list size, filtered for its alpha owner.
+---This reads the live dialogue list and is available only during its callback session.
+---@return integer
+function PlatformDialogueContext:assigned_mission_count() end
+
 ---@return boolean
 function PlatformDialogueContext:by_radio() end
 

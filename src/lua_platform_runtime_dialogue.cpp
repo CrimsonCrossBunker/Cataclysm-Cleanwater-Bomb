@@ -768,6 +768,8 @@ void detail::install_runtime_dialogue_presentation_api(
         "topic_item", &platform_dialogue_context::topic_item,
         "has_speaker", &platform_dialogue_context::has_speaker,
         "has_interlocutor", &platform_dialogue_context::has_interlocutor,
+        "assigned_mission_count",
+        &platform_dialogue_context::assigned_mission_count,
         "by_radio", &platform_dialogue_context::by_radio,
         "has_reason", &platform_dialogue_context::has_reason,
         "reason", &platform_dialogue_context::reason,

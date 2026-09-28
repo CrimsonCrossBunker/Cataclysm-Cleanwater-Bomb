@@ -11540,7 +11540,9 @@ assert(not available())
         # Unsupported and dynamic condition forms are hidden instead of
         # accidentally becoming unconditional Platform responses.
         unsupported_conditions = (
-            "has_assigned_mission",
+            {"mission_goal": {"var": "mission_goal"}},
+            {"mission_goal": "NOT_A_MISSION_GOAL"},
+            {"and": ["has_assigned_mission"]},
             {"npc_has_assigned_camp": "ignored"},
             {"u_has_camp": "ignored"},
             {"u_has_intelligence": "dynamic_var"},
@@ -11568,6 +11570,162 @@ assert(not available())
                 self.assertIsNotNone(unsupported_rendered)
                 self.assertIn("condition = false", unsupported_rendered)
                 self.assertTrue(unsupported_result.todos)
+
+    def test_talk_topic_mission_conditions_use_typed_services(self) -> None:
+        query_by_condition = {
+            "has_no_assigned_mission": "assigned_mission_count()",
+            "has_assigned_mission": "assigned_mission_count()",
+            "has_many_assigned_missions": "assigned_mission_count()",
+            "npc_has_no_available_mission": "available_count(beta)",
+            "npc_has_available_mission": "available_count(beta)",
+            "npc_has_many_available_missions": "available_count(beta)",
+            "npc_mission_complete": 'selected_condition(beta, owner, "complete")',
+            "npc_mission_incomplete": 'selected_condition(beta, owner, "incomplete")',
+            "npc_mission_failed": 'selected_condition(beta, owner, "failed")',
+        }
+        for condition, query in query_by_condition.items():
+            with self.subTest(condition=condition):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    condition
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn("dialogue_context:valid()", callback.value)
+                if query != "assigned_mission_count()":
+                    self.assertIn("dialogue_context:interlocutor()", callback.value)
+                self.assertIn(query, callback.value)
+
+        for condition in ("mission_goal", "npc_mission_goal"):
+            callback = migrate_lua_first.render_talk_topic_response_condition(
+                {condition: "MGOAL_ASSASSINATE"}
+            )
+            if condition == "mission_goal":
+                self.assertIsNone(callback)
+            else:
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn(
+                    'selected_has_goal(beta, "MGOAL_ASSASSINATE")', callback.value
+                )
+            self.assertIsNone(
+                migrate_lua_first.render_talk_topic_response_condition(
+                    {condition: {"var": "mission_goal"}}
+                )
+            )
+            self.assertIsNone(
+                migrate_lua_first.render_talk_topic_response_condition(
+                    {condition: "NOT_A_MISSION_GOAL"}
+                )
+            )
+
+        for alpha_condition in (
+            "has_no_available_mission", "has_available_mission",
+            "has_many_available_missions", "mission_complete",
+            "mission_incomplete", "mission_failed",
+        ):
+            with self.subTest(alpha_condition=alpha_condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_talk_topic_response_condition(
+                        alpha_condition
+                    )
+                )
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "direct_mission_topic",
+                "responses": [
+                    {"text": condition, "condition": condition}
+                    for condition in query_by_condition
+                ] + [
+                    {
+                        "text": "Goal matches",
+                        "condition": {"npc_mission_goal": "MGOAL_ASSASSINATE"},
+                    },
+                ],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("dialogue_context:assigned_mission_count()", rendered)
+        self.assertIn("services.npcs.missions.available_count(beta)", rendered)
+        self.assertIn(
+            "services.npcs.missions.selected_condition(beta, owner, \"complete\")",
+            rendered,
+        )
+        self.assertIn(
+            'services.npcs.missions.selected_has_goal(beta, "MGOAL_ASSASSINATE")',
+            rendered,
+        )
+        self.assertFalse(result.todos)
+
+    def test_real_mission_dialogue_conditions_migrate_to_typed_services(self) -> None:
+        source_dir = REPOSITORY_ROOT / "data/json/npcs"
+        common_mission_topics = json.loads(
+            (source_dir / "common_chat/TALK_COMMON_MISSION.json").read_text()
+        )
+        foodperson_topics = json.loads(
+            (source_dir / "TALK_TRUE_FOODPERSON.json").read_text()
+        )
+        test_topics = json.loads((source_dir / "TALK_TEST.json").read_text())
+        mission_list = next(
+            topic for topic in common_mission_topics
+            if topic.get("type") == "talk_topic" and
+            topic.get("id") == "TALK_MISSION_LIST"
+        )
+        mission_inquire = next(
+            topic for topic in common_mission_topics
+            if topic.get("type") == "talk_topic" and
+            topic.get("id") == "TALK_MISSION_INQUIRE"
+        )
+        assigned_topic = next(
+            topic for topic in foodperson_topics
+            if topic.get("type") == "talk_topic" and
+            isinstance(topic.get("id"), str) and any(
+                isinstance(response, dict) and
+                response.get("condition") == "has_assigned_mission"
+                for response in topic.get("responses", [])
+            )
+        )
+        mission_goal_topic = next(
+            topic for topic in test_topics
+            if topic.get("type") == "talk_topic" and
+            topic.get("id") == "TALK_TEST_MISSION_GOAL"
+        )
+        real_topics = (
+            ("common_chat/TALK_COMMON_MISSION.json", mission_list),
+            ("common_chat/TALK_COMMON_MISSION.json", mission_inquire),
+            ("TALK_TRUE_FOODPERSON.json", assigned_topic),
+            ("TALK_TEST.json", mission_goal_topic),
+        )
+        for source_path, source in real_topics:
+            with self.subTest(topic=source["id"]):
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_talk_topic(
+                    migrate_lua_first.SourceObject(
+                        Path(f"data/json/npcs/{source_path}"), 0, source
+                    ),
+                    result,
+                )
+                self.assertIsNotNone(rendered)
+                assert rendered is not None
+                if source["id"] == "TALK_TEST_MISSION_GOAL":
+                    self.assertNotIn("selected_has_goal", rendered)
+                    self.assertIn("condition = false", rendered)
+                    self.assertTrue(result.todos)
+                elif source["id"] == "TALK_MISSION_LIST":
+                    self.assertNotIn("services.npcs.missions.available_count", rendered)
+                    self.assertIn("condition = false", rendered)
+                    # This native predicate selects alpha, whose exact mission query remains TODO.
+                    self.assertTrue(result.todos)
+                elif source["id"] == "TALK_MISSION_INQUIRE":
+                    self.assertNotIn("services.npcs.missions.selected_condition", rendered)
+                    self.assertIn("condition = false", rendered)
+                    # This native predicate selects alpha; mission EOC actions stay TODO too.
+                    self.assertTrue(result.todos)
+                else:
+                    self.assertIn("assigned_mission_count()", rendered)
 
     def test_talk_topic_run_eocs_stays_todo_without_action_phase_hook(self) -> None:
         # This is the native response schema: run_eocs is one action in the
@@ -11607,9 +11765,9 @@ assert(not available())
         # f_has_many_assigned_missions distinguish 0, exactly 1, and >= 2
         # entries in dialogue::missions_assigned. avatar::talk_to first calls
         # the beta talker's check_missions(), then filters its assigned list to
-        # alpha's avatar id. The response renderer supports only a direct
-        # positive u_has_intelligence condition; mission predicates remain
-        # TODO and their responses are emitted with condition=false.
+        # alpha's avatar id. The talk response can read that exact native
+        # dialogue vector; equivalent EOC conditions remain TODO because they
+        # execute outside the scoped response callback.
         predicates = (
             "has_no_assigned_mission",
             "has_assigned_mission",
@@ -11667,7 +11825,8 @@ assert(not available())
         )
         self.assertIsNotNone(rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
-        self.assertIn("condition = false", rendered_topic)
+        self.assertIn("condition = function(dialogue_context)", rendered_topic)
+        self.assertIn("assigned_mission_count()", rendered_topic)
         self.assertTrue(topic_result.todos)
 
         pair_result = migrate_lua_first.MigrationResult()
@@ -11730,22 +11889,16 @@ assert(not available())
                     fail_closed,
                 )
 
-    def test_available_mission_counts_need_a_rendered_dialogue_callback(self) -> None:
-        # The six beta aliases ask const_actor(true)->available_missions():
+    def test_npc_available_mission_counts_use_the_exact_beta_actor(self) -> None:
+        # NPC aliases ask const_actor(true)->available_missions():
         # zero, exactly one, or at least two. talker_npc_const returns the raw
         # chatbin.missions vector, which services.npcs.missions.available_count
-        # also counts. The response renderer lowers only direct positive
-        # u_has_intelligence; these mission conditions fail closed as false.
-        # Action-level true_eocs remain disconnected.
-        # Also, the base talker returns an empty vector: for a non-NPC beta,
-        # has_no_available_mission is true while the other two are false. A
-        # blanket NPC-subtype guard would change that native result.
+        # also counts. Unprefixed aliases inspect alpha and stay TODO until an
+        # exact alpha mission query is available. Action-level true_eocs remain
+        # disconnected.
         predicates = {
-            "has_no_available_mission": "available_count == 0",
             "npc_has_no_available_mission": "available_count == 0",
-            "has_available_mission": "available_count == 1",
             "npc_has_available_mission": "available_count == 1",
-            "has_many_available_missions": "available_count >= 2",
             "npc_has_many_available_missions": "available_count >= 2",
         }
         for condition, native_boundary in predicates.items():
@@ -11766,6 +11919,9 @@ assert(not available())
                     )
 
         for alias in (
+            "has_no_available_mission",
+            "has_available_mission",
+            "has_many_available_missions",
             "u_has_no_available_mission",
             "u_has_available_mission",
             "u_has_many_available_missions",
@@ -11815,7 +11971,8 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertIn("condition = false", rendered_topic)
+        self.assertIn("condition = function(dialogue_context)", rendered_topic)
+        self.assertIn("services.npcs.missions.available_count(beta)", rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
 
@@ -11837,15 +11994,14 @@ assert(not available())
                 )
                 self.assertTrue(eoc_result.todos)
 
-    def test_selected_mission_status_needs_a_rendered_dialogue_callback(self) -> None:
+    def test_npc_selected_mission_status_uses_the_exact_beta_actor(self) -> None:
         # Native beta aliases inspect beta's selected mission: complete and
         # incomplete evaluate it against the current avatar, while failed
-        # checks has_failed(). The bounded response callback does not cover
-        # mission state, and action-level true_eocs remain disconnected.
+        # checks has_failed(). Unprefixed aliases inspect alpha and remain TODO.
+        # Action-level true_eocs remain disconnected.
         predicates = (
-            "mission_complete", "npc_mission_complete",
-            "mission_incomplete", "npc_mission_incomplete",
-            "mission_failed", "npc_mission_failed",
+            "npc_mission_complete", "npc_mission_incomplete",
+            "npc_mission_failed",
         )
         for condition in predicates:
             with self.subTest(condition=condition):
@@ -11863,9 +12019,14 @@ assert(not available())
                     )
 
         for condition in (
-            "u_mission_complete", "u_mission_incomplete", "u_mission_failed",
+            "mission_complete", "mission_incomplete", "mission_failed",
         ):
             with self.subTest(condition=condition):
+                self.assertIsNone(
+                    migrate_lua_first.render_talk_topic_response_condition(
+                        condition
+                    )
+                )
                 self.assertIsNone(
                     migrate_lua_first.render_eoc_condition_expression(
                         condition,
@@ -11910,7 +12071,11 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertIn("condition = false", rendered_topic)
+        self.assertIn("condition = function(dialogue_context)", rendered_topic)
+        self.assertIn(
+            "services.npcs.missions.selected_condition(beta, owner, \"complete\")",
+            rendered_topic,
+        )
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
         for eoc in condition_eocs:
@@ -11931,10 +12096,10 @@ assert(not available())
                 )
                 self.assertTrue(eoc_result.todos)
 
-    def test_selected_mission_goals_need_a_rendered_dialogue_callback(self) -> None:
+    def test_npc_selected_mission_goal_uses_the_exact_beta_actor(self) -> None:
         # Native uses str_or_var for the goal selector. Static enum names are
-        # bounded, but a variable/unknown value and the EOC callback path still
-        # need native conversion semantics that are not wired into topics.
+        # bounded for NPC beta aliases. Alpha aliases, dynamic/unknown values,
+        # and EOC callback paths remain outside the supported topic callback.
         for condition in ("mission_goal", "npc_mission_goal"):
             for goal in migrate_lua_first.NATIVE_MISSION_GOALS:
                 with self.subTest(condition=condition, goal=goal):
@@ -11945,10 +12110,24 @@ assert(not available())
                             npc_dialogue_pair_proven=True,
                         )
                     )
+            static_topic_condition = migrate_lua_first.render_talk_topic_response_condition(
+                {condition: "MGOAL_ASSASSINATE"}
+            )
+            if condition == "mission_goal":
+                self.assertIsNone(static_topic_condition)
+            else:
+                self.assertIsNotNone(static_topic_condition)
+                assert static_topic_condition is not None
+                self.assertIn("selected_has_goal(beta", static_topic_condition.value)
             for dynamic_goal in (
                 {"var": "mission_goal"}, "NOT_A_MISSION_GOAL",
             ):
                 with self.subTest(condition=condition, dynamic_goal=dynamic_goal):
+                    self.assertIsNone(
+                        migrate_lua_first.render_talk_topic_response_condition(
+                            {condition: dynamic_goal}
+                        )
+                    )
                     self.assertIsNone(
                         migrate_lua_first.render_eoc_condition_expression(
                             {condition: dynamic_goal},
@@ -11974,9 +12153,7 @@ assert(not available())
 
         response_pairs = [
             (condition, f"selected_goal_pair_{index}")
-            for index, condition in enumerate(
-                ("mission_goal", "npc_mission_goal")
-            )
+            for index, condition in enumerate(("npc_mission_goal",))
         ]
         dialogue_topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
@@ -12009,7 +12186,11 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertIn("condition = false", rendered_topic)
+        self.assertIn("condition = function(dialogue_context)", rendered_topic)
+        self.assertIn(
+            'services.npcs.missions.selected_has_goal(beta, "MGOAL_CONDITION")',
+            rendered_topic,
+        )
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
         for eoc in goal_eocs:

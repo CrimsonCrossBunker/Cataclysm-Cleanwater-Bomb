@@ -6360,7 +6360,11 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     ``PlatformDialogueContext:speaker()``. ``u_can_stow_weapon`` uses the
     exact avatar and the matching read-only weapon-state query. Camp predicates
     use the exact native global-player query or the live dialogue beta exposed
-    as ``interlocutor()``. Other condition shapes remain fail-closed in the caller.
+    as ``interlocutor()``. Assigned-mission predicates read the active native
+    dialogue vector. NPC-prefixed mission predicates use the live beta and the
+    existing typed NPC mission services. Unprefixed alpha mission predicates
+    remain unsupported until matching alpha services exist. Other shapes remain
+    fail-closed in the caller.
     """
     if condition == "u_has_camp":
         return LuaRaw(
@@ -6389,6 +6393,76 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
             "            if avatar == nil or not avatar:is_valid() then return false end\n"
             "            local weapon = services.inventory.weapon_state(avatar)\n"
             "            return weapon.ok and weapon.value.can_stow == true\n"
+            "        end"
+        )
+    mission_count_conditions = {
+        "has_no_assigned_mission": ("assigned", "== 0"),
+        "has_assigned_mission": ("assigned", "== 1"),
+        "has_many_assigned_missions": ("assigned", ">= 2"),
+        "npc_has_no_available_mission": ("available", "== 0"),
+        "npc_has_available_mission": ("available", "== 1"),
+        "npc_has_many_available_missions": ("available", ">= 2"),
+    }
+    if isinstance( condition, str ) and condition in mission_count_conditions:
+        collection, comparison = mission_count_conditions[condition]
+        if collection == "available":
+            count_query = (
+                "            local count = 0\n"
+                "            local beta = dialogue_context:interlocutor()\n"
+                "            if beta ~= nil then\n"
+                "                if not beta:is_valid() then return false end\n"
+                '                if beta.kind == "creature" and beta.subtype == "npc" then\n'
+                "                    local available = services.npcs.missions.available_count(beta)\n"
+                "                    if not available.ok then return false end\n"
+                "                    count = available.value\n"
+                "                end\n"
+                "            end\n"
+            )
+        else:
+            count_query = (
+                "            local count = dialogue_context:assigned_mission_count()\n"
+            )
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            + count_query +
+            f"            return count {comparison}\n"
+            "        end"
+        )
+    mission_status_conditions = {
+        "npc_mission_complete": "complete",
+        "npc_mission_incomplete": "incomplete",
+        "npc_mission_failed": "failed",
+    }
+    if isinstance( condition, str ) and condition in mission_status_conditions:
+        predicate = mission_status_conditions[condition]
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local owner = services.characters.avatar()\n"
+            "            if owner == nil or not owner:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_condition(beta, owner, "
+            f"{lua_quote(predicate)})\n"
+            "            return selected.ok and selected.value == true\n"
+            "        end"
+        )
+    if isinstance(condition, dict) and set(condition) == {"npc_mission_goal"}:
+        goal_key = next(iter(condition))
+        goal = condition[goal_key]
+        if not isinstance( goal, str ) or goal not in NATIVE_MISSION_GOALS:
+            return None
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_has_goal(beta, "
+            f"{lua_quote(goal)})\n"
+            "            return selected.ok and selected.value == true\n"
             "        end"
         )
     if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:

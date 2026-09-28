@@ -1,4 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "condition.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_test_support.h"
 
 TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
@@ -620,6 +622,67 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            ["uid"].get<int>() == owned_for_dialogue->get_id() );
     CHECK( value_from( assigned_for_owner( provider_handle, wrong_owner_handle ) )
            ["total"].get<int>() == 1 );
+
+    dialogue mission_dialogue(
+        get_talker_for( owner ), get_talker_for( *provider ) );
+    mission_dialogue.missions_assigned = {
+        owned_for_dialogue, second_owned_for_dialogue
+    };
+    using dialogue_context = cata::lua_platform::dialogue::context;
+    const cata::lua_platform::dialogue::dialogue_session_ptr mission_session =
+        cata::lua_platform::dialogue::begin_session(
+            mission_dialogue, runtime, active_world );
+    REQUIRE( mission_session != nullptr );
+    const cata::lua_platform::dialogue::dialogue_session_ptr topic_session =
+        cata::lua_platform::dialogue::session_for(
+            mission_dialogue, "TALK_MISSION_INQUIRE", runtime, active_world );
+    REQUIRE( topic_session == mission_session );
+    dialogue_context mission_context(
+        nullptr, mission_dialogue, "TALK_MISSION_INQUIRE", false,
+        "dialogue context is stale", {}, topic_session, runtime, active_world );
+    REQUIRE( mission_context.valid() );
+    lua.open_libraries( sol::lib::base );
+    sol::table platform_api = lua.create_table();
+    cata::lua_platform::detail::install_runtime_dialogue_presentation_api(
+        {}, lua, platform_api );
+    lua["mission_dialogue_context"] = &mission_context;
+
+    const conditional_t no_assigned_mission( "has_no_assigned_mission" );
+    const conditional_t one_assigned_mission( "has_assigned_mission" );
+    const conditional_t many_assigned_missions( "has_many_assigned_missions" );
+    const auto check_assigned_count = [&]( const std::size_t expected ) {
+        CHECK( mission_context.assigned_mission_count() == expected );
+        const sol::protected_function_result lua_count = lua.safe_script(
+                "return mission_dialogue_context:assigned_mission_count()" );
+        REQUIRE( lua_count.valid() );
+        CHECK( lua_count.get<std::size_t>() == expected );
+        CHECK( no_assigned_mission( mission_dialogue ) == ( expected == 0 ) );
+        CHECK( one_assigned_mission( mission_dialogue ) == ( expected == 1 ) );
+        CHECK( many_assigned_missions( mission_dialogue ) == ( expected >= 2 ) );
+    };
+    check_assigned_count( 2 );
+
+    // A live provider query follows chatbin storage. The response callback
+    // reads the alpha-filtered vector already captured by this dialogue.
+    provider->chatbin.missions_assigned.erase(
+        provider->chatbin.missions_assigned.begin() + 1 );
+    CHECK( value_from( assigned_for_owner( provider_handle, owner_handle ) )
+           ["total"].get<int>() == 1 );
+    check_assigned_count( 2 );
+
+    mission_dialogue.missions_assigned.resize( 1 );
+    check_assigned_count( 1 );
+    mission_dialogue.missions_assigned.clear();
+    check_assigned_count( 0 );
+    cata::lua_platform::dialogue::end_session( mission_dialogue );
+    CHECK_THROWS( mission_context.assigned_mission_count() );
+    const sol::protected_function_result stale_lua_count = lua.safe_script(
+                "return mission_dialogue_context:assigned_mission_count()" );
+    CHECK_FALSE( stale_lua_count.valid() );
+
+    provider->chatbin.missions_assigned = {
+        owned_for_dialogue, second_owned_for_dialogue, owned_by_other
+    };
     provider->chatbin.mission_selected = owned_by_other;
     CHECK( value_from( state( provider_handle ) )["selected"].get<sol::table>()
            ["uid"].get<int>() == owned_by_other->get_id() );
