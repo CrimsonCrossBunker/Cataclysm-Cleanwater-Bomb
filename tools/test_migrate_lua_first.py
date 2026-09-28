@@ -20220,6 +20220,25 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                                 "whitelist_flag": "WET",
                             },
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unsafe_body_part_pick_type_filters",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": {
+                                "npc_pick_bodypart": {"npc_val": "picked"},
+                                "whitelist_type": ["arm"],
+                                "blacklist_type": ["head"],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unsafe_body_part_pick_scope",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_pick_bodypart": {"npc_val": "picked"},
+                                "pick_random": True,
+                            },
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -20229,9 +20248,9 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             )
             main = result.files[Path("main.lua")]
             self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 4)
             self.assertNotIn("services.characters.pick_body_part", main)
-            self.assertEqual(main.count("TODO: translate body-part picking"), 2)
+            self.assertEqual(main.count("TODO: translate body-part picking"), 4)
 
     def test_translates_literal_item_activation_for_proven_item_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -22582,6 +22601,134 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("services.spawns.monster_configured(", main)
             self.assertIn("services.spawns.npc(", main)
 
+    def test_ranged_attack_lowers_only_for_direct_talk_topic_callbacks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic",
+                            "id": "ranged_dialogue_topic",
+                            "responses": [
+                                {
+                                    "text": "Pay and attack",
+                                    "topic": "TALK_DONE",
+                                    "effect": {
+                                        "u_spend_cash": 1,
+                                        "true_eocs": "dialogue_u_ranged",
+                                        "false_eocs": "dialogue_npc_ranged",
+                                    },
+                                }
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dialogue_u_ranged",
+                            "effect": "u_ranged_attack",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dialogue_npc_ranged",
+                            "effect": "npc_ranged_attack",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "dialogue_ranged_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(main.count("services.characters.ranged_attack("), 2)
+            self.assertIn("actor, context.actors.beta", main)
+            self.assertIn("context.actors.beta, actor", main)
+
+    def test_ranged_attack_stays_todo_after_talk_topic_run_eocs_reentry(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "talk_topic",
+                            "id": "ranged_reentry_topic",
+                            "responses": [
+                                {
+                                    "text": "Run follow-up",
+                                    "effect": {"run_eocs": "reentered_ranged"},
+                                }
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "reentered_ranged",
+                            "effect": ["u_ranged_attack", "npc_ranged_attack"],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "ranged_reentry_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.characters.ranged_attack(", main)
+            self.assertEqual(len(result.partial), 1)
+
+    def test_monster_attack_creature_callback_stays_todo_for_all_six_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "monster_attack",
+                            "id": "monster_combat_callback",
+                            "attack_type": "eoc",
+                            "cooldown": 1,
+                            "range": 1,
+                            "eoc": ["monster_combat_selectors"],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "monster_combat_selectors",
+                            "effect": [
+                                "u_ranged_attack",
+                                "npc_ranged_attack",
+                                {"u_cast_spell": {"id": "spell_demo"}},
+                                {"npc_cast_spell": {"id": "spell_demo"}},
+                                {
+                                    "u_pick_bodypart": {"u_val": "picked"},
+                                    "pick_random": True,
+                                    "wounded": True,
+                                },
+                                {
+                                    "npc_pick_bodypart": {"npc_val": "picked"},
+                                    "wounded": True,
+                                },
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "monster_combat_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            for service in (
+                "services.characters.ranged_attack(",
+                "services.characters.cast_spell(",
+                "services.characters.pick_body_part(",
+            ):
+                self.assertNotIn(service, main)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 6)
+
     def test_mutation_maintenance_requires_exclusive_source_and_registered_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -22810,7 +22957,6 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "u_cast_spell": {
                                 "id": "spell_demo",
                                 "min_level": {"math": ["u_spell_level"]},
-                                "max_level": {"context_val": "spell_max"},
                             }
                         },
                     }
@@ -22827,8 +22973,157 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn("min_level = math.max(0, math.min(1000", main)
-            self.assertIn("max_level = math.max(-1, math.min(1000", main)
+            self.assertNotIn("max_level = math.max", main)
             self.assertNotIn("cast spell", report)
+
+    def test_cast_spell_preserves_supported_target_and_hit_self_options(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "bounded_cast_spell_options",
+                        "required_event": "game_start",
+                        "effect": [
+                            {
+                                "u_cast_spell": {
+                                    "id": "spell_demo",
+                                    "hit_self": True,
+                                    "min_level": 2,
+                                    "max_level": 3,
+                                }
+                            },
+                            {
+                                "u_cast_spell": {"id": "targeted_spell"},
+                                "targeted": True,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bounded_cast_spell_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(main.count("services.characters.cast_spell("), 2)
+            self.assertIn("hit_self = true", main)
+            self.assertIn("min_level = 2", main)
+            self.assertIn("max_level = 3", main)
+            self.assertIn("targeted = true", main)
+
+    def test_cast_spell_fails_closed_for_native_control_flow_and_location(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unsupported_cast_spell_options",
+                            "required_event": "game_start",
+                            "effect": [
+                                {
+                                    "u_cast_spell": {"id": "spell_demo"},
+                                    "true_eocs": "cast_spell_true_callback",
+                                },
+                                {
+                                    "u_cast_spell": {"id": "spell_demo"},
+                                    "false_eocs": "cast_spell_false_callback",
+                                },
+                                {
+                                    "u_cast_spell": {
+                                        "id": "spell_demo",
+                                        "once_in": 2,
+                                    }
+                                },
+                                {
+                                    "u_cast_spell": {
+                                        "id": "spell_demo",
+                                        "message": "translated source text",
+                                    }
+                                },
+                                {
+                                    "u_cast_spell": {
+                                        "id": "spell_demo",
+                                        "npc_message": "translated NPC text",
+                                    }
+                                },
+                                {
+                                    "u_cast_spell": {"id": "spell_demo"},
+                                    "loc": {"u_val": "spell_target"},
+                                },
+                                {
+                                    "u_cast_spell": {"id": "spell_demo"},
+                                    "targeted": True,
+                                    "loc": {"u_val": "ignored_by_native_targeted"},
+                                },
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "cast_spell_true_callback",
+                            "effect": "nothing",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "cast_spell_false_callback",
+                            "effect": "nothing",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "unsupported_cast_spell_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.characters.cast_spell(", main)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 7)
+
+    def test_cast_spell_rejects_dynamic_bounds_that_can_invert(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "inverted_dynamic_cast_spell_levels",
+                        "required_event": "game_start",
+                        "effect": [
+                            {
+                                "u_cast_spell": {
+                                    "id": "spell_demo",
+                                    "min_level": {"context_val": "spell_min"},
+                                    "max_level": 3,
+                                }
+                            },
+                            {
+                                "u_cast_spell": {
+                                    "id": "spell_demo",
+                                    "min_level": 2,
+                                    "max_level": {"context_val": "spell_max"},
+                                }
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "dynamic_cast_bounds_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("services.characters.cast_spell(", main)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 2)
 
     def test_rejects_literal_cast_spell_level_ordering(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -21681,34 +21681,42 @@ def render_static_combat_ranged_attack(
     key: str,
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
-    npc_actor_expression: str | None = None,
     creature_actor_proven: bool = False,
+    character_actor_proven: bool = False,
+    npc_dialogue_mission_pair_proven: bool = False,
 ) -> list[str] | None:
     if effect != key or key not in {"u_ranged_attack", "npc_ranged_attack"}:
         return None
     if key == "npc_ranged_attack":
-        if not (npc_event_character_actor_proven and avatar_actor_proven):
-            return None
-        return [
-            "    services.characters.ranged_attack(",
-            "        actor, services.characters.avatar())",
-        ]
+        if npc_event_character_actor_proven and avatar_actor_proven:
+            return [
+                "    services.characters.ranged_attack(",
+                "        actor, services.characters.avatar())",
+            ]
+        if (
+            npc_dialogue_mission_pair_proven and character_actor_proven and
+            not creature_actor_proven
+        ):
+            return [
+                "    services.characters.ranged_attack(",
+                "        context.actors.beta, actor)",
+            ]
+        return None
     if npc_event_character_actor_proven and avatar_actor_proven:
         return [
             "    services.characters.ranged_attack(",
             "        services.characters.avatar(), actor)",
         ]
     if (
-        (avatar_actor_proven or creature_actor_proven) and
-        npc_actor_expression is not None
+        npc_dialogue_mission_pair_proven and character_actor_proven and
+        not creature_actor_proven
     ):
         return [
-            f"    local ranged_target = {npc_actor_expression}",
-            "    if ranged_target ~= nil then",
-            "        services.characters.ranged_attack(actor, ranged_target)",
-            "    end",
+            "    services.characters.ranged_attack(",
+            "        actor, context.actors.beta)",
         ]
-    # game_start proves only the avatar, not a target.
+    # A generic Creature callback can prove alpha/beta handles without proving
+    # that the attacker accepted by this Character-only service is a Character.
     return None
 
 
@@ -21955,7 +21963,7 @@ def render_static_combat_cast_spell(
         return None
     spell = effect[key]
     allowed_spell = {
-        "id", "hit_self", "min_level", "max_level", "message", "npc_message"
+        "id", "hit_self", "min_level", "max_level"
     }
     if set(spell) - allowed_spell:
         return None
@@ -21970,6 +21978,20 @@ def render_static_combat_cast_spell(
         spell.get("max_level", -1), actor, -1, 1000, integer=True
     )
     if hit_self is None or min_level is None or max_level is None:
+        return None
+    if (
+        "max_level" in spell and spell.get("max_level") != -1 and
+        (
+            _combat_literal_number(
+                spell.get("min_level", 0), 0, 1000, integer=True
+            ) is None or
+            _combat_literal_number(
+                spell.get("max_level"), -1, 1000, integer=True
+            ) is None
+        )
+    ):
+        # Platform rejects max < min, while native fake_spell clamps or returns
+        # a default spell. A dynamic bound cannot prove their native ordering.
         return None
     literal_min_level = _combat_literal_number(
         spell.get("min_level", 0), 0, 1000, integer=True
@@ -21991,27 +22013,14 @@ def render_static_combat_cast_spell(
         options.append(f"min_level = {min_level}")
     if max_level != "-1":
         options.append(f"max_level = {max_level}")
-    for name in ("message", "npc_message"):
-        if name in spell:
-            message = spell[name]
-            message_expression = render_eoc_string_expression(message, actor)
-            if message_expression is None:
-                return None
-            options.append(f"{name} = {message_expression}")
-    target = None
     if "loc" in effect:
-        if targeted:
-            return None
-        target = _coordinate_source_expression(
-            effect["loc"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-        if target is None:
-            return None
+        # Native read_var_value(...).tripoint() accepts an absent or malformed
+        # value as the origin after a debug message. Platform requires a typed
+        # absolute-map-square TripointCoord and throws for those values. A
+        # var_info descriptor alone does not prove that runtime type.
+        return None
     if targeted:
         options.append("targeted = true")
-    elif target is not None:
-        options.append(f"target = {target}")
     option_expression = "nil" if not options else "{ " + ", ".join(options) + " }"
     return [
         f"    services.characters.cast_spell({actor}, "
@@ -24888,7 +24897,9 @@ def render_static_character_pick_bodypart(
     shapes require explicit ``pick_random=true``; NPC shapes already select
     randomly in the native handler.  Only the wounded filter is lowered here;
     flag/type filters remain explicit TODOs until their definition metadata is
-    exposed as a typed service.
+    exposed as a typed service.  The hostile-NPC event path preserves the
+    native alpha fallback's target choice when beta is absent, but does not
+    reproduce its missing-beta debug message.
     """
     if key not in {"u_pick_bodypart", "npc_pick_bodypart"}:
         return None
@@ -33585,8 +33596,9 @@ def render_eoc(
                     rendered = render_static_combat_ranged_attack(
                         effect, effect, avatar_actor_proven,
                         npc_event_character_actor_proven,
-                        npc_actor_expression,
                         creature_actor_proven,
+                        character_actor_proven,
+                        npc_dialogue_mission_pair_proven,
                     )
                 elif effect in {"u_prevent_death", "npc_prevent_death"}:
                     # The fatal avatar hook has a separate cancellable contract
