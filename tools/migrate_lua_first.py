@@ -27204,7 +27204,9 @@ def render_eoc_condition_expression(
     opposite_visibility_conditions = {
         "u_see_npc", "u_see_npc_loc", "npc_see_u_loc",
     }
-    if condition == "player_see_npc" or condition in opposite_visibility_conditions:
+    if isinstance(condition, str) and (
+        condition == "player_see_npc" or condition in opposite_visibility_conditions
+    ):
         # These native predicates read const_actor(true), which is the
         # dialogue beta.  A Character proof or a single NPC event actor does
         # not establish that role; require the narrow dialogue-pair proof and
