@@ -850,9 +850,10 @@ TEST_CASE( "lua_platform_mutations_purifiability_write_matches_legacy_effect",
              false, false, true, true
          } ) {
         const bool before = platform.target( npc_target ).purifiable( trait );
-        legacy.legacy_effect( R"({")" + prefix +
-                              R"(set_trait_purifiability":"VULNERABLECHILL","purifiable":)" +
-                              ( desired ? "true}" : "false}" ) );
+        const std::string native_effect = R"({")" + prefix +
+                                          R"(set_trait_purifiability":"VULNERABLECHILL")" +
+                                          ( desired ? "}" : R"(,"purifiable":false})" );
+        legacy.legacy_effect( native_effect );
         sol::protected_function_result call = set( platform.handle( npc_target ),
                                               cata::lua_platform::script_game_id( "mutation", trait.str() ), desired );
         REQUIRE( call.valid() );
@@ -866,6 +867,89 @@ TEST_CASE( "lua_platform_mutations_purifiability_write_matches_legacy_effect",
         CHECK( result["value"]["present"].get<bool>() == present );
         CHECK( platform.target( !npc_target ).purifiable( trait ) );
     }
+}
+
+TEST_CASE( "lua_platform_mutation_maintenance_matches_native_alpha_fallback_state",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 2900 );
+    mutation_fixture platform( 3000 );
+    Character &old_npc = legacy.target( true );
+    Character &new_npc = platform.target( true );
+    const trait_id resist_chill( "RESISTCHILL" );
+    const trait_id vulnerable_chill( "VULNERABLECHILL" );
+    for( const trait_id &trait : { resist_chill, vulnerable_chill,
+                                   trait_STRONGER_VULNERABLEWARM } ) {
+        old_npc.set_mutation( trait );
+        new_npc.set_mutation( trait );
+    }
+    legacy.player.set_mutation( resist_chill );
+    legacy.player.set_mutation( vulnerable_chill );
+    platform.target( false ).set_mutation( resist_chill );
+    platform.target( false ).set_mutation( vulnerable_chill );
+    const bool avatar_purifiable_before =
+        platform.target( false ).purifiable( vulnerable_chill );
+
+    // Compare resulting mutation state only. Platform does not mirror the
+    // native missing-beta or trait-purifiability debug messages.
+    const std::string purifiability_diagnostic = capture_debugmsg_during( [&]() {
+        legacy.legacy_alpha_only_effect(
+            R"({"npc_set_trait_purifiability":"VULNERABLECHILL","purifiable":false})",
+            old_npc );
+    } );
+    CHECK( purifiability_diagnostic.find( "Tried to use an invalid beta talker." ) !=
+           std::string::npos );
+    sol::protected_function_result purifiability_call =
+        platform.services["mutations"]["set_purifiable"](
+            platform.handle( true ),
+            cata::lua_platform::script_game_id( "mutation", "VULNERABLECHILL" ), false );
+    REQUIRE( purifiability_call.valid() );
+    sol::table purifiability_result = purifiability_call;
+    REQUIRE( purifiability_result["ok"].get<bool>() );
+    CHECK( old_npc.purifiable( vulnerable_chill ) ==
+           new_npc.purifiable( vulnerable_chill ) );
+
+    const std::string category_diagnostic = capture_debugmsg_during( [&]() {
+        legacy.legacy_alpha_only_effect(
+            R"({"npc_lose_category":"CATTLE"})", old_npc );
+    } );
+    CHECK( category_diagnostic.find( "Tried to use an invalid beta talker." ) !=
+           std::string::npos );
+    sol::protected_function_result category_call =
+        platform.services["mutations"]["remove_category"](
+            platform.handle( true ),
+            cata::lua_platform::script_game_id( "mutation_category", "CATTLE" ) );
+    REQUIRE( category_call.valid() );
+    sol::table category_result = category_call;
+    REQUIRE( category_result["ok"].get<bool>() );
+    const std::vector<trait_id> old_after_category = old_npc.get_mutations();
+    const std::vector<trait_id> new_after_category = new_npc.get_mutations();
+    CHECK( std::set<trait_id>( old_after_category.begin(), old_after_category.end() ) ==
+           std::set<trait_id>( new_after_category.begin(), new_after_category.end() ) );
+
+    const std::string type_diagnostic = capture_debugmsg_during( [&]() {
+        legacy.legacy_alpha_only_effect(
+            R"({"npc_lose_mutation_type":"ACCLIMATIZATION"})", old_npc );
+    } );
+    CHECK( type_diagnostic.find( "Tried to use an invalid beta talker." ) !=
+           std::string::npos );
+    sol::protected_function_result type_call =
+        platform.services["mutations"]["remove_type"](
+            platform.handle( true ), "ACCLIMATIZATION" );
+    REQUIRE( type_call.valid() );
+    sol::table type_result = type_call;
+    REQUIRE( type_result["ok"].get<bool>() );
+    const std::vector<trait_id> old_after_type = old_npc.get_mutations();
+    const std::vector<trait_id> new_after_type = new_npc.get_mutations();
+    CHECK( std::set<trait_id>( old_after_type.begin(), old_after_type.end() ) ==
+           std::set<trait_id>( new_after_type.begin(), new_after_type.end() ) );
+    CHECK( legacy.player.has_trait( resist_chill ) );
+    CHECK( legacy.player.has_trait( vulnerable_chill ) );
+    CHECK( platform.target( false ).has_trait( resist_chill ) );
+    CHECK( platform.target( false ).has_trait( vulnerable_chill ) );
+    CHECK( platform.target( false ).purifiable( vulnerable_chill ) ==
+           avatar_purifiable_before );
+    CHECK( legacy.player.purifiable( vulnerable_chill ) == avatar_purifiable_before );
 }
 
 TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
