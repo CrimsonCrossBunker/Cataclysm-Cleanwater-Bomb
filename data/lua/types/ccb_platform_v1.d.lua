@@ -9988,12 +9988,12 @@ function CcbNpcsApi.set_radio_representative(handle, avatar, enabled) end
 ---@return table
 function CcbNpcsApi.ai_rule_catalog() end
 ---@param handle GameHandle Exact NPC handle.
----@param family string
----@param rule string
+---@param family 'aim'|'engagement'|'cbm_recharge'|'cbm_reserve'
+---@param rule string Native rule id from the selected family's ai_rule_catalog() entry.
 ---@return CcbResult
 function CcbNpcsApi.set_ai_policy(handle, family, rule) end
 ---@param handle GameHandle Exact NPC handle.
----@param rule string
+---@param rule string Native ally rule id from ai_rule_catalog().allies.
 ---@param enabled? boolean When omitted, toggle according to the effective rule (including overrides); before/after report the base flag.
 ---@return CcbResult
 function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end

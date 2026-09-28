@@ -22439,12 +22439,16 @@ def render_static_npc_ai_rule_update(
         if enabled is None:
             return None
         return [
-            "    services.npcs.set_ally_rule(actor, "
-            f"{lua_quote(rule)}, {enabled})"
+            '    if actor ~= nil and actor.kind == "creature" and actor.subtype == "npc" then',
+            "        services.npcs.set_ally_rule(actor, "
+            f"{lua_quote(rule)}, {enabled})",
+            "    end",
         ]
     return [
-        "    services.npcs.set_ai_policy(actor, "
-        f"{lua_quote(family)}, {lua_quote(rule)})"
+        '    if actor ~= nil and actor.kind == "creature" and actor.subtype == "npc" then',
+        "        services.npcs.set_ai_policy(actor, "
+        f"{lua_quote(family)}, {lua_quote(rule)})",
+        "    end",
     ]
 
 
@@ -29813,6 +29817,24 @@ def render_eoc(
         npc_talker_ui_actor_expression = "context.actors.beta"
     elif required_event == "npc_becomes_hostile" and not talker_pair_override:
         npc_talker_ui_actor_expression = "actor"
+    # These native setters call dialogue::actor(true).  The only bounded
+    # migrated caller we can execute with that selection today is the direct,
+    # unreferenced npc_becomes_hostile event: native event dispatch builds an
+    # NPC alpha with no beta, and Platform exposes that event Character as
+    # context.actors.npc.  A static or dynamic child call can supply another
+    # dialogue, while direct topic EOC callbacks are not emitted by
+    # render_talk_topic, so neither source proves actor(true) for this branch.
+    # Native emits a debug message on the alpha fallback; this lowering
+    # preserves the rule-state mutation and no-op target selection only.
+    npc_ai_rule_mutation_actor_proven = (
+        has_event_trigger and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and
+        npc_talker_ui_actor_expression == "actor" and
+        not talker_pair_override and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     exact_alpha_effect_kind: str | None = None
     alpha_effect_kinds: set[str] = set()
     if (
@@ -31815,7 +31837,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                npc_actor_proven and isinstance(effect, dict) and
+                npc_ai_rule_mutation_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
                 next(iter(effect)) in {
                     "set_npc_rule", "clear_npc_rule", "toggle_npc_rule"
@@ -31846,7 +31868,7 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
             elif (
-                npc_actor_proven and isinstance(effect, dict) and
+                npc_ai_rule_mutation_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
                 next(iter(effect)) in {
                     "set_npc_aim_rule", "set_npc_engagement_rule",
