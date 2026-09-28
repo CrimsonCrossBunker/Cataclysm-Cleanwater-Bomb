@@ -27424,7 +27424,7 @@ assert(#messages==2 and messages[2]=="target")
                             "effect": [
                                 {
                                     "set_condition": "stored_test",
-                                    "condition": {"math": ["_context > 0"]},
+                                    "condition": {"u_has_trait": "QUICK"},
                                 },
                                 {"run_eocs": "stored_condition_literal"},
                                 {
@@ -27447,9 +27447,7 @@ assert(#messages==2 and messages[2]=="target")
                             "type": "effect_on_condition",
                             "id": "stored_condition_dynamic",
                             "condition": {
-                                "get_condition": {
-                                    "context_val": "condition_name"
-                                }
+                                "get_condition": "stored_test"
                             },
                             "effect": {"message": "dynamic"},
                         },
@@ -27479,6 +27477,195 @@ assert(#messages==2 and messages[2]=="target")
                 "context.conditions[stored_condition_name]", main
             )
             self.assertNotIn("native Lua predicate", report)
+
+    def test_named_conditions_require_fixed_keys_and_a_proven_current_alpha(
+        self,
+    ) -> None:
+        literal_set = migrate_lua_first.render_static_set_condition(
+            {
+                "set_condition": "named",
+                "condition": {"and": []},
+            },
+            avatar_actor_proven=True,
+            weapon_actor_proven=False,
+            npc_actor_proven=False,
+            creature_actor_proven=False,
+            eoc_conditions=None,
+            actor_expression="actor",
+            npc_actor_expression=None,
+        )
+        self.assertIsNotNone(literal_set)
+        self.assertIn("context.conditions[stored_condition_name]", "\n".join(literal_set or []))
+        current_actor_predicate = migrate_lua_first.render_static_set_condition(
+            {
+                "set_condition": "avatar_at_set_time",
+                "condition": "u_is_avatar",
+            },
+            avatar_actor_proven=True,
+            weapon_actor_proven=False,
+            npc_actor_proven=False,
+            creature_actor_proven=False,
+            eoc_conditions=None,
+            actor_expression="setter_avatar",
+            npc_actor_expression=None,
+        )
+        self.assertIsNotNone(current_actor_predicate)
+        self.assertIn(
+            'services.creatures.snapshot(actor)).kind == "avatar"',
+            "\n".join(current_actor_predicate or []),
+        )
+        self.assertNotIn(
+            'return true', "\n".join(current_actor_predicate or []),
+        )
+        current_alpha_trait = migrate_lua_first.render_static_set_condition(
+            {
+                "set_condition": "trait_at_set_time",
+                "condition": {"u_has_trait": "QUICK"},
+            },
+            avatar_actor_proven=True,
+            weapon_actor_proven=False,
+            npc_actor_proven=False,
+            creature_actor_proven=False,
+            eoc_conditions=None,
+            actor_expression="setter_avatar",
+            npc_actor_expression=None,
+        )
+        self.assertIsNotNone(current_alpha_trait)
+        self.assertIn(
+            "services.mutations.has_id_text(character, raw)",
+            "\n".join(current_alpha_trait or []),
+        )
+        self.assertNotIn(
+            "services.characters.avatar()",
+            "\n".join(current_alpha_trait or []),
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_condition(
+                {
+                    "set_condition": "ambient_math",
+                    "condition": {"math": ["_context > 0"]},
+                },
+                avatar_actor_proven=True,
+                weapon_actor_proven=False,
+                npc_actor_proven=False,
+                creature_actor_proven=False,
+                eoc_conditions=None,
+                actor_expression="setter_avatar",
+                npc_actor_expression=None,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_condition(
+                {
+                    "set_condition": {"context_val": "condition_name"},
+                    "condition": {"and": []},
+                },
+                avatar_actor_proven=True,
+                weapon_actor_proven=False,
+                npc_actor_proven=False,
+                creature_actor_proven=False,
+                eoc_conditions=None,
+                actor_expression="actor",
+                npc_actor_expression=None,
+            )
+        )
+
+        literal_get = migrate_lua_first.render_eoc_condition_expression(
+            {"get_condition": "named"}, avatar_actor_proven=True,
+            named_condition_alpha_actor_proven=True,
+        )
+        self.assertIsNotNone(literal_get)
+        self.assertIn(
+            'context.conditions["named"]',
+            literal_get or "",
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"get_condition": "named"},
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"get_condition": "named"},
+                creature_actor_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"get_condition": "named"},
+                npc_actor_proven=True,
+                npc_actor_expression="beta",
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"get_condition": {"context_val": "condition_name"}},
+                avatar_actor_proven=True,
+            )
+        )
+
+        # An event's NPC actor is native alpha. It cannot satisfy the beta
+        # slot needed by a stored npc_* predicate.
+        npc_event = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "npc_alpha_named_beta_condition",
+                "required_event": "npc_becomes_hostile",
+                "effect": {
+                    "set_condition": "named",
+                    "condition": {"npc_has_trait": "QUICK"},
+                },
+            },
+        )
+        rendered = migrate_lua_first.render_eoc(
+            npc_event, migrate_lua_first.MigrationResult(),
+        )
+        self.assertNotIn("stored_condition_beta", rendered)
+        self.assertIn(
+            "TODO: translate the named condition through the callback-local condition registry.",
+            rendered,
+        )
+
+        dynamic_get = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 1, {
+                "type": "effect_on_condition",
+                "id": "dynamic_named_condition_getter",
+                "required_event": "game_start",
+                "condition": {
+                    "get_condition": {"context_val": "condition_name"},
+                },
+                "effect": [],
+            }),
+            migrate_lua_first.MigrationResult(),
+        )
+        self.assertIn("condition TODO", dynamic_get)
+
+        no_dynamic_target = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 2, {
+                "type": "effect_on_condition",
+                "id": "dynamic_dispatch_named_condition_getter",
+                "required_event": "game_start",
+                "condition": {"get_condition": "named"},
+                "effect": [],
+            }),
+            migrate_lua_first.MigrationResult(),
+            dynamic_eoc_dispatch_present=True,
+        )
+        self.assertIn("condition TODO", no_dynamic_target)
+
+        named_requirement = migrate_lua_first._eoc_actor_requirements(
+            [migrate_lua_first.SourceObject(Path("source.json"), 3, {
+                "type": "effect_on_condition",
+                "id": "named_condition_character_requirement",
+                "required_event": "game_start",
+                "condition": {"get_condition": "named"},
+                "effect": [],
+            })], frozenset(), frozenset(), frozenset(), frozenset(),
+        )
+        self.assertEqual(
+            named_requirement["named_condition_character_requirement"],
+            "character",
+        )
 
     def test_talker_events_do_not_invent_beta_condition_handles(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -29161,7 +29348,9 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             return migrate_lua_first.render_eoc_condition_expression(
                 {"test_eoc": "target"}, eoc_conditions={"target": definition})
 
-        self.assertEqual(render({"effect": []}), "true")
+        # Native f_test_eoc directly calls condition(d); an EOC with no
+        # condition has no initialized std::function to inline as true/false.
+        self.assertIsNone(render({"effect": []}))
         self.assertEqual(render({"condition": {"and": []}}), "true")
         self.assertEqual(render({"condition": {"or": []}}), "false")
         for invalid in (None, True, False, 0, 1.5, []):
@@ -29169,6 +29358,87 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                 self.assertIsNone(render({"condition": invalid}))
         self.assertIsNone(render({"condition": {"test_eoc": "target"}}))
         self.assertIsNone(render({"condition": {"test_eoc": "missing"}}))
+
+    def test_test_eoc_inline_forwards_current_proofs_and_bounds_depth(self) -> None:
+        proficiency = migrate_lua_first.render_eoc_condition_expression(
+            {"test_eoc": "proficiency_target"},
+            avatar_actor_proven=True,
+            proficiency_alpha_actor_proven=True,
+            eoc_conditions={
+                "proficiency_target": {
+                    "condition": {"u_has_proficiency": "survival"},
+                },
+            },
+        )
+        self.assertEqual(
+            proficiency,
+            'service_value(services.proficiencies.has_id_text(actor, "survival"))',
+        )
+
+        beta = migrate_lua_first.render_eoc_condition_expression(
+            {"test_eoc": "beta_target"},
+            npc_melee_beta_actor_proven=True,
+            eoc_conditions={"beta_target": {"condition": "npc_friend"}},
+        )
+        self.assertIsNotNone(beta)
+        self.assertIn("context.actors.interlocutor", beta or "")
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "beta_target"},
+                eoc_conditions={"beta_target": {"condition": "npc_friend"}},
+            )
+        )
+
+        named = migrate_lua_first.render_eoc_condition_expression(
+            {"test_eoc": "named_target"},
+            avatar_actor_proven=True,
+            named_condition_alpha_actor_proven=True,
+            eoc_conditions={
+                "named_target": {"condition": {"get_condition": "named"}},
+            },
+        )
+        self.assertIsNotNone(named)
+        self.assertIn('context.conditions["named"]', named or "")
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "named_target"},
+                eoc_conditions={
+                    "named_target": {"condition": {"get_condition": "named"}},
+                },
+            )
+        )
+
+        # A separately callable referenced EOC does not inherit its caller's
+        # event beta proof, even though an inline test_eoc above uses the same
+        # dialogue and may reuse that proof.
+        independent_target = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(Path("source.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "beta_target",
+                "required_event": "character_melee_attacks_character",
+                "condition": "npc_friend",
+                "effect": [],
+            }),
+            migrate_lua_first.MigrationResult(),
+            eoc_referenced_ids=frozenset({"beta_target"}),
+        )
+        self.assertNotIn("context.actors.interlocutor", independent_target)
+        self.assertIn("condition TODO", independent_target)
+
+        predicates = {
+            f"target_{index}": {
+                "condition": {"test_eoc": f"target_{index + 1}"},
+            }
+            for index in range(migrate_lua_first.MAX_TEST_EOC_INLINE_DEPTH + 1)
+        }
+        predicates[f"target_{migrate_lua_first.MAX_TEST_EOC_INLINE_DEPTH + 1}"] = {
+            "condition": "is_day",
+        }
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "target_0"}, eoc_conditions=predicates,
+            )
+        )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_run_eocs_variable_context_copies_named_predicates(self) -> None:
