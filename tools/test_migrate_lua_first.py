@@ -23496,9 +23496,48 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         )
         self.assertNotIn("services.inventory.has_stolen_from(", unpaired)
         self.assertIn(
-            "condition TODO: translate the legacy condition into a Lua predicate",
+            "-- TODO: translate the legacy condition into a Lua predicate",
             unpaired,
         )
+
+    def test_stolen_item_condition_accepts_only_proven_melee_character_pair(self) -> None:
+        for selector in ("u_has_stolen_item", "npc_has_stolen_item"):
+            with self.subTest(selector=selector):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), 0, {
+                        "type": "effect_on_condition",
+                        "id": "melee_stolen_item",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": selector,
+                        "effect": {"message": "stolen"},
+                    },
+                )
+                accepted = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                    character_melee_event_emitted_by_eoc=False,
+                )
+                self.assertIn(
+                    "services.inventory.has_stolen_from(alpha, beta)", accepted
+                )
+                self.assertIn("context.actors.interlocutor", accepted)
+                self.assertNotIn(
+                    "-- TODO: translate the legacy condition", accepted
+                )
+
+                emitted = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                    character_melee_event_emitted_by_eoc=True,
+                )
+                self.assertNotIn("services.inventory.has_stolen_from(", emitted)
+                self.assertIn("-- TODO: translate the legacy condition", emitted)
+
+                referenced = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                    eoc_referenced_ids=frozenset({"melee_stolen_item"}),
+                    character_melee_event_emitted_by_eoc=False,
+                )
+                self.assertNotIn("services.inventory.has_stolen_from(", referenced)
+                self.assertIn("-- TODO: translate the legacy condition", referenced)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_stolen_item_condition_guards_both_character_roles(self) -> None:
@@ -23534,6 +23573,37 @@ assert(calls == 1)
         result = subprocess.run(
             ["lua", "-"], input=script, text=True,
             capture_output=True, timeout=10
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_stolen_item_melee_predicate_uses_live_interlocutor(self) -> None:
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            "u_has_stolen_item", generic_character_actor_proven=True,
+            safe_space_character_beta_actor_proven=True,
+        )
+        self.assertIsNotNone(predicate)
+        script = """
+local actor = { kind = "creature", subtype = "avatar" }
+local beta = { kind = "creature", subtype = "npc" }
+local context = { actors = {} }
+local calls = 0
+local function service_value(value) return value end
+local services = { inventory = { has_stolen_from = function(holder, owner)
+    assert(holder == actor and owner == beta)
+    calls = calls + 1
+    return true
+end } }
+assert(not (PREDICATE))
+context.actors.interlocutor = { kind = "creature", subtype = "monster" }
+assert(not (PREDICATE))
+context.actors.interlocutor = beta
+assert(PREDICATE)
+assert(calls == 1)
+""".replace("PREDICATE", predicate or "false")
+        result = subprocess.run(
+            ["lua", "-"], input=script, text=True,
+            capture_output=True, timeout=10,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 

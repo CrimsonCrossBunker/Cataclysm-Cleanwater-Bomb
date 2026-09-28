@@ -27541,17 +27541,18 @@ def render_eoc_condition_expression(
     if condition in ("u_has_stolen_item", "npc_has_stolen_item"):
         # Both native aliases ignore their is_npc parameter and query
         # const_actor(false) as the inventory holder and const_actor(true) as
-        # the owner.  A direct talk-topic pair proves those alpha/beta roles;
-        # a single event actor or a merely NPC-shaped handle does not.
-        if (
-            not npc_dialogue_pair_proven or
-            npc_actor_expression != "context.actors.beta"
-        ):
+        # the owner. A direct topic pair or an event-exclusive pre-damage
+        # Character melee pair proves both roles. A single event actor does not.
+        if npc_dialogue_pair_proven and npc_actor_expression == "context.actors.beta":
+            beta_field = "beta"
+        elif safe_space_character_beta_actor_proven and generic_character_actor_proven:
+            beta_field = "interlocutor"
+        else:
             return None
         return (
             "(function() "
             "local alpha = actor; "
-            "local beta = context and context.actors and context.actors.beta; "
+            f"local beta = context and context.actors and context.actors.{beta_field}; "
             "local function is_character(value) "
             "return value ~= nil and value.kind == \"creature\" and "
             "(value.subtype == \"avatar\" or "
@@ -30006,7 +30007,8 @@ def render_eoc(
     # Character snapshot that matches native at_safe_space for a Character.
     safe_space_character_beta_actor_proven = (
         npc_melee_beta_actor_proven and
-        required_event == "character_melee_attacks_character"
+        required_event == "character_melee_attacks_character" and
+        not character_melee_event_emitted_by_eoc
     )
     # A narrowly migratable u_sell_item callback needs the actual runtime
     # EOC bridge to carry both native dialogue Characters.  The melee-to-
