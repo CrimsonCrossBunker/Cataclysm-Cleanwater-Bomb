@@ -1,12 +1,16 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <string>
+#include <vector>
 
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "condition.h"
 #include "json_loader.h"
 #include "lua_platform_test_map_support.h"
+#include "map_scale_constants.h"
 #include "npc.h"
+#include "overmap_connection.h"
+#include "overmapbuffer.h"
 
 TEST_CASE( "lua_platform_native_overmap_condition_queries_preserve_terrain_and_camp_rules",
            "[lua][platform][overmap][conditions]" )
@@ -212,6 +216,116 @@ TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
         "FACTION_CAMP_START", 1 );
     compare_near( R"({"npc_near_om_location":"FACTION_CAMP_ANY","range":2})",
                   "FACTION_CAMP_ANY", 2 );
+}
+
+TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
+           "[lua][platform][overmap][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 824, 54 );
+    REQUIRE( fixture.edit_ready );
+
+    const int om_base_x = fixture.source_omt.x() - fixture.source_local.x();
+    const int om_base_y = fixture.source_omt.y() - fixture.source_local.y();
+    const tripoint_abs_omt start( om_base_x + OMAPX / 2,
+                                  om_base_y + OMAPY / 2,
+                                  fixture.source_omt.z() );
+    const tripoint_abs_omt end = start + tripoint::east;
+    const tripoint_om_omt local_start( OMAPX / 2, OMAPY / 2,
+                                       fixture.source_omt.z() );
+    const oter_id road_terrain = oter_str_id( "road" ).id();
+    REQUIRE( road_terrain.is_valid() );
+    REQUIRE( overmap_connections::guess_for( road_terrain ).is_valid() );
+
+    struct route_tile_preimage {
+        tripoint_om_omt local;
+        oter_id terrain;
+        om_vision_level seen;
+    };
+    std::vector<route_tile_preimage> preimage;
+    for( int dy = -4; dy <= 4; ++dy ) {
+        for( int dx = -4; dx <= 4; ++dx ) {
+            const tripoint_om_omt local(
+                local_start.x() + dx, local_start.y() + dy,
+                local_start.z() );
+            preimage.push_back( { local,
+                                  fixture.source_overmap->ter( local ),
+                                  fixture.source_overmap->seen( local ) } );
+        }
+    }
+    const on_out_of_scope restore_route_tiles( [&]() {
+        for( const route_tile_preimage &tile : preimage ) {
+            if( fixture.source_overmap->ter( tile.local ) != tile.terrain ) {
+                fixture.source_overmap->ter_set( tile.local, tile.terrain );
+            }
+            if( fixture.source_overmap->seen( tile.local ) != tile.seen ) {
+                fixture.source_overmap->set_seen( tile.local, tile.seen, true );
+            }
+        }
+    } );
+    for( const route_tile_preimage &tile : preimage ) {
+        fixture.source_overmap->ter_set( tile.local, road_terrain );
+        if( fixture.source_overmap->seen( tile.local ) !=
+            om_vision_level::unseen ) {
+            fixture.source_overmap->set_seen(
+                tile.local, om_vision_level::unseen, true );
+        }
+    }
+
+    const bool native_found = overmap_buffer.reveal_route( start, end, 1, true );
+    REQUIRE( native_found );
+    std::vector<om_vision_level> native_seen;
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 3; ++dx ) {
+            native_seen.push_back( fixture.source_overmap->seen(
+                                       tripoint_om_omt( local_start.x() + dx,
+                                               local_start.y() + dy,
+                                               local_start.z() ) ) );
+        }
+    }
+    CHECK( native_seen[13] == om_vision_level::full );
+    CHECK( native_seen[14] == om_vision_level::full );
+    CHECK( native_seen[15] == om_vision_level::full );
+    CHECK( native_seen[16] == om_vision_level::full );
+    for( const route_tile_preimage &tile : preimage ) {
+        if( fixture.source_overmap->seen( tile.local ) !=
+            om_vision_level::unseen ) {
+            fixture.source_overmap->set_seen(
+                tile.local, om_vision_level::unseen, true );
+        }
+    }
+
+    const sol::protected_function reveal_route =
+        fixture.overmap_api()["reveal_route"];
+    const sol::protected_function_result platform_result = reveal_route(
+                fixture.abs_omt_position( start ),
+                fixture.abs_omt_position( end ), 1, true );
+    REQUIRE( platform_result.valid() );
+    CHECK( platform_result.get<bool>() == native_found );
+    std::size_t seen_index = 0;
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 3; ++dx ) {
+            CHECK( fixture.source_overmap->seen( tripoint_om_omt(
+                       local_start.x() + dx, local_start.y() + dy,
+                       local_start.z() ) ) == native_seen[seen_index++] );
+        }
+    }
+    CHECK( fixture.write_called );
+
+    const cata::lua_platform::script_tripoint_coord wrong_scale =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            project_to<coords::ms>( start ).raw() );
+    const sol::protected_function_result wrong_scale_result = reveal_route(
+                wrong_scale, fixture.abs_omt_position( end ), 1, true );
+    CHECK_FALSE( wrong_scale_result.valid() );
+    const sol::protected_function_result excessive_radius_result = reveal_route(
+                fixture.abs_omt_position( start ),
+                fixture.abs_omt_position( end ), 31, true );
+    CHECK_FALSE( excessive_radius_result.valid() );
+    const sol::protected_function_result fractional_radius_result = reveal_route(
+                fixture.abs_omt_position( start ),
+                fixture.abs_omt_position( end ), 1.5, true );
+    CHECK_FALSE( fractional_radius_result.valid() );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

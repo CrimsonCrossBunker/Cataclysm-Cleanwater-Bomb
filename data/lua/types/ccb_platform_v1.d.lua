@@ -470,6 +470,13 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@return CcbResult result `value` is a CcbOvermapRevealResult.
 function CcbOvermapApi.reveal(center, radius) end
 
+---@param start_abs_omt TripointCoord Explicit absolute overmap-terrain route start; local, map-square, and raw coordinates are rejected.
+---@param end_abs_omt TripointCoord Explicit absolute overmap-terrain route destination; native routing uses its x/y and stays on the start z-level.
+---@param radius integer Per-path-node radius passed to native reveal (CIRCLEDIST-aware), bounded to 0..30.
+---@param road_only boolean When true, reject terrain outside the connection guessed at the start; when false, penalize off-connection terrain and reject rivers.
+---@return boolean True when native route search found a path, even if its tiles were already fully revealed; false when the source has no connection or no route was found. Search may lazily load or generate overmap terrain.
+function CcbOvermapApi.reveal_route(start_abs_omt, end_abs_omt, radius, road_only) end
+
 ---@param position TripointCoord Explicit absolute overmap-terrain position.
 ---@param terrain_id string Native terrain text (1..256 UTF-8 bytes, without control characters) compared with `oter_no_dir_or_connections`; this query may lazily load or create/populate its overmap.
 ---@return boolean True when the normalized native terrain id equals `terrain_id`.

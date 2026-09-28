@@ -17498,12 +17498,12 @@ assert(not available())
             self.assertNotIn("services.hordes.advance", main)
             self.assertNotIn("services.overmap.reveal_route", main)
             self.assertIn(
-                "native reveal_route reads two var_info abs_ms endpoints and "
-                "projects them to OMT",
+                "native reveal_route resolves two var_info abs_ms endpoints "
+                "and projects them to OMT",
                 main,
             )
             self.assertIn(
-                "services.overmap.reveal accepts one typed abs_omt center",
+                "services.overmap.reveal_route now preserves native connection guessing",
                 report,
             )
             self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
@@ -23301,8 +23301,8 @@ assert(not pcall(function() return U_EXPRESSION end))
         todo_text = "\n".join(todo.message for todo in result.todos)
         self.assertNotIn("services.overmap.reveal(", rendered)
         self.assertNotIn("services.overmap.reveal_route(", rendered)
-        self.assertIn("guesses the source connection", todo_text)
-        self.assertIn("reveals around every path node", todo_text)
+        self.assertIn("not yet proven available as typed abs_omt values in Lua", todo_text)
+        self.assertIn("preserve the enclosing effect/context order", todo_text)
         self.assertIn("can load/create missing overmap data even when radius is 0", todo_text)
 
         zero_radius_source = migrate_lua_first.SourceObject(
