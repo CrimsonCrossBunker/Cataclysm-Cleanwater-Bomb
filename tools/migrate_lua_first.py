@@ -6578,6 +6578,20 @@ def render_talk_topic_response_condition(
             "            return dialogue_context:interlocutor_at_safe_space()\n"
             "        end"
         )
+    if condition == "npc_friend":
+        # Native f_npc_friend(true) queries the beta talker against the global
+        # player Character. Only NPC talkers override the native default false;
+        # the Platform snapshot's friendly field uses the same NPC query.
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local snapshot = services.npcs.get(beta)\n"
+            "            return snapshot.ok and snapshot.value.friendly == true\n"
+            "        end"
+        )
     npc_state_expression = _render_talk_topic_npc_state_condition(condition)
     if npc_state_expression is not None:
         return LuaRaw(

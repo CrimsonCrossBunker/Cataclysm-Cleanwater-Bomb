@@ -22,6 +22,7 @@
 #include "effect.h"
 #include "faction.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "json_loader.h"
@@ -532,6 +533,9 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     CHECK( trust_from_platform );
     CHECK( friend_condition( context ) == friend_from_platform );
     CHECK( friend_from_platform );
+    // Native npc_friend passes get_player_character(); the Platform NPC
+    // snapshot computes friendly against get_avatar(). Both currently name g->u.
+    CHECK( static_cast<Character *>( &player ) == &get_player_character() );
     CHECK_FALSE( beta_snapshot["friendly"].get<bool>() );
     CHECK( npc_friend_condition( context ) ==
            beta_snapshot["friendly"].get<bool>() );
