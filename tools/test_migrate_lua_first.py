@@ -22046,6 +22046,40 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                     actor_expression="actor",
                 ))
 
+    def test_real_gossamer_roll_remainder_keeps_success_callback(self) -> None:
+        path = REPOSITORY_ROOT / (
+            "data/mods/Xedra_Evolved/mutations/paraclesians/paraclesian_eocs.json"
+        )
+        objects = migrate_lua_first.load_objects([path])
+        source = next(
+            entry for entry in objects
+            if entry.value.get("id") == "EOC_PARACLESIAN_GOSSAMER_RECIPES"
+        )
+        effect = next(
+            entry for entry in source.value["effect"]
+            if isinstance(entry, dict) and "u_roll_remainder" in entry
+        )
+        self.assertEqual(effect["type"], "recipe")
+        self.assertEqual(len(effect["u_roll_remainder"]), 22)
+        self.assertEqual(
+            effect["true_eocs"],
+            ["EOC_SUCCESSFUL_ROLL_REMAINDER_GOSSAMER_RECIPE"],
+        )
+        result = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(
+            source, result,
+            eoc_function_names={
+                "EOC_SUCCESSFUL_ROLL_REMAINDER_GOSSAMER_RECIPE":
+                    "gossamer_success"
+            },
+        )
+        self.assertIn('local actor = actor_override or context.actors["character"]', main)
+        self.assertIn('local roll_result = service_value(services.progression.grant_random_missing(actor, "recipe"', main)
+        self.assertIn("if roll_result.granted then", main)
+        self.assertIn("gossamer_success(failure_context, actor)", main)
+        self.assertIn("local failure_context = copy_context(vector_context)", main)
+        self.assertEqual(len(result.todos), 1)  # Unrelated complex condition.
+
     def _migrate_teleport_source(self, objects: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

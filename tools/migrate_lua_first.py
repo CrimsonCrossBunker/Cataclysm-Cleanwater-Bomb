@@ -22442,17 +22442,20 @@ def render_static_roll_remainder_effect(
     avatar_actor_proven: bool, npc_actor_proven: bool,
     eoc_function_names: dict[str, str] | None = None,
     *, actor_expression: str | None = None,
+    dialogue_alpha_expression: str | None = None,
 ) -> list[str] | None:
     """Lower literal grants only when the native effect has no side branches.
 
     The progression service preserves the native missing-candidate selection
-    and setter semantics.  Messages and copied-dialogue EOC vectors require
-    separate lowering and remain fail-closed here.
+    and setter semantics.  Static EOC vectors use separate dialogue copies;
+    translated messages still require a dedicated native adapter.
     """
-    del avatar_actor_proven, npc_actor_proven, eoc_function_names
+    del avatar_actor_proven, npc_actor_proven
     if key not in {"u_roll_remainder", "npc_roll_remainder"}:
         return None
-    if actor_expression is None or set(effect) != {key, "type"}:
+    if actor_expression is None or set(effect) - {
+        key, "type", "true_eocs", "false_eocs"
+    } or "type" not in effect or key not in effect:
         return None
     kind = effect["type"]
     ids = effect[key]
@@ -22474,10 +22477,31 @@ def render_static_roll_remainder_effect(
         f'services.types.id({lua_quote(kind)}, {lua_quote(identifier)})'
         for identifier in ids
     )
-    return [
-        "    service_value(services.progression.grant_random_missing("
-        f"{actor_expression}, {lua_quote(kind)}, {{ {typed_ids} }}))"
-    ]
+    grant_call = (
+        "services.progression.grant_random_missing("
+        f"{actor_expression}, {lua_quote(kind)}, {{ {typed_ids} }})"
+    )
+    if not ("true_eocs" in effect or "false_eocs" in effect):
+        return [f"    service_value({grant_call})"]
+    vectors = render_ordered_copied_eoc_vectors(
+        effect.get("true_eocs", []), effect.get("false_eocs", []),
+        eoc_function_names or {},
+        dialogue_alpha_expression=dialogue_alpha_expression,
+    )
+    if vectors is None:
+        return None
+    true_lines, false_lines = vectors
+    if not true_lines and not false_lines:
+        return [f"    service_value({grant_call})"]
+    lines = [f"    local roll_result = service_value({grant_call})"]
+    if true_lines and false_lines:
+        lines.extend(["    if roll_result.granted then", *true_lines,
+                      "    else", *false_lines, "    end"])
+    elif true_lines:
+        lines.extend(["    if roll_result.granted then", *true_lines, "    end"])
+    else:
+        lines.extend(["    if not roll_result.granted then", *false_lines, "    end"])
+    return lines
 
 
 def render_static_dimension_travel_effect(
@@ -34217,6 +34241,11 @@ def render_eoc(
                         beta_effect_target[0] if key.startswith("npc_") and
                         beta_effect_target is not None and
                         beta_effect_target[1] == "character" else None
+                    ),
+                    dialogue_alpha_expression=(
+                        alpha_effect_target[0] if key.startswith("u_") and
+                        alpha_effect_target is not None and
+                        alpha_effect_target[1] == "character" else None
                     ),
                 )
                 if rendered is not None:
