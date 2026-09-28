@@ -32,6 +32,7 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
 #include "lua_platform_npcs.h"
+#include "lua_platform_proficiencies.h"
 #include "lua_platform_sol.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -409,12 +410,53 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     platform::install_faction_api( services, [runtime]() {
         return runtime;
     }, current_world, []() {}, []() {} );
+    platform::install_proficiency_api( services, [runtime]() {
+        return runtime;
+    }, current_world, []() {}, []() {} );
     platform::register_npc_handle_identity( alpha );
     platform::register_npc_handle_identity( beta );
     const platform::game_handle alpha_handle = platform::game_handle::from_creature(
             alpha, { "npc", alpha.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const platform::game_handle beta_handle = platform::game_handle::from_creature(
             beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+    const proficiency_id carving( "prof_carving" );
+    const conditional_t npc_proficiency_condition( json_loader::from_string(
+                R"({"npc_has_proficiency":"prof_carving"})" ).get_object() );
+    const sol::protected_function has_proficiency =
+        services["proficiencies"]["has_id_text"];
+    const auto platform_knows_proficiency = [&]( const platform::game_handle &handle ) {
+        const sol::protected_function_result call = has_proficiency( handle, carving.str() );
+        REQUIRE( call.valid() );
+        const sol::table result = call;
+        REQUIRE( result["ok"].get<bool>() );
+        return result["value"].get<bool>();
+    };
+    alpha.add_proficiency( carving, true );
+    beta.lose_proficiency( carving );
+    CHECK_FALSE( npc_proficiency_condition( context ) );
+    CHECK( platform_knows_proficiency( alpha_handle ) );
+    CHECK_FALSE( platform_knows_proficiency( beta_handle ) );
+    CHECK( npc_proficiency_condition( context ) ==
+           platform_knows_proficiency( beta_handle ) );
+    const std::string unknown_proficiency = "prof_unregistered_npc_condition_test";
+    const conditional_t npc_unknown_proficiency_condition(
+        json_loader::from_string(
+            R"({"npc_has_proficiency":"prof_unregistered_npc_condition_test"})"
+        ).get_object() );
+    CHECK_FALSE( npc_unknown_proficiency_condition( context ) );
+    const sol::protected_function_result unknown_proficiency_call =
+        has_proficiency( beta_handle, unknown_proficiency );
+    REQUIRE( unknown_proficiency_call.valid() );
+    const sol::table unknown_proficiency_result = unknown_proficiency_call;
+    REQUIRE( unknown_proficiency_result["ok"].get<bool>() );
+    CHECK_FALSE( unknown_proficiency_result["value"].get<bool>() );
+    alpha.lose_proficiency( carving );
+    beta.add_proficiency( carving, true );
+    CHECK( npc_proficiency_condition( context ) );
+    CHECK_FALSE( platform_knows_proficiency( alpha_handle ) );
+    CHECK( platform_knows_proficiency( beta_handle ) );
+    CHECK( npc_proficiency_condition( context ) ==
+           platform_knows_proficiency( beta_handle ) );
 
     const sol::protected_function get_npc = services["npcs"]["get"];
     sol::protected_function_result alpha_call = get_npc( alpha_handle );
@@ -526,6 +568,10 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
                                 "mon_zombie", player.pos_bub() + tripoint::east );
     dialogue monster_beta_context( get_talker_for( alpha ),
                                    get_talker_for( monster_beta ) );
+    CHECK_FALSE( npc_proficiency_condition( monster_beta_context ) );
+    // The generated interlocutor lowerer has the matching Character-subtype
+    // guard, so native talker::knows_proficiency's default false result is
+    // returned before the Character-only Platform service is called.
     CHECK_FALSE( npc_friend_condition( monster_beta_context ) );
     CHECK_FALSE( npc_hostile_condition( monster_beta_context ) );
     CHECK_FALSE( npc_pickup_rule_condition( monster_beta_context ) );
