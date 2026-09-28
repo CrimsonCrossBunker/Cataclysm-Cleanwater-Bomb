@@ -10467,6 +10467,25 @@ function CcbPlatformWoundsApi.add(character, body_part, wound) end
 ---@return CcbResult result `value` has detached native-order before/after arrays; absent instances produce `changed = false`.
 function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
+---Apply the native direct wound operation to the native next-best body part; runtime-callback write only.
+---This intentionally bypasses Wound per-part limits and does not call Character::apply_wound,
+---so it does not trigger that method's perceived-pain resynchronization.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` is a CcbPlatformWoundMutation with detached native-order before/after arrays.
+function CcbPlatformWoundsApi.add_unbounded(character, body_part, wound) end
+
+---Remove every matching wound directly from the native next-best body part; runtime-callback write only.
+---This intentionally does not call Character::on_stat_change or resynchronize perceived pain.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` has detached native-order before/after arrays.
+function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
+
 ---@class CcbMutationTypeRemoval
 ---@field type string Requested mutation type (a mutation's `types` membership, not its category).
 ---@field removed GameId[] Detached GameId<mutation> array; ordering is unspecified.
