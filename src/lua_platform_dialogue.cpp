@@ -411,6 +411,7 @@ struct context::state {
     lua_State *lua_state = nullptr;
     std::string topic_id;
     bool allow_write = false;
+    bool response_action_phase = false;
     std::string invalid_context_message;
     actor_converter convert_actor;
     dialogue_session_ptr session;
@@ -473,12 +474,14 @@ context::context( lua_State *const lua_state, ::dialogue &d, std::string topic_i
                   actor_converter convert_actor,
                   dialogue_session_ptr session,
                   game_handle_runtime runtime_identity,
-                  const std::size_t world_generation )
+                  const std::size_t world_generation,
+                  const bool response_action_phase )
     : state_( std::make_shared<state>() )
 {
     state_->lua_state = lua_state;
     state_->topic_id = std::move( topic_id );
     state_->allow_write = allow_write;
+    state_->response_action_phase = response_action_phase;
     state_->invalid_context_message = std::move( invalid_context_message );
     state_->convert_actor = std::move( convert_actor );
     state_->session = session ? std::move( session ) :
@@ -571,6 +574,16 @@ context::state &context::require_write_state() const
     return result;
 }
 
+context::state &context::require_action_write_state() const
+{
+    state &result = require_write_state();
+    if( !result.response_action_phase ) {
+        throw std::runtime_error(
+            "native dialogue item offers require an active on_action callback" );
+    }
+    return result;
+}
+
 std::string context::topic() const
 {
     return require_state().topic_id;
@@ -609,6 +622,22 @@ bool context::has_reason() const
 std::string context::reason() const
 {
     return require_state().dialogue_ref().reason;
+}
+
+std::string context::offer_item_to_interlocutor( const bool use_item ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        throw std::runtime_error(
+            "dialogue item offer requires a native interlocutor" );
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        throw std::runtime_error(
+            "dialogue item offer requires a live native interlocutor" );
+    }
+    d.reason = interlocutor->give_item_to( use_item );
+    return d.reason;
 }
 
 int context::trial_chance( const std::string &kind, const int difficulty,

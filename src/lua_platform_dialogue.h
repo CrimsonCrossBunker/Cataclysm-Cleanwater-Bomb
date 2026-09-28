@@ -111,7 +111,8 @@ class context
                  actor_converter convert_actor,
                  dialogue_session_ptr session = {},
                  game_handle_runtime runtime_identity = {},
-                 std::size_t world_generation = 0 );
+                 std::size_t world_generation = 0,
+                 bool response_action_phase = false );
 
         bool valid() const noexcept;
         std::optional<game_handle_error> validation_error() const;
@@ -125,6 +126,7 @@ class context
         bool by_radio() const;
         bool has_reason() const;
         std::string reason() const;
+        std::string offer_item_to_interlocutor( bool use_item ) const;
         int trial_chance( const std::string &kind, int difficulty,
                           const std::string &skill_id = {} ) const;
         bool roll_trial( const std::string &kind, int difficulty,
@@ -142,6 +144,7 @@ class context
 
         state &require_state() const;
         state &require_write_state() const;
+        state &require_action_write_state() const;
 
         std::shared_ptr<state> state_;
 };

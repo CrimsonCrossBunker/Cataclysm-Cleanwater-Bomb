@@ -528,7 +528,8 @@ using platform_dialogue_context = cata::lua_platform::dialogue::context;
 
 std::shared_ptr<platform_dialogue_context> make_platform_dialogue_context(
     runtime &owner, ::dialogue &d, const std::string &topic_id,
-    const bool allow_write = true )
+    const bool allow_write = true,
+    const bool response_action_phase = false )
 {
     if( owner.lua == nullptr ) {
         throw std::runtime_error( "Platform dialogue runtime has no Lua state" );
@@ -543,7 +544,8 @@ std::shared_ptr<platform_dialogue_context> make_platform_dialogue_context(
                "Platform dialogue context is no longer valid",
     [&owner]( const cata::lua_platform::native_callback_talker & actor ) {
         return platform_callback_talker_to_lua( owner, actor );
-    }, session, runtime_identity, detail::runtime_world_generation_storage() );
+    }, session, runtime_identity, detail::runtime_world_generation_storage(),
+    response_action_phase );
 }
 
 void validate_platform_dialogue_descriptor_keys( const sol::table &descriptor,
@@ -773,6 +775,8 @@ void detail::install_runtime_dialogue_presentation_api(
         "by_radio", &platform_dialogue_context::by_radio,
         "has_reason", &platform_dialogue_context::has_reason,
         "reason", &platform_dialogue_context::reason,
+        "offer_item_to_interlocutor",
+        &platform_dialogue_context::offer_item_to_interlocutor,
         "trial_chance",
         []( const platform_dialogue_context & context,
             const std::string & kind, const int difficulty,
@@ -2108,7 +2112,7 @@ void invoke_platform_dialogue_action_callback(
         if( owner->callback_depth >= 16 ) {
             throw std::runtime_error( "dialogue callback recursion limit reached" );
         }
-        context = make_platform_dialogue_context( *owner, d, topic_id );
+        context = make_platform_dialogue_context( *owner, d, topic_id, true, true );
         callback_scope scope( *owner );
         const sol::protected_function_result result = callback( context, trial_success );
         context->invalidate();

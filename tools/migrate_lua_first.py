@@ -6474,6 +6474,16 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     that live beta Character's typed snapshot. Unprefixed alpha mission
     predicates and Boolean compositions remain fail-closed in the caller.
     """
+    if (
+        isinstance(condition, dict) and set(condition) == {"not"} and
+        condition["not"] == "is_by_radio"
+    ):
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            return not dialogue_context:by_radio()\n"
+            "        end"
+        )
     npc_state_expression = _render_talk_topic_npc_state_condition(condition)
     if npc_state_expression is not None:
         return LuaRaw(
@@ -6631,6 +6641,20 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
             mission_todo = _talk_topic_effect_todo(nested)
             if mission_todo is not None and "mission" in mission_todo[1]:
                 return mission_todo
+    if isinstance(effect, dict):
+        selectors = set(effect) & {"npc_gets_item", "npc_gets_item_to_use"}
+        if not selectors and set(effect) == {"effect"}:
+            wrapped = effect["effect"]
+            if isinstance(wrapped, str) and wrapped in {
+                "npc_gets_item", "npc_gets_item_to_use",
+            }:
+                selectors = {wrapped}
+        if selectors:
+            return (
+                "semantic_choice",
+                "native item offers are registered as direct string selectors; "
+                "object-shaped forms are not lowered without an exact native parse",
+            )
     if effect == "goto_location":
         return (
             "platform_gap",
@@ -6752,6 +6776,52 @@ def render_talk_topic_npc_lose_morale_action(
     )
 
 
+def render_talk_topic_item_offer_effect(response: Any) -> LuaRaw | None:
+    """Lower an exact, condition-renderable native TALK item-offer response."""
+    if not isinstance(response, dict) or set(response) - {
+        "text", "topic", "condition", "effect",
+    }:
+        return None
+    if "topic" in response and (
+        not isinstance(response["topic"], str) or not response["topic"]
+    ):
+        return None
+    if "condition" in response and render_talk_topic_response_condition(
+        response["condition"]
+    ) is None:
+        return None
+    effect = response.get("effect")
+    if not isinstance(effect, str):
+        return None
+    if effect == "npc_gets_item":
+        use_item = "false"
+    elif effect == "npc_gets_item_to_use":
+        use_item = "true"
+    else:
+        return None
+    return LuaRaw(
+        "function(dialogue_context, trial_success) "
+        "if not trial_success then return end; "
+        f"dialogue_context:offer_item_to_interlocutor({use_item}) "
+        "end"
+    )
+
+
+def _talk_topic_item_offer_todo(response: Any) -> tuple[str, str] | None:
+    if not isinstance(response, dict):
+        return None
+    effect = response.get("effect")
+    if not isinstance(effect, str) or effect not in {
+        "npc_gets_item", "npc_gets_item_to_use",
+    }:
+        return None
+    return (
+        "manual_rewrite",
+        "native item offers lower only for direct string responses without a trial "
+        "or extra fields and with a precisely converted condition",
+    )
+
+
 def render_talk_topic(
     source: SourceObject,
     result: MigrationResult,
@@ -6806,6 +6876,8 @@ def render_talk_topic(
                 action_callback = render_talk_topic_npc_lose_morale_action(
                     entry, known_morale_ids,
                 )
+            if action_callback is None:
+                action_callback = render_talk_topic_item_offer_effect(entry)
             if action_callback is not None:
                 response["on_action"] = action_callback
             else:
@@ -6817,13 +6889,16 @@ def render_talk_topic(
                     response["on_select"] = callback
                 else:
                     trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
+                    item_offer_todo = _talk_topic_item_offer_todo(entry)
                     camp_todo = _camp_selector_todo(entry["effect"])
                     camp_object_todo = _camp_selector_object_todo(entry["effect"])
                     food_todo = _distribute_food_auto_todo(entry["effect"])
                     response_effect_todo = _talk_topic_effect_todo(
                         entry["effect"]
                     )
-                    if camp_todo is not None:
+                    if item_offer_todo is not None:
+                        response_effect_category, response_effect_reason = item_offer_todo
+                    elif camp_todo is not None:
                         response_effect_category, response_effect_reason = camp_todo
                     elif camp_object_todo is not None:
                         response_effect_category = "semantic_choice"
