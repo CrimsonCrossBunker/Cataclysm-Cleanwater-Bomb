@@ -18781,6 +18781,142 @@ assert(not available())
         self.assertNotIn("on_action =", unsupported_lua or "")
         self.assertTrue(unsupported_result.todos)
 
+    def test_direct_talk_spend_cash_uses_exact_native_payment_action(self) -> None:
+        responses = [
+            {
+                "text": "Pay the NPC",
+                "topic": "TALK_DONE",
+                "effect": {"u_spend_cash": 500},
+            },
+            {
+                "text": "Pay zero",
+                "effect": {"u_spend_cash": 0},
+            },
+            {
+                "text": "Pay the largest native integer",
+                "effect": {"u_spend_cash": migrate_lua_first.NATIVE_INT_MAX},
+            },
+        ]
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "direct_spend_cash",
+                "dynamic_line": "Choose a payment.",
+                "responses": responses,
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("on_action = function(context, trial_success)", rendered)
+        self.assertIn(
+            "if not trial_success or not context:valid() then return end", rendered
+        )
+        self.assertIn("local seller = context:interlocutor()", rendered)
+        self.assertIn('seller.subtype ~= "npc"', rendered)
+        self.assertIn("local buyer = services.characters.avatar()", rendered)
+        self.assertIn("services.trade.pay(seller, buyer, 500)", rendered)
+        self.assertIn("services.trade.pay(seller, buyer, 0)", rendered)
+        self.assertIn(
+            f"services.trade.pay(seller, buyer, {migrate_lua_first.NATIVE_INT_MAX})",
+            rendered,
+        )
+        self.assertNotIn("on_select =", rendered)
+        self.assertFalse(result.todos)
+
+        unsupported_effects = (
+            {"u_spend_cash": -1},
+            {"u_spend_cash": 1.5},
+            {"u_spend_cash": True},
+            {"u_spend_cash": migrate_lua_first.NATIVE_INT_MAX + 1},
+            {"u_spend_cash": 500, "true_eocs": "after_payment"},
+            {"u_spend_cash": 500, "false_eocs": "payment_failed"},
+            {"u_spend_cash": {"math": ["u_val", "cash"]}},
+            [{"u_spend_cash": 500}],
+        )
+        for index, effect in enumerate(unsupported_effects):
+            with self.subTest(effect=effect):
+                unsupported = migrate_lua_first.SourceObject(
+                    Path("source.json"), index + 2, {
+                        "type": "talk_topic", "id": f"unsupported_spend_{index}",
+                        "dynamic_line": "Choose a payment.",
+                        "responses": [{"text": "Unsupported payment", "effect": effect}],
+                    },
+                )
+                unsupported_result = migrate_lua_first.MigrationResult()
+                unsupported_lua = migrate_lua_first.render_talk_topic(
+                    unsupported, unsupported_result
+                )
+                self.assertIsNotNone(unsupported_lua)
+                self.assertNotIn("on_action =", unsupported_lua or "")
+                self.assertNotIn("on_select =", unsupported_lua or "")
+                self.assertTrue(unsupported_result.todos)
+
+    def test_real_talk_spend_cash_shape_and_monster_purchase_remain_bounded(self) -> None:
+        talk_test_path = Path("data/json/npcs/TALK_TEST.json")
+        talk_test_topics = json.loads(
+            (REPOSITORY_ROOT / talk_test_path).read_text(encoding="utf-8")
+        )
+        talk_test = next(
+            entry for entry in talk_test_topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_TEST_EFFECTS"
+        )
+        real_payment = next(
+            response for response in talk_test["responses"]
+            if response.get("text") == "This is a u_spend_cash response"
+        )
+        self.assertEqual(real_payment["effect"], {"u_spend_cash": 500})
+        real_combined_payment = next(
+            response for response in talk_test["responses"]
+            if response.get("text") == "This is a multi-effect response"
+        )
+        self.assertTrue(any(
+            isinstance(effect, dict) and "u_spend_cash" in effect
+            for effect in real_combined_payment["effect"]
+        ))
+        payment_result = migrate_lua_first.MigrationResult()
+        payment_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(talk_test_path, 0, talk_test),
+            payment_result,
+        )
+        self.assertIsNotNone(payment_rendered)
+        self.assertIn("services.trade.pay(seller, buyer, 500)", payment_rendered or "")
+        self.assertIn("on_action = function(context, trial_success)", payment_rendered or "")
+        self.assertTrue(any(
+            "u_spend_cash" in todo.message and "combined effects" in todo.message
+            for todo in payment_result.todos
+        ))
+
+        shelter_path = Path(
+            "data/json/npcs/other/TALK_ANIMAL_SHELTER_SURVIVOR.json"
+        )
+        shelter_topics = json.loads(
+            (REPOSITORY_ROOT / shelter_path).read_text(encoding="utf-8")
+        )
+        shelter = next(
+            entry for entry in shelter_topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_BUY_PETS"
+        )
+        self.assertTrue(any(
+            isinstance(response.get("effect"), list) and
+            any(isinstance(effect, dict) and "u_buy_monster" in effect
+                for effect in response["effect"])
+            for response in shelter["responses"]
+        ))
+        shelter_result = migrate_lua_first.MigrationResult()
+        shelter_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(shelter_path, 0, shelter), shelter_result
+        )
+        self.assertIsNotNone(shelter_rendered)
+        self.assertNotIn("services.spawns.monster(", shelter_rendered or "")
+        self.assertNotIn("on_action =", shelter_rendered or "")
+        self.assertTrue(any(
+            "native u_buy_monster" in todo.message
+            for todo in shelter_result.todos
+        ))
+
     def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
         lines = migrate_lua_first.render_static_assign_mission_effect(
             {"assign_mission": "MISSION_TEST", "deadline": 500}, True

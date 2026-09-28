@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "player_helpers.h"
+#include "talker_npc.h"
 
 TEST_CASE( "lua_platform_allowance_quote_rejects_nonactive_avatar",
            "[lua][platform][trade][semantic]" )
@@ -444,6 +445,41 @@ TEST_CASE( "lua_platform_native_trade_does_not_substitute_the_active_avatar",
                 fixture.buyer_handle, fixture.seller_handle, 0, "Test trade" );
     REQUIRE( rejected.valid() );
     CHECK_FALSE( rejected.get<sol::table>()["ok"].get<bool>() );
+}
+
+TEST_CASE( "lua_platform_talk_payment_matches_native_npc_buy_from_credit",
+           "[lua][platform][trade][semantic]" )
+{
+    clear_avatar();
+    avatar &active_avatar = get_avatar();
+    active_avatar.normalize();
+    active_avatar.setID( character_id( 243 ), true );
+    platform_trade_quote_fixture fixture( 242, 503, 220021, 220022 );
+    REQUIRE( fixture.ready() );
+    const cata::lua_platform::game_handle active_avatar_handle =
+        cata::lua_platform::game_handle::from_creature(
+            active_avatar,
+            { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
+            fixture.runtime, fixture.active_world_generation );
+    constexpr int starting_credit = 500;
+    constexpr int payment = 300;
+
+    talker_npc native_seller( fixture.buyer.get() );
+    fixture.buyer->op_of_u.owed = starting_credit;
+    const bool native_paid = native_seller.buy_from( payment );
+    const int native_remaining_credit = fixture.buyer->op_of_u.owed;
+    CHECK( native_paid );
+    CHECK( native_remaining_credit == starting_credit - payment );
+
+    fixture.buyer->op_of_u.owed = starting_credit;
+    sol::protected_function pay = fixture.services["trade"]["pay"];
+    const sol::protected_function_result result = pay(
+                fixture.buyer_handle, active_avatar_handle, payment );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    CHECK( envelope["value"].get<bool>() == native_paid );
+    CHECK( fixture.buyer->op_of_u.owed == native_remaining_credit );
 }
 
 TEST_CASE( "lua_platform_trade_quote_requires_exact_participants_and_holders",

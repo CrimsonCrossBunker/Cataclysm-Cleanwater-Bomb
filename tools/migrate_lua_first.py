@@ -3179,16 +3179,17 @@ def _legacy_trade_action_todo(key: str) -> str | None:
             "matching items; Platform quote requires exact Item and holder handles"
         ),
         "u_buy_monster": (
-            "native u_buy_monster requires an alpha avatar and beta NPC, pays before "
-            "placing pet monsters, reports success even if placement stops early, and "
-            "runs true/false EOCs in the dialogue; the typed trade and spawn services "
-            "do not preserve that combined result"
+            "native u_buy_monster pays the beta NPC before placing monsters around the "
+            "alpha avatar, applies permanent pet plus optional pacified/name state, "
+            "shows native messages, reports success after partial placement, and runs "
+            "true/false EOCs; typed trade and spawn services do not preserve that combined result"
         ),
         "u_spend_cash": (
-            "native u_spend_cash calls dialogue actor(true).buy_from (beta, with native "
-            "alpha fallback when beta is absent) and runs ordered true/false EOCs in the "
-            "original dialogue; Platform trade.pay needs an explicit live NPC/avatar "
-            "pair and cannot preserve that dialogue callback context"
+            "native u_spend_cash calls dialogue actor(true).buy_from and runs ordered "
+            "true/false EOCs in the original dialogue; only standalone direct TALK "
+            "responses with a nonnegative literal integer amount use the bounded "
+            "on_action lowering, while combined effects, event/EOC, dynamic, negative, "
+            "and callback-bearing shapes remain unsupported"
         ),
     }.get(key)
 
@@ -3202,6 +3203,12 @@ def _legacy_trade_action_effect_todo(effect: Any) -> str | None:
         "u_bulk_trade_accept", "npc_bulk_trade_accept",
         "u_buy_monster", "u_spend_cash",
     }
+    if isinstance(effect, list):
+        for nested in effect:
+            reason = _legacy_trade_action_effect_todo(nested)
+            if reason is not None:
+                return reason
+        return None
     if isinstance(effect, str):
         return _legacy_trade_action_todo(effect) if effect in selectors else None
     if isinstance(effect, dict):
@@ -6683,11 +6690,15 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             else:
                 response["condition"] = condition
         if "effect" in entry:
-            action_callback = (
-                render_dialogue_mission_action_effect(entry["effect"])
-                if set(entry) <= {"text", "topic", "effect"}
-                else None
-            )
+            action_callback = None
+            if set(entry) <= {"text", "topic", "effect"}:
+                action_callback = render_dialogue_mission_action_effect(
+                    entry["effect"]
+                )
+                if action_callback is None:
+                    action_callback = render_dialogue_spend_cash_action_effect(
+                        entry["effect"]
+                    )
             if action_callback is not None:
                 response["on_action"] = action_callback
             else:
@@ -20565,6 +20576,29 @@ def render_dialogue_mission_action_effect(effect: Any) -> LuaRaw | None:
         "    if not trial_success then return end",
         "    local actor = services.characters.avatar()",
         *action,
+        "end",
+    ]))
+
+
+def render_dialogue_spend_cash_action_effect(effect: Any) -> LuaRaw | None:
+    """Render an exact static beta-NPC payment in the native TALK action phase."""
+    if not isinstance(effect, dict) or set(effect) != {"u_spend_cash"}:
+        return None
+    amount = effect["u_spend_cash"]
+    if type(amount) is not int or amount < 0 or amount > NATIVE_INT_MAX:
+        return None
+    # Native TALK builds alpha from the active avatar and beta from talk_with.
+    # `u_spend_cash` calls beta.buy_from(int); the NPC implementation delegates
+    # to npc_trading::pay_npc, which is the same operation exposed by trade.pay.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local seller = context:interlocutor()",
+        '    if seller == nil or seller.kind ~= "creature" or seller.subtype ~= "npc" then return end',
+        "    if not seller:is_valid() then return end",
+        "    local buyer = services.characters.avatar()",
+        "    if buyer == nil or not buyer:is_valid() then return end",
+        f"    service_value(services.trade.pay(seller, buyer, {amount}))",
         "end",
     ]))
 
