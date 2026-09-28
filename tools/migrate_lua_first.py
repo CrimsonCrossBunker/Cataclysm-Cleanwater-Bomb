@@ -3633,97 +3633,14 @@ def render_static_traversal(
         return lines
 
     if key in {"u_map_run_eocs", "npc_map_run_eocs"}:
-        allowed = {key, "target_var", "range", "store_coordinates_in", "stop_at_first", "condition"}
-        if set(effect) - allowed:
-            return None
-        target = _context_coordinate_expression(effect.get("target_var"))
-        if target is None:
-            if actor_expression is None:
-                return None
-            target = f"service_value(services.characters.snapshot({actor_expression})).creature.position"
-        radius = effect.get("range", 1)
-        radius_expression = _traversal_integer_expression(
-            radius, 0, 1000000, actor_expression or "actor"
-        )
-        if radius_expression is None:
-            return None
-        output_key = effect.get("store_coordinates_in")
-        output_descriptor = None
-        if output_key is not None:
-            output_descriptor = (
-                {"context_val": output_key}
-                if isinstance(output_key, str) else output_key
-            )
-            if _coordinate_variable_descriptor(output_descriptor) is None:
-                return None
-            output_lines = _coordinate_output_lines(
-                output_descriptor, "point_entry.position",
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("npc_") and actor_expression is not None,
-            )
-            if output_lines is None:
-                return None
-            output_lines = [
-                line.replace("        ", "            ", 1)
-                for line in output_lines
-            ]
-        stop_at_first = effect.get("stop_at_first", True)
-        if not isinstance(stop_at_first, bool):
-            return None
-        calls = _traversal_calls(
-            references, eoc_function_names, target=False,
-            owner_actor=actor_expression,
-        )
-        condition_expression = effect.get("condition", True)
-        if condition_expression not in (True, False):
-            condition_expression = render_eoc_condition_expression(
-                condition_expression,
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("npc_") and actor_expression is not None,
-                False,
-            )
-            if condition_expression is None:
-                return None
-        lines = [
-            "    local point_offset = 0",
-            "    local point_done = false",
-            "    while true do",
-            f"        local point_page = services.world.points_nearby({target}, {{ min_radius = 0, max_radius = {radius_expression}, offset = point_offset, limit = 4096 }})",
-            "        for _, point_entry in ipairs(point_page.items) do",
-        ]
-        if output_key is not None:
-            lines.extend(output_lines)
-        if condition_expression is not True:
-            condition_lua = (
-                lua_boolean(condition_expression)
-                if isinstance(condition_expression, bool)
-                else condition_expression
-            )
-            lines.append(f"            if {condition_lua} then")
-            lines.extend(line.replace("        ", "                ", 1) for line in calls)
-            if stop_at_first and condition_expression is not False:
-                lines.extend([
-                    "                point_done = true",
-                    "                break",
-                ])
-            lines.append("            end")
-        elif condition_expression is True:
-            lines.extend(line.replace("        ", "            ", 1) for line in calls)
-            if stop_at_first:
-                lines.extend([
-                    "            point_done = true",
-                    "            break",
-                ])
-        lines.extend([
-            "        end",
-            "        if point_done or not point_page.has_more or point_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        point_offset = point_offset + point_page.returned",
-            "    end",
-        ])
-        return lines
+        # The position query has the same closest_points_first order as native,
+        # but that is not enough to preserve this callback. Native writes an
+        # optional var_info before every tile, reevaluates condition(d) before
+        # every EOC, and effect_on_condition::activate copies the dialogue and
+        # its context for each callback. A generated Lua loop shares one mutable
+        # context table, and this source does not prove typed coordinates or
+        # equivalent per-callback context-copy semantics.
+        return None
 
     return None
 
@@ -4869,7 +4786,7 @@ def render_static_false_effect(
             if "u_transform_radius" in effect else "npc_transform_radius"
         )
         rendered = render_static_transform_radius(
-            effect, key, avatar_actor_proven, npc_actor_proven
+            effect, key, event_exclusive_live_avatar_actor_proven=False
         )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
@@ -23938,37 +23855,6 @@ def render_static_mapgen_update(
     return None
 
 
-def render_static_reveal_map(
-    effect: dict[str, Any],
-    avatar_actor_proven: bool = False,
-    npc_actor_proven: bool = False,
-) -> list[str] | None:
-    if "reveal_map" not in effect or set(effect) - {"reveal_map", "radius"}:
-        return None
-    target = _context_coordinate_expression(effect["reveal_map"])
-    if target is None:
-        target = _coordinate_source_expression(
-            effect["reveal_map"], avatar_actor_proven, npc_actor_proven
-        )
-    raw_radius = effect.get("radius", 0)
-    radius = _literal_nonnegative_integer(raw_radius, 30)
-    if radius is not None:
-        radius_expression = str(radius)
-    else:
-        dynamic_radius = render_eoc_numeric_expression(
-            raw_radius, "0", "actor" if (avatar_actor_proven or npc_actor_proven) else "actor"
-        )
-        if dynamic_radius is None:
-            return None
-        radius_expression = (
-            "math.max(0, math.min(30, "
-            f"math.floor(({dynamic_radius}) + 0.5)))"
-        )
-    if target is None:
-        return None
-    return [f"    services.overmap.reveal({target}, {radius_expression})"]
-
-
 def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
@@ -24026,16 +23912,19 @@ def render_static_place_override(
 def render_static_transform_radius(
     effect: dict[str, Any],
     key: str,
-    avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_actor_proven: bool,
 ) -> list[str] | None:
+    """Lower only actor-centered U transforms with a live exclusive alpha."""
+    # Only the event-exclusive live game_start alpha has a supported U-side
+    # actor proof. The current NPC event has no beta; native actor(true) falls
+    # back to alpha after logging a diagnostic, which Platform does not mirror.
+    if key != "u_transform_radius" or not event_exclusive_live_avatar_actor_proven:
+        return None
     if key not in effect or set(effect) - {
-        key, "ter_furn_transform", "target_var", "time_in_future", "key",
+        key, "ter_furn_transform", "time_in_future", "key",
     }:
         return None
-    actor = _eoc_actor_expression(
-        key, avatar_actor_proven, npc_event_character_actor_proven
-    )
+    actor = "actor"
     transform = effect.get("ter_furn_transform")
     radius = _literal_nonnegative_integer(effect[key], 60)
     radius_expression = str(radius) if radius is not None else None
@@ -24051,17 +23940,11 @@ def render_static_transform_radius(
         return None
     if not bounded_utf8_string(event_key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
         return None
-    if "target_var" in effect:
-        target = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-    elif actor is not None:
-        target = "service_value(services.characters.snapshot(" + actor + ")).creature.position"
-    else:
-        target = None
-    if target is None:
-        return None
+    # With target_var omitted, snapshot position is already a typed absolute
+    # map-square coordinate and the Platform implementation calls the same
+    # transform_radius/timed-event paths as the native handler. Static ID text
+    # is shape-checked here; registration remains a runtime content precondition.
+    target = "service_value(services.characters.snapshot(actor)).creature.position"
     return [
         "    services.world.transform_radius(",
         f"        {target}, {radius_expression}, services.types.id(\"terrain_furniture_transform\", {lua_quote(transform)}),",
@@ -31811,23 +31694,19 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_map" in effect:
-                rendered = render_static_reveal_map(
-                    effect, avatar_actor_proven, npc_event_character_actor_proven
+                reveal_gap = (
+                    "native reveal_map reads its target_var as abs_ms and projects "
+                    "to OMT, while services.overmap.reveal requires typed abs_omt; "
+                    "native radius truncates a double and honors CIRCLEDIST, whereas "
+                    "the Platform service is limited to existing overmaps and always "
+                    "uses square-radius semantics"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the reveal-map target "
-                        "through the typed overmap service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
-                    )
-                    all_effects_converted = False
+                lines.append(f"    -- TODO: {reveal_gap}.")
+                result.add_todo(
+                    "platform_gap",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reveal_gap}"
+                )
+                all_effects_converted = False
             elif isinstance(effect, dict) and "revert_location" in effect:
                 rendered = render_static_location_revert(
                     effect, "revert_location"
@@ -31876,21 +31755,25 @@ def render_eoc(
                     else "npc_transform_radius"
                 )
                 rendered = render_static_transform_radius(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key, mutation_avatar_actor_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the radius transformation "
-                        "through the typed world service."
+                    transform_gap = (
+                        "native npc_transform_radius reads mutable beta, but the "
+                        "supported hostile-event path has only alpha and native "
+                        "actor(true) emits a missing-beta diagnostic before fallback"
+                        if key == "npc_transform_radius" else
+                        "only an event-exclusive live game_start alpha with no "
+                        "target_var and static in-range radius, transform ID, delay, "
+                        "and key is proven for the matching Platform transform path"
                     )
+                    lines.append(f"    -- TODO: {transform_gap}.")
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {transform_gap}"
                     )
                     all_effects_converted = False
             elif static_wrapped_beta_npc and effect == "follow":
@@ -34107,6 +33990,23 @@ def render_eoc(
                             "callbacks; "
                             "services.world.items_nearby sorts by position/UID, and "
                             "manual_mult false_eocs only run when the candidate set is empty"
+                        ),
+                        "u_map_run_eocs": (
+                            "native u_map_run_eocs uses closest_points_first order, "
+                            "writes optional var_info coordinates before each tile, "
+                            "reevaluates condition before each EOC, and activates each "
+                            "EOC with a copied dialogue/context; the generated loop "
+                            "does not preserve that per-callback context isolation or "
+                            "prove typed abs_ms variable reads/writes"
+                        ),
+                        "npc_map_run_eocs": (
+                            "native npc_map_run_eocs uses mutable actor(true), which "
+                            "falls back to alpha with a debug diagnostic when beta is "
+                            "absent, then uses closest_points_first order, optional "
+                            "var_info writes, per-EOC condition checks, and a copied "
+                            "dialogue/context for each callback; the generated loop "
+                            "does not preserve those callback semantics or prove typed "
+                            "abs_ms variable reads/writes"
                         ),
                         "u_run_monster_eocs": (
                             "native u_run_monster_eocs walks game::all_creatures() order "

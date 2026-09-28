@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import migrate_lua_first
@@ -19127,7 +19128,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 )
                 self.assertIn(f"-- TODO: {todo}.", main)
                 self.assertIn(todo, report)
-            self.assertTrue(result.todos or result.partial)
+                self.assertTrue(
+                    any(effect in todo_record.message for todo_record in result.todos),
+                    f"missing classified TODO for {effect}",
+                )
 
     def test_translates_bounded_npc_equipment_trade_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -21547,7 +21551,21 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "returns errors where native misses are ignored.",
                 main,
             )
-            self.assertIn("services.overmap.reveal(", main)
+            self.assertNotIn("services.overmap.reveal(", main)
+            self.assertIn(
+                "native reveal_map reads its target_var as abs_ms and projects to OMT",
+                main,
+            )
+            self.assertIn(
+                "native radius truncates a double and honors CIRCLEDIST", main
+            )
+            reveal_todos = [
+                todo for todo in result.todos
+                if "native reveal_map reads its target_var" in todo.message
+            ]
+            self.assertEqual(len(reveal_todos), 1)
+            self.assertEqual(reveal_todos[0].category, "platform_gap")
+            self.assertTrue(reveal_todos[0].platform_core_input)
             self.assertIn("services.world.schedule_location_revert(", main)
             self.assertIn(
                 'services.world.schedule_location_revert(\n'
@@ -21562,7 +21580,11 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("delay must be 1 turn..10000 days", main)
             self.assertIn("maps 'infinite' to INT_MAX turns", main)
             self.assertNotIn("services.world.schedule_location_copy(", main)
-            self.assertIn("services.world.transform_radius(", main)
+            self.assertEqual(main.count("services.world.transform_radius("), 1)
+            self.assertIn(
+                "native npc_transform_radius reads mutable beta", main
+            )
+            self.assertIn("emits a missing-beta diagnostic", main)
             self.assertNotIn(
                 "services.characters.drop_weapon(services.characters.avatar())",
                 main,
@@ -21861,26 +21883,146 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("explicitly typed abs_ms coordinate", main)
 
     def test_transform_radius_rejects_dynamic_or_out_of_range_arguments(self) -> None:
-        for key, avatar_proven, npc_proven in (
-            ("u_transform_radius", True, False),
-            ("npc_transform_radius", False, True),
+        base = {"ter_furn_transform": "transform_demo"}
+        accepted = migrate_lua_first.render_static_transform_radius(
+            {"u_transform_radius": 60, **base}, "u_transform_radius", True,
+        )
+        self.assertIsNotNone(accepted)
+        self.assertIn(
+            "        60, services.types.id", "\n".join(accepted or [])
+        )
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {"u_transform_radius": 61, **base}, "u_transform_radius", True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {"u_transform_radius": {"context_val": "radius"}, **base},
+            "u_transform_radius", True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {"u_transform_radius": 1, **base}, "u_transform_radius", False,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {"npc_transform_radius": 1, **base}, "npc_transform_radius", True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {"u_transform_radius": 1, **base, "target_var": {"context_val": "loc"}},
+            "u_transform_radius", True,
+        ))
+        for options in (
+            {"time_in_future": {"context_val": "delay"}},
+            {"key": {"context_val": "key"}},
         ):
-            with self.subTest(key=key):
-                base = {"ter_furn_transform": "transform_demo"}
-                accepted = migrate_lua_first.render_static_transform_radius(
-                    {key: 60, **base}, key, avatar_proven, npc_proven,
-                )
-                self.assertIsNotNone(accepted)
-                self.assertIn(
-                    "        60, services.types.id", "\n".join(accepted or [])
-                )
+            with self.subTest(options=options):
                 self.assertIsNone(migrate_lua_first.render_static_transform_radius(
-                    {key: 61, **base}, key, avatar_proven, npc_proven,
+                    {"u_transform_radius": 1, **base, **options},
+                    "u_transform_radius", True,
                 ))
-                self.assertIsNone(migrate_lua_first.render_static_transform_radius(
-                    {key: {"context_val": "radius"}, **base},
-                    key, avatar_proven, npc_proven,
-                ))
+        self.assertIsNone(migrate_lua_first.render_static_transform_radius(
+            {
+                "u_transform_radius": 1,
+                "ter_furn_transform": {"context_val": "transform"},
+            },
+            "u_transform_radius", True,
+        ))
+
+    def test_transform_radius_requires_event_exclusive_live_game_start_alpha(self) -> None:
+        effect = {
+            "u_transform_radius": 1,
+            "ter_furn_transform": "transform_demo",
+        }
+
+        def migrate_objects(
+            objects: list[dict[str, object]], name: str,
+        ) -> migrate_lua_first.MigrationResult:
+            with tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / "source.json"
+                source.write_text(json.dumps(objects), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]), name
+                )
+                return result
+
+        eligible_result = migrate_objects([{
+            "type": "effect_on_condition",
+            "id": "event_exclusive_radius",
+            "required_event": "game_start",
+            "effect": effect,
+        }], "radius_event_exclusive")
+        eligible = eligible_result.files[Path("main.lua")]
+        self.assertEqual(len(eligible_result.converted), 1)
+        self.assertEqual(eligible_result.partial, [])
+        self.assertEqual(eligible_result.todos, [])
+        self.assertIn("services.world.transform_radius(", eligible)
+
+        referenced_result = migrate_objects([
+            {
+                "type": "effect_on_condition",
+                "id": "referenced_radius",
+                "required_event": "game_start",
+                "effect": effect,
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "radius_reentry",
+                "required_event": "game_load",
+                "effect": {"run_eocs": "referenced_radius"},
+            },
+        ], "radius_reentry")
+        referenced = referenced_result.files[Path("main.lua")]
+        self.assertNotIn("services.world.transform_radius(", referenced)
+        self.assertIn(
+            "event-exclusive live game_start alpha",
+            referenced_result.files[Path("MIGRATION_REPORT.md")],
+        )
+
+        dynamic_result = migrate_objects([
+            {
+                "type": "effect_on_condition",
+                "id": "dynamic_radius",
+                "required_event": "game_start",
+                "effect": effect,
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "dynamic_caller",
+                "effect": {"run_eoc_selector": {"var_val": "selected"}},
+            },
+        ], "radius_dynamic_dispatch")
+        dynamic_dispatch = dynamic_result.files[Path("main.lua")]
+        self.assertNotIn("services.world.transform_radius(", dynamic_dispatch)
+        self.assertIn(
+            "event-exclusive live game_start alpha",
+            dynamic_result.files[Path("MIGRATION_REPORT.md")],
+        )
+
+        synthetic_result = migrate_objects([
+            {
+                "type": "effect_on_condition",
+                "id": "synthetic_game_start",
+                "effect": {"trigger_event": "game_start"},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "replayed_radius",
+                "required_event": "game_start",
+                "effect": effect,
+            },
+        ], "radius_synthetic_event")
+        synthetic_event = synthetic_result.files[Path("main.lua")]
+        self.assertNotIn("services.world.transform_radius(", synthetic_event)
+        self.assertIn(
+            "event-exclusive live game_start alpha",
+            synthetic_result.files[Path("MIGRATION_REPORT.md")],
+        )
+
+        npc_beta = migrate_lua_first.render_static_transform_radius(
+            {
+                "npc_transform_radius": 1,
+                "ter_furn_transform": "transform_demo",
+            },
+            "npc_transform_radius", True,
+        )
+        self.assertIsNone(npc_beta)
 
     def test_mapgen_update_rejects_unsupported_transforms_as_todos(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -27067,7 +27209,7 @@ assert(context.data.picked==selected)
             self.assertIn("item_group_chance = 0", main)
             self.assertIn("item_spawn_iterations = 0", main)
 
-    def test_lowers_supported_npc_zone_and_point_traversals_without_eoc_runner(
+    def test_lowers_supported_npc_and_zone_traversals_without_eoc_runner(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -27093,15 +27235,6 @@ assert(context.data.picked==selected)
                                     ],
                                     "zone_range": 6,
                                 },
-                                {
-                                    "u_map_run_eocs": {
-                                        "effect": {"math": ["u_point_count += 1"]}
-                                    },
-                                    "range": 1,
-                                    "store_coordinates_in": {
-                                        "context_val": "point_location"
-                                    },
-                                },
                             ],
                         }
                     ]
@@ -27125,16 +27258,90 @@ assert(context.data.picked==selected)
             self.assertNotIn("services.items.page", main)
             self.assertNotIn("local inventory_holder =", main)
             self.assertNotIn("services.inventory.filter", main)
-            self.assertIn("services.world.points_nearby", main)
-            self.assertIn("local point_offset = 0", main)
-            self.assertIn("point_page.has_more", main)
-            self.assertIn('services.variables.set(\n        actor, "point_count"', main)
-            self.assertIn(
-                'context.data["point_location"] = point_entry.position', main
-            )
             self.assertIn("migrated_eoc_", main)
             self.assertIn("local migrated_eoc_", main)
             self.assertNotIn("run_eoc(", main)
+
+    def test_map_run_eocs_stays_todo_for_native_dialogue_and_actor_boundaries(self) -> None:
+        objects = [
+            {
+                "type": "effect_on_condition",
+                "id": "map_callback",
+                "effect": {"u_message": "callback"},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "actor_centered_map",
+                "required_event": "game_start",
+                "effect": {
+                    "u_map_run_eocs": ["map_callback"],
+                    "range": 1,
+                    "stop_at_first": False,
+                },
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "coordinate_map",
+                "required_event": "game_start",
+                "effect": {
+                    "u_map_run_eocs": {"effect": {"u_message": "at tile"}},
+                    "target_var": {"context_val": "center"},
+                    "range": 1,
+                    "store_coordinates_in": {"context_val": "tile"},
+                    "condition": {
+                        "map_terrain_with_flag": "TREE",
+                        "loc": {"context_val": "tile"},
+                    },
+                },
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "npc_map",
+                "required_event": "npc_becomes_hostile",
+                "effect": {
+                    "npc_map_run_eocs": {"effect": {"u_message": "NPC tile"}},
+                    "range": 1,
+                },
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "referenced_map",
+                "required_event": "game_start",
+                "effect": {
+                    "u_map_run_eocs": {"effect": {"u_message": "reentered"}},
+                    "range": 1,
+                },
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "map_reentry",
+                "required_event": "game_load",
+                "effect": {"run_eocs": "referenced_map"},
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps(objects), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "map_traversal_boundaries"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertNotIn("services.world.points_nearby(", main)
+        self.assertIn(
+            "native u_map_run_eocs uses closest_points_first", main
+        )
+        self.assertIn("native npc_map_run_eocs uses mutable actor(true)", main)
+        self.assertIn("copied dialogue/context", main)
+        self.assertIn("missing-beta diagnostic", main)
+        self.assertIn("closest_points_first order", report)
+        self.assertIn("map_reentry", main)
+        for selector in ("u_map_run_eocs", "npc_map_run_eocs"):
+            self.assertTrue(
+                any(selector in todo_record.message for todo_record in result.todos),
+                f"missing classified TODO for {selector}",
+            )
 
     def test_item_eoc_traversals_remain_todo_with_proven_actors_and_callbacks(self) -> None:
         callback_names = {
