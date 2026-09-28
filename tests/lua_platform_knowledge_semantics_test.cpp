@@ -83,6 +83,26 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             REQUIRE( result["ok"].get<bool>() );
             return result["value"].get<sol::object>();
         };
+        const cata::lua_platform::game_handle avatar_handle = handle_for( player, false );
+        const cata::lua_platform::game_handle beta_handle = handle_for( partner, true );
+        const sol::table avatar_snapshot = value_of(
+                services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
+        const sol::table beta_snapshot = value_of(
+                services["characters"]["snapshot"], beta_handle ).as<sol::table>();
+        // This fixture compares each native selector with the snapshot for
+        // its intended participant.  Both default actors may share the same
+        // safe state, so it does not independently prove role routing when
+        // their boolean values coincide.
+        const bool avatar_safe_space =
+            avatar_snapshot["environment"]["safe_space"].get<bool>();
+        const bool beta_safe_space =
+            beta_snapshot["environment"]["safe_space"].get<bool>();
+        const conditional_t avatar_safe_space_condition( "u_at_safe_space" );
+        const conditional_t beta_safe_space_condition( "at_safe_space" );
+        const conditional_t npc_beta_safe_space_condition( "npc_at_safe_space" );
+        CHECK( avatar_safe_space_condition( conversation ) == avatar_safe_space );
+        CHECK( beta_safe_space_condition( conversation ) == beta_safe_space );
+        CHECK( npc_beta_safe_space_condition( conversation ) == beta_safe_space );
         for( const bool is_npc : {
                  false, true
              } ) {

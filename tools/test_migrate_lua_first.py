@@ -4378,8 +4378,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertIn(".travel.has_path", main)
             self.assertIn("local function character_at_safe_space", main)
             self.assertIn("character_at_safe_space(actor)", main)
-            self.assertIn("services.overmap.is_safe(position)", main)
-            self.assertIn("services.characters.is_safe(character)", main)
+            self.assertIn("return snapshot.environment.safe_space", main)
+            self.assertNotIn("services.overmap.is_safe(position)", main)
+            self.assertNotIn("services.characters.is_safe(character)", main)
             self.assertIn(
                 "local function character_has_pickup_whitelist", main
             )
@@ -10413,9 +10414,6 @@ assert(not available())
                 "not (service_value(services.characters.snapshot("
                 "context.actors.beta)).senses.blind)"
             ),
-            "at_safe_space": (
-                "character_at_safe_space(context.actors.beta)"
-            ),
             "npc_has_pickup_list": (
                 "character_has_pickup_whitelist(context.actors.beta)"
             ),
@@ -10474,6 +10472,151 @@ assert(not available())
                 npc_actor_expression="context.actors.beta",
             )
         )
+
+    def test_beta_safe_space_conditions_wait_for_a_live_interlocutor_callback(self) -> None:
+        for selector in ("at_safe_space", "npc_at_safe_space"):
+            for actor_expression in ("context.actors.beta", "actor"):
+                with self.subTest(selector=selector, actor_expression=actor_expression):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            selector,
+                            avatar_actor_proven=True,
+                            npc_actor_proven=True,
+                            npc_actor_expression=actor_expression,
+                            npc_dialogue_pair_proven=True,
+                            event_beta_presence_proven=True,
+                        )
+                    )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "talk_topic",
+                        "id": "TALK_SAFE_SPACE_CALLBACK",
+                        "responses": [
+                            {
+                                "text": "invoke callback",
+                                "topic": "TALK_DONE",
+                                "effect": {"run_eocs": "safe_space_pair"},
+                            },
+                            {
+                                "text": "legacy callback fields",
+                                "topic": "TALK_DONE",
+                                "true_eocs": "safe_space_pair",
+                                "false_eocs": "safe_space_pair",
+                            },
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "safe_space_pair",
+                        "condition": {
+                            "and": ["at_safe_space", "npc_at_safe_space"],
+                        },
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "event_beta_safe_space",
+                        "required_event": "npc_becomes_hostile",
+                        "condition": "npc_at_safe_space",
+                        "effect": [],
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "safe_space_callback_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertNotIn("character_at_safe_space(context.actors.beta)", main)
+        self.assertNotIn("services.overmap.is_safe(", main)
+        self.assertTrue(any(
+            "EOC safe_space_pair condition TODO" in entry and
+            "supported EOC callback supplies native beta as a live Character interlocutor"
+            in entry
+            for entry in result.todos
+        ))
+        self.assertTrue(any(
+            "EOC event_beta_safe_space condition TODO" in entry and
+            "supported EOC callback supplies native beta as a live Character interlocutor"
+            in entry
+            for entry in result.todos
+        ))
+        self.assertIn(
+            "topic TALK_SAFE_SPACE_CALLBACK response effect needs a native callback",
+            report,
+        )
+        self.assertIn(
+            "response fields need Lua conversion: false_eocs, true_eocs",
+            report,
+        )
+
+    def test_avatar_safe_space_requires_live_event_exclusive_avatar_proof(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_at_safe_space", avatar_actor_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_at_safe_space", generic_character_actor_proven=True,
+            )
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_at_safe_space", avatar_actor_proven=True,
+                proficiency_alpha_actor_proven=True,
+            ),
+            "character_at_safe_space(actor)",
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_avatar_safe_space",
+                        "eoc_type": "AVATAR_DEATH",
+                        "condition": "u_at_safe_space",
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_game_start_safe_space",
+                        "required_event": "game_start",
+                        "condition": "u_at_safe_space",
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_dispatcher",
+                        "effect": {
+                            "run_eoc_selector": {
+                                "global_val": "selected_eoc",
+                            },
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            objects = migrate_lua_first.load_objects([source])
+            result = migrate_lua_first.migrate(objects, "safe_space_live_avatar_mod")
+            main = result.files[Path("main.lua")]
+            todos = "\n".join(todo.text for todo in result.todos)
+
+        self.assertTrue(migrate_lua_first._has_dynamic_eoc_dispatch(objects))
+        self.assertNotIn("character_at_safe_space(actor)", main)
+        for eoc_id in ("dead_avatar_safe_space", "dynamic_game_start_safe_space"):
+            self.assertIn(
+                f"EOC {eoc_id} condition TODO: translate u_at_safe_space only for an event-exclusive live avatar source",
+                todos,
+            )
 
     def test_npc_exists_uses_event_beta_presence_only(self) -> None:
         expected = (
