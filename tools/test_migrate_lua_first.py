@@ -38594,7 +38594,15 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertEqual(search_variable["u_location_variable"], {
             "context_val": "portal_storm_dungeon_teleportation",
         })
-        self.assertTrue(search_variable["target_params"]["random"])
+        self.assertEqual(search_variable["target_params"], {
+            "om_terrain": "portal_storm_dungeon_teleporter",
+            "om_special": "portal_storm_dungeon_teleporter",
+            "min_distance": 6,
+            "search_range": 40,
+            "random": True,
+        })
+        self.assertEqual(search_variable["trap"], first_trap["set_trap"])
+        self.assertEqual(search_variable["target_max_radius"], 24)
         self.assertEqual(effects[last_index - 1]["u_teleport"], {
             "context_val": "portal_storm_dungeon_teleportation",
         })
@@ -38603,12 +38611,13 @@ assert(context.conditions.check==original and context.conditions.check() and con
         })
         self.assertEqual(first_trap["radius"], 0)
         self.assertEqual(last_trap["radius"], 0)
+        self.assertEqual(first_trap["set_trap"], last_trap["set_trap"])
 
-        # Native f_set_trap still projects each location into the current
-        # bubble and calls trap_set; map.edit cannot preserve trap_set's
-        # logged no-mutation cases.  This real chain also includes a random
-        # OMT target and teleport, so neither context location is an isolated
-        # proof of a map-tile edit.
+        # The final radius-zero write targets the same trap id selected within
+        # the random OMT target.  map.edit skips that same-id write, whereas
+        # native f_set_trap re-applies it through trap_set.  The preceding
+        # random OMT and radius-24 trap search is not lowered to the
+        # loaded-tile API.
         self.assertIsNone(
             migrate_lua_first.render_static_location_variable(
                 search_variable, "u_location_variable", True, False
@@ -38622,6 +38631,9 @@ assert(context.conditions.check==original and context.conditions.check() and con
         trap_todos = [todo for todo in result.todos if trap_gap in todo.message]
         self.assertEqual(len(trap_todos), 2)
         self.assertTrue(all(todo.category == "platform_gap" for todo in trap_todos))
+        self.assertTrue(
+            all("skip same-id writes" in todo.message for todo in trap_todos)
+        )
 
     def test_pickup_migration_keeps_unproven_var_info_as_manual_todo(
         self,
