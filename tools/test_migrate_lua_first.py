@@ -17473,12 +17473,55 @@ assert(not available())
             self.assertIn('services.activities.assign_npc_job(context.actors.beta, "find_mount")', main)
             self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "seminar")', main)
             self.assertNotIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD")', main)
-            self.assertIn(
-                "needs explicit camp, manager, and storage holder handles",
-                report,
+            food_todo = next(
+                todo for todo in result.todos
+                if "distribute_food_auto" in todo.message
             )
+            self.assertEqual(food_todo.category, "platform_gap")
+            for reason_fragment in (
+                "has no camp at its current OMT",
+                "fails allowed_access_by",
+                "zones over the NPC's 3x3 map-square area",
+                "validates sort zones around the global avatar",
+                "may query_yn to open zone setup",
+                "missing zones also produce an NPC-distribution debugmsg",
+                "no suitable food returns false quietly",
+                "consumes eligible ground and vehicle food",
+                "removes every same-faction CAMP_FOOD and CAMP_STORAGE zone",
+                "services.camps.food.add/consume mutate supply directly",
+            ):
+                self.assertIn(reason_fragment, food_todo.message)
+                self.assertIn(reason_fragment, report)
+            self.assertNotIn("service_value(services.zones.create(", main)
+            self.assertNotIn("service_value(services.camps.food.add(", main)
             self.assertNotIn("services.npcs.open_dialogue", main)
             self.assertIn("native topic-talker or beta-clone dialogue", report)
+
+    def test_real_distribute_food_auto_speaker_effect_is_a_platform_gap(self) -> None:
+        source_path = REPOSITORY_ROOT / (
+            "data/json/npcs/refugee_center/surface_staff/Smokes/"
+            "free_merchant_shopkeep_talk.json"
+        )
+        source = next(
+            candidate for candidate in migrate_lua_first.load_objects([source_path])
+            if candidate.value.get("id") == "TALK_FREE_MERCHANTS_MERCHANT_DoneTrading"
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(source, result)
+
+        self.assertIsNotNone(rendered)
+        food_todo = next(
+            todo for todo in result.todos
+            if "speaker_effect" in todo.message and
+            "native distribute_food_auto" in todo.message
+        )
+        self.assertEqual(food_todo.category, "platform_gap")
+        self.assertIn("enabled CAMP_FOOD and CAMP_STORAGE zones", food_todo.message)
+        self.assertIn("removes every same-faction CAMP_FOOD and CAMP_STORAGE zone", food_todo.message)
+        self.assertNotIn("speaker_effects =", rendered)
+        self.assertNotIn("distribute_food_auto", rendered)
+        self.assertNotIn("services.camps.food.", rendered)
+        self.assertNotIn("services.zones.", rendered)
 
     def test_translates_teleport_navigation_damage_and_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
