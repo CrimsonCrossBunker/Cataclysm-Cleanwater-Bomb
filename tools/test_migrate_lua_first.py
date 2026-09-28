@@ -6559,6 +6559,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "unproven_target_practice",
+                        "required_event": "monster_dies",
                         "effect": native_effect,
                     },
                 ]),
@@ -18736,6 +18737,49 @@ assert(not available())
                 {"finish_mission": "MISSION_TEST", "step": -1}, True
             )
         )
+
+    def test_direct_talk_mission_action_uses_native_effect_phase(self) -> None:
+        path = REPOSITORY_ROOT / "data/json/npcs/computers/TALK_COMPUTER.json"
+        topic = next(
+            entry for entry in json.loads(path.read_text(encoding="utf-8"))
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "COMP_DISABLE_EXTERNAL_POWER"
+        )
+        real_effect = next(
+            response["effect"] for response in topic["responses"]
+            if isinstance(response.get("effect"), dict) and
+            "finish_mission" in response["effect"]
+        )
+        self.assertEqual(real_effect, {
+            "finish_mission": "MISSION_OLD_GUARD_NEC_COMMO_2",
+            "step": 1,
+        })
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 0, topic), result
+        )
+        self.assertIsNotNone(rendered)
+        self.assertIn("on_action = function(context, trial_success)", rendered)
+        self.assertIn("if not trial_success then return end", rendered)
+        self.assertIn("local actor = services.characters.avatar()", rendered)
+        self.assertIn(
+            "services.missions.step_complete(actor, mission_entry.token, 1)",
+            rendered,
+        )
+        self.assertNotIn("on_select = function(context, trial_success)", rendered)
+
+        unsupported = {**topic, "responses": [{
+            "text": "Mission trial", "topic": "TALK_DONE",
+            "trial": {"type": "PERSUADE", "difficulty": 50},
+            "effect": real_effect,
+        }]}
+        unsupported_result = migrate_lua_first.MigrationResult()
+        unsupported_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 1, unsupported),
+            unsupported_result,
+        )
+        self.assertNotIn("on_action =", unsupported_lua or "")
+        self.assertTrue(unsupported_result.todos)
 
     def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
         lines = migrate_lua_first.render_static_assign_mission_effect(

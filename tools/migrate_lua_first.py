@@ -6683,41 +6683,49 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             else:
                 response["condition"] = condition
         if "effect" in entry:
-            callback = render_dialogue_trade_effect(
-                entry["effect"], result, source.location,
-                f"topic {topic_id} response",
+            action_callback = (
+                render_dialogue_mission_action_effect(entry["effect"])
+                if set(entry) <= {"text", "topic", "effect"}
+                else None
             )
-            if callback is None:
-                trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
-                camp_todo = _camp_selector_todo(entry["effect"])
-                camp_object_todo = _camp_selector_object_todo(entry["effect"])
-                food_todo = _distribute_food_auto_todo(entry["effect"])
-                response_effect_todo = _talk_topic_effect_todo(
-                    entry["effect"]
-                )
-                if camp_todo is not None:
-                    response_effect_category, response_effect_reason = camp_todo
-                elif camp_object_todo is not None:
-                    response_effect_category = "semantic_choice"
-                    response_effect_reason = camp_object_todo
-                elif food_todo is not None:
-                    response_effect_category = "platform_gap"
-                    response_effect_reason = food_todo
-                elif trade_todo is not None:
-                    response_effect_category = "manual_rewrite"
-                    response_effect_reason = trade_todo
-                elif response_effect_todo is not None:
-                    response_effect_category, response_effect_reason = response_effect_todo
-                else:
-                    response_effect_category = "manual_rewrite"
-                    response_effect_reason = "needs a native callback"
-                result.add_todo(
-                    response_effect_category,
-                    f"{source.location}: talk topic {topic_id} response effect "
-                    f"{response_effect_reason}"
-                )
+            if action_callback is not None:
+                response["on_action"] = action_callback
             else:
-                response["on_select"] = callback
+                callback = render_dialogue_trade_effect(
+                    entry["effect"], result, source.location,
+                    f"topic {topic_id} response",
+                )
+                if callback is not None:
+                    response["on_select"] = callback
+                else:
+                    trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
+                    camp_todo = _camp_selector_todo(entry["effect"])
+                    camp_object_todo = _camp_selector_object_todo(entry["effect"])
+                    food_todo = _distribute_food_auto_todo(entry["effect"])
+                    response_effect_todo = _talk_topic_effect_todo(
+                        entry["effect"]
+                    )
+                    if camp_todo is not None:
+                        response_effect_category, response_effect_reason = camp_todo
+                    elif camp_object_todo is not None:
+                        response_effect_category = "semantic_choice"
+                        response_effect_reason = camp_object_todo
+                    elif food_todo is not None:
+                        response_effect_category = "platform_gap"
+                        response_effect_reason = food_todo
+                    elif trade_todo is not None:
+                        response_effect_category = "manual_rewrite"
+                        response_effect_reason = trade_todo
+                    elif response_effect_todo is not None:
+                        response_effect_category, response_effect_reason = response_effect_todo
+                    else:
+                        response_effect_category = "manual_rewrite"
+                        response_effect_reason = "needs a native callback"
+                    result.add_todo(
+                        response_effect_category,
+                        f"{source.location}: talk topic {topic_id} response effect "
+                        f"{response_effect_reason}"
+                    )
         responses.append(response)
         unsupported = set(entry) - {"text", "topic", "condition", "effect"}
         if unsupported:
@@ -20536,6 +20544,31 @@ def render_static_remove_active_mission_effect(
     )
 
 
+def render_dialogue_mission_action_effect(effect: Any) -> LuaRaw | None:
+    """Run a literal mission action in the native response effect phase."""
+    if not isinstance(effect, dict):
+        return None
+    if "finish_mission" in effect:
+        action = render_static_finish_mission_effect(effect, True)
+    elif "remove_active_mission" in effect:
+        action = render_static_remove_active_mission_effect(effect, True)
+    else:
+        return None
+    if action is None:
+        return None
+    # Both native wrappers fetch get_avatar(), regardless of the current
+    # dialogue speaker.  The success response's effect vector runs inside
+    # talk_effect_t::apply; Platform on_action is inserted into that same
+    # vector, while on_select would run after opinion and hostility handling.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success then return end",
+        "    local actor = services.characters.avatar()",
+        *action,
+        "end",
+    ]))
+
+
 def render_static_offer_mission_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
@@ -33688,7 +33721,7 @@ def render_eoc(
                     )
                     result.add_todo(
                         "manual_rewrite" if actor_unproven else "platform_gap",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
                         (
                             "needs source-proven Character activity target"
                             if actor_unproven else
