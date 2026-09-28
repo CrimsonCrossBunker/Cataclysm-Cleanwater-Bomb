@@ -10594,13 +10594,108 @@ assert(not available())
         self.assertNotIn("services.npcs.ai_rules(beta)", topic_main)
         self.assertTrue(topic_result.todos)
 
+    def test_talk_topic_response_condition_supports_only_live_speaker_intelligence(self) -> None:
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "speaker_intelligence_topic",
+                "responses": [
+                    {
+                        "text": "Meet the intelligence threshold",
+                        "condition": {"u_has_intelligence": 8},
+                    },
+                    {"text": "Unconditional response"},
+                ],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("condition = function(dialogue_context)", rendered)
+        self.assertIn("dialogue_context:speaker()", rendered)
+        self.assertIn('speaker.kind ~= "creature"', rendered)
+        self.assertIn('speaker.subtype ~= "avatar"', rendered)
+        self.assertIn('speaker.subtype ~= "character"', rendered)
+        self.assertIn('speaker.subtype ~= "npc"', rendered)
+        self.assertIn("speaker:is_valid()", rendered)
+        self.assertIn("services.characters.snapshot(speaker)", rendered)
+        self.assertIn("snapshot.value.stats.intelligence >= 8", rendered)
+        self.assertIn('text = "Unconditional response"', rendered)
+        self.assertNotIn("true_eocs", rendered)
+        self.assertFalse(result.todos)
+
+        # Native action EOCs are nested inside the response's effect action.
+        # Keep that execution path TODO even when the condition itself is
+        # safely renderable.
+        action_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 20, {
+                "type": "talk_topic", "id": "action_eoc_stays_todo",
+                "responses": [
+                    {
+                        "text": "Pay and run the native follow-up",
+                        "condition": {"u_has_intelligence": 8},
+                        "effect": [{
+                            "u_spend_cash": 800,
+                            "true_eocs": "intelligence_followup",
+                        }],
+                    },
+                    {
+                        "text": "Run an action EOC",
+                        "effect": [{"run_eocs": "intelligence_followup"}],
+                    },
+                ],
+            },
+        )
+        action_result = migrate_lua_first.MigrationResult()
+        action_rendered = migrate_lua_first.render_talk_topic(
+            action_topic, action_result
+        )
+        self.assertIsNotNone(action_rendered)
+        self.assertIn("condition = function(dialogue_context)", action_rendered)
+        self.assertNotIn("true_eocs", action_rendered)
+        self.assertNotIn("run_eocs", action_rendered)
+        self.assertTrue(action_result.todos)
+
+        # Positive thresholds let non-Character talkers preserve the native
+        # base talker int_cur()==0 result by returning false before snapshot.
+        # Unsupported and dynamic condition forms are hidden instead of
+        # accidentally becoming unconditional Platform responses.
+        unsupported_conditions = (
+            "has_assigned_mission",
+            {"u_has_intelligence": "dynamic_var"},
+            {"u_has_intelligence": 0},
+            {"u_has_intelligence": -1},
+            {"u_has_intelligence": True},
+            {"u_has_intelligence": 8, "npc_has_intelligence": 4},
+            {"and": [{"u_has_intelligence": 8}]},
+        )
+        for index, condition in enumerate(unsupported_conditions):
+            with self.subTest(condition=condition):
+                unsupported_topic = migrate_lua_first.SourceObject(
+                    Path("source.json"), index + 2, {
+                        "type": "talk_topic", "id": f"unsupported_condition_{index}",
+                        "responses": [{
+                            "text": "Must stay hidden until converted",
+                            "condition": condition,
+                        }],
+                    },
+                )
+                unsupported_result = migrate_lua_first.MigrationResult()
+                unsupported_rendered = migrate_lua_first.render_talk_topic(
+                    unsupported_topic, unsupported_result
+                )
+                self.assertIsNotNone(unsupported_rendered)
+                self.assertIn("condition = false", unsupported_rendered)
+                self.assertTrue(unsupported_result.todos)
+
     def test_assigned_mission_counts_need_a_rendered_dialogue_callback(self) -> None:
         # Native f_no_assigned_mission/f_has_assigned_mission/
         # f_has_many_assigned_missions distinguish 0, exactly 1, and >= 2
         # entries in dialogue::missions_assigned. avatar::talk_to first calls
         # the beta talker's check_missions(), then filters its assigned list to
-        # alpha's avatar id. The topic renderer drops response conditions and
-        # true_eocs, so source pairing alone cannot reproduce this state.
+        # alpha's avatar id. The response renderer supports only a direct
+        # positive u_has_intelligence condition; mission predicates remain
+        # TODO and their responses are emitted with condition=false.
         predicates = (
             "has_no_assigned_mission",
             "has_assigned_mission",
@@ -10658,7 +10753,7 @@ assert(not available())
         )
         self.assertIsNotNone(rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
-        self.assertNotIn("condition", rendered_topic)
+        self.assertIn("condition = false", rendered_topic)
         self.assertTrue(topic_result.todos)
 
         pair_result = migrate_lua_first.MigrationResult()
@@ -10725,8 +10820,9 @@ assert(not available())
         # The six beta aliases ask const_actor(true)->available_missions():
         # zero, exactly one, or at least two. talker_npc_const returns the raw
         # chatbin.missions vector, which services.npcs.missions.available_count
-        # also counts. But render_talk_topic drops response conditions and
-        # true_eocs, so this source proof has no executable Platform callback.
+        # also counts. The response renderer lowers only direct positive
+        # u_has_intelligence; these mission conditions fail closed as false.
+        # Action-level true_eocs remain disconnected.
         # Also, the base talker returns an empty vector: for a non-NPC beta,
         # has_no_available_mission is true while the other two are false. A
         # blanket NPC-subtype guard would change that native result.
@@ -10805,7 +10901,7 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertNotIn("condition", rendered_topic)
+        self.assertIn("condition = false", rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
 
@@ -10830,8 +10926,8 @@ assert(not available())
     def test_selected_mission_status_needs_a_rendered_dialogue_callback(self) -> None:
         # Native beta aliases inspect beta's selected mission: complete and
         # incomplete evaluate it against the current avatar, while failed
-        # checks has_failed(). Direct topic provenance is not executable yet
-        # because render_talk_topic drops response conditions and true_eocs.
+        # checks has_failed(). The bounded response callback does not cover
+        # mission state, and action-level true_eocs remain disconnected.
         predicates = (
             "mission_complete", "npc_mission_complete",
             "mission_incomplete", "npc_mission_incomplete",
@@ -10900,7 +10996,7 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertNotIn("condition", rendered_topic)
+        self.assertIn("condition = false", rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
         for eoc in condition_eocs:
@@ -10999,7 +11095,7 @@ assert(not available())
             dialogue_topic, topic_result
         )
         self.assertIsNotNone(rendered_topic)
-        self.assertNotIn("condition", rendered_topic)
+        self.assertIn("condition = false", rendered_topic)
         self.assertNotIn("true_eocs", rendered_topic)
         self.assertTrue(topic_result.todos)
         for eoc in goal_eocs:
