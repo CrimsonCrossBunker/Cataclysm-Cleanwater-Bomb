@@ -17869,6 +17869,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 migrate_lua_first.load_objects([source]), "selection_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
@@ -17877,6 +17878,14 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.npcs.copy_ai_rules(", main)
             self.assertEqual(main.count("services.inventory.choose("), 0)
             self.assertNotIn("services.npcs.offer_item(", main)
+            for effect in ("npc_gets_item", "npc_gets_item_to_use"):
+                todo = (
+                    f"native beta NPC {effect} opens the global avatar's "
+                    "interactive item picker; select and bind its exact "
+                    "ItemHandle before calling services.npcs.offer_item"
+                )
+                self.assertIn(f"-- TODO: {todo}.", main)
+                self.assertIn(todo, report)
             self.assertTrue(result.todos or result.partial)
 
     def test_translates_bounded_npc_equipment_trade_shapes(self) -> None:
