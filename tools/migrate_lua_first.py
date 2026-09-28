@@ -29184,6 +29184,19 @@ def render_eoc(
         has_event_trigger and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # Targeting UI needs the talker selected by this EOC's current dialogue.
+    # A callable child inherits its caller's actors, so an event name alone
+    # cannot prove that an event-specific avatar remains alpha at that call.
+    # Restrict these pickers to direct, statically event-bound functions.
+    targeting_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        avatar_actor_proven
+    )
+    # npc_choose_adjacent_highlight selects dialogue::actor(true).  The only
+    # supported alpha fallback is the direct npc_becomes_hostile event, whose
+    # dialogue has no beta.  That native fallback also emits a debug message;
+    # Platform preserves the selected NPC but does not mirror that diagnostic.
+    targeting_npc_actor_proven = npc_alpha_fallback_event_actor_proven
     # The morale adapters require a live Character handle and native morale
     # effects read dialogue alpha/beta rather than an ambient global actor.
     # Limit avatar mutations to the live game_start alpha and npc_add_morale
@@ -31654,7 +31667,7 @@ def render_eoc(
                     npc_event_character_actor_proven and
                     isinstance(effect.get(key), str)
                     else render_static_query_tile(
-                        effect, key, avatar_actor_proven,
+                        effect, key, targeting_avatar_actor_proven,
                     )
                 )
                 if rendered is not None:
@@ -31714,14 +31727,15 @@ def render_eoc(
                 )
                 rendered = (
                     render_static_choose_adjacent_highlight(
-                        effect, key, avatar_actor_proven,
+                        effect, key, targeting_avatar_actor_proven,
                         npc_event_character_actor_proven,
                         eoc_conditions, npc_actor_expression, eoc_function_names,
                     )
                     if key == "u_choose_adjacent_highlight" else
                     render_static_npc_choose_adjacent_highlight(
-                        effect, key, npc_event_character_actor_proven,
-                        npc_actor_expression, avatar_actor_proven, eoc_conditions, eoc_function_names,
+                        effect, key, targeting_npc_actor_proven,
+                        "actor" if targeting_npc_actor_proven else None,
+                        targeting_avatar_actor_proven, eoc_conditions, eoc_function_names,
                     )
                 )
                 if rendered is not None:
