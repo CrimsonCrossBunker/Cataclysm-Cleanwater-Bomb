@@ -11417,40 +11417,47 @@ assert(not available())
                 todos,
             )
 
-    def test_npc_exists_uses_event_beta_presence_only(self) -> None:
+    def test_event_beta_presence_conditions_use_only_interlocutor_presence(
+        self,
+    ) -> None:
         expected = (
             "context ~= nil and "
             "context.__ccb_event_beta_presence_proven == true and "
             "context.actors ~= nil and "
             "context.actors.interlocutor ~= nil"
         )
+        for condition in ("has_beta", "npc_exists"):
+            self.assertEqual(
+                migrate_lua_first.render_eoc_condition_expression(
+                    condition, event_beta_presence_proven=True
+                ),
+                expected,
+            )
+            for kwargs in (
+                {},
+                {
+                    "npc_actor_proven": True,
+                    "npc_actor_expression": "context.actors.beta",
+                },
+                {
+                    "npc_dialogue_pair_proven": True,
+                    "npc_actor_expression": "context.actors.beta",
+                },
+            ):
+                with self.subTest(condition=condition, kwargs=kwargs):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            condition, **kwargs
+                        )
+                    )
+
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
-                "npc_exists", event_beta_presence_proven=True
+                {"test_eoc": "inline_beta"},
+                eoc_conditions={"inline_beta": {"condition": "has_beta"}},
+                event_beta_presence_proven=True,
             ),
             expected,
-        )
-        for kwargs in (
-            {},
-            {
-                "npc_actor_proven": True,
-                "npc_actor_expression": "context.actors.beta",
-            },
-            {
-                "npc_dialogue_pair_proven": True,
-                "npc_actor_expression": "context.actors.beta",
-            },
-        ):
-            with self.subTest(kwargs=kwargs):
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        "npc_exists", **kwargs
-                    )
-                )
-        self.assertIsNone(
-            migrate_lua_first.render_eoc_condition_expression(
-                "has_beta", event_beta_presence_proven=True
-            )
         )
 
         # This direct-event proof applies only to corpora without a
@@ -11466,10 +11473,10 @@ assert(not available())
                 main = migrate_lua_first.render_eoc(
                     migrate_lua_first.SourceObject(Path("source.json"), 0, {
                         "type": "effect_on_condition",
-                        "id": "event_npc_exists",
+                        "id": "event_beta_presence",
                         "required_event": event,
                         "condition": {
-                            "and": ["npc_exists", {"not": "npc_exists"}]
+                            "and": ["has_beta", {"not": "npc_exists"}]
                         },
                         "effect": {"message": "event"},
                     }),
@@ -11486,13 +11493,13 @@ assert(not available())
         referenced_main = migrate_lua_first.render_eoc(
             migrate_lua_first.SourceObject(Path("source.json"), 0, {
                 "type": "effect_on_condition",
-                "id": "event_npc_exists",
+                "id": "event_beta_presence",
                 "required_event": "character_melee_attacks_character",
-                "condition": "npc_exists",
+                "condition": "has_beta",
                 "effect": {"message": "event"},
             }),
             result,
-            eoc_referenced_ids=frozenset({"event_npc_exists"}),
+            eoc_referenced_ids=frozenset({"event_beta_presence"}),
         )
         self.assertNotIn(
             "context.__ccb_event_beta_presence_proven = true", referenced_main
@@ -11524,9 +11531,9 @@ assert(not available())
                 json.dumps([
                     {
                         "type": "effect_on_condition",
-                        "id": "event_npc_exists",
+                        "id": "event_beta_presence",
                         "required_event": "character_melee_attacks_character",
-                        "condition": "npc_exists",
+                        "condition": "has_beta",
                         "effect": {"message": "event"},
                     },
                     {
@@ -28256,9 +28263,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             )
             self.assertNotIn("conditional-control-flow conversion", report)
 
-    def test_generic_talker_type_conditions_use_handle_kind_and_furniture_metadata(
-        self,
-    ) -> None:
+    def test_generic_talker_type_conditions_use_handle_kind(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -28282,7 +28287,6 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                                 "u_is_character",
                                 "u_is_monster",
                                 "u_is_item",
-                                "u_is_furniture",
                                 "u_is_vehicle",
                             )
                         ],
@@ -28301,14 +28305,51 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn('actor.kind == "creature"', main)
             self.assertIn('actor.kind == "item"', main)
             self.assertIn('actor.kind == "vehicle"', main)
-            self.assertIn(
-                'context.data["__ccb_talker_kind"] == "furniture"', main
-            )
-            self.assertIn(
-                "requires callback context __ccb_talker_kind=furniture",
-                report,
-            )
+            self.assertNotIn("__ccb_talker_kind", main)
             self.assertIn("needs an explicit Platform trigger", report)
+
+    def test_u_is_furniture_requires_a_live_computer_talker(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_is_furniture", avatar_actor_proven=True
+            ),
+            "false",
+        )
+        for kwargs in ({}, {"creature_actor_proven": True}):
+            with self.subTest(kwargs=kwargs):
+                self.assertIsNone(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        "u_is_furniture", **kwargs
+                    )
+                )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "computer_talker_condition",
+                    "effect": {
+                        "if": "u_is_furniture",
+                        "then": {"message": "computer"},
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "computer_talker_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("__ccb_talker_kind", main)
+            self.assertIn(
+                "requires a live computer talker", report
+            )
+            self.assertIn(
+                "computer snapshots are detached", report
+            )
 
     def test_unbound_mixed_eoc_keeps_a_fail_closed_condition_actor_contract(
         self,
