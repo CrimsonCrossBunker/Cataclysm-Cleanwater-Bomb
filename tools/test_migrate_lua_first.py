@@ -31792,6 +31792,7 @@ assert(context.data.picked==selected)
         self.assertNotIn("weighted_cursor", main)
         self.assertNotIn("services.random.int(", main)
         self.assertNotIn("services.random.native_int(", main)
+        self.assertIn("services.random.weighted_index", main)
         self.assertIn("raw_draw % total_weight", main)
         self.assertIn("copied alpha/beta Dialogue", main)
         for owner in (
@@ -31891,6 +31892,7 @@ assert(context.data.picked==selected)
         self.assertIn(
             "one global rng_bits() draw even for a single survivor", rendered
         )
+        self.assertIn("services.random.weighted_index", rendered)
         self.assertIn(
             "pick_ent returns index 0 without using that value for one survivor",
             rendered,

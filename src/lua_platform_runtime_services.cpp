@@ -113,6 +113,7 @@ extern "C" {
 #include "type_id.h"
 #include "units.h"
 #include "worldfactory.h"
+#include "weighted_list.h"
 // Supplies enum_traits<cardinal_direction> for string_to_enum_optional.
 #include "widget.h" // IWYU pragma: keep
 #include "wound.h"
@@ -163,6 +164,54 @@ std::size_t require_dense_array( const sol::table &values,
 {
     return detail::checked_dense_array(
                values, description, minimum, maximum );
+}
+
+std::vector<int> platform_random_weights( const sol::table &weights )
+{
+    constexpr std::size_t maximum_entries = 1024;
+    const std::size_t count = require_dense_array(
+                                  weights, "services.random.weighted_index weights",
+                                  0, maximum_entries );
+    std::vector<int> result;
+    result.reserve( count );
+    std::int64_t total_weight = 0;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_weight = weights.raw_get<sol::object>( index );
+        if( !raw_weight.is<lua_Integer>() ) {
+            throw std::invalid_argument(
+                "services.random.weighted_index weights must be native integers" );
+        }
+        const std::int64_t weight = raw_weight.as<std::int64_t>();
+        if( weight < std::numeric_limits<int>::min() ||
+            weight > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                "services.random.weighted_index weights exceed native integer bounds" );
+        }
+        if( weight > 0 ) {
+            if( total_weight > std::numeric_limits<int>::max() - weight ) {
+                throw std::invalid_argument(
+                    "services.random.weighted_index total exceeds native integer bounds" );
+            }
+            total_weight += weight;
+        }
+        result.push_back( static_cast<int>( weight ) );
+    }
+    return result;
+}
+
+sol::optional<std::int64_t> platform_random_weighted_index(
+    const std::vector<int> &weights )
+{
+    weighted_int_list<std::size_t> weighted_entries;
+    for( std::size_t index = 0; index < weights.size(); ++index ) {
+        // Keep the original 1-based row after the native list drops nonpositive weights.
+        weighted_entries.add( index + 1, weights[index] );
+    }
+    const std::size_t *picked = weighted_entries.pick();
+    if( picked == nullptr ) {
+        return sol::nullopt;
+    }
+    return static_cast<std::int64_t>( *picked );
 }
 
 std::uint64_t fnv1a( const std::string_view value,
@@ -2918,6 +2967,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         static_cast<void>( require_random_runtime() );
         return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
+    } );
+    random.set_function( "weighted_index", [require_random_runtime]( const sol::table &weights ) {
+        const std::vector<int> native_weights = platform_random_weights( weights );
+        static_cast<void>( require_random_runtime() );
+        return platform_random_weighted_index( native_weights );
     } );
     random.set_function( "chance", [require_random_runtime]( const std::int64_t numerator,
     const std::int64_t denominator ) {
