@@ -612,7 +612,7 @@ assert(worn_calls==1 and has_calls==1)
             ),
             (
                 "generic_event_role",
-                {"required_event": "character_takes_damage",
+                {"eoc_type": "EVENT", "required_event": "character_takes_damage",
                  "condition": {"npc_role_nearby": "scout"}},
                 False,
                 "services.npcs.has_role_nearby(actor, \"scout\", 48)",
@@ -4855,7 +4855,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                         {
                             "type": "effect_on_condition",
                             "id": f"predicate_{index}",
-                            "required_event": "unproven_dialogue_event",
+                            "eoc_type": "EVENT", "required_event": "unproven_dialogue_event",
                             "condition": predicate,
                             "effect": {"message": f"predicate {index}"},
                         }
@@ -5067,7 +5067,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     {
                         "type": "effect_on_condition",
                         "id": "item_variable_wield",
-                        "required_event": "character_wields_item",
+                        "eoc_type": "EVENT", "required_event": "character_wields_item",
                         "effect": {
                             "npc_add_var": "last_event",
                             "value": "character_wields_item",
@@ -5076,7 +5076,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                     {
                         "type": "effect_on_condition",
                         "id": "item_variable_wear",
-                        "required_event": "character_wears_item",
+                        "eoc_type": "EVENT", "required_event": "character_wears_item",
                         "effect": {
                             "npc_add_var": "last_event",
                             "value": "character_wears_item",
@@ -5260,7 +5260,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 {
                     "type": "effect_on_condition",
                     "id": "add_named_character_wound",
-                    "required_event": "character_wields_item",
+                    "eoc_type": "EVENT", "required_event": "character_wields_item",
                     "effect": {
                         "u_add_wound": "hand_r",
                         "wound_id": "cut",
@@ -5439,7 +5439,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
         wound_event = {
             "type": "effect_on_condition",
             "id": "item_wound_callback",
-            "required_event": "character_wields_item",
+            "eoc_type": "EVENT", "required_event": "character_wields_item",
             "effect": {"u_add_wound": "arm_l", "wound_id": "scratch"},
         }
         callback_cases = [
@@ -6144,7 +6144,7 @@ assert(#events == 9)
             source.write_text(json.dumps([
                 {
                     "type": "effect_on_condition", "id": "npc_time",
-                    "required_event": "character_melee_attack",
+                    "eoc_type": "EVENT", "required_event": "character_melee_attack",
                     "effect": {
                         "npc_add_var": "npc_turn", "time": True,
                         "value": 17, "possible_values": ["ignored"],
@@ -6157,12 +6157,12 @@ assert(#events == 9)
                 },
                 {
                     "type": "effect_on_condition", "id": "single_value_rng",
-                    "required_event": "character_melee_attack",
+                    "eoc_type": "EVENT", "required_event": "character_melee_attack",
                     "effect": {"npc_add_var": "single", "value": "ready"},
                 },
                 {
                     "type": "effect_on_condition", "id": "candidate_rng",
-                    "required_event": "character_melee_attack",
+                    "eoc_type": "EVENT", "required_event": "character_melee_attack",
                     "effect": {
                         "npc_add_var": "candidate",
                         "possible_values": ["left", "right"],
@@ -6566,7 +6566,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "unproven_target_practice",
-                        "required_event": "monster_dies",
+                        "eoc_type": "EVENT", "required_event": "monster_dies",
                         "effect": native_effect,
                     },
                 ]),
@@ -6710,7 +6710,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "unproven_any_bionic",
-                            "required_event": "character_kills_monster",
+                            "eoc_type": "EVENT", "required_event": "character_kills_monster",
                             "condition": {"u_has_bionics": "ANY"},
                             "effect": {"message": "bounded only"},
                         },
@@ -7888,19 +7888,19 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "dead_avatar_dies",
-                            "required_event": "avatar_dies",
+                            "eoc_type": "EVENT", "required_event": "avatar_dies",
                             "effect": {"u_learn_martial_art": "style_karate"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "dead_game_avatar_death",
-                            "required_event": "game_avatar_death",
+                            "eoc_type": "EVENT", "required_event": "game_avatar_death",
                             "effect": {"u_forget_martial_art": "style_karate"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "ambiguous_game_over",
-                            "required_event": "game_over",
+                            "eoc_type": "EVENT", "required_event": "game_over",
                             "effect": {"u_learn_martial_art": "style_karate"},
                         },
                         {
@@ -8191,7 +8191,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_other_morale_add",
-                        "required_event": "character_takes_damage",
+                        "eoc_type": "EVENT", "required_event": "character_takes_damage",
                         "effect": {
                             "npc_add_morale": "morale_feeling_good",
                             "bonus": 1,
@@ -8201,7 +8201,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_other_morale_remove",
-                        "required_event": "character_takes_damage",
+                        "eoc_type": "EVENT", "required_event": "character_takes_damage",
                         "effect": {"npc_lose_morale": "morale_feeling_good"},
                     },
                     {
@@ -8569,7 +8569,7 @@ assert(#events == 9)
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_unproven_beta_wet",
-                        "required_event": "character_takes_damage",
+                        "eoc_type": "EVENT", "required_event": "character_takes_damage",
                         "effect": {"npc_add_wet": 12},
                     },
                     {
@@ -8578,13 +8578,13 @@ assert(#events == 9)
                         # Native npc.cpp sends character_wields_item with
                         # send_with_talker(character, item), so get_character()
                         # on beta returns null and the effect is a no-op.
-                        "required_event": "character_wields_item",
+                        "eoc_type": "EVENT", "required_event": "character_wields_item",
                         "effect": {"npc_add_wet": 12},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "npc_event_killer_fallback_wet",
-                        "required_event": "character_kills_character",
+                        "eoc_type": "EVENT", "required_event": "character_kills_character",
                         "effect": {"npc_add_wet": 12},
                     },
                 ]),
@@ -9014,7 +9014,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "character_kill_beta_fallback",
-                            "required_event": "character_kills_character",
+                            "eoc_type": "EVENT", "required_event": "character_kills_character",
                             "effect": {
                                 "npc_add_effect": "bleed",
                                 "duration": 5,
@@ -9023,7 +9023,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "monster_alpha_static",
-                            "required_event": "monster_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "monster_takes_damage",
                             "effect": {
                                 "u_add_effect": "bleed",
                                 "duration": 5,
@@ -9042,7 +9042,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "monster_beta_static",
-                            "required_event": "character_kills_monster",
+                            "eoc_type": "EVENT", "required_event": "character_kills_monster",
                             "effect": {
                                 "npc_add_effect": "bleed",
                                 "duration": 5,
@@ -9081,7 +9081,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "monster_alpha_random_add",
-                            "required_event": "monster_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "monster_takes_damage",
                             "effect": {
                                 "u_add_effect": "bleed",
                                 "duration": 5,
@@ -9091,7 +9091,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "monster_beta_random_add",
-                            "required_event": "character_kills_monster",
+                            "eoc_type": "EVENT", "required_event": "character_kills_monster",
                             "effect": {
                                 "npc_add_effect": "bleed",
                                 "duration": 5,
@@ -9746,7 +9746,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "item_alive",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "condition": "u_is_alive",
                             "effect": {"message": "item alive"},
                         },
@@ -10465,7 +10465,7 @@ assert(#events == 9)
                         {
                             "type": "effect_on_condition",
                             "id": "npc_var",
-                            "required_event": "character_melee_attack",
+                            "eoc_type": "EVENT", "required_event": "character_melee_attack",
                             "effect": {"npc_lose_var": "npc_var"},
                         },
                         {
@@ -11556,7 +11556,7 @@ assert(not available())
                         "melee_beta_default_activation" if eoc_type is None
                         else "melee_beta_explicit_activation"
                     ),
-                    "required_event": "character_melee_attacks_character",
+                    "eoc_type": "EVENT", "required_event": "character_melee_attacks_character",
                     "condition": "npc_friend",
                     "effect": {"message": "non-event beta remains unproven"},
                 }
@@ -13666,7 +13666,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "flag_item",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "condition": {"u_has_flag": "SAMPLE_FLAG"},
                             "effect": {"message": "wielded"},
                         },
@@ -13755,7 +13755,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "wearing_item",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "condition": {"u_is_wearing": "socks"},
                             "effect": {"message": "item wearing"},
                         },
@@ -13854,7 +13854,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "item_outside",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "condition": "u_is_outside",
                             "effect": {"message": "item outside"},
                         },
@@ -14605,7 +14605,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "ambiguous_alpha",
-                        "required_event": "character_kills_monster",
+                        "eoc_type": "EVENT", "required_event": "character_kills_monster",
                         "condition": {"u_has_trait": "TOUGH"},
                         "effect": {
                             "u_add_effect": "downed",
@@ -17597,7 +17597,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "sound_effects_eoc",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {
                                     "id": "bionics",
@@ -17619,7 +17619,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "invalid_sound_volume",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {
                                     "id": "bionics",
@@ -17631,7 +17631,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "outdoor_sound_effect",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {
                                     "id": "bionics",
@@ -17643,7 +17643,7 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "oversized_sound_id",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {
                                     "id": "x" * 129,
@@ -20129,7 +20129,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "proven_npc_mission_provider",
-                        "required_event": "character_takes_damage",
+                        "eoc_type": "EVENT", "required_event": "character_takes_damage",
                         "effect": [
                             {"offer_mission": "MISSION_OFFER"},
                             {"add_mission": "MISSION_ASSIGNED"},
@@ -20186,7 +20186,7 @@ assert(not available())
         })
         generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "generic_pair_missions",
-            "required_event": "character_takes_damage", "effect": effects,
+            "eoc_type": "EVENT", "required_event": "character_takes_damage", "effect": effects,
         })
         with patch.object(
             migrate_lua_first,
@@ -21051,7 +21051,7 @@ assert(not available())
                     {
                         "type": "effect_on_condition",
                         "id": "character_event_not_avatar",
-                        "required_event": "character_takes_damage",
+                        "eoc_type": "EVENT", "required_event": "character_takes_damage",
                         "effect": {"u_message": "character event"},
                     }
                 ),
@@ -21074,21 +21074,21 @@ assert(not available())
                         {
                             "type": "effect_on_condition",
                             "id": "character_event_mission",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "condition": {"u_has_mission": "MISSION_MAIN_QUEST"},
                             "effect": {"message": "mission"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "character_event_faction",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "condition": {"u_has_faction_trust": 1},
                             "effect": {"message": "faction"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "character_event_query",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "condition": {"u_query": "Continue?"},
                             "effect": {"message": "query"},
                         },
@@ -22108,7 +22108,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 {
                     "type": "effect_on_condition",
                     "id": "synthetic_game_start_dispatch",
-                    "required_event": "character_wakes_up",
+                    "eoc_type": "EVENT", "required_event": "character_wakes_up",
                     "effect": {
                         "trigger_event": "game_start",
                         "args": ["synthetic-game-version"],
@@ -22212,7 +22212,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "custom_light_shapes",
-                            "required_event": "character_wakes_up",
+                            "eoc_type": "EVENT", "required_event": "character_wakes_up",
                             "effect": [
                                 {
                                     "custom_light_level": 50,
@@ -22370,7 +22370,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "damage_requires_lua_rewrite",
-                            "required_event": "character_wakes_up",
+                            "eoc_type": "EVENT", "required_event": "character_wakes_up",
                             "effect": [
                                 {
                                     "u_deal_damage": "pure",
@@ -22407,7 +22407,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_item_transform",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {"set_browsed": True},
                                 {
@@ -22449,7 +22449,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_item_fault",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {"npc_set_fault": "fault_sample"},
                                 {"u_set_fault": "fault_avatar"},
@@ -22659,7 +22659,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_item_activation",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {"u_activate": "reveal_map"},
                                 {"npc_activate": "transform"},
@@ -22696,7 +22696,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "unsafe_item_activation",
-                            "required_event": "character_wields_item",
+                            "eoc_type": "EVENT", "required_event": "character_wields_item",
                             "effect": [
                                 {"u_activate": {"context_val": "method"}},
                                 {"npc_activate": ""},
@@ -24913,7 +24913,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             {
                 "type": "effect_on_condition",
                 "id": "radius_reentry",
-                "required_event": "game_load",
+                "eoc_type": "EVENT", "required_event": "game_load",
                 "effect": {"run_eocs": "referenced_radius"},
             },
         ], "radius_reentry")
@@ -26412,13 +26412,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "item_beta_message",
-                        "required_event": "character_wields_item",
+                        "eoc_type": "EVENT", "required_event": "character_wields_item",
                         "effect": {"npc_message": "item beta is not a Character"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "monster_beta_message",
-                        "required_event": "character_kills_monster",
+                        "eoc_type": "EVENT", "required_event": "character_kills_monster",
                         "effect": {"npc_message": "monster beta is not a Character"},
                     },
                     {
@@ -26515,25 +26515,25 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "character_kill_message",
-                        "required_event": "character_kills_character",
+                        "eoc_type": "EVENT", "required_event": "character_kills_character",
                         "effect": {"message": "killed Character beta"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "monster_kill_message",
-                        "required_event": "character_kills_monster",
+                        "eoc_type": "EVENT", "required_event": "character_kills_monster",
                         "effect": {"message": "dead monster beta"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "character_ranged_message",
-                        "required_event": "character_ranged_attacks_character",
+                        "eoc_type": "EVENT", "required_event": "character_ranged_attacks_character",
                         "effect": {"message": "ranged Character beta"},
                     },
                     {
                         "type": "effect_on_condition",
                         "id": "monster_ranged_message",
-                        "required_event": "character_ranged_attacks_monster",
+                        "eoc_type": "EVENT", "required_event": "character_ranged_attacks_monster",
                         "effect": {"message": "ranged monster beta"},
                     },
                     {
@@ -27067,7 +27067,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     {
                         "type": "effect_on_condition",
                         "id": "kill_event_has_no_talker_beta",
-                        "required_event": "character_kills_character",
+                        "eoc_type": "EVENT", "required_event": "character_kills_character",
                         "condition": {"npc_at_om_location": "forest"},
                         "effect": {"message": "kill event"},
                     },
@@ -27831,7 +27831,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         })
         generic_source = migrate_lua_first.SourceObject(Path("source.json"), 0, {
             "type": "effect_on_condition", "id": "generic_pair_vehicle_services",
-            "required_event": "character_takes_damage", "effect": effects,
+            "eoc_type": "EVENT", "required_event": "character_takes_damage", "effect": effects,
         })
         with patch.object(
             migrate_lua_first,
@@ -31071,7 +31071,7 @@ assert(context.data.picked==selected)
             {
                 "type": "effect_on_condition",
                 "id": "map_reentry",
-                "required_event": "game_load",
+                "eoc_type": "EVENT", "required_event": "game_load",
                 "effect": {"run_eocs": "referenced_map"},
             },
         ]
@@ -31606,7 +31606,7 @@ assert(context.data.picked==selected)
                         {
                             "type": "effect_on_condition",
                             "id": "event_character_mutation",
-                            "required_event": "character_gains_effect",
+                            "eoc_type": "EVENT", "required_event": "character_gains_effect",
                             "effect": [
                                 {"u_add_effect": "stunned", "duration": "1 turn"},
                                 {
@@ -31622,7 +31622,7 @@ assert(context.data.picked==selected)
                         {
                             "type": "effect_on_condition",
                             "id": "avatar_map_update",
-                            "required_event": "avatar_enters_omt",
+                            "eoc_type": "EVENT", "required_event": "avatar_enters_omt",
                             "effect": {
                                 "mapgen_update": "update_lab",
                                 "target_var": {"context_val": "location"},
@@ -31632,7 +31632,7 @@ assert(context.data.picked==selected)
                         {
                             "type": "effect_on_condition",
                             "id": "monster_damage_effect_cleanup",
-                            "required_event": "monster_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "monster_takes_damage",
                             "condition": {
                                 "and": [
                                     {"u_has_effect": "psi_stunned"},
@@ -31649,7 +31649,7 @@ assert(context.data.picked==selected)
                         {
                             "type": "effect_on_condition",
                             "id": "character_damage_effect_cleanup",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "condition": "has_beta",
                             "effect": {
                                 "if": {
@@ -32388,7 +32388,7 @@ assert(context.data.picked==selected)
                     {
                         "type": "effect_on_condition",
                         "id": "dynamic_item_shapes",
-                        "required_event": "character_wields_item",
+                        "eoc_type": "EVENT", "required_event": "character_wields_item",
                         "effect": [
                             {"u_activate": {"context_val": "method"}},
                             {"u_set_fault": {"context_val": "fault"}, "force": True},
@@ -32567,7 +32567,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "delayed_talker_owner",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "effect": {
                                 "run_eocs": "delayed_talker_target",
                                 "alpha_talker": "npc",
@@ -32628,7 +32628,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "unproven_delayed_talker_owner",
-                            "required_event": "character_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "character_takes_damage",
                             "effect": {
                                 "run_eocs": "unproven_delayed_talker_target",
                                 "alpha_talker": "avatar",
@@ -32723,7 +32723,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "creature_delayed_owner",
-                            "required_event": "monster_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "monster_takes_damage",
                             "effect": {
                                 "run_eocs": "character_delayed_target",
                                 "time_in_future": "2 turns",
@@ -33366,7 +33366,7 @@ assert(#messages==2 and messages[2]=="target")
                         {
                             "type": "effect_on_condition",
                             "id": "monster_damage_species_predicate",
-                            "required_event": "monster_takes_damage",
+                            "eoc_type": "EVENT", "required_event": "monster_takes_damage",
                             "condition": {"u_has_species": "PLANT"},
                             "effect": {"message": "species"},
                         },
@@ -34300,7 +34300,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
                     {
                         "type": "effect_on_condition",
                         "id": "phase_destination",
-                        "required_event": "phase_move",
+                        "eoc_type": "EVENT", "required_event": "phase_move",
                         "effect": {
                             "if": {
                                 "and": [
@@ -39065,7 +39065,7 @@ assert(context.conditions.check==original and context.conditions.check() and con
                         {
                             "type": "effect_on_condition",
                             "id": "remove_item_with_avatar_event",
-                            "required_event": "avatar_moves",
+                            "eoc_type": "EVENT", "required_event": "avatar_moves",
                             "effect": {"u_remove_item_with": "rock"},
                         },
                     ]
