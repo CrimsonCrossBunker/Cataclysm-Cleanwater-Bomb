@@ -31617,8 +31617,8 @@ assert(#calls==0)
 
     def test_control_and_parameterless_world_effects_are_not_silent_success(self) -> None:
         for effect, reason in (
-            ("take_control", "original dialogue participants"),
-            ("take_control_menu", "refreshed participant handles"),
+            ("take_control", "native take_control requires an avatar alpha"),
+            ("take_control_menu", "event-exclusive live game_start Avatar handle"),
             ("clear_dimension", "native object parameters"),
             ("place_override", "native object parameters"),
         ):
@@ -31633,6 +31633,166 @@ assert(#calls==0)
                 self.assertEqual(len(result.converted), 0)
                 self.assertEqual(len(result.partial), 1)
                 self.assertIn(reason, result.files[Path("main.lua")])
+
+    def test_take_control_menu_lowers_only_terminal_live_game_start(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "live_terminal_menu",
+                        "required_event": "game_start",
+                        "effect": "take_control_menu",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_avatar_menu",
+                        "eoc_type": "AVATAR_DEATH",
+                        "effect": "take_control_menu",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "followup_after_menu",
+                        "required_event": "game_start",
+                        "effect": [
+                            "take_control_menu",
+                            {"u_add_effect": "effect_sleep"},
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "conditioned_menu",
+                        "required_event": "game_start",
+                        "condition": {"u_has_trait": "TEST_TRAIT"},
+                        "effect": "take_control_menu",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "deactivate_after_menu",
+                        "required_event": "game_start",
+                        "deactivate_condition": {"u_has_trait": "TEST_TRAIT"},
+                        "effect": "take_control_menu",
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "control_menu_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertIn("live_terminal_menu", result.converted)
+            self.assertNotIn("dead_avatar_menu", result.converted)
+            self.assertNotIn("followup_after_menu", result.converted)
+            self.assertNotIn("conditioned_menu", result.converted)
+            self.assertNotIn("deactivate_after_menu", result.converted)
+            self.assertEqual(
+                main.count(
+                    "services.npcs.open_control_menu(services.characters.avatar())"
+                ),
+                1,
+            )
+            self.assertIn("dead Avatar", main)
+            self.assertIn("invalidated by an avatar identity swap", main)
+            self.assertIn("dead Avatar", report)
+            self.assertTrue(result.todos)
+
+    def test_take_control_callback_object_preserves_native_branch_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "control_with_callbacks",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {
+                        "take_control": {},
+                        "true_eocs": "after_control",
+                        "false_eocs": "control_rejected",
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "control_callbacks_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertNotIn("services.npcs.take_control(", main)
+            self.assertIn("runs true_eocs or false_eocs against the original dialogue", main)
+            self.assertIn("Platform transfer invalidates those handles", report)
+            self.assertTrue(result.todos)
+
+    def test_take_control_menu_child_remains_unlowered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "referenced_menu",
+                        "required_event": "game_start",
+                        "effect": "take_control_menu",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "menu_caller",
+                        "effect": {"run_eocs": ["referenced_menu"]},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "control_menu_child_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertNotIn("referenced_menu", result.converted)
+            self.assertNotIn(
+                "services.npcs.open_control_menu(services.characters.avatar())", main
+            )
+            self.assertIn("reentrant EOC calls can leave", main)
+            self.assertTrue(result.todos)
+
+    def test_take_control_menu_fails_closed_when_game_start_is_reemitted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "live_terminal_menu",
+                        "required_event": "game_start",
+                        "effect": "take_control_menu",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "reemits_game_start",
+                        "effect": {
+                            "trigger_event": "game_start",
+                            "args": ["replayed version"],
+                        },
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "control_menu_reemit_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("live_terminal_menu", result.converted)
+            self.assertNotIn(
+                "services.npcs.open_control_menu(services.characters.avatar())", main
+            )
+            self.assertIn("another static JSON EOC can emit game_start", main)
+            self.assertIn("outside the native live-start lifecycle", report)
+            self.assertTrue(result.todos)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_purchased_animals_keep_pet_state_and_blocked_continuation(self) -> None:
