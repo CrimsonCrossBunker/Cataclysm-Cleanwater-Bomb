@@ -17310,7 +17310,7 @@ assert(not available())
             "services.characters.avatar()", "\n".join(rendered or [])
         )
 
-    def test_translates_bounded_context_pickup_actions(self) -> None:
+    def test_pickup_actions_keep_typed_target_and_limit_todos(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -17350,6 +17350,8 @@ assert(not available())
             self.assertNotIn("services.activities.pickup_from", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertEqual(main.count("services.activities.pickup_at"), 2)
+            self.assertIn("native u_pickup_items targets the alpha Character", main)
+            self.assertIn("native npc_pickup_items targets the beta Character", main)
             self.assertIn("does not prove an absolute map-square value", main)
             self.assertEqual(report.count("does not prove an absolute map-square value"), 2)
             self.assertIn("passes has_float('max_mass') as its gram value", report)
