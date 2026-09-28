@@ -6962,6 +6962,10 @@ def render_talk_topic(
                     action_callback = render_dialogue_item_grant_action_effect(
                         entry["effect"]
                     )
+                if action_callback is None:
+                    action_callback = render_dialogue_drop_stolen_items_action_effect(
+                        entry["effect"]
+                    )
             if action_callback is None:
                 action_callback = render_talk_topic_npc_lose_morale_action(
                     entry, known_morale_ids,
@@ -20898,6 +20902,27 @@ def render_dialogue_item_grant_action_effect(effect: Any) -> LuaRaw | None:
         "    if not trial_success or not context:valid() then return end",
         "    context:grant_item_to_speaker(services.types.id(",
         f"        \"item\", {lua_quote(item_id)}))",
+        "end",
+    ]))
+
+
+def render_dialogue_drop_stolen_items_action_effect(effect: Any) -> LuaRaw | None:
+    """Run the native stolen-item return for a direct TALK response.
+
+    The native string effect invokes its NPC function on dialogue beta, while
+    the function itself searches the current player's inventory.  A direct
+    response callback retains beta; EOC and compound response paths do not
+    establish the same invocation order and remain for manual conversion.
+    """
+    if effect != "drop_stolen_item":
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local beta = context:interlocutor()",
+        '    if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return end',
+        "    if not beta:is_valid() then return end",
+        "    service_value(services.npcs.drop_stolen_items(beta))",
         "end",
     ]))
 

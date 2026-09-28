@@ -19254,6 +19254,43 @@ assert(not available())
                     )
                 )
 
+    def test_real_direct_talk_stolen_item_return_uses_native_beta_service(self) -> None:
+        source_path = Path("data/json/npcs/common_chat/TALK_COMMON_OTHER.json")
+        topics = json.loads(
+            (REPOSITORY_ROOT / source_path).read_text(encoding="utf-8")
+        )
+        direct = next(
+            entry for entry in topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_DISALLOW_KEEP_ITEM"
+        )
+        self.assertEqual(direct["responses"][0]["effect"], "drop_stolen_item")
+        direct_result = migrate_lua_first.MigrationResult()
+        direct_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, direct), direct_result,
+        )
+        self.assertIsNotNone(direct_lua)
+        self.assertIn("on_action = function(context, trial_success)", direct_lua)
+        self.assertIn("local beta = context:interlocutor()", direct_lua)
+        self.assertIn("services.npcs.drop_stolen_items(beta)", direct_lua)
+        self.assertEqual(direct_result.todos, [])
+
+        rich_topic = next(
+            entry for entry in topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_STOLE_ITEM"
+        )
+        rich = dict(rich_topic)
+        rich["responses"] = [rich_topic["responses"][0]]
+        self.assertIn("opinion", rich["responses"][0])
+        self.assertIn("condition", rich["responses"][0])
+        rich_result = migrate_lua_first.MigrationResult()
+        rich_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 1, rich), rich_result,
+        )
+        self.assertNotIn("services.npcs.drop_stolen_items(beta)", rich_lua or "")
+        self.assertTrue(rich_result.todos)
+
     def test_real_talk_spend_cash_shape_and_monster_purchase_remain_bounded(self) -> None:
         talk_test_path = Path("data/json/npcs/TALK_TEST.json")
         talk_test_topics = json.loads(
