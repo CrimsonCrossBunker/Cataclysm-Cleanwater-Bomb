@@ -3015,19 +3015,52 @@ def _lua_literal(value: Any) -> str:
     raise TypeError(f"unsupported Lua literal {type(value).__name__}")
 
 
+def _legacy_item_trade_todo(key: str) -> str | None:
+    return {
+        "quote_npc_trade_item": (
+            "native quote_npc_trade_item only sets prefix_item_id/name/count/cost "
+            "from an item type, count, and NPC trading_price_for_order for its "
+            "alpha/beta participants; "
+            "services.trade.quote requires an exact held Item and holders, then "
+            "returns a QuoteToken instead of those variables"
+        ),
+        "u_buy_item": (
+            "native u_buy_item requires a live beta NPC for buy_from(cost), then "
+            "creates and initializes alpha's reward with group/container/flags/count, "
+            "default ammo, PRESERVE_SPAWN_LOC, force_equip, suppress_message and "
+            "conditional popup rules before ordered false/true EOCs; "
+            "services.trade.commit transfers an existing exact Item instead"
+        ),
+        "u_sell_item": (
+            "native u_sell_item consumes alpha inventory by item type/count or "
+            "charges, requires beta faction/debt behavior, assigns beta faction "
+            "ownership, shows success/failure popups, applies the explicit cost "
+            "as debt on success, and runs false/true EOCs; Platform transfer needs "
+            "the exact selected Item instance"
+        ),
+    }.get(key)
+
+
+def _legacy_item_trade_effect_todo(effect: Any) -> str | None:
+    if isinstance(effect, dict) and set(effect) == {"effect"}:
+        effect = effect["effect"]
+    selectors = {"quote_npc_trade_item", "u_buy_item", "u_sell_item"}
+    if isinstance(effect, str):
+        return _legacy_item_trade_todo(effect) if effect in selectors else None
+    if isinstance(effect, dict):
+        keys = [key for key in selectors if key in effect]
+        if len(keys) == 1:
+            return _legacy_item_trade_todo(keys[0])
+    return None
+
+
 def render_dialogue_trade_effect(
     effect: Any,
     result: MigrationResult,
     location: str,
     label: str,
 ) -> LuaRaw | None:
-    """Lower the bounded dialogue trade effects into Platform callbacks.
-
-    The native dialogue implementation uses the current topic item and the
-    alpha/beta talkers.  PlatformDialogueContext exposes those same semantic
-    values without exposing a borrowed ``dialogue`` pointer, while the trade
-    service preserves native ownership, debt, and currency settlement rules.
-    """
+    """Reject legacy trade callbacks until their native dialogue state is modeled."""
     if isinstance(effect, dict) and set(effect) == {"effect"}:
         effect = effect["effect"]
     if isinstance(effect, str):
@@ -3047,9 +3080,9 @@ def render_dialogue_trade_effect(
         return None
 
     if key == "quote_npc_trade_item":
-        # The dialogue topic only carries a type id, not an exact item
-        # handle.  Do not search the holder or resurrect the old topic-item
-        # accessor in a Platform migration.
+        # Native quote effects set prefixed quote variables from an item type
+        # and NPC pricing.  services.trade.quote instead requires an exact
+        # held Item and returns a transaction token.
         return None
 
     if key in {
@@ -6551,9 +6584,11 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 f"topic {topic_id} response",
             )
             if callback is None:
+                trade_todo = _legacy_item_trade_effect_todo(entry["effect"])
                 result.add_todo(
                     "manual_rewrite",
-                    f"{source.location}: talk topic {topic_id} response effect needs a native callback"
+                    f"{source.location}: talk topic {topic_id} response effect "
+                    f"{trade_todo or 'needs a native callback'}"
                 )
             else:
                 response["on_select"] = callback
@@ -6603,9 +6638,11 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 f"talk topic {topic_id} speaker_effect",
             )
             if callback is None:
+                trade_todo = _legacy_item_trade_effect_todo(raw_effect)
                 result.add_todo(
                     "manual_rewrite",
-                    f"{source.location}: talk topic {topic_id} speaker_effect needs a native callback"
+                    f"{source.location}: talk topic {topic_id} speaker_effect "
+                    f"{trade_todo or 'needs a native callback'}"
                 )
             else:
                 callbacks.append(callback)
@@ -21578,7 +21615,7 @@ def render_static_buy_item_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep type-id purchases as TODOs until an exact Item/holder exists."""
+    """Keep purchases as TODOs until payment and native item creation are modeled."""
     return None
 
 
@@ -21587,26 +21624,8 @@ def render_static_sell_item_effect(
     npc_actor_expression: str | None = None,
     avatar_actor_proven: bool = False,
 ) -> list[str] | None:
-    """Reject same-id sale selection until the source supplies an item handle."""
-    if not npc_actor_proven or not avatar_actor_proven or "u_sell_item" not in effect:
-        return None
-    if set(effect) - {"u_sell_item", "cost", "count"}:
-        return None
-    item_id = effect.get("u_sell_item")
-    if not safe_platform_id(item_id):
-        return None
-    cost = effect.get("cost", 0)
-    count = effect.get("count", 1)
-    if (
-        not isinstance(cost, int) or isinstance(cost, bool) or
-        not -1000000000 <= cost <= 1000000000 or
-        not isinstance(count, int) or isinstance(count, bool) or
-        not 1 <= count <= 1000000
-    ):
-        return None
-    # ``u_sell_item`` carries only a type id.  Calling transfer_matching here
-    # would search for an arbitrary same-id item and could cross a holder or
-    # generation boundary.  Keep the shape as a migration TODO.
+    """Keep type-id sales as TODOs until the selected Item can be proven."""
+    del effect, npc_actor_proven, npc_actor_expression, avatar_actor_proven
     return None
 
 
@@ -21774,9 +21793,10 @@ def render_static_quote_trade_effect(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool, npc_actor_proven: bool,
 ) -> list[str] | None:
-    # A legacy type-id quote cannot save a QuoteToken for a later UI event.
-    # Only a complete same-event descriptor can lower through quote -> commit.
-    return render_static_trade_commit_effect(effect, key)
+    # This native effect writes prefixed quote variables and performs no trade.
+    # A Platform QuoteToken is a transaction snapshot for exact held Items.
+    del effect, key, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_vehicle_service_effect(
@@ -30207,7 +30227,10 @@ def render_eoc(
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
-                    if isinstance(false_value, dict) and any(
+                    trade_todo = _legacy_item_trade_effect_todo(false_value)
+                    if trade_todo is not None:
+                        false_todo = trade_todo
+                    elif isinstance(false_value, dict) and any(
                         key in false_value for key in (
                             "u_remove_item_with", "npc_remove_item_with",
                         )
@@ -32597,14 +32620,16 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the trade operation through typed "
-                        "actor and item services."
+                    trade_todo = _legacy_item_trade_todo(trade_key)
+                    message = trade_todo or (
+                        "trade operation needs exact participants, item handles, "
+                        "holders, and a matching native settlement path"
                     )
+                    lines.append(f"    -- TODO: {message}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs trade actor/item conversion"
+                        f"{message}"
                     )
                     all_effects_converted = False
             elif (
@@ -33522,14 +33547,12 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the item purchase through "
-                        "the typed inventory/trade services."
-                    )
+                    trade_todo = _legacy_item_trade_todo("u_buy_item")
+                    lines.append(f"    -- TODO: {trade_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded item-purchase conversion"
+                        f"{trade_todo}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_sell_item" in effect:
@@ -33542,14 +33565,12 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the item sale through "
-                        "the typed inventory/trade services."
-                    )
+                    trade_todo = _legacy_item_trade_todo("u_sell_item")
+                    lines.append(f"    -- TODO: {trade_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded item-sale conversion"
+                        f"{trade_todo}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and (

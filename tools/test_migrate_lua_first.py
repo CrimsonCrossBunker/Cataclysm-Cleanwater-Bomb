@@ -18141,8 +18141,10 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'services.inventory.give(\n        services.characters.avatar(), services.types.id("item", "apple"), 2',
                 main,
             )
-            self.assertIn("item-purchase conversion", report)
-            self.assertIn("item-sale conversion", report)
+            self.assertIn("native u_buy_item requires a live beta NPC for buy_from(cost)", main)
+            self.assertIn("native u_sell_item consumes alpha inventory by item type/count or charges", main)
+            self.assertIn("native u_buy_item requires a live beta NPC for buy_from(cost)", report)
+            self.assertIn("native u_sell_item consumes alpha inventory by item type/count or charges", report)
             self.assertIn("services.spells.gain_levels(", main)
             self.assertNotIn("actor, spell.id, 2", main)
             self.assertIn("actor, spell.id, 1", main)
@@ -23170,6 +23172,10 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.map.", main)
             self.assertIn("no placeholder call is emitted", main)
             self.assertIn("needs domain-service conversion", report)
+            self.assertIn(
+                "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
+                report,
+            )
 
     def test_proven_beta_faction_trust_uses_the_exact_npc_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23494,6 +23500,122 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.map.", main)
             self.assertIn("no placeholder call is emitted", main)
             self.assertIn("needs domain-service conversion", report)
+
+    def test_legacy_item_trade_effects_remain_todo_without_native_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "legacy_item_trade",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": [
+                            {
+                                "quote_npc_trade_item": "coin",
+                                "count": 2,
+                                "prefix": "offer",
+                            },
+                            {
+                                "u_buy_item": "apple",
+                                "cost": 50,
+                                "count": 2,
+                                "container": "jar",
+                                "flags": ["VARSIZE"],
+                                "true_eocs": "trade_success",
+                                "false_eocs": "trade_failure",
+                            },
+                            {
+                                "u_sell_item": "rock",
+                                "cost": 25,
+                                "count": 1,
+                                "true_eocs": "trade_success",
+                                "false_eocs": "trade_failure",
+                            },
+                        ],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "trade_success",
+                        "effect": "nothing",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "trade_failure",
+                        "effect": "nothing",
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "legacy_item_trade_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
+            for call in (
+                "services.trade.quote(",
+                "services.trade.commit(",
+                "services.inventory.give(",
+                "services.inventory.give_group(",
+                "services.inventory.remove_type(",
+                "services.trade.transfer_matching(",
+            ):
+                self.assertNotIn(call, main)
+            for reason in (
+                "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
+                "native u_buy_item requires a live beta NPC for buy_from(cost)",
+                "native u_sell_item consumes alpha inventory by item type/count or charges",
+            ):
+                self.assertIn(reason, main)
+                self.assertIn(reason, report)
+
+    def test_legacy_item_trade_talk_topic_callbacks_remain_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "talk_topic",
+                    "id": "legacy_item_trade_topic",
+                    "dynamic_line": "Trade.",
+                    "responses": [
+                        {
+                            "text": "Quote",
+                            "effect": {"quote_npc_trade_item": "coin"},
+                        },
+                        {
+                            "text": "Buy",
+                            "effect": {"u_buy_item": "apple", "cost": 50},
+                        },
+                        {
+                            "text": "Sell",
+                            "effect": {"u_sell_item": "rock", "cost": 25},
+                        },
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "legacy_trade_topic_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("on_select", main)
+            self.assertNotIn("services.trade.quote(", main)
+            self.assertNotIn("services.trade.commit(", main)
+            self.assertNotIn("services.inventory.give(", main)
+            self.assertNotIn("services.inventory.remove_type(", main)
+            for reason in (
+                "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
+                "native u_buy_item requires a live beta NPC for buy_from(cost)",
+                "native u_sell_item consumes alpha inventory by item type/count or charges",
+            ):
+                self.assertIn(reason, report)
 
     def test_translates_batch_31_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -32675,6 +32797,14 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertIsNone(
             migrate_lua_first.render_static_quote_trade_effect(
                 {"quote_npc_trade_item": "legacy_item_id"},
+                "quote_npc_trade_item",
+                True,
+                True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_quote_trade_effect(
+                {"quote_npc_trade_item": descriptor},
                 "quote_npc_trade_item",
                 True,
                 True,
