@@ -119,6 +119,7 @@ TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
     CHECK( camps["get"].valid() );
     CHECK( camps["assign_worker"].valid() );
     CHECK( camps["recall_worker"].valid() );
+    CHECK( camps["has_player_owned_camp"].valid() );
     CHECK_FALSE( camps["near"].valid() );
     CHECK_FALSE( camps["player_has_camp"].valid() );
     CHECK_FALSE( camps["start_with"].valid() );
@@ -131,6 +132,57 @@ TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
     CHECK_FALSE( envelope["ok"].get<bool>() );
     CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() ==
            "wrong_subtype" );
+}
+
+TEST_CASE( "lua_platform_player_owned_camp_query_matches_native_condition",
+           "[lua][platform][camp][conditions][semantic]" )
+{
+    avatar &player = get_avatar();
+    REQUIRE( player.get_faction() != nullptr );
+    const auto previous_camps = player.camps;
+    const on_out_of_scope restore_camps( [&player, previous_camps]() {
+        player.camps = previous_camps;
+    } );
+    player.camps.clear();
+
+    const tripoint_abs_omt camp_position{ 17, 19, 0 };
+    platform_test_camp_scope camp_scope(
+        "Native Camp Condition", camp_position, faction_id::NULL_ID() );
+    REQUIRE( camp_scope.camp != nullptr );
+
+    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 66 );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_game_handle_api(
+        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
+        []() {} );
+    cata::lua_platform::install_camp_api(
+        services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
+        []() {}, []() {} );
+
+    const conditional_t native_condition( "u_has_camp" );
+    const dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
+    const sol::protected_function query = services["camps"]["has_player_owned_camp"];
+    const auto compare_with_native = [&]() {
+        const bool native_result = native_condition( conversation );
+        const sol::protected_function_result platform_call = query();
+        REQUIRE( platform_call.valid() );
+        const sol::table result = platform_call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( result["value"].get<bool>() == native_result );
+        return native_result;
+    };
+
+    player.camps.insert( tripoint_abs_omt{ 900, 900, 0 } );
+    CHECK_FALSE( compare_with_native() );
+    player.camps.clear();
+    player.camps.insert( camp_position );
+    CHECK_FALSE( compare_with_native() );
+    camp_scope.camp->set_owner( player.get_faction()->id );
+    CHECK( compare_with_native() );
+    player.camps.clear();
+    CHECK_FALSE( compare_with_native() );
 }
 
 TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
