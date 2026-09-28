@@ -2230,6 +2230,51 @@ def core_body_part_catalog_ids() -> frozenset[str]:
     return frozenset(identifiers)
 
 
+def _morale_type_catalog_parts(
+    objects: Iterable[SourceObject],
+) -> tuple[frozenset[str], frozenset[str]]:
+    identifiers: set[str] = set()
+    deleted: set[str] = set()
+    for source in objects:
+        value = source.value
+        identifier = value.get("id")
+        if value.get("type") != "morale_type" or not safe_platform_id(identifier):
+            continue
+        if "delete" in value:
+            deleted.add(identifier)
+        elif "abstract" not in value:
+            identifiers.add(identifier)
+    return frozenset(identifiers), frozenset(deleted)
+
+
+@functools.lru_cache(maxsize=1)
+def core_morale_type_catalog_ids() -> frozenset[str]:
+    """Read core registered morale IDs from the known core definition files."""
+    source_paths = (
+        REPOSITORY_ROOT / "data" / "json" / "morale_types.json",
+        REPOSITORY_ROOT / "data" / "json" / "effects_on_condition" /
+        "misc_effect_on_condition.json",
+        REPOSITORY_ROOT / "data" / "json" / "effects_on_condition" /
+        "nether_eocs" / "vitrification_effect_on_condition.json",
+    )
+    try:
+        objects = load_objects(source_paths)
+    except ValueError:
+        return frozenset()
+    identifiers, deleted = _morale_type_catalog_parts(objects)
+    return frozenset(identifiers - deleted)
+
+
+def known_morale_type_catalog_ids(
+    objects: Iterable[SourceObject],
+) -> frozenset[str]:
+    """Combine core and loaded morale types, honoring source deletions."""
+    source_ids, deleted = _morale_type_catalog_parts(objects)
+    return frozenset(
+        (core_morale_type_catalog_ids() | source_ids) - deleted
+    )
+
+
 def source_recipe_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
     """Collect only directly identifiable recipe IDs from loaded JSON sources."""
     identifiers: set[str] = set()
@@ -6611,6 +6656,12 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
             "WRAP map; use the object form only in an EOC with a proven avatar",
         )
     if isinstance(effect, dict):
+        if "npc_lose_morale" in effect:
+            return (
+                "manual_rewrite",
+                "npc_lose_morale lowers only for a direct static-topic response "
+                "with one registered morale ID and no other response fields or actions",
+            )
         for selector in ("goto_location", "player_weapon_away"):
             if selector in effect:
                 return (
@@ -6631,22 +6682,74 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
                 "cannot preserve mission mutation ordering",
             )
     if not _node_has_key(effect, "run_eocs"):
-        return None
+        if not (
+            _node_has_key(effect, "true_eocs") or
+            _node_has_key(effect, "false_eocs")
+        ):
+            return None
+        # These callbacks run within the enclosing native action before
+        # talk_effect_t applies opinion and hostility. Platform on_action has
+        # the matching phase, but this renderer cannot yet preserve the
+        # enclosing action's selected EOC branch.
+        return (
+            "manual_rewrite",
+            "native true_eocs/false_eocs run inside talk_effect_t::apply before "
+            "opinion and hostility handling; migrate the enclosing native "
+            "action and its success/failure branch together to preserve ordering",
+        )
     # Native f_run_eocs executes synchronously inside talk_effect_t::apply,
     # before talk_effect_t applies opinion and checks whether the NPC turned
-    # hostile.  PlatformDialogueContext:on_select is dispatched only after
-    # effects.apply has returned, so it cannot preserve that action ordering.
-    # Keep the action TODO until Platform has a session-checked callback slot
-    # inside the native response effect phase.
+    # hostile. Platform on_action has this phase, but this renderer cannot yet
+    # preserve the enclosing action's selected EOC branch.
+    # The Platform on_action slot now runs in this native effect phase, but
+    # translating a nested run_eocs callback alone would lose its enclosing
+    # action and branch result.
     return (
         "manual_rewrite",
         "native run_eocs executes inside talk_effect_t::apply before opinion and "
-        "hostility handling, while Platform on_select runs after the native "
-        "response effect; this needs a session-checked native action-phase hook",
+        "hostility handling; migrate the enclosing native action and its "
+        "success/failure branch together to preserve ordering",
     )
 
 
-def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | None:
+def render_talk_topic_npc_lose_morale_action(
+    entry: Any, known_morale_ids: frozenset[str],
+) -> LuaRaw | None:
+    """Render the one direct response shape with native action-phase parity."""
+    if not isinstance(entry, dict) or set(entry) != {"text", "topic", "effect"}:
+        return None
+    if (
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not entry["topic"]
+    ):
+        return None
+    effect = entry.get("effect")
+    if (
+        not isinstance(effect, dict) or
+        set(effect) != {"npc_lose_morale"} or
+        not safe_platform_id(effect.get("npc_lose_morale")) or
+        effect["npc_lose_morale"] not in known_morale_ids
+    ):
+        return None
+    morale_id = effect["npc_lose_morale"]
+    return LuaRaw(
+        "function(context, _trial_success)\n"
+        "    local morale_target = context:interlocutor()\n"
+        "    if morale_target ~= nil and morale_target.kind == \"creature\" and "
+        "morale_target.subtype == \"npc\" and morale_target:is_valid() then\n"
+        "        service_value(services.morale.remove(morale_target, "
+        "services.types.id(\"morale\", " + lua_quote(morale_id) + ")))\n"
+        "    end\n"
+        "end"
+    )
+
+
+def render_talk_topic(
+    source: SourceObject,
+    result: MigrationResult,
+    known_morale_ids: frozenset[str] = frozenset(),
+) -> str | None:
     value = source.value
     topic_id = value.get("id")
     if not safe_platform_id(topic_id):
@@ -6688,6 +6791,10 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 if set(entry) <= {"text", "topic", "effect"}
                 else None
             )
+            if action_callback is None:
+                action_callback = render_talk_topic_npc_lose_morale_action(
+                    entry, known_morale_ids,
+                )
             if action_callback is not None:
                 response["on_action"] = action_callback
             else:
@@ -28902,6 +29009,7 @@ def render_eoc(
     known_recipe_ids: frozenset[str] = frozenset(),
     character_melee_event_emitted_by_eoc: bool = True,
     npc_becomes_hostile_event_emitted_by_eoc: bool = False,
+    known_morale_ids: frozenset[str] = frozenset(),
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -31144,7 +31252,8 @@ def render_eoc(
                 morale_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_lose_morale"} and
-                safe_platform_id(effect.get("u_lose_morale"))
+                safe_platform_id(effect.get("u_lose_morale")) and
+                effect["u_lose_morale"] in known_morale_ids
             ):
                 lines.append("    services.morale.remove(")
                 lines.append("        actor,")
@@ -31158,13 +31267,14 @@ def render_eoc(
                 ("u_lose_morale" in effect or "npc_lose_morale" in effect)
             ):
                 lines.append(
-                    "    -- TODO: preserve the native const dialogue alpha/beta "
-                    "target; npc_lose_morale requires beta and has no fallback."
+                    "    -- TODO: preserve native alpha/beta selection and a "
+                    "registered morale ID; npc_lose_morale requires beta and "
+                    "has no fallback."
                 )
                 result.add_todo(
                     "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs exact native morale actor provenance"
+                    "needs exact native morale actor and registered-ID proof"
                 )
                 all_effects_converted = False
             elif (
@@ -34945,6 +35055,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
     known_body_part_ids = core_body_part_catalog_ids()
     known_wound_ids = source_wound_catalog_ids(objects)
     known_recipe_ids = core_recipe_catalog_ids() | source_recipe_catalog_ids(objects)
+    known_morale_ids = known_morale_type_catalog_ids(objects)
     (
         content_primary_actor_ids,
         content_character_actor_ids,
@@ -35269,6 +35380,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     known_recipe_ids,
                     character_melee_event_emitted_by_eoc,
                     npc_becomes_hostile_event_emitted_by_eoc,
+                    known_morale_ids,
                 )
             )
         elif kind == "tool_quality":
@@ -35800,7 +35912,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "talk_topic":
-            rendered = render_talk_topic(source, result)
+            rendered = render_talk_topic(
+                source, result, known_morale_ids=known_morale_ids,
+            )
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind in UNREGISTERED_CONTENT_TYPES:
@@ -35997,7 +36111,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
         needs_character_has_any_bionic_or_capacity or
         needs_character_weapon_helpers or
         needs_character_has_profession or
-        any("service_value(" in chunk for chunk in behaviour_chunks)
+        any("service_value(" in chunk for chunk in behaviour_chunks) or
+        any("service_value(" in chunk for chunk in catalog_chunks["talk_topic"])
     ):
         main.extend(
             (

@@ -8246,6 +8246,127 @@ assert(#events == 9)
         self.assertIn("avatar_overflow_morale effect #0", todo_text)
         self.assertIn("avatar_negative_morale_duration effect #0", todo_text)
 
+    def test_direct_npc_lose_morale_response_uses_native_action_stage(self) -> None:
+        known_morale_ids = migrate_lua_first.core_morale_type_catalog_ids()
+        self.assertIn("morale_feeling_good", known_morale_ids)
+
+        def render_response(response: dict[str, object]) -> tuple[str | None, str]:
+            source = migrate_lua_first.SourceObject(
+                Path("source.json"), 0, {
+                    "type": "talk_topic", "id": "npc_morale_topic",
+                    "dynamic_line": "A static line.", "responses": [response],
+                },
+            )
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_talk_topic(
+                source, result, known_morale_ids=known_morale_ids,
+            )
+            return rendered, "\n".join(todo.text for todo in result.todos)
+
+        bounded_response = {
+            "text": "Remove morale", "topic": "TALK_DONE",
+            "effect": {"npc_lose_morale": "morale_feeling_good"},
+        }
+        rendered, todo_text = render_response(bounded_response)
+        self.assertIn("on_action = function(context, _trial_success)", rendered or "")
+        self.assertIn("context:interlocutor()", rendered or "")
+        self.assertIn('morale_target.subtype == "npc"', rendered or "")
+        self.assertIn(
+            'services.types.id("morale", "morale_feeling_good")', rendered or "",
+        )
+        self.assertIn("service_value(services.morale.remove(", rendered or "")
+        self.assertNotIn("on_select =", rendered or "")
+        self.assertEqual(todo_text, "")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source_path = Path(temporary) / "talk_topic.json"
+            source_path.write_text(
+                json.dumps([{
+                    "type": "talk_topic", "id": "npc_morale_topic",
+                    "dynamic_line": "A static line.",
+                    "responses": [bounded_response],
+                }]),
+                encoding="utf-8",
+            )
+            migrated = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source_path]), "morale_dialogue_mod",
+            )
+            main = migrated.files[Path("main.lua")]
+        self.assertIn("local function service_value(result)", main)
+        self.assertIn("on_action = function(context, _trial_success)", main)
+
+        unsupported_response = {
+            "text": "No loaded native effect",
+            "effect": {"npc_lose_morale": "not_a_registered_morale"},
+        }
+        unsupported_lua, unsupported_todos = render_response(unsupported_response)
+        self.assertNotIn("on_action =", unsupported_lua or "")
+        self.assertIn("npc_lose_morale lowers only", unsupported_todos)
+
+    def test_npc_lose_morale_eoc_callers_stay_todo_without_action_proof(self) -> None:
+        known_morale_ids = migrate_lua_first.core_morale_type_catalog_ids()
+        eoc_id = "npc_morale_direct_callback"
+        eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "effect_on_condition", "id": eoc_id,
+                "effect": {"npc_lose_morale": "morale_feeling_good"},
+            },
+        )
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "npc_morale_topic",
+                "responses": [{"true_eocs": eoc_id}],
+            },
+        )
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [topic, eoc]
+        )
+        # This provenance helper alone is broader than the renderer's
+        # supported response fields; it must not authorize EOC lowering.
+        self.assertIn(eoc_id, pair_ids)
+        topic_result = migrate_lua_first.MigrationResult()
+        topic_lua = migrate_lua_first.render_talk_topic(topic, topic_result)
+        self.assertNotIn("on_action =", topic_lua or "")
+        self.assertTrue(topic_result.todos)
+
+        eoc_result = migrate_lua_first.MigrationResult()
+        eoc_lua = migrate_lua_first.render_eoc(
+            eoc, eoc_result,
+            npc_dialogue_mission_pair_ids=pair_ids,
+            known_morale_ids=known_morale_ids,
+        )
+        self.assertNotIn("services.morale.remove(", eoc_lua)
+        self.assertTrue(eoc_result.todos)
+
+    def test_real_talk_morale_callback_shape_keeps_native_ordering_todo(self) -> None:
+        path = REPOSITORY_ROOT / "data/json/npcs/godco/visitors/TALK_CARAVAN_GUARD_PREDATORY.json"
+        sources = migrate_lua_first.load_objects([path])
+        topic = next(
+            source for source in sources
+            if source.value.get("type") == "talk_topic" and
+            source.value.get("id") == "TALK_CARAVAN_GUARD_PREDATORY"
+        )
+        response = next(
+            entry for entry in topic.value["responses"]
+            if isinstance(entry, dict) and
+            isinstance(entry.get("effect"), dict) and
+            "true_eocs" in entry["effect"] and
+            "false_eocs" in entry["effect"]
+        )
+        bounded_topic = migrate_lua_first.SourceObject(
+            topic.path, topic.index, {**topic.value, "responses": [response]},
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(bounded_topic, result)
+        todo_text = "\n".join(todo.text for todo in result.todos)
+
+        self.assertIn("EOC_BRIBE_LATER_TRUE_EFFECT", response["effect"]["true_eocs"])
+        self.assertIn("EOC_BRIBE_20_FALSE_EFFECT", response["effect"]["false_eocs"])
+        self.assertNotIn("on_select =", rendered or "")
+        self.assertNotIn("on_action =", rendered or "")
+        self.assertIn("native u_buy_item requires a live beta NPC", todo_text)
+        self.assertIn("ordered false/true EOCs", todo_text)
+
     def test_morale_game_start_effects_require_event_exclusive_dispatch(self) -> None:
         for caller_effect in (
             {"run_eocs": "referenced_morale"},
