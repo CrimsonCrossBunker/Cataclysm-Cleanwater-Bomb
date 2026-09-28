@@ -16713,12 +16713,13 @@ assert(not available())
                                 },
                                 {"map_spawn_item": "radio"},
                                 "player_weapon_away",
+                                {"player_weapon_away": {}},
                                 {"set_trap": "tr_beartrap", "loc": {"context_val": "loc"}},
                                 {"set_trap": "tr_rollmat"},
                                 {"signal_hordes": 50, "loc": {"context_val": "loc"}},
                                 {
                                     "signal_hordes": {"context_val": "loc"},
-                                    "signal_power": 61,
+                                    "signal_power": {"math": ["_signal_power"]},
                                 },
                                 {
                                     "reveal_route": {"context_val": "loc"},
@@ -16764,10 +16765,28 @@ assert(not available())
             self.assertIn("native u_spawn_item uses receive_item/i_add_or_drop", report)
             self.assertIn("native map_spawn_item loc is a legacy var_info lookup", report)
             self.assertIn(
-                "player_weapon_away needs the exact wielded Item handle",
+                "player_weapon_away needs a generic current-weapon operation",
                 main,
             )
             self.assertNotIn("services.items.transfer", main)
+            weapon_todos = [
+                todo for todo in result.todos
+                if "player_weapon_away needs a generic current-weapon operation"
+                in todo.message
+            ]
+            self.assertEqual(len(weapon_todos), 1)
+            self.assertEqual(weapon_todos[0].category, "platform_gap")
+            self.assertIn(
+                "native WRAP player_weapon_away accepts only a string",
+                main,
+            )
+            invalid_weapon_todos = [
+                todo for todo in result.todos
+                if "native WRAP player_weapon_away accepts only a string"
+                in todo.message
+            ]
+            self.assertEqual(len(invalid_weapon_todos), 1)
+            self.assertEqual(invalid_weapon_todos[0].category, "semantic_choice")
             for legacy_map_write in (
                 "services.world.tile(",
                 "services.world.set_terrain(",
@@ -16780,12 +16799,28 @@ assert(not available())
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.hordes.signal", main)
             self.assertEqual(
-                main.count("signal_hordes has no transactional Platform API"),
-                2,
+                main.count("signal_hordes needs a typed overmap broadcast service"),
+                1,
             )
             self.assertEqual(
-                report.count("signal_hordes has no transactional Platform API"),
-                2,
+                report.count("signal_hordes needs a typed overmap broadcast service"),
+                1,
+            )
+            signal_todos = [
+                todo for todo in result.todos if "signal_hordes" in todo.message
+            ]
+            self.assertEqual(len(signal_todos), 2)
+            self.assertEqual(
+                sorted(todo.category for todo in signal_todos),
+                ["platform_gap", "semantic_choice"],
+            )
+            self.assertIn(
+                "native signal_hordes requires an object var_info target",
+                main,
+            )
+            self.assertEqual(
+                report.count("native signal_hordes requires an object var_info target"),
+                1,
             )
             self.assertNotIn("services.hordes.advance", main)
             self.assertNotIn("services.overmap.reveal_route", main)
@@ -17463,6 +17498,7 @@ assert(not available())
                                 {"u_set_guard_pos": {}},
                                 {"npc_set_guard_pos": {}},
                                 "goto_location",
+                                {"goto_location": {}},
                                 {"u_deal_damage": "pure", "amount": 10, "bodypart": "torso"},
                                 {"npc_deal_damage": "pure", "amount": 15, "bodypart": "torso"},
                                 {"trigger_event": "custom_event"},
@@ -17492,15 +17528,23 @@ assert(not available())
             )
             self.assertIn("TODO: translate the NPC goal", main)
             self.assertIn("TODO: translate the NPC guard position", main)
-            self.assertIn("services.npcs.destinations(actor)", main)
+            self.assertIn("TODO: goto_location cannot preserve native camp ordering", main)
+            self.assertNotIn("services.npcs.destinations(", main)
+            self.assertNotIn("services.npcs.plan_travel(", main)
+            self.assertNotIn("services.npcs.set_goal(", main)
+            self.assertNotIn("services.npcs.set_first_topic(", main)
+            goto_todos = [
+                todo for todo in result.todos if "goto_location" in todo.message
+            ]
+            self.assertEqual(len(goto_todos), 2)
+            self.assertEqual(
+                sorted(todo.category for todo in goto_todos),
+                ["platform_gap", "semantic_choice"],
+            )
             self.assertIn(
-                'ccb.presentation.choose("Select a destination", choices)',
+                "native WRAP goto_location accepts only a string",
                 main,
             )
-            self.assertIn("services.npcs.plan_travel(", main)
-            self.assertIn("services.npcs.set_goal(", main)
-            self.assertNotIn("TODO: translate goto_location", main)
-            self.assertIn("services.npcs.set_goal", main)
             self.assertNotIn("services.npcs.set_guard_pos", main)
             self.assertNotIn("services.npcs.set_omt_destination", main)
             self.assertNotIn("services.relocation.local_at", main)
@@ -17524,6 +17568,117 @@ assert(not available())
                 "explicit camp, manager, and worker handles", main
             )
             self.assertNotIn("needs review", report)
+
+    def test_real_common_dialogue_selector_effects_remain_classified(self) -> None:
+        selector_counts = {"goto_location": 0, "player_weapon_away": 0}
+        source_paths = (
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_GREET.json",
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_ALLY.json",
+        )
+        for path in source_paths:
+            for source in migrate_lua_first.load_objects([path]):
+                if source.value.get("type") != "talk_topic":
+                    continue
+                responses = source.value.get("responses", [])
+                for selector in selector_counts:
+                    matching = [
+                        response for response in responses
+                        if isinstance(response, dict)
+                        and response.get("effect") == selector
+                    ]
+                    if not matching:
+                        continue
+                    selector_counts[selector] += len(matching)
+                    # Keep the repository response object intact while giving
+                    # this focused response renderer one safe topic ID.
+                    focused_topic = dict(source.value)
+                    focused_topic["id"] = f"selector_probe_{selector}_{source.index}"
+                    focused_topic["responses"] = matching
+                    focused_source = migrate_lua_first.SourceObject(
+                        source.path, source.index, focused_topic
+                    )
+                    result = migrate_lua_first.MigrationResult()
+                    rendered = migrate_lua_first.render_talk_topic(
+                        focused_source, result
+                    )
+                    self.assertIsNotNone(rendered)
+                    effect_todos = [
+                        todo for todo in result.todos
+                        if "response effect" in todo.message
+                        and selector in todo.message
+                    ]
+                    self.assertEqual(len(effect_todos), len(matching))
+                    self.assertTrue(
+                        all(todo.category == "platform_gap" for todo in effect_todos)
+                    )
+                    if selector == "goto_location":
+                        self.assertNotIn("services.npcs.destinations(", rendered)
+                        self.assertNotIn("services.npcs.set_goal(", rendered)
+                    else:
+                        self.assertNotIn("services.equipment.unequip(", rendered)
+                        self.assertIn(
+                            "services.inventory.weapon_state(avatar)", rendered
+                        )
+        self.assertEqual(
+            selector_counts,
+            {"goto_location": 2, "player_weapon_away": 1},
+        )
+
+        invalid_topic = migrate_lua_first.SourceObject(
+            Path("invalid_dialogue.json"), 0, {
+                "type": "talk_topic",
+                "id": "invalid_selector_shapes",
+                "dynamic_line": "Choose an action.",
+                "responses": [
+                    {"text": "Travel", "effect": {"goto_location": {}}},
+                    {"text": "Stow", "effect": {"player_weapon_away": {}}},
+                ],
+            },
+        )
+        invalid_result = migrate_lua_first.MigrationResult()
+        invalid_output = migrate_lua_first.render_talk_topic(
+            invalid_topic, invalid_result
+        )
+        invalid_todos = [
+            todo for todo in invalid_result.todos
+            if "native WRAP" in todo.message
+        ]
+        self.assertEqual(len(invalid_todos), 2)
+        self.assertTrue(
+            all(todo.category == "semantic_choice" for todo in invalid_todos)
+        )
+        self.assertNotIn("services.npcs.destinations(", invalid_output)
+        self.assertNotIn("services.inventory.weapon_state(", invalid_output)
+
+    def test_real_scenario_horde_signal_remains_a_typed_service_gap(self) -> None:
+        path = (
+            REPOSITORY_ROOT
+            / "data/json/effects_on_condition/scenario_specific_eocs.json"
+        )
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([path])
+            if entry.value.get("id") == "EOC_scenario_eldritch_ire"
+        )
+        signal = next(
+            effect for effect in source.value["effect"]
+            if isinstance(effect, dict) and "signal_hordes" in effect
+        )
+        self.assertEqual(
+            signal["signal_hordes"],
+            {"context_val": "zombie_horde_target_scen"},
+        )
+        self.assertEqual(signal["signal_power"], {"math": ["7000 + 1000"]})
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(source, result)
+        gap_todos = [
+            todo for todo in result.todos
+            if "signal_hordes needs a typed overmap broadcast service" in todo.message
+        ]
+        self.assertEqual(len(gap_todos), 1)
+        self.assertEqual(gap_todos[0].category, "platform_gap")
+        self.assertNotIn("services.hordes.alert_entity(", rendered)
+        self.assertNotIn("services.hordes.signal(", rendered)
 
     def test_avatar_goal_and_guard_effects_keep_native_noop_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

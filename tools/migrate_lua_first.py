@@ -566,47 +566,6 @@ def render_static_light_override(effect: dict[str, Any]) -> list[str] | None:
     return call
 
 
-def render_static_goto_location_effect(
-    target_expression: str | None,
-) -> list[str] | None:
-    """Render the legacy no-argument NPC destination menu as Lua workflow.
-
-    ``goto_location`` discovers visible player camps and the player's route
-    destinations, asks Lua to present a choice, previews the typed path, and
-    commits the NPC's travelling goal only after confirmation.
-    """
-    if target_expression is None:
-        return None
-    return [
-        "    local destination_page = service_value(",
-        f"        services.npcs.destinations({target_expression}))",
-        "    local choices = {}",
-        "    for index, destination in ipairs(destination_page.items) do",
-        "        choices[index] = {",
-        "            id = destination.id,",
-        "            label = destination.label,",
-        "        }",
-        "    end",
-        '    local selected_id = ccb.presentation.choose("Select a destination", choices)',
-        "    if selected_id ~= nil then",
-        "        for _, destination in ipairs(destination_page.items) do",
-        "            if destination.id == selected_id then",
-        "                local plan = service_value(services.npcs.plan_travel(",
-        f"                    {target_expression}, destination.position))",
-        "                if plan.reachable and ccb.presentation.confirm(",
-        '                    "Accept this path and destination?" ) then',
-        "                    service_value(services.npcs.set_goal(",
-        f"                        {target_expression}, destination.position))",
-        "                elseif not plan.reachable then",
-        '                    ccb.presentation.notice("That is not a valid destination.")',
-        "                end",
-        "                break",
-        "            end",
-        "        end",
-        "    end",
-    ]
-
-
 def lua_boolean(value: bool) -> str:
     return "true" if value else "false"
 
@@ -6322,9 +6281,10 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
 
     Native ``u_has_intelligence`` reads ``const_actor(false)->int_cur()``.
     Platform dialogue callbacks expose that same alpha participant as
-    ``PlatformDialogueContext:speaker()``. Camp predicates use the exact
-    native global-player query or the live dialogue beta exposed as
-    ``interlocutor()``. Other condition shapes remain fail-closed in the caller.
+    ``PlatformDialogueContext:speaker()``. ``u_can_stow_weapon`` uses the
+    exact avatar and the matching read-only weapon-state query. Camp predicates
+    use the exact native global-player query or the live dialogue beta exposed
+    as ``interlocutor()``. Other condition shapes remain fail-closed in the caller.
     """
     if condition == "u_has_camp":
         return LuaRaw(
@@ -6343,6 +6303,16 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
             "            if not beta:is_valid() then return false end\n"
             "            local result = services.npcs.get(beta)\n"
             "            return result.ok and result.value.has_assigned_camp == true\n"
+            "        end"
+        )
+    if condition == "u_can_stow_weapon":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local avatar = services.characters.avatar()\n"
+            "            if avatar == nil or not avatar:is_valid() then return false end\n"
+            "            local weapon = services.inventory.weapon_state(avatar)\n"
+            "            return weapon.ok and weapon.value.can_stow == true\n"
             "        end"
         )
     if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:
@@ -6366,7 +6336,29 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     return LuaRaw(callback)
 
 
-def _talk_topic_effect_todo_reason(effect: Any) -> str | None:
+def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
+    if effect == "goto_location":
+        return (
+            "platform_gap",
+            "goto_location cannot preserve native camp ordering, the NPC's saved "
+            "first topic, or goal/path clearing after a declined or unreachable route "
+            "with current typed services",
+        )
+    if effect == "player_weapon_away":
+        return (
+            "platform_gap",
+            "player_weapon_away needs a generic current-weapon operation that "
+            "deactivates the exact weapon bionic or force-moves a physical wielded "
+            "item through native remove_weapon/i_add behavior",
+        )
+    if isinstance(effect, dict):
+        for selector in ("goto_location", "player_weapon_away"):
+            if selector in effect:
+                return (
+                    "semantic_choice",
+                    f"native WRAP {selector} accepts only a string; this "
+                    "object-shaped form has no native effect semantics",
+                )
     if not _node_has_key(effect, "run_eocs"):
         return None
     # Native f_run_eocs executes synchronously inside talk_effect_t::apply,
@@ -6376,9 +6368,10 @@ def _talk_topic_effect_todo_reason(effect: Any) -> str | None:
     # Keep the action TODO until Platform has a session-checked callback slot
     # inside the native response effect phase.
     return (
+        "manual_rewrite",
         "native run_eocs executes inside talk_effect_t::apply before opinion and "
         "hostility handling, while Platform on_select runs after the native "
-        "response effect; this needs a session-checked native action-phase hook"
+        "response effect; this needs a session-checked native action-phase hook",
     )
 
 
@@ -6425,13 +6418,21 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             )
             if callback is None:
                 trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
-                response_effect_reason = _talk_topic_effect_todo_reason(
+                response_effect_todo = _talk_topic_effect_todo(
                     entry["effect"]
                 )
+                if trade_todo is not None:
+                    response_effect_category = "manual_rewrite"
+                    response_effect_reason = trade_todo
+                elif response_effect_todo is not None:
+                    response_effect_category, response_effect_reason = response_effect_todo
+                else:
+                    response_effect_category = "manual_rewrite"
+                    response_effect_reason = "needs a native callback"
                 result.add_todo(
-                    "manual_rewrite",
+                    response_effect_category,
                     f"{source.location}: talk topic {topic_id} response effect "
-                    f"{trade_todo or response_effect_reason or 'needs a native callback'}"
+                    f"{response_effect_reason}"
                 )
             else:
                 response["on_select"] = callback
@@ -31265,15 +31266,30 @@ def render_eoc(
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} {map_gap}"
                 )
                 all_effects_converted = False
-            elif avatar_actor_proven and effect == "player_weapon_away":
+            elif effect == "player_weapon_away":
+                weapon_gap = (
+                    "player_weapon_away needs a generic current-weapon operation "
+                    "for the global avatar that "
+                    "deactivates the exact weapon bionic or force-moves a "
+                    "physical wielded item through native remove_weapon/i_add behavior"
+                )
                 lines.append(
-                    "    -- TODO: player_weapon_away needs the exact wielded Item "
-                    "handle plus explicit source and destination holders."
+                    f"    -- TODO: {weapon_gap}."
                 )
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "player_weapon_away needs a complete equipment transaction descriptor"
+                    "platform_gap",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {weapon_gap}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "player_weapon_away" in effect:
+                reason = (
+                    "native WRAP player_weapon_away accepts only a string; this "
+                    "object-shaped form has no native effect semantics"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
             elif (
@@ -31298,14 +31314,22 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
-                lines.append(
-                    "    -- TODO: signal_hordes has no transactional Platform API; "
-                    "preserve this legacy effect for manual conversion."
-                )
+                if isinstance(effect.get("signal_hordes"), dict):
+                    category = "platform_gap"
+                    reason = (
+                        "signal_hordes needs a typed overmap broadcast service for "
+                        "an absolute map-square target and evaluated signal strength"
+                    )
+                else:
+                    category = "semantic_choice"
+                    reason = (
+                        "native signal_hordes requires an object var_info target; "
+                        "this shape has no native effect semantics"
+                    )
+                lines.append(f"    -- TODO: {reason}.")
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "signal_hordes has no transactional Platform API"
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
@@ -32907,31 +32931,34 @@ def render_eoc(
                         "needs a bounded guard-variable conversion"
                     )
                     all_effects_converted = False
-            elif (
-                effect == "goto_location" or
-                (
-                    isinstance(effect, dict) and
-                    set(effect) == {"goto_location"} and
-                    effect.get("goto_location") in ({}, None)
-                )
-            ):
-                rendered = render_static_goto_location_effect(
-                    "actor" if npc_actor_proven else None
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
+            elif effect == "goto_location":
+                if npc_actor_proven:
+                    category = "platform_gap"
+                    reason = (
+                        "goto_location cannot preserve native camp ordering, the "
+                        "NPC's saved first topic, or goal/path clearing after a "
+                        "declined or unreachable route with current typed services"
+                    )
                 else:
-                    lines.append(
-                        "    -- TODO: translate goto_location through a typed "
-                        "overmap navigation service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a proven NPC dialogue actor"
-                    )
-                    all_effects_converted = False
+                    category = "manual_rewrite"
+                    reason = "goto_location needs a proven NPC dialogue actor"
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "goto_location" in effect:
+                reason = (
+                    "native WRAP goto_location accepts only a string; this "
+                    "object-shaped form has no native effect semantics"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif isinstance(effect, dict) and "custom_light_level" in effect:
                 rendered = render_static_light_override(effect)
                 if rendered is not None:
