@@ -24461,22 +24461,93 @@ def render_static_pickup_items(
 def render_static_inventory_consume_sum(
     effect: dict[str, Any],
     key: str,
-    avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_alpha_proven: bool,
+    event_exclusive_npc_alpha_fallback_proven: bool,
 ) -> list[str] | None:
-    # Native d.actor(is_npc) selects dialogue alpha for u_ and beta for npc_;
-    # its mutable beta lookup falls back to alpha when beta is absent.  These
-    # EOC proof flags alone cannot establish that pair/fallback behavior for
-    # each call site.  Native then iterates one unordered set of owned item
-    # locations spanning inventory, nearby map items, and vehicle cargo.  The
-    # ordered rows share one fractional coverage accumulator, and full-item
-    # removal spills contents before removing the item; partial charge stacks
-    # are mutated in place.  The effect has no transaction or rollback.  The
-    # crafting-inventory consume_sum service does not expose this candidate
-    # set or preserve its selection, ownership, spill, and incremental
-    # mutation semantics, so even static positive rows are not equivalent.
-    del effect, key, avatar_actor_proven, npc_event_character_actor_proven
-    return None
+    """Lower bounded inventory mutations only for event-exclusive actor sources.
+
+    This preserves item mutations, but does not reproduce the native debug
+    diagnostic emitted when mutable dialogue beta falls back to alpha.
+    """
+    if (
+        key not in {"u_consume_item_sum", "npc_consume_item_sum"} or
+        set(effect) != {key}
+    ):
+        return None
+    requested = effect.get(key)
+    if not isinstance(requested, list) or len(requested) > 128:
+        return None
+
+    entries: list[tuple[str, int | float]] = []
+    for row in requested:
+        if (
+            not isinstance(row, dict) or "item" not in row or
+            set(row) - {"item", "amount"}
+        ):
+            return None
+        item_id = row.get("item")
+        amount = finite_number_literal(row.get("amount", 1))
+        if (
+            not bounded_platform_id(item_id) or amount is None or
+            not 0 < amount <= 1000000000
+        ):
+            return None
+        entries.append((item_id, amount))
+
+    if key == "u_consume_item_sum":
+        if not event_exclusive_live_avatar_alpha_proven:
+            return None
+        participant = "alpha"
+        alpha_expression = "actor"
+        beta_expression = "nil"
+        expected_subtype = "avatar"
+    else:
+        if not event_exclusive_npc_alpha_fallback_proven:
+            return None
+        # npc_becomes_hostile constructs a one-Character dialogue with the
+        # live event NPC as alpha. Native mutable actor(true) falls back to
+        # alpha when beta is absent on this exact producer. Its debug
+        # diagnostic is not mirrored by the Platform mutation service. Direct
+        # topic callbacks remain TODO until the generated runtime adapter
+        # exposes their actual alpha/beta talkers.
+        alpha_expression = "actor"
+        beta_expression = "nil"
+        participant = "beta"
+        expected_subtype = "npc"
+
+    lines = [
+        "    do",
+        f"        local consume_alpha = {alpha_expression}",
+        f"        local consume_beta = {beta_expression}",
+        "        local function is_character(value)",
+        "            return value ~= nil and value.kind == \"creature\" and",
+        "                (value.subtype == \"avatar\" or value.subtype == \"character\" or",
+        "                 value.subtype == \"npc\")",
+        "        end",
+        f"        local target = "
+        f"{('consume_alpha' if participant == 'alpha' else 'consume_beta')} "
+        f"or {('consume_beta' if participant == 'alpha' else 'consume_alpha')}",
+        f"        if is_character(target) and target.subtype == {lua_quote(expected_subtype)} then",
+        "            service_value(services.inventory.consume_dialogue_sum(",
+        f"                consume_alpha, consume_beta, {lua_quote(participant)}, {{",
+    ]
+    if participant == "beta":
+        lines.insert(
+            1,
+            "        -- Native missing-beta fallback debug logging is not mirrored.",
+        )
+    lines.extend(
+        "                    { item = services.types.id(\"item\", "
+        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }"
+        + ("," if index + 1 < len(entries) else "")
+        for index, (item_id, amount) in enumerate(entries)
+    )
+    lines.extend([
+        "                }))",
+        "        end",
+        "    end",
+    ])
+    return lines
 
 
 def render_static_set_field(
@@ -32124,27 +32195,43 @@ def render_eoc(
                     if "u_consume_item_sum" in effect
                     else "npc_consume_item_sum"
                 )
+                event_exclusive_actor_source_proven = (
+                    has_event_trigger and
+                    eoc_id not in eoc_referenced_ids and
+                    not dynamic_eoc_dispatch_present
+                )
                 rendered = render_static_inventory_consume_sum(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key,
+                    (
+                        event_exclusive_actor_source_proven and
+                        required_event == "game_start" and avatar_actor_proven
+                    ),
+                    (
+                        event_exclusive_actor_source_proven and
+                        required_event == "npc_becomes_hostile" and
+                        npc_event_character_actor_proven and
+                        npc_actor_expression == "actor" and
+                        npc_talker_ui_actor_expression == "actor"
+                    ),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: native weighted consumption scans one unordered "
-                        "owned inventory/map/vehicle set, shares one coverage fraction, "
-                        "and spills whole-item contents; alpha/beta fallback and "
-                        "incremental mutation semantics also differ."
+                        "    -- TODO: consume_item_sum needs a static bounded row list "
+                        "and an event-exclusive live native alpha/beta Character source; "
+                        "referenced or dynamically dispatched EOCs and direct dialogue "
+                        "callbacks remain unproven Platform talker contexts."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs native alpha/beta selection including mutable beta "
-                        "fallback, an unordered owned inventory/map/vehicle candidate "
-                        "set, shared ordered-row coverage, and incremental spill/removal "
-                        "semantics without rollback"
+                        "consume_item_sum requires at most 128 static item rows with "
+                        "finite positive literal amounts <= 1000000000 and a live "
+                        "event-exclusive native actor source; only unreferenced, "
+                        "non-dynamic game_start alpha-avatar and npc_becomes_hostile "
+                        "beta-to-alpha fallback are currently proven"
                     )
                     all_effects_converted = False
             elif (

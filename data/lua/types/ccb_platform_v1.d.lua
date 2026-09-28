@@ -9373,6 +9373,19 @@ function CcbItemsApi.clear_old_owner(item_handle) end
 ---@class CcbInventoryApi
 local CcbInventoryApi = {}
 
+---@class CcbInventoryConsumeSumEntry
+---@field item GameId GameId<item> Static item type ID. Unknown IDs are accepted and match no items, as in native itype_id lookup.
+---@field amount number Finite positive value no greater than 1000000000.
+
+---@class CcbInventoryConsumeDialogueSumValue
+---@field coverage number Shared native weighted coverage; it may exceed 1 after the final row.
+---@field fulfilled boolean Whether shared coverage reached at least 1.
+---@field changed boolean Whether any item or charge stack changed.
+---@field removed_items integer Number of whole item locations removed.
+---@field modified_charge_stacks integer Number of charge stacks partially modified.
+
+---@alias CcbInventoryDialogueParticipant 'alpha'|'beta'
+
 ---@class CcbInventoryWeaponState
 ---@field armed boolean True when the Character has a wielded item selected for attacks.
 ---@field can_stow boolean Native stow result, including weapon-bionic deactivation and current storage capacity.
@@ -9516,6 +9529,18 @@ function CcbInventoryApi.hand_in(character, recipient, item_type, count, charges
 ---@param entries table
 ---@return CcbResult
 function CcbInventoryApi.consume_sum(character, entries) end
+---Apply native u_consume_item_sum/npc_consume_item_sum inventory mutations to the selected Character.
+---Scans owned recursive inventory, nearby map items, and loaded vehicle cargo as one unordered candidate set.
+---Rows are processed in order with shared fractional coverage. Whole-item removal spills contents; charge stacks may be decremented in place. Mutation is incremental and has no rollback.
+---Accepts an empty array or up to 128 dense rows with finite positive amounts <= 1000000000. Unknown item IDs are native no-match values.
+---When the requested alpha/beta participant is absent, use the other provided participant, matching mutable dialogue::actor fallback.
+---Native debug logging for the missing-beta fallback is not reproduced.
+---@param alpha GameHandle|nil Exact live dialogue alpha Character, when proven by the caller.
+---@param beta GameHandle|nil Exact live dialogue beta Character, when proven by the caller.
+---@param participant CcbInventoryDialogueParticipant Native role requested by the effect.
+---@param entries CcbInventoryConsumeSumEntry[] Ordered dense weighted item rows.
+---@return CcbResult
+function CcbInventoryApi.consume_dialogue_sum(alpha, beta, participant, entries) end
 
 ---@alias CcbEquipmentOperation 'wield'|'wear'|'unequip'
 
