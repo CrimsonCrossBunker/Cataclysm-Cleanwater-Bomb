@@ -23678,7 +23678,9 @@ assert(calls == 0)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(any("talk topic drop_stolen_item_topic" in entry
+                                for entry in result.partial))
             self.assertEqual(main.count("services.npcs.drop_stolen_items(beta)"), 1)
             self.assertIn(
                 'beta.kind == "creature" and beta.subtype == "npc"', main
@@ -23687,7 +23689,7 @@ assert(calls == 0)
                 "drop_stolen_item's native wrapper requires a dialogue beta NPC",
                 main,
             )
-            self.assertIn("direct talk-topic beta NPC proof", report)
+            self.assertIn("drop_stolen_item needs a proven live beta NPC pair", report)
 
     def test_npc_drop_weapon_requires_direct_talk_topic_beta_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -23728,14 +23730,90 @@ assert(calls == 0)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.partial), 3)
+            self.assertTrue(any("talk topic npc_drop_weapon_topic" in entry
+                                for entry in result.partial))
             self.assertEqual(main.count("services.npcs.drop_weapon(beta)"), 1)
             self.assertIn(
                 'beta.kind == "creature" and beta.subtype == "npc"', main
             )
             self.assertNotIn('services.npcs.orders.run(beta, "drop_weapon")', main)
             self.assertIn("drop_weapon targets native dialogue beta", main)
-            self.assertIn("direct talk-topic beta NPC proof", report)
+            self.assertIn("drop_weapon needs a proven live beta NPC pair", report)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_wrapped_npc_item_effects_use_only_proven_melee_beta(self) -> None:
+        effects = {
+            "drop_stolen_item": "services.npcs.drop_stolen_items(beta)",
+            "drop_weapon": "services.npcs.drop_weapon(beta)",
+            "player_weapon_drop": "services.characters.drop_weapon(services.characters.avatar())",
+        }
+        for effect, call in effects.items():
+            with self.subTest(effect=effect):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), 0, {
+                        "type": "effect_on_condition",
+                        "id": f"melee_{effect}",
+                        "required_event": "character_melee_attacks_character",
+                        "effect": effect,
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(
+                    source, result,
+                    character_melee_event_emitted_by_eoc=False,
+                )
+                self.assertIn("context.actors.interlocutor", rendered)
+                self.assertIn(call, rendered)
+                self.assertEqual(len(result.converted), 1)
+
+                no_pair = migrate_lua_first.render_eoc(
+                    source, migrate_lua_first.MigrationResult(),
+                    character_melee_event_emitted_by_eoc=True,
+                )
+                self.assertNotIn(call, no_pair)
+                self.assertIn("-- TODO:", no_pair)
+
+                script = """
+local calls = 0
+local avatar = {}
+local services = {
+    npcs = {
+        drop_stolen_items = function(beta)
+            assert(beta.subtype == "npc"); calls = calls + 1; return true
+        end,
+        drop_weapon = function(beta)
+            assert(beta.subtype == "npc"); calls = calls + 1; return true
+        end,
+    },
+    characters = {
+        avatar = function() return avatar end,
+        drop_weapon = function(value)
+            assert(value == avatar); calls = calls + 1; return true
+        end,
+    },
+}
+local function service_value(value) return value end
+local runtime = { handler = function() end, on = function() end }
+local migrated_eoc_functions = {}
+RENDERED
+local context = { actors = {
+    attacker = { kind = "creature", subtype = "avatar" },
+    interlocutor = { kind = "creature", subtype = "npc" },
+} }
+HANDLER(context)
+assert(calls == 1)
+context.actors.interlocutor = { kind = "creature", subtype = "monster" }
+HANDLER(context)
+assert(calls == 1)
+""".replace("RENDERED", rendered).replace(
+                    "HANDLER", f"migrated_eoc_melee_{effect}"
+                )
+                execution = subprocess.run(
+                    ["lua", "-"], input=script, text=True,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual(execution.returncode, 0, execution.stderr)
 
     def test_can_stow_weapon_conditions_require_proven_native_characters(self) -> None:
         u_expression = migrate_lua_first.render_eoc_condition_expression(

@@ -30010,6 +30010,11 @@ def render_eoc(
         required_event == "character_melee_attacks_character" and
         not character_melee_event_emitted_by_eoc
     )
+    wrapped_npc_beta_expression = (
+        "context.actors.interlocutor" if safe_space_character_beta_actor_proven
+        else "context.actors.beta" if npc_dialogue_mission_pair_proven
+        else None
+    )
     # A narrowly migratable u_sell_item callback needs the actual runtime
     # EOC bridge to carry both native dialogue Characters.  The melee-to-
     # Character sender supplies alpha and its live target as interlocutor;
@@ -33430,11 +33435,13 @@ def render_eoc(
             elif effect == "drop_stolen_item":
                 # The native static WRAP selects dialogue beta and no-ops when
                 # beta is not an NPC.  Preserve that exact participant
-                # requirement; ordinary event actors do not prove this role.
-                if npc_dialogue_mission_pair_proven:
+                # requirement; only a direct pair or pre-damage melee pair
+                # proves this role in the current migration.
+                if wrapped_npc_beta_expression is not None:
                     lines.extend([
                         "    do",
-                        "        local beta = context and context.actors and context.actors.beta",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
                         '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
                         "            service_value(services.npcs.drop_stolen_items(beta))",
                         "        end",
@@ -33444,25 +33451,26 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: drop_stolen_item's native wrapper requires a "
-                        "dialogue beta NPC; this EOC has no direct talk-topic pair proof."
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "drop_stolen_item needs a direct talk-topic beta NPC proof"
+                        "drop_stolen_item needs a proven live beta NPC pair"
                     )
                     all_effects_converted = False
             elif effect == "player_weapon_drop":
                 # The static WRAP still requires talk_effect_fun_t's beta NPC
                 # before it invokes player_weapon_drop, even though the native
                 # function itself targets the global player Character.  Only
-                # direct talk-topic callbacks prove that beta pair; the
+                # direct topic or pre-damage melee pair proves that beta; the
                 # runtime subtype guard preserves the wrapper's no-op for a
                 # non-NPC beta.
-                if npc_dialogue_mission_pair_proven:
+                if wrapped_npc_beta_expression is not None:
                     lines.extend([
                         "    do",
-                        "        local beta = context and context.actors and context.actors.beta",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
                         '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
                         "            service_value(services.characters.drop_weapon(services.characters.avatar()))",
                         "        end",
@@ -33472,12 +33480,12 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: player_weapon_drop's native wrapper requires a "
-                        "dialogue beta NPC; this EOC has no direct talk-topic pair proof."
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "player_weapon_drop needs a direct talk-topic beta NPC proof"
+                        "player_weapon_drop needs a proven live beta NPC pair"
                     )
                     all_effects_converted = False
             elif effect == "drop_weapon":
@@ -33485,10 +33493,11 @@ def render_eoc(
                 # talk_effect_fun_t, so alpha-only event actors cannot be
                 # substituted here.  Preserve its get_npc() no-op for any
                 # beta that is not an exact NPC GameHandle.
-                if npc_dialogue_mission_pair_proven:
+                if wrapped_npc_beta_expression is not None:
                     lines.extend([
                         "    do",
-                        "        local beta = context and context.actors and context.actors.beta",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
                         '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
                         "            service_value(services.npcs.drop_weapon(beta))",
                         "        end",
@@ -33503,7 +33512,7 @@ def render_eoc(
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "drop_weapon needs a direct talk-topic beta NPC proof"
+                        "drop_weapon needs a proven live beta NPC pair"
                     )
                     all_effects_converted = False
             elif isinstance(effect, str) and effect in {
