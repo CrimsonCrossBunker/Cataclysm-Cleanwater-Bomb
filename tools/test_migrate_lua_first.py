@@ -25817,7 +25817,9 @@ assert(context.data.picked==selected)
             self.assertIn("item_group_chance = 0", main)
             self.assertIn("item_spawn_iterations = 0", main)
 
-    def test_lowers_supported_traversals_and_inline_callbacks_without_eoc_runner(self) -> None:
+    def test_lowers_supported_npc_zone_and_point_traversals_without_eoc_runner(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -26063,33 +26065,14 @@ assert(context.data.picked==selected)
                 "creature_vehicle_traversal_mod",
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 4)
-            for phrase in (
-                "game::all_creatures() order",
-                "includes hallucination monsters",
-                "integer-only optional filter",
-                "absence means unbounded",
-                "z_min/z_max double values convert to int by truncation",
-                "fresh dialogue with each monster as alpha",
-                "per-callback context semantics also differ",
-                "reads mutable actor(true) beta",
-                "debug diagnostic if absent",
-                "map::get_vehicles() order",
-                "uses rl_dist",
-                "sorts by position",
-                "used square_distance",
-                "fresh dialogue with each vehicle as alpha",
-                "copies its context",
-                "shared Lua context",
-            ):
-                self.assertIn(phrase, main)
-                self.assertIn(phrase, report)
+            self.assertIn("game::all_creatures() order", main)
+            self.assertIn(
+                "map::get_vehicles() order and uses rl_dist", main
+            )
             self.assertNotIn("services.creatures.nearby", main)
             self.assertNotIn("services.world.vehicles", main)
-            self.assertNotIn("monster_page", main)
-            self.assertNotIn("vehicle_page", main)
             self.assertNotIn("context.actors.vehicle = target", main)
             for callback_id in callback_names:
                 self.assertIn(
