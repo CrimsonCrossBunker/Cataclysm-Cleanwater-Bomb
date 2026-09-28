@@ -6334,10 +6334,29 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
 
     Native ``u_has_intelligence`` reads ``const_actor(false)->int_cur()``.
     Platform dialogue callbacks expose that same alpha participant as
-    ``PlatformDialogueContext:speaker()``.  A positive threshold makes the
-    native base-talker value of zero exactly false for non-Character talkers;
-    other condition shapes remain fail-closed in the caller.
+    ``PlatformDialogueContext:speaker()``. Camp predicates use the exact
+    native global-player query or the live dialogue beta exposed as
+    ``interlocutor()``. Other condition shapes remain fail-closed in the caller.
     """
+    if condition == "u_has_camp":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local result = services.camps.has_player_owned_camp()\n"
+            "            return result.ok and result.value == true\n"
+            "        end"
+        )
+    if condition == "npc_has_assigned_camp":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local result = services.npcs.get(beta)\n"
+            "            return result.ok and result.value.has_assigned_camp == true\n"
+            "        end"
+        )
     if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:
         return None
     threshold = finite_number_literal(condition["u_has_intelligence"])
@@ -27307,6 +27326,24 @@ def render_eoc_condition_expression(
         (" or " in npc_query_actor or " and " in npc_query_actor) else
         npc_query_actor
     )
+    if condition == "u_has_camp":
+        # Native f_u_has_camp ignores dialogue alpha and reads the global
+        # player's recorded camp coordinates and current faction ownership.
+        return "service_value(services.camps.has_player_owned_camp())"
+    if condition == "npc_has_assigned_camp":
+        # Native f_npc_has_assigned_camp reads const_actor(true).  Only the
+        # event-exclusive melee proof supplies that live beta to this EOC.
+        if not npc_melee_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "beta.subtype ~= \"npc\" or not beta:is_valid() then return false end; "
+            "local result = services.npcs.get(beta); "
+            "return result.ok and result.value.has_assigned_camp == true "
+            "end)()"
+        )
     if condition in (
         "u_train_styles", "npc_train_styles",
         "u_train_spells", "npc_train_spells",
@@ -27339,14 +27376,9 @@ def render_eoc_condition_expression(
         # npc_has_activity's valid member-object form also reads native beta;
         # no current EOC callback proves a live Character in that slot.
         return None
-    # ``npc_actor_proven`` proves a Character/NPC handle, not a dialogue beta.
-    # Native const_actor(true) does not fall back to alpha when beta is absent,
-    # so only an expression that explicitly names the beta can be queried.
-    npc_assigned_camp_actor = None
-    if npc_actor_expression == "context.actors.beta":
-        npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
-    elif npc_actor_expression == "(context.actors and context.actors.beta) or actor":
-        npc_assigned_camp_actor = "context and context.actors and context.actors.beta"
+    # npc_has_assigned_camp reads const_actor(true).  A callable EOC needs an
+    # event-exclusive beta proof; a single Character or inferred topic pair
+    # cannot stand in for that slot.
     if condition in ("u_train_skills", "npc_train_skills"):
         if not avatar_actor_proven or not npc_actor_proven or npc_query_actor is None:
             return None
@@ -27712,22 +27744,8 @@ def render_eoc_condition_expression(
                 "context.actors.item ~= nil and "
                 "service_value(services.items.snapshot(context.actors.item)).relative_rot > 1"
             )
-        if condition == "npc_has_assigned_camp":
-            if npc_assigned_camp_actor is None:
-                return None
-            return (
-                "(function(candidate) "
-                'if candidate == nil or candidate.kind ~= "creature" then return false end; '
-                'if service_value(services.creatures.snapshot(candidate)).kind ~= "npc" then return false end; '
-                'return service_value(services.npcs.get(candidate)).has_assigned_camp '
-                "end)(" + npc_assigned_camp_actor + ")"
-            )
-        # These legacy predicates need a dedicated native query with explicit
-        # location/mission/item semantics.  Do not emit a made-up generic
-        # service call: returning ``None`` makes render_eoc record a visible
-        # TODO and keeps the generated Lua executable against the declared API.
-        if condition == "u_has_camp":
-            return None
+        # Other legacy predicates need dedicated native queries with explicit
+        # location/mission/item semantics; keep them as visible TODOs.
         if avatar_actor_proven and condition == "u_has_activity":
             return "service_value(services.activities.snapshot(actor)).active"
         if weapon_actor_proven and condition == "u_has_weapon":
@@ -29915,12 +29933,7 @@ def render_eoc(
     false_effect_converted = True
     if condition_expression is None:
         condition_todo = "translate the legacy condition into a Lua predicate"
-        if raw_condition == "u_has_camp":
-            condition_todo = (
-                "translate u_has_camp only with an explicit camp handle and "
-                "authorized manager handle"
-            )
-        elif isinstance(raw_condition, str) and raw_condition in {
+        if isinstance(raw_condition, str) and raw_condition in {
             "mission_complete", "mission_failed", "mission_incomplete",
             "npc_mission_complete", "npc_mission_failed",
             "npc_mission_incomplete",

@@ -10662,6 +10662,8 @@ assert(not available())
         # accidentally becoming unconditional Platform responses.
         unsupported_conditions = (
             "has_assigned_mission",
+            {"npc_has_assigned_camp": "ignored"},
+            {"u_has_camp": "ignored"},
             {"u_has_intelligence": "dynamic_var"},
             {"u_has_intelligence": 0},
             {"u_has_intelligence": -1},
@@ -12268,7 +12270,7 @@ assert(not available())
         self.assertIn("mission_id:is_valid()", expression)
         self.assertNotIn("has_active(actor", expression)
 
-    def test_translates_u_has_camp_in_any_event(self) -> None:
+    def test_translates_u_has_camp_with_exact_global_query(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             cases = [
@@ -12296,16 +12298,11 @@ assert(not available())
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), len(cases))
-            self.assertNotIn("services.camps.", main)
             self.assertEqual(
-                report.count(
-                    "condition TODO: translate u_has_camp only with an explicit "
-                    "camp handle and authorized manager handle"
-                ),
+                main.count("service_value(services.camps.has_player_owned_camp())"),
                 len(cases),
             )
+            self.assertNotIn("u_has_camp condition TODO", report)
             self.assertNotIn("run_eoc", main)
 
     def test_dynamic_or_unproven_u_has_camp_shapes_stay_partial(self) -> None:
@@ -12333,7 +12330,7 @@ assert(not available())
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
-            self.assertNotIn("services.camps.", main)
+            self.assertNotIn("services.camps.has_player_owned_camp()", main)
             self.assertEqual(
                 report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 1,
@@ -12368,27 +12365,21 @@ assert(not available())
             self.assertIn("condition TODO: translate", report)
             self.assertIn("---@field has_assigned_camp boolean", declarations)
 
-    def test_npc_assigned_camp_uses_only_explicit_beta_and_preserves_not(self) -> None:
-        predicate = migrate_lua_first.render_eoc_condition_expression(
-            {"not": "npc_has_assigned_camp"},
-            npc_actor_proven=True,
-            npc_actor_expression="(context.actors and context.actors.beta) or actor",
-        )
-
-        self.assertIsNotNone(predicate)
-        self.assertIn("not (", predicate)
-        self.assertIn(
-            "end)(context and context.actors and context.actors.beta)",
-            predicate,
-        )
-        self.assertNotIn("or actor", predicate)
-        self.assertIn("candidate == nil", predicate)
-        self.assertIn('kind ~= "npc"', predicate)
+    def test_npc_assigned_camp_requires_live_event_beta_or_dialogue_callback(self) -> None:
+        for expression in ("actor", "context.actors.beta"):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    "npc_has_assigned_camp",
+                    npc_actor_proven=True,
+                    npc_actor_expression=expression,
+                )
+            )
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 "npc_has_assigned_camp",
                 npc_actor_proven=True,
-                npc_actor_expression="actor",
+                npc_actor_expression="context.actors.beta",
+                npc_dialogue_pair_proven=True,
             )
         )
         self.assertIsNone(
@@ -12396,6 +12387,76 @@ assert(not available())
                 "npc_has_assigned_camp"
             )
         )
+        predicate = migrate_lua_first.render_eoc_condition_expression(
+            {"not": "npc_has_assigned_camp"},
+            npc_melee_beta_actor_proven=True,
+        )
+        self.assertIsNotNone(predicate)
+        self.assertIn("not (", predicate)
+        self.assertIn("context.actors.interlocutor", predicate)
+        self.assertIn('beta.kind ~= "creature"', predicate)
+        self.assertIn('beta.subtype ~= "npc"', predicate)
+        self.assertIn("services.npcs.get(beta)", predicate)
+
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 8, {
+                "type": "talk_topic", "id": "assigned_camp_response",
+                "dynamic_line": "Camp response",
+                "responses": [
+                    {"text": "Show the camp response", "condition": "npc_has_assigned_camp"},
+                    {"text": "Show global camp response", "condition": "u_has_camp"},
+                ],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        self.assertIn("dialogue_context:interlocutor()", rendered)
+        self.assertIn('beta.subtype ~= "npc"', rendered)
+        self.assertIn("services.npcs.get(beta)", rendered)
+        self.assertIn("services.camps.has_player_owned_camp()", rendered)
+        self.assertFalse(result.todos)
+
+    def test_npc_assigned_camp_only_lowers_event_exclusive_live_interlocutors(self) -> None:
+        melee = migrate_lua_first.SourceObject(
+            Path("source.json"), 9, {
+                "type": "effect_on_condition", "id": "melee_assigned_camp",
+                "required_event": "character_melee_attacks_character",
+                "condition": "npc_has_assigned_camp",
+                "effect": {"message": "assigned"},
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(melee, result)
+        self.assertIn("context.actors.interlocutor", rendered)
+        self.assertIn('beta.subtype ~= "npc"', rendered)
+        self.assertIn("services.npcs.get(beta)", rendered)
+        self.assertNotIn("condition TODO", "\n".join(result.todos))
+
+        for kwargs in (
+            {"eoc_referenced_ids": frozenset({"melee_assigned_camp"})},
+            {"dynamic_eoc_dispatch_present": True},
+        ):
+            with self.subTest(provenance=kwargs):
+                blocked_result = migrate_lua_first.MigrationResult()
+                blocked_rendered = migrate_lua_first.render_eoc(
+                    melee, blocked_result, **kwargs,
+                )
+                self.assertNotIn("services.npcs.get(beta)", blocked_rendered)
+                self.assertIn("condition TODO", "\n".join(blocked_result.todos))
+
+        alpha_only = migrate_lua_first.SourceObject(
+            Path("source.json"), 10, {
+                "type": "effect_on_condition", "id": "alpha_assigned_camp",
+                "required_event": "npc_becomes_hostile",
+                "condition": "npc_has_assigned_camp",
+                "effect": {"message": "alpha is not beta"},
+            },
+        )
+        alpha_result = migrate_lua_first.MigrationResult()
+        alpha_rendered = migrate_lua_first.render_eoc(alpha_only, alpha_result)
+        self.assertNotIn("services.npcs.get(actor)", alpha_rendered)
+        self.assertIn("condition TODO", "\n".join(alpha_result.todos))
 
     def test_renders_butchery_requirement_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

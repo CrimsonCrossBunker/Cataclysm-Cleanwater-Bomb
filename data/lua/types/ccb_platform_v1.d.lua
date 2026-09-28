@@ -7581,6 +7581,9 @@ function CcbCampsApi.remove(camp, manager) end
 ---@return CcbResult result `value` is a bounded CcbCampListPage.
 function CcbCampsApi.list(center, options) end
 
+---@return CcbResult result `value` is a boolean from the native global player camp-list and current-faction ownership query.
+function CcbCampsApi.has_player_owned_camp() end
+
 ---@param camp GameHandle Exact live camp handle.
 ---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
 ---@return CcbResult result `value` is a detached CcbCampSnapshot.

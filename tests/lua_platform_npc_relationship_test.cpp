@@ -349,6 +349,7 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     beta.set_fac( faction_id( "hells_raiders" ) );
     alpha.set_attitude( NPCATT_FOLLOW );
     beta.set_attitude( NPCATT_KILL );
+    beta.assigned_camp = tripoint_abs_omt{ 31, 32, 0 };
     beta.rules.set_flag( ally_rule::allow_pick_up );
     beta.rules.set_flag( ally_rule::allow_bash );
     beta.rules.set_specific_override_state( ally_rule::allow_bash, false );
@@ -385,6 +386,7 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
                 R"({"npc_rule":"UNKNOWN_RULE"})" ).get_object() );
     const conditional_t npc_bash_override_condition( json_loader::from_string(
                 R"({"npc_override":"allow_bash"})" ).get_object() );
+    const conditional_t npc_assigned_camp_condition( "npc_has_assigned_camp" );
     const conditional_t npc_unknown_override_condition( json_loader::from_string(
                 R"({"npc_override":"UNKNOWN_RULE"})" ).get_object() );
 
@@ -425,6 +427,20 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const sol::table beta_result = beta_call;
     REQUIRE( beta_result["ok"].get<bool>() );
     const sol::table beta_snapshot = beta_result["value"];
+    CHECK( npc_assigned_camp_condition( context ) ==
+           beta_snapshot["has_assigned_camp"].get<bool>() );
+    beta.assigned_camp.reset();
+    const bool native_without_assignment = npc_assigned_camp_condition( context );
+    const sol::protected_function_result beta_without_assignment_call =
+        get_npc( beta_handle );
+    REQUIRE( beta_without_assignment_call.valid() );
+    const sol::table beta_without_assignment_result = beta_without_assignment_call;
+    REQUIRE( beta_without_assignment_result["ok"].get<bool>() );
+    CHECK( native_without_assignment ==
+           beta_without_assignment_result["value"]["has_assigned_camp"].get<bool>() );
+    const dialogue avatar_beta_context( get_talker_for( alpha ),
+                                        get_talker_for( player ) );
+    CHECK_FALSE( npc_assigned_camp_condition( avatar_beta_context ) );
     const sol::protected_function ai_rules = services["npcs"]["ai_rules"];
     const sol::protected_function_result beta_rules_call = ai_rules( beta_handle );
     REQUIRE( beta_rules_call.valid() );
