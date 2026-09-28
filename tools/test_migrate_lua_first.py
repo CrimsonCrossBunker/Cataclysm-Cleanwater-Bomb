@@ -21099,12 +21099,13 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.mapgen.apply(", main)
             self.assertIn(
-                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
-                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
-                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
-                "or collision=false must be rewritten by the author; unsupported "
-                "mirror/rotation transforms must also be "
-                "rewritten by the author.",
+                "TODO: mapgen_update gets its target from a runtime "
+                "var_info abs_ms lookup or mission target search; native "
+                "execution can schedule timed updates and passes the selected "
+                "mission to its best-effort runner. services.mapgen.apply is "
+                "immediate and mission-free, requires a typed OMT, a registered "
+                "transaction-safe update, and a complete loaded footprint, and "
+                "returns errors where native misses are ignored.",
                 main,
             )
             self.assertIn("services.overmap.reveal(", main)
@@ -21472,12 +21473,13 @@ assert(not pcall(function() return U_EXPRESSION end))
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             todo = (
-                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
-                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
-                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
-                "or collision=false must be rewritten by the author; unsupported "
-                "mirror/rotation transforms must also be "
-                "rewritten by the author."
+                "TODO: mapgen_update gets its target from a runtime "
+                "var_info abs_ms lookup or mission target search; native "
+                "execution can schedule timed updates and passes the selected "
+                "mission to its best-effort runner. services.mapgen.apply is "
+                "immediate and mission-free, requires a typed OMT, a registered "
+                "transaction-safe update, and a complete loaded footprint, and "
+                "returns errors where native misses are ignored."
             )
 
             self.assertEqual(result.converted, [])
@@ -21488,7 +21490,35 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.world.", main)
             self.assertNotIn("mapgen update target", report)
 
-    def test_mapgen_update_uses_explicit_omt_token_and_applies_offsets(self) -> None:
+    def test_mapgen_update_real_var_info_target_stays_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "mapgen_update_variable_target",
+                    "required_event": "game_start",
+                    "effect": {
+                        "mapgen_update": "update_pond",
+                        "target_var": {"u_val": "mapgen_abs_ms_target"},
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "mapgen_variable_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn("var_info abs_ms lookup or mission target search", main)
+            self.assertNotIn("services.mapgen.apply(", main)
+
+    def test_mapgen_update_literal_omt_migrator_shape_stays_fail_closed(self) -> None:
+        # This static object was accepted by the old lowerer; it is not a native
+        # var_info descriptor and exists here only as a migration regression.
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -21515,21 +21545,20 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertIn("services.overmap.tile_token(", main)
-            self.assertIn("services.mapgen.update_token(", main)
-            self.assertIn("services.mapgen.apply(", main)
-            self.assertIn("services.coords.tripoint_abs_omt(14, 24, 0)", main)
-            self.assertIn(
-                "services.coords.tripoint_rel_omt(-1, 1, 0)", main
-            )
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn("var_info abs_ms lookup or mission target search", main)
+            self.assertIn("passes the selected mission", main)
+            self.assertNotIn("services.overmap.tile_token(", main)
+            self.assertNotIn("services.mapgen.update_token(", main)
+            self.assertNotIn("services.mapgen.apply(", main)
 
     def test_mapgen_update_rejects_unsafe_shapes_as_todos(self) -> None:
         def make_effect(**overrides: object) -> dict[str, object]:
             effect: dict[str, object] = {
                 "mapgen_update": "update_static",
-                "target_var": {"abs_omt": [10, 20, 0]},
+                "target_var": {"u_val": "mapgen_abs_ms_target"},
                 "cancel_on_collision": True,
             }
             effect.update(overrides)
@@ -21539,7 +21568,6 @@ assert(not pcall(function() return U_EXPRESSION end))
             make_effect(mapgen_update={"context_val": "update_id"}),
             make_effect(mapgen_update=42),
             make_effect(target_var={"context_val": "target"}),
-            make_effect(target_var={"u_val": "target"}),
             make_effect(
                 target_var={
                     "coordinate_space": "local",
@@ -21578,11 +21606,13 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             main = result.files[Path("main.lua")]
             todo = (
-                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
-                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
-                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
-                "or collision=false must be rewritten by the author; unsupported "
-                "mirror/rotation transforms must also be rewritten by the author."
+                "TODO: mapgen_update gets its target from a runtime "
+                "var_info abs_ms lookup or mission target search; native "
+                "execution can schedule timed updates and passes the selected "
+                "mission to its best-effort runner. services.mapgen.apply is "
+                "immediate and mission-free, requires a typed OMT, a registered "
+                "transaction-safe update, and a complete loaded footprint, and "
+                "returns errors where native misses are ignored."
             )
 
             self.assertEqual(main.count(todo), len(unsafe_effects))
@@ -21591,7 +21621,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.mapgen.apply(", main)
             self.assertNotIn("services.world.", main)
 
-    def test_mapgen_update_static_collision_cancel_true_lowers(self) -> None:
+    def test_mapgen_update_static_literal_target_never_uses_transaction_api(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -21617,13 +21647,12 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.mapgen.apply(", main)
-            self.assertIn("cancel_on_collision = true", main)
-            self.assertNotIn("mirror_horizontal", main)
-            self.assertNotIn("mirror_vertical", main)
-            self.assertNotIn("rotation", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn("var_info abs_ms lookup or mission target search", main)
+            self.assertNotIn("services.overmap.tile_token(", main)
+            self.assertNotIn("services.mapgen.apply(", main)
             self.assertNotIn("services.world.", main)
 
     def test_inventory_lowering_rejects_dynamic_or_out_of_contract_shapes(self) -> None:
@@ -27135,11 +27164,13 @@ assert(context.data.picked==selected)
             self.assertNotIn("services.overmap.matches", main)
             self.assertNotIn("services.mapgen.apply(", main)
             self.assertIn(
-                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
-                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
-                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
-                "or collision=false must be rewritten by the author; unsupported "
-                "mirror/rotation transforms must also be rewritten by the author.",
+                "TODO: mapgen_update gets its target from a runtime "
+                "var_info abs_ms lookup or mission target search; native "
+                "execution can schedule timed updates and passes the selected "
+                "mission to its best-effort runner. services.mapgen.apply is "
+                "immediate and mission-free, requires a typed OMT, a registered "
+                "transaction-safe update, and a complete loaded footprint, and "
+                "returns errors where native misses are ignored.",
                 main,
             )
             self.assertIn("context.actors.beta", main)
@@ -33685,7 +33716,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
         coordinate = {"abs_ms": [12, -7, 0]}
         mutation = {
             "set_terrain": "t_floor",
-            "set_furniture": "f_null",
             "u_set_field": "fd_fire",
             "location": coordinate,
             "target_var": coordinate,
@@ -33703,7 +33733,6 @@ assert(context.conditions.check==original and context.conditions.check() and con
         self.assertEqual(main.count("services.map.edit("), 1)
         self.assertIn("map_tile_snapshot.revision", main)
         self.assertIn('services.types.id("terrain", "t_floor")', main)
-        self.assertIn('services.types.id("furniture", "f_null")', main)
         self.assertIn('services.types.id("field", "fd_fire")', main)
 
         for trap_effect in (
@@ -33741,6 +33770,35 @@ assert(context.conditions.check==original and context.conditions.check() and con
         terrain_main = "\n".join(terrain or [])
         self.assertIn("services.map.edit(", terrain_main)
         self.assertNotIn("services.world.set_", terrain_main)
+
+        for furniture_effect in (
+            {"set_furniture": "f_null", "location": coordinate},
+            {"set_furniture": "f_null", "location": coordinate, "radius": 0},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_static_set_terrain_or_furniture(
+                    furniture_effect, "set_furniture"
+                )
+            )
+        furniture_result = migrate_lua_first.MigrationResult()
+        furniture_source = migrate_lua_first.SourceObject(Path("furniture.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "furniture_gap",
+            "required_event": "game_start",
+            "effect": {
+                "set_furniture": "f_null",
+                "location": coordinate,
+                "radius": 0,
+            },
+        })
+        furniture_main = migrate_lua_first.render_eoc(
+            furniture_source, furniture_result
+        )
+        self.assertNotIn("services.map.edit(", furniture_main)
+        self.assertIn("native radius neighborhood (default radius=1", furniture_main)
+        self.assertIn("failed-placement behavior differs from map.edit", furniture_main)
+        self.assertEqual(len(furniture_result.todos), 1)
+        self.assertEqual(furniture_result.todos[0].category, "platform_gap")
 
         holder = migrate_lua_first.render_explicit_map_tile_holder(coordinate)
         self.assertIsNotNone(holder)
