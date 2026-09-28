@@ -1210,7 +1210,7 @@ struct declarative_platform_dialogue_response {
 declarative_platform_dialogue_response declarative_platform_dialogue_response_from_table(
     const std::shared_ptr<runtime> &owner, const std::string &topic_id,
     ::dialogue &d, const sol::table &descriptor,
-    const bool debug_ignore_conditionals )
+    const bool debug_ignore_conditionals, const bool repeat_response )
 {
     std::optional<sol::protected_function> on_select;
     declarative_platform_dialogue_response generated;
@@ -1249,9 +1249,15 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         generated.condition_result = evaluate_platform_dialogue_boolean(
                                          owner, d, topic_id, condition, "response condition" );
     }
-    bool show_anyway = descriptor.get_or( "show_always", false );
+    // Native gen_repeat_response only tests condition. It does not apply
+    // show_always, show_condition, failure explanations, or the debug override.
+    if( repeat_response && generated.condition_exists && !generated.condition_result ) {
+        generated.response.truetext = translation();
+        return generated;
+    }
+    bool show_anyway = !repeat_response && descriptor.get_or( "show_always", false );
     const sol::object show_condition = descriptor.raw_get<sol::object>( "show_condition" );
-    if( show_condition.valid() && show_condition.get_type() != sol::type::nil ) {
+    if( !repeat_response && show_condition.valid() && show_condition.get_type() != sol::type::nil ) {
         show_anyway = show_anyway || evaluate_platform_dialogue_boolean(
                           owner, d, topic_id, show_condition, "response show_condition" );
     }
@@ -1598,7 +1604,8 @@ void add_declarative_platform_dialogue_response(
     const bool debug_ignore_conditionals = d.debug_ignore_conditionals && !repeat_item;
     declarative_platform_dialogue_response generated =
         declarative_platform_dialogue_response_from_table(
-            owner, topic_id, d, descriptor, debug_ignore_conditionals );
+            owner, topic_id, d, descriptor, debug_ignore_conditionals,
+            repeat_item.has_value() );
     if( repeat_item ) {
         generated.response.success.next_topic.item_type = *repeat_item;
         generated.response.failure.next_topic.item_type = *repeat_item;

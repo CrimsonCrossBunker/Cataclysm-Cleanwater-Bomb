@@ -1957,12 +1957,24 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
               "for_item": "test_rock",
               "response": { "text": "Repeat item", "switch": true }
             })" );
+    const JsonValue false_repeat_json = json_loader::from_string(
+            R"({
+              "for_item": "test_rock",
+              "response": {
+                "text": "Hidden repeat",
+                "condition": { "u_has_trait": "SPIRITUAL" },
+                "show_always": true,
+                "failure_explanation": "Unavailable"
+              }
+            })" );
     json_talk_response native_false_switch(
         false_switch_json.get_object(), "dialogue_debug_condition_test" );
     json_talk_response native_default_switch(
         default_switch_json.get_object(), "dialogue_debug_condition_test" );
     json_talk_repeat_response native_repeat(
         repeat_json.get_object(), "dialogue_debug_condition_test" );
+    json_talk_repeat_response native_false_repeat(
+        false_repeat_json.get_object(), "dialogue_debug_condition_test" );
     const auto generate_native = [&]( dialogue &conversation, bool &switch_done ) {
         switch_done = false;
         std::vector<bool> switch_claims;
@@ -1989,9 +2001,11 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     CHECK_FALSE( native_normal_switch_done );
     CHECK( native_repeat.response.gen_repeat_response(
                native_normal, repeat_item_id, native_normal_switch_done ) );
+    CHECK_FALSE( native_false_repeat.response.gen_repeat_response(
+                     native_normal, repeat_item_id, native_normal_switch_done ) );
     REQUIRE( native_normal.responses.size() == 2 );
-    CHECK( native_normal.responses[0].truetext.translated() == "Fallback" );
-    CHECK( native_normal.responses[1].truetext.translated() == "Repeat item" );
+    CHECK( native_normal.responses[0].truetext.translated() == "Repeat item" );
+    CHECK( native_normal.responses[1].truetext.translated() == "Fallback" );
 
     dialogue native_debug(
         get_talker_for( speaker ), get_talker_for( interlocutor ) );
@@ -2002,6 +2016,8 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     REQUIRE( native_debug_claims.size() == 2 );
     CHECK( native_debug_switch_done );
     CHECK_FALSE( native_repeat.response.gen_repeat_response(
+                     native_debug, repeat_item_id, native_debug_switch_done ) );
+    CHECK_FALSE( native_false_repeat.response.gen_repeat_response(
                      native_debug, repeat_item_id, native_debug_switch_done ) );
     REQUIRE( native_debug.responses.size() == 2 );
     CHECK( native_debug.responses[0].truetext.translated() == "False switch" );
@@ -2036,6 +2052,15 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     repeat_descriptor["response"] = repeat_response;
     sol::table repeat_responses = owner_lua.create_table();
     repeat_responses[1] = repeat_descriptor;
+    sol::table false_repeat_response = owner_lua.create_table();
+    false_repeat_response["text"] = "Hidden repeat";
+    false_repeat_response["condition"] = false;
+    false_repeat_response["show_always"] = true;
+    false_repeat_response["failure_explanation"] = "Unavailable";
+    sol::table false_repeat_descriptor = owner_lua.create_table();
+    false_repeat_descriptor["item"] = "test_rock";
+    false_repeat_descriptor["response"] = false_repeat_response;
+    repeat_responses[2] = false_repeat_descriptor;
     sol::table descriptor = owner_lua.create_table();
     descriptor["id"] = "TALK_CCB_DEBUG_CONDITION";
     descriptor["dynamic_line"] = "Debug condition parity test";
@@ -2065,8 +2090,9 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
         generate_platform( platform_normal );
     REQUIRE( normal_session );
     REQUIRE( platform_normal.responses.size() == 2 );
-    CHECK( platform_normal.responses[0].truetext.translated() == "Fallback" );
-    CHECK( platform_normal.responses[1].truetext.translated() == "Repeat item" );
+    CHECK( platform_normal.responses[0].truetext.translated() == "Repeat item" );
+    CHECK( platform_normal.responses[1].truetext.translated() == "Fallback" );
+    CHECK( platform_normal.response_condition_eval == native_normal.response_condition_eval );
     cata::lua_platform::dialogue::end_session( platform_normal );
 
     dialogue platform_debug(
@@ -2080,6 +2106,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     CHECK( platform_debug.responses[1].truetext.translated() == "Fallback" );
     CHECK( platform_debug.responses[0].ignore_conditionals );
     CHECK_FALSE( platform_debug.responses[1].ignore_conditionals );
+    CHECK( platform_debug.response_condition_eval == native_debug.response_condition_eval );
     cata::lua_platform::dialogue::end_session( platform_debug );
 }
 
