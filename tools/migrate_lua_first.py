@@ -30059,8 +30059,17 @@ def render_eoc(
         required_event == "character_melee_attacks_character" and
         not character_melee_event_emitted_by_eoc
     )
+    # Native required_event is only loaded for eoc_type EVENT.  A JSON shape
+    # that merely carries the field (or can recur) does not prove the live
+    # melee dialogue pair used by these static WRAP effects.
+    wrapped_npc_melee_pair_proven = (
+        safe_space_character_beta_actor_proven and
+        value.get("eoc_type") == "EVENT" and
+        value.get("global") is not True and
+        "recurrence" not in value
+    )
     wrapped_npc_beta_expression = (
-        "context.actors.interlocutor" if safe_space_character_beta_actor_proven
+        "context.actors.interlocutor" if wrapped_npc_melee_pair_proven
         else "context.actors.beta" if npc_dialogue_mission_pair_proven
         else None
     )

@@ -23821,6 +23821,7 @@ assert(calls == 0)
                     Path("source.json"), 0, {
                         "type": "effect_on_condition",
                         "id": f"melee_{effect}",
+                        "eoc_type": "EVENT",
                         "required_event": "character_melee_attacks_character",
                         "effect": effect,
                     },
@@ -23840,6 +23841,22 @@ assert(calls == 0)
                 )
                 self.assertNotIn(call, no_pair)
                 self.assertIn("-- TODO:", no_pair)
+
+                for unsafe_fields in (
+                    {"eoc_type": "ACTIVATION"},
+                    {"global": True},
+                    {"recurrence": "1 turn"},
+                ):
+                    with self.subTest(effect=effect, unsafe=unsafe_fields):
+                        unsafe_source = migrate_lua_first.SourceObject(
+                            Path("source.json"), 0,
+                            {**source.value, **unsafe_fields},
+                        )
+                        unsafe = migrate_lua_first.render_eoc(
+                            unsafe_source, migrate_lua_first.MigrationResult(),
+                            character_melee_event_emitted_by_eoc=False,
+                        )
+                        self.assertNotIn(call, unsafe)
 
                 script = """
 local calls = 0
