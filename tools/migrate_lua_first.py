@@ -6391,6 +6391,21 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
             "            return weapon.ok and weapon.value.can_stow == true\n"
             "        end"
         )
+    if condition in ("u_has_stolen_item", "npc_has_stolen_item"):
+        # Native f_has_stolen_item ignores the selector's is_npc flag: alpha's
+        # inventory is checked against beta's old ownership in both cases.
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local holder = dialogue_context:speaker()\n"
+            "            local owner = dialogue_context:interlocutor()\n"
+            '            if holder == nil or holder.kind ~= "creature" then return false end\n'
+            '            if owner == nil or owner.kind ~= "creature" then return false end\n'
+            "            if not holder:is_valid() or not owner:is_valid() then return false end\n"
+            "            local result = services.inventory.has_stolen_from(holder, owner)\n"
+            "            return result.ok and result.value == true\n"
+            "        end"
+        )
     if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:
         return None
     threshold = finite_number_literal(condition["u_has_intelligence"])

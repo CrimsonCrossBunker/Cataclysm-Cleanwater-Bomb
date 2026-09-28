@@ -11473,6 +11473,42 @@ assert(not available())
         self.assertNotIn("services.npcs.ai_rules(beta)", topic_main)
         self.assertTrue(topic_result.todos)
 
+    def test_talk_topic_stolen_item_condition_uses_native_participant_order(self) -> None:
+        for selector in ("u_has_stolen_item", "npc_has_stolen_item"):
+            with self.subTest(selector=selector):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    selector
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn("local holder = dialogue_context:speaker()", callback.value)
+                self.assertIn("local owner = dialogue_context:interlocutor()", callback.value)
+                self.assertIn(
+                    "services.inventory.has_stolen_from(holder, owner)", callback.value
+                )
+                self.assertNotIn("has_stolen_from(owner, holder)", callback.value)
+
+        source_path = Path("data/json/npcs/common_chat/TALK_COMMON_OTHER.json")
+        topics = json.loads((REPOSITORY_ROOT / source_path).read_text())
+        stolen_topic = next(
+            topic for topic in topics
+            if topic.get("type") == "talk_topic" and topic.get("id") == "TALK_STOLE_ITEM"
+        )
+        self.assertTrue(any(
+            response.get("condition") == "u_has_stolen_item"
+            for response in stolen_topic["responses"]
+        ))
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, stolen_topic), result
+        )
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("services.inventory.has_stolen_from(holder, owner)", rendered)
+        # The trial and response effects in this topic still need independent
+        # migration; this only proves the direct response condition.
+        self.assertTrue(result.todos)
+
     def test_talk_topic_response_condition_supports_only_live_speaker_intelligence(self) -> None:
         topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
