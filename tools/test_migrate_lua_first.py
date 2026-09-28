@@ -16912,7 +16912,7 @@ assert(not available())
                 report,
             )
             self.assertNotIn("services.npcs.open_dialogue", main)
-            self.assertIn("explicit dialogue participant conversion", report)
+            self.assertIn("native topic-talker or beta-clone dialogue", report)
 
     def test_translates_teleport_navigation_damage_and_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -18104,11 +18104,76 @@ assert(not available())
             self.assertNotIn("services.npcs.open_dialogue", main)
             self.assertIn('services.npcs.training.start_selected(context.actors.beta, services.characters.avatar(), "npc")', main)
             self.assertIn(
-                "exact NPC and avatar handles plus an explicit topic", main
+                "topic-only UI/no-topic beta clone", main
             )
-            self.assertIn("explicit dialogue participant conversion", report)
-            self.assertIn("exact NPC/avatar handles and topic", report)
+            self.assertIn("native topic-talker or beta-clone dialogue", report)
+            self.assertIn("post-UI true_eocs/false_eocs semantics", report)
             self.assertNotIn("needs domain-service conversion", report)
+
+    def test_open_dialogue_retains_native_topic_and_post_ui_eoc_shapes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "explicit_topic_open",
+                        "required_event": "game_start",
+                        "effect": {
+                            "open_dialogue": {
+                                "topic": "TALK_TEST",
+                                "true_eocs": "after_topic_open",
+                                "false_eocs": "avatar_required",
+                            },
+                        },
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "implicit_beta_clone_open",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": "open_dialogue",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_no_topic_open",
+                        "required_event": "game_start",
+                        "effect": "open_dialogue",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_event_open_noop",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": "open_dialogue",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "after_topic_open",
+                        "effect": "nothing",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "avatar_required",
+                        "effect": "nothing",
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "open_dialogue_parity_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("services.npcs.open_dialogue", main)
+            self.assertIn("npc_event_open_noop", result.converted)
+            self.assertNotIn("implicit_beta_clone_open", result.converted)
+            self.assertNotIn("avatar_no_topic_open", result.converted)
+            self.assertGreaterEqual(
+                main.count("TODO: open_dialogue's topic-only UI/no-topic beta clone"),
+                3,
+            )
+            self.assertIn("post-UI true_eocs/false_eocs semantics", report)
+            self.assertTrue(result.todos)
 
     def test_npc_radio_representation_supplies_native_avatar_owner(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -22123,10 +22188,9 @@ assert(not pcall(function() return U_EXPRESSION end))
                 main,
             )
             self.assertIn(
-                "translate open_dialogue only when exact NPC and avatar handles "
-                "plus an explicit topic are available", main
+                "open_dialogue's topic-only UI/no-topic beta clone", main
             )
-            self.assertIn("exact NPC/avatar handles and topic", report)
+            self.assertIn("post-UI true_eocs/false_eocs semantics", report)
             self.assertIn("services.achievements.complete(", main)
             self.assertIn("if achievement_id:is_valid() then", main)
             self.assertIn('context.data["branch_value"]', main)
@@ -31720,6 +31784,29 @@ end
                             "npc_first_topic": "TALK_SAFE\nruntime.handler(\"injected\")",
                         },
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "empty_topic",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_first_topic": ""},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_npc_topic",
+                        "eoc_type": "NPC_DEATH",
+                        "effect": {"npc_first_topic": "TALK_DEAD"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "nested_topic",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": {"npc_first_topic": "TALK_NESTED"},
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "nested_topic_caller",
+                        "effect": {"run_eocs": ["nested_topic"]},
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -31728,13 +31815,24 @@ end
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.converted, ["safe_topic"])
-            self.assertEqual(len(result.partial), 2)
+            self.assertIn("safe_topic", result.converted)
+            self.assertNotIn("dead_npc_topic", result.converted)
+            self.assertNotIn("nested_topic", result.converted)
             self.assertEqual(main.count("services.npcs.set_first_topic("), 1)
             self.assertIn('services.npcs.set_first_topic(actor, "TALK_SAFE")', main)
+            self.assertNotIn('set_first_topic(actor, "TALK_DEAD")', main)
+            self.assertNotIn('set_first_topic(actor, "TALK_NESTED")', main)
             self.assertNotIn('context.data["topic"]', main)
+            self.assertNotIn('set_first_topic(actor, "")', main)
             self.assertNotIn("runtime.handler", main)
             self.assertTrue(result.todos)
+            self.assertIn(
+                "standalone npc_becomes_hostile alpha fallback", main
+            )
+            self.assertIn(
+                "event-exclusive live NPC alpha fallback from npc_becomes_hostile",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_radio_representative_routes_owner_and_propagates_failure(self) -> None:
