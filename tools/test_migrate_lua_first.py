@@ -12711,7 +12711,7 @@ assert(not available())
             )
         )
 
-    def test_beta_safe_space_conditions_wait_for_a_live_interlocutor_callback(self) -> None:
+    def test_beta_safe_space_eoc_conditions_require_character_melee_beta(self) -> None:
         for selector in ("at_safe_space", "npc_at_safe_space"):
             for actor_expression in ("context.actors.beta", "actor"):
                 with self.subTest(selector=selector, actor_expression=actor_expression):
@@ -12723,8 +12723,25 @@ assert(not available())
                             npc_actor_expression=actor_expression,
                             npc_dialogue_pair_proven=True,
                             event_beta_presence_proven=True,
+                            npc_melee_beta_actor_proven=True,
                         )
                     )
+            rendered = migrate_lua_first.render_eoc_condition_expression(
+                selector,
+                safe_space_character_beta_actor_proven=True,
+            )
+            self.assertIsNotNone(rendered)
+            assert rendered is not None
+            self.assertIn("context.actors.interlocutor", rendered)
+            self.assertIn("services.characters.snapshot(beta)", rendered)
+            self.assertIn("environment.safe_space == true", rendered)
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    {"not": selector},
+                    safe_space_character_beta_actor_proven=True,
+                ),
+                "composite safe-space EOC conditions remain TODO in this batch",
+            )
 
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -12762,6 +12779,20 @@ assert(not available())
                         "condition": "npc_at_safe_space",
                         "effect": [],
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "event_character_safe_space",
+                        "required_event": "character_melee_attacks_character",
+                        "condition": "at_safe_space",
+                        "effect": [],
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "event_monster_safe_space",
+                        "required_event": "character_melee_attacks_monster",
+                        "condition": "npc_at_safe_space",
+                        "effect": [],
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -12773,20 +12804,31 @@ assert(not available())
 
         self.assertNotIn("character_at_safe_space(context.actors.beta)", main)
         self.assertNotIn("services.overmap.is_safe(", main)
+        self.assertIn("services.characters.snapshot(beta)", main)
         self.assertTrue(any(
             "EOC safe_space_pair condition TODO" in entry and
-            "supported EOC callback supplies native beta as a live Character interlocutor"
+            "direct, event-exclusive character_melee_attacks_character EOC"
             in entry
             for entry in result.todos
         ))
         self.assertTrue(any(
             "EOC event_beta_safe_space condition TODO" in entry and
-            "supported EOC callback supplies native beta as a live Character interlocutor"
+            "direct, event-exclusive character_melee_attacks_character EOC"
             in entry
             for entry in result.todos
         ))
+        self.assertTrue(any(
+            "EOC event_monster_safe_space condition TODO" in entry and
+            "monster-victim" in entry
+            for entry in result.todos
+        ))
+        self.assertFalse(any(
+            "EOC event_character_safe_space condition TODO" in entry
+            for entry in result.todos
+        ))
         self.assertIn(
-            "topic TALK_SAFE_SPACE_CALLBACK response effect needs a native callback",
+            "topic TALK_SAFE_SPACE_CALLBACK response effect native run_eocs "
+            "executes inside talk_effect_t::apply",
             report,
         )
         self.assertIn(
@@ -13030,6 +13072,62 @@ assert(not available())
         self.assertTrue(any(
             "response condition needs Lua conversion" in todo.text
             for todo in activity_result.todos
+        ))
+
+    def test_talk_topic_safe_space_uses_live_native_interlocutor_query(self) -> None:
+        for selector in ("at_safe_space", "npc_at_safe_space"):
+            with self.subTest(selector=selector):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    selector
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn(
+                    "dialogue_context:interlocutor_at_safe_space()",
+                    callback.source,
+                )
+                self.assertIn("dialogue_context:valid()", callback.source)
+                self.assertIsNone(
+                    migrate_lua_first.render_talk_topic_response_condition(
+                        {"not": selector}
+                    ),
+                    "Boolean compositions remain fail-closed",
+                )
+
+        source_path = Path("data/json/npcs/common_chat/TALK_COMMON_ALLY.json")
+        topics = migrate_lua_first.load_objects([REPOSITORY_ROOT / source_path])
+        social_topic = next(
+            source for source in topics
+            if source.value.get("type") == "talk_topic" and
+            "TALK_ALLY_SOCIAL" in source.value.get("id", [])
+        )
+        positive_response = next(
+            response for response in social_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == "at_safe_space"
+        )
+        self.assertIsNotNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                positive_response["condition"]
+            )
+        )
+        rendered_result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(
+                social_topic.path, social_topic.index,
+                {**social_topic.value, "id": "TALK_ALLY_SOCIAL"},
+            ),
+            rendered_result,
+        )
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn(
+            "dialogue_context:interlocutor_at_safe_space()", rendered
+        )
+        self.assertIn("condition = false", rendered)
+        self.assertTrue(any(
+            "response condition needs Lua conversion" in todo.text
+            for todo in rendered_result.todos
         ))
 
     def test_avatar_safe_space_requires_live_event_exclusive_avatar_proof(self) -> None:
