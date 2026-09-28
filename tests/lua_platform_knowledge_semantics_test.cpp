@@ -92,9 +92,9 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_snapshot = value_of(
                 services["characters"]["snapshot"], beta_handle ).as<sol::table>();
-        // The Exodii device handoff compares native u_skill('social') against
-        // fixed thresholds.  The Lua condition uses the matching effective
-        // level, not raw practical or knowledge level.
+        // The Exodii device handoff uses the display name 'social' as a skill
+        // ID (the registered ID is 'speech').  Both paths must evaluate that
+        // exact native expression; skills.get would reject the invalid ID.
         const skill_id social( "social" );
         const conditional_t below_three( json_loader::from_string(
                                             R"({"math":["u_skill('social') < 3"]})" ).get_object() );
@@ -103,14 +103,15 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
         finalize_conditions();
         for( const int level : { 0, 2, 3, 5, 9 } ) {
             player.set_skill_level( social, level );
-            const sol::table skill_state = value_of(
-                    services["skills"]["get"], avatar_handle,
-                    cata::lua_platform::script_game_id( "skill", "social" ) ).as<sol::table>();
-            const int effective = skill_state["practical_effective"].get<int>();
-            CAPTURE( level, effective );
-            CHECK( effective == player.get_skill_level( social ) );
-            CHECK( below_three( conversation ) == ( effective < 3 ) );
-            CHECK( above_two( conversation ) == ( effective > 2 ) );
+            const double below_value = value_of(
+                                           services["gameplay"]["math"]["evaluate"],
+                                           std::string( "u_skill('social') < 3" ), avatar_handle ).as<double>();
+            const double above_value = value_of(
+                                           services["gameplay"]["math"]["evaluate"],
+                                           std::string( "u_skill('social') > 2" ), avatar_handle ).as<double>();
+            CAPTURE( level, below_value, above_value );
+            CHECK( below_three( conversation ) == ( below_value != 0 ) );
+            CHECK( above_two( conversation ) == ( above_value != 0 ) );
         }
         const sol::table avatar_activity = value_of(
                 services["activities"]["snapshot"], avatar_handle ).as<sol::table>();

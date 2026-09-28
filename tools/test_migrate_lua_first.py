@@ -19447,6 +19447,11 @@ assert(not available())
             ) for response in grants
         ]
         self.assertTrue(all(callback is not None for callback in callbacks))
+        skills = migrate_lua_first.load_objects(
+            [REPOSITORY_ROOT / "data/json/skills.json"]
+        )
+        self.assertFalse(any(source.value.get("id") == "social" for source in skills))
+        self.assertTrue(any(source.value.get("id") == "speech" for source in skills))
         self.assertEqual(
             [response["topic"].rsplit("_", 1)[-1] for response in grants],
             ["0-2", "3-4", "5-6", "7-8", "9-10"],
@@ -19464,9 +19469,14 @@ assert(not available())
             'local level = 0',
             'local alpha = {kind="creature", subtype="avatar", is_valid=function() return true end}',
             'local context = {valid=function() return true end, speaker=function() return alpha end}',
-            'services = {types={id=function(kind, name) assert(kind=="skill" and name=="social"); return name end},',
-            'skills={get=function(actor, id) assert(actor==alpha and id=="social");',
-            'return {ok=true, value={practical_effective=level}} end}}',
+            'services = {gameplay={math={evaluate=function(expression, actor, values)',
+            '  assert(actor==alpha and next(values)==nil)',
+            '  local operator, threshold=expression:match("^u_skill%(\'social\'%) ([<>]) (%d+)$")',
+            '  assert(operator and threshold)',
+            '  local matched=operator=="<" and level<tonumber(threshold) or',
+            '    operator==">" and level>tonumber(threshold)',
+            '  return {ok=true, value=matched and 1 or 0}',
+            'end}}}',
             'local callbacks = {' + ', '.join(
                 callback.source for callback in callbacks if callback is not None
             ) + '}',

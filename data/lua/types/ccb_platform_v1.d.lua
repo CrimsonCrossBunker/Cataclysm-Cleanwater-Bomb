@@ -10634,13 +10634,6 @@ function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
 ---@class CcbSkillsApi
 local CcbSkillsApi = {}
 
----Snapshot one Character's native skill state. `practical_effective` is
----Character::get_skill_level, including current rust and contextual modifiers.
----@param character GameHandle Exact avatar, character or NPC handle.
----@param skill GameId GameId<skill>.
----@return CcbResult result `value.practical_effective` is the native effective level.
-function CcbSkillsApi.get(character, skill) end
-
 ---Skills the teacher can teach this student, using the student's knowledge level.
 ---@param teacher GameHandle Character handle.
 ---@param student GameHandle Character handle; never inferred from the avatar.

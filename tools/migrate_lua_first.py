@@ -6495,9 +6495,10 @@ def render_talk_topic_response_condition(
     if _depth > 16:
         return None
     if isinstance(condition, dict) and set(condition) == {"math"}:
-        # Native u_skill reads dialogue alpha's effective practical skill.
-        # The Exodii device handoff uses only these static social thresholds;
-        # arbitrary math expressions still need a dedicated parser.
+        # Native u_skill reads dialogue alpha even when the named skill ID is
+        # unregistered (Exodii says 'social', while the registered ID is
+        # 'speech').  Use the same native math evaluator, not skills.get,
+        # which rejects invalid IDs.  Other expressions stay TODO.
         expressions = condition["math"]
         if isinstance(expressions, list) and len(expressions) == 1 and isinstance(expressions[0], str):
             skill_match = re.fullmatch(
@@ -6507,6 +6508,7 @@ def render_talk_topic_response_condition(
                 operator, threshold_text = skill_match.groups()
                 threshold = int(threshold_text)
                 if threshold <= NATIVE_INT_MAX:
+                    expression = f"u_skill('social') {operator} {threshold}"
                     return LuaRaw(
                         "function(dialogue_context)\n"
                         "            if not dialogue_context:valid() then return false end\n"
@@ -6515,9 +6517,9 @@ def render_talk_topic_response_condition(
                         '(alpha.subtype ~= "avatar" and alpha.subtype ~= "character" '
                         'and alpha.subtype ~= "npc") then return false end\n'
                         "            if not alpha:is_valid() then return false end\n"
-                        '            local skill = services.skills.get(alpha, '
-                        'services.types.id("skill", "social"))\n'
-                        f"            return skill.ok and skill.value.practical_effective {operator} {threshold}\n"
+                        "            local evaluated = services.gameplay.math.evaluate("
+                        f"{lua_quote(expression)}, alpha, {{}})\n"
+                        "            return evaluated.ok and evaluated.value ~= 0\n"
                         "        end"
                     )
     if (
