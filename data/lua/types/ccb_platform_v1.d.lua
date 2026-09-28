@@ -450,13 +450,13 @@ function CcbOvermapApi.matches_terrain(position, terrain_id) end
 
 ---@param position TripointCoord Explicit absolute overmap-terrain position.
 ---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`; this query may lazily load or create/populate its overmap.
----@return boolean Native `u_at_om_location` / `u_near_om_location` location predicate result at this exact tile.
+---@return boolean Exact-tile location match used by native at-location conditions.
 function CcbOvermapApi.matches_location(position, location_id) end
 
 ---@param origin TripointCoord Explicit absolute overmap-terrain origin.
 ---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`.
 ---@param radius integer Nonnegative square radius from 0 through 30.
----@return boolean Native `u_near_om_location` result, preserving candidate order and origin mapgen-argument lookups.
+---@return boolean Native `u_near_om_location` / `npc_near_om_location` result, preserving candidate order and origin mapgen-argument lookups.
 function CcbOvermapApi.matches_location_near(origin, location_id, radius) end
 
 ---@param position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) coordinate.

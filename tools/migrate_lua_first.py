@@ -28491,6 +28491,32 @@ def render_eoc_condition_expression(
                 f"services.overmap.matches_location_near({position}, "
                 f"{lua_quote(raw_location)}, {radius})"
             )
+    if (
+        npc_melee_beta_actor_proven and
+        set(condition) <= {"npc_near_om_location", "range"} and
+        "npc_near_om_location" in condition
+    ):
+        raw_location = condition.get("npc_near_om_location")
+        raw_range = condition.get("range", 1)
+        radius = native_int_literal(raw_range)
+        # The supported melee-event interlocutor is the native beta talker.
+        # These native predicates use its position without an NPC type check;
+        # the bridge may therefore supply a Character or monster Creature.
+        if (
+            radius is not None and 0 <= radius <= 30 and
+            bounded_overmap_condition_id(raw_location)
+        ):
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+                "local position = services.coords.project_to("
+                "service_value(services.creatures.snapshot(beta)).position, "
+                "\"omt\"); "
+                "return services.overmap.matches_location_near(position, "
+                f"{lua_quote(raw_location)}, {radius}) "
+                "end)()"
+            )
 
     # Inventory predicates are lowered only for a proven avatar/NPC actor and
     # literal GameIds.  The normal resources/category/wielded APIs preserve
@@ -28813,6 +28839,22 @@ def render_eoc_condition_expression(
         return (
             f"services.overmap.matches_location({position}, "
             f"{lua_quote(condition['u_at_om_location'])})"
+        )
+    if (
+        npc_melee_beta_actor_proven and
+        set(condition) == {"npc_at_om_location"} and
+        bounded_overmap_condition_id(condition.get("npc_at_om_location"))
+    ):
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+            "local position = services.coords.project_to("
+            "service_value(services.creatures.snapshot(beta)).position, "
+            "\"omt\"); "
+            "return services.overmap.matches_location(position, "
+            f"{lua_quote(condition['npc_at_om_location'])}) "
+            "end)()"
         )
     if (
         avatar_actor_proven and
@@ -30254,8 +30296,12 @@ def render_eoc(
             "npc_near_om_location" in raw_condition
         ):
             condition_todo = (
-                "translate npc_*_om_location only with a proven beta talker; "
-                "the current EOC event actor proves alpha only"
+                "translate npc_*_om_location only for an event-exclusive "
+                "character_melee_attacks_character or "
+                "character_melee_attacks_monster EOC with its live "
+                "Creature interlocutor and bounded literal location/radius; "
+                "other event actors prove alpha only, and direct talk-topic "
+                "response EOC callbacks are not wired"
             )
         elif (
             isinstance(raw_condition, dict) and
