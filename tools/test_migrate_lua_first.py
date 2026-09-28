@@ -31223,7 +31223,13 @@ assert(context.data.picked==selected)
         )
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_eoc(leaf_source, result)
-        self.assertIn("one global rng_bits() draw even for a single survivor", rendered)
+        self.assertIn(
+            "one global rng_bits() draw even for a single survivor", rendered
+        )
+        self.assertIn(
+            "pick_ent returns index 0 without using that value for one survivor",
+            rendered,
+        )
         self.assertIn("copied alpha/beta Dialogue", rendered)
         self.assertNotIn("services.random.int(", rendered)
         self.assertNotIn("services.random.native_int(", rendered)
