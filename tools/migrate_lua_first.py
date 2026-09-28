@@ -6846,6 +6846,13 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
     if isinstance(effect, str) and effect in {
         "mission_success", "mission_failure", "clear_mission",
     }:
+        if effect == "clear_mission":
+            return (
+                "manual_rewrite",
+                "only a standalone direct TALK response with static text/topic is "
+                "lowered through the callback-scoped native beta clear; conditions, "
+                "additional response fields, combined effects, and EOCs remain TODO",
+            )
         return (
             "manual_rewrite",
             f"native WRAP {effect} executes inside talk_effect_t::apply before "
@@ -6996,6 +7003,30 @@ def render_talk_topic_mission_reward_action(
     ]))
 
 
+def render_talk_topic_clear_mission_action(entry: Any) -> LuaRaw | None:
+    """Lower one standalone direct TALK clear_mission response."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        entry.get("effect") != "clear_mission"
+    ):
+        return None
+    # TALK response actions execute in talk_effect_t::apply. The typed context
+    # delegates to talk_function::clear_mission on the live native beta NPC,
+    # preserving selected-pointer, follow-up, and ordering semantics without
+    # retaining a provider pointer. Conditions, added effects, and EOCs remain
+    # outside this shape.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:clear_selected_mission()",
+        "end",
+    ]))
+
+
 def render_talk_topic_item_offer_effect(response: Any) -> LuaRaw | None:
     """Lower an exact, condition-renderable native TALK item-offer response."""
     if not isinstance(response, dict) or set(response) - {
@@ -7089,6 +7120,8 @@ def render_talk_topic(
             action_callback = render_talk_topic_mission_reward_action(
                 entry, converted_condition,
             )
+            if action_callback is None:
+                action_callback = render_talk_topic_clear_mission_action(entry)
             if action_callback is None and set(entry) <= {"text", "topic", "effect"}:
                 action_callback = render_dialogue_mission_action_effect(
                     entry["effect"]

@@ -6369,6 +6369,12 @@ function PlatformDialogueContext:interlocutor_at_safe_space() end
 ---@return integer
 function PlatformDialogueContext:assigned_mission_count() end
 
+---Clear the current native NPC interlocutor's selected mission using the
+---native TALK `clear_mission` behavior, including its follow-up and selection
+---ordering. Only available during a writable `on_action` callback; non-NPC
+---interlocutors and missing/unassigned selections keep the native no-op behavior.
+function PlatformDialogueContext:clear_selected_mission() end
+
 ---Grant one native-default item to the current native dialogue alpha.
 ---Only available in a writable `on_action` callback. Preserves native
 ---i_add_or_drop behavior, default ammunition, one charge for charge-counted

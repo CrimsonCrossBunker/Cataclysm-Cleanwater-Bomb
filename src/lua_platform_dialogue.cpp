@@ -11,6 +11,7 @@
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
 #include <lua_platform_items.h>
+#include <npctalk.h>
 #include <overmapbuffer.h>
 #include <output.h>
 #include <point.h>
@@ -585,7 +586,7 @@ context::state &context::require_action_write_state() const
     state &result = require_write_state();
     if( !result.response_action_phase ) {
         throw std::runtime_error(
-            "native dialogue item offers require an active on_action callback" );
+            "native dialogue effects require an active on_action callback" );
     }
     return result;
 }
@@ -624,6 +625,22 @@ bool context::interlocutor_at_safe_space() const
 std::size_t context::assigned_mission_count() const
 {
     return require_state().dialogue_ref().missions_assigned.size();
+}
+
+void context::clear_selected_mission() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::clear_mission( *provider );
+    }
 }
 
 void context::grant_item_to_speaker( const script_game_id &item_type ) const

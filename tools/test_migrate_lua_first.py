@@ -19443,6 +19443,45 @@ assert(not available())
         self.assertNotIn("on_action =", unsupported_lua or "")
         self.assertTrue(unsupported_result.todos)
 
+    def test_real_direct_talk_clear_mission_uses_live_beta_native_action(self) -> None:
+        path = REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
+        topic = next(
+            entry for entry in json.loads(path.read_text(encoding="utf-8"))
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_MISSION_REWARD"
+        )
+        self.assertEqual(
+            [response["effect"] for response in topic["responses"]],
+            ["clear_mission", "clear_mission"],
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 0, topic), result
+        )
+        self.assertIsNotNone(rendered)
+        self.assertEqual((rendered or "").count("context:clear_selected_mission()"), 2)
+        self.assertIn("on_action = function(context, trial_success)", rendered or "")
+        self.assertIn("if not trial_success or not context:valid() then return end", rendered or "")
+        self.assertFalse(result.todos)
+
+        bundled = {
+            **topic,
+            "responses": [{
+                "text": "Thanks.", "topic": "TALK_NONE",
+                "effect": "clear_mission", "mission_opinion": {"trust": 1},
+            }],
+        }
+        bundled_result = migrate_lua_first.MigrationResult()
+        bundled_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(path, 1, bundled), bundled_result
+        )
+        self.assertNotIn("clear_selected_mission", bundled_rendered or "")
+        self.assertTrue(any(
+            "only a standalone direct TALK response" in todo.message and
+            "combined effects, and EOCs remain TODO" in todo.message
+            for todo in bundled_result.todos
+        ))
+
     def test_direct_talk_spend_cash_uses_exact_native_payment_action(self) -> None:
         responses = [
             {
