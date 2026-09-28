@@ -24175,7 +24175,8 @@ def render_copied_eoc_callbacks(
         return None
     if not references:
         return []
-    # run_eoc_vector copies the dialogue once, then shares it across callbacks.
+    # run_eoc_vector snapshots the dialogue once; each activate() then copies
+    # that snapshot again, so dialogue-local writes do not leak across EOCs.
     lines = [
         "        local function copy_data(value)",
         "            if type(value) ~= \"table\" then return value end",
@@ -24183,16 +24184,62 @@ def render_copied_eoc_callbacks(
         "            for key, entry in pairs(value) do result[key] = copy_data(entry) end",
         "            return result",
         "        end",
-        "        local failure_context = {}",
-        "        for key, value in pairs(context) do failure_context[key] = value end",
-        "        failure_context.data = copy_data(context.data or {})",
-        "        failure_context.conditions = copy_data(context.conditions or {})",
-        "        failure_context.actors = {}",
-        "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
+        "        local function copy_context(source)",
+        "            local result = {}",
+        "            for key, value in pairs(source) do result[key] = value end",
+        "            result.data = copy_data(source.data or {})",
+        "            result.conditions = copy_data(source.conditions or {})",
+        "            result.actors = {}",
+        "            for key, value in pairs(source.actors or {}) do result.actors[key] = value end",
+        "            return result",
+        "        end",
+        "        local vector_context = copy_context(context)",
     ]
-    lines.extend(f"        {function_names[reference]}(failure_context, {actor_expression})"
-                 for reference in references)
+    for reference in references:
+        lines.extend([
+            "        local failure_context = copy_context(vector_context)",
+            f"        {function_names[reference]}(failure_context, {actor_expression})",
+        ])
     return lines
+
+
+def render_ordered_copied_eoc_vectors(
+    true_value: Any, false_value: Any, function_names: dict[str, str], *,
+    dialogue_alpha_expression: str | None,
+) -> tuple[list[str], list[str]] | None:
+    """Render static true/false callback vectors for one native dialogue copy.
+
+    The caller selects exactly one returned branch after its native-equivalent
+    operation. Each non-empty vector copies the dialogue callback context once,
+    preserves its alpha/beta actor handles, and invokes named migrated Lua
+    functions in JSON order. ``dialogue_alpha_expression`` must name the
+    original native dialogue alpha; a selected beta/target is not a substitute.
+    Every callback receives its own copy of the vector snapshot, matching the
+    copy made by native ``effect_on_condition::activate``. This emits ordinary
+    calls to private migrated functions, never an EOC runner or public selector
+    API.
+    """
+    true_references = _validated_eoc_references(
+        true_value, function_names, allow_empty=True
+    )
+    false_references = _validated_eoc_references(
+        false_value, function_names, allow_empty=True
+    )
+    if true_references is None or false_references is None:
+        return None
+    if not true_references and not false_references:
+        return [], []
+    if not isinstance(dialogue_alpha_expression, str) or not dialogue_alpha_expression:
+        return None
+    true_lines = render_copied_eoc_callbacks(
+        true_references, function_names, dialogue_alpha_expression
+    )
+    false_lines = render_copied_eoc_callbacks(
+        false_references, function_names, dialogue_alpha_expression
+    )
+    if true_lines is None or false_lines is None:
+        return None
+    return true_lines, false_lines
 
 
 def render_static_choose_adjacent_highlight(

@@ -35720,7 +35720,7 @@ assert(context.actors==original_actors and context.actors.alpha==actor and conte
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_run_eocs_missing_talkers_copy_failure_context_once(self) -> None:
+    def test_run_eocs_missing_talkers_copy_context_per_eoc(self) -> None:
         lines = migrate_lua_first.render_static_run_eocs({
             "run_eocs": "never", "alpha_talker": "", "beta_talker": "",
             "false_eocs": ["first", "second"],
@@ -35731,14 +35731,16 @@ assert(context.actors==original_actors and context.actors.alpha==actor and conte
 local actor={}
 local context={data={nested={1}},actors={alpha=actor},conditions={}}
 local calls=0
+local first_context
 local function never() error('success branch ran') end
 local function first(child,owner)
  assert(owner==actor and child~=context and child.actors.alpha==actor)
  child.data.nested[1]=9;child.conditions.added=function() return true end
- calls=calls+1
+ first_context=child;calls=calls+1
 end
 local function second(child,owner)
- assert(calls==1 and child.data.nested[1]==9 and child.conditions.added())
+ assert(calls==1 and child~=first_context and child.data.nested[1]==1)
+ assert(child.conditions.added==nil and child.actors.alpha==actor)
  calls=calls+1
 end
 BODY
@@ -38672,7 +38674,7 @@ assert(reads==1 and writes==1)
             self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_adjacent_failure_callbacks_share_copy_without_parent_writes(self) -> None:
+    def test_adjacent_failure_callbacks_get_fresh_eoc_contexts(self) -> None:
         lines = migrate_lua_first.render_copied_eoc_callbacks(
             ["first", "second"], {"first": "first", "second": "second"})
         self.assertIsNotNone(lines)
@@ -38681,16 +38683,20 @@ local actor={}
 local original=function() return true end
 local context={data={nested={1,2}},actors={alpha=actor},conditions={check=original}}
 local calls=0
+local first_context
 local function first(child,owner)
  assert(owner==actor and child.actors.alpha==actor)
  assert(child.conditions.check==original)
  child.conditions.check=function() return false end
  child.conditions.added=function() return true end
- child.data.nested[1]=9;child.data.added=true;child.actors.alpha=nil;calls=calls+1
+ child.data.nested[1]=9;child.data.added=true;child.actors.alpha=nil
+ first_context=child;calls=calls+1
 end
 local function second(child,owner)
- assert(calls==1 and child.data.nested[1]==9 and child.data.added and child.actors.alpha==nil)
- assert(not child.conditions.check() and child.conditions.added())
+ assert(calls==1 and child~=first_context and owner==actor)
+ assert(child.data.nested[1]==1 and child.data.nested[2]==2 and child.data.added==nil)
+ assert(child.actors.alpha==actor)
+ assert(child.conditions.check==original and child.conditions.check() and child.conditions.added==nil)
  calls=calls+1
 end
 BODY
@@ -38711,6 +38717,128 @@ assert(context.conditions.check==original and context.conditions.check() and con
             self.assertIsNotNone(rendered)
             self.assertIn("    else", rendered)
             self.assertIn("        first(failure_context, actor)", rendered)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_roll_remainder_real_eoc_vectors_keep_alpha_and_callback_order(self) -> None:
+        path = REPOSITORY_ROOT / "data/mods/Xedra_Evolved/effects/vampvirus.json"
+        objects = json.loads(path.read_text(encoding="utf-8"))
+        rolls: list[tuple[dict[str, object], list[str]]] = []
+        callback_ids = [
+            "EOC_SUCCESFUL_ROLL_REMAINDER",
+            "EOC_COMPLETED_ROLL_REMAINDER_VAMPVIRUS",
+            "EOC_VAMPVIRUS1",
+        ]
+        callback_sources: dict[str, dict[str, object]] = {}
+
+        def collect(node: object, ancestors: list[str]) -> None:
+            if isinstance(node, dict):
+                current = ancestors + ([node["id"]] if isinstance(node.get("id"), str) else [])
+                if node.get("id") in callback_ids:
+                    callback_sources[node["id"]] = node
+                if "u_roll_remainder" in node and (
+                    node.get("true_eocs") or node.get("false_eocs")
+                ):
+                    rolls.append((node, current))
+                for value in node.values():
+                    collect(value, current)
+            elif isinstance(node, list):
+                for value in node:
+                    collect(value, ancestors)
+
+        collect(objects, [])
+        roll, ancestry = next(
+            (node, ancestry) for node, ancestry in rolls
+            if node.get("true_eocs") == ["EOC_SUCCESFUL_ROLL_REMAINDER"] and
+            node.get("false_eocs") == [
+                "EOC_COMPLETED_ROLL_REMAINDER_VAMPVIRUS", "EOC_VAMPVIRUS1",
+            ]
+        )
+        self.assertIn("EOC_vampire_virus_escalation", ancestry)
+        self.assertIn("eoc_vampvirus_1_trait", ancestry)
+        recurrence = next(
+            node for node in objects
+            if isinstance(node, dict) and
+            node.get("id") == "EOC_vampire_virus_escalation"
+        )
+        self.assertIn("recurrence", recurrence)
+        self.assertNotIn("required_event", recurrence)
+        self.assertFalse(recurrence.get("global", False))
+
+        self.assertEqual(set(callback_sources), set(callback_ids))
+        self.assertTrue(all(
+            migrate_lua_first._node_has_actor_prefix(callback_sources[callback_id], "u_")
+            for callback_id in callback_ids
+        ))
+        self.assertFalse(any(
+            migrate_lua_first._node_has_actor_prefix(callback_sources[callback_id], "npc_")
+            for callback_id in callback_ids
+        ))
+
+        function_names = {
+            "EOC_SUCCESFUL_ROLL_REMAINDER": "roll_success_callback",
+            "EOC_COMPLETED_ROLL_REMAINDER_VAMPVIRUS": "roll_complete_callback",
+            "EOC_VAMPVIRUS1": "roll_next_stage_callback",
+        }
+        vectors = migrate_lua_first.render_ordered_copied_eoc_vectors(
+            roll.get("true_eocs"), roll.get("false_eocs"), function_names,
+            dialogue_alpha_expression="actor",
+        )
+        self.assertIsNotNone(vectors)
+        true_callbacks, false_callbacks = vectors
+        self.assertEqual(
+            [line.strip().split("(", 1)[0] for line in true_callbacks if "callback(" in line],
+            ["roll_success_callback"],
+        )
+        self.assertEqual(
+            [line.strip().split("(", 1)[0] for line in false_callbacks if "callback(" in line],
+            ["roll_complete_callback", "roll_next_stage_callback"],
+        )
+        self.assertIsNone(migrate_lua_first.render_ordered_copied_eoc_vectors(
+            roll.get("true_eocs"), roll.get("false_eocs"), function_names,
+            dialogue_alpha_expression=None,
+        ))
+
+        script = r"""
+local actor,beta={},{}
+local context={data={step=0},conditions={},actors={character=actor,beta=beta}}
+local calls={}
+local function record(name,child,owner,expected_step)
+ assert(owner==actor and child.actors.character==actor and child.actors.beta==beta)
+ assert(child.data.step==expected_step)
+ calls[#calls+1]=name
+end
+local function roll_success_callback(child,owner)
+ record('success',child,owner,0)
+end
+local function roll_complete_callback(child,owner)
+ record('complete',child,owner,0)
+ child.data.step=99
+ child.conditions.changed=function() return false end
+ child.actors.beta=nil
+end
+local function roll_next_stage_callback(child,owner)
+ record('next',child,owner,0)
+ assert(child.conditions.changed==nil)
+end
+local function choose_callbacks(granted)
+ if granted then
+BODY_TRUE
+ else
+BODY_FALSE
+ end
+end
+choose_callbacks(true)
+assert(#calls==1 and calls[1]=='success' and context.data.step==0)
+calls={}
+choose_callbacks(false)
+assert(#calls==2 and calls[1]=='complete' and calls[2]=='next')
+assert(context.data.step==0 and context.actors.character==actor and context.actors.beta==beta)
+""".replace("BODY_TRUE", "\n".join(true_callbacks)).replace(
+            "BODY_FALSE", "\n".join(false_callbacks)
+        )
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_adjacent_selectors_filter_candidates_and_fail_closed_for_explicit_centers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
