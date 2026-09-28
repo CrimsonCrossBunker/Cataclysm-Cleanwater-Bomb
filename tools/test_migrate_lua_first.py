@@ -18828,10 +18828,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(main.count("services.inventory.consume_by_type("), 3)
             self.assertNotIn("services.inventory.consume(", main)
             self.assertNotIn("services.inventory.consume_sum(", main)
-            self.assertIn(
-                "native weighted consumption scans one unordered owned inventory/map/vehicle set",
-                main,
-            )
+            self.assertEqual(main.count("services.inventory.consume_dialogue_sum("), 2)
             self.assertNotIn("services.world.put_field(", main)
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.mapgen.apply(", main)
@@ -18870,7 +18867,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
-    def test_static_consume_item_sum_effects_remain_todo_for_native_semantics(self) -> None:
+    def test_static_consume_item_sum_lowers_live_alpha_and_beta_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -18884,7 +18881,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 {
                                     "u_consume_item_sum": [
                                         {"item": "battery", "amount": 2},
-                                        {"item": "scrap", "amount": 1},
+                                        {"item": "__unknown_native_item__", "amount": 1},
                                     ]
                                 }
                             ],
@@ -18910,21 +18907,63 @@ assert(not pcall(function() return U_EXPRESSION end))
                 migrate_lua_first.load_objects([source]), "consume_sum_boundaries"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
-            todo_text = "\n".join(todo.text for todo in result.todos)
-
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
-            self.assertEqual(len(result.todos), 2)
-            self.assertEqual(
-                main.count("TODO: native weighted consumption scans one unordered"),
-                2,
-            )
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertEqual(main.count("services.inventory.consume_dialogue_sum("), 2)
+            self.assertIn('services.types.id("item", "__unknown_native_item__")', main)
+            self.assertIn('local target = consume_alpha or consume_beta', main)
+            self.assertIn('consume_alpha, consume_beta, "alpha"', main)
+            self.assertIn('local target = consume_beta or consume_alpha', main)
+            self.assertIn('consume_alpha, consume_beta, "beta"', main)
+            self.assertIn('target.subtype == "avatar"', main)
+            self.assertIn('target.subtype == "npc"', main)
             self.assertNotIn("services.inventory.consume_sum(", main)
-            self.assertIn("EOC static_avatar_consume_sum effect #0", todo_text)
-            self.assertIn("EOC static_npc_consume_sum effect #0", todo_text)
-            self.assertIn("native alpha/beta selection including mutable beta", todo_text)
-            self.assertIn("incremental spill/removal semantics without rollback", report)
+
+    def test_direct_topic_consume_sum_stays_todo_without_runtime_talker_adapter(self) -> None:
+        rendered = render_direct_npc_dialogue_pair({
+            "type": "effect_on_condition",
+            "id": "direct_topic_consume_sum",
+            "effect": {
+                "npc_consume_item_sum": [{"item": "battery", "amount": 1}],
+            },
+        })
+        self.assertIn("consume_item_sum needs a static bounded row list", rendered)
+        self.assertNotIn("services.inventory.consume_dialogue_sum(", rendered)
+
+    def test_consume_item_sum_keeps_unproven_and_dynamic_sources_todo(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {"u_consume_item_sum": [{"item": "battery", "amount": 1}]},
+                "u_consume_item_sum", False, False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {"u_consume_item_sum": [{"item": "battery", "amount": 0}]},
+                "u_consume_item_sum", True, False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {"u_consume_item_sum": [{"item": "battery", "amount": 1000000001}]},
+                "u_consume_item_sum", True, False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {"u_consume_item_sum": [{
+                    "item": "battery", "amount": {"global_val": "amount"}
+                }]},
+                "u_consume_item_sum", True, False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {"npc_consume_item_sum": [{"item": "battery", "amount": 1}]},
+                "npc_consume_item_sum", False, False,
+            )
+        )
 
     def test_item_category_spawn_rates_lower_only_bounded_unique_literals(self) -> None:
         valid_effect = {
@@ -30206,16 +30245,10 @@ assert(context.conditions.check==original and context.conditions.check() and con
                 "context.actors.beta",
             )
         )
-        self.assertIsNone(
+        self.assertIsNotNone(
             migrate_lua_first.render_static_inventory_consume_sum(
-                {
-                    "u_consume_item_sum": [
-                        {"item": "sample_item", "amount": 1}
-                    ]
-                },
-                "u_consume_item_sum",
-                True,
-                False,
+                {"u_consume_item_sum": [{"item": "sample_item", "amount": 1}]},
+                "u_consume_item_sum", True, False,
             )
         )
         self.assertIsNone(

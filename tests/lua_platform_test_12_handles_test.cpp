@@ -1324,6 +1324,366 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                               { { "bandages", 1.0 } } ) );
 }
 
+TEST_CASE( "lua_platform_consume_item_sum_matches_native_talker_effects",
+           "[lua][platform][items][mutation][semantic]" )
+{
+    clear_avatar();
+    clear_vehicles();
+    clear_map_without_vision();
+    struct cleanup_map_state {
+        ~cleanup_map_state() {
+            clear_vehicles();
+            clear_map_without_vision();
+            clear_avatar();
+        }
+    } cleanup;
+
+    map &here = get_map();
+    avatar &alpha = get_avatar();
+    alpha.normalize();
+    alpha.setID( character_id( 6494 ), true );
+    const tripoint_bub_ms alpha_pos( 60, 60, 0 );
+    const tripoint_bub_ms alpha_map_pos( 61, 60, 0 );
+    const tripoint_bub_ms alpha_vehicle_pos( 59, 60, 0 );
+    alpha.setpos( here, alpha_pos );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 6495 ), true );
+    beta.set_fac( faction_id( "tacoma_commune" ) );
+    cata::lua_platform::register_npc_handle_identity( beta );
+    struct cleanup_npc_handle_identity {
+        npc &value;
+        ~cleanup_npc_handle_identity() {
+            cata::lua_platform::retire_npc_handle_identity( value );
+        }
+    } retire_beta_identity{ beta };
+    const tripoint_bub_ms beta_pos( 110, 110, 0 );
+    const tripoint_bub_ms beta_map_pos( 111, 110, 0 );
+    const tripoint_bub_ms beta_vehicle_pos( 109, 110, 0 );
+    beta.setpos( here, beta_pos );
+
+    const ter_str_id floor_id( "t_floor" );
+    REQUIRE( floor_id.is_valid() );
+    for( const tripoint_bub_ms &pos : { alpha_pos, alpha_map_pos, alpha_vehicle_pos,
+                                        beta_pos, beta_map_pos, beta_vehicle_pos } ) {
+        here.ter_set( pos, floor_id.id() );
+    }
+    const tripoint_bub_ms unowned_decoy_pos( 62, 60, 0 );
+    here.ter_set( unowned_decoy_pos, floor_id.id() );
+
+    vehicle *alpha_vehicle = here.add_vehicle(
+                                 vehicle_prototype_test_cargo_space, alpha_vehicle_pos,
+                                 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    vehicle *beta_vehicle = here.add_vehicle(
+                                vehicle_prototype_test_cargo_space, beta_vehicle_pos,
+                                0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( alpha_vehicle != nullptr );
+    REQUIRE( beta_vehicle != nullptr );
+    alpha_vehicle->set_owner( alpha.get_faction_id() );
+    beta_vehicle->set_owner( beta.get_faction_id() );
+    std::optional<vpart_reference> alpha_cargo =
+        here.veh_at( alpha_vehicle_pos ).cargo();
+    std::optional<vpart_reference> beta_cargo =
+        here.veh_at( beta_vehicle_pos ).cargo();
+    REQUIRE( alpha_cargo.has_value() );
+    REQUIRE( beta_cargo.has_value() );
+
+    const auto stock_target = [&]( Character &target, const faction_id &owner_faction,
+                                   const tripoint_bub_ms &map_pos,
+                                   vpart_reference &cargo ) {
+        item inventory_battery( itype_battery );
+        inventory_battery.charges = 5;
+        inventory_battery.set_owner( owner_faction );
+        target.inv->add_item( std::move( inventory_battery ), false, false, false );
+
+        item map_battery( itype_battery );
+        map_battery.charges = 3;
+        map_battery.set_owner( owner_faction );
+        here.add_item( map_pos, std::move( map_battery ) );
+
+        item vehicle_battery( itype_battery );
+        vehicle_battery.charges = 2;
+        vehicle_battery.set_owner( owner_faction );
+        cargo.vehicle().add_item( here, cargo.part(), std::move( vehicle_battery ) );
+
+        item vehicle_rock( itype_rock );
+        vehicle_rock.set_owner( owner_faction );
+        cargo.vehicle().add_item( here, cargo.part(), std::move( vehicle_rock ) );
+    };
+    const faction_id alpha_faction = alpha.get_faction_id();
+    const faction_id beta_faction = beta.get_faction_id();
+    REQUIRE( alpha_faction.is_valid() );
+    REQUIRE( beta_faction.is_valid() );
+    REQUIRE( alpha_faction != beta_faction );
+    stock_target( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
+    stock_target( beta, beta_faction, beta_map_pos, *beta_cargo );
+    item unowned_battery( itype_battery );
+    unowned_battery.charges = 9;
+    here.add_item( unowned_decoy_pos, std::move( unowned_battery ) );
+
+    constexpr std::size_t world_generation = 1;
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 65 );
+    const cata::lua_platform::game_handle alpha_handle =
+        cata::lua_platform::game_handle::from_creature(
+            alpha,
+            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle beta_handle =
+        cata::lua_platform::game_handle::from_creature(
+            beta,
+            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [&]() {
+        return runtime;
+    };
+    const auto current_world = []() {
+        return world_generation;
+    };
+    cata::lua_platform::install_value_type_api( lua, services, []() {} );
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_item_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+
+    using item_amount_row = std::pair<const char *, double>;
+    const auto run_native_effect = [&]( const std::string &selector,
+                                        const std::initializer_list<item_amount_row> &rows,
+                                        dialogue &context ) {
+        std::string source = std::string( "{\"" ) + selector + "\":[";
+        bool first = true;
+        for( const auto &row : rows ) {
+            if( !first ) {
+                source += ",";
+            }
+            first = false;
+            source += std::string( "{\"item\":\"" ) + row.first +
+                      "\",\"amount\":" + std::to_string( row.second ) + "}";
+        }
+        source += "]}";
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect(
+            json_loader::from_string( source ).get_object(),
+            "consume_item_sum_semantic_test" );
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( context );
+        }
+    };
+    const auto lua_entries = [&]( const std::initializer_list<item_amount_row> &rows ) {
+        sol::table entries = lua.create_table();
+        std::size_t index = 1;
+        for( const auto &row : rows ) {
+            sol::table entry = lua.create_table();
+            entry["item"] = cata::lua_platform::script_game_id( "item", row.first );
+            entry["amount"] = row.second;
+            entries[index++] = std::move( entry );
+        }
+        return entries;
+    };
+    const auto consume = [&]( const sol::optional<cata::lua_platform::game_handle> &alpha_arg,
+                              const sol::optional<cata::lua_platform::game_handle> &beta_arg,
+                              const std::string &participant,
+                              const sol::table &entries ) {
+        const sol::protected_function_result call =
+            services["inventory"]["consume_dialogue_sum"](
+                alpha_arg, beta_arg, participant, entries );
+        REQUIRE( call.valid() );
+        const sol::table envelope = call.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        return envelope["value"].get<sol::table>();
+    };
+    const auto count_map_items = [&]( const tripoint_bub_ms &pos,
+                                      const itype_id &type,
+                                      const faction_id &owner_faction ) {
+        int total = 0;
+        for( item &candidate : here.i_at( pos ) ) {
+            if( candidate.typeId() == type && candidate.get_owner() == owner_faction ) {
+                total += candidate.count_by_charges() ? candidate.charges : 1;
+            }
+        }
+        return total;
+    };
+    const auto count_cargo_items = []( vpart_reference &cargo, const itype_id &type,
+                                       const faction_id &owner_faction ) {
+        int total = 0;
+        for( item &candidate : cargo.vehicle().get_items( cargo.part() ) ) {
+            if( candidate.typeId() == type && candidate.get_owner() == owner_faction ) {
+                total += candidate.count_by_charges() ? candidate.charges : 1;
+            }
+        }
+        return total;
+    };
+    const auto check_target_empty = [&]( Character &target, const faction_id &faction,
+                                         const tripoint_bub_ms &map_pos,
+                                         vpart_reference &cargo ) {
+        CHECK( target.charges_of( itype_battery ) == 0 );
+        CHECK( count_map_items( map_pos, itype_battery, faction ) == 0 );
+        CHECK( count_cargo_items( cargo, itype_battery, faction ) == 0 );
+        CHECK( count_cargo_items( cargo, itype_rock, faction ) == 0 );
+    };
+
+    dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
+    run_native_effect( "u_consume_item_sum", { { "battery", 14 }, { "rock", 1 } },
+                       native_pair );
+    check_target_empty( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
+    CHECK( beta.charges_of( itype_battery ) == 5 );
+    run_native_effect( "npc_consume_item_sum", { { "battery", 14 }, { "rock", 1 } },
+                       native_pair );
+    check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
+    CHECK( count_map_items( unowned_decoy_pos, itype_battery, faction_id() ) == 9 );
+
+    // Re-stock both role candidates, then compare the Platform service to the
+    // real talk effects across owned inventory, map, and vehicle locations.
+    stock_target( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
+    stock_target( beta, beta_faction, beta_map_pos, *beta_cargo );
+    const sol::table weighted_entries = lua_entries( { { "battery", 14 }, { "rock", 1 } } );
+    const sol::table alpha_value = consume(
+            alpha_handle, beta_handle, "alpha", weighted_entries );
+    const sol::table beta_value = consume(
+            alpha_handle, beta_handle, "beta", weighted_entries );
+    CHECK( alpha_value["coverage"].get<double>() == Approx( 12.0 / 7.0 ) );
+    CHECK( beta_value["coverage"].get<double>() == Approx( 12.0 / 7.0 ) );
+    CHECK( alpha_value["removed_items"].get<int>() == 4 );
+    CHECK( beta_value["removed_items"].get<int>() == 4 );
+    check_target_empty( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
+    check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
+    CHECK( count_map_items( unowned_decoy_pos, itype_battery, faction_id() ) == 9 );
+
+    // Unknown IDs are accepted by native itype_id and match nothing; empty
+    // rows likewise leave holders untouched.
+    item unknown_test_battery( itype_battery );
+    unknown_test_battery.charges = 5;
+    unknown_test_battery.set_owner( alpha_faction );
+    alpha.inv->add_item( std::move( unknown_test_battery ), false, false, false );
+    run_native_effect( "u_consume_item_sum", { { "__unknown_native_item__", 1 } },
+                       native_pair );
+    CHECK( alpha.charges_of( itype_battery ) == 5 );
+    const sol::table unknown_value = consume(
+            alpha_handle, beta_handle, "alpha",
+            lua_entries( { { "__unknown_native_item__", 1 } } ) );
+    CHECK( unknown_value["coverage"].get<double>() == 0.0 );
+    CHECK_FALSE( unknown_value["changed"].get<bool>() );
+    run_native_effect( "u_consume_item_sum", {}, native_pair );
+    const sol::table empty_value = consume(
+            alpha_handle, beta_handle, "alpha", lua_entries( {} ) );
+    CHECK( empty_value["coverage"].get<double>() == 0.0 );
+    CHECK_FALSE( empty_value["changed"].get<bool>() );
+    CHECK( alpha.charges_of( itype_battery ) == 5 );
+
+    // A single owned charge stack proves in-place partial mutation. The
+    // beta role exercises the native direct-dialogue actor selection.
+    item partial_native_battery( itype_battery );
+    partial_native_battery.charges = 5;
+    partial_native_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( partial_native_battery ), false, false, false );
+    run_native_effect( "npc_consume_item_sum", { { "battery", 2 } }, native_pair );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+    beta.inv->clear();
+    item partial_platform_battery( itype_battery );
+    partial_platform_battery.charges = 5;
+    partial_platform_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( partial_platform_battery ), false, false, false );
+    const sol::table partial_value = consume(
+            alpha_handle, beta_handle, "beta", lua_entries( { { "battery", 2 } } ) );
+    CHECK( partial_value["coverage"].get<double>() == Approx( 1.0 ) );
+    CHECK( partial_value["modified_charge_stacks"].get<int>() == 1 );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+
+    // Beta-absent mutable actor fallback is the native event shape used by
+    // npc_becomes_hostile. Both the native effect and Platform call target
+    // the exact live alpha NPC in this case.
+    beta.inv->clear();
+    item fallback_native_battery( itype_battery );
+    fallback_native_battery.charges = 5;
+    fallback_native_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( fallback_native_battery ), false, false, false );
+    dialogue native_fallback( get_talker_for( beta ), std::unique_ptr<talker>() );
+    run_native_effect( "npc_consume_item_sum", { { "battery", 2 } }, native_fallback );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+    beta.inv->clear();
+    item fallback_platform_battery( itype_battery );
+    fallback_platform_battery.charges = 5;
+    fallback_platform_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( fallback_platform_battery ), false, false, false );
+    const sol::optional<cata::lua_platform::game_handle> absent_handle;
+    const sol::table fallback_value = consume(
+            beta_handle, absent_handle, "beta", lua_entries( { { "battery", 2 } } ) );
+    CHECK( fallback_value["coverage"].get<double>() == Approx( 1.0 ) );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+
+    // The opposite participant fallback is also part of mutable dialogue
+    // actor selection: an absent alpha resolves to the provided beta.
+    beta.inv->clear();
+    item alpha_fallback_native_battery( itype_battery );
+    alpha_fallback_native_battery.charges = 5;
+    alpha_fallback_native_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( alpha_fallback_native_battery ), false, false, false );
+    dialogue native_alpha_fallback( std::unique_ptr<talker>(), get_talker_for( beta ) );
+    run_native_effect( "u_consume_item_sum", { { "battery", 2 } }, native_alpha_fallback );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+    beta.inv->clear();
+    item alpha_fallback_platform_battery( itype_battery );
+    alpha_fallback_platform_battery.charges = 5;
+    alpha_fallback_platform_battery.set_owner( beta_faction );
+    beta.inv->add_item( std::move( alpha_fallback_platform_battery ), false, false, false );
+    const sol::table alpha_fallback_value = consume(
+            absent_handle, beta_handle, "alpha", lua_entries( { { "battery", 2 } } ) );
+    CHECK( alpha_fallback_value["coverage"].get<double>() == Approx( 1.0 ) );
+    CHECK( beta.charges_of( itype_battery ) == 3 );
+
+    const auto add_backpack_with_bandages = [&]( Character &target,
+            const faction_id &owner_faction ) {
+        item backpack( itype_debug_backpack );
+        backpack.set_owner( owner_faction );
+        item bandages( itype_bandages );
+        bandages.set_owner( owner_faction );
+        REQUIRE( backpack.put_in( std::move( bandages ), pocket_type::CONTAINER ).success() );
+        return &target.inv->add_item( std::move( backpack ), false, false, false );
+    };
+    item *native_backpack = add_backpack_with_bandages( beta, beta_faction );
+    REQUIRE( native_backpack != nullptr );
+    dialogue native_spill_dialogue( get_talker_for( alpha ), get_talker_for( beta ) );
+    run_native_effect( "npc_consume_item_sum", { { "debug_backpack", 2 } },
+                       native_spill_dialogue );
+    CHECK_FALSE( beta.has_amount( itype_debug_backpack, 1 ) );
+    CHECK( count_map_items( beta_pos, itype_bandages, beta_faction ) == 1 );
+
+    item *platform_backpack = add_backpack_with_bandages( beta, beta_faction );
+    REQUIRE( platform_backpack != nullptr );
+    item *nested_bandages = nullptr;
+    platform_backpack->visit_items( [&]( item *candidate, item *parent ) {
+        if( parent != nullptr && candidate->typeId() == itype_bandages ) {
+            nested_bandages = candidate;
+            return VisitResponse::ABORT;
+        }
+        return VisitResponse::NEXT;
+    } );
+    REQUIRE( nested_bandages != nullptr );
+    const cata::lua_platform::game_handle backpack_handle =
+        cata::lua_platform::game_handle::from_item(
+            *platform_backpack,
+            { "character_inventory", platform_backpack->uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const cata::lua_platform::game_handle nested_bandages_handle =
+        cata::lua_platform::game_handle::from_item(
+            *nested_bandages,
+            { "character_inventory", nested_bandages->uid().get_value(), 0, 0, 0, {} },
+            runtime, world_generation );
+    const sol::table spill_value = consume(
+            alpha_handle, beta_handle, "beta",
+            lua_entries( { { "debug_backpack", 2 } } ) );
+    CHECK( spill_value["coverage"].get<double>() == Approx( 0.5 ) );
+    CHECK( spill_value["removed_items"].get<int>() == 1 );
+    CHECK( backpack_handle.validation_error( runtime, world_generation ).has_value() );
+    CHECK( nested_bandages_handle.validation_error( runtime, world_generation ).has_value() );
+    CHECK_FALSE( beta.has_amount( itype_debug_backpack, 1 ) );
+    CHECK( count_map_items( beta_pos, itype_bandages, beta_faction ) == 2 );
+}
+
 
 TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker",
            "[lua][platform][items][semantic]" )

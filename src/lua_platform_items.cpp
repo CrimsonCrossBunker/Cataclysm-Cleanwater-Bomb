@@ -43,6 +43,7 @@ extern "C" {
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -4570,6 +4571,143 @@ sol::table consume_inventory_sum(
                    state, std::move( value ) ) );
 }
 
+sol::table consume_dialogue_inventory_sum(
+    sol::this_state lua, const sol::optional<game_handle> &alpha_handle,
+    const sol::optional<game_handle> &beta_handle,
+    const std::string &participant, const sol::table &requested_entries,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( participant != "alpha" && participant != "beta" ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_dialogue_sum participant must be alpha or beta" );
+    }
+    const std::size_t entry_count = requested_entries.size();
+    if( entry_count > maximum_inventory_sum_entries ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_dialogue_sum accepts at most 128 weighted item entries" );
+    }
+    struct weighted_entry {
+        script_game_id id;
+        double desired = 0.0;
+    };
+    std::vector<weighted_entry> entries;
+    entries.reserve( entry_count );
+    for( std::size_t index = 1; index <= entry_count; ++index ) {
+        const sol::object row_object = requested_entries[index];
+        if( !row_object.is<sol::table>() ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum entries must be a dense table array" );
+        }
+        const sol::table row = row_object.as<sol::table>();
+        const sol::object id_object = row["item"];
+        const sol::object amount_object = row["amount"];
+        if( !id_object.is<script_game_id>() ||
+            amount_object.get_type() != sol::type::number ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum entries require item and numeric amount fields" );
+        }
+        const script_game_id &id = id_object.as<script_game_id>();
+        // Native itype_id accepts an unknown static item string and simply
+        // matches no candidates.  Keep this API's check to the ID namespace;
+        // require_id_kind would reject unknown IDs and change that no-op.
+        if( id.kind() != "item" ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum requires GameId<item> entries" );
+        }
+        const double desired = amount_object.as<double>();
+        if( !std::isfinite( desired ) || desired <= 0.0 ||
+            desired > maximum_inventory_resource_quantity ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum amount must be finite, positive, and within native integer bounds" );
+        }
+        entries.push_back( { id, desired } );
+    }
+
+    const game_handle *selected_handle = nullptr;
+    if( participant == "alpha" ) {
+        selected_handle = alpha_handle ? &*alpha_handle :
+                          beta_handle ? &*beta_handle : nullptr;
+    } else {
+        selected_handle = beta_handle ? &*beta_handle :
+                          alpha_handle ? &*alpha_handle : nullptr;
+    }
+
+    sol::state_view state( lua );
+    if( selected_handle == nullptr ) {
+        return make_game_error_result( state, {
+            "missing_actor",
+            "services.inventory.consume_dialogue_sum requires at least one dialogue Character"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               *selected_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const auto legal_to_consume = [character]( const item &entry ) {
+        return entry.is_owned_by( *character );
+    };
+    std::unordered_set<item_location> all_items = get_map().all_items(
+                legal_to_consume, *character,
+                Access_Inventory | Access_Map_Around | Access_Vehicle );
+    double coverage = 0.0;
+    int removed_items = 0;
+    int modified_charge_stacks = 0;
+    bool changed = false;
+    for( const weighted_entry &entry : entries ) {
+        const itype_id item_to_remove( entry.id.value() );
+        auto iter = all_items.begin();
+        while( iter != all_items.end() && coverage < 1.0 ) {
+            item_location location = *iter;
+            if( location && location->typeId() == item_to_remove ) {
+                const int available = location->count_by_charges() ?
+                                      location->charges : 1;
+                const int amount_to_remove = std::min(
+                        available,
+                        static_cast<int>( std::ceil(
+                                ( 1.0 - coverage ) * entry.desired ) ) );
+                coverage += amount_to_remove / entry.desired;
+
+                if( amount_to_remove >= available ) {
+                    location->spill_contents( location.pos_bub( get_map() ) );
+                    retire_item_handle_identity( *location );
+                    location.remove_item();
+                    iter = all_items.erase( iter );
+                    ++removed_items;
+                    changed = true;
+                } else {
+                    location->mod_charges( -amount_to_remove );
+                    ++iter;
+                    if( amount_to_remove != 0 ) {
+                        ++modified_charge_stacks;
+                        changed = true;
+                    }
+                }
+            } else {
+                ++iter;
+            }
+        }
+    }
+
+    if( changed ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+    sol::table value = state.create_table();
+    value["coverage"] = coverage;
+    value["fulfilled"] = coverage >= 1.0;
+    value["changed"] = changed;
+    value["removed_items"] = removed_items;
+    value["modified_charge_stacks"] = modified_charge_stacks;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 item_category_id require_item_category_id(
     const script_game_id &id, const std::string_view api_name )
 {
@@ -7778,6 +7916,20 @@ void install_item_api(
         require_item_write();
         return consume_inventory_sum(
                    lua_state, character, entries,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "consume_dialogue_sum",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const sol::optional<game_handle> &alpha,
+            const sol::optional<game_handle> &beta,
+            const std::string &participant,
+            const sol::table &entries ) {
+        require_item_write();
+        return consume_dialogue_inventory_sum(
+                   lua_state, alpha, beta, participant, entries,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
