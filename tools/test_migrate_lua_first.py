@@ -7417,6 +7417,15 @@ assert(#events == 9)
             }),
             migrate_lua_first.SourceObject(Path("source.json"), 2, {
                 "type": "effect_on_condition",
+                "id": "avatar_shaped_test_eoc_wrapper",
+                "condition": {"and": [
+                    {"test_eoc": "game_start_target"},
+                    {"u_is_outside": True},
+                ]},
+                "effect": "nothing",
+            }),
+            migrate_lua_first.SourceObject(Path("source.json"), 3, {
+                "type": "effect_on_condition",
                 "id": "game_start_reemitter",
                 "effect": {
                     "trigger_event": "game_start",
@@ -7425,8 +7434,12 @@ assert(#events == 9)
             }),
         ]
         normal_requirements = migrate_lua_first._eoc_actor_requirements(
-            objects[:2], frozenset(), frozenset(), frozenset(), frozenset(),
+            objects[:3], frozenset(), frozenset(), frozenset(), frozenset(),
             game_start_event_emitted_by_eoc=False,
+        )
+        avatar_shape_alone = migrate_lua_first._eoc_actor_requirements(
+            [objects[2]], frozenset(), frozenset(), frozenset(), frozenset(),
+            game_start_event_emitted_by_eoc=True,
         )
         reemitted_requirements = migrate_lua_first._eoc_actor_requirements(
             objects, frozenset(), frozenset(), frozenset(), frozenset(),
@@ -7436,10 +7449,20 @@ assert(#events == 9)
         )
         self.assertEqual(normal_requirements["game_start_target"], "avatar")
         self.assertEqual(
+            normal_requirements["avatar_shaped_test_eoc_wrapper"], "avatar"
+        )
+        self.assertEqual(
+            avatar_shape_alone["avatar_shaped_test_eoc_wrapper"], "avatar"
+        )
+        self.assertEqual(
             reemitted_requirements["game_start_target"], "unproven"
         )
         self.assertEqual(
             reemitted_requirements["test_eoc_wrapper"], "unproven"
+        )
+        self.assertEqual(
+            reemitted_requirements["avatar_shaped_test_eoc_wrapper"],
+            "unproven",
         )
 
         names = {

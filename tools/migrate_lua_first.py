@@ -1603,10 +1603,9 @@ def _eoc_actor_requirements(
                 requirement = "none"
         result[identifier] = requirement
 
-    # A predicate-only wrapper has the same actor requirement as the
-    # ``test_eoc`` predicates it composes.  The native condition evaluator
-    # reuses the current dialogue for this call, so propagate that requirement
-    # instead of treating wrappers such as a recurrence guard as ambient.
+    # Native reuses the current dialogue for ``test_eoc``. An unproven
+    # dependency therefore overrides even a wrapper's own u_/npc_ shape;
+    # other actor requirements retain the existing propagation rules.
     condition_references: dict[str, set[str]] = {}
 
     def collect_test_eocs(node: Any, found: set[str]) -> None:
@@ -1634,15 +1633,18 @@ def _eoc_actor_requirements(
     while changed:
         changed = False
         for identifier, references in condition_references.items():
+            inherited = {result.get(reference, "none") for reference in references}
+            if "unproven" in inherited:
+                if result.get(identifier) != "unproven":
+                    result[identifier] = "unproven"
+                    changed = True
+                continue
             if result.get(identifier) != "none":
                 continue
-            inherited = {result.get(reference, "none") for reference in references}
             inherited.discard("none")
             if not inherited:
                 continue
-            if "unproven" in inherited:
-                requirement = "unproven"
-            elif "item" in inherited:
+            if "item" in inherited:
                 requirement = "item"
             elif "vehicle" in inherited:
                 requirement = "vehicle"
