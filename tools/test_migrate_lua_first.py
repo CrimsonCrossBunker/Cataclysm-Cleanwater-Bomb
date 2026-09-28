@@ -20317,6 +20317,40 @@ assert(not available())
             "services.characters.avatar()", "\n".join(rendered or [])
         )
 
+    def test_real_portal_run_eocs_without_activation_actor_stays_todo(self) -> None:
+        paths = (
+            REPOSITORY_ROOT / "data/json/effects_on_condition/scenario_specific_eocs.json",
+            REPOSITORY_ROOT /
+            "data/json/effects_on_condition/nether_eocs/portal_dependent_effect_on_condition.json",
+        )
+        objects = migrate_lua_first.load_objects(list(paths))
+        owner = next(
+            source for source in objects
+            if source.value.get("id") == "scenario_portal_dependent"
+        )
+        self.assertEqual(
+            owner.value["effect"][0]["run_eocs"],
+            [
+                "EOC_PORTAL_DEPENDENT_MESSAGES_BAD",
+                "EOC_PORTAL_DEPENDENT_FOCUS_BAD",
+                "EOC_PORTAL_DEPENDENT_DAMAGE_CONSTANT",
+            ],
+        )
+        result = migrate_lua_first.migrate(objects, "portal_run_eocs_boundary")
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertIn(
+            "TODO: preserve native run_eocs talker clones, copied dialogue context, "
+            "and per-activation Dialogue copies",
+            main,
+        )
+        self.assertIn(
+            "EOC scenario_portal_dependent effect #0 needs a typed callback/task "
+            "conversion preserving get_talker() alpha/beta clones",
+            report,
+        )
+
     def test_pickup_actions_keep_typed_target_and_limit_todos(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

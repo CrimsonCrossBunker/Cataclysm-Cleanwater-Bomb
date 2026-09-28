@@ -30320,13 +30320,17 @@ def render_eoc(
                         )
                     else:
                         lines.append(
-                            "    -- TODO: translate delayed or context-bound run_eocs "
-                            "through Platform callbacks."
+                            "    -- TODO: preserve native run_eocs talker clones, "
+                            "copied dialogue context, and per-activation Dialogue "
+                            "copies before translating through Platform callbacks."
                         )
                         result.add_todo(
                             "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs a typed callback/task conversion"
+                            "needs a typed callback/task conversion preserving "
+                            "get_talker() alpha/beta clones, copied dialogue "
+                            "context/conditionals, and each EOC activation's "
+                            "fresh Dialogue copy"
                         )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "run_eoc_selector" in effect:
