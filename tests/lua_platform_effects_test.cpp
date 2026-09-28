@@ -154,6 +154,68 @@ struct effect_fixture {
 };
 } // namespace
 
+TEST_CASE( "lua_platform_first_topic_matches_native_beta_alpha_fallback",
+           "[lua][platform][npc][dialogue][semantic]" )
+{
+    effect_fixture fixture;
+    npc native;
+    native.normalize();
+    native.setID( character_id( 3199 ), true );
+    native.chatbin.first_topic = "TALK_BEFORE";
+    fixture.other.chatbin.first_topic = "TALK_BEFORE";
+
+    const JsonValue native_json = json_loader::from_string(
+                                      R"({"npc_first_topic":"TALK_AFTER"})" );
+    const JsonObject native_input = native_json.get_object();
+    talk_effect_t native_effect;
+    native_effect.parse_sub_effect( native_input, "first_topic_semantics" );
+    // This is the event bridge shape used by npc_becomes_hostile: one NPC alpha,
+    // no beta, so native actor(true) falls back to the same NPC.
+    dialogue native_context( get_talker_for( native ) );
+    CHECK( native_context.has_alpha );
+    CHECK_FALSE( native_context.has_beta );
+    for( const talk_effect_fun_t &operation : native_effect.effects ) {
+        operation( native_context );
+    }
+
+    sol::table npcs = fixture.lua.create_table();
+    cata::lua_platform::install_npc_domain_services(
+        npcs, [&]() {
+        return fixture.runtime;
+    }, [&]() {
+        return fixture.world;
+    }, []() {}, []() {} );
+    const sol::protected_function set_first_topic = npcs["set_first_topic"];
+    const sol::protected_function_result platform_result = set_first_topic(
+                fixture.handle( true ), "TALK_AFTER" );
+    REQUIRE( platform_result.valid() );
+    const sol::table result = platform_result.get<sol::table>();
+    REQUIRE( result["ok"].get<bool>() );
+    CHECK( result["value"]["before"].get<std::string>() == "TALK_BEFORE" );
+    CHECK( result["value"]["after"].get<std::string>() == "TALK_AFTER" );
+    CHECK( native.chatbin.first_topic == fixture.other.chatbin.first_topic );
+}
+
+TEST_CASE( "native_open_dialogue_skips_ui_for_non_avatar_alpha",
+           "[lua][platform][npc][dialogue][semantic]" )
+{
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 3200 ), true );
+    interlocutor.chatbin.first_topic = "TALK_BEFORE";
+    const JsonValue native_json = json_loader::from_string(
+                                      R"({"open_dialogue":{"topic":"TALK_TEST"}})" );
+    talk_effect_t native_effect;
+    native_effect.parse_sub_effect( native_json.get_object(), "open_dialogue_semantics" );
+    dialogue native_context( get_talker_for( interlocutor ) );
+    CHECK( native_context.has_alpha );
+    CHECK_FALSE( native_context.has_beta );
+    for( const talk_effect_fun_t &operation : native_effect.effects ) {
+        operation( native_context );
+    }
+    CHECK( interlocutor.chatbin.first_topic == "TALK_BEFORE" );
+}
+
 TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
            "[lua][platform][character][semantic]" )
 {

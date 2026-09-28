@@ -4989,8 +4989,11 @@ def render_static_false_effect(
     if effect == "open_dialogue" or (
         isinstance(effect, dict) and "open_dialogue" in effect
     ):
-        # Legacy open_dialogue does not prove exact NPC and avatar handles
-        # together with an explicit topic.  Never invent either participant.
+        # The native explicit-topic path opens a topic-list talker without an
+        # NPC beta and runs its true_eocs after the UI; the no-topic path clones
+        # actor(true). Platform's NPC service instead requires an exact NPC,
+        # avatar, and topic and opens an NPC-bound conversation. Neither native
+        # shape can be replaced by that call or inherit its EOC context.
         return None
     if isinstance(effect, dict) and "transform_item" in effect:
         rendered = render_dynamic_item_transform_effect(effect, actor_expression)
@@ -29560,6 +29563,12 @@ def render_eoc(
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # First-topic mutation and the bare open_dialogue no-op additionally need
+    # a live NPC alpha: npc_becomes_hostile provides one, while NPC_DEATH's
+    # actor may already be dead and cannot back generation-checked services.
+    npc_alpha_fallback_event_actor_proven = (
+        npc_ai_rule_mutation_actor_proven and not npc_fatal_hook
+    )
     exact_alpha_effect_kind: str | None = None
     alpha_effect_kinds: set[str] = set()
     if (
@@ -30251,8 +30260,8 @@ def render_eoc(
                     )
                     if retains_open_dialogue:
                         lines.append(
-                            "    -- TODO: conditional open_dialogue requires "
-                            "exact NPC and avatar handles plus an explicit topic."
+                            "    -- TODO: conditional open_dialogue's native topic "
+                            "talker/beta clone and post-UI EOCs are not represented."
                         )
                     else:
                         lines.append(
@@ -30266,8 +30275,8 @@ def render_eoc(
                         result.add_todo(
                             "semantic_choice",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs an explicit dialogue participant conversion with "
-                            "exact NPC/avatar handles and topic"
+                            "needs native topic-talker or beta-clone dialogue plus "
+                            "post-UI true_eocs/false_eocs semantics"
                         )
                     elif missing_predicates:
                         result.add_todo(
@@ -31691,9 +31700,28 @@ def render_eoc(
             elif static_wrapped_beta_npc and effect == "flee":
                 lines.extend(render_static_wrapped_beta_npc_call("start_fleeing"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, dict) and len(effect) == 1 and next(iter(effect)) in {
-                "npc_change_class", "npc_change_faction", "npc_first_topic",
-            }:
+            elif (
+                isinstance(effect, dict) and set(effect) == {"npc_first_topic"} and
+                not npc_alpha_fallback_event_actor_proven
+            ):
+                lines.append(
+                    "    -- TODO: npc_first_topic needs the standalone "
+                    "npc_becomes_hostile alpha fallback; event alpha does not "
+                    "prove dialogue beta or a callable child's talkers."
+                )
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "npc_first_topic needs the event-exclusive live NPC alpha "
+                    "fallback from npc_becomes_hostile"
+                )
+                all_effects_converted = False
+            elif (
+                npc_actor_proven and isinstance(effect, dict) and
+                len(effect) == 1 and next(iter(effect)) in {
+                    "npc_change_class", "npc_change_faction", "npc_first_topic",
+                }
+            ):
                 key = next(iter(effect))
                 target = npc_actor_expression or "actor"
                 topic_value = effect[key]
@@ -33774,18 +33802,24 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
+            elif effect == "open_dialogue" and npc_alpha_fallback_event_actor_proven:
+                # This exact event has a live NPC as alpha, so native
+                # f_open_dialogue returns before opening UI; bare string form
+                # has no false_eocs and is a no-op. Do not infer this for
+                # avatar, NPC_DEATH, callable, or topic-object shapes.
+                converted_effect = True
             elif effect == "open_dialogue" or (
                 isinstance(effect, dict) and "open_dialogue" in effect
             ):
                 lines.append(
-                    "    -- TODO: translate open_dialogue only when exact NPC "
-                    "and avatar handles plus an explicit topic are available."
+                    "    -- TODO: open_dialogue's topic-only UI/no-topic beta clone "
+                    "and post-UI EOCs do not match services.npcs.open_dialogue."
                 )
                 result.add_todo(
                     "semantic_choice",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs an explicit dialogue participant conversion with "
-                    "exact NPC/avatar handles and topic"
+                    "needs native topic-talker or beta-clone dialogue plus "
+                    "post-UI true_eocs/false_eocs semantics"
                 )
                 all_effects_converted = False
             elif isinstance(effect, dict) and "place_override" in effect:
