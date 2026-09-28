@@ -1752,6 +1752,22 @@ def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
     return any(walk(source.value) for source in objects)
 
 
+def _has_static_event_emission(
+    objects: Iterable[SourceObject], event_name: str,
+) -> bool:
+    """Fail closed when a JSON effect can synthesize a supposedly source-only event."""
+    def walk(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        if not isinstance(value, dict):
+            return False
+        if value.get("trigger_event") == event_name:
+            return True
+        return any(walk(entry) for entry in value.values())
+
+    return any(walk(source.value) for source in objects)
+
+
 def _content_callback_actor_provenance(
     objects: Iterable[SourceObject],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
@@ -29284,6 +29300,7 @@ def render_eoc(
     dynamic_eoc_dispatch_present: bool = False,
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
+    game_start_event_emitted_by_eoc: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29588,6 +29605,30 @@ def render_eoc(
     # actor may already be dead and cannot back generation-checked services.
     npc_alpha_fallback_event_actor_proven = (
         npc_ai_rule_mutation_actor_proven and not npc_fatal_hook
+    )
+    raw_effect = value.get("effect")
+    single_take_control_menu_effect = (
+        (isinstance(raw_effect, str) and raw_effect == "take_control_menu") or
+        (isinstance(raw_effect, list) and raw_effect == ["take_control_menu"])
+    )
+    # The Platform menu service calls the same avatar::control_npc_menu UI,
+    # but it takes a generation-checked live Avatar handle and invalidates it
+    # if the menu swaps the controlled character.  Only a standalone,
+    # event-exclusive game_start EOC with this terminal effect has a proven
+    # live Avatar and no later effects/conditions that could use stale handles.
+    # Static JSON trigger_event emitters are screened corpus-wide below; trusted
+    # Lua can still call services.native_events.emit("game_start", ...), so
+    # this remains bounded source support rather than full runtime proof.
+    take_control_menu_live_terminal_proven = (
+        has_event_trigger and required_event == "game_start" and
+        game_start_avatar_actor_is_proven() and stable_handler and
+        not inline_eoc and not avatar_fatal_hook and not avatar_death_hook and
+        not npc_fatal_hook and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present and not game_start_event_emitted_by_eoc and
+        single_take_control_menu_effect and
+        value.get("condition") is None and value.get("false_effect") is None and
+        value.get("deactivate_condition") is None and recurrence_value is None and
+        value.get("global") is not True
     )
     exact_alpha_effect_kind: str | None = None
     alpha_effect_kinds: set[str] = set()
@@ -32789,8 +32830,9 @@ def render_eoc(
             }:
                 if effect == "take_control":
                     reason = (
-                        "control transfer requires original dialogue participants, "
-                        "callback branches and refreshed handles after avatar replacement"
+                        "native take_control requires an avatar alpha and may swap an NPC beta, "
+                        "then runs true_eocs or false_eocs with the original talkers; "
+                        "Platform transfer invalidates those handles"
                     )
                     category = "manual_rewrite"
                 else:
@@ -32799,6 +32841,18 @@ def render_eoc(
                 lines.append(f"    -- TODO: {reason}.")
                 result.add_todo(
                     category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "take_control" in effect:
+                reason = (
+                    "native take_control branches on avatar alpha and NPC beta, then runs "
+                    "true_eocs or false_eocs against the original dialogue after a possible "
+                    "identity swap; Platform transfer invalidates those handles"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
@@ -34500,10 +34554,45 @@ def render_eoc(
                         f"{item_picker_todo}"
                     )
                     all_effects_converted = False
-            elif effect == "take_control_menu":
-                reason = (
-                    "control menu requires refreshed participant handles after avatar replacement"
+            elif effect == "take_control_menu" and take_control_menu_live_terminal_proven:
+                # open_control_menu calls the same native Avatar menu entry.
+                # This EOC has no later operation or callback that can observe
+                # the handles invalidated if the player chooses a follower.
+                lines.append(
+                    "    -- Bounded source support: static JSON event emitters were "
+                    "screened; trusted Lua may still emit game_start."
                 )
+                lines.append(
+                    "    service_value(services.npcs.open_control_menu("
+                    "services.characters.avatar()))"
+                )
+                converted_effect = True
+            elif effect == "take_control_menu":
+                if avatar_fatal_hook or avatar_death_hook:
+                    reason = (
+                        "native death-hook control menu runs with a dead Avatar, but "
+                        "Platform GameHandle validation rejects dead creatures"
+                    )
+                elif inline_eoc or eoc_id in eoc_referenced_ids or dynamic_eoc_dispatch_present:
+                    reason = (
+                        "reentrant EOC calls can leave the live game_start actor context; "
+                        "the menu's Avatar handle must be proven at its call site"
+                    )
+                elif required_event == "game_start" and game_start_event_emitted_by_eoc:
+                    reason = (
+                        "another static JSON EOC can emit game_start and re-enter this "
+                        "handler outside the native live-start lifecycle"
+                    )
+                elif required_event == "game_start":
+                    reason = (
+                        "only a condition-free terminal menu action avoids later work with "
+                        "handles invalidated by an avatar identity swap"
+                    )
+                else:
+                    reason = (
+                        "native menu uses the current Avatar, but this source does not prove "
+                        "an event-exclusive live game_start Avatar handle"
+                    )
                 lines.append(f"    -- TODO: {reason}.")
                 result.add_todo(
                     "manual_rewrite",
@@ -35053,6 +35142,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
     npc_dialogue_mission_pair_ids = \
         _npc_dialogue_mission_pair_provenance(objects)
     dynamic_eoc_dispatch_present = _has_dynamic_eoc_dispatch(objects)
+    game_start_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "game_start"
+    )
     character_override_ids = frozenset(
         set(character_override_ids) | set(content_character_actor_ids)
     )
@@ -35362,6 +35454,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     dynamic_eoc_dispatch_present,
                     known_body_part_ids,
                     known_wound_ids,
+                    game_start_event_emitted_by_eoc,
                 )
             )
         elif kind == "tool_quality":
