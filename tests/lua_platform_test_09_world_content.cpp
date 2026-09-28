@@ -1,12 +1,59 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <memory>
 #include <list>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "calendar.h"
+#include "flag.h"
 #include "lua_platform_test_support.h"
 #include "timed_event.h"
+
+namespace
+{
+struct platform_world_spawn_contract_fixture {
+    platform_world_spawn_contract_fixture() :
+        runtime_owner( cata::lua_platform::make_game_handle_runtime_owner() ),
+        runtime( runtime_owner, 501 ),
+        active_runtime( runtime ),
+        active_world_generation( 1 ) {
+        services = lua.create_table();
+        cata::lua_platform::install_value_type_api(
+            lua, services, []() {} );
+        cata::lua_platform::install_game_handle_api(
+            lua, services,
+        [this]() {
+            return active_runtime;
+        },
+        [this]() {
+            return active_world_generation;
+        }, []() {} );
+        cata::lua_platform::install_world_api(
+            services,
+        [this]() {
+            return active_runtime;
+        },
+        [this]() {
+            return active_world_generation;
+        }, []() {},
+        [this]() {
+            ++write_gate_calls;
+        } );
+    }
+
+    sol::state lua;
+    sol::table services;
+    std::shared_ptr<const cata::lua_platform::game_handle_runtime_owner> runtime_owner;
+    cata::lua_platform::game_handle_runtime runtime;
+    cata::lua_platform::game_handle_runtime active_runtime;
+    std::size_t active_world_generation;
+    int write_gate_calls = 0;
+};
+} // namespace
 
 TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
            "[lua][platform][weather]" )
@@ -267,6 +314,115 @@ TEST_CASE( "lua_platform_world_registrar_finalization_failure_boundary_is_termin
     transaction.rollback();
     CHECK_FALSE( transaction.apply( error ) );
     CHECK( error.find( "no longer building" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initialization",
+           "[lua][platform][world][spawn_item]" )
+{
+    REQUIRE( g != nullptr );
+    platform_world_spawn_contract_fixture fixture;
+    map &here = get_map();
+    const tripoint_abs_ms position = get_avatar().pos_abs();
+    const tripoint_bub_ms local = here.get_bub( position );
+    REQUIRE( here.inbounds( local ) );
+    const cata::lua_platform::script_tripoint_coord script_position =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square, position.raw() );
+
+    std::vector<std::int64_t> spawned_uids;
+    on_out_of_scope restore_spawned_items( [&here, &local, &spawned_uids]() {
+        for( const std::int64_t uid : spawned_uids ) {
+            map_stack stack = here.i_at( local );
+            for( map_stack::iterator it = stack.begin(); it != stack.end(); ) {
+                if( it->uid().get_value() == uid ) {
+                    it = here.i_rem( local, it );
+                } else {
+                    ++it;
+                }
+            }
+        }
+    } );
+
+    const auto find_spawned = [&here, &local]( const std::int64_t uid ) -> item * {
+        map_stack stack = here.i_at( local );
+        for( item &entry : stack ) {
+            if( entry.uid().get_value() == uid ) {
+                return &entry;
+            }
+        }
+        return nullptr;
+    };
+    const auto spawn_through_platform = [&]( const std::string &id ) {
+        const sol::table world = fixture.services["world"];
+        const sol::protected_function spawn = world["spawn_item"];
+        const sol::protected_function_result result = spawn(
+                script_position,
+                cata::lua_platform::script_game_id( "item", id ), 1 );
+        if( !result.valid() ) {
+            return sol::table();
+        }
+        const sol::table envelope = result.get<sol::table>();
+        if( !envelope.valid() || !envelope["ok"].get<bool>() ) {
+            return sol::table();
+        }
+        return envelope["value"].get<sol::table>();
+    };
+
+    item native_flyer( itype_id( "flyer_evac" ), calendar::turn );
+    REQUIRE( native_flyer.has_flag( flag_PRESERVE_SPAWN_LOC ) );
+    native_flyer.preserve_location( position );
+    item &native_flyer_added = here.add_item_or_charges(
+                                   local, std::move( native_flyer ) );
+    const std::int64_t native_flyer_uid = native_flyer_added.uid().get_value();
+    spawned_uids.push_back( native_flyer_uid );
+
+    const sol::table platform_flyer_value =
+        spawn_through_platform( "flyer_evac" );
+    REQUIRE( platform_flyer_value.valid() );
+    REQUIRE( platform_flyer_value["added"].get<std::int64_t>() == 1 );
+    const sol::table platform_flyer_items =
+        platform_flyer_value["items"].get<sol::table>();
+    const sol::table platform_flyer_item =
+        platform_flyer_items[1].get<sol::table>();
+    const std::int64_t platform_flyer_uid =
+        platform_flyer_item["uid"].get<std::int64_t>();
+    spawned_uids.push_back( platform_flyer_uid );
+    item *const platform_flyer = find_spawned( platform_flyer_uid );
+    item *const native_flyer_map_item = find_spawned( native_flyer_uid );
+    REQUIRE( platform_flyer != nullptr );
+    REQUIRE( native_flyer_map_item != nullptr );
+    CHECK( platform_flyer->get_var(
+               "spawn_location", tripoint_abs_ms::invalid ) ==
+           native_flyer_map_item->get_var(
+               "spawn_location", tripoint_abs_ms::invalid ) );
+
+    item native_gun( itype_id( "glock_19" ), calendar::turn );
+    REQUIRE_FALSE( native_gun.count_by_charges() );
+    REQUIRE_FALSE( native_gun.ammo_default().is_null() );
+    native_gun.ammo_set( native_gun.ammo_default() );
+    item &native_gun_added = here.add_item_or_charges(
+                                 local, std::move( native_gun ) );
+    const std::int64_t native_gun_uid = native_gun_added.uid().get_value();
+    spawned_uids.push_back( native_gun_uid );
+
+    const sol::table platform_gun_value =
+        spawn_through_platform( "glock_19" );
+    REQUIRE( platform_gun_value.valid() );
+    REQUIRE( platform_gun_value["added"].get<std::int64_t>() == 1 );
+    const sol::table platform_gun_items =
+        platform_gun_value["items"].get<sol::table>();
+    const sol::table platform_gun_item =
+        platform_gun_items[1].get<sol::table>();
+    const std::int64_t platform_gun_uid =
+        platform_gun_item["uid"].get<std::int64_t>();
+    spawned_uids.push_back( platform_gun_uid );
+    item *const platform_gun = find_spawned( platform_gun_uid );
+    item *const native_gun_map_item = find_spawned( native_gun_uid );
+    REQUIRE( platform_gun != nullptr );
+    REQUIRE( native_gun_map_item != nullptr );
+    CHECK( platform_gun->ammo_current() == native_gun_map_item->ammo_current() );
+    CHECK( platform_gun->ammo_remaining() == native_gun_map_item->ammo_remaining() );
+    CHECK( fixture.write_gate_calls == 2 );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

@@ -4375,6 +4375,45 @@ def render_static_spawn_item_effect(
     return None
 
 
+def render_static_map_spawn_item_effect(
+    effect: dict[str, Any], live_avatar_actor_proven: bool,
+    actor_expression: str | None,
+) -> list[str] | None:
+    """Lower only direct map spawns at a source-proven loaded Avatar position.
+
+    Native ``map_spawn_item`` defaults to dialogue alpha's current absolute
+    map-square position.  The bounded caller proof is the unreferenced,
+    event-exclusive ``game_start`` Avatar: ``game::start_game`` loads the map
+    and places the player before ``on_world_ready`` and the event send.  It is
+    further restricted to the first EOC effect so prior Lua cannot relocate
+    the Avatar or unload the map.  The world service accepts only loaded
+    absolute map-square coordinates; off-screen tinymap writes, item groups,
+    containers, flags, dynamic ids, and dynamic quantities remain TODOs.
+    """
+    item_id = effect.get("map_spawn_item")
+    quantity = _literal_integer_or_none(
+        effect.get("count", 1), 1, 100
+    )
+    if (
+        not live_avatar_actor_proven or actor_expression != "actor" or
+        set(effect) - {"map_spawn_item", "count", "//~"} or
+        "loc" in effect or
+        "//~" in effect and not isinstance(effect["//~"], str) or
+        not bounded_utf8_string(item_id, PLATFORM_ID_MAX_BYTES) or
+        quantity is None
+    ):
+        return None
+    position = (
+        "service_value(services.characters.snapshot(actor))"
+        ".creature.position"
+    )
+    return [
+        "    service_value(services.world.spawn_item("
+        f"{position}, services.types.id(\"item\", {lua_quote(item_id)}), "
+        f"{quantity}))"
+    ]
+
+
 def render_participant_string(value: Any, target: str, alpha: str | None, beta: str | None) -> str | None:
     if isinstance(value, dict) and value.get("i18n") is True and "str" in value:
         if set(value) - {"str", "i18n", "//~"} or not isinstance(value["str"], str):
@@ -29654,9 +29693,11 @@ def render_eoc(
                         )
                     elif isinstance(false_value, dict) and "map_spawn_item" in false_value:
                         false_todo = (
-                            "map_spawn_item needs a typed absolute map-square position "
-                            "and native off-screen tinymap plus item-initialization "
-                            "semantics that services.world.spawn_item does not provide"
+                            "map_spawn_item false branches are not lowered yet; the "
+                            "bounded world-service path requires a live Avatar at an "
+                            "implicit loaded position, a direct item id, and a static "
+                            "count from 1..100; loc, groups, containers, flags, and "
+                            "dynamic values remain TODO"
                         )
                     elif isinstance(false_value, dict) and any(
                         key in false_value for key in (
@@ -31517,24 +31558,48 @@ def render_eoc(
                 )
                 all_effects_converted = False
             elif isinstance(effect, dict) and "map_spawn_item" in effect:
-                position_gap = (
-                    "loc is a legacy var_info lookup and does not prove a typed "
-                    "absolute map-square TripointCoord"
-                    if "loc" in effect else
-                    "the native target defaults to alpha's runtime position"
+                loaded_avatar_position_proven = (
+                    mutation_avatar_actor_proven and effect_index == 0
                 )
-                map_gap = (
-                    f"native map_spawn_item {position_gap}; map_add_item may load "
-                    "off-screen tinymaps, while services.world.spawn_item requires "
-                    "a loaded typed position and does not reproduce native item "
-                    "initialization, item-group, container, flags, or count behavior"
+                rendered_map_spawn = render_static_map_spawn_item_effect(
+                    effect, loaded_avatar_position_proven, actor_expression
                 )
-                lines.append(f"    -- TODO: {map_gap}.")
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {map_gap}"
-                )
-                all_effects_converted = False
+                if rendered_map_spawn is not None:
+                    lines.extend(rendered_map_spawn)
+                    converted_effect = True
+                else:
+                    if "loc" in effect:
+                        map_gap = (
+                            "loc is a legacy var_info lookup and does not prove a "
+                            "typed absolute map-square position; native map_add_item "
+                            "may load off-screen tinymaps while services.world.spawn_item "
+                            "requires a loaded position"
+                        )
+                    elif not mutation_avatar_actor_proven:
+                        map_gap = (
+                            "native map_spawn_item defaults to dialogue alpha's runtime "
+                            "position, but this source does not prove the event-exclusive "
+                            "live Avatar required by the loaded-position world service"
+                        )
+                    elif effect_index != 0:
+                        map_gap = (
+                            "an earlier EOC effect may relocate the Avatar or unload the "
+                            "map; the loaded-position world service is lowered only for "
+                            "the first game_start effect"
+                        )
+                    else:
+                        map_gap = (
+                            "only a literal direct item id and integral count from 1..100 "
+                            "are lowered; dynamic ids/counts, item groups, containers, "
+                            "flags, and other options retain native semantics not covered "
+                            "by this bounded service call"
+                        )
+                    lines.append(f"    -- TODO: {map_gap}.")
+                    result.add_todo(
+                        "manual_rewrite" if not mutation_avatar_actor_proven else "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {map_gap}"
+                    )
+                    all_effects_converted = False
             elif effect == "player_weapon_away":
                 reason = (
                     "player_weapon_away is registered as a native TALK response "

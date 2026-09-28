@@ -313,6 +313,29 @@ function CcbMapApi.edit(tile, expected_revision, changes) end
 ---@class CcbWorldApi
 local CcbWorldApi = {}
 
+---@class CcbWorldSpawnedItem
+---@field handle GameHandle Generation-bound handle for the spawned map item.
+---@field uid integer Native item instance uid.
+---@field id GameId GameId<item> for the spawned item.
+---@field name string Localized native item name.
+---@field charges integer Native charge count reported for the spawned instance.
+
+---@class CcbWorldSpawnItemResult
+---@field id GameId GameId<item> requested for spawning.
+---@field requested integer Requested charge count or instance count.
+---@field added integer Charges or item instances added to the map.
+---@field rejected integer Requested quantity not added.
+---@field count_by_charges boolean Whether the item is counted by charges.
+---@field instances integer Number of item handles returned.
+---@field items CcbWorldSpawnedItem[] Dense one-based handles for added map items.
+
+---@param position TripointCoord Explicit absolute map-square coordinate in the loaded map.
+---@param id GameId GameId<item> identifying the item to create.
+---@param quantity integer Positive quantity up to 1,000,000; non-charge items are limited to 100 instances per call.
+--- Non-charge items receive native default ammo, and items with PRESERVE_SPAWN_LOC retain this position.
+---@return CcbResult result `value` is a CcbWorldSpawnItemResult.
+function CcbWorldApi.spawn_item(position, id, quantity) end
+
 ---@param origin TripointCoord Explicit absolute map-square coordinate.
 ---@param options? CcbWorldPointsNearbyOptions Bounded result page options.
 ---@return CcbWorldNearbyPointsPage
