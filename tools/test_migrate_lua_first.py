@@ -10688,6 +10688,39 @@ assert(not available())
                 self.assertIn("condition = false", unsupported_rendered)
                 self.assertTrue(unsupported_result.todos)
 
+    def test_talk_topic_run_eocs_stays_todo_without_action_phase_hook(self) -> None:
+        # This is the native response schema: run_eocs is one action in the
+        # success talk_effect_t, not a top-level true_eocs field.  Native
+        # talk_effect_t::apply runs it before opinion/hostility handling;
+        # Platform on_select is called only after that whole method returns.
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "response_run_eocs_topic",
+                "responses": [{
+                    "text": "Run the local follow-up",
+                    "effect": [{"run_eocs": "local_response_followup"}],
+                }],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertNotIn("on_select", rendered)
+        self.assertNotIn("run_eocs", rendered)
+        self.assertTrue(result.todos)
+        todo_text = "\n".join(todo.text for todo in result.todos)
+        self.assertIn(
+            "native run_eocs executes inside talk_effect_t::apply", todo_text
+        )
+        self.assertIn("before opinion and hostility handling", todo_text)
+        self.assertIn(
+            "Platform on_select runs after the native response effect", todo_text
+        )
+        self.assertIn(
+            "session-checked native action-phase hook", todo_text
+        )
+
     def test_assigned_mission_counts_need_a_rendered_dialogue_callback(self) -> None:
         # Native f_no_assigned_mission/f_has_assigned_mission/
         # f_has_many_assigned_missions distinguish 0, exactly 1, and >= 2

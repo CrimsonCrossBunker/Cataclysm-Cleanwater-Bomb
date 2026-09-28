@@ -6584,6 +6584,22 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     return LuaRaw(callback)
 
 
+def _talk_topic_effect_todo_reason(effect: Any) -> str | None:
+    if not _node_has_key(effect, "run_eocs"):
+        return None
+    # Native f_run_eocs executes synchronously inside talk_effect_t::apply,
+    # before talk_effect_t applies opinion and checks whether the NPC turned
+    # hostile.  PlatformDialogueContext:on_select is dispatched only after
+    # effects.apply has returned, so it cannot preserve that action ordering.
+    # Keep the action TODO until Platform has a session-checked callback slot
+    # inside the native response effect phase.
+    return (
+        "native run_eocs executes inside talk_effect_t::apply before opinion and "
+        "hostility handling, while Platform on_select runs after the native "
+        "response effect; this needs a session-checked native action-phase hook"
+    )
+
+
 def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     topic_id = value.get("id")
@@ -6627,10 +6643,13 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
             )
             if callback is None:
                 trade_todo = _legacy_item_trade_effect_todo(entry["effect"])
+                response_effect_reason = _talk_topic_effect_todo_reason(
+                    entry["effect"]
+                )
                 result.add_todo(
                     "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} response effect "
-                    f"{trade_todo or 'needs a native callback'}"
+                    f"{trade_todo or response_effect_reason or 'needs a native callback'}"
                 )
             else:
                 response["on_select"] = callback
