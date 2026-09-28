@@ -8344,9 +8344,10 @@ assert(#events == 9)
             self.assertEqual(len(result.partial), 1)
             self.assertIn("context.actors.npc", main)
             self.assertIn(
-                "EOC npc_hostile condition TODO: translate npc_has_activity "
-                "member objects and npc_is_travelling only after a supported "
-                "EOC callback supplies native beta as a live Character",
+                "EOC npc_hostile condition TODO: translate npc_* activity, "
+                "travel, following, and vehicle snapshot conditions only when "
+                "a direct talk-topic true_eocs/false_eocs callback proves native "
+                "beta as a live Character",
                 report,
             )
             self.assertNotIn("character_travel_has_path(actor)", main)
@@ -12581,102 +12582,243 @@ assert(not available())
             report,
         )
 
-    def test_npc_activity_and_travel_conditions_preserve_native_roles(self) -> None:
-        for selector in ("npc_is_travelling",):
-            for actor_expression in ("actor", "context.actors.beta"):
-                with self.subTest(
-                    selector=selector, actor_expression=actor_expression
-                ):
+    def test_npc_state_conditions_require_exact_dialogue_beta_proof(self) -> None:
+        fields = {
+            "npc_has_activity": "activity.active",
+            "npc_is_travelling": "travel.has_path",
+            "npc_following": "npc_state.following",
+            "npc_driving": "movement.driving",
+            "npc_controlling_vehicle": "movement.controlling_vehicle",
+        }
+        conditions: dict[str, object] = {
+            selector: selector for selector in fields
+        }
+        conditions["npc_has_activity_member"] = {"npc_has_activity": "ignored"}
+        conditions["negated_activity_member"] = {
+            "not": {"npc_has_activity": "ignored"}
+        }
+        for name, condition in conditions.items():
+            with self.subTest(condition=name):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    condition,
+                    npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta",
+                )
+                self.assertIsNotNone(expression)
+                assert expression is not None
+                expected_field = (
+                    fields["npc_has_activity"] if name.endswith("activity_member")
+                    or name == "negated_activity_member" else fields[name]
+                )
+                self.assertIn(f"state.{expected_field}", expression)
+                self.assertIn("context.actors.beta", expression)
+                self.assertIn("beta:is_valid()", expression)
+
+        for condition in (
+            "npc_has_activity", "npc_is_travelling", "npc_following",
+            "npc_driving", "npc_controlling_vehicle",
+            {"npc_has_activity": "ignored"},
+        ):
+            for provenance in (
+                {},
+                {"npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "actor"},
+                {"npc_dialogue_pair_proven": True,
+                 "npc_actor_expression": "context.actors.interlocutor"},
+                {"npc_actor_proven": True, "npc_actor_expression": "actor"},
+            ):
+                with self.subTest(condition=condition, provenance=provenance):
                     self.assertIsNone(
                         migrate_lua_first.render_eoc_condition_expression(
-                            selector,
-                            npc_actor_proven=True,
-                            npc_actor_expression=actor_expression,
-                            npc_dialogue_pair_proven=True,
-                            event_beta_presence_proven=True,
+                            condition, **provenance
                         )
                     )
-
-        # This member form is the native f_has_activity parser.  The member
-        # string is ignored, but the query still reads const_actor(true).
-        for condition in (
-            {"npc_has_activity": "ignored"},
-            {"not": {"npc_has_activity": "ignored"}},
+        for invalid in (
+            {"npc_has_activity": 4},
+            {"npc_is_travelling": "not-a-simple-condition"},
+            {"npc_driving": "not-a-simple-condition"},
         ):
-            for actor_expression in ("actor", "context.actors.beta"):
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        condition,
-                        npc_actor_proven=True,
-                        npc_actor_expression=actor_expression,
-                        npc_dialogue_pair_proven=True,
-                        event_beta_presence_proven=True,
-                    )
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    invalid,
+                    npc_dialogue_pair_proven=True,
+                    npc_actor_expression="context.actors.beta",
                 )
-        # The bare string is not a registered simple native condition.
-        self.assertEqual(
-            migrate_lua_first.render_eoc_condition_expression(
-                "npc_has_activity",
-                npc_actor_proven=True,
-                npc_actor_expression="actor",
-                npc_dialogue_pair_proven=True,
-            ),
-            "false",
+            )
+
+        # Direct topic callback slots prove alpha/beta. The shared proof is
+        # removed when the same EOC can also be re-entered through run_eocs.
+        for callback_key, selector in (
+            ("true_eocs", "npc_has_activity"),
+            ("false_eocs", "npc_is_travelling"),
+        ):
+            eoc_id = f"npc_state_{callback_key}"
+            topic = migrate_lua_first.SourceObject(
+                Path("source.json"), 1, {
+                    "type": "talk_topic", "id": f"topic_{eoc_id}",
+                    "responses": [{callback_key: eoc_id}],
+                },
+            )
+            eoc = migrate_lua_first.SourceObject(
+                Path("source.json"), 2, {
+                    "type": "effect_on_condition", "id": eoc_id,
+                    "condition": selector, "effect": {"message": "state"},
+                },
+            )
+            pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+                [topic, eoc]
+            )
+            self.assertIn(eoc_id, pair_ids)
+            rendered = migrate_lua_first.render_eoc(
+                eoc, migrate_lua_first.MigrationResult(),
+                npc_dialogue_mission_pair_ids=pair_ids,
+            )
+            field = fields[selector]
+            self.assertIn(f"state.{field} == true", rendered)
+
+        reentered_id = "npc_state_reentered"
+        reentered_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 3, {
+                "type": "talk_topic", "id": "topic_npc_state_reentered",
+                "responses": [
+                    {"true_eocs": reentered_id},
+                    {"effect": {"run_eocs": reentered_id}},
+                ],
+            },
         )
+        reentered_eoc = migrate_lua_first.SourceObject(
+            Path("source.json"), 4, {
+                "type": "effect_on_condition", "id": reentered_id,
+                "condition": "npc_driving", "effect": {"message": "state"},
+            },
+        )
+        reentered_pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [reentered_topic, reentered_eoc]
+        )
+        self.assertNotIn(reentered_id, reentered_pair_ids)
+        reentered_result = migrate_lua_first.MigrationResult()
+        reentered_rendered = migrate_lua_first.render_eoc(
+            reentered_eoc, reentered_result,
+            npc_dialogue_mission_pair_ids=reentered_pair_ids,
+        )
+        self.assertNotIn("state.movement.driving", reentered_rendered)
+        self.assertTrue(reentered_result.todos)
 
         with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary) / "source.json"
+            source = Path(temporary) / "npc_state_event.json"
             source.write_text(
-                json.dumps([
-                    {
-                        "type": "effect_on_condition",
-                        "id": "npc_activity_member_event",
-                        "required_event": "npc_becomes_hostile",
-                        "condition": {"npc_has_activity": "ignored"},
-                        "effect": {"message": "activity"},
-                    },
-                    {
-                        "type": "effect_on_condition",
-                        "id": "npc_travel_event",
-                        "required_event": "npc_becomes_hostile",
-                        "condition": "npc_is_travelling",
-                        "effect": {"message": "travel"},
-                    },
-                    {
-                        "type": "effect_on_condition",
-                        "id": "npc_activity_bare_event",
-                        "required_event": "npc_becomes_hostile",
-                        "condition": "npc_has_activity",
-                        "effect": {"message": "bare activity"},
-                    },
-                ]),
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "npc_activity_event_without_beta",
+                    "required_event": "npc_becomes_hostile",
+                    "condition": "npc_has_activity",
+                    "effect": {"message": "native beta activity"},
+                }),
                 encoding="utf-8",
             )
-            result = migrate_lua_first.migrate(
+            event_result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]),
-                "npc_activity_travel_mod",
+                "npc_state_event_without_beta_mod",
             )
-            main = result.files[Path("main.lua")]
-            todos = "\n".join(todo.text for todo in result.todos)
-
-        self.assertNotIn("services.activities.snapshot(actor)", main)
-        self.assertNotIn("character_travel_has_path(actor)", main)
-        self.assertIn("if not (false) then", main)
-        self.assertNotIn(
-            "EOC npc_activity_bare_event condition TODO:",
-            todos,
+        event_main = event_result.files[Path("main.lua")]
+        event_todos = "\n".join(todo.text for todo in event_result.todos)
+        self.assertIn("if not (false) then", event_main)
+        self.assertIn(
+            "EOC npc_activity_event_without_beta condition TODO: translate "
+            "npc_* activity, travel, following, and vehicle snapshot conditions "
+            "only when a direct talk-topic true_eocs/false_eocs callback proves "
+            "native beta as a live Character",
+            event_todos,
         )
-        for eoc_id in ("npc_activity_member_event", "npc_travel_event"):
-            todo_prefix = (
-                f"EOC {eoc_id} condition TODO: translate "
-                "npc_has_activity member objects and npc_is_travelling only "
-                "after a supported EOC callback supplies native beta as a "
-                "live Character"
-            )
-            self.assertIn(
-                todo_prefix,
-                todos,
-            )
+
+    def test_real_talk_topic_npc_state_conditions_are_bounded(self) -> None:
+        topics = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_OTHER.json",
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_COMMON_ALLY.json",
+            REPOSITORY_ROOT / "data/json/npcs/common_chat/TALK_FRIEND_CONVERSATION.json",
+        ])
+        by_id = {
+            source.value.get("id"): source
+            for source in topics
+            if source.value.get("type") == "talk_topic"
+        }
+        following_topic = by_id["TALK_SHELTER"]
+        following_response = next(
+            response for response in following_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == {"not": "npc_following"}
+        )
+        friend_topic = by_id["TALK_FRIEND_CONVERSATION"]
+        following_positive_response = next(
+            response for response in friend_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == "npc_following"
+        )
+        activity_topic = by_id["TALK_ACTIVITIES"]
+        activity_response = next(
+            response for response in activity_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == "npc_has_activity"
+        )
+        compound_activity_response = next(
+            response for response in activity_topic.value["responses"]
+            if isinstance(response, dict) and
+            isinstance(response.get("condition"), dict) and
+            response["condition"].get("and")
+        )
+
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                following_response["condition"]
+            ),
+            "negated state predicates remain TODO until non-Character talker semantics are total",
+        )
+        following_callback = migrate_lua_first.render_talk_topic_response_condition(
+            following_positive_response["condition"]
+        )
+        self.assertIsNotNone(following_callback)
+        assert following_callback is not None
+        self.assertIn("dialogue_context:interlocutor()", following_callback.source)
+        self.assertIn("state.npc_state.following == true", following_callback.source)
+        activity_callback = migrate_lua_first.render_talk_topic_response_condition(
+            activity_response["condition"]
+        )
+        self.assertIsNotNone(activity_callback)
+        assert activity_callback is not None
+        self.assertIn("dialogue_context:interlocutor()", activity_callback.source)
+        self.assertIn("services.characters.snapshot(beta)", activity_callback.source)
+        self.assertIn("state.activity.active == true", activity_callback.source)
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                compound_activity_response["condition"]
+            ),
+            "compound activity and trait condition remains fail-closed",
+        )
+        friend_result = migrate_lua_first.MigrationResult()
+        friend_rendered = migrate_lua_first.render_talk_topic(
+            friend_topic, friend_result
+        )
+        self.assertIsNotNone(friend_rendered)
+        assert friend_rendered is not None
+        self.assertIn("state.npc_state.following == true", friend_rendered)
+        self.assertIn("condition = false", friend_rendered)
+        self.assertTrue(any(
+            "response condition needs Lua conversion" in todo.text
+            for todo in friend_result.todos
+        ))
+
+        activity_result = migrate_lua_first.MigrationResult()
+        activity_rendered = migrate_lua_first.render_talk_topic(
+            activity_topic, activity_result
+        )
+        self.assertIsNotNone(activity_rendered)
+        assert activity_rendered is not None
+        self.assertIn("state.activity.active == true", activity_rendered)
+        self.assertIn("condition = false", activity_rendered)
+        self.assertTrue(any(
+            "response condition needs Lua conversion" in todo.text
+            for todo in activity_result.todos
+        ))
 
     def test_avatar_safe_space_requires_live_event_exclusive_avatar_proof(self) -> None:
         self.assertIsNone(

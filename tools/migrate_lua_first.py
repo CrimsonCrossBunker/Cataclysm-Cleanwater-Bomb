@@ -6352,6 +6352,23 @@ def _talk_text(value: Any) -> str | None:
     return None
 
 
+def _render_talk_topic_npc_state_condition(condition: Any) -> str | None:
+    """Render bounded beta Character snapshot predicates for a topic callback."""
+    if (
+        isinstance(condition, str) and
+        condition in NPC_BETA_CHARACTER_SNAPSHOT_FIELDS
+    ):
+        field = NPC_BETA_CHARACTER_SNAPSHOT_FIELDS[condition]
+        return f"state.{field} == true"
+    if isinstance(condition, dict):
+        if set(condition) == {"npc_has_activity"}:
+            # The native jarg::string parser ignores this member value.
+            if isinstance(condition["npc_has_activity"], str):
+                return "state.activity.active == true"
+            return None
+    return None
+
+
 def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     """Render one source-proven response predicate against its live speaker.
 
@@ -6362,10 +6379,26 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
     use the exact native global-player query or the live dialogue beta exposed
     as ``interlocutor()``. Assigned-mission predicates read the active native
     dialogue vector. NPC-prefixed mission predicates use the live beta and the
-    existing typed NPC mission services. Unprefixed alpha mission predicates
-    remain unsupported until matching alpha services exist. Other shapes remain
-    fail-closed in the caller.
+    existing typed NPC mission services. Direct ``npc_*`` state conditions use
+    that live beta Character's typed snapshot. Unprefixed alpha mission
+    predicates and Boolean compositions remain fail-closed in the caller.
     """
+    npc_state_expression = _render_talk_topic_npc_state_condition(condition)
+    if npc_state_expression is not None:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or '
+            '(beta.subtype ~= "avatar" and beta.subtype ~= "character" and '
+            'beta.subtype ~= "npc") then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local snapshot = services.characters.snapshot(beta)\n"
+            "            if not snapshot.ok then return false end\n"
+            "            local state = snapshot.value\n"
+            f"            return {npc_state_expression}\n"
+            "        end"
+        )
     if condition == "u_has_camp":
         return LuaRaw(
             "function(dialogue_context)\n"
@@ -25730,9 +25763,16 @@ SAFE_SPACE_BETA_CONDITION_SELECTORS = frozenset({
     "at_safe_space", "npc_at_safe_space",
 })
 SAFE_SPACE_ALPHA_CONDITION_SELECTORS = frozenset({"u_at_safe_space"})
-NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS = frozenset({
-    "npc_has_activity", "npc_is_travelling",
-})
+NPC_BETA_CHARACTER_SNAPSHOT_FIELDS = {
+    "npc_has_activity": "activity.active",
+    "npc_is_travelling": "travel.has_path",
+    "npc_controlling_vehicle": "movement.controlling_vehicle",
+    "npc_driving": "movement.driving",
+    "npc_following": "npc_state.following",
+}
+NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS = frozenset(
+    NPC_BETA_CHARACTER_SNAPSHOT_FIELDS
+)
 
 
 def contains_safe_space_beta_condition(condition: Any) -> bool:
@@ -25765,20 +25805,21 @@ def contains_safe_space_alpha_condition(condition: Any) -> bool:
     return False
 
 
-def contains_npc_activity_travel_condition(condition: Any) -> bool:
+def contains_npc_beta_character_state_condition(condition: Any) -> bool:
     if isinstance(condition, str):
-        # The bare activity name is an unknown native simple condition and
-        # lowers to false; only travelling is a beta-backed simple selector.
-        return condition == "npc_is_travelling"
+        return condition in NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS
     if isinstance(condition, dict):
-        if NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS.intersection(condition):
+        if NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS.intersection(condition):
             return True
         return any(
-            contains_npc_activity_travel_condition(condition[key])
+            contains_npc_beta_character_state_condition(condition[key])
             for key in ("and", "or", "not") if key in condition
         )
     if isinstance(condition, list):
-        return any(contains_npc_activity_travel_condition(entry) for entry in condition)
+        return any(
+            contains_npc_beta_character_state_condition(entry)
+            for entry in condition
+        )
     return False
 
 
@@ -26708,21 +26749,6 @@ def render_eoc_condition_expression(
         # does not currently pass a live beta talker to generated functions;
         # a single event Character or content pair proof cannot stand in for it.
         return None
-    if isinstance(condition, str) and condition == "npc_has_activity":
-        # The native member parser requires an object key; its bare string
-        # form is an unknown simple condition and therefore evaluates false.
-        return "false"
-    if isinstance(condition, str) and condition == "npc_is_travelling":
-        # This simple native condition reads const_actor(true), not the EOC's
-        # event alpha or an unconnected dialogue-pair proof.
-        return None
-    if (
-        isinstance(condition, dict) and
-        NPC_ACTIVITY_TRAVEL_CONDITION_SELECTORS.intersection(condition)
-    ):
-        # npc_has_activity's valid member-object form also reads native beta;
-        # no current EOC callback proves a live Character in that slot.
-        return None
     # npc_has_assigned_camp reads const_actor(true).  A callable EOC needs an
     # event-exclusive beta proof; a single Character or inferred topic pair
     # cannot stand in for that slot.
@@ -26818,33 +26844,44 @@ def render_eoc_condition_expression(
             "return service_value(services.inventory.has_stolen_from(alpha, beta)) "
             "end)()"
         )
-    npc_beta_snapshot_fields = {
-        "npc_controlling_vehicle": "movement.controlling_vehicle",
-        "npc_driving": "movement.driving",
-        "npc_following": "npc_state.following",
-    }
-    if isinstance(condition, str) and condition in npc_beta_snapshot_fields:
-        # These native aliases read const_actor(true), not the callback's
-        # alpha actor.  The snapshot uses the same map occupancy/control test;
-        # for driving, map::veh_at(abs) converts through get_bub just as
-        # Character::is_driving's pos_bub does.  NPC following is
-        # npc::is_following in both paths.
+    npc_beta_snapshot_condition = None
+    if isinstance(condition, str) and condition in NPC_BETA_CHARACTER_SNAPSHOT_FIELDS:
+        npc_beta_snapshot_condition = condition
+    elif (
+        isinstance(condition, dict) and
+        set(condition) == {"npc_has_activity"} and
+        isinstance(condition["npc_has_activity"], str)
+    ):
+        npc_beta_snapshot_condition = "npc_has_activity"
+    if npc_beta_snapshot_condition is not None:
+        # Every selector reads native const_actor(true). Only a direct
+        # true_eocs/false_eocs topic callback proves that beta exists at this
+        # exact slot; an event alpha or nested/re-entered callback is not a
+        # substitute. The Character snapshot matches the native talker
+        # activity/travel/following checks. For vehicle checks, map::veh_at
+        # converts absolute coordinates through get_bub; Character::is_driving
+        # uses the same bubble square and additionally requires a moving
+        # vehicle, while controlling_vehicle does not.
         if (
             not npc_dialogue_pair_proven or
             npc_actor_expression != "context.actors.beta"
         ):
             return None
-        field = npc_beta_snapshot_fields[condition]
+        field = NPC_BETA_CHARACTER_SNAPSHOT_FIELDS[
+            npc_beta_snapshot_condition
+        ]
         result = f"state.{field}"
-        if condition == "npc_following":
-            result += " == true"
+        result += " == true"
         return (
             "(function() "
             "local beta = context and context.actors and context.actors.beta; "
             "if beta == nil or beta.kind ~= \"creature\" or "
             "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
             "and beta.subtype ~= \"npc\") then return false end; "
-            "local state = service_value(services.characters.snapshot(beta)); "
+            "if not beta:is_valid() then return false end; "
+            "local snapshot = services.characters.snapshot(beta); "
+            "if not snapshot.ok then return false end; "
+            "local state = snapshot.value; "
             f"return {result} "
             "end)()"
         )
@@ -29486,13 +29523,13 @@ def render_eoc(
                 "avatar source; current bounded proof is an unreferenced "
                 "game_start EOC without dynamic dispatch"
             )
-        elif contains_npc_activity_travel_condition(raw_condition):
+        elif contains_npc_beta_character_state_condition(raw_condition):
             condition_todo = (
-                "translate npc_has_activity member objects and "
-                "npc_is_travelling only after a supported EOC callback supplies "
-                "native beta as a live Character; event NPC actors are alpha, "
-                "the member string for npc_has_activity is ignored, and direct "
-                "talk-topic response EOC callbacks are not wired"
+                "translate npc_* activity, travel, following, and vehicle "
+                "snapshot conditions only when a direct talk-topic "
+                "true_eocs/false_eocs callback proves native beta as a live "
+                "Character; event NPC actors are alpha, and the "
+                "npc_has_activity member string is ignored"
             )
         elif contains_safe_space_beta_condition(raw_condition):
             condition_todo = (

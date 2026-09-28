@@ -100,11 +100,13 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     R"({"u_has_activity":"ignored"})" ).get_object() );
         const conditional_t beta_has_activity_condition( json_loader::from_string(
                     R"({"npc_has_activity":"ignored"})" ).get_object() );
+        const conditional_t beta_has_activity_simple_condition( "npc_has_activity" );
         const conditional_t avatar_is_travelling_condition( "u_is_travelling" );
         const conditional_t beta_is_travelling_condition( "npc_is_travelling" );
         // The native NPC predicate uses the talker's current player_activity,
-        // not npc::has_activity()'s mission/attitude status; its member string
-        // does not select an activity id.
+        // not npc::has_activity()'s mission/attitude status. Both the simple
+        // string and member-object parser read dialogue beta; the object
+        // member string does not select an activity id.
         const bool avatar_has_activity = avatar_activity["active"].get<bool>();
         const bool beta_has_activity = beta_activity["active"].get<bool>();
         const bool avatar_is_travelling =
@@ -116,6 +118,8 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
         CHECK( avatar_has_activity_condition( conversation ) ==
                avatar_has_activity );
         CHECK( beta_has_activity_condition( conversation ) ==
+               beta_has_activity );
+        CHECK( beta_has_activity_simple_condition( conversation ) ==
                beta_has_activity );
         CHECK_FALSE( avatar_is_travelling );
         CHECK( beta_is_travelling );
