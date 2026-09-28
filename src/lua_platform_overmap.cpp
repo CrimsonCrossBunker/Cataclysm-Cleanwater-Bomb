@@ -1941,6 +1941,15 @@ bool reveal_native_overmap(
     }
     const tripoint_abs_omt native_center = require_absolute_omt(
             center, std::string( api_name ) );
+    // overmapbuffer::reveal adds each radius offset using int coordinates.
+    // Reject centers whose square would overflow before calling native code.
+    if( native_center.x() < std::numeric_limits<int>::min() + radius ||
+        native_center.x() > std::numeric_limits<int>::max() - radius ||
+        native_center.y() < std::numeric_limits<int>::min() + radius ||
+        native_center.y() > std::numeric_limits<int>::max() - radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " center and radius exceed coordinate range" );
+    }
     const bool changed = overmap_buffer.reveal( native_center, radius );
     if( changed ) {
         // Native reveal may touch multiple tiles and does not expose them.

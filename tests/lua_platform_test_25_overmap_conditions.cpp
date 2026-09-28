@@ -1,4 +1,5 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -414,6 +415,9 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
     CHECK_FALSE( reveal_native( lua_center, 37 ).valid() );
     CHECK_FALSE( reveal_native( lua_center, 1.5 ).valid() );
     CHECK_FALSE( reveal_native( lua_center, -1 ).valid() );
+    const tripoint_abs_omt overflow_center(
+        std::numeric_limits<int>::max(), center.y(), center.z() );
+    CHECK_FALSE( reveal_native( fixture.abs_omt_position( overflow_center ), 1 ).valid() );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM
