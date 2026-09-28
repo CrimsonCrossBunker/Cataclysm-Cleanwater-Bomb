@@ -92,6 +92,26 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_snapshot = value_of(
                 services["characters"]["snapshot"], beta_handle ).as<sol::table>();
+        // The Exodii device handoff compares native u_skill('social') against
+        // fixed thresholds.  The Lua condition uses the matching effective
+        // level, not raw practical or knowledge level.
+        const skill_id social( "social" );
+        const conditional_t below_three( json_loader::from_string(
+                                            R"({"math":["u_skill('social') < 3"]})" ).get_object() );
+        const conditional_t above_two( json_loader::from_string(
+                                           R"({"math":["u_skill('social') > 2"]})" ).get_object() );
+        finalize_conditions();
+        for( const int level : { 0, 2, 3, 5, 9 } ) {
+            player.set_skill_level( social, level );
+            const sol::table skill_state = value_of(
+                    services["skills"]["get"], avatar_handle,
+                    cata::lua_platform::script_game_id( "skill", "social" ) ).as<sol::table>();
+            const int effective = skill_state["practical_effective"].get<int>();
+            CAPTURE( level, effective );
+            CHECK( effective == player.get_skill_level( social ) );
+            CHECK( below_three( conversation ) == ( effective < 3 ) );
+            CHECK( above_two( conversation ) == ( effective > 2 ) );
+        }
         const sol::table avatar_activity = value_of(
                 services["activities"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_activity = value_of(
