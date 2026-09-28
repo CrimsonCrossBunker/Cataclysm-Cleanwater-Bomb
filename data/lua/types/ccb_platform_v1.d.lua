@@ -11342,8 +11342,8 @@ function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 ---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
 
 ---@class CcbCharacterMovementSnapshot
----@field driving boolean Native current-position vehicle query; true only when the vehicle is moving and the Character controls it.
----@field controlling_vehicle boolean Native current-position vehicle query; true when the Character controls the vehicle at its map square.
+---@field driving boolean Native absolute-position vehicle query converted to the Character's map square; true only when that vehicle is moving and the Character controls it.
+---@field controlling_vehicle boolean Native bubble-position vehicle query; true when the Character controls the vehicle at its map square, whether or not it is moving.
 
 ---@class CcbCharacterNpcStateSnapshot
 ---@field present boolean Whether the Character is an NPC.
