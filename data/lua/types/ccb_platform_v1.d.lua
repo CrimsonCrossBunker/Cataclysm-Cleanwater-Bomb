@@ -6333,6 +6333,12 @@ function PlatformDialogueContext:has_speaker() end
 ---@return boolean
 function PlatformDialogueContext:has_interlocutor() end
 
+---Query the current native beta talker using the native safe-space check.
+---Available only during the callback; returns false without beta and retains no actor
+---reference.
+---@return boolean
+function PlatformDialogueContext:interlocutor_at_safe_space() end
+
 ---Return the native dialogue's assigned-mission list size, filtered for its alpha owner.
 ---This reads the live dialogue list and is available only during its callback session.
 ---@return integer

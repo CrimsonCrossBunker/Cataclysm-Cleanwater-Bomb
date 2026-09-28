@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "condition.h"
 
 class platform_item_offer_test_talker : public talker_npc
 {
@@ -878,6 +879,105 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
     REQUIRE( invalidated_failure_context.valid() );
     CHECK_FALSE( invalidated_failure_context.get<bool>() );
     cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_safe_space_query_matches_native_beta_condition",
+           "[lua][platform][dialogue][runtime][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_safe_space", 84, owner_lua );
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["services"] = ccb["services"];
+    owner_lua.script( R"(
+        observed_safe_space_context_valid = false
+        observed_safe_space_beta_kind = ""
+        observed_safe_space_beta_subtype = ""
+        observed_safe_space_value = false
+        function dialogue_safe_space_condition(context)
+            if not context:valid() then return false end
+            observed_safe_space_context_valid = true
+            local beta = context:interlocutor()
+            if beta == nil then return false end
+            if beta.kind == "creature" and not beta:is_valid() then return false end
+            observed_safe_space_beta_kind = beta.kind
+            observed_safe_space_beta_subtype = beta.subtype or ""
+            observed_safe_space_value = context:interlocutor_at_safe_space()
+            return observed_safe_space_value
+        end
+    )" );
+
+    sol::table response = owner_lua.create_table();
+    response["text"] = "Only available in a safe space";
+    response["condition"] = owner_lua["dialogue_safe_space_condition"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_SAFE_SPACE_QUERY";
+    descriptor["dynamic_line"] = "Safe-space beta query test";
+    descriptor["responses"] = responses;
+    const sol::table dialogue_api = ccb["dialogue"];
+    const sol::protected_function register_topic = dialogue_api["register_topic"];
+    const sol::protected_function_result registered =
+        register_topic( descriptor );
+    REQUIRE( registered.valid() );
+
+    avatar speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1384 ), true );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1385 ), true );
+    cata::lua_platform::register_npc_handle_identity( interlocutor );
+    const on_out_of_scope retire_interlocutor( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( interlocutor );
+    } );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    dialogue conversation( get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    cata::lua_platform::dialogue::begin_session(
+        conversation, runtime_identity, world_generation );
+    conversation.gen_responses( talk_topic( "TALK_CCB_SAFE_SPACE_QUERY" ) );
+
+    const bool native_safe_space =
+        conditional_t( "at_safe_space" )( conversation );
+    CHECK( conditional_t( "npc_at_safe_space" )( conversation ) == native_safe_space );
+    CHECK( owner_lua["observed_safe_space_context_valid"].get<bool>() );
+    CHECK( owner_lua["observed_safe_space_beta_kind"].get<std::string>() ==
+           "creature" );
+    CHECK( owner_lua["observed_safe_space_beta_subtype"].get<std::string>() ==
+           "npc" );
+    CHECK( owner_lua["observed_safe_space_value"].get<bool>() ==
+           native_safe_space );
+    CHECK( conversation.responses.size() == ( native_safe_space ? 1U : 0U ) );
+    cata::lua_platform::dialogue::end_session( conversation );
+
+    dialogue non_character_conversation(
+        std::make_unique<talker_topic>(), std::make_unique<talker_topic>() );
+    cata::lua_platform::dialogue::begin_session(
+        non_character_conversation, runtime_identity, world_generation );
+    non_character_conversation.gen_responses(
+        talk_topic( "TALK_CCB_SAFE_SPACE_QUERY" ) );
+    const bool native_non_character_safe_space =
+        conditional_t( "at_safe_space" )( non_character_conversation );
+    CHECK( owner_lua["observed_safe_space_beta_kind"].get<std::string>() !=
+           "creature" );
+    CHECK( owner_lua["observed_safe_space_beta_subtype"].get<std::string>().empty() );
+    CHECK( owner_lua["observed_safe_space_value"].get<bool>() ==
+           native_non_character_safe_space );
+    CHECK( non_character_conversation.responses.size() ==
+           ( native_non_character_safe_space ? 1U : 0U ) );
+    cata::lua_platform::dialogue::end_session( non_character_conversation );
 }
 
 TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",

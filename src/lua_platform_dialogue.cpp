@@ -7,6 +7,7 @@
 #include <item_uid.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
+#include <overmapbuffer.h>
 #include <point.h>
 #include <safe_reference.h>
 #include <talker.h>
@@ -602,6 +603,17 @@ bool context::has_speaker() const
 bool context::has_interlocutor() const
 {
     return require_state().interlocutor_snapshot.present;
+}
+
+bool context::interlocutor_at_safe_space() const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return false;
+    }
+    const const_talker *const beta = d.const_actor( true );
+    return beta != nullptr && overmap_buffer.is_safe( beta->pos_abs_omt() ) &&
+           beta->is_safe();
 }
 
 std::size_t context::assigned_mission_count() const

@@ -6481,9 +6481,11 @@ def render_talk_topic_response_condition(
     as ``interlocutor()``. Assigned-mission predicates read the active native
     dialogue vector. NPC-prefixed mission predicates use the live beta and the
     existing typed NPC mission services. Direct ``npc_*`` state conditions use
-    that live beta Character's typed snapshot. ``u_*`` alpha mission
-    predicates and Boolean compositions remain
-    fail-closed in the caller. Native unprefixed mission aliases select beta.
+    that live beta Character's typed snapshot. Safe-space conditions query the
+    callback-scoped native beta talker directly, preserving native talker
+    overrides without retaining an actor reference. Native unprefixed mission
+    aliases select beta. ``u_*`` alpha mission predicates remain fail-closed;
+    Boolean compositions require every child to have a supported lowering.
     """
     if _depth > 16:
         return None
@@ -6533,6 +6535,13 @@ def render_talk_topic_response_condition(
                 f"            return {expression}\n"
                 "        end"
             )
+    if isinstance(condition, str) and condition in SAFE_SPACE_BETA_CONDITION_SELECTORS:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            return dialogue_context:interlocutor_at_safe_space()\n"
+            "        end"
+        )
     npc_state_expression = _render_talk_topic_npc_state_condition(condition)
     if npc_state_expression is not None:
         return LuaRaw(
@@ -27151,6 +27160,7 @@ def render_eoc_condition_expression(
     event_beta_presence_proven: bool = False,
     proficiency_alpha_actor_proven: bool = False,
     npc_melee_beta_actor_proven: bool = False,
+    safe_space_character_beta_actor_proven: bool = False,
     named_condition_alpha_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
@@ -27199,10 +27209,21 @@ def render_eoc_condition_expression(
         isinstance(condition, str) and
         condition in SAFE_SPACE_BETA_CONDITION_SELECTORS
     ):
-        # Native at_safe_space reads const_actor(true).  The EOC/topic adapter
-        # does not currently pass a live beta talker to generated functions;
-        # a single event Character or content pair proof cannot stand in for it.
-        return None
+        # Only the direct, event-exclusive character-melee callback supplies
+        # the exact native beta as a live Character interlocutor.  Do not pass
+        # this proof through test_eoc, nested Boolean shapes, or child EOCs.
+        if not safe_space_character_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" and "
+            "beta.subtype ~= \"npc\") or not beta:is_valid() then return false end; "
+            "local snapshot = services.characters.snapshot(beta); "
+            "return snapshot.ok and snapshot.value.environment.safe_space == true "
+            "end)()"
+        )
     # npc_has_assigned_camp reads const_actor(true).  A callable EOC needs an
     # event-exclusive beta proof; a single Character or inferred topic pair
     # cannot stand in for that slot.
@@ -29739,6 +29760,13 @@ def render_eoc(
         } and not inline_eoc and eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # Only the character-victim melee event proves a Character beta. The
+    # monster-victim sibling has the same callback slot but cannot use the
+    # Character snapshot that matches native at_safe_space for a Character.
+    safe_space_character_beta_actor_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character"
+    )
     raw_eoc_effects = value.get("effect", [])
     if isinstance(raw_eoc_effects, (dict, str)):
         raw_eoc_effects = [raw_eoc_effects]
@@ -29870,6 +29898,7 @@ def render_eoc(
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
             named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
         )
         if deactivate_expression is not None:
@@ -29917,6 +29946,7 @@ def render_eoc(
             event_beta_presence_proven=event_beta_presence_proven,
             proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
             named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
         )
         condition_converted = condition_expression is not None
@@ -29990,10 +30020,10 @@ def render_eoc(
             )
         elif contains_safe_space_beta_condition(raw_condition):
             condition_todo = (
-                "translate at_safe_space/npc_at_safe_space only after a "
-                "supported EOC callback supplies native beta as a live "
-                "Character interlocutor; talk-topic response EOC callbacks "
-                "are not yet wired"
+                "translate at_safe_space/npc_at_safe_space only for a direct, "
+                "event-exclusive character_melee_attacks_character EOC whose "
+                "native beta is the live Character victim; monster-victim, "
+                "other-event, nested, and callable EOCs remain TODO"
             )
         elif contains_line_of_sight_condition(raw_condition):
             condition_todo = (
