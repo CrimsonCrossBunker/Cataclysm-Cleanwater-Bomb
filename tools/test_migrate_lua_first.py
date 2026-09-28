@@ -17843,7 +17843,7 @@ assert(not available())
                 main,
             )
 
-    def test_training_offer_conditions_remain_todo_until_pair_callback_is_wired(self) -> None:
+    def test_eoc_training_offer_conditions_remain_todo_without_pair_callback(self) -> None:
         for selector in (
             "u_train_styles", "npc_train_styles",
             "u_train_spells", "npc_train_spells",
@@ -17924,8 +17924,114 @@ assert(not available())
             "supported EOC callback supplies the native alpha and beta" in entry
             for entry in result.todos
         ))
-        self.assertIn("topic TALK_TRAINING_CALLBACKS response effect needs a native callback", report)
+        self.assertIn(
+            "response effect native run_eocs executes inside talk_effect_t::apply",
+            report,
+        )
         self.assertIn("response fields need Lua conversion: false_eocs, true_eocs", report)
+
+    def test_talk_topic_training_offer_conditions_use_exact_live_pair(self) -> None:
+        selectors = {
+            "u_train_skills": ("alpha", "beta", "skill_count"),
+            "npc_train_skills": ("beta", "alpha", "skill_count"),
+            "u_train_styles": ("alpha", "beta", "style_count"),
+            "npc_train_styles": ("beta", "alpha", "style_count"),
+            "u_train_spells": ("alpha", "beta", "spell_count"),
+            "npc_train_spells": ("beta", "alpha", "spell_count"),
+        }
+        for selector, (teacher, student, count_field) in selectors.items():
+            with self.subTest(selector=selector):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    selector
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn("dialogue_context:valid()", callback.source)
+                self.assertIn(
+                    "local alpha = dialogue_context:speaker()", callback.source
+                )
+                self.assertIn(
+                    'local beta = dialogue_context:interlocutor()', callback.source
+                )
+                self.assertIn(
+                    f"services.characters.training_offers({teacher}, {student})",
+                    callback.source,
+                )
+                self.assertIn(f"offers.value.{count_field} > 0", callback.source)
+                self.assertIn("offers.ok and", callback.source)
+
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition({
+                "and": ["npc_train_styles", {"unsupported_training_predicate": True}],
+            }),
+            "compositions with an unsupported training peer remain fail-closed",
+        )
+
+        corrie_path = REPOSITORY_ROOT / (
+            "data/json/npcs/godco/members/NPC_Corrie_Kaja_Dosia.json"
+        )
+        corrie_topics = migrate_lua_first.load_objects([corrie_path])
+        corrie_topic = next(
+            source for source in corrie_topics
+            if source.value.get("type") == "talk_topic" and
+            source.value.get("id") == "TALK_GODCO_Corrie_Result_rewardRation"
+        )
+        corrie_response = next(
+            response for response in corrie_topic.value["responses"]
+            if isinstance(response, dict) and
+            response.get("condition") == "npc_train_skills"
+        )
+        corrie_callback = migrate_lua_first.render_talk_topic_response_condition(
+            corrie_response["condition"]
+        )
+        self.assertIsNotNone(corrie_callback)
+        assert corrie_callback is not None
+        self.assertIn(
+            "services.characters.training_offers(beta, alpha)",
+            corrie_callback.source,
+        )
+        corrie_result = migrate_lua_first.MigrationResult()
+        corrie_rendered = migrate_lua_first.render_talk_topic(
+            corrie_topic, corrie_result
+        )
+        self.assertIsNotNone(corrie_rendered)
+        assert corrie_rendered is not None
+        self.assertIn(
+            "services.characters.training_offers(beta, alpha)", corrie_rendered
+        )
+
+        mission_path = REPOSITORY_ROOT / (
+            "data/json/npcs/common_chat/TALK_COMMON_MISSION.json"
+        )
+        mission_topics = migrate_lua_first.load_objects([mission_path])
+        mission_topic = next(
+            source for source in mission_topics
+            if source.value.get("type") == "talk_topic" and
+            source.value.get("id") == "TALK_MISSION_SUCCESS"
+        )
+        mission_response = next(
+            response for response in mission_topic.value["responses"]
+            if isinstance(response, dict) and
+            isinstance(response.get("condition"), dict) and
+            "npc_train_styles" in json.dumps(response["condition"])
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                mission_response["condition"]
+            ),
+            "the actual compound also asks about selected mission state and stays TODO",
+        )
+        mission_result = migrate_lua_first.MigrationResult()
+        mission_rendered = migrate_lua_first.render_talk_topic(
+            mission_topic, mission_result
+        )
+        self.assertIsNotNone(mission_rendered)
+        assert mission_rendered is not None
+        self.assertIn("condition = false", mission_rendered)
+        self.assertTrue(any(
+            "response condition needs Lua conversion" in todo.text
+            for todo in mission_result.todos
+        ))
 
     def test_translates_senses_species_and_turn_cost(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

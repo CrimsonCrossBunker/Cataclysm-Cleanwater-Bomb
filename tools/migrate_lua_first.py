@@ -6488,6 +6488,8 @@ def render_talk_topic_response_condition(
     overrides without retaining an actor reference. Native unprefixed mission
     aliases select beta. ``u_*`` alpha mission predicates remain fail-closed;
     Boolean compositions require every child to have a supported lowering.
+    Training-offer predicates use the live alpha/beta pair and select the
+    teacher from the native parser's ``is_npc`` orientation.
     """
     if _depth > 16:
         return None
@@ -6558,6 +6560,28 @@ def render_talk_topic_response_condition(
             "            if not snapshot.ok then return false end\n"
             "            local state = snapshot.value\n"
             f"            return {npc_state_expression}\n"
+            "        end"
+        )
+    training_offer_counts = {
+        "u_train_skills": ("skill_count", "alpha", "beta"),
+        "npc_train_skills": ("skill_count", "beta", "alpha"),
+        "u_train_styles": ("style_count", "alpha", "beta"),
+        "npc_train_styles": ("style_count", "beta", "alpha"),
+        "u_train_spells": ("spell_count", "alpha", "beta"),
+        "npc_train_spells": ("spell_count", "beta", "alpha"),
+    }
+    if isinstance(condition, str) and condition in training_offer_counts:
+        count_field, teacher, student = training_offer_counts[condition]
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local alpha = dialogue_context:speaker()\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            "            if alpha == nil or beta == nil then return false end\n"
+            "            if not alpha:is_valid() or not beta:is_valid() then return false end\n"
+            "            local offers = services.characters.training_offers("
+            f"{teacher}, {student})\n"
+            f"            return offers.ok and offers.value.{count_field} > 0\n"
             "        end"
         )
     if condition == "u_has_camp":
