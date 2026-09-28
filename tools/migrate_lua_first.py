@@ -6574,6 +6574,11 @@ def render_talk_topic_response_condition(condition: Any) -> LuaRaw | None:
 
 
 def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
+    if isinstance(effect, list):
+        for nested in effect:
+            mission_todo = _talk_topic_effect_todo(nested)
+            if mission_todo is not None and "mission" in mission_todo[1]:
+                return mission_todo
     if effect == "goto_location":
         return (
             "platform_gap",
@@ -6589,6 +6594,22 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
             "the native response effect returns; the current callback phase cannot "
             "preserve that ordering",
         )
+    if isinstance(effect, str) and effect in {
+        "mission_success", "mission_failure", "clear_mission", "mission_reward",
+    }:
+        return (
+            "manual_rewrite",
+            f"native WRAP {effect} executes inside talk_effect_t::apply before "
+            "opinion/hostility handling, while Platform on_select runs after the "
+            "native response effect; the current callback phase cannot preserve "
+            "mission mutation, provider side effects, or trade UI ordering",
+        )
+    if effect == "remove_active_mission":
+        return (
+            "semantic_choice",
+            "string-form remove_active_mission is not registered in the native "
+            "WRAP map; use the object form only in an EOC with a proven avatar",
+        )
     if isinstance(effect, dict):
         for selector in ("goto_location", "player_weapon_away"):
             if selector in effect:
@@ -6597,6 +6618,18 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
                     f"native WRAP {selector} accepts only a string; this "
                     "object-shaped form has no native effect semantics",
                 )
+        mission_selectors = {
+            "finish_mission", "remove_active_mission", "mission_success",
+            "mission_failure", "clear_mission", "mission_reward",
+        }
+        if mission_selectors.intersection(effect):
+            return (
+                "manual_rewrite",
+                "native response mission effects execute inside talk_effect_t::apply "
+                "before opinion/hostility handling, while Platform on_select runs "
+                "after the native response effect; the current callback phase "
+                "cannot preserve mission mutation ordering",
+            )
     if not _node_has_key(effect, "run_eocs"):
         return None
     # Native f_run_eocs executes synchronously inside talk_effect_t::apply,
@@ -20415,6 +20448,94 @@ def render_static_assign_mission_effect(
     return lines
 
 
+def _render_static_active_mission_match(
+    mission_id: str, mutation: str,
+) -> list[str]:
+    """Scan every bounded native-order page and mutate only its first match."""
+    return [
+        "    do",
+        f"        local mission_id = {lua_quote(mission_id)}",
+        "        local mission_offset = 0",
+        "        local mission_done = false",
+        "        repeat",
+        "            local mission_page = services.missions.active(actor, {",
+        "                offset = mission_offset, limit = 256,",
+        "            })",
+        "            for _, mission_entry in ipairs(mission_page.items) do",
+        "                if not mission_done and mission_entry.id.value == mission_id then",
+        f"                    {mutation}",
+        "                    mission_done = true",
+        "                end",
+        "            end",
+        "            if not mission_done and mission_page.has_more and",
+        "               mission_offset + mission_page.returned >= 1000000 then",
+        '                error("active mission scan exceeded its bounded offset")',
+        "            end",
+        "            mission_offset = mission_offset + mission_page.returned",
+        "        until mission_done or not mission_page.has_more",
+        "    end",
+    ]
+
+
+def render_static_finish_mission_effect(
+    effect: dict[str, Any], avatar_actor_proven: bool,
+) -> list[str] | None:
+    """Apply one native-order literal mission mutation to the avatar."""
+    if (
+        "finish_mission" not in effect or
+        set(effect) - {"finish_mission", "success", "step"} or
+        not avatar_actor_proven
+    ):
+        return None
+    mission_id = effect["finish_mission"]
+    if not safe_platform_id(mission_id):
+        return None
+    if "step" in effect:
+        step = effect["step"]
+        if (
+            not isinstance(step, int) or isinstance(step, bool) or
+            not 0 <= step <= 1000000
+        ):
+            return None
+        mutation = (
+            "service_value(services.missions.step_complete("
+            f"actor, mission_entry.token, {step}))"
+        )
+    else:
+        success = effect.get("success", False)
+        if not isinstance(success, bool):
+            return None
+        mutation = (
+            "service_value(services.missions.finish("
+            "actor, mission_entry.token))"
+            if success else
+            "service_value(services.missions.fail("
+            "actor, mission_entry.token))"
+        )
+    return _render_static_active_mission_match(
+        mission_id, mutation
+    )
+
+
+def render_static_remove_active_mission_effect(
+    effect: dict[str, Any], avatar_actor_proven: bool,
+) -> list[str] | None:
+    """Remove the first native-order active avatar mission of a literal type."""
+    if (
+        set(effect) != {"remove_active_mission"} or
+        not avatar_actor_proven
+    ):
+        return None
+    mission_id = effect["remove_active_mission"]
+    if not safe_platform_id(mission_id):
+        return None
+    return _render_static_active_mission_match(
+        mission_id,
+        "service_value(services.missions.abandon("
+        "actor, mission_entry.token))",
+    )
+
+
 def render_static_offer_mission_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
@@ -33969,45 +34090,51 @@ def render_eoc(
                 )
             ):
                 rendered = None
-                if "assign_mission" in effect:
-                    rendered = render_static_assign_mission_effect(
-                        effect, avatar_actor_proven
+                mission_effect_count = sum(
+                    key in effect for key in (
+                        "assign_mission", "finish_mission",
+                        "remove_active_mission",
                     )
+                )
+                if mission_effect_count == 1:
+                    if "assign_mission" in effect:
+                        rendered = render_static_assign_mission_effect(
+                            effect, avatar_actor_proven
+                        )
+                    elif "finish_mission" in effect:
+                        rendered = render_static_finish_mission_effect(
+                            effect, avatar_actor_proven
+                        )
+                    else:
+                        rendered = render_static_remove_active_mission_effect(
+                            effect, avatar_actor_proven
+                        )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
-                elif "assign_mission" in effect:
-                    lines.append(
-                        "    -- TODO: assign_mission needs a proven avatar and "
-                        "a statically supported mission definition."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded avatar mission assignment"
-                    )
-                    all_effects_converted = False
-                elif "finish_mission" in effect:
-                    mission_gap = (
-                        "finish_mission scans avatar.get_active_missions() in native "
-                        "order and mutates the first mission-type match; native accepts "
-                        "only an integer step and otherwise reads success (default false). "
-                        "services.missions.list sorts mission instances, while typed "
-                        "step/complete/fail add range, active-state, or goal checks"
-                    )
-                    lines.append(f"    -- TODO: {mission_gap}.")
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        f"{mission_gap}"
-                    )
-                    all_effects_converted = False
                 else:
-                    mission_gap = (
-                        "object-form remove_active_mission scans avatar active missions "
-                        "by mission type and removes the first match; services.missions.list "
-                        "orders instances differently and abandon adds active-owner checks"
-                    )
+                    if mission_effect_count != 1:
+                        mission_gap = (
+                            "one object combines multiple mission effects; lower each "
+                            "native effect separately to preserve ordering"
+                        )
+                    elif "finish_mission" in effect:
+                        mission_gap = (
+                            "finish_mission needs a proven avatar, a literal mission ID, "
+                            "and either an omitted/boolean success or a bounded integer "
+                            "step; the native-order page scan fails closed past offset 1000000"
+                        )
+                    elif "remove_active_mission" in effect:
+                        mission_gap = (
+                            "object-form remove_active_mission needs a proven avatar and "
+                            "a literal mission ID; the native-order page scan fails closed "
+                            "past offset 1000000"
+                        )
+                    elif "assign_mission" in effect:
+                        mission_gap = (
+                            "assign_mission needs a proven avatar and a statically "
+                            "supported mission definition"
+                        )
                     lines.append(f"    -- TODO: {mission_gap}.")
                     result.add_todo(
                         "manual_rewrite",

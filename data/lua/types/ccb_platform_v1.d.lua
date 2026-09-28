@@ -163,6 +163,10 @@ function CcbCoordsApi.project_to(value, scale) end
 ---@field limit? integer
 ---@field status? string
 
+---@class CcbMissionActiveOptions
+---@field offset? integer Starting index from 0 through 1000000.
+---@field limit? integer Page size from 1 through 256.
+
 ---@class CcbFactionQueryOptions
 ---@field offset? integer
 ---@field limit? integer
@@ -8985,6 +8989,15 @@ function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, 
 ---@field owner GameHandle Exact avatar owner used for the query.
 ---@field status 'all'|'reserved'|'active'|'success'|'failure'
 
+---@class CcbMissionActivePage
+---@field items CcbMissionSnapshot[] Active missions in the owner's native active-vector order.
+---@field total integer Total active missions for this owner before pagination.
+---@field offset integer Starting native-vector index, bounded to 1000000.
+---@field limit integer Page size, bounded to 256.
+---@field returned integer Number of snapshots in this page.
+---@field has_more boolean Whether a later native-vector page exists; callers must continue while true to inspect every mission.
+---@field owner GameHandle Exact avatar owner used for the query.
+
 ---@class CcbMissionMutation
 ---@field before? CcbMissionSnapshot
 ---@field after? CcbMissionSnapshot
@@ -9009,6 +9022,10 @@ function CcbMissionsApi.definition(id) end
 ---@param options? CcbMissionQueryOptions `offset`, `limit`, and `status`.
 ---@return CcbMissionPage
 function CcbMissionsApi.list(owner, options) end
+---@param owner GameHandle Exact avatar owner; results preserve native active-vector order.
+---@param options? CcbMissionActiveOptions `offset` and `limit`; continue through `has_more` to inspect every instance.
+---@return CcbMissionActivePage
+function CcbMissionsApi.active(owner, options) end
 ---@param token MissionToken Exact mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionSnapshot.
 function CcbMissionsApi.get(token) end
@@ -9063,6 +9080,10 @@ function CcbMissionsApi.fail(owner, token) end
 ---@param force? boolean Explicit completion override.
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.complete(owner, token, force) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact active mission instance.
+---@return CcbResult result `value` is a CcbMissionMutation; wraps up without querying goal completion, like native finish_mission success.
+function CcbMissionsApi.finish(owner, token) end
 ---@param token MissionToken Exact unassigned mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.cancel(token) end

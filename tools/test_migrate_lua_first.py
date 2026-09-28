@@ -18501,7 +18501,7 @@ assert(not available())
             )
             self.assertNotIn("needs a native Lua predicate", report)
 
-    def test_only_avatar_mission_assignment_has_bounded_lowering(self) -> None:
+    def test_avatar_mission_lifecycle_uses_native_ordered_typed_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -18547,9 +18547,9 @@ assert(not available())
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 3)
-            self.assertEqual(len(result.todos), 3)
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
             self.assertIn('services.missions.reserve(\n        services.types.id("mission", "MISSION_TEST"))', main)
             self.assertIn("services.missions.set_deadline(", main)
             self.assertIn("services.time.point(500)", main)
@@ -18558,14 +18558,17 @@ assert(not available())
                 main.index("services.missions.assign(actor, token)"),
                 main.index("services.missions.set_deadline("),
             )
+            self.assertIn("services.missions.active(actor", main)
+            self.assertIn("mission_entry.id.value == mission_id", main)
+            self.assertIn("mission_page.has_more", main)
+            self.assertIn("services.missions.finish(", main)
             self.assertNotIn("services.missions.complete(", main)
-            self.assertNotIn("services.missions.fail(", main)
-            self.assertNotIn("services.missions.abandon(", main)
-            self.assertIn("native accepts only an integer step", main)
-            self.assertIn("success (default false)", main)
-            self.assertIn("services.missions.list orders instances differently", main)
-            self.assertIn("finish_mission scans avatar.get_active_missions()", report)
-            self.assertIn("object-form remove_active_mission scans avatar active missions", report)
+            self.assertIn("services.missions.fail(", main)
+            self.assertIn("services.missions.abandon(", main)
+            self.assertIn("mission_page.returned", main)
+            self.assertIn("active mission scan exceeded its bounded offset", main)
+            self.assertNotIn("services.missions.list(", main)
+            self.assertIn("Explicit TODO records: 0", report)
 
     def test_variable_backed_avatar_mission_mutations_stay_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -18619,9 +18622,120 @@ assert(not available())
             self.assertNotIn("services.missions.step_complete(", main)
             self.assertNotIn("services.missions.abandon(", main)
             self.assertIn("assign_mission needs a proven avatar", main)
-            self.assertIn("native accepts only an integer step", main)
-            self.assertIn("success (default false)", main)
-            self.assertIn("object-form remove_active_mission scans avatar active missions", report)
+            self.assertIn("bounded integer step", main)
+            self.assertIn("literal mission ID", main)
+            self.assertIn("native-order page scan fails closed", report)
+
+    def test_real_corpus_mission_effect_shapes_use_native_ordered_pages(self) -> None:
+        # These helper calls establish that current bundled JSON uses the
+        # supported literal shapes; True is an explicit helper precondition,
+        # not proof that the source EOC itself has an avatar actor.
+        storm_eocs = json.loads(
+            (REPOSITORY_ROOT / "data/json/effects_on_condition/nether_eocs/"
+             "portal_storm_effect_on_condition.json").read_text(encoding="utf-8")
+        )
+        storm_move = next(
+            entry for entry in storm_eocs
+            if entry.get("id") == "EOC_MOVE_PORTAL_STORM"
+        )
+        actual_remove = next(
+            effect for effect in storm_move["effect"]
+            if isinstance(effect, dict) and "remove_active_mission" in effect
+        )
+        rendered_remove = migrate_lua_first.render_static_remove_active_mission_effect(
+            actual_remove, True
+        )
+        self.assertIsNotNone(rendered_remove)
+        remove_source = "\n".join(rendered_remove or [])
+        self.assertIn('local mission_id = "MISSION_INVESTIGATE_PORTAL_STORM_CENTER"', remove_source)
+        self.assertIn("services.missions.active(actor", remove_source)
+        self.assertIn("services.missions.abandon(actor, mission_entry.token)", remove_source)
+
+        rescue_eocs = json.loads(
+            (REPOSITORY_ROOT / "data/json/effects_on_condition/npc_eocs/"
+             "isherwood_barry_rescue_eocs.json").read_text(encoding="utf-8")
+        )
+        actual_mission_failure = next(
+            effect for entry in rescue_eocs
+            if entry.get("id") == "EOC_BARRY_ISHERWOOD_DIE_TRUE_EFFECT"
+            for effect in entry.get("effect", [])
+            if isinstance(effect, dict) and "finish_mission" in effect
+        )
+        rendered_failure = migrate_lua_first.render_static_finish_mission_effect(
+            actual_mission_failure, True
+        )
+        self.assertIsNotNone(rendered_failure)
+        failure_source = "\n".join(rendered_failure or [])
+        self.assertIn("services.missions.fail(actor, mission_entry.token)", failure_source)
+        self.assertIn("mission_page.has_more", failure_source)
+
+        godco_eocs = json.loads(
+            (REPOSITORY_ROOT / "data/json/effects_on_condition/npc_eocs/"
+             "godco_npc_eocs.json").read_text(encoding="utf-8")
+        )
+        npc_death_eoc = next(
+            entry for entry in godco_eocs
+            if entry.get("id") == "GODCO_TRADER_MISSION_DEATHFAIL"
+        )
+        self.assertEqual(npc_death_eoc.get("eoc_type"), "NPC_DEATH")
+        unproven_result = migrate_lua_first.MigrationResult()
+        unproven_render = migrate_lua_first.render_eoc(
+            migrate_lua_first.SourceObject(
+                Path("data/json/effects_on_condition/npc_eocs/godco_npc_eocs.json"),
+                0,
+                npc_death_eoc,
+            ),
+            unproven_result,
+        )
+        self.assertIn("finish_mission needs a proven avatar", unproven_render)
+        self.assertNotIn("services.missions.active(actor", unproven_render)
+
+        talk_topics = json.loads(
+            (REPOSITORY_ROOT / "data/json/npcs/common_chat/"
+             "TALK_COMMON_MISSION.json").read_text(encoding="utf-8")
+        )
+        mission_success_topic = next(
+            entry for entry in talk_topics
+            if entry.get("id") == "TALK_MISSION_SUCCESS"
+        )
+        talk_result = migrate_lua_first.MigrationResult()
+        talk_render = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(
+                Path("data/json/npcs/common_chat/TALK_COMMON_MISSION.json"),
+                0,
+                mission_success_topic,
+            ),
+            talk_result,
+        )
+        self.assertIsNotNone(talk_render)
+        self.assertTrue(any(
+            "native response mission effects execute inside talk_effect_t::apply"
+            in todo.message
+            for todo in talk_result.todos
+        ))
+        self.assertNotIn("on_select", talk_render or "")
+
+    def test_finish_mission_keeps_native_step_precedence_and_bounds(self) -> None:
+        step_effect = {
+            "finish_mission": "MISSION_TEST",
+            "step": 4,
+            "success": True,
+        }
+        rendered = migrate_lua_first.render_static_finish_mission_effect(
+            step_effect, True
+        )
+        self.assertIsNotNone(rendered)
+        rendered_source = "\n".join(rendered or [])
+        self.assertIn(
+            "services.missions.step_complete(actor, mission_entry.token, 4)",
+            rendered_source,
+        )
+        self.assertNotIn("services.missions.complete(", rendered_source)
+        self.assertIsNone(
+            migrate_lua_first.render_static_finish_mission_effect(
+                {"finish_mission": "MISSION_TEST", "step": -1}, True
+            )
+        )
 
     def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
         lines = migrate_lua_first.render_static_assign_mission_effect(

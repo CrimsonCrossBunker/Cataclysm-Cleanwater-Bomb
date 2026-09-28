@@ -100,6 +100,130 @@ TEST_CASE( "lua_platform_mission_api_requires_explicit_owner_and_generation",
     CHECK_FALSE( write_gate_called );
 }
 
+TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
+           "[lua][platform][missions]" )
+{
+    avatar owner;
+    owner.normalize();
+    owner.setID( character_id( 7301 ), true );
+    owner.reset_all_missions();
+    mission::clear_all();
+    struct mission_test_cleanup {
+        avatar &owner;
+        ~mission_test_cleanup() {
+            owner.reset_all_missions();
+            mission::clear_all();
+        }
+    } cleanup{ owner };
+
+    const mission_type_id duplicate_type(
+        "TEST_MISSION_GOAL_CONDITION1" );
+    mission *first_uid = mission::reserve_new(
+                             duplicate_type, character_id() );
+    mission *second_uid = mission::reserve_new(
+                              duplicate_type, character_id() );
+    REQUIRE( first_uid != nullptr );
+    REQUIRE( second_uid != nullptr );
+    // Reverse assignment order from UID order. Native finish/remove effects
+    // use the active vector's first matching mission, not the sorted UID list.
+    second_uid->assign( owner );
+    first_uid->assign( owner );
+    const std::vector<mission *> native_order =
+        owner.get_active_missions();
+    REQUIRE( native_order.size() == 2 );
+    CHECK( native_order[0] == second_uid );
+    CHECK( native_order[1] == first_uid );
+
+    const auto runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime(
+        runtime_owner, 64 );
+    std::size_t active_world = 22;
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [runtime]() {
+        return runtime;
+    };
+    const auto current_world = [&active_world]() {
+        return active_world;
+    };
+    cata::lua_platform::install_value_type_api(
+        lua, services, []() {} );
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_mission_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+    const cata::lua_platform::game_handle owner_handle =
+        cata::lua_platform::game_handle::from_creature(
+            owner,
+    { "avatar", owner.getID().get_value(), 0, 0, 0, {} },
+    runtime, active_world );
+
+    const sol::table missions = services["missions"];
+    const sol::protected_function active = missions["active"];
+    REQUIRE( active.valid() );
+    sol::table first_options = lua.create_table();
+    first_options["limit"] = 1;
+    const sol::protected_function_result first_result =
+        active( owner_handle, first_options );
+    REQUIRE( first_result.valid() );
+    const sol::table first_page = first_result.get<sol::table>();
+    CHECK( first_page["total"].get<std::size_t>() == 2 );
+    CHECK( first_page["returned"].get<std::size_t>() == 1 );
+    CHECK( first_page["has_more"].get<bool>() );
+    const sol::table first_items = first_page["items"];
+    const sol::table first_item = first_items[1];
+    const cata::lua_platform::mission_token first_token =
+        first_item["token"].get<
+            cata::lua_platform::mission_token>();
+    CHECK( first_token.uid() == second_uid->get_id() );
+
+    sol::table second_options = lua.create_table();
+    second_options["offset"] = 1;
+    second_options["limit"] = 1;
+    const sol::protected_function_result second_result =
+        active( owner_handle, second_options );
+    REQUIRE( second_result.valid() );
+    const sol::table second_page = second_result.get<sol::table>();
+    const sol::table second_items = second_page["items"];
+    const sol::table second_item = second_items[1];
+    CHECK( second_page["total"].get<std::size_t>() == 2 );
+    CHECK( second_page["offset"].get<std::size_t>() == 1 );
+    CHECK_FALSE( second_page["has_more"].get<bool>() );
+    CHECK( second_item["token"].get<
+               cata::lua_platform::mission_token>().uid() ==
+           first_uid->get_id() );
+
+    CHECK_FALSE( second_uid->is_complete( character_id(), owner ) );
+    const sol::protected_function finish = missions["finish"];
+    REQUIRE( finish.valid() );
+    const sol::protected_function_result finish_result =
+        finish( owner_handle, first_token );
+    REQUIRE( finish_result.valid() );
+    const sol::table finish_envelope = finish_result.get<sol::table>();
+    REQUIRE( finish_envelope["ok"].get<bool>() );
+    CHECK( finish_envelope["value"].get<sol::table>()
+           ["after"].get<sol::table>()
+           ["status"].get<std::string>() == "success" );
+    const std::vector<mission *> after_finish = owner.get_active_missions();
+    REQUIRE( after_finish.size() == 1 );
+    CHECK( after_finish[0] == first_uid );
+
+    sol::table zero_limit = lua.create_table();
+    zero_limit["limit"] = 0;
+    CHECK_FALSE( active( owner_handle, zero_limit ).valid() );
+
+    active_world = 23;
+    const sol::protected_function get = missions["get"];
+    const sol::protected_function_result stale_token_result =
+        get( first_token );
+    REQUIRE( stale_token_result.valid() );
+    const sol::table stale_token = stale_token_result.get<sol::table>();
+    CHECK_FALSE( stale_token["ok"].get<bool>() );
+    CHECK( stale_token["error"].get<sol::table>()
+           ["code"].get<std::string>() == "stale_world" );
+}
+
 TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollback",
            "[lua][platform][missions][npc]" )
 {
