@@ -1665,6 +1665,46 @@ def _collect_eoc_references(
     return frozenset(references)
 
 
+def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
+    """Fail closed when run_eocs can select a target from runtime data.
+
+    Static references are collected separately.  A variable-backed EOC id can
+    name any generated function, so an event EOC may also be called as a child
+    with a different native beta than its event interlocutor.
+    """
+    def dynamic_reference(value: Any) -> bool:
+        if isinstance(value, str) or not isinstance(value, dict):
+            return False
+        # A localized/string literal is still a fixed reference; all other
+        # accepted table forms resolve through runtime data or a registry.
+        if (
+            "str" in value and set(value) <= {"str", "i18n", "//~"} and
+            bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
+            value.get("i18n") is not True and
+            ("i18n" not in value or isinstance(value["i18n"], bool)) and
+            ("//~" not in value or isinstance(value["//~"], str))
+        ):
+            return False
+        return render_eoc_string_expression(value) is not None
+
+    def walk(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        if not isinstance(value, dict):
+            return False
+        if "run_eocs" in value:
+            raw = value["run_eocs"]
+            references = [raw] if isinstance(raw, (str, dict)) else raw
+            if (
+                isinstance(references, list) and
+                any(dynamic_reference(entry) for entry in references)
+            ):
+                return True
+        return any(walk(entry) for entry in value.values())
+
+    return any(walk(source.value) for source in objects)
+
+
 def _content_callback_actor_provenance(
     objects: Iterable[SourceObject],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
@@ -5277,8 +5317,6 @@ def render_static_false_effect(
         rendered = render_message_effect(effect, "u_message", target)
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
-    if isinstance(effect, dict) and set(effect) <= {"npc_message", "popup", "type", "snippet"} and "npc_message" in effect and isinstance(effect["npc_message"], str) and npc_actor_proven:
-        return []
     if isinstance(effect, dict) and "run_eocs" in effect:
         rendered = render_static_run_eocs(
             effect, eoc_function_names, eoc_actor_requirements,
@@ -5669,8 +5707,10 @@ def render_dynamic_combat_damage(
 
 def render_message_effect(
     effect: dict[str, Any], key: str, actor_expression: str,
+    dialogue_alpha_expression: str | None = None,
+    dialogue_beta_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a message/snippet through the typed presentation services."""
+    """Render bounded static text with the native dialogue tag service."""
     comment_keys = {
         name for name in effect
         if isinstance(name, str) and name.startswith("//")
@@ -5700,21 +5740,22 @@ def render_message_effect(
         return None
     if (same_snippet or store_in_lore) and not snippet:
         return None
-    # Native f_message runs parse_tags on the evaluated text.  No typed
-    # Platform parser exists, so dynamic text and literal tag delimiters must
-    # remain manual instead of being displayed verbatim.
+    # The text service uses the real native dialogue parser, but the message
+    # migration deliberately leaves explicit tags/snippets and dynamic text
+    # manual until their RNG and variable semantics can be bounded.
     if (sound and outdoor_only) or snippet:
         return None
     raw_literal = effect[key]
-    # A variable or localized translation may resolve to a native tag.
-    if not isinstance(raw_literal, str) or "<" in raw_literal or ">" in raw_literal:
+    if (
+        not bounded_utf8_string(raw_literal, 8192, allow_empty=True) or
+        "<" in raw_literal or ">" in raw_literal or
+        dialogue_alpha_expression is None or
+        dialogue_beta_expression is None
+    ):
         return None
     message_type = effect.get("type")
     if message_type is not None and not isinstance(message_type, str):
         return None
-    if message_type == "popup":
-        popup = True
-        message_type = None
     if message_type is not None and message_type not in {
         "good", "bad", "mixed", "warning", "info", "neutral", "debug",
         "headshot", "critical", "grazing",
@@ -5724,6 +5765,15 @@ def render_message_effect(
     if not isinstance(interrupt_type, str) or not bounded_utf8_string(
         interrupt_type, 128, allow_empty=False
     ):
+        return None
+    if popup_w_interrupt_query and interrupt_type != "portal_storm_popup":
+        # Native f_message only implements the portal-storm query.  Other
+        # values either produce a debug message or no query at all.
+        return None
+    if sound and (popup or popup_w_interrupt_query):
+        # Native sound gating happens before popup and interruption UI.  The
+        # Platform audibility helper emits a message, so it cannot guard UI
+        # operations without changing behavior.
         return None
     popup_flag = effect.get("popup_flag")
     popup_flag = {
@@ -5737,32 +5787,29 @@ def render_message_effect(
         "get_key", "on_top", "fullscreen",
     }:
         return None
-    raw_message = render_eoc_string_expression(effect[key], actor_expression)
-    if raw_message is None:
-        return None
-    lines: list[str] = []
-    if same_snippet or store_in_lore:
-        # ``random_named`` is the only bounded API that keeps the selected
-        # snippet id.  That lets us preserve same-snippet/lore behaviour while
-        # still expanding the selected text exactly once.
-        lines.extend([
-            f"    local selected_snippet = services.snippets.random_named({raw_message})",
-            "    if selected_snippet ~= nil then",
-        ])
-        if store_in_lore:
-            lines.append(
-                "        services.lore.remember_snippet(selected_snippet.id)"
-            )
-        lines.append(
-            "        local message = services.snippets.expand(selected_snippet.text)"
-        )
-        message = "message"
+    translated = (
+        f"services.translate({lua_quote(raw_literal)})"
+    )
+    expanded_message = (
+        "service_value(services.text.expand_for("
+        f"{translated}, {dialogue_alpha_expression}, "
+        f"{dialogue_beta_expression}))"
+    )
+    if key in {"u_message", "npc_message"}:
+        target = actor_expression.strip()
+        if not target:
+            return None
+        lines = [
+            f"    local message_target = {target}",
+            '    if message_target ~= nil and message_target.kind == "creature" and '
+            'message_target.subtype == "avatar" then',
+            f"        local message_text = {expanded_message}",
+        ]
         indent = "        "
     else:
-        message = raw_message
-        if snippet:
-            message = f"(services.snippets.random({message}) or {lua_quote('')})"
+        lines = [f"    local message_text = {expanded_message}"]
         indent = "    "
+    message = "message_text"
 
     if popup:
         popup_call = {
@@ -5772,23 +5819,14 @@ def render_message_effect(
             "fullscreen": "ccb.presentation.notice_large",
         }[popup_flag]
         lines.append(f"{indent}{popup_call}({message})")
+        lines.append(f"{indent}services.activities.offer_interruption(\"\")")
     if popup_w_interrupt_query:
-        if interrupt_type == "portal_storm_popup":
-            lines.append(
-                f"{indent}services.activities.offer_portal_storm_interruption({message})"
-            )
-        else:
-            lines.append(
-                f"{indent}services.activities.offer_interruption({message})"
-            )
-    elif not popup:
+        lines.append(
+            f"{indent}services.activities.offer_portal_storm_interruption({message})"
+        )
+    else:
         if sound:
-            add_call = (
-                "services.messages.add_from_outdoors"
-                if outdoor_only else "services.messages.add_if_audible"
-            )
-        elif outdoor_only:
-            add_call = "services.messages.add_from_outdoors"
+            add_call = "services.messages.add_if_audible"
         elif message_type in (None, "neutral"):
             lines.append(f"{indent}services.message({message})")
             add_call = None
@@ -5800,7 +5838,7 @@ def render_message_effect(
                 if message_type not in (None, "neutral") else ""
             )
             lines.append(f"{indent}{add_call}({message}{type_argument})")
-    if same_snippet or store_in_lore:
+    if key in {"u_message", "npc_message"}:
         lines.append("    end")
     return lines
 
@@ -27541,6 +27579,7 @@ def render_eoc_condition_expression(
     generic_character_actor_proven: bool = False,
     training_pair_proven: bool = False,
     npc_dialogue_pair_proven: bool = False,
+    event_beta_presence_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -27871,10 +27910,21 @@ def render_eoc_condition_expression(
                 "return not service_value(services.effects.has(beta, busy)) "
                 "end)()"
             )
+        if condition == "npc_exists" and event_beta_presence_proven:
+            # conditional_t::f_exists(true) reads only d.has_beta. For a
+            # required_event EOC, event_bus passes the same optional second
+            # talker to the native EOC subscriber and Platform event bridge;
+            # event_to_lua exposes that pointer as actors.interlocutor. This
+            # checks presence only and does not claim the talker is an NPC.
+            return (
+                "context ~= nil and "
+                "context.__ccb_event_beta_presence_proven == true and "
+                "context.actors ~= nil and "
+                "context.actors.interlocutor ~= nil"
+            )
         if condition in {"has_beta", "npc_exists"}:
-            # These read dialogue/beta state, which actor provenance alone
-            # does not establish. Event bridges and nested run_eocs expose
-            # different actor keys.
+            # Outside a required_event callback, actor provenance does not
+            # establish the native dialogue beta slot.
             return None
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
@@ -28187,6 +28237,7 @@ def render_eoc_condition_expression(
                     generic_character_actor_proven,
                     training_pair_proven,
                     npc_dialogue_pair_proven,
+                    event_beta_presence_proven,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -28307,6 +28358,7 @@ def render_eoc_condition_expression(
                 generic_character_actor_proven,
                 training_pair_proven,
                 npc_dialogue_pair_proven,
+                event_beta_presence_proven,
             )
             for entry in entries
         ]
@@ -28324,6 +28376,7 @@ def render_eoc_condition_expression(
             generic_character_actor_proven,
             training_pair_proven,
             npc_dialogue_pair_proven,
+            event_beta_presence_proven,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -29453,6 +29506,7 @@ def render_eoc(
     npc_dialogue_mission_pair_ids: frozenset[str] = frozenset(),
     known_mutation_ids: frozenset[str] = frozenset(),
     known_mutation_category_ids: frozenset[str] = frozenset(),
+    dynamic_eoc_dispatch_present: bool = False,
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
@@ -29770,6 +29824,38 @@ def render_eoc(
         beta_effect_target = ("actor", "character")
     else:
         beta_effect_target = None
+    # Text expansion resolves native handles, so only keep message paths whose
+    # dialogue participants are both alive at event dispatch.  Fatal/death and
+    # kill hooks run after the affected Character or monster is already dead;
+    # ranged attacks dispatch after projectile damage.  Native no-beta EOCs
+    # also pass a default avatar to parse_tags while retaining has_beta=false,
+    # which expand_for cannot currently represent.
+    message_dialogue_pair: tuple[str, str] | None = None
+    if (
+        required_event == "character_melee_attacks_character" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "character"
+    ):
+        message_dialogue_pair = (
+            alpha_effect_target[0], beta_effect_target[0]
+        )
+    elif (
+        required_event == "character_melee_attacks_monster" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "monster"
+    ):
+        message_dialogue_pair = (
+            alpha_effect_target[0], beta_effect_target[0]
+        )
+    # These event contracts provide a live Character alpha, but the attacker
+    # may be an NPC.  A runtime Avatar guard preserves native u_message's
+    # add_msg_if_player behavior without inventing an avatar proof.
+    u_message_avatar_guarded_pair = (
+        required_event in {
+            "character_melee_attacks_character",
+            "character_melee_attacks_monster",
+        } and message_dialogue_pair is not None
+    )
     effect_actor_targets = {
         "u": alpha_effect_target,
         "npc": beta_effect_target,
@@ -29906,11 +29992,22 @@ def render_eoc(
         lines.append("    local actor = actor_override or services.characters.avatar()")
     if avatar_fatal_hook or npc_fatal_hook:
         lines.append("    local prevent_death = false")
-    # EOC event/fatal actor proof is alpha proof.  Legacy ``npc_*`` conditions
-    # read const_actor(true); current event and fatal payloads do not prove
-    # that beta is the same handle.  Keep those selectors as TODOs until a
-    # separately typed beta participant is available.
+    # EOC event/fatal actor proof is not Character/NPC proof for a beta actor.
+    # Separately, the event bridge preserves the exact presence of the native
+    # optional beta talker as ``context.actors.interlocutor``.  The direct
+    # event handler stamps a private marker; copied child contexts do not
+    # inherit it.  Only this boolean fact is safe for npc_exists and it does
+    # not authorize NPC services.
     npc_condition_beta_actor_proven = False
+    # A referenced EOC is also callable by run_eocs/test_eoc and can receive a
+    # different child context.  Dynamic run_eocs selectors can target any
+    # generated EOC, so disable this proof corpus-wide when one is present.
+    # Only an event-exclusive function in a corpus without dynamic dispatch
+    # may use its event bridge's interlocutor as native beta-presence evidence.
+    event_beta_presence_proven = (
+        has_event_trigger and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
@@ -29922,6 +30019,7 @@ def render_eoc(
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -29965,6 +30063,7 @@ def render_eoc(
             generic_character_actor_proven=character_actor_proven,
             training_pair_proven=training_pair_proven,
             npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
@@ -30518,13 +30617,20 @@ def render_eoc(
                     "popup_flag", "sound", "outdoor_only",
                 }
             ):
-                rendered = render_message_effect(effect, "message", "actor")
+                rendered = (
+                    render_message_effect(
+                        effect, "message", "actor",
+                        message_dialogue_pair[0], message_dialogue_pair[1],
+                    )
+                    if message_dialogue_pair is not None else None
+                )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate message presentation options through a typed service."
+                        "    -- TODO: translate message through a typed service only "
+                        "with bounded text and proven dialogue participants."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -30545,8 +30651,13 @@ def render_eoc(
                 }
             ):
                 # The avatar target is the player, so the u_ spelling is the
-                # same player message as the bare `message` effect.
-                if not exact_avatar_actor_proven:
+                # same player message as the bare `message` effect.  Melee
+                # events retain their exact live alpha/beta pair and receive
+                # a runtime Avatar guard because the attacker may be an NPC.
+                if (
+                    not exact_avatar_actor_proven and
+                    not u_message_avatar_guarded_pair
+                ):
                     lines.append(
                         "    -- TODO: translate u_message only with an exact "
                         "avatar participant supplied by the Platform trigger."
@@ -30557,9 +30668,21 @@ def render_eoc(
                         "requires an exact avatar participant for u_message"
                     )
                     all_effects_converted = False
+                elif message_dialogue_pair is None:
+                    lines.append(
+                        "    -- TODO: translate u_message only with exact dialogue participants."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "requires exact dialogue participants for u_message"
+                    )
+                    all_effects_converted = False
                 else:
                     rendered = render_message_effect(
-                        effect, "u_message", "actor"
+                        effect, "u_message",
+                        "actor",
+                        message_dialogue_pair[0], message_dialogue_pair[1],
                     )
                     if rendered is not None:
                         lines.extend(rendered)
@@ -30575,14 +30698,40 @@ def render_eoc(
                             "needs domain-service conversion"
                         )
                         all_effects_converted = False
-            elif (
-                exact_npc_actor_proven and
-                isinstance(effect, dict) and
-                "npc_message" in effect
-            ):
-                # The native handler returns early for an exact NPC target.
-                # Selector shape alone does not prove that role.
-                converted_effect = True
+            elif isinstance(effect, dict) and "npc_message" in effect:
+                # f_message selects dialogue beta for npc_message.  Require a
+                # live, explicit Character pair; no-beta alpha fallback and
+                # death paths remain manual until text expansion can preserve
+                # their native lifecycle and dialogue state.
+                npc_message_target = (
+                    beta_effect_target[0]
+                    if beta_effect_target is not None and
+                    beta_effect_target[1] == "character" else None
+                )
+                rendered = (
+                    render_message_effect(
+                        effect, "npc_message", npc_message_target,
+                        message_dialogue_pair[0], message_dialogue_pair[1],
+                    )
+                    if (
+                        npc_message_target is not None and
+                        message_dialogue_pair is not None
+                    ) else None
+                )
+                if rendered is not None:
+                    lines.extend(rendered)
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: translate npc_message only with an exact beta "
+                        "Character and bounded static text."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "requires an exact beta Character for npc_message"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 set(effect) == {"give_achievement"} and
@@ -34641,9 +34790,16 @@ def render_eoc(
         not avatar_death_hook and not nested_only
     )
     if not inline_eoc and not nested_only:
-        lines.extend((
+        handler_lines = [
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
+        ]
+        if event_beta_presence_proven:
+            handler_lines.extend([
+                "    context = context or {}",
+                "    context.__ccb_event_beta_presence_proven = true",
+            ])
+        handler_lines.extend([
             f"    return {function_name}(context, nil)",
             "end)",
             f"runtime.handler({lua_quote('migrated-task.' + eoc_id)}, function(context)",
@@ -34653,7 +34809,8 @@ def render_eoc(
             f"    return {function_name}(task_context, task_actor)",
             "end)",
             "",
-        ))
+        ])
+        lines.extend(handler_lines)
     global_recurrence = global_recurrence and not nested_only
     character_recurrence = character_recurrence and not nested_only
     periodic_trigger = global_recurrence or character_recurrence
@@ -34926,6 +35083,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
     )
     npc_dialogue_mission_pair_ids = \
         _npc_dialogue_mission_pair_provenance(objects)
+    dynamic_eoc_dispatch_present = _has_dynamic_eoc_dispatch(objects)
     character_override_ids = frozenset(
         set(character_override_ids) | set(content_character_actor_ids)
     )
@@ -35232,6 +35390,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     npc_dialogue_mission_pair_ids,
                     known_mutation_ids,
                     known_mutation_category_ids,
+                    dynamic_eoc_dispatch_present,
                 )
             )
         elif kind == "tool_quality":

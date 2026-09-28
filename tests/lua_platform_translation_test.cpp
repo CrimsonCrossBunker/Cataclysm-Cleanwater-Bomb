@@ -1,7 +1,13 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "avatar.h"
+#include "dialogue.h"
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_bindings_coords.h"
+#include "npc.h"
+#include "npctalk.h"
+#include <memory>
+#include <string>
 #include <string_view>
 
 TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
@@ -122,5 +128,52 @@ TEST_CASE( "lua_platform_choice_positions_reject_invalid_shapes_before_ui",
         INFO( error.what() );
     }
     REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_platform_text_expansion_matches_native_dialogue_tags",
+           "[lua][platform][runtime][messages][semantic]" )
+{
+    clear_avatar();
+    struct cleanup_avatar {
+        ~cleanup_avatar() {
+            clear_avatar();
+        }
+    } cleanup;
+
+    avatar &player = get_avatar();
+    player.normalize();
+    const_dialogue native_dialogue(
+        get_const_talker_for( player ), get_const_talker_for( player ) );
+    std::string native_text = "<u_name> / <npc_name>";
+    parse_tags( native_text, *native_dialogue.const_actor( false ),
+                *native_dialogue.const_actor( true ), native_dialogue );
+
+    cata::lua_platform::clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> runtime =
+        cata::lua_platform::make_runtime( "lua_platform_message_text_test", 1903, lua );
+    on_out_of_scope cleanup_runtime( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
+    cata::lua_platform::set_active_runtimes( { runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    lua["ccb"] = ccb;
+
+    const sol::protected_function_result result = lua.safe_script( R"(
+        local avatar = ccb.services.creatures.avatar()
+        local expanded = ccb.services.text.expand_for(
+            "<u_name> / <npc_name>", avatar, avatar)
+        assert(expanded.ok)
+        return expanded.value
+    )", sol::script_pass_on_error );
+    if( !result.valid() ) {
+        const sol::error error = result;
+        INFO( error.what() );
+    }
+    REQUIRE( result.valid() );
+    CHECK( result.get<std::string>() == native_text );
 }
 #endif
