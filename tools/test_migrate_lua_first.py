@@ -18332,7 +18332,7 @@ assert(not available())
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                "TODO: preserve native teleport map loading",
+                "TODO: preserve native teleport_to_point map loading/recentering",
                 main,
             )
             self.assertIn("TODO: translate the NPC goal", main)
@@ -20877,6 +20877,95 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 migrate_lua_first.load_objects([source]), "teleport_mod"
             )
 
+    def test_real_teleport_eoc_and_talk_shapes_remain_fail_closed(self) -> None:
+        avatar_eocs = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / (
+                "data/json/effects_on_condition/npc_eocs/"
+                "isherwood_barry_rescue_eocs.json"
+            )
+        ])
+        avatar_eoc = next(
+            source for source in avatar_eocs
+            if source.value.get("id") == "isherwood_mission_player_leaves_map"
+        )
+        avatar_effects = avatar_eoc.value["effect"]
+        avatar_teleport = next(
+            effect for effect in avatar_effects
+            if isinstance(effect, dict) and "u_teleport" in effect
+        )
+        self.assertEqual(avatar_eoc.value.get("required_event"), "avatar_moves")
+        self.assertEqual(
+            avatar_teleport,
+            {
+                "u_teleport": {"global_val": "isherwood_mission_success_return_map"},
+                "force": True,
+            },
+        )
+        avatar_result = migrate_lua_first.MigrationResult()
+        avatar_rendered = migrate_lua_first.render_eoc(
+            avatar_eoc, avatar_result
+        )
+        self.assertIn("TODO: preserve native teleport_to_point", avatar_rendered)
+        self.assertNotIn("services.relocation.move(", avatar_rendered)
+        self.assertTrue(any(
+            "teleport needs native teleport_to_point" in todo.message
+            for todo in avatar_result.todos
+        ))
+
+        monster_eocs = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/monsters/singularities.json"
+        ])
+        monster_eoc = next(
+            source for source in monster_eocs
+            if source.value.get("id") == "EOC_LIEUTENANT_SHADOW_CATCHUP"
+        )
+        monster_teleport = next(
+            effect for effect in monster_eoc.value["effect"]
+            if isinstance(effect, dict) and "npc_teleport" in effect
+        )
+        self.assertEqual(monster_teleport.get("force"), True)
+        self.assertIn("success_message", monster_teleport)
+        self.assertIsNone(
+            migrate_lua_first.render_static_teleport_effect(
+                monster_teleport, monster_actor_proven=True,
+            )
+        )
+
+        talk_sources = migrate_lua_first.load_objects([
+            REPOSITORY_ROOT / "data/json/npcs/exodii/exodii_merchant_talk.json"
+        ])
+        talk_group = next(
+            source for source in talk_sources
+            if source.value.get("type") == "talk_topic" and
+            "TALK_EXODII_MERCHANT_Talk" in source.value.get("id", [])
+        )
+        talk_value = dict(talk_group.value)
+        talk_value["id"] = "TALK_EXODII_MERCHANT_Talk"
+        talk_source = migrate_lua_first.SourceObject(
+            talk_group.path, talk_group.index, talk_value,
+        )
+        response = next(
+            response for response in talk_value["responses"]
+            if isinstance(response, dict) and
+            str(response.get("text", "")).startswith(
+                "I'm ready to become a true cyborg."
+            )
+        )
+        talk_effects = response["effect"]
+        self.assertEqual(
+            [next(iter(effect)) for effect in talk_effects],
+            ["u_lose_var", "u_location_variable", "u_teleport"],
+        )
+        talk_result = migrate_lua_first.MigrationResult()
+        talk_rendered = migrate_lua_first.render_talk_topic(
+            talk_source, talk_result,
+        )
+        self.assertNotIn("on_action", talk_rendered)
+        self.assertTrue(any(
+            todo.message.endswith("response effect needs a native callback")
+            for todo in talk_result.todos
+        ))
+
     def test_keeps_proven_character_teleport_targets_fail_closed(self) -> None:
         result = self._migrate_teleport_source(
             [
@@ -20911,7 +21000,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         self.assertNotIn("services.map.tile(", main)
         self.assertNotIn("services.relocation.move(", main)
         self.assertNotIn("services.relocation.creature_at(", main)
-        self.assertIn("native map-loading, force-policy", report)
+        self.assertIn("teleport_to_point map loading/recentering", report)
 
     def test_keeps_static_teleport_targets_fail_closed_for_proven_actors(self) -> None:
         cases = [
@@ -20956,7 +21045,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 self.assertNotIn("services.overmap.tile_token(", main)
                 self.assertNotIn("services.relocation.move(", main)
                 self.assertNotIn("services.relocation.travel_to_omt(", main)
-                self.assertIn("map-loading, force-policy", report)
+                self.assertIn("teleport_to_point map loading/recentering", report)
 
     def test_marks_non_monster_teleport_shapes_for_migration(self) -> None:
         explicit_effect = {"u_teleport": {"abs_ms": [10, 20, 30]}}
@@ -21181,7 +21270,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         self.assertIn("TODO: preserve native dimension validation", main)
         self.assertNotIn("services.relocation.move(", main)
         self.assertNotIn("services.relocation.travel_to_dimension(", main)
-        self.assertIn("native map-loading, force-policy", report)
+        self.assertIn("teleport_to_point map loading/recentering", report)
         self.assertIn(
             "dimension-validation, radius, actor, and failure-message parity",
             report,
@@ -30230,7 +30319,7 @@ assert(context.data.picked==selected)
             self.assertTrue(
                 any(
                     "event_character_mutation effect #2 "
-                    "teleport needs native map-loading, force-policy" in todo
+                    "teleport needs native teleport_to_point map" in todo
                     for todo in result.todos
                 )
             )
@@ -30238,8 +30327,10 @@ assert(context.data.picked==selected)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.effects.remove", main)
             self.assertIn(
-                "TODO: preserve native teleport map loading, "
-                "force policies, linked items, and talker behavior.",
+                "TODO: preserve native teleport_to_point map "
+                "loading/recentering, safe/force/force_safe behavior, "
+                "Character linked-item translation, Creature/Item/Vehicle/Zone "
+                "dispatch, and translated success/failure messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -36115,8 +36206,10 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn("services.overmap.reveal(", main)
             self.assertNotIn("services.variables.get_global(\"target\")", main)
             self.assertIn(
-                "TODO: preserve native teleport map loading, "
-                "force policies, linked items, and talker behavior.",
+                "TODO: preserve native teleport_to_point map "
+                "loading/recentering, safe/force/force_safe behavior, "
+                "Character linked-item translation, Creature/Item/Vehicle/Zone "
+                "dispatch, and translated success/failure messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -36124,13 +36217,16 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertTrue(
                 any(
                     "dynamic_world_targets effect #1 teleport needs native "
-                    "map-loading, force-policy" in todo
+                    "teleport_to_point map" in todo
                     for todo in result.todos
                 )
             )
             self.assertIn(
-                "dynamic_world_targets effect #1 teleport needs native map-loading, "
-                "force-policy, linked-item, and talker parity",
+                "dynamic_world_targets effect #1 teleport needs native teleport_to_point map "
+                "loading/recentering and safe/force/force_safe behavior, Character "
+                "linked-item translation, Creature/Item/Vehicle/Zone talker dispatch, and "
+                "translation_or_var success/failure message evaluation; "
+                "services.relocation.move only performs strict loaded-tile movement",
                 report,
             )
 
