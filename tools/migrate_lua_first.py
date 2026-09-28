@@ -29579,7 +29579,11 @@ def render_eoc(
     )
     stable_handler = isinstance(value.get("id"), str) and bool(value["id"])
     handler_id = f"migrated.{eoc_id}"
-    required_event = value.get("required_event")
+    # Native EOC loading reads required_event only for EVENT; absent eoc_type
+    # defaults to ACTIVATION (or RECURRING when recurrence is present).
+    required_event = (
+        value.get("required_event") if value.get("eoc_type") == "EVENT" else None
+    )
     has_event_trigger = isinstance(required_event, str) and bool(required_event)
     recurrence_value = value.get("recurrence")
     recurrence_expression = (
