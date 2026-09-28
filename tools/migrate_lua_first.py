@@ -27279,40 +27279,6 @@ def render_trait_condition(
     return query(raw)
 
 
-def render_npc_available_mission_count_condition(
-    condition: str, npc_dialogue_pair_proven: bool,
-    npc_actor_expression: str | None,
-) -> str | None:
-    """Lower provider availability aliases for a proven dialogue beta."""
-    if (
-        not npc_dialogue_pair_proven or
-        npc_actor_expression != "context.actors.beta"
-    ):
-        return None
-    if condition in {
-        "has_no_available_mission", "npc_has_no_available_mission",
-    }:
-        comparison, count = "==", 0
-    elif condition in {"has_available_mission", "npc_has_available_mission"}:
-        comparison, count = "==", 1
-    elif condition in {
-        "has_many_available_missions", "npc_has_many_available_missions",
-    }:
-        comparison, count = ">=", 2
-    else:
-        return None
-    return (
-        "(function() "
-        "local beta = context and context.actors and context.actors.beta; "
-        "if beta == nil or beta.kind ~= \"creature\" or "
-        "beta.subtype ~= \"npc\" then return false end; "
-        "local available_count = service_value("
-        "services.npcs.missions.available_count(beta)); "
-        f"return available_count {comparison} {count} "
-        "end)()"
-    )
-
-
 def render_npc_selected_mission_condition(
     condition: str, npc_dialogue_pair_proven: bool,
     npc_actor_expression: str | None,
@@ -27909,13 +27875,6 @@ def render_eoc_condition_expression(
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
-        available_mission_count = \
-            render_npc_available_mission_count_condition(
-                condition, npc_dialogue_pair_proven,
-                npc_actor_expression,
-            )
-        if available_mission_count is not None:
-            return available_mission_count
         selected_mission_condition = \
             render_npc_selected_mission_condition(
                 condition, npc_dialogue_pair_proven,
@@ -27974,12 +27933,21 @@ def render_eoc_condition_expression(
             # direct-topic source has no Platform callback with that state.
             return None
         if condition in {
-            "has_available_mission",
-            "has_many_available_missions", "has_no_available_mission",
+            "has_available_mission", "has_many_available_missions",
+            "has_no_available_mission", "npc_has_available_mission",
+            "npc_has_many_available_missions",
+            "npc_has_no_available_mission",
+        }:
+            # Native beta aliases read const_actor(true)->available_missions().
+            # NPC providers expose chatbin.missions, but talk_topic response
+            # conditions/true_eocs are not emitted as Platform callbacks. A
+            # subtype guard would also change has_no_available_mission for a
+            # non-NPC beta, whose base talker returns an empty list.
+            return None
+        if condition in {
             "mission_complete", "mission_failed", "mission_incomplete",
-            "npc_has_available_mission", "npc_has_many_available_missions",
-            "npc_has_no_available_mission", "npc_mission_complete",
-            "npc_mission_failed", "npc_mission_incomplete",
+            "npc_mission_complete", "npc_mission_failed",
+            "npc_mission_incomplete",
         }:
             # Actor provenance alone does not prove beta or dialogue state.
             return None
@@ -30271,6 +30239,17 @@ def render_eoc(
                 "EOC callback supplies the native alpha and beta as live "
                 "Character handles; talk-topic response EOC callbacks are "
                 "not yet wired"
+            )
+        elif isinstance(raw_condition, str) and raw_condition in {
+            "has_available_mission", "has_many_available_missions",
+            "has_no_available_mission", "npc_has_available_mission",
+            "npc_has_many_available_missions",
+            "npc_has_no_available_mission",
+        }:
+            condition_todo = (
+                "translate beta available-mission counts only after "
+                "talk-topic response EOC callbacks are wired; preserve the "
+                "native empty-list result for a non-NPC beta"
             )
         elif contains_safe_space_alpha_condition(raw_condition):
             condition_todo = (

@@ -10721,42 +10721,39 @@ assert(not available())
                     fail_closed,
                 )
 
-    def test_available_mission_counts_require_a_dialogue_provider(self) -> None:
+    def test_available_mission_counts_need_a_rendered_dialogue_callback(self) -> None:
+        # The six beta aliases ask const_actor(true)->available_missions():
+        # zero, exactly one, or at least two. talker_npc_const returns the raw
+        # chatbin.missions vector, which services.npcs.missions.available_count
+        # also counts. But render_talk_topic drops response conditions and
+        # true_eocs, so this source proof has no executable Platform callback.
+        # Also, the base talker returns an empty vector: for a non-NPC beta,
+        # has_no_available_mission is true while the other two are false. A
+        # blanket NPC-subtype guard would change that native result.
         predicates = {
             "has_no_available_mission": "available_count == 0",
-            "has_available_mission": "available_count == 1",
-            "has_many_available_missions": "available_count >= 2",
             "npc_has_no_available_mission": "available_count == 0",
+            "has_available_mission": "available_count == 1",
             "npc_has_available_mission": "available_count == 1",
+            "has_many_available_missions": "available_count >= 2",
             "npc_has_many_available_missions": "available_count >= 2",
         }
-        for condition, comparison in predicates.items():
-            with self.subTest(condition=condition):
-                expression = migrate_lua_first.render_eoc_condition_expression(
-                    condition,
-                    npc_actor_expression="context.actors.beta",
-                    npc_dialogue_pair_proven=True,
-                )
-                self.assertIsNotNone(expression)
-                self.assertIn(
-                    "services.npcs.missions.available_count(beta)",
-                    expression,
-                )
-                self.assertIn(comparison, expression)
-                self.assertIn('beta.subtype ~= "npc"', expression)
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        condition,
-                        npc_actor_expression="context.actors.beta",
+        for condition, native_boundary in predicates.items():
+            with self.subTest(
+                condition=condition, native_boundary=native_boundary
+            ):
+                for actor_expression, pair_proven in (
+                    ("context.actors.beta", True),
+                    ("context.actors.beta", False),
+                    ("actor", True),
+                ):
+                    self.assertIsNone(
+                        migrate_lua_first.render_eoc_condition_expression(
+                            condition,
+                            npc_actor_expression=actor_expression,
+                            npc_dialogue_pair_proven=pair_proven,
+                        )
                     )
-                )
-                self.assertIsNone(
-                    migrate_lua_first.render_eoc_condition_expression(
-                        condition,
-                        npc_actor_expression="actor",
-                        npc_dialogue_pair_proven=True,
-                    )
-                )
 
         for alias in (
             "u_has_no_available_mission",
@@ -10771,6 +10768,64 @@ assert(not available())
                         npc_dialogue_pair_proven=True,
                     )
                 )
+
+        response_pairs = [
+            (condition, f"available_pair_{index}")
+            for index, condition in enumerate(predicates)
+        ]
+        dialogue_topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 1, {
+                "type": "talk_topic", "id": "available_topic",
+                "responses": [{
+                    "text": f"Check {condition}",
+                    "condition": condition,
+                    "true_eocs": eoc_id,
+                } for condition, eoc_id in response_pairs],
+            },
+        )
+        condition_eocs = [
+            migrate_lua_first.SourceObject(
+                Path("source.json"), index + 2, {
+                    "type": "effect_on_condition", "id": eoc_id,
+                    "condition": condition,
+                    "effect": {"message": "available"},
+                },
+            )
+            for index, (condition, eoc_id) in enumerate(response_pairs)
+        ]
+        pair_ids = migrate_lua_first._npc_dialogue_mission_pair_provenance(
+            [dialogue_topic, *condition_eocs]
+        )
+        self.assertEqual(
+            pair_ids, frozenset(eoc_id for _, eoc_id in response_pairs)
+        )
+
+        topic_result = migrate_lua_first.MigrationResult()
+        rendered_topic = migrate_lua_first.render_talk_topic(
+            dialogue_topic, topic_result
+        )
+        self.assertIsNotNone(rendered_topic)
+        self.assertNotIn("condition", rendered_topic)
+        self.assertNotIn("true_eocs", rendered_topic)
+        self.assertTrue(topic_result.todos)
+
+        for eoc in condition_eocs:
+            with self.subTest(eoc=eoc.value["id"]):
+                eoc_result = migrate_lua_first.MigrationResult()
+                rendered_eoc = migrate_lua_first.render_eoc(
+                    eoc,
+                    eoc_result,
+                    talker_pair_ids=pair_ids,
+                    npc_dialogue_mission_pair_ids=pair_ids,
+                )
+                self.assertNotIn(
+                    "services.npcs.missions.available_count(", rendered_eoc
+                )
+                self.assertIn(
+                    "native empty-list result for a non-NPC beta",
+                    rendered_eoc,
+                )
+                self.assertTrue(eoc_result.todos)
 
     def test_selected_mission_status_requires_a_dialogue_provider(self) -> None:
         predicates = {
