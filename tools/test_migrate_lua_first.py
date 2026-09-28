@@ -2984,6 +2984,138 @@ assert(observed[#observed] == 'KNOWN')
                 self.assertIn(expected, expression)
                 self.assertTrue(expression.endswith(".total > 0"))
 
+    def test_proficiency_conditions_require_exact_actor_and_static_id_text(self) -> None:
+        unknown_literal = {"u_has_proficiency": "prof_unregistered_condition_test"}
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                unknown_literal, avatar_actor_proven=True,
+            )
+        )
+        expression = migrate_lua_first.render_eoc_condition_expression(
+            unknown_literal, avatar_actor_proven=True,
+            proficiency_alpha_actor_proven=True,
+        )
+        self.assertEqual(
+            expression,
+            'service_value(services.proficiencies.has_id_text('
+            'actor, "prof_unregistered_condition_test"))',
+        )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"not": unknown_literal}, avatar_actor_proven=True,
+                proficiency_alpha_actor_proven=True,
+            ),
+            f"not ({expression})",
+        )
+        for raw_id in (
+            {"context_val": "proficiency_id"},
+            {"str": "prof_knapping", "i18n": True},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    {"u_has_proficiency": raw_id},
+                    avatar_actor_proven=True,
+                    proficiency_alpha_actor_proven=True,
+                )
+            )
+        for proof in (
+            {"npc_actor_proven": True, "npc_actor_expression": "actor"},
+            {
+                "npc_actor_proven": True,
+                "npc_actor_expression": "context.actors.beta",
+                "npc_dialogue_pair_proven": True,
+            },
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_eoc_condition_expression(
+                    {"npc_has_proficiency": "prof_knapping"}, **proof,
+                )
+            )
+
+    def test_proficiency_event_actor_proof_does_not_survive_eoc_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            target = {
+                "type": "effect_on_condition",
+                "id": "proficiency_target",
+                "required_event": "game_start",
+                "condition": {"u_has_proficiency": "prof_unregistered_condition_test"},
+                "effect": {"message": "bounded target"},
+            }
+            cases = (
+                [
+                    target,
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_caller",
+                        "required_event": "game_start",
+                        "effect": {"run_eocs": ["proficiency_target"]},
+                    },
+                ],
+                [
+                    target,
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_caller",
+                        "required_event": "game_start",
+                        "effect": {"run_eocs": {"context_val": "next_eoc"}},
+                    },
+                ],
+                [
+                    target,
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dynamic_selector_caller",
+                        "required_event": "game_start",
+                        "effect": {
+                            "run_eoc_selector": {"global_val": "selected_eoc"},
+                        },
+                    },
+                ],
+            )
+            for index, objects in enumerate(cases):
+                with self.subTest(dispatch=index):
+                    source.write_text(json.dumps(objects), encoding="utf-8")
+                    result = migrate_lua_first.migrate(
+                        migrate_lua_first.load_objects([source]), "proficiency_gate_mod"
+                    )
+                    main = result.files[Path("main.lua")]
+                    report = result.files[Path("MIGRATION_REPORT.md")]
+                    self.assertNotIn(
+                        'services.proficiencies.has_id_text(actor, '
+                        '"prof_unregistered_condition_test")', main,
+                    )
+                    self.assertIn(
+                        "EOC proficiency_target condition TODO: translate the legacy condition into a Lua predicate",
+                        report,
+                    )
+
+    def test_proficiency_dead_avatar_hook_remains_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "effect_on_condition",
+                        "id": "dead_avatar_proficiency",
+                        "eoc_type": "AVATAR_DEATH",
+                        "condition": {"u_has_proficiency": "prof_knapping"},
+                        "effect": {"message": "dead avatar"},
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "dead_avatar_proficiency_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertNotIn("services.proficiencies.has_id_text", main)
+            self.assertIn(
+                "EOC dead_avatar_proficiency condition TODO: translate the legacy condition into a Lua predicate",
+                report,
+            )
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_visible_traits_require_and_use_both_proven_participants(self) -> None:
         for selector, observed, observer in (
@@ -3017,7 +3149,6 @@ assert({expression})
     def test_knowledge_predicates_execute_for_both_participants(self) -> None:
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
             for key, kind, identifier in (
-                ("has_proficiency", "proficiency", "prof_carving"),
                 ("has_wielded_with_skill", "skill", "cutting"),
                 ("has_wielded_with_weapon_category", "weapon_category", "LONG_SWORDS"),
             ):
@@ -3030,15 +3161,13 @@ assert({expression})
 local actor, partner = {}, {}
 local answer = false
 local function service_value(result) assert(result.ok); return result.value end
-local services = {types={id=function(kind,id) return {kind=kind,id=id} end},
- proficiencies={}, inventory={}}
+local services = {types={id=function(kind,id) return {kind=kind,id=id} end}, inventory={}}
 """
                     script += f"""
 local function query(character, id)
  assert(character == {target} and id.kind == '{kind}' and id.id == '{identifier}')
- return {{ok=true,value={"{known=answer}" if kind == "proficiency" else "answer"}}}
+ return {{ok=true,value=answer}}
 end
-services.proficiencies.get = query
 services.inventory.wielded_matches = query
 assert(not ({expression}))
 answer = true
@@ -3921,7 +4050,7 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
                 main,
             )
             self.assertIn(
-                'services.types.id("proficiency", "prof_knapping")',
+                'services.proficiencies.has_id_text(actor, "prof_knapping")',
                 main,
             )
             self.assertIn(
@@ -3930,7 +4059,9 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertIn("services.mutations.has", main)
             self.assertIn("services.martial_arts.get", main)
-            self.assertIn("services.proficiencies.get", main)
+            self.assertNotIn('services.types.id("proficiency"', main)
+            self.assertNotIn("services.proficiencies.get", main)
+            self.assertIn("services.proficiencies.has_id_text", main)
             self.assertIn("services.bionics.has", main)
             self.assertIn("services.inventory.resources", main)
             self.assertIn(
@@ -8695,6 +8826,7 @@ assert(#events == 9)
                 )
             self.assertNotIn("services.mutations.has(", main)
             self.assertNotIn("services.npcs.get(actor)", main)
+            self.assertNotIn("services.proficiencies.has_id_text", main)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_literal_lose_var_effects(self) -> None:

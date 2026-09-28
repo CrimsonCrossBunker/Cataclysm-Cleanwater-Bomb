@@ -154,8 +154,25 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 }
                 sol::table proficiency = value_of( services["proficiencies"]["get"], teacher_handle,
                                                    cata::lua_platform::script_game_id( "proficiency", carving.str() ) );
-                CHECK( legacy( "has_proficiency", carving.str() ) == known );
+                const bool native_known = legacy( "has_proficiency", carving.str() );
+                const bool platform_known = value_of(
+                                                services["proficiencies"]["has_id_text"],
+                                                teacher_handle, carving.str() ).as<bool>();
+                CHECK( native_known == known );
+                CHECK( platform_known == native_known );
                 CHECK( proficiency["known"].get<bool>() == known );
+            }
+            for( const std::string &unknown_id : {
+                     std::string( "prof_unregistered_condition_test" ),
+                     std::string( 257, 'x' )
+                 } ) {
+                CAPTURE( prefix, unknown_id );
+                REQUIRE_FALSE( proficiency_id( unknown_id ).is_valid() );
+                const bool native_known = legacy( "has_proficiency", unknown_id );
+                CHECK_FALSE( native_known );
+                CHECK( value_of(
+                           services["proficiencies"]["has_id_text"],
+                           teacher_handle, unknown_id ).as<bool>() == native_known );
             }
             teacher.remove_weapon();
             for( const bool wielded : {
