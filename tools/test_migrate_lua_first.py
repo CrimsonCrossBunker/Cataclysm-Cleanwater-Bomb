@@ -23030,7 +23030,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.mutations.remove_type(", main)
             self.assertNotIn("services.mutations.set_purifiable(", main)
 
-    def test_die_migration_preserves_native_legacy_suppress_message_key(self) -> None:
+    def test_die_migration_ignores_native_unrecognized_suppress_message_key(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -23426,7 +23426,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn('context.data["branch_value"]', main)
             self.assertIn('services.characters.damage(\n        actor', main)
 
-    def test_lowers_variable_backed_explosion_parameters(self) -> None:
+    def test_variable_backed_explosion_parameters_without_range_proof_stay_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -23458,17 +23458,169 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('context.data["power"]', main)
-            self.assertIn('services.variables.get_global("distance")', main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "noise")', main)
-            self.assertIn('context.data["casing"]', main)
-            self.assertIn('services.variables.get_global("fragment")', main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "recovery")', main)
-            self.assertIn('context.data["radius"]', main)
-            self.assertNotIn("combat effect", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn("services.characters.explosion(", main)
+            self.assertNotIn('context.data["power"]', main)
+            self.assertIn(
+                "EOC dynamic_explosion effect #0 needs domain-service conversion",
+                report,
+            )
+
+    def test_explosion_target_var_without_abs_ms_type_proof_stays_todo(self) -> None:
+        actual_artifacts = json.loads(
+            (REPOSITORY_ROOT / "data/json/artifact/altered_object_active.json")
+            .read_text(encoding="utf-8")
+        )
+        actual_explosion = next(
+            entry for entry in actual_artifacts
+            if entry.get("id") == "EOC_BOOK_COMBUSTION_EXPLODE"
+        )
+        # This is the bundled artifact's exact context_val target_var shape.
+        # Give the renderer an otherwise proven avatar so the coordinate type
+        # check, rather than unrelated actor provenance, decides the result.
+        self.assertIsNone(
+            migrate_lua_first.render_static_combat_explosion(
+                actual_explosion["effect"][0], "u_explosion", True, False
+            )
+        )
+
+        actual_mod_explosions = json.loads(
+            (REPOSITORY_ROOT / "data/mods/MindOverMatter/effectoncondition/"
+             "eoc_nether_attunement_events.json").read_text(encoding="utf-8")
+        )
+        actual_emp_effect = next(
+            entry for entry in actual_mod_explosions
+            if entry.get("id") == "EOC_NETHER_EFFECT_CHECK_PHOTOKIN_EMP"
+        )["effect"][0]["then"][1]
+        # This bundled no-target literal blast is the bounded positive shape.
+        rendered_actual_blast = \
+            migrate_lua_first.render_static_combat_explosion(
+                actual_emp_effect, "u_explosion", True, False
+            )
+        self.assertEqual(
+            rendered_actual_blast,
+            ["    services.characters.explosion(actor, "
+             "{ power = 10, emp_blast = true })"],
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "untyped_explosion_target",
+                        "required_event": "game_start",
+                        "condition": {"expects_vars": ["explode_loc"]},
+                        "effect": {
+                            "u_explosion": {"power": 50000},
+                            "target_var": {"context_val": "explode_loc"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "untyped_explosion_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn("services.characters.explosion(", main)
+            self.assertNotIn('target = context.data["explode_loc"]', main)
+            self.assertIn(
+                "EOC untyped_explosion_target effect #0 needs domain-service conversion",
+                report,
+            )
+
+    def test_real_corpus_die_shapes_respect_character_actor_proof(self) -> None:
+        portal_topics = json.loads(
+            (REPOSITORY_ROOT / "data/json/npcs/EOC_talkers/portal_storm.json")
+            .read_text(encoding="utf-8")
+        )
+        portal_topic = next(
+            entry for entry in portal_topics
+            if entry.get("id") == "TALK_PORTAL_STORM_WILL_IT"
+        )
+        actual_u_die = portal_topic["responses"][0]["effect"][0]
+        self.assertEqual(
+            migrate_lua_first.render_static_combat_die(
+                actual_u_die, actual_u_die, True, False
+            ),
+            ["    services.characters.die(actor)"],
+        )
+
+        scenario_eocs = json.loads(
+            (REPOSITORY_ROOT / "data/json/effects_on_condition/scenario_specific_eocs.json")
+            .read_text(encoding="utf-8")
+        )
+        item_callback = next(
+            entry for entry in scenario_eocs
+            if entry.get("id") == "EOC_LAB_MUTANT_NO_MUTAGENS"
+        )
+        actual_npc_die = item_callback["effect"]["true_eocs"][0]["effect"][0]
+        self.assertEqual(actual_npc_die, "npc_die")
+        self.assertIsNone(
+            migrate_lua_first.render_static_combat_die(
+                actual_npc_die, actual_npc_die, False, False
+            )
+        )
+
+    def test_combat_death_and_explosion_from_monster_callbacks_stay_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "monster_attack",
+                            "id": "creature_death_explosion_attack",
+                            "attack_type": "eoc",
+                            "eoc": ["creature_death_explosion"],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "creature_death_explosion",
+                            "effect": [
+                                "u_die",
+                                {"npc_die": {"remove_corpse": True}},
+                                {"u_explosion": {"power": 10}},
+                                {"npc_explosion": {"power": 10}},
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "monster_combat_effects_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertNotIn("services.characters.die(", main)
+            self.assertNotIn("services.characters.explosion(", main)
+            self.assertIn(
+                "EOC creature_death_explosion effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC creature_death_explosion effect #1 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC creature_death_explosion effect #2 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC creature_death_explosion effect #3 needs domain-service conversion",
+                report,
+            )
 
     def test_message_tags_and_outdoor_sound_stay_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

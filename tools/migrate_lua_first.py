@@ -21839,14 +21839,31 @@ def render_static_combat_explosion(
     }
     if set(explosion) - allowed_inner:
         return None
-    power = _combat_number_expression(
-        explosion.get("power", 0), actor, -1000000, 1000000
+
+    def literal_number(
+        value: Any, minimum: float, maximum: float, *, integer: bool = False,
+    ) -> str | None:
+        parsed = _combat_literal_number(
+            value, minimum, maximum, integer=integer
+        )
+        if parsed is None:
+            return None
+        # Python's shortest round-trip representation parses back to the same
+        # native double while avoiding an unnecessarily long decimal.
+        return str(parsed)
+
+    # The native dbl_or_var values are not range-clamped. A context/global
+    # variable can therefore exceed the Platform service bounds; clamping it
+    # here would change the blast. Only translate literal values whose native
+    # conversions fit the bounded service contract.
+    power = literal_number(
+        explosion.get("power", 0), -1000000, 1000000
     )
-    distance_factor = _combat_number_expression(
-        explosion.get("distance_factor", 0.75), actor, 0, 1000
+    distance_factor = literal_number(
+        explosion.get("distance_factor", 0.75), 0, 1000
     )
-    max_noise = _combat_number_expression(
-        explosion.get("max_noise", 90000000), actor, 0, 1000000000,
+    max_noise = literal_number(
+        explosion.get("max_noise", 90000000), 0, 1000000000,
         integer=True,
     )
     fire = _combat_literal_bool(explosion.get("fire"), False)
@@ -21862,18 +21879,15 @@ def render_static_combat_explosion(
     if fire:
         options.append("fire = true")
     if "target_var" in effect:
-        target = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-        if target is None:
-            return None
-        options.append(f"target = {target}")
+        # Native reads var_info and coerces its value to absolute map-square
+        # tripoint; a descriptor does not prove that the value is a typed
+        # absolute-map-square TripointCoord required by Platform.
+        return None
     if "shrapnel" in explosion:
         shrapnel = explosion["shrapnel"]
         if isinstance(shrapnel, int) and not isinstance(shrapnel, bool):
-            casing_mass = _combat_number_expression(
-                explosion.get("casing_mass"), actor, 0, 1000000000, integer=True
+            casing_mass = literal_number(
+                explosion.get("casing_mass"), 0, 1000000000, integer=True
             )
             if casing_mass is None:
                 return None
@@ -21881,19 +21895,21 @@ def render_static_combat_explosion(
         elif isinstance(shrapnel, dict):
             if set(shrapnel) - {"casing_mass", "fragment_mass", "recovery", "drop"}:
                 return None
-            casing_mass = _combat_number_expression(
-                shrapnel.get("casing_mass"), actor, 0, 1000000000, integer=True
+            casing_mass = literal_number(
+                shrapnel.get("casing_mass"), 0, 1000000000, integer=True
             )
-            fragment_mass = _combat_number_expression(
-                shrapnel.get("fragment_mass", 0.08), actor, 0, 1000
+            fragment_mass = literal_number(
+                shrapnel.get("fragment_mass", 0.08), 0, 1000
             )
-            recovery = _combat_number_expression(
-                shrapnel.get("recovery", 0), actor, 0, 100, integer=True
+            recovery = literal_number(
+                shrapnel.get("recovery", 0), 0, 100, integer=True
             )
             drop = shrapnel.get("drop", "null")
             if (
                 casing_mass is None or fragment_mass is None or recovery is None or
-                not bounded_utf8_string(drop, PLATFORM_ID_MAX_BYTES, allow_empty=False)
+                # The service validates item IDs while native itype_id keeps
+                # arbitrary strings; without catalog proof only null is safe.
+                drop != "null"
             ):
                 return None
             shrapnel_options = [f"casing_mass = {casing_mass}"]
@@ -21917,8 +21933,8 @@ def render_static_combat_explosion(
     immune = _combat_literal_bool(
         effect.get("flashbang_avatar_is_immune"), False
     )
-    radius = _combat_number_expression(
-        effect.get("flashbang_radius", 8), actor, 0, 1000, integer=True
+    radius = literal_number(
+        effect.get("flashbang_radius", 8), 0, 1000, integer=True
     )
     if immune is None or radius is None:
         return None
@@ -22084,6 +22100,8 @@ def render_static_combat_die(
     ):
         return None
     options_value = effect[key]
+    # Native f_die_advanced reads only `supress_message`; accept the correctly
+    # spelled field solely to preserve its native no-op, never to emit it.
     if set(options_value) - {"remove_corpse", "supress_message", "suppress_message"}:
         return None
     remove_corpse = _combat_literal_bool(options_value.get("remove_corpse"), False)
