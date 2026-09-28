@@ -20424,7 +20424,7 @@ def render_static_mirror_coordinates(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Fail closed: Platform lacks safe absolute-ms reflection semantics."""
+    """Keep fail-closed until var_info scope and value conversion are exact."""
     del effect, avatar_actor_proven, npc_actor_proven
     return None
 
@@ -34000,14 +34000,18 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: preserve native dimension validation, radius "
-                        "truncation, actor selection, and failure messages."
+                        "    -- TODO: u_travel_to_dimension needs native invalid-ID/filter "
+                        "no-op behavior, double-to-int radius truncation, dialogue-alpha "
+                        "NPC/item/vehicle targeting including target_location, and translated "
+                        "success/failure messages; services.relocation.travel_to_dimension "
+                        "is avatar-centered, int-only, and requires an active map."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "u_travel_to_dimension needs native dimension-validation, "
-                        "radius, actor, and failure-message parity"
+                        "u_travel_to_dimension needs native invalid-ID/filter, "
+                        "radius truncation, dialogue-alpha actor/target_location, "
+                        "and translated-message parity"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "clear_dimension" in effect:
@@ -34210,15 +34214,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: mirror_coordinates reads and writes native "
-                        "absolute-ms var_info values; the Platform has no equivalent "
-                        "scope-correct reflection operation."
+                        "    -- TODO: mirror_coordinates reads and writes arbitrary native "
+                        "absolute-ms var_info values; typed coordinate arithmetic alone "
+                        "does not preserve missing/legacy-string conversion or variable scopes."
                     )
                     result.add_todo(
                         "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs absolute-ms reflection and exact input/output "
-                        "variable-scope semantics"
+                        "needs native missing/legacy-value conversion and exact "
+                        "input/output var_info scope semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:
