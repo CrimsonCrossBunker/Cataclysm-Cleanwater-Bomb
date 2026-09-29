@@ -6493,12 +6493,75 @@ def render_mod_tileset(source: SourceObject, result: MigrationResult) -> str | N
     return "\n".join(lines) + "\n"
 
 
-def _talk_text(value: Any) -> str | None:
+def _talk_text(value: Any) -> tuple[str | LuaRaw | None, str | None]:
     if isinstance(value, str):
-        return value
-    # Native dynamic_line_t translates each concatenate entry separately.
-    # Joining raw pieces changes both lookup keys and language-switch behavior.
-    return None
+        return value, None
+    if isinstance(value, list):
+        return None, "dynamic_line random-choice arrays need a manual choice conversion"
+    if not isinstance(value, dict) or "concatenate" not in value:
+        return None, "dynamic_line needs a static string or flat concatenate"
+
+    extra_fields = sorted(
+        key for key in value
+        if key != "concatenate" and not (isinstance(key, str) and key.startswith("//"))
+    )
+    if extra_fields:
+        return None, (
+            "dynamic_line concatenate has unsupported fields: " +
+            ", ".join(extra_fields)
+        )
+    pieces = value["concatenate"]
+    if not isinstance(pieces, list):
+        return None, "dynamic_line concatenate must be an array"
+    if not pieces:
+        return None, "dynamic_line concatenate must contain at least one translation piece"
+
+    calls: list[str] = []
+    for index, piece in enumerate(pieces, start=1):
+        if isinstance(piece, str):
+            text = piece
+            context = None
+        elif isinstance(piece, list):
+            return None, (
+                f"dynamic_line concatenate entry {index} is a random-choice array; "
+                "only flat translation entries are supported"
+            )
+        elif isinstance(piece, dict):
+            extra_piece_fields = sorted(
+                key for key in piece
+                if key not in {"str", "ctxt"} and
+                not (isinstance(key, str) and key.startswith("//"))
+            )
+            text = piece.get("str")
+            context = piece.get("ctxt")
+            if extra_piece_fields or not isinstance(text, str) or (
+                "ctxt" in piece and not isinstance(context, str)
+            ):
+                return None, (
+                    f"dynamic_line concatenate entry {index} must be a string or "
+                    "a typed {str, ctxt} translation"
+                )
+        else:
+            return None, (
+                f"dynamic_line concatenate entry {index} must be a string or "
+                "a typed {str, ctxt} translation"
+            )
+        if "\0" in text or (context is not None and "\0" in context):
+            return None, f"dynamic_line concatenate entry {index} contains NUL text"
+        arguments = [lua_quote(text)]
+        if context is not None:
+            arguments.append(lua_quote(context))
+        calls.append(f"ccb.services.translate({', '.join(arguments)})")
+
+    callback = "\n".join((
+        "function(context)",
+        "        return " + "\n            .. ".join(calls),
+        "    end",
+    ))
+    # Native dynamic_line_t translates each piece when the line is generated.
+    # Keep each gettext key/context separate and defer those lookups to the
+    # Platform callback instead of joining the source strings during migration.
+    return LuaRaw(callback), None
 
 
 def _render_talk_topic_npc_state_condition(condition: Any) -> str | None:
@@ -7291,15 +7354,13 @@ def render_talk_topic(
         return None
     todo_count = len(result.todos)
     raw_dynamic_line = value.get("dynamic_line")
-    dynamic_line = _talk_text(raw_dynamic_line)
+    dynamic_line, dynamic_line_issue = _talk_text(raw_dynamic_line)
     if dynamic_line is None:
-        reason = (
-            "dynamic_line concatenate needs per-piece native translation "
-            "and source-order Lua conversion"
-            if isinstance(raw_dynamic_line, dict) and "concatenate" in raw_dynamic_line
-            else "dynamic_line needs a static string"
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: talk topic {topic_id} "
+            f"{dynamic_line_issue or 'dynamic_line needs manual conversion'}",
         )
-        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} {reason}")
         dynamic_line = "[Lua-first dialogue line requires manual conversion]"
     responses: list[dict[str, Any]] = []
     raw_responses = value.get("responses", [])

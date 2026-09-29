@@ -19356,6 +19356,111 @@ assert(not available())
         self.assertEqual(len(effect_todos), 2)
         self.assertTrue(all(todo.category == "manual_rewrite" for todo in effect_todos))
 
+    def test_talk_concatenate_translates_each_flat_typed_piece(self) -> None:
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "talk_topic", "id": "typed_concat_topic",
+                "dynamic_line": {"concatenate": [
+                    "Meet the ",
+                    {"ctxt": "dialogue fragment", "str": "scout"},
+                    ".",
+                ]},
+                "responses": [],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("dynamic_line = function(context)", rendered)
+        self.assertIn('ccb.services.translate("Meet the ")', rendered)
+        self.assertIn(
+            'ccb.services.translate("scout", "dialogue fragment")', rendered
+        )
+        self.assertIn('ccb.services.translate(".")', rendered)
+        self.assertEqual(rendered.count("ccb.services.translate("), 3)
+        self.assertNotIn('"concatenate"', rendered)
+        self.assertNotIn("dynamic_line_translation", rendered)
+        self.assertFalse(result.todos)
+
+    def test_talk_concatenate_keeps_nested_random_choice_as_todo(self) -> None:
+        cases = (
+            (
+                "random_concat_topic",
+                {"concatenate": ["Prefix", ["one", "two"]]},
+                "entry 2 is a random-choice array",
+            ),
+            (
+                "conditional_concat_topic",
+                {"concatenate": ["Prefix", {
+                    "follower_present": "NC_STARTINGNPC_LIAM",
+                    "yes": " there", "no": ".",
+                }]},
+                "entry 2 must be a string or a typed {str, ctxt} translation",
+            ),
+        )
+        for topic_id, dynamic_line, expected_todo in cases:
+            with self.subTest(topic_id=topic_id):
+                topic = migrate_lua_first.SourceObject(
+                    Path("source.json"), 0, {
+                        "type": "talk_topic", "id": topic_id,
+                        "dynamic_line": dynamic_line, "responses": [],
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_talk_topic(topic, result)
+                self.assertIsNotNone(rendered)
+                assert rendered is not None
+                self.assertIn(
+                    'dynamic_line = "[Lua-first dialogue line requires manual conversion]"',
+                    rendered,
+                )
+                self.assertTrue(any(
+                    expected_todo in todo.message for todo in result.todos
+                ))
+
+    def test_real_translate_dialogue_topic_preserves_piece_boundaries(self) -> None:
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([
+                REPOSITORY_ROOT / "data/mods/translate-dialogue/exodii_merchant_talk.json"
+            ])
+            if entry.value.get("id") == "TALK_EXODII_MERCHANT_New"
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(source, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertEqual(rendered.count("ccb.services.translate("), 3)
+        self.assertLess(
+            rendered.index("Us call us the Exodii"),
+            rendered.index("[TRANSLATE:]"),
+        )
+        self.assertLess(
+            rendered.index("[TRANSLATE:]"),
+            rendered.index("We call ourselves the Exodii"),
+        )
+        self.assertFalse(result.todos)
+
+    def test_real_conditional_dialogue_array_remains_a_precise_todo(self) -> None:
+        source = next(
+            entry for entry in migrate_lua_first.load_objects([
+                REPOSITORY_ROOT / "data/json/npcs/exodii/common_talk.json"
+            ])
+            if entry.value.get("id") == "TALK_Directions_exodii_true"
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(source, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn(
+            'dynamic_line = "[Lua-first dialogue line requires manual conversion]"',
+            rendered,
+        )
+        self.assertTrue(any(
+            "dynamic_line random-choice arrays need a manual choice conversion"
+            in todo.message for todo in result.todos
+        ))
+
     def test_plain_json_talk_texts_keep_deferred_translation_markers(self) -> None:
         # Native dynamic_line_t and talk_response read these JSON strings as
         # translations; Platform-authored plain Lua strings are literal.
@@ -24144,12 +24249,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.tileset.register", main)
             self.assertIn('file = "sample.png"', main)
             self.assertIn("ccb.dialogue.register_topic", main)
-            self.assertIn(
-                'dynamic_line = "[Lua-first dialogue line requires manual conversion]"',
-                main,
-            )
-            self.assertTrue(any(
-                "dynamic_line concatenate needs per-piece native translation" in todo.message
+            self.assertIn("dynamic_line = function(context)", main)
+            self.assertIn('ccb.services.translate("Hello")', main)
+            self.assertIn('ccb.services.translate(" world")', main)
+            self.assertFalse(any(
+                "dynamic_line concatenate" in todo.message
                 for todo in result.todos
             ))
             self.assertNotIn('dynamic_line = "Hello world"', main)

@@ -608,6 +608,7 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_translation", 145, lua );
     cata::lua_platform::install_runtime_api( owner_runtime, lua, ccb );
+    lua["ccb"] = ccb;
 
     sol::table runtime_normal_response = lua.create_table();
     runtime_normal_response["text"] = response_text;
@@ -628,6 +629,21 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
     const sol::protected_function_result registration =
         ccb["dialogue"]["register_topic"]( runtime_topic );
     REQUIRE( registration.valid() );
+    const sol::protected_function_result composed_registration = lua.safe_script( R"(
+        ccb.dialogue.register_topic({
+            id = "TALK_CCB_DIALOGUE_TRANSLATION_COMPOSED",
+            dynamic_line = function(context)
+                return ccb.services.translate("First dialogue fragment.") ..
+                    ccb.services.translate(" second fragment.", "dialogue fragment")
+            end,
+            responses = {}
+        })
+    )", sol::script_pass_on_error );
+    if( !composed_registration.valid() ) {
+        const sol::error error = composed_registration;
+        INFO( error.what() );
+    }
+    REQUIRE( composed_registration.valid() );
 
     cata::lua_platform::set_active_runtimes( { owner_runtime } );
     cata::lua_platform::runtime_world_ready( true );
@@ -653,6 +669,21 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
             conversation, talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION" ) );
     REQUIRE( rendered_line );
     CHECK( *rendered_line == native_line.translated() );
+    const JsonValue native_composed_json = json_loader::from_string( R"({
+        "dynamic_line": {
+            "concatenate": [
+                "First dialogue fragment.",
+                {"ctxt":"dialogue fragment","str":" second fragment."}
+            ]
+        }
+    })" );
+    const dynamic_line_t native_composed_line = dynamic_line_t::from_member(
+                native_composed_json.get_object(), "dynamic_line" );
+    const std::optional<std::string> rendered_composed_line =
+        cata::lua_platform::platform_dialogue_dynamic_line(
+            conversation, talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION_COMPOSED" ) );
+    REQUIRE( rendered_composed_line );
+    CHECK( *rendered_composed_line == native_composed_line( conversation ) );
     conversation.gen_responses( talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION" ) );
     REQUIRE( conversation.responses.size() == 2 );
     CHECK( conversation.responses[0].truetext == native_response.truetext );

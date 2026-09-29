@@ -6515,6 +6515,7 @@ function PlatformDialogueContext:remove(key) end
 
 ---@class CcbPlatformDialogueTopicDescriptor
 ---@field id string Native dialogue topic id.
+---The callback runs when the line is generated. Translate each source fragment with `ccb.services.translate` inside it, then compose the returned strings with Lua's `..` operator to preserve separate gettext keys and contexts.
 ---@field dynamic_line string|fun(context: PlatformDialogueContext): string
 ---@field dynamic_line_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of a static `dynamic_line`; without this field, static lines and callback results stay literal.
 ---@field responses CcbPlatformDialogueResponses
@@ -11784,6 +11785,7 @@ function CcbPlatformServices.format(text, arguments) end
 
 ---Translate runtime text using the current game language. Available after world_ready.
 ---Missing translations return the source text. Text/context must not contain NUL.
+---The lookup runs when called, so dialogue callbacks can compose separately translated fragments.
 ---@param text string Literal source text for extraction.
 ---@param context? string Literal disambiguation context.
 ---@return string
