@@ -517,10 +517,11 @@ static std::string point_pool_status_text( const Character &u, pool_type pool )
             return string_format( _( "Points remaining: %s" ),
                                   colored_balance( status.one_pool_points_left() ) );
         case pool_type::MULTI_POOL:
-            return string_format( _( "Points remaining — stats: %1$s, traits: %2$s, skills: %3$s" ),
-                                  colored_balance( status.stat_points_left ),
-                                  colored_balance( status.trait_points_left ),
-                                  colored_balance( status.skill_points_left ) );
+            return string_format(
+                       _( "Spendable points (shared, not additive) — stats: %1$s, traits: %2$s, skills: %3$s" ),
+                       colored_balance( status.stat_points_left ),
+                       colored_balance( status.trait_points_left ),
+                       colored_balance( status.skill_points_left ) );
         case pool_type::TRANSFER:
             return std::string();
     }
