@@ -368,7 +368,7 @@ function CcbWorldApi.points_nearby(origin, options) end
 ---@field distance_from_origin? integer Chebyshev distance from the requested origin.
 
 ---@param origin TripointCoord Explicit absolute map-square origin.
----@param selector CcbWorldLocationSelector Typed selector and optional matching GameId.
+---@param selector? CcbWorldLocationSelector Typed selector and optional matching GameId. Nil skips selector lookup while preserving native detached map loading.
 ---@param options? CcbWorldFindLocationOptions Bounded search and random-placement options.
 ---@return CcbWorldFindLocationResult
 function CcbWorldApi.find_location(origin, selector, options) end

@@ -23891,6 +23891,17 @@ def render_dynamic_location_variable_search(
             for reference in references
         ]
     target_params = effect.get("target_params")
+    if (
+        key == "u_location_variable" and
+        isinstance(target_params, dict) and
+        "om_terrain" in target_params
+    ):
+        # mission_util logs a debugmsg when a nonempty terrain search misses,
+        # then returns the Avatar OMT origin.  find_target currently returns
+        # only that coordinate, so generated code cannot preserve the native
+        # miss diagnostic.  Route an explicit empty terrain through the
+        # static no-search lowering below as well; do not treat it as a query.
+        return None
     selector_names = [
         name for name in ("terrain", "furniture", "field", "monster", "npc", "species", "trap", "zone")
         if name in effect
@@ -24300,6 +24311,14 @@ def render_static_location_variable(
         if not npc_actor_proven and npc_actor_expression is None:
             return None
         output_scope = "npc"
+    if (
+        effect.get("target_params") is not None and
+        (key != "u_location_variable" or not avatar_actor_proven)
+    ):
+        # get_mission_om_origin uses the player Avatar when target_params is
+        # present for either native location-variable effect.  Only a proven
+        # Avatar alpha may stand in for that origin; NPC alpha is not equivalent.
+        return None
     # Location variables may target any of the native EOC scopes (u/npc,
     # global, context, or var).  The search path remains actor-proven, but
     # the destination itself is not limited to a Character field.
@@ -24315,9 +24334,41 @@ def render_static_location_variable(
         return None
     if any(
         effect.get(name, False) is not False
-        for name in ("target_params", "true_eocs", "false_eocs")
+        for name in ("true_eocs", "false_eocs")
     ):
         return None
+    target_params = effect.get("target_params")
+    target_options: list[str] = []
+    if target_params is not None:
+        if not isinstance(target_params, dict):
+            return None
+        if set(target_params) - {
+            "om_terrain", "z", "offset_x", "offset_y", "offset_z",
+        }:
+            return None
+        terrain = target_params.get("om_terrain", "")
+        if not isinstance(terrain, str) or terrain != "":
+            return None
+        if "z" in target_params:
+            target_z = _literal_integer_or_none(
+                target_params["z"], -2147483648, 2147483647
+            )
+            if target_z is None:
+                return None
+            target_options.append(f"z = {target_z}")
+        offsets: list[int] = []
+        for name in ("offset_x", "offset_y", "offset_z"):
+            value = _literal_integer_or_none(
+                target_params.get(name, 0), -2147483648, 2147483647
+            )
+            if value is None:
+                return None
+            offsets.append(value)
+        if any(offsets):
+            target_options.append(
+                "offset = services.coords.tripoint_rel_omt("
+                f"{offsets[0]}, {offsets[1]}, {offsets[2]})"
+            )
     for name in ("outdoor_only", "passable_only"):
         if not isinstance(effect.get(name, False), bool):
             return None
@@ -24353,10 +24404,26 @@ def render_static_location_variable(
     )
     if actor is None or output is not None and output[0] in {"u", "npc"} and output_handle is None:
         return None
-    lines = [
-        "    local location = service_value(services.characters.snapshot(",
-        f"        {actor})).creature.position",
-    ]
+    if target_params is None:
+        lines = [
+            "    local location = service_value(services.characters.snapshot(",
+            f"        {actor})).creature.position",
+        ]
+    else:
+        lines = [
+            "    local target_origin = service_value(services.characters.snapshot(",
+            f"        {actor})).creature.position",
+            "    local target_omt = services.overmap.find_target(",
+            '        target_origin:project_to("overmap_terrain"), "", { '
+            f"{', '.join(target_options)} }})",
+            '    local location = target_omt:project_to("map_square")',
+            # f_location_variable loads the map containing its pre-adjustment
+            # target even when no local selector is requested.  The returned
+            # search status must not gate the legacy coordinate write: native
+            # writes the requested target even when a detached map is not in
+            # bounds after loading.
+            "    services.world.find_location(location, nil)",
+        ]
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
@@ -33120,12 +33187,19 @@ def render_eoc(
                         "Both context_val route endpoints have preceding "
                         "target_params-based u/npc_location_variable writes, so "
                         "the native missing-variable default is not the blocker. "
-                        "services.overmap.find_target now covers the static "
-                        "mission_util::get_om_terrain_pos terrain search, "
-                        "generation retry, and Avatar OMT fallback. The "
-                        "renderer still needs proven trigger actors, the "
-                        "native off-screen map-load step, typed context writes, "
-                        "and the complete enclosing effect order before it "
+                        "services.overmap.find_target covers the static "
+                        "mission_util::get_om_terrain_pos terrain selection, "
+                        "generation retry, and Avatar OMT fallback, but it "
+                        "does not return a match status. On a miss the native "
+                        "helper also emits debugmsg before writing that fallback, "
+                        "so the renderer must keep nonempty terrain searches "
+                        "fail-closed until both outcomes can be preserved. "
+                        "This source is an item use_action EOC and does not "
+                        "prove the exact live alpha selected by native "
+                        "dialogue::actor(false) for u_location_variable. "
+                        "The renderer must also preserve "
+                        "the native off-screen map-load step, typed context "
+                        "writes, and complete enclosing effect order before it "
                         "can generate this route. "
                         f"{route_options_note} Keep preceding reveal_map and "
                         "u_message effects in source order"
@@ -33332,11 +33406,44 @@ def render_eoc(
                         "    -- TODO: translate location-variable search "
                         "through a typed coordinate service."
                     )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                    target_params = effect.get("target_params")
+                    has_static_terrain_search = (
+                        key == "u_location_variable" and
+                        isinstance(target_params, dict) and
+                        isinstance(target_params.get("om_terrain"), str) and
+                        bool(target_params.get("om_terrain"))
                     )
+                    if has_static_terrain_search:
+                        search_gap = (
+                            "static nonempty target_params terrain search needs "
+                            "a match status to preserve mission_util::get_om_terrain_pos "
+                            "debugmsg and Avatar OMT fallback; "
+                            "services.overmap.find_target currently returns only "
+                            "the coordinate"
+                        )
+                        lines[-1] = "    -- TODO: " + search_gap + "."
+                        result.add_todo(
+                            "platform_gap",
+                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                            + search_gap,
+                        )
+                        if not avatar_actor_proven:
+                            actor_gap = (
+                                "u_location_variable needs the exact live alpha "
+                                "selected by native dialogue::actor(false); an item "
+                                "use_action EOC does not prove that actor"
+                            )
+                            result.add_todo(
+                                "manual_rewrite",
+                                f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                                + actor_gap,
+                            )
+                    else:
+                        result.add_todo(
+                            "manual_rewrite",
+                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                            "needs domain-service conversion"
+                        )
                     all_effects_converted = False
             elif (
                 isinstance(effect, dict) and

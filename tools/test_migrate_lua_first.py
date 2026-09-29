@@ -41003,6 +41003,118 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             child_called_body,
         )
 
+    def test_empty_static_location_target_params_preserves_offscreen_load_and_typed_writes(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("location_target.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "static_location_target_origin",
+            "eoc_type": "EVENT",
+            "required_event": "avatar_moves",
+            "effect": [
+                {
+                    "u_location_variable": {"context_val": "picked"},
+                    "target_params": {
+                        "z": 0, "offset_x": 1, "offset_z": -1,
+                    },
+                    "x_adjust": 2,
+                    "z_adjust": -3,
+                    "z_override": True,
+                },
+                {
+                    "u_location_variable": {"u_val": "picked_u"},
+                    "target_params": {"om_terrain": "", "offset_y": -2},
+                },
+            ],
+        })
+        result = migrate_lua_first.MigrationResult()
+
+        rendered = migrate_lua_first.render_eoc(source, result)
+
+        self.assertEqual(result.todos, [])
+        self.assertEqual(rendered.count("services.overmap.find_target("), 2)
+        self.assertEqual(rendered.count("services.world.find_location(location, nil)"), 2)
+        self.assertIn('target_origin:project_to("overmap_terrain"), "", { z = 0, offset = services.coords.tripoint_rel_omt(1, 0, -1) }', rendered)
+        self.assertIn('target_origin:project_to("overmap_terrain"), "", { offset = services.coords.tripoint_rel_omt(0, -2, 0) }', rendered)
+        self.assertIn('context.data["picked"] = location', rendered)
+        self.assertIn('services.variables.set(\n        actor, "picked_u", location)', rendered)
+        self.assertNotIn("if located.found", rendered)
+
+        map_load = rendered.index("services.world.find_location(location, nil)")
+        coordinate_adjustment = rendered.index(
+            "location = location:add(services.coords.tripoint_rel_ms(", map_load
+        )
+        context_write = rendered.index('context.data["picked"] = location')
+        self.assertLess(map_load, coordinate_adjustment)
+        self.assertLess(coordinate_adjustment, context_write)
+
+    def test_nonempty_static_u_location_terrain_search_keeps_native_miss_todo(self) -> None:
+        source = migrate_lua_first.SourceObject(Path("location_target.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "static_location_target_search",
+            "eoc_type": "EVENT",
+            "required_event": "avatar_moves",
+            "effect": {
+                "u_location_variable": {"context_val": "picked"},
+                "target_params": {
+                    "om_terrain": "road", "random": True,
+                    "search_range": 3, "z": 0,
+                },
+            },
+        })
+        result = migrate_lua_first.MigrationResult()
+
+        rendered = migrate_lua_first.render_eoc(source, result)
+
+        self.assertNotIn("services.overmap.find_target(", rendered)
+        self.assertIn("static nonempty target_params terrain search needs a match status", rendered)
+        self.assertIn("mission_util::get_om_terrain_pos debugmsg", rendered)
+        search_todos = [
+            todo for todo in result.todos
+            if "static nonempty target_params terrain search needs a match status" in todo.message
+        ]
+        self.assertEqual(len(search_todos), 1)
+        self.assertEqual(search_todos[0].category, "platform_gap")
+        self.assertIsNone(migrate_lua_first.render_static_location_variable(
+            {
+                "u_location_variable": {"context_val": "picked"},
+                "target_params": {},
+            },
+            "u_location_variable", False, True,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_location_variable(
+            {
+                "npc_location_variable": {"context_val": "picked"},
+                "target_params": {"om_terrain": ""},
+            },
+            "npc_location_variable", False, True, "actor",
+        ))
+
+    def test_magiclysm_item_route_keeps_location_search_todo_without_avatar_proof(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
+        sources = migrate_lua_first.load_objects([source_path])
+        self.assertEqual(sources[0].value["use_action"]["type"], "effect_on_conditions")
+        normalized, *_ = migrate_lua_first.normalize_inline_eocs(sources, False)
+        source = next(
+            entry for entry in normalized
+            if entry.value.get("id") == "EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS"
+        )
+        self.assertIsNone(source.value.get("required_event"))
+        self.assertEqual(source.value.get("__inline_actor_kind"), "item")
+        result = migrate_lua_first.MigrationResult()
+
+        rendered = migrate_lua_first.render_eoc(source, result)
+
+        self.assertNotIn("services.overmap.find_target(", rendered)
+        self.assertTrue(any(
+            todo.category == "platform_gap" and
+            "static nonempty target_params terrain search needs a match status" in todo.message
+            for todo in result.todos
+        ))
+        self.assertTrue(any(
+            todo.category == "manual_rewrite" and
+            "does not prove the exact live alpha" in todo.message
+            for todo in result.todos
+        ))
+
 
 def load_tests(loader, tests, pattern):
     # Keep domain regressions on the same migration gate without growing this file.
