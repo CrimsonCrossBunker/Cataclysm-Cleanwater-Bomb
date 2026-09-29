@@ -130,6 +130,85 @@ local other_description = ccb.content.text("Fresh water.")
 
     @unittest.skipUnless(shutil.which("xgettext"),
                          "GNU xgettext is not installed")
+    def test_migrated_dialogue_markers_extract_only_direct_literal_fields(self):
+        source = '''ccb.dialogue.register_topic {
+    id = "TALK_migrated_truefalsetext",
+    dynamic_line = "Check the selected mission.",
+    responses = {
+        {
+            text = "I killed him.",
+            text_translation = {  },
+            text_condition = function(context)
+                local false_text_translation = { context = "callback only" }
+                local text = "callback only"
+                return context:get("selected") == true
+            end,
+            false_text = "I killed it.",
+            false_text_translation = { context = "dialogue response" },
+        },
+        { text = "Unmarked plain response." },
+        { text = dynamic_response, text_translation = {  } },
+        {
+            text = "Parent text without its own marker.",
+            nested = { text_translation = {  } },
+        },
+    },
+    dynamic_line_translation = { context = "dialogue line" },
+}
+'''
+        self.source.write_text(source, encoding="utf-8")
+        output = extract([self.source])
+
+        self.assertIn('msgid "Check the selected mission."', output)
+        self.assertIn('msgid "I killed him."', output)
+        self.assertIn(
+            'msgctxt "dialogue response"\nmsgid "I killed it."', output)
+        self.assertIn('msgctxt "dialogue line"', output)
+        self.assertNotIn("Unmarked plain response.", output)
+        self.assertNotIn("callback only", output)
+        self.assertNotIn("Parent text without its own marker.", output)
+        self.assertNotIn("dynamic_response", output)
+        true_text_line = source.splitlines().index(
+            '            text = "I killed him.",') + 1
+        self.assertIn(f"#: {self.source}:{true_text_line}", output)
+
+    @unittest.skipUnless(shutil.which("xgettext"),
+                         "GNU xgettext is not installed")
+    def test_dialogue_marker_with_nonliteral_text_or_context_is_skipped(self):
+        self.source.write_text('''
+ccb.dialogue.register_topic {
+    id = "TALK_nonliteral_dialogue",
+    dynamic_line = computed_line,
+    dynamic_line_translation = {  },
+    responses = {
+        {
+            text = computed_response,
+            text_translation = {  },
+        },
+        {
+            text = "Computed context must not be catalogued.",
+            text_translation = { context = active_context },
+        },
+        {
+            text = "Concatenated response must not be catalogued." .. suffix,
+            text_translation = {  },
+        },
+        {
+            text = "Concatenated context must not be catalogued.",
+            text_translation = { context = "computed" .. suffix },
+        },
+        {
+            text = "Concatenated marker must not be catalogued.",
+            text_translation = {  } .. marker_tail,
+        },
+    },
+}
+''', encoding="utf-8")
+        output = extract([self.source])
+        self.assertEqual(output.count('msgid '), 1)
+
+    @unittest.skipUnless(shutil.which("xgettext"),
+                         "GNU xgettext is not installed")
     def test_explicit_translator_notes_are_retained(self):
         self.source.write_text('''
 -- TRANSLATORS: This is a button action, not a door state.

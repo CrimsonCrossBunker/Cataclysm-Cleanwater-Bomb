@@ -245,9 +245,14 @@ computed messages, and dynamic contexts cannot be extracted reliably: keep the
 full `ccb.services.translate`/`translate_plural` or `ccb.content.text`/`plural_text`
 spelling and literals. Review the POT after extraction.
 The `text_translation`, `false_text_translation`, and
-`dynamic_line_translation` dialogue descriptor markers defer runtime lookup,
-but this extractor does not discover their table fields. Add that source text
-to a catalog separately until a dialogue-aware extractor exists.
+`dynamic_line_translation` dialogue descriptor markers defer runtime lookup.
+The extractor also collects a direct literal `text`, `false_text`, or
+`dynamic_line` field paired with an inline marker table in the same Lua table.
+Marker tables may be empty or provide a literal `context`; a `false_text`
+marker also requires a direct `text_condition` field. Computed fields and
+multiline text or context literals are skipped. This covers generated dialogue
+descriptors, including migrated `truefalsetext`, without treating unmarked
+dialogue strings as translations.
 An immediately preceding `-- TRANSLATORS: ...` comment is retained for translators;
 ordinary implementation comments are not added to the template.
 Formatting is a separate Lua operation; translators must preserve placeholders.
