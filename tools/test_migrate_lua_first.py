@@ -41460,6 +41460,22 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             for entry in result.partial
         ))
 
+        # Another callback on the same item must keep the EOC definition.
+        shared = migrate_lua_first.load_objects([source_path])
+        shared_item = next(
+            entry for entry in shared
+            if entry.value.get("type") in migrate_lua_first.ITEM_TYPES and
+            entry.value.get("id") == "fidget_spinner"
+        )
+        shared_item.value["consumption_effect_on_conditions"] = [
+            "EOC_spinner_spinning"
+        ]
+        shared_result = migrate_lua_first.migrate(shared, "toy_item_use_shared")
+        self.assertFalse(any(
+            "inline item-use EOC EOC_spinner_spinning is retained as a source-level item-use TODO" in entry
+            for entry in shared_result.partial
+        ))
+
     def test_real_magiclysm_currency_keeps_npc_safe_route_gap(self) -> None:
         source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
         result = migrate_lua_first.migrate(

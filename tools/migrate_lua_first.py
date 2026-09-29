@@ -2040,7 +2040,23 @@ def _item_use_has_other_eoc_reference(
             stable_id(source.value, f"anonymous_{source.index}") == eoc_id
         )
     ]
-    return eoc_id in _collect_eoc_references( other_sources, { eoc_id } )
+    # The owner can also reference the inline EOC outside its use action.
+    # Exclude only the attachment being classified, not the whole item.
+    owner_without_attachment = {
+        key: value for key, value in owner.value.items() if key != "use_action"
+    }
+    action = owner.value.get("use_action")
+    if isinstance(action, dict):
+        remaining_action = {
+            key: value for key, value in action.items()
+            if key != "effect_on_conditions"
+        }
+        if remaining_action:
+            owner_without_attachment["use_action"] = remaining_action
+    other_sources.append(
+        SourceObject(owner.path, owner.index, owner_without_attachment)
+    )
+    return eoc_id in _collect_eoc_references(other_sources, {eoc_id})
 
 
 def _location_variable_target_params(value: Any) -> list[Any]:
