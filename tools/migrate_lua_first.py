@@ -25495,6 +25495,69 @@ def render_static_mapgen_update(
     return None
 
 
+def render_static_reveal_map(
+    effect: dict[str, Any],
+    previous_effect: Any,
+    live_loaded_avatar_actor_proven: bool,
+) -> list[str] | None:
+    """Lower a reveal only after a supported effect wrote its typed position."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"reveal_map", "radius"}:
+        return None
+
+    target = effect.get("reveal_map")
+    target_descriptor = _coordinate_variable_descriptor(target)
+    if (
+        target_descriptor is None or target_descriptor[0] not in {"context", "u"} or
+        not live_loaded_avatar_actor_proven
+    ):
+        return None
+
+    # f_location_variable loads the map at its resolved target even with no
+    # target_params. Only the direct event-exclusive avatar_moves alpha and
+    # its unadjusted u_location_variable default are guaranteed to point at
+    # the already-loaded Avatar map. NPC, item-use, offset, and searched forms
+    # can load other map data and stay fail-closed here.
+    if (
+        not isinstance(previous_effect, dict) or
+        set(previous_effect) != {"u_location_variable"} or
+        _coordinate_variable_descriptor(
+            previous_effect["u_location_variable"]
+        ) != target_descriptor or
+        render_static_location_variable(
+            previous_effect, "u_location_variable", True, False
+        ) is None
+    ):
+        return None
+
+    target_abs_ms = _coordinate_source_expression(
+        target, True, False,
+    )
+    if target_abs_ms is None:
+        return None
+
+    # f_reveal_map evaluates a double and passes it to an int parameter, which
+    # truncates toward zero. Keep only finite, nonnegative literals whose
+    # converted value fits the typed service's native 0..36 bound.
+    raw_radius = finite_number_literal(effect.get("radius", 0))
+    if raw_radius is None or raw_radius < 0:
+        return None
+    try:
+        native_radius = math.trunc(float(raw_radius))
+    except (OverflowError, ValueError):
+        return None
+    if native_radius < 0 or native_radius > 36:
+        return None
+
+    return [
+        "    services.overmap.reveal_native("
+        f"({target_abs_ms}):project_to(\"omt\"), {native_radius})"
+    ]
+
+
 def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
@@ -33606,24 +33669,38 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_map" in effect:
-                reveal_gap = (
-                    "native reveal_map reads its target_var as abs_ms and projects "
-                    "to OMT; dbl_or_var radius truncates to int and native "
-                    "overmapbuffer::reveal honors CIRCLEDIST and can load/create "
-                    "missing overmap data even when radius is 0. "
-                    "services.overmap.reveal_native preserves those native "
-                    "semantics for an explicit typed abs_omt and integer radius "
-                    "0..36, but this var_info target has no proven typed-coordinate "
-                    "resolution and the radius must be proven to be a nonnegative "
-                    "integer no greater than 36. services.overmap.reveal remains "
-                    "a square-area helper that skips missing overmaps"
+                rendered_reveal = render_static_reveal_map(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    teleport_avatar_actor_proven,
                 )
-                lines.append(f"    -- TODO: {reveal_gap}.")
-                result.add_todo(
-                    "platform_gap",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reveal_gap}"
-                )
-                all_effects_converted = False
+                if rendered_reveal is not None:
+                    lines.extend(rendered_reveal)
+                    converted_effect = True
+                else:
+                    reveal_gap = (
+                        "native reveal_map reads var_info as abs_ms (a missing "
+                        "value becomes (0,0,0), and var_info.default is ignored), "
+                        "then projects to OMT; optional dbl_or_var radius defaults "
+                        "to 0 and truncates toward zero when passed to int. "
+                        "overmapbuffer::reveal honors CIRCLEDIST and may load or "
+                        "create missing overmap data, including at radius 0. "
+                        "services.overmap.reveal_native preserves those effects "
+                        "for a typed abs_omt and integer radius 0..36. Auto-migration "
+                        "requires the same-scope typed coordinate from an immediately "
+                        "preceding unadjusted u_location_variable in an exclusive "
+                        "avatar_moves callback (the target map is already loaded) and a "
+                        "finite nonnegative static radius truncating into 0..36; "
+                        "NPC, item-use, search, and unproven writers remain TODO. "
+                        "This source does not prove both. services.overmap.reveal "
+                        "is a square helper that skips missing overmaps"
+                    )
+                    lines.append(f"    -- TODO: {reveal_gap}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reveal_gap}"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and "revert_location" in effect:
                 rendered = render_static_location_revert(
                     effect, "revert_location"

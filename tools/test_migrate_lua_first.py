@@ -25431,33 +25431,38 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.overmap.reveal(", main)
             self.assertNotIn("services.overmap.reveal_native(", main)
             self.assertIn(
-                "native reveal_map reads its target_var as abs_ms and projects to OMT",
+                "native reveal_map reads var_info as abs_ms",
                 main,
             )
             self.assertIn(
-                "native overmapbuffer::reveal honors CIRCLEDIST", main
+                "overmapbuffer::reveal honors CIRCLEDIST", main
             )
             self.assertIn(
-                "can load/create missing overmap data even when radius is 0", main
-            )
-            self.assertIn(
-                "services.overmap.reveal remains a square-area helper that skips missing overmaps",
+                "may load or create missing overmap data, including at radius 0",
                 main,
             )
             self.assertIn(
-                "services.overmap.reveal_native preserves those native semantics",
+                "services.overmap.reveal is a square helper that skips missing overmaps",
                 main,
             )
             self.assertIn(
-                "an explicit typed abs_omt and integer radius 0..36", main
+                "services.overmap.reveal_native preserves those effects",
+                main,
+            )
+            self.assertIn(
+                "typed abs_omt and integer radius 0..36", main
+            )
+            self.assertIn(
+                "same-scope typed coordinate from an immediately preceding",
+                main,
             )
             reveal_todos = [
                 todo for todo in result.todos
-                if "native reveal_map reads its target_var" in todo.message
+                if "native reveal_map reads var_info as abs_ms" in todo.message
             ]
             self.assertEqual(len(reveal_todos), 1)
-            self.assertEqual(reveal_todos[0].category, "platform_gap")
-            self.assertTrue(reveal_todos[0].platform_core_input)
+            self.assertEqual(reveal_todos[0].category, "manual_rewrite")
+            self.assertFalse(reveal_todos[0].platform_core_input)
             self.assertIn("services.world.schedule_location_revert(", main)
             self.assertIn(
                 'services.world.schedule_location_revert(\n'
@@ -25487,6 +25492,164 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
+
+    def test_reveal_map_lowers_proven_typed_location_and_truncated_literal_radius(self) -> None:
+        for index, (radius, expected_radius) in enumerate((
+            (2.9, 2),
+            (36.99, 36),
+            (None, 0),
+        )):
+            with self.subTest(radius=radius):
+                reveal = {"reveal_map": {"context_val": "map_center"}}
+                if radius is not None:
+                    reveal["radius"] = radius
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), index, {
+                        "type": "effect_on_condition",
+                        "id": f"typed_reveal_map_{index}",
+                        "eoc_type": "EVENT",
+                        "required_event": "avatar_moves",
+                        "effect": [
+                            {"u_location_variable": {"context_val": "map_center"}},
+                            reveal,
+                        ],
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+
+                self.assertIn(
+                    "context.data[\"map_center\"] = location", rendered
+                )
+                self.assertIn(
+                    "services.overmap.reveal_native("
+                    '(context.data["map_center"]):project_to("omt"), '
+                    f"{expected_radius})",
+                    rendered,
+                )
+                self.assertNotIn(
+                    "native reveal_map reads var_info as abs_ms", rendered
+                )
+                self.assertFalse(
+                    any("reveal_map" in todo.message for todo in result.todos)
+                )
+
+    def test_reveal_map_keeps_unproven_coordinate_and_radius_todos(self) -> None:
+        base_effects = [
+            {"u_location_variable": {"context_val": "map_center"}},
+        ]
+        cases = (
+            ("missing_writer", [{
+                "reveal_map": {"context_val": "map_center"}, "radius": 1,
+            }]),
+            (
+                "mismatched_writer",
+                [{"u_location_variable": {"context_val": "other"}}, {
+                    "reveal_map": {"context_val": "map_center"}, "radius": 1,
+                }],
+            ),
+            (
+                "dynamic_radius",
+                [*base_effects, {
+                    "reveal_map": {"context_val": "map_center"},
+                    "radius": {"math": ["rng(11, 36)"]},
+                }],
+            ),
+            (
+                "negative_radius",
+                [*base_effects, {
+                    "reveal_map": {"context_val": "map_center"}, "radius": -0.5,
+                }],
+            ),
+            (
+                "radius_above_native_bridge_bound",
+                [*base_effects, {
+                    "reveal_map": {"context_val": "map_center"}, "radius": 37,
+                }],
+            ),
+            (
+                "unresolved_location_search",
+                [{
+                    "u_location_variable": {"context_val": "map_center"},
+                    "target_params": {"om_terrain": "forge_x2y2z1", "z": 0},
+                }, {
+                    "reveal_map": {"context_val": "map_center"}, "radius": 4,
+                }],
+            ),
+        )
+        for index, (case_name, effects) in enumerate(cases):
+            with self.subTest(case=case_name):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), index, {
+                        "type": "effect_on_condition",
+                        "id": f"unproven_reveal_map_{case_name}",
+                        "eoc_type": "EVENT",
+                        "required_event": "avatar_moves",
+                        "effect": effects,
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertNotIn("services.overmap.reveal_native(", rendered)
+                reveal_todos = [
+                    todo for todo in result.todos
+                    if "native reveal_map reads var_info as abs_ms" in todo.message
+                ]
+                self.assertEqual(len(reveal_todos), 1)
+                self.assertEqual(reveal_todos[0].category, "manual_rewrite")
+                self.assertIn("var_info.default is ignored", reveal_todos[0].message)
+                self.assertIn("truncates toward zero", reveal_todos[0].message)
+
+    def test_reveal_map_requires_the_live_loaded_avatar_location_writer(self) -> None:
+        cases = (
+            (
+                "npc_location_writer",
+                "npc_becomes_hostile",
+                [
+                    {"npc_location_variable": {"npc_val": "map_center"}},
+                    {"reveal_map": {"npc_val": "map_center"}, "radius": 2},
+                ],
+            ),
+            (
+                "avatar_position_adjustment",
+                "avatar_moves",
+                [
+                    {
+                        "u_location_variable": {"context_val": "map_center"},
+                        "x_adjust": 1,
+                    },
+                    {"reveal_map": {"context_val": "map_center"}, "radius": 2},
+                ],
+            ),
+            (
+                "avatar_event_without_loaded_map_proof",
+                "avatar_dies",
+                [
+                    {"u_location_variable": {"context_val": "map_center"}},
+                    {"reveal_map": {"context_val": "map_center"}, "radius": 2},
+                ],
+            ),
+        )
+        for index, (case_name, required_event, effects) in enumerate(cases):
+            with self.subTest(case=case_name):
+                source = migrate_lua_first.SourceObject(
+                    Path("source.json"), index, {
+                        "type": "effect_on_condition",
+                        "id": f"unloaded_reveal_map_{case_name}",
+                        "eoc_type": "EVENT",
+                        "required_event": required_event,
+                        "effect": effects,
+                    },
+                )
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertNotIn("services.overmap.reveal_native(", rendered)
+                self.assertTrue(
+                    any(
+                        "NPC, item-use, search, and unproven writers remain TODO" in todo.message
+                        for todo in result.todos
+                    )
+                )
 
     def test_real_magiclysm_route_source_chain_keeps_generation_search_todo(self) -> None:
         source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
@@ -25572,6 +25735,13 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertNotIn("services.overmap.reveal(", rendered)
         self.assertNotIn("services.overmap.reveal_native(", rendered)
         self.assertNotIn("services.overmap.reveal_route(", rendered)
+        reveal_todos = [
+            todo for todo in result.todos
+            if "native reveal_map reads var_info as abs_ms" in todo.message
+        ]
+        self.assertEqual(len(reveal_todos), 1)
+        self.assertEqual(reveal_todos[0].category, "manual_rewrite")
+        self.assertIn("same-scope typed coordinate", reveal_todos[0].message)
         self.assertIn("TODO: translate the false_effect branch", rendered)
         route_todos = [
             todo for todo in result.todos
@@ -25611,7 +25781,7 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertNotIn("services.overmap.reveal(", zero_radius_rendered)
         self.assertNotIn("services.overmap.reveal_native(", zero_radius_rendered)
         self.assertIn(
-            "can load/create missing overmap data even when radius is 0",
+            "may load or create missing overmap data, including at radius 0",
             "\n".join(todo.message for todo in zero_radius_result.todos),
         )
 
@@ -25644,14 +25814,15 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertNotIn("services.overmap.reveal_native(", rendered)
         reveal_todos = [
             todo for todo in result.todos
-            if "native reveal_map reads its target_var" in todo.message
+            if "native reveal_map reads var_info as abs_ms" in todo.message
         ]
         self.assertEqual(len(reveal_todos), 1)
-        self.assertIn("native overmapbuffer::reveal honors CIRCLEDIST", rendered)
-        self.assertIn("missing overmap data even when radius is 0", rendered)
+        self.assertEqual(reveal_todos[0].category, "manual_rewrite")
+        self.assertIn("overmapbuffer::reveal honors CIRCLEDIST", rendered)
+        self.assertIn("missing overmap data, including at radius 0", rendered)
         self.assertIn("integer radius 0..36", rendered)
         self.assertIn(
-            "this var_info target has no proven typed-coordinate resolution",
+            "same-scope typed coordinate from an immediately preceding",
             rendered,
         )
 

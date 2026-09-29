@@ -382,8 +382,16 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
 
     const sol::protected_function reveal_native =
         fixture.overmap_api()["reveal_native"];
+    const tripoint_abs_ms center_ms = project_to<coords::ms>( center );
+    const cata::lua_platform::script_tripoint_coord projected_center =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            center_ms.raw() ).project_to( "omt" );
+    CHECK( projected_center.native_scale() ==
+           coords::scale::overmap_terrain );
+    CHECK( projected_center.to_native() == center.raw() );
     const sol::protected_function_result platform_result = reveal_native(
-                fixture.abs_omt_position( center ), 2 );
+                projected_center, 2 );
     REQUIRE( platform_result.valid() );
     CHECK( platform_result.get<bool>() == native_changed );
     std::size_t seen_index = 0;
