@@ -23481,6 +23481,17 @@ def _context_coordinate_expression(value: Any) -> str | None:
     return f"context.data[{lua_quote(value['context_val'])}]"
 
 
+def _context_val_key(value: Any) -> str | None:
+    """Return a bounded context_val key without implying it stores a coordinate."""
+    if (
+        not isinstance(value, dict) or
+        set(value) != {"context_val"} or
+        not bounded_utf8_string(value.get("context_val"), 1024)
+    ):
+        return None
+    return value["context_val"]
+
+
 def _static_coordinate_variable_descriptor(
     value: Any,
 ) -> tuple[str, str] | None:
@@ -33003,23 +33014,76 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
-                reveal_route_gap = (
-                    "native reveal_route resolves two var_info abs_ms endpoints "
-                    "and projects them to OMT; services.overmap.reveal_route now "
-                    "preserves native connection guessing, the greedy search "
-                    "within a four-overmap radius, road_only filtering, and "
-                    "CIRCLEDIST reveal around each path node. This EOC's var_info "
-                    "context_val endpoints are not yet proven available as typed "
-                    "abs_omt values in Lua; the renderer also does not yet prove "
-                    "conversion of native dbl_or_var radius values into the "
-                    "service's 0..30 integer range or preserve the enclosing "
-                    "effect/context order"
+                endpoint_keys = (
+                    _context_val_key( effect.get( "reveal_route" ) ),
+                    _context_val_key( effect.get( "target_var" ) ),
                 )
+                preceding_location_writes: set[str] = set()
+                for prior_effect in effects[:effect_index]:
+                    if not isinstance( prior_effect, dict ):
+                        continue
+                    for location_key in ( "u_location_variable", "npc_location_variable" ):
+                        context_key = _context_val_key( prior_effect.get( location_key ) )
+                        target_params = prior_effect.get( "target_params" )
+                        if (
+                            context_key is not None and
+                            set( prior_effect ) == { location_key, "target_params" } and
+                            isinstance( target_params, dict ) and
+                            isinstance( target_params.get( "om_terrain" ), str ) and
+                            set( target_params ) <= {
+                                "om_terrain", "z", "random", "search_range",
+                            }
+                        ):
+                            preceding_location_writes.add( context_key )
+                endpoint_writers_proven = (
+                    all( endpoint_key is not None for endpoint_key in endpoint_keys ) and
+                    all(
+                        endpoint_key in preceding_location_writes
+                        for endpoint_key in endpoint_keys
+                    )
+                )
+                route_radius = effect.get( "radius", 0 )
+                route_road_only = effect.get( "road_only", False )
+                route_options_note = (
+                    f"Its literal radius={route_radius} and road_only="
+                    f"{str( route_road_only ).lower()} fit the typed route service"
+                    if type( route_radius ) is int and 0 <= route_radius <= 30 and
+                    isinstance( route_road_only, bool ) else
+                    "Its radius must be proven to truncate into the typed service's "
+                    "0..30 integer range, and road_only must be a boolean"
+                )
+                if endpoint_writers_proven:
+                    reveal_route_gap = (
+                        "Both context_val route endpoints have preceding "
+                        "target_params-based u/npc_location_variable writes, so "
+                        "the native missing-variable default is not the blocker. "
+                        "Those writes use mission_util::get_om_terrain_pos, which "
+                        "searches existing overmaps, retries with generation "
+                        "enabled, then leaves the Avatar OMT as the fallback if "
+                        "no terrain matches; current services.overmap.closest and "
+                        "services.overmap.random queries are existing_only. "
+                        f"{route_options_note} Keep preceding reveal_map and "
+                        "u_message effects in source order"
+                    )
+                    reveal_route_category = "platform_gap"
+                else:
+                    reveal_route_gap = (
+                        "native reveal_route resolves two var_info abs_ms endpoints "
+                        "and projects them to OMT; services.overmap.reveal_route "
+                        "preserves native connection guessing, the greedy search "
+                        "within a four-overmap radius, road_only filtering, and "
+                        "CIRCLEDIST reveal around each path node once given "
+                        "explicit typed abs_omt endpoints. The renderer does not "
+                        "yet prove how this EOC's var_info endpoints are produced "
+                        "as typed coordinates or preserve their enclosing "
+                        f"effect/context order. {route_options_note}"
+                    )
+                    reveal_route_category = "manual_rewrite"
                 lines.append(
                     "    -- TODO: " + reveal_route_gap + "."
                 )
                 result.add_todo(
-                    "manual_rewrite",
+                    reveal_route_category,
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     + reveal_route_gap
                 )

@@ -25351,7 +25351,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
-    def test_real_magiclysm_route_and_reveal_map_keep_native_overmap_todo(self) -> None:
+    def test_real_magiclysm_route_source_chain_keeps_generation_search_todo(self) -> None:
         source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
         sources = migrate_lua_first.load_objects([source_path])
         normalized, *_ = migrate_lua_first.normalize_inline_eocs(sources, False)
@@ -25360,15 +25360,56 @@ assert(not pcall(function() return U_EXPRESSION end))
             if entry.value.get("type") == "effect_on_condition" and
             entry.value.get("id") == "EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS"
         )
+        self.assertEqual(source.value["condition"], {"u_near_om_location": "road"})
         effects = source.value["effect"]
+        false_message = source.value["false_effect"][0]
+        self.assertEqual(false_message["type"], "mixed")
+        self.assertEqual(
+            false_message["u_message"],
+            "You rub the scratches on the coin, but leave no mark.  "
+            "Oh, would-be traveller, how can you wear upon his visage like the wagon wheels upon the roads?",
+        )
+        location_writes = [
+            (index, effect) for index, effect in enumerate(effects)
+            if isinstance(effect, dict) and "u_location_variable" in effect
+        ]
+        self.assertEqual(len(location_writes), 2)
+        forge_write_index, forge_write = location_writes[0]
+        road_write_index, road_write = location_writes[1]
+        self.assertEqual(
+            forge_write["u_location_variable"], {"context_val": "forge_location"}
+        )
+        self.assertEqual(
+            forge_write["target_params"],
+            {"om_terrain": "forge_x2y2z1", "z": 0},
+        )
+        self.assertEqual(
+            road_write["u_location_variable"],
+            {"context_val": "current_location_nearest_road"},
+        )
+        self.assertEqual(
+            road_write["target_params"],
+            {"om_terrain": "road", "search_range": 3, "random": True, "z": 0},
+        )
         reveal_map = next(
             effect for effect in effects
             if isinstance(effect, dict) and "reveal_map" in effect
         )
+        reveal_map_index = effects.index(reveal_map)
+        message_index = next(
+            index for index, effect in enumerate(effects)
+            if isinstance(effect, dict) and "u_message" in effect
+        )
+        self.assertEqual(effects[message_index]["type"], "good")
         reveal_route = next(
             effect for effect in effects
             if isinstance(effect, dict) and "reveal_route" in effect
         )
+        reveal_route_index = effects.index(reveal_route)
+        self.assertLess(forge_write_index, reveal_map_index)
+        self.assertLess(reveal_map_index, road_write_index)
+        self.assertLess(road_write_index, message_index)
+        self.assertLess(message_index, reveal_route_index)
         self.assertEqual(reveal_map["reveal_map"], {"context_val": "forge_location"})
         self.assertEqual(reveal_map["radius"], 4)
         self.assertEqual(
@@ -25385,9 +25426,33 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertNotIn("services.overmap.reveal(", rendered)
         self.assertNotIn("services.overmap.reveal_native(", rendered)
         self.assertNotIn("services.overmap.reveal_route(", rendered)
-        self.assertIn("not yet proven available as typed abs_omt values in Lua", todo_text)
-        self.assertIn("preserve the enclosing effect/context order", todo_text)
-        self.assertIn("can load/create missing overmap data even when radius is 0", todo_text)
+        self.assertIn("TODO: translate the false_effect branch", rendered)
+        route_todos = [
+            todo for todo in result.todos
+            if "effect #4" in todo.message and "Both context_val route endpoints" in todo.message
+        ]
+        self.assertEqual(len(route_todos), 1)
+        self.assertEqual(route_todos[0].category, "platform_gap")
+        route_todo = route_todos[0].message
+        self.assertIn(
+            "preceding target_params-based u/npc_location_variable writes",
+            route_todo,
+        )
+        self.assertIn(
+            "native missing-variable default is not the blocker", route_todo
+        )
+        self.assertIn("mission_util::get_om_terrain_pos", route_todo)
+        self.assertIn("retries with generation enabled", route_todo)
+        self.assertIn(
+            "services.overmap.closest and services.overmap.random queries are existing_only",
+            route_todo,
+        )
+        self.assertIn("literal radius=0 and road_only=false", route_todo)
+        self.assertIn(
+            "Keep preceding reveal_map and u_message effects in source order",
+            route_todo,
+        )
+        self.assertNotIn("dbl_or_var radius", route_todo)
 
         zero_radius_source = migrate_lua_first.SourceObject(
             source.path, source.index, {
