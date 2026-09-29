@@ -12,6 +12,8 @@
 #include "map.h"
 #include "npctalk.h"
 #include "talker.h"
+#include "talker_avatar.h"
+#include "translation.h"
 #include "type_id.h"
 
 class platform_item_offer_test_talker : public talker_npc
@@ -44,6 +46,24 @@ class platform_dialogue_silent_npc_talker : public talker_npc
         std::string disp_name() const override {
             return {};
         }
+};
+
+class platform_dialogue_reject_pet_purchase_talker : public talker_avatar
+{
+    public:
+        explicit platform_dialogue_reject_pet_purchase_talker( avatar *subject ) :
+            talker_avatar( subject ) {}
+
+        bool buy_monster( talker &seller, const mtype_id &, int, int, bool,
+                          const translation & ) override {
+            ++purchase_calls;
+            sold_pet_was_present_before_purchase = seller.has_effect(
+                    efftype_id( "sold_pet" ), bodypart_str_id::NULL_ID() );
+            return false;
+        }
+
+        int purchase_calls = 0;
+        bool sold_pet_was_present_before_purchase = false;
 };
 
 TEST_CASE( "lua_platform_exact_creature_subtypes_fail_closed", "[lua][platform]" )
@@ -1035,6 +1055,361 @@ TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
     const sol::protected_function_result rejected_reuse = reuse_context();
     CHECK_FALSE( rejected_reuse.valid() );
     cata::lua_platform::dialogue::end_session( platform_conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
+           "[lua][platform][dialogue][pets][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    clear_map_without_vision();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+        g->clear_zombies();
+        clear_map_without_vision();
+    } );
+
+    map &here = get_map();
+    avatar native_buyer;
+    native_buyer.normalize();
+    native_buyer.setID( character_id( 1570 ), true );
+    native_buyer.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    npc native_seller;
+    native_seller.normalize();
+    native_seller.setID( character_id( 1571 ), true );
+    native_seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    avatar platform_buyer;
+    platform_buyer.normalize();
+    platform_buyer.setID( character_id( 1572 ), true );
+    platform_buyer.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    npc platform_seller;
+    platform_seller.normalize();
+    platform_seller.setID( character_id( 1573 ), true );
+    platform_seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    cata::lua_platform::register_npc_handle_identity( platform_seller );
+    on_out_of_scope retire_platform_seller( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( platform_seller );
+    } );
+
+    const mtype_id dog_type( "mon_dog" );
+    const efftype_id pet_effect( "pet" );
+    const efftype_id pacified_effect( "pacified" );
+    const efftype_id sold_pet_effect( "sold_pet" );
+    REQUIRE( dog_type.is_valid() );
+    REQUIRE( pet_effect.is_valid() );
+    REQUIRE( pacified_effect.is_valid() );
+    REQUIRE( sold_pet_effect.is_valid() );
+    native_seller.op_of_u.owed = 5000;
+    platform_seller.op_of_u.owed = 5000;
+
+    dialogue native_conversation(
+        get_talker_for( native_buyer ), get_talker_for( native_seller ) );
+    const conditional_t native_can_buy( json_loader::from_string(
+            R"({"not":{"npc_has_effect":"sold_pet"}})" ).get_object() );
+    CHECK( native_can_buy( native_conversation ) );
+    talk_effect_t native_purchase;
+    native_purchase.parse_sub_effect(
+        json_loader::from_string(
+            R"({"u_buy_monster":"mon_dog","cost":5000,"pacified":true})" ).get_object(),
+        "dialogue_pet_purchase_semantic_test" );
+    native_purchase.parse_sub_effect(
+        json_loader::from_string(
+            R"({"npc_add_effect":"sold_pet","duration":"24 hours"})" ).get_object(),
+        "dialogue_pet_purchase_semantic_test" );
+    rng_set_engine_seed( 58163 );
+    native_purchase.apply( native_conversation );
+
+    std::vector<monster *> native_pets;
+    for( monster &entry : g->all_monsters() ) {
+        if( entry.type->id == dog_type ) {
+            native_pets.push_back( &entry );
+        }
+    }
+    REQUIRE( native_pets.size() == 1 );
+    const tripoint_bub_ms expected_position = native_pets.front()->pos_bub();
+    const int expected_friendly = native_pets.front()->friendly;
+    const bool expected_pet_permanent =
+        native_pets.front()->get_effect( pet_effect ).is_permanent();
+    const bool expected_pacified_permanent =
+        native_pets.front()->get_effect( pacified_effect ).is_permanent();
+    CHECK( native_pets.front()->friendly == -1 );
+    CHECK( native_pets.front()->has_effect( pet_effect ) );
+    CHECK( native_pets.front()->get_effect( pet_effect ).is_permanent() );
+    CHECK( native_pets.front()->has_effect( pacified_effect ) );
+    CHECK( native_pets.front()->get_effect( pacified_effect ).is_permanent() );
+    CHECK( native_pets.front()->unique_name.empty() );
+    CHECK( native_seller.op_of_u.owed == 0 );
+    CHECK( native_seller.has_effect( sold_pet_effect ) );
+    CHECK( native_seller.get_effect_dur( sold_pet_effect ) == 24_hours );
+    CHECK_FALSE( native_can_buy( native_conversation ) );
+
+    g->clear_zombies();
+    sol::state owner_lua;
+    sol::table ccb = owner_lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_pet_purchase", 93, owner_lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    owner_lua.script( R"(
+        local services = ccb.services
+        function can_buy_pet(context)
+            return not context:has_interlocutor_effect(
+                services.types.id("effect", "sold_pet"))
+        end
+        function purchase_pet_action(context, trial_success)
+            if not trial_success or not context:valid() then return end
+            purchase_result = context:purchase_pet(
+                services.types.id("monster", "mon_dog"),
+                { cost = 5000, pacified = true })
+            local marked = services.effects.add(
+                context:interlocutor(),
+                services.types.id("effect", "sold_pet"),
+                services.time.duration(86400, "turn"))
+            if not marked.ok then error(marked.error.code) end
+        end
+    )" );
+    sol::table response = owner_lua.create_table();
+    response["text"] = "I'll have a dog.";
+    response["condition"] = owner_lua["can_buy_pet"];
+    response["on_action"] = owner_lua["purchase_pet_action"];
+    sol::table responses = owner_lua.create_table();
+    responses[1] = response;
+    sol::table descriptor = owner_lua.create_table();
+    descriptor["id"] = "TALK_CCB_PET_PURCHASE";
+    descriptor["dynamic_line"] = "Choose a shelter pet.";
+    descriptor["responses"] = responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( descriptor );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue platform_conversation(
+        get_talker_for( platform_buyer ),
+        std::make_unique<platform_dialogue_silent_npc_talker>( &platform_seller ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            platform_conversation, runtime_identity, world_generation );
+    platform_conversation.gen_responses(
+        talk_topic( "TALK_CCB_PET_PURCHASE" ) );
+    REQUIRE( platform_conversation.responses.size() == 1 );
+    REQUIRE( platform_conversation.response_condition_eval.size() == 1 );
+    CHECK( platform_conversation.response_condition_eval.front() );
+
+    rng_set_engine_seed( 58163 );
+    platform_conversation.responses.front().success.apply( platform_conversation );
+    REQUIRE( owner_lua["purchase_result"].valid() );
+    CHECK( owner_lua["purchase_result"].get<bool>() );
+    CHECK( platform_seller.op_of_u.owed == 0 );
+    CHECK( platform_seller.has_effect( sold_pet_effect ) );
+    CHECK( platform_seller.get_effect_dur( sold_pet_effect ) == 24_hours );
+
+    std::vector<monster *> platform_pets;
+    for( monster &entry : g->all_monsters() ) {
+        if( entry.type->id == dog_type ) {
+            platform_pets.push_back( &entry );
+        }
+    }
+    REQUIRE( platform_pets.size() == 1 );
+    CHECK( platform_pets.front()->pos_bub() == expected_position );
+    CHECK( platform_pets.front()->friendly == expected_friendly );
+    CHECK( platform_pets.front()->has_effect( pet_effect ) );
+    CHECK( platform_pets.front()->get_effect( pet_effect ).is_permanent() ==
+           expected_pet_permanent );
+    CHECK( platform_pets.front()->has_effect( pacified_effect ) );
+    CHECK( platform_pets.front()->get_effect( pacified_effect ).is_permanent() ==
+           expected_pacified_permanent );
+    CHECK( platform_pets.front()->unique_name.empty() );
+    cata::lua_platform::dialogue::end_session( platform_conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_pet_purchase_false_result_keeps_native_effect_tail",
+           "[lua][platform][dialogue][pets][semantic]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope cleanup( []() {
+        g->clear_zombies();
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar buyer;
+    buyer.normalize();
+    buyer.setID( character_id( 1574 ), true );
+    buyer.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    npc seller;
+    seller.normalize();
+    seller.setID( character_id( 1575 ), true );
+    seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+
+    auto rejecting_buyer = std::make_unique<platform_dialogue_reject_pet_purchase_talker>(
+                               &buyer );
+    platform_dialogue_reject_pet_purchase_talker *const buyer_talker =
+        rejecting_buyer.get();
+    dialogue conversation(
+        std::move( rejecting_buyer ), get_talker_for( seller ) );
+    talk_effect_t ordered_effects;
+    ordered_effects.parse_sub_effect(
+        json_loader::from_string(
+            R"({"u_buy_monster":"mon_dog","cost":5000,"pacified":true})" ).get_object(),
+        "dialogue_pet_purchase_failure_tail_test" );
+    ordered_effects.parse_sub_effect(
+        json_loader::from_string(
+            R"({"npc_add_effect":"sold_pet","duration":"24 hours"})" ).get_object(),
+        "dialogue_pet_purchase_failure_tail_test" );
+    ordered_effects.apply( conversation );
+
+    CHECK( buyer_talker->purchase_calls == 1 );
+    CHECK_FALSE( buyer_talker->sold_pet_was_present_before_purchase );
+    CHECK( seller.has_effect( efftype_id( "sold_pet" ) ) );
+    CHECK( seller.get_effect_dur( efftype_id( "sold_pet" ) ) == 24_hours );
+}
+
+TEST_CASE( "lua_platform_dialogue_pet_purchase_keeps_partial_placement_success",
+           "[lua][platform][dialogue][pets][semantic]" )
+{
+    clear_map_without_vision();
+    g->clear_zombies();
+    on_out_of_scope cleanup( []() {
+        g->clear_zombies();
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    const tripoint_bub_ms center( 60, 60, 0 );
+    const tripoint_bub_ms only_open = center + tripoint_rel_ms( 1, 0, 0 );
+    const ter_str_id wall( "t_wall" );
+    const ter_str_id floor( "t_floor" );
+    REQUIRE( wall.is_valid() );
+    REQUIRE( floor.is_valid() );
+    for( int x = center.x() - 3; x <= center.x() + 3; ++x ) {
+        for( int y = center.y() - 3; y <= center.y() + 3; ++y ) {
+            here.ter_set( tripoint_bub_ms( x, y, center.z() ), wall );
+        }
+    }
+    here.ter_set( only_open, floor );
+    avatar buyer;
+    buyer.normalize();
+    buyer.setpos( here, center );
+    npc seller;
+    seller.normalize();
+    talker_avatar native_buyer( &buyer );
+    talker_npc native_seller( &seller );
+
+    const bool result = native_buyer.buy_monster(
+                            native_seller, mtype_id( "mon_dog" ), 0, 2, true,
+                            no_translation( "" ) );
+    CHECK( result );
+    std::vector<monster *> placed;
+    for( monster &entry : g->all_monsters() ) {
+        placed.push_back( &entry );
+    }
+    REQUIRE( placed.size() == 1 );
+    CHECK( placed.front()->type->id == mtype_id( "mon_dog" ) );
+    CHECK( placed.front()->friendly == -1 );
+    CHECK( placed.front()->has_effect( efftype_id( "pet" ) ) );
+    CHECK( placed.front()->has_effect( efftype_id( "pacified" ) ) );
+    CHECK( placed.front()->unique_name.empty() );
+}
+
+TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part",
+           "[lua][platform][dialogue][effects][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    clear_map_without_vision();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar buyer;
+    buyer.normalize();
+    buyer.setID( character_id( 1576 ), true );
+    buyer.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    npc seller;
+    seller.normalize();
+    seller.setID( character_id( 1577 ), true );
+    seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    seller.add_effect( efftype_id( "bleed" ), 10_turns,
+                       bodypart_id( "arm_l" ), false, 1 );
+    cata::lua_platform::register_npc_handle_identity( seller );
+    on_out_of_scope retire_seller_identity( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( seller );
+    } );
+
+    sol::state lua;
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_effect_condition", 94, lua );
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue conversation( get_talker_for( buyer ), get_talker_for( seller ) );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            conversation, runtime_identity, world_generation );
+    const cata::lua_platform::dialogue::dialogue_session_ptr topic_session =
+        cata::lua_platform::dialogue::session_for(
+            conversation, "TALK_CCB_EFFECT_CONDITION", runtime_identity,
+            world_generation );
+    REQUIRE( topic_session == session );
+    cata::lua_platform::dialogue::context context(
+        lua.lua_state(), conversation, "TALK_CCB_EFFECT_CONDITION", false,
+        "dialogue context is stale", {}, topic_session, runtime_identity,
+        world_generation );
+    const conditional_t native_condition( json_loader::from_string(
+            R"({"npc_has_effect":"bleed"})" ).get_object() );
+    const cata::lua_platform::script_game_id bleed_id( "effect", "bleed" );
+    for( const auto &[reason, expected] : std::vector<std::pair<std::string, bool>> {
+             { "arm_l", true }, { "leg_l", false },
+             { "unknown_dialogue_reason", false }, { "", false }
+         } ) {
+        conversation.reason = reason;
+        CHECK( native_condition( conversation ) == expected );
+        CHECK( context.has_interlocutor_effect( bleed_id ) == expected );
+    }
+    cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_pet_purchase_requires_interlocutor",
+           "[lua][platform][dialogue][pets][contract]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    sol::state lua;
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_pet_purchase_no_beta", 95, lua );
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    dialogue no_interlocutor(
+        std::make_unique<talker_topic>(), std::unique_ptr<talker>() );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            no_interlocutor, runtime_identity, world_generation );
+    const cata::lua_platform::dialogue::dialogue_session_ptr topic_session =
+        cata::lua_platform::dialogue::session_for(
+            no_interlocutor, "TALK_CCB_NO_INTERLOCUTOR", runtime_identity,
+            world_generation );
+    cata::lua_platform::dialogue::context action_context(
+        lua.lua_state(), no_interlocutor, "TALK_CCB_NO_INTERLOCUTOR", true,
+        "dialogue context is stale", {}, topic_session, runtime_identity,
+        world_generation, true );
+    sol::optional<sol::table> no_options;
+    CHECK( action_context.valid() );
+    CHECK_FALSE( no_interlocutor.has_beta );
+    CHECK_THROWS( action_context.purchase_pet(
+                      cata::lua_platform::script_game_id( "monster", "mon_dog" ),
+                      no_options ) );
+    cata::lua_platform::dialogue::end_session( no_interlocutor );
 }
 
 TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",

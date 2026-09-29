@@ -6626,6 +6626,19 @@ def render_talk_topic_response_condition(
             "            return dialogue_context:interlocutor_at_safe_space()\n"
             "        end"
         )
+    if isinstance(condition, dict) and set(condition) == {"npc_has_effect"}:
+        effect_id = condition["npc_has_effect"]
+        if safe_platform_id(effect_id):
+            # Native f_has_effect uses dialogue.reason when bodypart is omitted.
+            # Keep that implicit target inside the native callback context.
+            return LuaRaw("\n".join([
+                "function(dialogue_context)",
+                "            if not dialogue_context:valid() then return false end",
+                "            return dialogue_context:has_interlocutor_effect(",
+                "                services.types.id(\"effect\", "
+                f"{lua_quote(effect_id)}))",
+                "        end",
+            ]))
     if condition == "npc_friend":
         # Native f_npc_friend(true) queries the beta talker against the global
         # player Character. Only NPC talkers override the native default false;
@@ -7180,6 +7193,44 @@ def _talk_topic_item_offer_todo(response: Any) -> tuple[str, str] | None:
     )
 
 
+def render_talk_topic_pet_purchase_action(response: Any) -> LuaRaw | None:
+    """Lower the two exact shelter responses using native purchase semantics."""
+    if (
+        not isinstance(response, dict) or
+        set(response) != {"text", "topic", "condition", "effect"} or
+        not isinstance(response.get("text"), str) or
+        response.get("topic") != "TALK_DONE" or
+        response.get("condition") != {"not": {"npc_has_effect": "sold_pet"}}
+    ):
+        return None
+    effects = response.get("effect")
+    if not isinstance(effects, list) or len(effects) != 2:
+        return None
+    purchase, mark_sold = effects
+    # These are the exact checked-in animal-shelter variants. Keep richer
+    # options, EOC tails, extra effects, and altered order as TODO until their
+    # native response-phase semantics have a separate proof.
+    if purchase not in (
+        {"u_buy_monster": "mon_dog", "cost": 5000, "pacified": True},
+        {"u_buy_monster": "mon_cat", "cost": 2500, "pacified": True},
+    ) or mark_sold != {"npc_add_effect": "sold_pet", "duration": "24 hours"}:
+        return None
+    monster_id = purchase["u_buy_monster"]
+    cost = purchase["cost"]
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:purchase_pet(services.types.id(\"monster\", "
+        f"{lua_quote(monster_id)}), {{ cost = {cost}, pacified = true }})",
+        "    local sold = services.effects.add(",
+        "        context:interlocutor(),",
+        "        services.types.id(\"effect\", \"sold_pet\"),",
+        "        services.time.duration(86400, \"turn\"))",
+        "    if not sold.ok then error(sold.error.code) end",
+        "end",
+    ]))
+
+
 def render_talk_topic(
     source: SourceObject,
     result: MigrationResult,
@@ -7290,6 +7341,8 @@ def render_talk_topic(
                 )
             if action_callback is None:
                 action_callback = render_talk_topic_item_offer_effect(entry)
+            if action_callback is None:
+                action_callback = render_talk_topic_pet_purchase_action(entry)
             if action_callback is not None:
                 response["on_action"] = action_callback
             else:

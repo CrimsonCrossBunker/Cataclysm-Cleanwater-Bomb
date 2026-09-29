@@ -20240,11 +20240,55 @@ assert(not available())
         )
         self.assertIsNotNone(shelter_rendered)
         self.assertNotIn("services.spawns.monster(", shelter_rendered or "")
-        self.assertNotIn("on_action =", shelter_rendered or "")
-        self.assertTrue(any(
+        self.assertIn("context:purchase_pet(", shelter_rendered or "")
+        self.assertIn("context:has_interlocutor_effect(", shelter_rendered or "")
+        self.assertIn('services.time.duration(86400, "turn")', shelter_rendered or "")
+        self.assertIn("on_action = function(context, trial_success)", shelter_rendered or "")
+        self.assertNotIn("on_select =", shelter_rendered or "")
+        pet_action = (shelter_rendered or "").index("context:purchase_pet(")
+        sold_effect = (shelter_rendered or "").index("services.effects.add(", pet_action)
+        self.assertLess(pet_action, sold_effect)
+        self.assertFalse(any(
             "native u_buy_monster" in todo.message
             for todo in shelter_result.todos
         ))
+
+        # A third effect would also run after a failed native purchase, but its
+        # exact response-phase semantics have not been proven for this lowering.
+        # Keep altered order and extra effects as TODO instead of guessing.
+        for mutate in (
+            lambda response: response["effect"].reverse(),
+            lambda response: response["effect"].append({"u_spawn_item": "bottle_plastic"}),
+            lambda response: response["effect"][0].update({"count": 1}),
+            lambda response: response["effect"][1].update({"intensity": 2}),
+        ):
+            altered = json.loads(json.dumps(shelter))
+            pet_responses = [
+                response for response in altered["responses"]
+                if isinstance(response.get("effect"), list) and
+                any(isinstance(effect, dict) and "u_buy_monster" in effect
+                    for effect in response["effect"])
+            ]
+            self.assertEqual(len(pet_responses), 2)
+            for pet_response in pet_responses:
+                mutate(pet_response)
+            altered_result = migrate_lua_first.MigrationResult()
+            altered_rendered = migrate_lua_first.render_talk_topic(
+                migrate_lua_first.SourceObject(shelter_path, 0, altered),
+                altered_result,
+            )
+            self.assertIsNotNone(altered_rendered)
+            self.assertNotIn("context:purchase_pet(", altered_rendered or "")
+            self.assertTrue(any(
+                "u_buy_monster" in todo.message
+                for todo in altered_result.todos
+            ))
+
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                {"npc_has_effect": "sold_pet", "bodypart": "bp_null"}
+            )
+        )
 
     def test_assign_mission_deadline_keeps_native_order_and_zero_default(self) -> None:
         lines = migrate_lua_first.render_static_assign_mission_effect(

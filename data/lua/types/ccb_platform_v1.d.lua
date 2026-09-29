@@ -6402,6 +6402,28 @@ function PlatformDialogueContext:end_interlocutor_conversation() end
 ---@param item_type GameId GameId<item>
 function PlatformDialogueContext:grant_item_to_speaker(item_type) end
 
+---@class PlatformPurchasePetOptions
+---@field cost? number Payment amount; defaults to 0 and follows native truncation to integer.
+---@field count? number Number to place; defaults to 1 and follows native truncation to integer.
+---@field pacified? boolean Whether each placed pet receives the native pacified effect.
+---@field name? string Plain, already translated display name; omitted or empty uses native unnamed-pet feedback.
+
+---Buy a pet through the native dialogue alpha and beta talkers. Native payment,
+---placement, pet/pacified state, naming, and feedback are preserved. A false
+---result means the native buyer rejected the purchase; partial placement still
+---uses the native success result. Only available in writable `on_action`.
+---@param monster_type GameId GameId<monster>
+---@param options? PlatformPurchasePetOptions
+---@return boolean native_result
+function PlatformDialogueContext:purchase_pet(monster_type, options) end
+
+---Query the current native dialogue interlocutor for an effect. With no
+---explicit body-part parameter, this preserves TALK's implicit lookup using
+---the current dialogue reason when it names a valid body part.
+---@param effect_type GameId GameId<effect>
+---@return boolean
+function PlatformDialogueContext:has_interlocutor_effect(effect_type) end
+
 ---@return boolean
 function PlatformDialogueContext:by_radio() end
 

@@ -5,6 +5,7 @@
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue.h>
+#include <effect.h>
 #include <flag.h>
 #include <item_uid.h>
 #include <lua_platform_bindings_values.h>
@@ -19,6 +20,8 @@
 #include <talker.h>
 #include <translation.h>
 #include <type_id.h>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -737,6 +740,128 @@ void context::grant_item_to_speaker( const script_game_id &item_type ) const
         }
     }
     bump_item_query_mutation_epoch();
+}
+
+bool context::purchase_pet(
+    const script_game_id &monster_type,
+    const sol::optional<sol::table> &requested_options ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( monster_type.kind() != "monster" || monster_type.value().empty() ||
+        monster_type.value().size() > 256 ||
+        monster_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue purchase_pet requires a bounded GameId<monster>" );
+    }
+    const mtype_id native_type( monster_type.value() );
+    if( !native_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue purchase_pet requires a registered monster type" );
+    }
+    if( !d.has_beta ) {
+        throw std::runtime_error(
+            "dialogue purchase_pet requires a native interlocutor" );
+    }
+
+    int cost = 0;
+    int count = 1;
+    bool pacified = false;
+    std::string name;
+    if( requested_options ) {
+        for( const auto &entry : *requested_options ) {
+            const sol::object key_object = entry.first;
+            if( key_object.get_type() != sol::type::string ) {
+                throw std::invalid_argument(
+                    "dialogue purchase_pet option keys must be strings" );
+            }
+            const std::string key = key_object.as<std::string>();
+            const sol::object value = entry.second;
+            if( key == "cost" || key == "count" ) {
+                if( value.get_type() != sol::type::number ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet cost and count must be numbers" );
+                }
+                const double number = value.as<double>();
+                if( !std::isfinite( number ) ||
+                    number < std::numeric_limits<int>::min() ||
+                    number > std::numeric_limits<int>::max() ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet cost and count must fit a native integer" );
+                }
+                // Native TALK's dbl_or_var values are implicitly converted to
+                // the int arguments of talker::buy_monster (truncation toward zero).
+                const int native_value = static_cast<int>( number );
+                if( key == "cost" ) {
+                    cost = native_value;
+                } else {
+                    count = native_value;
+                }
+            } else if( key == "pacified" ) {
+                if( value.get_type() != sol::type::boolean ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet pacified must be a boolean" );
+                }
+                pacified = value.as<bool>();
+            } else if( key == "name" ) {
+                if( value.get_type() != sol::type::string ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet name must be a string" );
+                }
+                name = value.as<std::string>();
+            } else {
+                throw std::invalid_argument(
+                    "dialogue purchase_pet received unknown option '" + key + "'" );
+            }
+        }
+    }
+
+    talker *const buyer = d.actor( false );
+    talker *const seller = d.actor( true );
+    if( buyer == nullptr || seller == nullptr ) {
+        throw std::runtime_error(
+            "dialogue purchase_pet requires live alpha and beta talkers" );
+    }
+
+    // The native operation owns payment, placement, disposition, naming, and
+    // feedback. In particular, a partial placement still returns its native
+    // successful result, and an empty name remains untranslated and empty.
+    return buyer->buy_monster( *seller, native_type, cost, count, pacified,
+                               no_translation( name ) );
+}
+
+bool context::has_interlocutor_effect( const script_game_id &effect_type ) const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    if( effect_type.kind() != "effect" || effect_type.value().empty() ||
+        effect_type.value().size() > 256 ||
+        effect_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue has_interlocutor_effect requires a bounded GameId<effect>" );
+    }
+    if( !effect_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue has_interlocutor_effect requires a registered effect type" );
+    }
+    if( !d.has_beta ) {
+        return false;
+    }
+    const const_talker *const interlocutor = d.const_actor( true );
+    if( interlocutor == nullptr ) {
+        return false;
+    }
+
+    // Native TALK npc_has_effect uses dialogue.reason as an implicit body part
+    // when the condition has no explicit bodypart member.
+    bodypart_id body_part = bodypart_str_id::NULL_ID();
+    if( !d.reason.empty() ) {
+        body_part = bodypart_id( d.reason );
+        if( !body_part.is_valid() ) {
+            body_part = bodypart_str_id::NULL_ID();
+        }
+    }
+    const effect active = interlocutor->get_effect(
+                              efftype_id( effect_type.value() ), body_part );
+    return !active.is_null() && active.get_intensity() >= -1;
 }
 
 bool context::by_radio() const

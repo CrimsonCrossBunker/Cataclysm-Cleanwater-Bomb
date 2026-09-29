@@ -134,6 +134,9 @@ class context
         void fail_selected_mission() const;
         void end_interlocutor_conversation() const;
         void grant_item_to_speaker( const script_game_id &item_type ) const;
+        bool purchase_pet( const script_game_id &monster_type,
+                           const sol::optional<sol::table> &options ) const;
+        bool has_interlocutor_effect( const script_game_id &effect_type ) const;
         bool by_radio() const;
         bool has_reason() const;
         std::string reason() const;
