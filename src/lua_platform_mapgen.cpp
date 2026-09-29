@@ -398,6 +398,57 @@ sol::table apply_mapgen_update(
     return mapgen_transaction_error( state, target, update, report );
 }
 
+sol::table run_mapgen_update(
+    sol::this_state lua,
+    const sol::object &requested_target,
+    const sol::object &requested_update,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::function<void()> require_write )
+{
+    sol::state_view state( lua );
+    if( !requested_target.is<overmap_tile_token>() ) {
+        return make_game_error_result( state, {
+            "invalid_target",
+            "services.mapgen.run_update requires an OvermapTileToken target"
+        } );
+    }
+    const overmap_tile_token &target =
+        requested_target.as<const overmap_tile_token &>();
+    if( const std::optional<game_handle_error> error =
+            validate_overmap_tile_token(
+                target, runtime_generation, world_generation ) ) {
+        return make_game_error_result( state, *error );
+    }
+    if( !requested_update.is<mapgen_update_token>() ) {
+        return make_game_error_result( state, {
+            "invalid_update",
+            "services.mapgen.run_update requires a MapgenUpdateToken update"
+        } );
+    }
+    const mapgen_update_token &update =
+        requested_update.as<const mapgen_update_token &>();
+    if( const std::optional<game_handle_error> error =
+            validate_mapgen_update_token(
+                update, runtime_generation, world_generation ) ) {
+        return make_game_error_result( state, *error );
+    }
+
+    require_write();
+    // This is the native immediate update path.  Unlike apply(), it does not
+    // preflight or roll back external mapgen side effects; the native EOC path
+    // also runs this operation without collision cancellation or a transaction.
+    const ret_val<void> outcome = run_mapgen_update_func(
+                                      update.native_id(), target.native_position(), {}, nullptr );
+    set_queued_points();
+    reality_bubble().invalidate_map_cache( target.native_position().z() );
+    // A native failure can still have changed map state before it returned.
+    bump_map_mutation_epoch();
+    notify_overmap_tile_mutation( target.native_position() );
+    return make_game_value_result(
+               state, sol::make_object( state, outcome.success() ) );
+}
+
 } // namespace
 
 void install_mapgen_service_api(
@@ -465,6 +516,15 @@ void install_mapgen_service_api(
     sol::object update, sol::optional<sol::object> options ) {
         return apply_mapgen_update(
                    state, target, update, options,
+                   current_runtime_generation(),
+                   current_world_generation(), require_write );
+    } );
+    mapgen.set_function(
+        "run_update",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, sol::object target, sol::object update ) {
+        return run_mapgen_update(
+                   state, target, update,
                    current_runtime_generation(),
                    current_world_generation(), require_write );
     } );

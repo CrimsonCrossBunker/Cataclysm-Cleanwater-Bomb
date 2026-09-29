@@ -24976,16 +24976,8 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.world.put_field(", main)
             self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("services.mapgen.apply(", main)
-            self.assertIn(
-                "TODO: mapgen_update gets its target from a runtime "
-                "var_info abs_ms lookup or mission target search; native "
-                "execution can schedule timed updates and passes the selected "
-                "mission to its best-effort runner. services.mapgen.apply is "
-                "immediate and mission-free, requires a typed OMT, a registered "
-                "transaction-safe update, and a complete loaded footprint, and "
-                "returns errors where native misses are ignored.",
-                main,
-            )
+            self.assertIn("mapgen_update needs a proven native target", main)
+            self.assertNotIn("services.mapgen.run_update(", main)
             self.assertNotIn("services.overmap.reveal(", main)
             self.assertNotIn("services.overmap.reveal_native(", main)
             self.assertIn(
@@ -25669,21 +25661,14 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            todo = (
-                "TODO: mapgen_update gets its target from a runtime "
-                "var_info abs_ms lookup or mission target search; native "
-                "execution can schedule timed updates and passes the selected "
-                "mission to its best-effort runner. services.mapgen.apply is "
-                "immediate and mission-free, requires a typed OMT, a registered "
-                "transaction-safe update, and a complete loaded footprint, and "
-                "returns errors where native misses are ignored."
-            )
+            todo = "TODO: mapgen_update needs a proven native target"
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
             self.assertEqual(len(result.todos), 1)
             self.assertIn(todo, main)
             self.assertNotIn("services.mapgen.apply(", main)
+            self.assertNotIn("services.mapgen.run_update(", main)
             self.assertNotIn("services.world.", main)
             self.assertNotIn("mapgen update target", report)
 
@@ -25805,20 +25790,13 @@ assert(not pcall(function() return U_EXPRESSION end))
                 migrate_lua_first.load_objects([source]), "unsafe_mapgen_mod"
             )
             main = result.files[Path("main.lua")]
-            todo = (
-                "TODO: mapgen_update gets its target from a runtime "
-                "var_info abs_ms lookup or mission target search; native "
-                "execution can schedule timed updates and passes the selected "
-                "mission to its best-effort runner. services.mapgen.apply is "
-                "immediate and mission-free, requires a typed OMT, a registered "
-                "transaction-safe update, and a complete loaded footprint, and "
-                "returns errors where native misses are ignored."
-            )
+            todo = "TODO: mapgen_update needs a proven native target"
 
             self.assertEqual(main.count(todo), len(unsafe_effects))
             self.assertEqual(len(result.todos), len(unsafe_effects))
             self.assertTrue(result.partial)
             self.assertNotIn("services.mapgen.apply(", main)
+            self.assertNotIn("services.mapgen.run_update(", main)
             self.assertNotIn("services.world.", main)
 
     def test_mapgen_update_static_literal_target_never_uses_transaction_api(self) -> None:
@@ -32454,16 +32432,8 @@ assert(context.data.picked==selected)
             self.assertNotIn("services.relocation.move", main)
             self.assertNotIn("services.overmap.matches", main)
             self.assertNotIn("services.mapgen.apply(", main)
-            self.assertIn(
-                "TODO: mapgen_update gets its target from a runtime "
-                "var_info abs_ms lookup or mission target search; native "
-                "execution can schedule timed updates and passes the selected "
-                "mission to its best-effort runner. services.mapgen.apply is "
-                "immediate and mission-free, requires a typed OMT, a registered "
-                "transaction-safe update, and a complete loaded footprint, and "
-                "returns errors where native misses are ignored.",
-                main,
-            )
+            self.assertIn("mapgen_update needs a proven native target", main)
+            self.assertNotIn("services.mapgen.run_update(", main)
             self.assertIn("context.actors.beta", main)
             self.assertIn("context.actors.character or context.actors.alpha", main)
             self.assertIn(

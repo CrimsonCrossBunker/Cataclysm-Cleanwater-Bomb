@@ -25257,10 +25257,10 @@ def render_static_mapgen_update(
     npc_actor_proven: bool = False,
 ) -> list[str] | None:
     # Native target_var is a var_info lookup yielding an absolute map-square
-    # tripoint, which is then projected to OMT.  The Platform API instead
-    # requires a typed OMT token and runs a transaction that rejects missions,
-    # unsafe operators, and incomplete loaded footprints.  No legacy shape is
-    # currently proven to preserve those targeting and best-effort semantics.
+    # tripoint, while the other branch performs a mission target search.  The
+    # typed Platform run_update now has immediate native runner semantics for
+    # an explicit OMT token, but no EOC callsite yet proves both its target and
+    # selected-mission argument.  Delayed updates also need a timed-event path.
     del effect, avatar_actor_proven, npc_actor_proven
     return None
 
@@ -33245,13 +33245,11 @@ def render_eoc(
                     converted_effect = True
                 else:
                     mapgen_gap = (
-                        "mapgen_update gets its target from a runtime var_info abs_ms "
-                        "lookup or mission target search; native execution can schedule "
-                        "timed updates and passes the selected mission to its best-effort "
-                        "runner. services.mapgen.apply is immediate and mission-free, "
-                        "requires a typed OMT, a registered transaction-safe update, and "
-                        "a complete loaded footprint, and returns errors where native "
-                        "misses are ignored"
+                        "mapgen_update needs a proven native target (var_info abs_ms "
+                        "or mission search) and typed OMT token. "
+                        "services.mapgen.run_update covers immediate mission-free "
+                        "native execution, while timed events and selected-mission "
+                        "arguments remain unrepresented"
                     )
                     lines.append(f"    -- TODO: {mapgen_gap}.")
                     result.add_todo(

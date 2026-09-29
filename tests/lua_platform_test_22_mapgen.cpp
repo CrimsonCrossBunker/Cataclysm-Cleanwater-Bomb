@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
+#include "mapgen.h"
 
 TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
            "[lua][platform][mapgen][transaction]" )
@@ -293,6 +294,7 @@ TEST_CASE( "lua_platform_mapgen_service_uses_typed_update_and_target_tokens",
     REQUIRE( mapgen.valid() );
     CHECK( mapgen["update_token"].valid() );
     CHECK( mapgen["apply"].valid() );
+    CHECK( mapgen["run_update"].valid() );
 
     const sol::object world_object = fixture.services["world"];
     CHECK_FALSE( world_object.valid() );
@@ -308,6 +310,7 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
     const sol::protected_function tile_token = overmap["tile_token"];
     const sol::protected_function update_token = mapgen["update_token"];
     const sol::protected_function apply = mapgen["apply"];
+    const sol::protected_function run_update = mapgen["run_update"];
 
     const sol::protected_function_result target_result = tile_token(
             fixture.abs_omt_position( fixture.target_omt ) );
@@ -343,6 +346,12 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
     check_error( "invalid_update", [&]() {
         return apply( target, update_id );
     } );
+    check_error( "invalid_target", [&]() {
+        return run_update( fixture.abs_omt_position( fixture.target_omt ), update );
+    } );
+    check_error( "invalid_update", [&]() {
+        return run_update( target, update_id );
+    } );
 
     const std::vector<std::pair<std::string, sol::table>> invalid_options = {
         { "delay", fixture.lua.create_table_with( "delay", 1 ) },
@@ -372,6 +381,97 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
             return apply( target, update, test_case.second );
         } );
     }
+}
+
+TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
+           "[lua][platform][mapgen][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 813, 43 );
+    const tripoint_abs_omt position = fixture.source_omt;
+    const oter_id original_terrain = overmap_buffer.ter_existing( position );
+    on_out_of_scope restore_terrain( [position, original_terrain]() {
+        overmap_buffer.ter_set( position, original_terrain );
+    } );
+    overmap_buffer.ter_set( position, oter_id( "field" ) );
+
+    struct saved_submap {
+        tripoint_abs_sm position;
+        submap snapshot;
+    };
+    const tripoint_abs_sm base = project_to<coords::sm>( position );
+    std::vector<saved_submap> saved_submaps;
+    for( int x = 0; x != 2; ++x ) {
+        for( int y = 0; y != 2; ++y ) {
+            const tripoint_abs_sm submap_position(
+                base.x() + x, base.y() + y, base.z() );
+            submap *source = MAPBUFFER.lookup_submap( submap_position );
+            REQUIRE( source != nullptr );
+            saved_submaps.push_back( { submap_position,
+                                      source->get_revert_submap() } );
+        }
+    }
+    const auto restore_submaps = [&saved_submaps, position]() {
+        for( saved_submap &saved : saved_submaps ) {
+            submap *target = MAPBUFFER.lookup_submap( saved.position );
+            if( target != nullptr ) {
+                target->revert_submap( saved.snapshot );
+            }
+        }
+        reality_bubble().invalidate_map_cache( position.z() );
+    };
+    on_out_of_scope restore_map( restore_submaps );
+
+    const update_mapgen_id native_id( "fbmc_shelter_1_0" );
+    REQUIRE( has_update_mapgen_for( native_id ) );
+    const ret_val<void> native = run_mapgen_update_func(
+                                     native_id, position, {}, nullptr );
+    REQUIRE( native.success() );
+    set_queued_points();
+    submap *const native_southeast = MAPBUFFER.lookup_submap(
+                                         tripoint_abs_sm( base.x() + 1,
+                                                 base.y() + 1, base.z() ) );
+    REQUIRE( native_southeast != nullptr );
+    const point_sm_ms changed_point( 15 - SEEX, 15 - SEEY );
+    const ter_id native_terrain = native_southeast->get_ter( changed_point );
+    const furn_id native_furniture = native_southeast->get_furn( changed_point );
+    CHECK( native_terrain == ter_str_id( "t_floor" ).id() );
+    CHECK( native_furniture == furn_str_id( "f_bulletin" ).id() );
+    restore_submaps();
+
+    const sol::table mapgen = fixture.services["mapgen"];
+    const sol::protected_function tile_token =
+        fixture.overmap_api()["tile_token"];
+    const sol::protected_function_result target_result =
+        tile_token( fixture.abs_omt_position( position ) );
+    REQUIRE( target_result.valid() );
+    const sol::table target_envelope = target_result.get<sol::table>();
+    REQUIRE( target_envelope["ok"].get<bool>() );
+    const cata::lua_platform::overmap_tile_token target =
+        target_envelope["value"].get<cata::lua_platform::overmap_tile_token>();
+    const sol::protected_function update_token = mapgen["update_token"];
+    const sol::protected_function_result update_result = update_token(
+            cata::lua_platform::script_game_id(
+                "update_mapgen", native_id.str() ) );
+    REQUIRE( update_result.valid() );
+    const sol::table update_envelope = update_result.get<sol::table>();
+    REQUIRE( update_envelope["ok"].get<bool>() );
+    const cata::lua_platform::mapgen_update_token update =
+        update_envelope["value"].get<cata::lua_platform::mapgen_update_token>();
+    fixture.write_called = false;
+    const sol::protected_function run_update = mapgen["run_update"];
+    const sol::protected_function_result result =
+        run_update( target, update );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    CHECK( envelope["value"].get<bool>() == native.success() );
+    CHECK( fixture.write_called );
+    submap *const platform_southeast = MAPBUFFER.lookup_submap(
+                                           tripoint_abs_sm( base.x() + 1,
+                                                   base.y() + 1, base.z() ) );
+    REQUIRE( platform_southeast != nullptr );
+    CHECK( platform_southeast->get_ter( changed_point ) == native_terrain );
+    CHECK( platform_southeast->get_furn( changed_point ) == native_furniture );
 }
 
 TEST_CASE( "lua_platform_mapgen_apply_reports_preflight_rejection_without_mutation",

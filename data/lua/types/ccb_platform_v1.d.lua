@@ -7224,6 +7224,16 @@ function CcbMapgenApi.update_token(id) end
 ---@return CcbMapgenTransactionResult result `ok=true` only when `value.state` is `'committed'`; `rejected`, `rolled_back`, and `rollback_failed` are reported in `error`.
 function CcbMapgenApi.apply(target, update, options) end
 
+---Run one registered update through the native immediate mapgen path at an explicit OMT.
+---Unlike `apply`, this operation does not use transactional preflight or rollback;
+---external NPC, vehicle, and zone effects may be published even when the native
+---runner reports failure. The selected mission is nil. The native result is
+---reported in `value`, while token/argument errors use the CcbResult error.
+---@param target OvermapTileToken Exact target absolute OMT token.
+---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@return CcbResult result `value` is the native runner's success boolean.
+function CcbMapgenApi.run_update(target, update) end
+
 ---Register a primary OMT generator invoked before native missing-mapgen fallback.
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
 ---@param options? CcbPlatformMapgenRegistrationOptions
