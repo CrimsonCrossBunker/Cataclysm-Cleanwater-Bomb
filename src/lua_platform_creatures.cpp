@@ -111,6 +111,7 @@ constexpr double maximum_combat_multiplier = 1000.0;
 constexpr int maximum_combat_radius = 1000;
 constexpr int maximum_combat_noise = 1000000000;
 constexpr int maximum_combat_string_bytes = 4096;
+constexpr std::size_t maximum_character_message_bytes = 8192;
 constexpr std::size_t maximum_training_offers = 256;
 constexpr std::size_t maximum_enchantment_value_key_bytes = 256;
 constexpr double maximum_enchantment_value_base = 1.0e15;
@@ -4370,6 +4371,39 @@ void install_creature_api(
         return make_creature_handle(
                    get_avatar(), current_runtime_generation(),
                    current_world_generation() );
+    } );
+    characters.set_function(
+        "add_msg_if_player",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const std::string &translated_format,
+            const std::string &argument ) {
+        require_write();
+        sol::state_view state( lua_state );
+        if( translated_format.size() > maximum_character_message_bytes ||
+            argument.size() > maximum_character_message_bytes ) {
+            return make_game_error_result( state, {
+                "message_too_long",
+                "services.characters.add_msg_if_player format and argument must each be at most 8192 bytes"
+            } );
+        }
+        if( translated_format.find( '\0' ) != std::string::npos ||
+            argument.find( '\0' ) != std::string::npos ) {
+            return make_game_error_result( state, {
+                "invalid_message",
+                "services.characters.add_msg_if_player format and argument cannot contain NUL"
+            } );
+        }
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                  handle, current_runtime_generation(),
+                                  current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        character->add_msg_if_player( translated_format, argument );
+        return make_game_value_result(
+                   state, sol::make_object( state, true ) );
     } );
     characters.set_function(
         "is_in_vehicle",

@@ -7830,6 +7830,14 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+---Send one string argument through the exact Character's native player-only message hook.
+---The format string must already be translated and follows native add_msg_if_player(format, argument) semantics.
+---NPC hooks are no-ops; messages are not broadcast through the global messages service.
+---@param character GameHandle Exact live Character handle.
+---@param translated_format string Already translated format string, at most 8192 UTF-8 bytes.
+---@param argument string Single string formatting argument, at most 8192 UTF-8 bytes.
+---@return CcbResult result value is true when the exact Character accepted the native call.
+function CcbCharactersApi.add_msg_if_player(character, translated_format, argument) end
 ---Immediately drop this exact avatar's wielded item with the native deliberate-drop behavior.
 ---@param character GameHandle Exact avatar Character handle.
 ---@return CcbResult result `value.dropped` is true when a physical wielded item was present.
