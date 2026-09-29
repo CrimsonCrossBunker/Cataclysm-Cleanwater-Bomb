@@ -25970,7 +25970,10 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertIn("mission_util::get_om_terrain_pos", route_todo)
         self.assertIn("generation retry, and Avatar OMT fallback", route_todo)
         self.assertIn("native off-screen map-load step", route_todo)
-        self.assertIn("literal radius=0 and road_only=false", route_todo)
+        self.assertIn(
+            "static radius=0 truncates toward zero to 0 and road_only=false",
+            route_todo,
+        )
         self.assertIn(
             "Keep preceding reveal_map and u_message effects in source order",
             route_todo,

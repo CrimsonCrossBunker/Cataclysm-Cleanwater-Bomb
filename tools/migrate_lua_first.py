@@ -33591,13 +33591,21 @@ def render_eoc(
                     )
                     route_radius = effect.get( "radius", 0 )
                     route_road_only = effect.get( "road_only", False )
+                    numeric_route_radius = finite_number_literal( route_radius )
+                    truncated_route_radius = (
+                        math.trunc( numeric_route_radius )
+                        if numeric_route_radius is not None else None
+                    )
                     route_options_note = (
-                        f"Its literal radius={route_radius} and road_only="
+                        f"Its static radius={route_radius} truncates toward zero to "
+                        f"{truncated_route_radius} and road_only="
                         f"{str( route_road_only ).lower()} fit the typed route service"
-                        if type( route_radius ) is int and 0 <= route_radius <= 30 and
+                        if truncated_route_radius is not None and
+                        0 <= truncated_route_radius <= 30 and
                         isinstance( route_road_only, bool ) else
-                        "Its radius must be proven to truncate into the typed service's "
-                        "0..30 integer range, and road_only must be a boolean"
+                        "Its radius must be a finite static number that truncates "
+                        "toward zero into the typed service's 0..30 range, and "
+                        "road_only must be a boolean"
                     )
                     if endpoint_writers_proven:
                         reveal_route_gap = (
