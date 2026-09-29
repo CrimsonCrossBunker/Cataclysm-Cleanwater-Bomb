@@ -8721,6 +8721,7 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field npcs CcbNpcsApi
 ---@field overmap CcbOvermapApi
 ---@field proficiencies CcbProficienciesApi
+---@field progression CcbPlatformProgressionApi
 ---@field random CcbPlatformRandomApi
 ---@field recipes CcbPlatformRecipesApi
 ---@field relocation CcbRelocationApi
@@ -11328,6 +11329,27 @@ function CcbPlatformMoraleApi.remove(character, id) end
 
 ---@class CcbPlatformRandomApi: CcbRandomApi
 local CcbPlatformRandomApi = {}
+
+---@alias CcbProgressionKind 'mutation'|'spell'|'recipe'|'bionic'
+
+---@class CcbProgressionGrantMissingResult
+---@field granted boolean True when one missing candidate was selected and its native setter was invoked.
+---@field id? GameId Selected typed id; present only when granted is true.
+---@field name? string Native display name for the selected candidate; present only when granted is true.
+
+---@class CcbPlatformProgressionApi
+local CcbPlatformProgressionApi = {}
+
+---Select one missing progression entry with the native global game RNG and invoke its native setter.
+---Filtering follows native talker has_* checks; for recipes this means learned recipes, not recipes merely available from books/groups.
+---The input must be a dense ordered list of 1..64 valid GameIds of the requested kind, each at most 256 UTF-8 bytes.
+---Duplicate IDs remain separate weighted rows. If every candidate is already present, returns granted=false without drawing.
+---Otherwise consumes exactly one native rng(0, n-1) draw, including when only one missing row remains.
+---@param character GameHandle Live Character handle.
+---@param kind CcbProgressionKind
+---@param ids GameId[] Dense ordered list of same-kind typed IDs; duplicate rows contribute duplicate weight.
+---@return CcbResult result `value` is a CcbProgressionGrantMissingResult; `id` and `name` are set when `granted` is true.
+function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) end
 
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.

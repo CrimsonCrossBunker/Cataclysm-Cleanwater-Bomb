@@ -34,6 +34,7 @@ extern "C" {
 
 #include "achievement.h"
 #include "avatar.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_path.h"
@@ -92,6 +93,7 @@ extern "C" {
 #include "lua_platform_world_info.h"
 #include "lua_platform_world_services.h"
 #include "lua_platform_zones.h"
+#include "magic.h"
 #include "map.h"
 #include "mapdata.h"
 #include "mapgen.h"
@@ -101,9 +103,11 @@ extern "C" {
 #include "messages.h"
 #include "mod_id_compat.h"
 #include "mod_tileset.h"
+#include "mutation.h"
 #include "npc.h"
 #include "options.h"
 #include "path_info.h"
+#include "recipe.h"
 #include "recipe_dictionary.h"
 #include "rng.h"
 #include "sounds.h"
@@ -202,6 +206,78 @@ std::size_t require_dense_array( const sol::table &values,
 {
     return detail::checked_dense_array(
                values, description, minimum, maximum );
+}
+
+enum class progression_kind : int {
+    mutation,
+    spell,
+    recipe,
+    bionic
+};
+
+progression_kind parse_progression_kind( const std::string_view kind )
+{
+    if( kind == "mutation" ) {
+        return progression_kind::mutation;
+    }
+    if( kind == "spell" ) {
+        return progression_kind::spell;
+    }
+    if( kind == "recipe" ) {
+        return progression_kind::recipe;
+    }
+    if( kind == "bionic" ) {
+        return progression_kind::bionic;
+    }
+    throw std::invalid_argument(
+        "services.progression.grant_random_missing kind must be mutation, spell, recipe, or bionic" );
+}
+
+// Match f_roll_remainder through its talker facade. In particular, talker
+// has_recipe checks learned state; Character::has_recipe also considers books.
+bool progression_candidate_missing( talker &target, const progression_kind kind,
+                                    const std::string &id )
+{
+    switch( kind ) {
+        case progression_kind::mutation:
+            return !target.has_trait( trait_id( id ) );
+        case progression_kind::spell:
+            return target.get_spell_level( spell_id( id ) ) == -1;
+        case progression_kind::recipe:
+            return !target.has_recipe( recipe_id( id ) );
+        case progression_kind::bionic:
+            return !target.has_bionic( bionic_id( id ) );
+    }
+    return false;
+}
+
+std::string grant_progression_candidate( talker &target,
+                                         const progression_kind kind,
+                                         const std::string &id )
+{
+    switch( kind ) {
+        case progression_kind::mutation: {
+            const trait_id selected( id );
+            target.set_mutation( selected );
+            return selected->name();
+        }
+        case progression_kind::spell: {
+            const spell_id selected( id );
+            target.set_spell_level( selected, 1 );
+            return selected->name.translated();
+        }
+        case progression_kind::recipe: {
+            const recipe_id selected( id );
+            target.learn_recipe( selected );
+            return selected->result_name();
+        }
+        case progression_kind::bionic: {
+            const bionic_id selected( id );
+            target.add_bionic( selected );
+            return selected->name.translated();
+        }
+    }
+    throw std::invalid_argument( "services.progression received an unsupported kind" );
 }
 
 std::vector<int> platform_random_weights( const sol::table &weights )
@@ -3074,6 +3150,75 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return static_cast<double>( random_integer( 1, die_size ) ) + check > difficulty;
     } );
     services["random"] = std::move( random );
+
+    sol::table progression = lua.create_table();
+    progression.set_function( "grant_random_missing",
+                              [require_write, require_random_runtime, runtime_generation, world_generation](
+                                  sol::this_state state,
+                                  const cata::lua_platform::game_handle & handle,
+                                  const std::string & raw_kind,
+                                  const sol::table & ids ) {
+        require_write();
+        const progression_kind kind = parse_progression_kind( raw_kind );
+        const std::size_t count = require_dense_array(
+                                      ids, "services.progression.grant_random_missing ids", 1, 64 );
+        std::vector<std::string> candidates;
+        candidates.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object raw_id = ids.raw_get<sol::object>( index );
+            if( !raw_id.is<cata::lua_platform::script_game_id>() ) {
+                throw std::invalid_argument(
+                    "services.progression.grant_random_missing ids must be typed GameIds" );
+            }
+            const cata::lua_platform::script_game_id id =
+                raw_id.as<cata::lua_platform::script_game_id>();
+            if( id.kind() != raw_kind || id.value().size() > 256 || !id.is_valid() ) {
+                throw std::invalid_argument(
+                    "services.progression.grant_random_missing ids must be valid same-kind GameIds no longer than 256 bytes" );
+            }
+            candidates.push_back( id.value() );
+        }
+
+        sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.progression.grant_random_missing requires a character handle"
+            } );
+        }
+        const std::unique_ptr<talker> target = get_talker_for( *character );
+
+        std::vector<std::size_t> missing;
+        missing.reserve( candidates.size() );
+        for( std::size_t index = 0; index < candidates.size(); ++index ) {
+            if( progression_candidate_missing( *target, kind, candidates[index] ) ) {
+                // Preserve every source row, including duplicate IDs, as a separate
+                // equally weighted candidate, just as f_roll_remainder does.
+                missing.push_back( index );
+            }
+        }
+
+        sol::table result = lua_state.create_table();
+        result["granted"] = false;
+        if( !missing.empty() ) {
+            static_cast<void>( require_random_runtime() );
+            const std::size_t selected_index = static_cast<std::size_t>(
+                                                   rng( 0, static_cast<int>( missing.size() - 1 ) ) );
+            const std::string &selected_id = candidates[missing[selected_index]];
+            const std::string name = grant_progression_candidate( *target, kind, selected_id );
+            result["granted"] = true;
+            result["id"] = cata::lua_platform::script_game_id( raw_kind, selected_id );
+            result["name"] = name;
+        }
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( result ) ) );
+    } );
+    services["progression"] = std::move( progression );
 
     sol::table gameplay = lua.create_table();
     const auto make_math_dialogue = [runtime_generation, world_generation](
