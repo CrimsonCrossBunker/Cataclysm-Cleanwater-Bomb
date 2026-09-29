@@ -11591,6 +11591,15 @@ function CcbPlatformEnvironmentQueries.terrain_id(position) end
 ---@return string
 function CcbPlatformEnvironmentQueries.furniture_id(position) end
 
+---@param position TripointCoord Absolute map-square center on the active map z-level; set_furniture never infers a position from an EOC alpha/beta talker. Other z-levels return 0.
+---@param furniture_id string Registered furniture id; use f_null to clear furniture.
+---@param radius? number Defaults to 1. Finite value truncated toward zero; the result must be in 0..32767 map squares. The native EOC parser has no explicit upper bound, but larger circles can overflow its integer distance calculation.
+---@param square? boolean Defaults to false; false uses the native circle rule trig_dist < radius + 0.5, true uses a square.
+---@param avoid_creatures? boolean Defaults to false; true skips squares containing a creature, matching map::furn_set.
+---@return integer accepted_squares Number of current-map squares whose furn_set call succeeded, including unchanged furniture.
+--- Only squares on the active map's current z-level are considered; the call does not load maps or modify another z-level.
+function CcbPlatformEnvironmentQueries.set_furniture(position, furniture_id, radius, square, avoid_creatures) end
+
 ---@param position TripointCoord Absolute map-square coordinate.
 ---@param field_id string Bounded non-empty field type id.
 ---@return boolean

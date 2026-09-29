@@ -19,6 +19,7 @@
 #include "field_type.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "line.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
@@ -36,6 +37,7 @@
 
 static const field_type_str_id field_fd_web( "fd_web" );
 static const ter_str_id ter_t_floor( "t_floor" );
+static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
 
 namespace cata::lua_platform
 {
@@ -211,6 +213,182 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
         creature_snapshot_query();
     REQUIRE( creature_snapshot_result.valid() );
     CHECK( creature_snapshot_result.get<bool>() == is_creature_outside( get_avatar() ) );
+}
+
+TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics",
+           "[lua][platform][environment_mutation][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    clear_map_without_vision();
+    clear_avatar();
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "environment_set_furniture", 4904, lua );
+    on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+        runtime_world_ready( false );
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    map &here = get_map();
+    const int map_width = here.getmapsize() * SEEX;
+    const int map_height = here.getmapsize() * SEEY;
+    const tripoint_abs_ms actor_abs = get_avatar().pos_abs();
+    const tripoint_bub_ms actor_bubble = here.get_bub( actor_abs );
+    REQUIRE( here.inbounds( actor_bubble ) );
+    tripoint_bub_ms center( map_width / 2, map_height / 2, actor_bubble.z() );
+    if( trig_dist( center, actor_bubble ) < 3.0f ) {
+        const int offset_x = actor_bubble.x() + 7 < map_width ? 7 : -7;
+        const int offset_y = actor_bubble.y() + 7 < map_height ? 7 : -7;
+        center = actor_bubble + tripoint_rel_ms( offset_x, offset_y, 0 );
+    }
+    REQUIRE( trig_dist( center, actor_bubble ) >= 3.0f );
+    const tripoint_bub_ms edge = center + tripoint_rel_ms( 2, 1, 0 );
+    const tripoint_bub_ms corner = center + tripoint_rel_ms( 2, 2, 0 );
+    const tripoint_abs_ms center_abs = here.get_abs( center );
+    const tripoint_bub_ms far_center( -32767, -32767, center.z() );
+    const tripoint_bub_ms far_corner( 0, 0, center.z() );
+    const tripoint_abs_ms far_abs = here.get_abs( far_center );
+    const tripoint_abs_ms unloaded_z_abs(
+        center_abs.x(), center_abs.y(), std::numeric_limits<int>::max() );
+    const int active_z = here.get_abs_sub().z();
+    const int inactive_z = active_z == -OVERMAP_DEPTH ? active_z + 1 : active_z - 1;
+    const tripoint_abs_ms inactive_z_abs( center_abs.x(), center_abs.y(), inactive_z );
+    lua["center_position"] = script_tripoint_coord::from_native(
+                                 coords::origin::abs, coords::scale::map_square, center_abs.raw() );
+    lua["actor_position"] = script_tripoint_coord::from_native(
+                                coords::origin::abs, coords::scale::map_square, actor_abs.raw() );
+    lua["far_position"] = script_tripoint_coord::from_native(
+                              coords::origin::abs, coords::scale::map_square, far_abs.raw() );
+    lua["unloaded_z_position"] = script_tripoint_coord::from_native(
+                                     coords::origin::abs, coords::scale::map_square,
+                                     unloaded_z_abs.raw() );
+    lua["inactive_z_position"] = script_tripoint_coord::from_native(
+                                     coords::origin::abs, coords::scale::map_square,
+                                     inactive_z_abs.raw() );
+    lua["clear_furniture_id"] = furn_str_id::NULL_ID().str();
+
+    REQUIRE( furn_test_f_eoc.is_valid() );
+    REQUIRE( here.furn_set( actor_bubble, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( corner, furn_test_f_eoc.id() ) );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.set_furniture("
+                    "inactive_z_position, clear_furniture_id, 0, false, false) == 0)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( center ) == furn_test_f_eoc.id() );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            local environment = services.gameplay.environment
+            -- The native default is a circle; radius 2 includes (2, 1) but not (2, 2).
+            assert(environment.set_furniture(
+                center_position, clear_furniture_id, 2, false, false) == 21)
+            assert(not pcall(environment.set_furniture,
+                center_position, "missing_furniture_id", 0))
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( actor_bubble ) == furn_test_f_eoc.id() );
+    CHECK( here.furn( edge ) == furn_str_id::NULL_ID().id() );
+    CHECK( here.furn( corner ) == furn_test_f_eoc.id() );
+
+    REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.set_furniture("
+                    "center_position, clear_furniture_id, 2, true, false) == 25)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( corner ) == furn_str_id::NULL_ID().id() );
+
+    REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.set_furniture("
+                    "center_position, clear_furniture_id) == 9)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( edge ) == furn_test_f_eoc.id() );
+
+    REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
+    REQUIRE( here.furn_set( far_corner, furn_test_f_eoc.id() ) );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            local environment = services.gameplay.environment
+            -- 1.9 truncates to radius 1; (2, 1) remains outside the circle.
+            assert(environment.set_furniture(
+                center_position, clear_furniture_id, 1.9, false, false) == 9)
+            -- The extreme corner delta is still evaluated with bounded int64 arithmetic.
+            assert(environment.set_furniture(
+                far_position, clear_furniture_id, 32767, false, false) == 0)
+            assert(not pcall(environment.set_furniture,
+                far_position, clear_furniture_id, 32768, false, false))
+            -- Non-current or out-of-range z-levels and unloaded coordinates are not loaded.
+            assert(environment.set_furniture(
+                unloaded_z_position, clear_furniture_id, 0, false, false) == 0)
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( edge ) == furn_test_f_eoc.id() );
+    CHECK( here.furn( center ) == furn_str_id::NULL_ID().id() );
+    CHECK( here.furn( far_corner ) == furn_test_f_eoc.id() );
+
+    const tripoint_bub_ms actor_position = here.get_bub( actor_abs );
+    REQUIRE( here.furn_set( actor_position, furn_test_f_eoc.id() ) );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            local environment = services.gameplay.environment
+            assert(environment.set_furniture(
+                actor_position, clear_furniture_id, 0, false, true) == 0)
+            assert(environment.set_furniture(
+                actor_position, clear_furniture_id, 0, false, false) == 1)
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.furn( actor_position ) == furn_str_id::NULL_ID().id() );
 }
 
 TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",

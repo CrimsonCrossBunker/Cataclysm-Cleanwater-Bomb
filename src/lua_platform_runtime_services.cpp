@@ -54,6 +54,7 @@ extern "C" {
 #include "game.h"
 #include "item.h"
 #include "item_location.h"
+#include "line.h"
 #include "lua_platform_achievements.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_addictions.h"
@@ -660,6 +661,80 @@ class use_context_lease
         use_context_data &context_;
 };
 
+int set_platform_furniture( const tripoint_abs_ms &absolute,
+                            const std::string &furniture_id,
+                            const double requested_radius, const bool square,
+                            const bool avoid_creatures )
+{
+    if( g == nullptr ) {
+        throw std::runtime_error(
+            "services.gameplay.environment.set_furniture requires an active game" );
+    }
+    if( furniture_id.empty() || furniture_id.size() > 256 ||
+        furniture_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture requires a 1 to 256 byte furniture id" );
+    }
+    const furn_str_id source_furniture( furniture_id );
+    if( !source_furniture.is_valid() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture requires a registered furniture id" );
+    }
+    const furn_id target_furniture = source_furniture.id();
+
+    // The native EOC has no radius cap; 2 * 32767^2 remains below INT_MAX,
+    // keeping its int-based circle distance representable within this bound.
+    constexpr int maximum_safe_radius = 32767;
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    map &here = get_map();
+    if( absolute.z() != here.get_abs_sub().z() ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int accepted_tiles = 0;
+    // The legacy effect enumerates its whole requested range, then lets the map
+    // reject off-map squares. Iterate only the active map to avoid radius-squared
+    // work and never load a different map or z-level as a side effect.
+    for( const tripoint_bub_ms &destination : here.points_on_zlevel() ) {
+        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
+        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
+        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
+            continue;
+        }
+        const std::int64_t squared_distance = dx * dx + dy * dy;
+        const float distance = static_cast<float>(
+                                  std::sqrt( static_cast<double>( squared_distance ) ) );
+        if( !square && distance >= circle_radius ) {
+            continue;
+        }
+        if( here.furn_set( destination, target_furniture, false, avoid_creatures ) ) {
+            ++accepted_tiles;
+        }
+    }
+    return accepted_tiles;
+}
 
 } // namespace
 
@@ -3725,6 +3800,21 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         map &here = get_map();
         const tripoint_abs_ms absolute( position.to_native() );
         return here.furn( here.get_bub( absolute ) ).id().str();
+    } );
+    environment.set_function( "set_furniture", [require_write,
+    require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & furniture_id,
+    const sol::optional<double> & requested_radius,
+    const sol::optional<bool> & requested_square,
+    const sol::optional<bool> & requested_avoid_creatures ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_furniture" );
+        return set_platform_furniture( absolute, furniture_id,
+                                       requested_radius.value_or( 1.0 ),
+                                       requested_square.value_or( false ),
+                                       requested_avoid_creatures.value_or( false ) );
     } );
     environment.set_function( "field_exists", [require_read](
     const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {
