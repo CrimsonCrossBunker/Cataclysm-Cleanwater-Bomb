@@ -619,3 +619,25 @@ TEST_CASE( "player_single_effect_field_test_all", "[field][player]" )
     clear_avatar();
     fields_test_cleanup();
 }
+
+TEST_CASE( "thin_smoke_ages_without_spreading", "[field][smoke]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms pos( 60, 60, 0 );
+    here.build_map_cache( pos.z() );
+    REQUIRE( here.is_outside( pos ) );
+    here.add_field( pos, fd_smoke, 1 );
+    field_entry *smoke = here.get_field( pos, fd_smoke );
+    REQUIRE( smoke != nullptr );
+    smoke->set_field_age( -1_hours );
+    const time_duration before = smoke->get_field_age();
+    here.process_fields();
+    CHECK( smoke->get_field_age() > before );
+    CHECK( smoke->get_field_intensity() == 1 );
+    for( const tripoint_bub_ms &neighbor : here.points_in_radius( pos, 1 ) ) {
+        if( neighbor != pos ) {
+            CHECK( here.get_field( neighbor, fd_smoke ) == nullptr );
+        }
+    }
+}
