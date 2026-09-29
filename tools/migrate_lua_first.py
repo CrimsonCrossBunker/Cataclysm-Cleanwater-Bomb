@@ -30899,15 +30899,6 @@ def render_eoc(
                 "absolute map-square Tripoint values and dbl_or_var range/RNG "
                 "semantics are preserved"
             )
-        elif (
-            isinstance(raw_condition, dict) and
-            raw_condition.get("u_near_om_location") == "FACTION_CAMP_ANY"
-        ):
-            condition_todo = (
-                "translate this FACTION_CAMP_ANY near-query shape only with a "
-                "bounded native square scan, per-candidate origin mapgen-argument "
-                "lookup, camp lookup, and lazy overmap queries"
-            )
         elif isinstance(raw_condition, dict) and (
             "npc_at_om_location" in raw_condition or
             "npc_near_om_location" in raw_condition
@@ -30922,14 +30913,15 @@ def render_eoc(
             )
         elif (
             isinstance(raw_condition, dict) and
-            "u_near_om_location" in raw_condition and
-            raw_condition.get("range", 1) != 0
+            "u_near_om_location" in raw_condition
         ):
             condition_todo = (
-                "translate this u_near_om_location shape only with native "
-                "double-to-int range conversion, a bounded x/y square scan, "
-                "per-candidate origin mapgen-argument lookups, and lazy "
-                "overmap queries"
+                "rewrite u_near_om_location only when this callback proves "
+                "its actual Character alpha and a bounded literal location ID "
+                "and 0..30 radius after native int truncation; "
+                "services.overmap.matches_location_near already preserves "
+                "the square, camp, mapgen-argument, and lazy overmap lookup "
+                "semantics, so do not assume the Avatar or invent an origin"
             )
         elif (
             isinstance(raw_condition, dict) and

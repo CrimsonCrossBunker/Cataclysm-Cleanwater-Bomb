@@ -25456,6 +25456,15 @@ assert(not pcall(function() return U_EXPRESSION end))
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_eoc(source, result)
         todo_text = "\n".join(todo.message for todo in result.todos)
+        self.assertIn("local actor = actor_override", rendered)
+        self.assertIn("if actor == nil then", rendered)
+        self.assertIn(
+            'services.overmap.matches_location_near('
+            'services.coords.project_to('
+            'service_value(services.creatures.snapshot(actor)).position, '
+            '"omt"), "road", 1)', rendered,
+        )
+        self.assertNotIn("services.characters.avatar()", rendered)
         self.assertNotIn("services.overmap.reveal(", rendered)
         self.assertNotIn("services.overmap.reveal_native(", rendered)
         self.assertNotIn("services.overmap.reveal_route(", rendered)
@@ -28055,6 +28064,7 @@ assert(not pcall(function() return U_EXPRESSION end))
     def test_overmap_location_conditions_use_typed_overmap_matching(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
+            # Keep the effect native and inert so this test isolates condition lowering.
             source.write_text(
                 json.dumps(
                     [
@@ -28063,7 +28073,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": "avatar_omt",
                             "required_event": "game_start",
                             "condition": {"u_at_om_location": "field"},
-                            "effect": {"message": "avatar"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28071,14 +28081,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": "npc_omt",
                             "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
                             "condition": {"npc_at_om_location": "forest"},
-                            "effect": {"message": "npc"},
+                            "effect": "nothing",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "avatar_camp_omt",
                             "required_event": "game_start",
                             "condition": {"u_at_om_location": "FACTION_CAMP_ANY"},
-                            "effect": {"message": "camp"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28089,7 +28099,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": 0,
                             },
-                            "effect": {"message": "same tile"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28097,7 +28107,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                             "id": "avatar_default_radius_omt",
                             "required_event": "game_start",
                             "condition": {"u_near_om_location": "field"},
-                            "effect": {"message": "default radius"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28108,7 +28118,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": 1.9,
                             },
-                            "effect": {"message": "truncated radius"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28119,7 +28129,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": -0.9,
                             },
-                            "effect": {"message": "truncated negative fraction"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28130,7 +28140,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": -1,
                             },
-                            "effect": {"message": "negative radius"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28141,7 +28151,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "FACTION_CAMP_START",
                                 "range": 1,
                             },
-                            "effect": {"message": "origin mapgen args"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28152,7 +28162,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": {"context_val": "radius"},
                             },
-                            "effect": {"message": "dynamic radius"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28163,7 +28173,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "u_near_om_location": "field",
                                 "range": 31,
                             },
-                            "effect": {"message": "large radius"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28174,14 +28184,14 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "npc_near_om_location": "forest",
                                 "range": 1,
                             },
-                            "effect": {"message": "npc near"},
+                            "effect": "nothing",
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "avatar_default_point_omt",
                             "required_event": "game_start",
                             "condition": {"overmap_at_point": "field"},
-                            "effect": {"message": "alpha point"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -28192,7 +28202,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                                 "overmap_at_point": "field",
                                 "point": {"context_val": "point"},
                             },
-                            "effect": {"message": "point"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                     ]
@@ -28239,7 +28249,9 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             self.assertIn('"FACTION_CAMP_START", 1)', main)
             self.assertIn(
-                "double-to-int range conversion, a bounded x/y square scan",
+                "services.overmap.matches_location_near already preserves "
+                "the square, camp, mapgen-argument, and lazy overmap lookup "
+                "semantics",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
             self.assertIn(
