@@ -251,6 +251,11 @@ AVATAR_ACTOR_EVENTS = frozenset({
     "phase_move",
 })
 
+# Only this Avatar event is a sufficient writable-world liveness proof for
+# services.relocation.travel_to_dimension. Lifecycle and death events prove
+# identity but do not guarantee an active map/world for the native service.
+DIMENSION_TRAVEL_AVATAR_EVENTS = frozenset({"avatar_moves"})
+
 # Talker-bearing events can carry a non-Character Creature in the alpha slot.
 # The Platform event bridge exposes that handle as ``context.actors.character``
 # even when the native event has no character_id field.  Keep this allowlist
@@ -22547,11 +22552,110 @@ def render_static_roll_remainder_effect(
 
 def render_static_dimension_travel_effect(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
+    avatar_dialogue_alpha_exclusive: bool,
 ) -> list[str] | None:
-    """Keep native dimension travel fail-closed until its result paths match."""
-    del effect, avatar_actor_proven
-    return None
+    """Lower only static dimension travel whose dialogue alpha is the Avatar.
+
+    The native effect targets ``d.actor(false)`` while the typed Platform
+    operation is centered on the actual Avatar.  Exact actor provenance is
+    therefore a required precondition.  Dynamic dimension/message values,
+    target-location item collection, and radii outside the current typed
+    service range remain explicit migration work.
+    """
+    if not avatar_dialogue_alpha_exclusive or "u_travel_to_dimension" not in effect:
+        return None
+    allowed = {
+        "u_travel_to_dimension", "npc_travel_radius", "npc_travel_filter",
+        "item_travel_radius", "take_vehicle", "success_message",
+        "fail_message", "region_type",
+    }
+    if set(effect) - allowed:
+        return None
+
+    dimension = effect.get("u_travel_to_dimension")
+    if (
+        not safe_platform_id(dimension) or
+        not bounded_utf8_string(dimension, 256) or
+        any(ord(character) < 0x20 or ord(character) == 0x7f for character in dimension)
+    ):
+        return None
+
+    def native_radius(field: str, default: int, maximum: int, *, npc: bool) -> int | None:
+        value = effect.get(field, default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        if isinstance(value, float):
+            if not math.isfinite(value) or value < NATIVE_INT_MIN or value > NATIVE_INT_MAX:
+                return None
+            converted = math.trunc(value)
+        else:
+            converted = value
+            if converted < NATIVE_INT_MIN or converted > NATIVE_INT_MAX:
+                return None
+        if npc and converted < 0:
+            # Native code only gathers NPCs when the converted radius is > 0.
+            converted = 0
+        elif not npc and converted < 0:
+            # Any negative native item radius disables item collection.
+            converted = -1
+        if converted > maximum:
+            return None
+        return converted
+
+    npc_radius = native_radius("npc_travel_radius", 0, 60, npc=True)
+    item_radius = native_radius("item_travel_radius", -1, 60, npc=False)
+    if npc_radius is None or item_radius is None:
+        return None
+
+    travel_filter = effect.get("npc_travel_filter", "all")
+    if not bounded_utf8_string(travel_filter, 8192, allow_empty=True):
+        return None
+    if travel_filter not in {"all", "follower", "enemy", "none"}:
+        # The native predicate matches no NPC for every other filter string.
+        travel_filter = "none"
+
+    take_vehicle = effect.get("take_vehicle", False)
+    if not isinstance(take_vehicle, bool):
+        return None
+
+    def static_message(field: str) -> str | None:
+        value = effect.get(field, "")
+        if not bounded_utf8_string(value, 8192, allow_empty=True):
+            return None
+        if not value:
+            return '""'
+        return f"services.translate({lua_quote(value)})"
+
+    success_message = static_message("success_message")
+    fail_message = static_message("fail_message")
+    if success_message is None or fail_message is None:
+        return None
+
+    if "region_type" in effect and not bounded_utf8_string(
+            effect["region_type"], 8192, allow_empty=True):
+        return None
+
+    options = (
+        "{ npc_travel_radius = " + str(npc_radius) +
+        ", npc_travel_filter = " + lua_quote(travel_filter) +
+        ", item_travel_radius = " + str(item_radius) +
+        ", take_vehicle = " + ("true" if take_vehicle else "false") + " }"
+    )
+    return [
+        "    if actor ~= nil then",
+        "        local travel_result = services.relocation.travel_to_dimension(" +
+        f"{lua_quote(dimension)}, {options})",
+        "        if travel_result.ok and travel_result.value.accepted then",
+        f"            if {success_message} ~= \"\" then",
+        f"                services.message({success_message})",
+        "            end",
+        "        else",
+        f"            if {fail_message} ~= \"\" then",
+        f"                services.message({fail_message})",
+        "            end",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_clear_dimension_effect(
@@ -29844,6 +29948,16 @@ def render_eoc(
         isinstance(required_event, str) and required_event in PROVEN_NPC_ACTOR_EVENTS or
         value.get("__inline_actor_kind") == "npc"
     )
+    # Native u_travel_to_dimension follows the active dialogue alpha. An EOC
+    # registered for an Avatar event can still be called by run_eocs or a
+    # dynamic dispatcher with another alpha. The typed service also requires
+    # a live world/map, which avatar_moves proves while lifecycle/death hooks
+    # do not.
+    dimension_travel_avatar_actor_proven = (
+        required_event in DIMENSION_TRAVEL_AVATAR_EVENTS and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     avatar_actor_proven = (
         avatar_fatal_hook or avatar_death_hook or
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
@@ -34551,25 +34665,26 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_travel_to_dimension" in effect:
                 rendered = render_static_dimension_travel_effect(
-                    effect, avatar_actor_proven
+                    effect, dimension_travel_avatar_actor_proven
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: u_travel_to_dimension needs native invalid-ID/filter "
-                        "no-op behavior, double-to-int radius truncation, dialogue-alpha "
-                        "NPC/item/vehicle targeting including target_location, and translated "
-                        "success/failure messages; services.relocation.travel_to_dimension "
-                        "is avatar-centered, int-only, and requires an active map."
+                        "    -- TODO: native u_travel_to_dimension follows dialogue alpha, "
+                        "but the typed service is Avatar-centered. This call needs an "
+                        "event-exclusive exact Avatar proof, a static dimension ID, "
+                        "service-bounded options, and static non-format messages; "
+                        "target_location and broader values remain unsupported."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "u_travel_to_dimension needs native invalid-ID/filter, "
-                        "radius truncation, dialogue-alpha actor/target_location, "
-                        "and translated-message parity"
+                        "u_travel_to_dimension needs an event-exclusive exact "
+                        "dialogue-alpha Avatar proof; "
+                        "dynamic dimension/messages, target_location, and radii outside "
+                        "the typed service range remain unsupported"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "clear_dimension" in effect:

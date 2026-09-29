@@ -1213,4 +1213,67 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
     }
 }
 
+TEST_CASE( "lua_platform_dimension_travel_rejects_inputs_without_mutating_state",
+           "[lua][platform][relocation][dimension]" )
+{
+    platform_overmap_travel_fixture fixture( 804, 34 );
+    const sol::protected_function travel =
+        fixture.relocation_api()["travel_to_dimension"];
+    REQUIRE( travel.valid() );
+
+    const dimension_id dimension_before = g->get_dimension_prefix();
+    const tripoint_abs_ms avatar_position_before = get_avatar().pos_abs();
+    const tripoint_abs_sm map_abs_sub_before = get_map().get_abs_sub();
+
+    const sol::protected_function_result invalid_dimension = travel(
+            "", fixture.lua.create_table() );
+    REQUIRE( invalid_dimension.valid() );
+    const sol::table invalid_envelope = invalid_dimension.get<sol::table>();
+    REQUIRE_FALSE( invalid_envelope["ok"].get<bool>() );
+    CHECK( invalid_envelope["error"]["code"].get<std::string>() == "invalid_dimension" );
+    CHECK( g->get_dimension_prefix() == dimension_before );
+    CHECK( get_avatar().pos_abs() == avatar_position_before );
+    CHECK( get_map().get_abs_sub() == map_abs_sub_before );
+
+    for( const char *filter : { "all", "follower", "enemy", "none" } ) {
+        const sol::table options = fixture.lua.create_table_with(
+                                       "npc_travel_radius", 60,
+                                       "npc_travel_filter", filter,
+                                       "item_travel_radius", 60 );
+        const sol::protected_function_result already_there = travel(
+                    dimension_before.str(), options );
+        REQUIRE( already_there.valid() );
+        const sol::table envelope = already_there.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        CHECK_FALSE( value["accepted"].get<bool>() );
+        CHECK_FALSE( value["changed"].get<bool>() );
+        CHECK( value["reason"].get<std::string>() == "already_there" );
+        CHECK( value["before"].get<std::string>() == dimension_before.str() );
+        CHECK( value["after"].get<std::string>() == dimension_before.str() );
+    }
+
+    const sol::table invalid_options = fixture.lua.create_table_with(
+            "npc_travel_radius", 61 );
+    const sol::protected_function_result rejected_options = travel(
+            dimension_before.str(), invalid_options );
+    CHECK_FALSE( rejected_options.valid() );
+
+    const std::string alternate_dimension = dimension_before.str() == "highlands" ?
+            "default" : "highlands";
+    REQUIRE( dimension_id( alternate_dimension ).is_valid() );
+    REQUIRE_FALSE( get_map().veh_at( get_avatar().pos_bub() ) );
+    const sol::table take_vehicle = fixture.lua.create_table_with(
+                                        "take_vehicle", true );
+    const sol::protected_function_result missing_vehicle = travel(
+            alternate_dimension, take_vehicle );
+    REQUIRE( missing_vehicle.valid() );
+    const sol::table vehicle_envelope = missing_vehicle.get<sol::table>();
+    REQUIRE_FALSE( vehicle_envelope["ok"].get<bool>() );
+    CHECK( vehicle_envelope["error"]["code"].get<std::string>() == "no_vehicle" );
+    CHECK( g->get_dimension_prefix() == dimension_before );
+    CHECK( get_avatar().pos_abs() == avatar_position_before );
+    CHECK( get_map().get_abs_sub() == map_abs_sub_before );
+}
+
 #endif // CATA_ENABLE_LUA_PLATFORM

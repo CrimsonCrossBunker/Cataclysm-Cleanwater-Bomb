@@ -22195,6 +22195,118 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 migrate_lua_first.load_objects([source]), "teleport_mod"
             )
 
+    def test_dimension_travel_requires_exact_avatar_and_supported_static_shape(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "proven_avatar_dimension_travel",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": {
+                        "u_travel_to_dimension": "highlands",
+                        "npc_travel_radius": 5.8,
+                        "npc_travel_filter": "follower",
+                        "item_travel_radius": 10,
+                        "take_vehicle": False,
+                        "fail_message": "The portal does not respond.",
+                        "success_message": "The portal opens.",
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "unproven_avatar_dimension_travel",
+                    "effect": {"u_travel_to_dimension": "highlands"},
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "dynamic_avatar_dimension_travel",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": {
+                        "u_travel_to_dimension": {"u_val": "destination"}
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "empty_avatar_dimension_travel",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": {"u_travel_to_dimension": ""},
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "dead_avatar_dimension_travel",
+                    "eoc_type": "EVENT",
+                    "required_event": "game_avatar_death",
+                    "effect": {"u_travel_to_dimension": "highlands"},
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "shared_avatar_dimension_travel",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": {"u_travel_to_dimension": "highlands"},
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "non_avatar_dimension_caller",
+                    "eoc_type": "EVENT",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"run_eocs": "shared_avatar_dimension_travel"},
+                },
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        positive = main[
+            main.index("migrated_eoc_proven_avatar_dimension_travel = function"):
+            main.index('migrated_eoc_functions["proven_avatar_dimension_travel"]')
+        ]
+        self.assertIn(
+            'services.relocation.travel_to_dimension("highlands", '
+            '{ npc_travel_radius = 5, npc_travel_filter = "follower", '
+            'item_travel_radius = 10, take_vehicle = false })',
+            positive,
+        )
+        self.assertIn('services.translate("The portal opens.")', positive)
+        self.assertIn('services.translate("The portal does not respond.")', positive)
+        self.assertNotIn("TODO: native u_travel_to_dimension follows dialogue alpha", positive)
+        self.assertIn('runtime.on("game:avatar_moves"', main)
+        self.assertEqual(
+            main.count("TODO: native u_travel_to_dimension follows dialogue alpha"),
+            5,
+        )
+        self.assertNotIn(
+            'services.relocation.travel_to_dimension("highlands",',
+            main[
+                main.index("migrated_eoc_unproven_avatar_dimension_travel = function"):
+                main.index('migrated_eoc_functions["unproven_avatar_dimension_travel"]')
+            ],
+        )
+        self.assertNotIn(
+            'services.relocation.travel_to_dimension("",',
+            main[
+                main.index("migrated_eoc_empty_avatar_dimension_travel = function"):
+                main.index('migrated_eoc_functions["empty_avatar_dimension_travel"]')
+            ],
+        )
+        shared = main[
+            main.index("migrated_eoc_shared_avatar_dimension_travel = function"):
+            main.index('migrated_eoc_functions["shared_avatar_dimension_travel"]')
+        ]
+        self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", shared)
+        self.assertNotIn("services.relocation.travel_to_dimension(", shared)
+        dead = main[
+            main.index("migrated_eoc_dead_avatar_dimension_travel = function"):
+            main.index('migrated_eoc_functions["dead_avatar_dimension_travel"]')
+        ]
+        self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", dead)
+        self.assertNotIn("services.relocation.travel_to_dimension(", dead)
+        self.assertNotIn(
+            'services.variables.resolve(context.data, actor, "u", "destination")',
+            main,
+        )
+
     def test_real_teleport_eoc_and_talk_shapes_remain_fail_closed(self) -> None:
         avatar_eocs = migrate_lua_first.load_objects([
             REPOSITORY_ROOT / (
@@ -22505,7 +22617,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 self.assertNotIn("services.relocation.move(", main)
                 self.assertNotIn("services.relocation.creature_at(", main)
 
-    def test_keeps_literal_and_variable_avatar_dimension_travel_fail_closed(self) -> None:
+    def test_avatar_event_static_dimension_travel_converts_dynamic_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -22514,7 +22626,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "bounded_dimension_travel",
-                            "required_event": "game_start",
+                            "required_event": "avatar_moves",
                             "effect": [
                                 {"u_travel_to_dimension": "nether"},
                                 {
@@ -22530,7 +22642,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                         {
                             "type": "effect_on_condition",
                             "id": "dynamic_dimension_travel",
-                            "required_event": "game_start",
+                            "required_event": "avatar_moves",
                             "effect": {"u_travel_to_dimension": {"u_val": "target"}},
                             "eoc_type": "EVENT",
                         },
@@ -22544,21 +22656,22 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
-            self.assertEqual(len(result.partial), 2)
-            self.assertNotIn("services.relocation.travel_to_dimension(", main)
-            self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(main.count("services.relocation.travel_to_dimension("), 2)
+            self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", main)
+            self.assertIn('runtime.on("game:avatar_moves"', main)
             self.assertNotIn(
                 'services.variables.resolve(context.data, actor, "u", "target")',
                 main,
             )
             self.assertIn(
-                "invalid-ID/filter, radius truncation, dialogue-alpha actor/target_location, "
-                "and translated-message parity",
+                "event-exclusive exact dialogue-alpha Avatar proof; dynamic dimension/messages, "
+                "target_location, and radii outside the typed service range",
                 report,
             )
 
-    def test_real_portal_dimension_travel_keeps_native_actor_and_message_semantics(
+    def test_real_portal_dimension_travel_stays_todo_without_actor_proof(
         self,
     ) -> None:
         source_path = (
@@ -22581,12 +22694,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
         result = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(source, result)
-        self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
-        self.assertIn("dialogue-alpha NPC/item/vehicle targeting including target_location", main)
+        self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", main)
+        self.assertIn("event-exclusive exact Avatar proof", main)
         self.assertNotIn("services.relocation.travel_to_dimension(", main)
         dimension_todos = [
             todo for todo in result.todos
-            if "u_travel_to_dimension needs native invalid-ID/filter" in todo.message
+            if "u_travel_to_dimension needs an event-exclusive exact "
+            "dialogue-alpha Avatar proof" in todo.message
         ]
         self.assertEqual(len(dimension_todos), 1)
         self.assertEqual(dimension_todos[0].category, "manual_rewrite")
@@ -22624,13 +22738,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
 
         self.assertIn('services.native_events.emit("game_start"', main)
         self.assertIn("TODO: preserve native teleport", main)
-        self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
+        self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", main)
         self.assertNotIn("services.relocation.move(", main)
         self.assertNotIn("services.relocation.travel_to_dimension(", main)
         self.assertIn("teleport_to_point map loading/recentering", report)
         self.assertIn(
-            "invalid-ID/filter, radius truncation, dialogue-alpha actor/target_location, "
-            "and translated-message parity",
+            "event-exclusive exact dialogue-alpha Avatar proof; dynamic dimension/messages, "
+            "target_location, and radii outside the typed service range",
             report,
         )
 
@@ -22682,7 +22796,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("TODO: translate random item-fault mutation", main)
             self.assertNotIn("services.items.transform", main)
             self.assertIn("TODO: native transform_line loads a temporary map", main)
-            self.assertIn("TODO: u_travel_to_dimension needs native invalid-ID/filter", main)
+            self.assertIn("TODO: native u_travel_to_dimension follows dialogue alpha", main)
             self.assertNotIn("services.world.transform_line(", main)
             self.assertNotIn("services.gameplay.environment.set_light_level", main)
             self.assertIn("services.items.activate", main)

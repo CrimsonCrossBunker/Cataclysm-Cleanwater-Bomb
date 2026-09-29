@@ -7963,6 +7963,26 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field value? CcbRelocationMoveValue Present only when the typed relocation succeeds.
 ---@field error? CcbPlatformResultError Present when the exact handle, target token, or strict relocation precondition is rejected.
 
+---@class CcbRelocationDimensionTravelOptions
+---@field npc_travel_radius? integer Radius from the Avatar for NPC selection, in 0..60; 0 selects none.
+---@field npc_travel_filter? 'all'|'follower'|'enemy'|'none' NPC selection predicate; default is `all`.
+---@field item_travel_radius? integer Radius from the Avatar for item selection, in -1..60; -1 disables item travel.
+---@field take_vehicle? boolean Include the vehicle at the Avatar's current tile; absence returns `no_vehicle`.
+
+---@class CcbRelocationDimensionTravelValue
+---@field accepted boolean Native game transition result.
+---@field changed boolean True when the active dimension changed.
+---@field before string Previous active dimension id.
+---@field after string Current active dimension id.
+---@field npc_travellers? integer Number of NPC handles selected for travel; absent when already in the requested dimension.
+---@field items? integer Number of item handles selected for travel; absent when already in the requested dimension.
+---@field vehicle? boolean Whether a vehicle was selected for travel; absent when already in the requested dimension.
+---@field reason? string Present as `already_there` when the requested dimension is already active.
+
+---@class CcbRelocationDimensionTravelResult: CcbResult
+---@field value? CcbRelocationDimensionTravelValue Present for valid dimensions, including already-there no-ops.
+---@field error? CcbPlatformResultError Present when the dimension id is invalid or a requested vehicle is missing; malformed options raise a Lua error.
+
 ---@class CcbRelocationApi
 local CcbRelocationApi = {}
 
@@ -7977,6 +7997,11 @@ function CcbRelocationApi.move(entity, target, options) end
 ---@param options? CcbRelocationMoveOptions Optional strict-only policy; omitted means strict mode. No force or fallback policy is supported.
 ---@return CcbRelocationMoveResult result `value` is a CcbRelocationMoveValue; failures return the typed error envelope.
 function CcbRelocationApi.travel_to_omt(avatar, target, options) end
+
+---@param dimension string Registered dimension id.
+---@param options? CcbRelocationDimensionTravelOptions Optional Avatar-centered NPC/item/vehicle selection options.
+---@return CcbRelocationDimensionTravelResult result Requires an active map and a write callback; malformed options raise a Lua error. This operation may load/save worlds and change the active dimension.
+function CcbRelocationApi.travel_to_dimension(dimension, options) end
 
 ---@class CcbWeatherTypeIdPage
 ---@field items GameId[] Bounded weather-type ids.
