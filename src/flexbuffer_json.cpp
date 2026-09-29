@@ -1,8 +1,10 @@
 #include "flexbuffer_json.h"
 
 #include <atomic>
+#include <cstdint>
 #include <cstring>
 #include <istream>
+#include <limits>
 #include <optional>
 
 #include "cata_unreachable.h"
@@ -144,7 +146,21 @@ int JsonValue::get_int_exact() const
     }
     std::unique_ptr<std::istream> source = root_->get_source_stream();
     if( !source ) {
-        throw_error( "Original JSON source unavailable for integer range check" );
+        // Precompiled FlexBuffers (for example, in an archive) have no JSON source.
+        // Check the stored integer without narrowing it to int first.
+        if( json_.IsUInt() ) {
+            const uint64_t number = json_.AsUInt64();
+            if( number > static_cast<uint64_t>( std::numeric_limits<int>::max() ) ) {
+                throw_error( "Integer exceeds int range" );
+            }
+            return static_cast<int>( number );
+        }
+        const int64_t number = json_.AsInt64();
+        if( number < std::numeric_limits<int>::min() ||
+            number > std::numeric_limits<int>::max() ) {
+            throw_error( "Integer exceeds int range" );
+        }
+        return static_cast<int>( number );
     }
     TextJsonIn jsin( *source, get_root_source_path() );
     JsonPath path;
