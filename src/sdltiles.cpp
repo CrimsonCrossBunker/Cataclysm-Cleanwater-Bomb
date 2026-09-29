@@ -3632,9 +3632,9 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             const tripoint_abs_omt omp = origin + point( col, row );
 
             const om_vision_level vision = overmap_buffer.seen( omp );
-            // Hordes and mongroups live on the ground level, so marker
-            // visibility is evaluated at z=0 to keep them on higher z-levels.
-            const tripoint_abs_omt ground_omp( omp.xy(), 0 );
+            // Surface hordes remain visible from above, but underground views
+            // must query their own level rather than projecting surface hordes.
+            const tripoint_abs_omt ground_omp( omp.xy(), std::min( omp.z(), 0 ) );
             const bool los =
                 overmap_buffer.seen_more_than( ground_omp, om_vision_level::details ) &&
                 ( you.overmap_los( ground_omp, sight_points ) ||
@@ -3728,16 +3728,20 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             }
 
             if( vision != om_vision_level::unseen ) {
-                if( draw_overlays && uistate.overmap_debug_mongroup ) {
+                const int horde_size = showhordes && los ?
+                                       overmap_buffer.get_horde_size( ground_omp,
+                                           horde_map_flavors::active | horde_map_flavors::idle ) : 0;
+                // The normal horde marker already represents this group.  Debug
+                // overlays should not add a second zombie sprite beneath it.
+                if( draw_overlays && uistate.overmap_debug_mongroup &&
+                    horde_size < HORDE_VISIBILITY_SIZE ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                                ground_omp );
+                            ground_omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
                 }
                 if( showhordes && los ) {
-                    const int horde_size = overmap_buffer.get_horde_size( ground_omp,
-                                           horde_map_flavors::active | horde_map_flavors::idle );
                     if( horde_size >= HORDE_VISIBILITY_SIZE ) {
                         // Scale down the range of horde population, which can be 1-576 to a range of 1-10
                         // These thresholds are generated with pow( sprite_size, 2.4 ).
@@ -3764,9 +3768,10 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                             sprite_size = 10;
                         }
 
-                        if( find_tile_with_season( id ) ) {
-                            // NOLINTNEXTLINE(cata-translate-string-literal)
-                            draw_from_id_string( string_format( "overmap_horde_%d", sprite_size ),
+                        // NOLINTNEXTLINE(cata-translate-string-literal)
+                        const std::string horde_id = string_format( "overmap_horde_%d", sprite_size );
+                        if( find_tile_with_season( horde_id ) ) {
+                            draw_from_id_string( horde_id,
                                                  omp, 0, 0, lit_level::LIT, false );
                         } else {
                             // a little bit of hardcoded fallbacks for hordes for
