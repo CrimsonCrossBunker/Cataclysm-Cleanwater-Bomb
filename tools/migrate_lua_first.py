@@ -24727,6 +24727,72 @@ def render_static_location_variable(
     return lines
 
 
+def render_static_reveal_route(
+    effect: dict[str, Any],
+    previous_effects: list[Any],
+    avatar_actor_proven: bool,
+    event_exclusive_source_proven: bool,
+) -> list[str] | None:
+    """Lower only route endpoints written as typed context coordinates in order."""
+    if (
+        not event_exclusive_source_proven or not avatar_actor_proven or
+        set(effect) - {"reveal_route", "target_var", "radius", "road_only"} or
+        "reveal_route" not in effect or "target_var" not in effect
+    ):
+        return None
+    start_key = _context_val_key(effect["reveal_route"])
+    end_key = _context_val_key(effect["target_var"])
+    if start_key is None or end_key is None:
+        return None
+
+    raw_radius = finite_number_literal(effect.get("radius", 0))
+    if raw_radius is None:
+        return None
+    # Native passes dbl_or_var through a double-to-int conversion.  Truncate
+    # static literals toward zero, and only emit values accepted by the typed
+    # service.  Dynamic, negative-after-truncation, and >30 shapes stay TODO.
+    radius = math.trunc(raw_radius)
+    if radius < 0 or radius > 30:
+        return None
+    road_only = effect.get("road_only", False)
+    if not isinstance(road_only, bool):
+        return None
+
+    endpoint_keys = tuple(dict.fromkeys((start_key, end_key)))
+    if len(previous_effects) < len(endpoint_keys):
+        return None
+    writers = previous_effects[-len(endpoint_keys):]
+    written_keys: set[str] = set()
+    for writer in writers:
+        if (
+            not isinstance(writer, dict) or
+            set(writer) - {
+                "u_location_variable", "x_adjust", "y_adjust", "z_adjust",
+                "z_override",
+            } or
+            "u_location_variable" not in writer
+        ):
+            return None
+        context_key = _context_val_key(writer["u_location_variable"])
+        if context_key not in endpoint_keys or context_key in written_keys:
+            return None
+        if render_static_location_variable(
+            writer, "u_location_variable", avatar_actor_proven, False,
+        ) is None:
+            return None
+        written_keys.add(context_key)
+    if written_keys != set(endpoint_keys):
+        return None
+
+    return [
+        "    services.overmap.reveal_route(",
+        f"        context.data[{lua_quote(start_key)}]:project_to(\"overmap_terrain\"),",
+        f"        context.data[{lua_quote(end_key)}]:project_to(\"overmap_terrain\"),",
+        f"        {radius}, {str(road_only).lower()}",
+        "    )",
+    ]
+
+
 def render_static_horde_signal_broadcast(
     effect: dict[str, Any],
     previous_effect: Any,
@@ -33479,89 +33545,108 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
-                endpoint_keys = (
-                    _context_val_key( effect.get( "reveal_route" ) ),
-                    _context_val_key( effect.get( "target_var" ) ),
+                reveal_route_avatar_move_source_proven = (
+                    event_exclusive_source_proven and stable_handler and
+                    value.get("eoc_type") == "EVENT" and
+                    required_event == "avatar_moves" and not inline_eoc and
+                    value.get("global") is not True and recurrence_value is None
                 )
-                preceding_location_writes: set[str] = set()
-                for prior_effect in effects[:effect_index]:
-                    if not isinstance( prior_effect, dict ):
-                        continue
-                    for location_key in ( "u_location_variable", "npc_location_variable" ):
-                        context_key = _context_val_key( prior_effect.get( location_key ) )
-                        target_params = prior_effect.get( "target_params" )
-                        if (
-                            context_key is not None and
-                            set( prior_effect ) == { location_key, "target_params" } and
-                            isinstance( target_params, dict ) and
-                            isinstance( target_params.get( "om_terrain" ), str ) and
-                            set( target_params ) <= {
-                                "om_terrain", "z", "random", "search_range",
-                            }
-                        ):
-                            preceding_location_writes.add( context_key )
-                endpoint_writers_proven = (
-                    all( endpoint_key is not None for endpoint_key in endpoint_keys ) and
-                    all(
-                        endpoint_key in preceding_location_writes
-                        for endpoint_key in endpoint_keys
-                    )
+                rendered_route = render_static_reveal_route(
+                    effect,
+                    effects[:effect_index],
+                    avatar_actor_proven,
+                    reveal_route_avatar_move_source_proven,
                 )
-                route_radius = effect.get( "radius", 0 )
-                route_road_only = effect.get( "road_only", False )
-                route_options_note = (
-                    f"Its literal radius={route_radius} and road_only="
-                    f"{str( route_road_only ).lower()} fit the typed route service"
-                    if type( route_radius ) is int and 0 <= route_radius <= 30 and
-                    isinstance( route_road_only, bool ) else
-                    "Its radius must be proven to truncate into the typed service's "
-                    "0..30 integer range, and road_only must be a boolean"
-                )
-                if endpoint_writers_proven:
-                    reveal_route_gap = (
-                        "Both context_val route endpoints have preceding "
-                        "target_params-based u/npc_location_variable writes, so "
-                        "the native missing-variable default is not the blocker. "
-                        "services.overmap.find_target covers the static "
-                        "mission_util::get_om_terrain_pos terrain selection, "
-                        "generation retry, and Avatar OMT fallback, but it "
-                        "does not return a match status. On a miss the native "
-                        "helper also emits debugmsg before writing that fallback, "
-                        "so the renderer must keep nonempty terrain searches "
-                        "fail-closed until both outcomes can be preserved. "
-                        "This source is an item use_action EOC and does not "
-                        "prove the exact live alpha selected by native "
-                        "dialogue::actor(false) for u_location_variable. "
-                        "The renderer must also preserve "
-                        "the native off-screen map-load step, typed context "
-                        "writes, and complete enclosing effect order before it "
-                        "can generate this route. "
-                        f"{route_options_note} Keep preceding reveal_map and "
-                        "u_message effects in source order"
-                    )
-                    reveal_route_category = "manual_rewrite"
+                if rendered_route is not None:
+                    lines.extend(rendered_route)
+                    converted_effect = True
                 else:
-                    reveal_route_gap = (
-                        "native reveal_route resolves two var_info abs_ms endpoints "
-                        "and projects them to OMT; services.overmap.reveal_route "
-                        "preserves native connection guessing, the greedy search "
-                        "within a four-overmap radius, road_only filtering, and "
-                        "CIRCLEDIST reveal around each path node once given "
-                        "explicit typed abs_omt endpoints. The renderer does not "
-                        "yet prove how this EOC's var_info endpoints are produced "
-                        "as typed coordinates or preserve their enclosing "
-                        f"effect/context order. {route_options_note}"
+                    endpoint_keys = (
+                        _context_val_key( effect.get( "reveal_route" ) ),
+                        _context_val_key( effect.get( "target_var" ) ),
                     )
-                    reveal_route_category = "manual_rewrite"
-                lines.append(
-                    "    -- TODO: " + reveal_route_gap + "."
-                )
-                result.add_todo(
-                    reveal_route_category,
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    + reveal_route_gap
-                )
-                all_effects_converted = False
+                    preceding_location_writes: set[str] = set()
+                    for prior_effect in effects[:effect_index]:
+                        if not isinstance( prior_effect, dict ):
+                            continue
+                        for location_key in ( "u_location_variable", "npc_location_variable" ):
+                            context_key = _context_val_key( prior_effect.get( location_key ) )
+                            target_params = prior_effect.get( "target_params" )
+                            if (
+                                context_key is not None and
+                                set( prior_effect ) == { location_key, "target_params" } and
+                                isinstance( target_params, dict ) and
+                                isinstance( target_params.get( "om_terrain" ), str ) and
+                                set( target_params ) <= {
+                                    "om_terrain", "z", "random", "search_range",
+                                }
+                            ):
+                                preceding_location_writes.add( context_key )
+                    endpoint_writers_proven = (
+                        all( endpoint_key is not None for endpoint_key in endpoint_keys ) and
+                        all(
+                            endpoint_key in preceding_location_writes
+                            for endpoint_key in endpoint_keys
+                        )
+                    )
+                    route_radius = effect.get( "radius", 0 )
+                    route_road_only = effect.get( "road_only", False )
+                    route_options_note = (
+                        f"Its literal radius={route_radius} and road_only="
+                        f"{str( route_road_only ).lower()} fit the typed route service"
+                        if type( route_radius ) is int and 0 <= route_radius <= 30 and
+                        isinstance( route_road_only, bool ) else
+                        "Its radius must be proven to truncate into the typed service's "
+                        "0..30 integer range, and road_only must be a boolean"
+                    )
+                    if endpoint_writers_proven:
+                        reveal_route_gap = (
+                            "Both context_val route endpoints have preceding "
+                            "target_params-based u/npc_location_variable writes, so "
+                            "the native missing-variable default is not the blocker. "
+                            "services.overmap.find_target covers the static "
+                            "mission_util::get_om_terrain_pos terrain selection, "
+                            "generation retry, and Avatar OMT fallback, but it "
+                            "does not return a match status. On a miss the native "
+                            "helper also emits debugmsg before writing that fallback, "
+                            "so the renderer must keep nonempty terrain searches "
+                            "fail-closed until both outcomes can be preserved. "
+                            "This source is an item use_action EOC and does not "
+                            "prove the exact live alpha selected by native "
+                            "dialogue::actor(false) for u_location_variable. "
+                            "The renderer must also preserve "
+                            "the native off-screen map-load step, typed context "
+                            "writes, and complete enclosing effect order before it "
+                            "can generate this route. "
+                            f"{route_options_note} Keep preceding reveal_map and "
+                            "u_message effects in source order"
+                        )
+                        reveal_route_category = "manual_rewrite"
+                    else:
+                        reveal_route_gap = (
+                            "native reveal_route resolves two var_info abs_ms endpoints "
+                            "and projects them to OMT; services.overmap.reveal_route "
+                            "preserves native connection guessing, the greedy search "
+                            "within a four-overmap radius, road_only filtering, and "
+                            "CIRCLEDIST reveal around each path node once given "
+                            "explicit typed abs_omt endpoints. Bounded lowering is "
+                            "limited to context_val endpoints written by immediately "
+                            "preceding, translatable u_location_variable effects in "
+                            "an event-exclusive Avatar handler. The renderer does "
+                            "not yet prove other var_info scopes, missing-variable "
+                            "default coordinates, or enclosing context order. "
+                            f"{route_options_note}"
+                        )
+                        reveal_route_category = "manual_rewrite"
+                    lines.append(
+                        "    -- TODO: " + reveal_route_gap + "."
+                    )
+                    result.add_todo(
+                        reveal_route_category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        + reveal_route_gap
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_consume_item" in effect or "npc_consume_item" in effect)

@@ -25737,6 +25737,129 @@ assert(not pcall(function() return U_EXPRESSION end))
                     )
                 )
 
+    def test_translates_reveal_route_for_immediately_written_typed_context_points(self) -> None:
+        cases = (
+            ({"radius": 3.75, "road_only": True}, "3, true"),
+            ({"radius": 30.9}, "30, false"),
+            ({}, "0, false"),
+            ({"radius": -0.75}, "0, false"),
+        )
+        for index, (route_options, expected_options) in enumerate(cases):
+            with self.subTest(route_options=route_options):
+                route_effect = {
+                    "reveal_route": {"context_val": "start"},
+                    "target_var": {"context_val": "destination"},
+                    **route_options,
+                }
+                source = migrate_lua_first.SourceObject(Path("route.json"), index, {
+                    "type": "effect_on_condition",
+                    "id": f"bounded_context_reveal_route_{index}",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": [
+                        {"u_location_variable": {"context_val": "start"}},
+                        {
+                            "u_location_variable": {"context_val": "destination"},
+                            "x_adjust": 12,
+                        },
+                        route_effect,
+                    ],
+                })
+                result = migrate_lua_first.MigrationResult()
+
+                rendered = migrate_lua_first.render_eoc(source, result)
+
+                self.assertEqual(result.todos, [])
+                self.assertEqual(
+                    rendered.count("services.overmap.reveal_route("), 1
+                )
+                start_write = rendered.index('context.data["start"] = location')
+                destination_write = rendered.index(
+                    'context.data["destination"] = location'
+                )
+                route_call = rendered.index("services.overmap.reveal_route(")
+                self.assertLess(start_write, destination_write)
+                self.assertLess(destination_write, route_call)
+                self.assertIn(
+                    'context.data["start"]:project_to("overmap_terrain")',
+                    rendered,
+                )
+                self.assertIn(
+                    'context.data["destination"]:project_to("overmap_terrain")',
+                    rendered,
+                )
+                self.assertIn(f"{expected_options}", rendered)
+                self.assertNotIn("route_result", rendered)
+
+    def test_reveal_route_keeps_unproven_var_info_and_radius_shapes_as_todos(self) -> None:
+        location_writers = [
+            {"u_location_variable": {"context_val": "start"}},
+            {"u_location_variable": {"context_val": "destination"}},
+        ]
+        invalid_options = (
+            ("negative integer", {"radius": -1}),
+            ("over service limit", {"radius": 31}),
+            ("dynamic radius", {"radius": {"math": ["_radius"]}}),
+            ("nonboolean road_only", {"road_only": 0}),
+        )
+        cases: list[tuple[str, list[Any], dict[str, Any], str]] = [
+            (
+                "missing context writers",
+                [],
+                {
+                    "reveal_route": {"context_val": "start"},
+                    "target_var": {"context_val": "destination"},
+                },
+                "avatar_moves",
+            ),
+            (
+                "other var_info scope",
+                location_writers,
+                {
+                    "reveal_route": {"u_val": "start"},
+                    "target_var": {"context_val": "destination"},
+                },
+                "avatar_moves",
+            ),
+            (
+                "unproven alpha actor",
+                location_writers,
+                {
+                    "reveal_route": {"context_val": "start"},
+                    "target_var": {"context_val": "destination"},
+                },
+                "npc_becomes_hostile",
+            ),
+        ]
+        cases.extend(
+            (name, location_writers, {
+                "reveal_route": {"context_val": "start"},
+                "target_var": {"context_val": "destination"},
+                **options,
+            }, "avatar_moves")
+            for name, options in invalid_options
+        )
+        for index, (case_name, preceding_effects, route_effect, required_event) in enumerate(cases):
+            with self.subTest(case=case_name):
+                source = migrate_lua_first.SourceObject(Path("route.json"), index, {
+                    "type": "effect_on_condition",
+                    "id": f"unproven_shape_{index}",
+                    "eoc_type": "EVENT",
+                    "required_event": required_event,
+                    "effect": [*preceding_effects, route_effect],
+                })
+                result = migrate_lua_first.MigrationResult()
+
+                rendered = migrate_lua_first.render_eoc(source, result)
+
+                self.assertNotIn("services.overmap.reveal_route(", rendered)
+                route_todos = [
+                    todo for todo in result.todos
+                    if "native reveal_route resolves two var_info" in todo.message
+                ]
+                self.assertEqual(len(route_todos), 1)
+                self.assertEqual(route_todos[0].category, "manual_rewrite")
+
     def test_real_magiclysm_route_source_chain_keeps_generation_search_todo(self) -> None:
         source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
         sources = migrate_lua_first.load_objects([source_path])
