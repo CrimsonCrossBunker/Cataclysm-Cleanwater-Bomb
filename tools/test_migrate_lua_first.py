@@ -540,11 +540,19 @@ assert(worn_calls==1 and has_calls==1)
             migrate_lua_first.render_eoc_condition_expression(
                 "npc_see_u", npc_actor_proven=True,
                 npc_actor_expression="actor"))
+        inner_condition = {"inner": {"condition": "npc_see_u"}}
+        # Native f_test_eoc evaluates the child predicate with the same
+        # dialogue, so the caller's event proof remains valid while an
+        # unproven caller still cannot lower npc_see_u.
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
-                {"test_eoc": "inner"},
-                eoc_conditions={"inner": {"condition": "npc_see_u"}},
-                npc_melee_beta_actor_proven=True))
+                {"test_eoc": "inner"}, eoc_conditions=inner_condition))
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                {"test_eoc": "inner"}, eoc_conditions=inner_condition,
+                npc_melee_beta_actor_proven=True),
+            see_expression,
+        )
 
         service_expression = (
             migrate_lua_first.render_eoc_condition_expression(
@@ -11769,6 +11777,10 @@ assert(not available())
         )
         self.assertIn("beta == nil", character_main)
         self.assertIn('beta.subtype ~= "npc"', character_main)
+        self.assertIn(
+            'runtime.on("game:character_melee_attacks_character"',
+            character_main,
+        )
         self.assertNotIn(
             "EOC melee_character_beta_conditions condition TODO",
             "\n".join(todo.message for todo in character_result.todos),
@@ -11813,15 +11825,15 @@ assert(not available())
 
         # Native EOC loading defaults missing eoc_type to ACTIVATION, and
         # explicitly non-event EOCs cannot prove the callback's beta actor.
-        for offset, eoc_type in enumerate((None, "ACTIVATION")):
+        for offset, eoc_type in enumerate((None, "ACTIVATION", "NPC_DEATH")):
             with self.subTest(eoc_type=eoc_type):
                 inactive_data = {
                     "type": "effect_on_condition",
                     "id": (
                         "melee_beta_default_activation" if eoc_type is None
-                        else "melee_beta_explicit_activation"
+                        else f"melee_beta_explicit_{eoc_type.lower()}"
                     ),
-                    "eoc_type": "EVENT", "required_event": "character_melee_attacks_character",
+                    "required_event": "character_melee_attacks_character",
                     "condition": "npc_friend",
                     "effect": {"message": "non-event beta remains unproven"},
                 }
@@ -11836,6 +11848,10 @@ assert(not available())
                 )
                 self.assertNotIn("services.npcs.get(beta)).friendly", inactive_main)
                 self.assertNotIn("services.npcs.ai_rules(beta)", inactive_main)
+                self.assertNotIn(
+                    'runtime.on("game:character_melee_attacks_character"',
+                    inactive_main,
+                )
                 self.assertIn(
                     "condition TODO",
                     "\n".join(todo.message for todo in inactive_result.todos),
@@ -11877,8 +11893,13 @@ assert(not available())
         self.assertTrue(dynamic_result.todos)
 
         inline_result = migrate_lua_first.MigrationResult()
+        inline_event = migrate_lua_first.SourceObject(
+            character_event.path, character_event.index, {
+                **character_event.value, "__inline_eoc": True,
+            },
+        )
         inline_main = migrate_lua_first.render_eoc(
-            character_event, inline_result, inline_eoc=True,
+            inline_event, inline_result,
         )
         self.assertNotIn("services.npcs.ai_rules(beta)", inline_main)
         self.assertTrue(inline_result.todos)
@@ -27995,7 +28016,10 @@ assert(not pcall(function() return U_EXPRESSION end))
                 f"EOC {eoc_id} effect #0" in entry
                 for entry in result.todos
             ))
-        self.assertIn("melee_avatar_beta_message", result.converted)
+        self.assertTrue(any(
+            item.endswith("EOC melee_avatar_beta_message")
+            for item in result.converted
+        ))
         self.assertFalse(any(
             "EOC melee_avatar_beta_message effect #0" in entry
             for entry in result.todos
@@ -28121,8 +28145,10 @@ assert(not pcall(function() return U_EXPRESSION end))
                 f"EOC {eoc_id} effect #0" in entry
                 for entry in result.todos
             ), eoc_id)
-        self.assertIn("character_melee_message", result.converted)
-        self.assertIn("monster_melee_message", result.converted)
+        for eoc_id in ("character_melee_message", "monster_melee_message"):
+            self.assertTrue(any(
+                item.endswith(f"EOC {eoc_id}") for item in result.converted
+            ), eoc_id)
         for text in (
             "dead NPC alpha", "dead NPC speaker", "dead avatar alpha",
             "dead avatar u target", "dead avatar hook", "dead avatar u hook",
@@ -28193,8 +28219,12 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertIn("character_melee_u_message", result.converted)
-        self.assertIn("monster_melee_u_message", result.converted)
+        for eoc_id in (
+            "character_melee_u_message", "monster_melee_u_message",
+        ):
+            self.assertTrue(any(
+                item.endswith(f"EOC {eoc_id}") for item in result.converted
+            ), eoc_id)
         for eoc_id in (
             "no_beta_u_message", "prevent_death_u_message",
             "avatar_death_u_message", "npc_death_u_message",
@@ -28692,8 +28722,12 @@ assert(not pcall(function() return U_EXPRESSION end))
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-        self.assertIn("melee_character_beta_omt", result.converted)
-        self.assertIn("melee_monster_beta_near_omt", result.converted)
+        for eoc_id in (
+            "melee_character_beta_omt", "melee_monster_beta_near_omt",
+        ):
+            self.assertTrue(any(
+                item.endswith(f"EOC {eoc_id}") for item in result.converted
+            ), eoc_id)
         for eoc_id in (
             "kill_event_has_no_talker_beta",
             "ordinary_event_has_no_beta",
@@ -35036,7 +35070,9 @@ assert(#messages==2 and messages[2]=="target")
                 report,
             )
             self.assertNotIn("context.actors.beta", main)
-            self.assertNotIn("context.actors.interlocutor", main)
+            self.assertNotIn("services.npcs.get(beta)", main)
+            self.assertNotIn("services.effects.has(beta", main)
+            self.assertNotIn("services.creatures.has_species(beta", main)
             self.assertNotIn("services.effects.has(context.actors", main)
             self.assertNotIn("services.creatures.has_species(context.actors", main)
             self.assertIn("services.creatures.has_species(actor", main)
@@ -36749,8 +36785,11 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             migrate_lua_first.MigrationResult(),
             eoc_referenced_ids=frozenset({"beta_target"}),
         )
-        self.assertNotIn("context.actors.interlocutor", independent_target)
-        self.assertIn("condition TODO", independent_target)
+        self.assertNotIn("services.npcs.get(beta)", independent_target)
+        self.assertIn(
+            "TODO: translate the legacy condition into a Lua predicate.",
+            independent_target,
+        )
 
         predicates = {
             f"target_{index}": {
