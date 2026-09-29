@@ -4540,21 +4540,25 @@ function WeaponCategoryDefinition:proficiency(proficiency_id) end
 ---| 'grazing'
 ---Non-copyable borrowed callback context. Every member becomes stale after the
 ---item-use handler returns or fails; saving the userdata does not extend its lease.
----The native bridge invokes the handler synchronously with the exact non-null
----using Character and item instance. A null native Character fails closed
----before Lua runs; the Character may be an NPC and is never replaced by an avatar.
+---The native bridge invokes the handler synchronously with the actual using
+---Character when present, and with the exact item instance at its native
+---location. If native code invokes the action without a Character and the native
+---map context is available, the handler still runs with `character` and
+---`player_name` set to nil; no avatar is substituted. Without that map context,
+---the action fails closed before the Lua callback.
 ---@class ItemUseContext
----@field player_name string
+---@field player_name? string Name of the actual using Character; nil when native code supplies no Character.
 ---@field item_id string
----@field character GameHandle Runtime-owner- and generation-safe handle for the actual using Character (alpha); NPCs are preserved.
----@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta).
+---@field character? GameHandle Runtime-owner- and generation-safe handle for the actual using Character (alpha), or nil when native code supplies no Character; NPCs are preserved.
+---@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta), retaining its native location hint.
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
 ---@field charges integer
 local ItemUseContext = {}
 
 ---@param text string
 ---@param type? CcbPlatformMessageType Optional native severity; defaults to neutral.
----The message uses the using Character's add_msg_if_player path.
+---The message uses the actual using Character's add_msg_if_player path; with no
+---native Character, the call is a no-op before severity parsing.
 function ItemUseContext:message(text, type) end
 
 ---@class FactionDefinitionOptions

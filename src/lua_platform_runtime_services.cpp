@@ -355,13 +355,14 @@ struct use_context_data {
 
     Character *character = nullptr;
     item *used_item = nullptr;
+    item_location used_item_location;
     tripoint_bub_ms position;
     cata::lua_platform::game_handle_runtime handle_runtime;
     std::size_t world_generation = 0;
     bool active = true;
 
     void require_active() const {
-        if( !active || character == nullptr || used_item == nullptr ) {
+        if( !active || used_item == nullptr ) {
             throw std::runtime_error( "stale item-use context" );
         }
     }
@@ -369,14 +370,19 @@ struct use_context_data {
     void message( const std::string &value,
                   const sol::optional<std::string> &type ) const {
         require_active();
-        character->add_msg_if_player(
-            game_message_params( parse_platform_message_type(
-                                     type.value_or( "neutral" ), "ItemUseContext:message" ) ),
-            value );
+        if( character == nullptr ) {
+            return;
+        }
+        const game_message_params params( parse_platform_message_type(
+                                              type.value_or( "neutral" ), "ItemUseContext:message" ) );
+        character->add_msg_if_player( params, value );
     }
 
-    std::string player_name() const {
+    sol::optional<std::string> player_name() const {
         require_active();
+        if( character == nullptr ) {
+            return {};
+        }
         return character->get_name();
     }
 
@@ -398,8 +404,11 @@ struct use_context_data {
         used_item->charges = static_cast<int>( value );
     }
 
-    cata::lua_platform::game_handle character_handle() const {
+    sol::optional<cata::lua_platform::game_handle> character_handle() const {
         require_active();
+        if( character == nullptr ) {
+            return {};
+        }
         const tripoint_abs_ms absolute = character->pos_abs();
         const std::string scope = character->is_avatar() ? "avatar" :
                                   character->is_npc() ? "npc" : "character";
@@ -411,9 +420,35 @@ struct use_context_data {
 
     cata::lua_platform::game_handle item_handle() const {
         require_active();
-        return cata::lua_platform::game_handle::from_item( *used_item, {
-            "platform_item_use_item", used_item->uid().get_value(), 0, 0, 0, {}
-        }, handle_runtime, world_generation );
+        cata::lua_platform::game_handle_locator locator;
+        locator.scope = "platform_item_use_item";
+        locator.stable_id = used_item->uid().get_value();
+        if( used_item_location ) {
+            const tripoint_abs_ms absolute = used_item_location.pos_abs();
+            switch( used_item_location.where_recursive() ) {
+                case item_location::type::character: {
+                    Character *carrier = used_item_location.carrier();
+                    locator.scope = carrier != nullptr && carrier->is_avatar() ?
+                                    "avatar_item" : "character_item";
+                    break;
+                }
+                case item_location::type::map:
+                    locator.scope = "map_item";
+                    break;
+                case item_location::type::vehicle:
+                    locator.scope = "vehicle_item";
+                    break;
+                case item_location::type::container:
+                case item_location::type::invalid:
+                    locator.scope = "item";
+                    break;
+            }
+            locator.x = absolute.x();
+            locator.y = absolute.y();
+            locator.z = absolute.z();
+        }
+        return cata::lua_platform::game_handle::from_item( *used_item, std::move( locator ),
+                handle_runtime, world_generation );
     }
 
     cata::lua_platform::script_tripoint_coord use_position() const {
@@ -618,6 +653,7 @@ class use_context_lease
             context_.active = false;
             context_.character = nullptr;
             context_.used_item = nullptr;
+            context_.used_item_location = item_location::nowhere;
         }
 
     private:
@@ -630,28 +666,46 @@ class use_context_lease
 std::optional<int> invoke_use_handler( std::string_view mod_id,
                                        std::string_view handler_id,
                                        Character *character, item &used_item,
-                                       map *, const tripoint_bub_ms &position )
+                                       map *here, const tripoint_bub_ms &position )
 {
     const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
-    if( character == nullptr ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
-                                    << handler_id << "' was invoked without a Character";
-        return std::nullopt;
-    }
     if( !owner || !owner->world_is_ready ) {
-        character->add_msg_if_player(
-            to_translation( "Lua-first Mod runtime is not ready." ).translated() );
+        if( character != nullptr ) {
+            character->add_msg_if_player(
+                to_translation( "Lua-first Mod runtime is not ready." ).translated() );
+        } else {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                        << handler_id << "' runtime is not ready";
+        }
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
-        character->add_msg_if_player(
-            to_translation( "Lua-first item handler is no longer registered." ).translated() );
+        if( character != nullptr ) {
+            character->add_msg_if_player(
+                to_translation( "Lua-first item handler is no longer registered." ).translated() );
+        } else {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                        << handler_id << "' is no longer registered";
+        }
+        return std::nullopt;
+    }
+    if( character == nullptr && here == nullptr ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                    << handler_id << "' has no native map context";
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
     context->character = character;
     context->used_item = &used_item;
+    context->used_item_location = character != nullptr ?
+                                  item_location( *character->as_character(), &used_item ) :
+                                  item_location( map_cursor( here, position ), &used_item );
+    if( character == nullptr && !context->used_item_location ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                    << handler_id << "' has no native item location";
+        return std::nullopt;
+    }
     context->position = position;
     context->handle_runtime = owner->handle_runtime();
     context->world_generation = detail::runtime_world_generation_storage();

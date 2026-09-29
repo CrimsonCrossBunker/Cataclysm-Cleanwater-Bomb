@@ -21,6 +21,8 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
+#include "map.h"
+#include "map_helpers.h"
 #include "messages.h"
 #include "npc.h"
 #include "npctalk.h"
@@ -103,6 +105,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
 {
     using namespace cata::lua_platform;
     REQUIRE( g != nullptr );
+    clear_map();
 
     npc user;
     user.normalize();
@@ -117,6 +120,11 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     avatar_user.normalize();
     item &avatar_item = avatar_user.inv->add_item(
                             item( itype_id( "efile_map" ) ), false, false, false );
+    map &here = get_map();
+    const tripoint_bub_ms map_use_position( 60, 60, 0 );
+    const tripoint_abs_ms map_item_position = here.get_abs( map_use_position );
+    item &map_used_item = here.add_item_or_charges(
+                              map_use_position, item( itype_id( "efile_map" ) ), false );
 
     constexpr std::string_view mod_id = "item_use_npc_actor_bridge";
     clear_active_runtimes();
@@ -126,6 +134,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     const std::shared_ptr<runtime> owner = make_runtime( std::string( mod_id ), 941722, lua );
     const on_out_of_scope cleanup( []() {
         clear_active_runtimes();
+        clear_map();
         Messages::clear_messages();
     } );
     install_runtime_api( owner, lua, ccb );
@@ -135,10 +144,46 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     lua["expected_item_uid"] = used_item.uid().get_value();
     lua["expected_character_subtype"] = "npc";
     lua["callback_count"] = 0;
+    lua["null_character_no_return"] = false;
+    lua["null_character_nil"] = false;
+    lua["null_character_result"] = 0;
     const sol::protected_function_result registered = lua.safe_script( R"(
         ccb.runtime.handler("npc_item_actor_bridge", function(context)
             callback_count = callback_count + 1
             local character = context.character
+            if expected_character_id == nil then
+                assert(character == nil)
+                assert(context.player_name == nil)
+                assert(context.item.kind == "item")
+                assert(context.item.locator.scope == "map_item")
+                assert(context.item.locator.stable_id == expected_item_uid)
+                assert(context.item.locator.position.x == expected_item_x)
+                assert(context.item.locator.position.y == expected_item_y)
+                assert(context.item.locator.position.z == expected_item_z)
+                assert(context.position.x == expected_use_x)
+                assert(context.position.y == expected_use_y)
+                assert(context.position.z == expected_use_z)
+                local snapshot = ccb.services.items.snapshot(context.item, 0)
+                assert(snapshot.ok)
+                assert(snapshot.value.uid == expected_item_uid)
+                assert(snapshot.value.id.value == "efile_map")
+                context:message("No Character means no message.", "good")
+                local ignored_severity = pcall(context.message, context,
+                                               "No alpha means native u_message returns early.",
+                                               "not_a_message_type")
+                assert(ignored_severity)
+                saved_context = context
+                if fail_callback then
+                    error("expected item-use callback failure without Character")
+                end
+                if null_character_no_return then
+                    return
+                end
+                if null_character_nil then
+                    return nil
+                end
+                return null_character_result
+            end
             assert(character.kind == "creature")
             assert(character.subtype == expected_character_subtype)
             assert(character.locator.stable_id == expected_character_id)
@@ -203,11 +248,62 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     CHECK( *avatar_result == 0 );
     CHECK( lua["callback_count"].get<int>() == 3 );
 
-    const std::optional<int> missing_character = invoke_use_handler(
+    lua["expected_character_id"] = sol::lua_nil;
+    lua["expected_item_uid"] = map_used_item.uid().get_value();
+    lua["expected_item_x"] = map_item_position.x();
+    lua["expected_item_y"] = map_item_position.y();
+    lua["expected_item_z"] = map_item_position.z();
+    lua["expected_use_x"] = map_use_position.x();
+    lua["expected_use_y"] = map_use_position.y();
+    lua["expected_use_z"] = map_use_position.z();
+    lua["null_character_no_return"] = true;
+    Messages::clear_messages();
+    const std::optional<int> null_character_result = invoke_use_handler(
                 mod_id, "npc_item_actor_bridge", nullptr,
-                used_item, nullptr, tripoint_bub_ms::zero );
-    CHECK_FALSE( missing_character.has_value() );
-    CHECK( lua["callback_count"].get<int>() == 3 );
+                map_used_item, &here, map_use_position );
+    REQUIRE( null_character_result.has_value() );
+    CHECK( *null_character_result == 0 );
+    CHECK( lua["callback_count"].get<int>() == 4 );
+    CHECK( Messages::recent_messages_with_formatting( 1 ).empty() );
+    const sol::protected_function_result stale_null_context = lua.safe_script( R"(
+        local character_ok = pcall(function() return saved_context.character end)
+        local player_name_ok = pcall(function() return saved_context.player_name end)
+        local item_ok = pcall(function() return saved_context.item end)
+        local position_ok = pcall(function() return saved_context.position end)
+        local message_ok = pcall(function() return saved_context:message("stale", "bad") end)
+        assert(not character_ok and not player_name_ok and not item_ok)
+        assert(not position_ok and not message_ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( stale_null_context.valid() );
+
+    lua["null_character_no_return"] = false;
+    lua["null_character_result"] = 1;
+    const std::optional<int> null_character_nonzero = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                map_used_item, &here, map_use_position );
+    REQUIRE( null_character_nonzero.has_value() );
+    CHECK( *null_character_nonzero == 1 );
+    CHECK( lua["callback_count"].get<int>() == 5 );
+
+    lua["null_character_nil"] = true;
+    const std::optional<int> null_character_nil = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                map_used_item, &here, map_use_position );
+    CHECK_FALSE( null_character_nil.has_value() );
+    CHECK( lua["callback_count"].get<int>() == 6 );
+
+    lua["fail_callback"] = true;
+    const std::optional<int> null_character_failure = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                map_used_item, &here, map_use_position );
+    CHECK_FALSE( null_character_failure.has_value() );
+    CHECK( lua["callback_count"].get<int>() == 7 );
+
+    const std::optional<int> null_character_without_map = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                map_used_item, nullptr, map_use_position );
+    CHECK_FALSE( null_character_without_map.has_value() );
+    CHECK( lua["callback_count"].get<int>() == 7 );
 }
 
 #endif
