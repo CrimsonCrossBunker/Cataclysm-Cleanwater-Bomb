@@ -121,6 +121,7 @@
 #include "proficiency.h"
 #include "recipe_dictionary.h"
 #include "requirements.h"
+#include "riding_config.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scent_map.h"
@@ -246,6 +247,7 @@ static const efftype_id effect_paincysts( "paincysts" );
 static const efftype_id effect_recover( "recover" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
+static const skill_id skill_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_stumbled_into_invisible( "stumbled_into_invisible" );
 static const efftype_id effect_stunned( "stunned" );
@@ -1650,11 +1652,46 @@ void Character::mount_creature( monster &z )
     mod_moves( -100 );
 }
 
+bool Character::try_mount_creature( monster &z )
+{
+    if( !can_mount( z ) ) {
+        return false;
+    }
+
+    const riding_config &config = get_riding_config();
+    const bool saddled = z.has_effect( effect_monster_saddled );
+    const double difficulty = std::max( 0.0,
+                                        static_cast<double>( saddled ? config.saddled_mount_difficulty :
+                                                config.unsaddled_mount_difficulty ) +
+                                        z.pet_equipment_mount_threshold_delta() );
+    const double ability = get_skill_level( skill_riding ) * config.mount_skill_weight +
+                           get_dex() * config.mount_dexterity_weight;
+    const int success_chance = std::clamp(
+                                   static_cast<int>( std::round( 50.0 + ( ability - difficulty ) * 10.0 ) ), 5, 95 );
+
+    practice( skill_riding, 1 );
+    if( !x_in_y( success_chance, 100 ) ) {
+        mod_moves( -100 );
+        add_msg_if_player( m_bad, _( "You fail to mount the %s." ), z.get_name() );
+        return false;
+    }
+
+    mount_creature( z );
+    return true;
+}
+
 bool Character::check_mount_will_move( const tripoint_bub_ms &dest_loc )
 {
     const map &here = get_map();
 
-    if( !is_mounted() || mounted_creature->has_flag( mon_flag_COMBAT_MOUNT ) ) {
+    if( !is_mounted() ) {
+        return true;
+    }
+    const riding_config &config = get_riding_config();
+    if( get_steed_type() == steed_type::ANIMAL && one_in( config.move_practice_chance ) ) {
+        practice( skill_riding, config.move_practice );
+    }
+    if( mounted_creature->has_flag( mon_flag_COMBAT_MOUNT ) ) {
         return true;
     }
     if( mounted_creature && mounted_creature->type->has_fear_trigger( mon_trigger::HOSTILE_CLOSE ) ) {
@@ -1709,6 +1746,7 @@ bool Character::check_mount_is_spooked()
                 }
                 chance -= 0.25 * get_dex();
                 chance -= 0.1 * get_str();
+                chance -= get_skill_level( skill_riding ) * get_riding_config().spook_skill_reduction;
                 chance *= get_limb_score( limb_score_grip );
                 if( saddled ) {
                     chance /= 2;
@@ -1716,6 +1754,7 @@ bool Character::check_mount_is_spooked()
                 if( combat_mount ) {
                     chance /= 2;
                 }
+                chance *= mounted_creature->pet_equipment_fear_multiplier();
                 chance = std::max( 1.0, chance );
                 if( x_in_y( chance, 100.0 ) ) {
                     forced_dismount();
@@ -1725,6 +1764,25 @@ bool Character::check_mount_is_spooked()
         }
     }
     return false;
+}
+
+void Character::check_mounted_balance( int damage )
+{
+    if( damage <= 0 || !is_mounted() || get_steed_type() != steed_type::ANIMAL ) {
+        return;
+    }
+
+    const riding_config &config = get_riding_config();
+    const double skill_factor = std::max( 0.2,
+                                          1.0 - get_skill_level( skill_riding ) * config.balance_skill_reduction );
+    const double equipment_factor = mounted_creature->pet_equipment_fear_multiplier();
+    const double fall_chance = std::clamp(
+                                   ( config.melee_fall_base_chance + damage * config.melee_fall_damage_scale ) *
+                                   skill_factor * equipment_factor, 0.0, 95.0 );
+    practice( skill_riding, 1 );
+    if( x_in_y( fall_chance, 100.0 ) ) {
+        forced_dismount();
+    }
 }
 
 bool Character::cant_do_mounted( bool msg ) const
@@ -6413,6 +6471,12 @@ std::vector<run_cost_effect> Character::run_cost_effects( float &movecost ) cons
                                  is_crouching() ? _( "Crouching" ) :
                                  is_prone() ? _( "Prone" ) : _( "Walking" )
                                );
+            const riding_config &config = get_riding_config();
+            const double riding_multiplier = std::max(
+                                                 config.minimum_move_cost_multiplier,
+                                                 1.0 + config.mounted_move_cost_penalty -
+                                                 get_skill_level( skill_riding ) * config.move_cost_skill_reduction );
+            run_cost_effect_mul( riding_multiplier, _( "Riding skill" ) );
         }
         return effects;
     }

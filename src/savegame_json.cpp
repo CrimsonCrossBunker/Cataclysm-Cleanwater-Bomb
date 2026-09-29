@@ -109,6 +109,7 @@
 #include "recipe_dictionary.h"
 #include "relic.h"
 #include "requirements.h"
+#include "riding_config.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -188,6 +189,8 @@ static const mfaction_str_id monfaction_factionless( "factionless" );
 static const mtype_id mon_breather( "mon_breather" );
 
 static const skill_id skill_chemistry( "chemistry" );
+static const skill_id skill_riding( "riding" );
+static const skill_id skill_survival( "survival" );
 
 static const ter_str_id ter_t_ash( "t_ash" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
@@ -1157,6 +1160,15 @@ void Character::load( const JsonObject &data )
         if( !skill_data.has_member( "chemistry" ) && skill_data.has_member( "cooking" ) ) {
             skill_data.get_member( "cooking" ).read( ( *_skills )[skill_chemistry] );
         }
+    }
+
+    if( !skill_data.has_member( "riding" ) ) {
+        const riding_config &config = get_riding_config();
+        const int converted_level = std::min(
+                                        config.legacy_survival_conversion_cap,
+                                        static_cast<int>( std::ceil( get_skill_level( skill_survival ) *
+                                                config.legacy_survival_conversion_ratio ) ) );
+        set_skill_level( skill_riding, converted_level );
     }
 
     on_stat_change( "thirst", thirst );
@@ -2666,6 +2678,19 @@ void monster::load( const JsonObject &data )
         newitem.deserialize( storage_item_json );
         storage_item = cata::make_value<item>( newitem );
     }
+    if( data.has_array( "pet_equipment" ) ) {
+        JsonArray equipment_entries = data.get_array( "pet_equipment" );
+        while( equipment_entries.has_more() ) {
+            JsonObject entry = equipment_entries.next_object();
+            const pet_slot_id slot( entry.get_string( "slot" ) );
+            item equipment;
+            equipment.deserialize( entry.get_member( "item" ) );
+            if( !slot.is_valid() || !equip_pet_equipment( slot, equipment ) ) {
+                // Preserve equipment from removed or incompatible mods instead of deleting it.
+                inv.push_back( std::move( equipment ) );
+            }
+        }
+    }
     if( data.has_object( "battery_item" ) ) {
         JsonValue battery_item_json = data.get_member( "battery_item" );
         item newitem;
@@ -2835,6 +2860,19 @@ void monster::store( JsonOut &json ) const
     }
     if( storage_item ) {
         json.member( "storage_item", *storage_item );
+    }
+    if( !custom_pet_equipment.empty() ) {
+        json.member( "pet_equipment" );
+        json.start_array();
+        for( const auto &[slot, equipment] : custom_pet_equipment ) {
+            if( equipment ) {
+                json.start_object();
+                json.member( "slot", slot.str() );
+                json.member( "item", *equipment );
+                json.end_object();
+            }
+        }
+        json.end_array();
     }
     if( battery_item ) {
         json.member( "battery_item", *battery_item );

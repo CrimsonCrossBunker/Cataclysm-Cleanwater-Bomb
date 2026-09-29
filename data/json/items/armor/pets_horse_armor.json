@@ -213,7 +213,7 @@
     "color": "green",
     "warmth": 10,
     "material_thickness": 2,
-    "flags": [ "BELTED", "WATER_FRIENDLY" ],
+    "flags": [ "BELTED", "WATER_FRIENDLY", "SADDLE_BAG" ],
     "//": "each 15 L bag is ~ 60 x 25 x 10 cm",
     "pocket_data": [
       {

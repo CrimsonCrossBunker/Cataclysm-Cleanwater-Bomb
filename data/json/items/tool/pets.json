@@ -128,6 +128,21 @@
     "flags": [ "TACK" ]
   },
   {
+    "id": "horse_stirrups",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str_sp": "horse stirrups (pair)" },
+    "description": "A matched pair of metal stirrups with leather straps.  Attached to a saddle, they give a rider a more stable seat and better control in combat.",
+    "weight": "1500 g",
+    "volume": "2 L",
+    "price": "80 USD",
+    "price_postapoc": "12 USD",
+    "material": [ "steel", "leather" ],
+    "symbol": "[",
+    "color": "light_gray",
+    "flags": [ "STIRRUP" ]
+  },
+  {
     "//": "https://primeusascales.com/product/sls-single-animal-livestock-scales/",
     "id": "livestock_scale",
     "type": "ITEM",

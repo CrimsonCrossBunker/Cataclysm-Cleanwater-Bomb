@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:9a528b3559acdd309f510c61b87680831a43360ff3e2d0c86e279dfdd77ff429",
+    "source_fingerprint": "sha256:df68578d616ec366021a2713a944d8375d9647e6c7cb6376baec845b1a8a3e6f",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -15,14 +15,16 @@
     "registrations": "src/init.cpp#DynamicDataLoader::initialize"
   },
   "summary": {
-    "registration_calls": 191,
-    "registered_types": 190,
+    "registration_calls": 193,
+    "registered_types": 192,
     "observed_types": 183,
     "registered_and_observed": 183,
     "registered_not_observed": [
       "TRAIT_BLACKLIST",
       "WORLD_OPTION",
       "colordef",
+      "pet_slot",
+      "riding_config",
       "sound_effect_preload",
       "spell_migration",
       "wound",
@@ -30,7 +32,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6770,
-    "top_level_objects": 94754,
+    "top_level_objects": 94757,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -52,7 +54,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 284,
+            "line": 286,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -98,7 +100,7 @@
       "type": "ITEM",
       "registrations": [
         {
-          "registration_order": 81,
+          "registration_order": 83,
           "type": "ITEM",
           "handler_kind": "direct_function",
           "handler_symbol": "items::load",
@@ -106,14 +108,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 381,
+            "line": 385,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15119,
+        "occurrences": 15120,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -157,7 +159,7 @@
       "type": "ITEM_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 141,
+          "registration_order": 143,
           "type": "ITEM_BLACKLIST",
           "handler_kind": "lambda",
           "handler_symbol": "load_item_blacklist",
@@ -165,7 +167,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 463,
+            "line": 467,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -211,7 +213,7 @@
       "type": "ITEM_CATEGORY",
       "registrations": [
         {
-          "registration_order": 82,
+          "registration_order": 84,
           "type": "ITEM_CATEGORY",
           "handler_kind": "direct_function",
           "handler_symbol": "item_category::load_item_cat",
@@ -219,7 +221,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 382,
+            "line": 386,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -265,7 +267,7 @@
       "type": "LOOT_ZONE",
       "registrations": [
         {
-          "registration_order": 90,
+          "registration_order": 92,
           "type": "LOOT_ZONE",
           "handler_kind": "direct_function",
           "handler_symbol": "zone_type::load_zones",
@@ -273,7 +275,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 400,
+            "line": 404,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -324,7 +326,7 @@
       "type": "MIGRATION",
       "registrations": [
         {
-          "registration_order": 83,
+          "registration_order": 85,
           "type": "MIGRATION",
           "handler_kind": "lambda",
           "handler_symbol": "load_migration",
@@ -332,7 +334,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 384,
+            "line": 388,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -383,7 +385,7 @@
       "type": "MOD_INFO",
       "registrations": [
         {
-          "registration_order": 145,
+          "registration_order": 147,
           "type": "MOD_INFO",
           "handler_kind": "direct_function",
           "handler_symbol": "load_ignored_type",
@@ -391,7 +393,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 477,
+            "line": 481,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -442,7 +444,7 @@
       "type": "MONSTER",
       "registrations": [
         {
-          "registration_order": 87,
+          "registration_order": 89,
           "type": "MONSTER",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -450,7 +452,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 392,
+            "line": 396,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -501,7 +503,7 @@
       "type": "MONSTER_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 48,
+          "registration_order": 50,
           "type": "MONSTER_BLACKLIST",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterBlacklist",
@@ -509,7 +511,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 331,
+            "line": 335,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -555,7 +557,7 @@
       "type": "MONSTER_FACTION",
       "registrations": [
         {
-          "registration_order": 151,
+          "registration_order": 153,
           "type": "MONSTER_FACTION",
           "handler_kind": "direct_function",
           "handler_symbol": "monfactions::load_monster_faction",
@@ -563,7 +565,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 485,
+            "line": 489,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -614,7 +616,7 @@
       "type": "MONSTER_WHITELIST",
       "registrations": [
         {
-          "registration_order": 49,
+          "registration_order": 51,
           "type": "MONSTER_WHITELIST",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterWhitelist",
@@ -622,7 +624,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 332,
+            "line": 336,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -668,7 +670,7 @@
       "type": "SCENARIO_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 54,
+          "registration_order": 56,
           "type": "SCENARIO_BLACKLIST",
           "handler_kind": "direct_function",
           "handler_symbol": "scen_blacklist::load_scen_blacklist",
@@ -676,7 +678,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 337,
+            "line": 341,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -722,7 +724,7 @@
       "type": "SPECIES",
       "registrations": [
         {
-          "registration_order": 88,
+          "registration_order": 90,
           "type": "SPECIES",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -730,7 +732,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 395,
+            "line": 399,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -781,7 +783,7 @@
       "type": "SPELL",
       "registrations": [
         {
-          "registration_order": 171,
+          "registration_order": 173,
           "type": "SPELL",
           "handler_kind": "direct_function",
           "handler_symbol": "spell_type::load_spell",
@@ -789,7 +791,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 511,
+            "line": 515,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -840,7 +842,7 @@
       "type": "TRAIT_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 142,
+          "registration_order": 144,
           "type": "TRAIT_BLACKLIST",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_blacklist",
@@ -848,7 +850,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 466,
+            "line": 470,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -889,7 +891,7 @@
       "type": "TRAIT_MIGRATION",
       "registrations": [
         {
-          "registration_order": 143,
+          "registration_order": 145,
           "type": "TRAIT_MIGRATION",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_migration",
@@ -897,7 +899,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 470,
+            "line": 474,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -956,7 +958,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 283,
+            "line": 285,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -997,7 +999,7 @@
       "type": "achievement",
       "registrations": [
         {
-          "registration_order": 179,
+          "registration_order": 181,
           "type": "achievement",
           "handler_kind": "direct_function",
           "handler_symbol": "achievement::load_achievement",
@@ -1005,7 +1007,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 519,
+            "line": 523,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1064,7 +1066,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 304,
+            "line": 306,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1123,7 +1125,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 305,
+            "line": 307,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1182,7 +1184,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 300,
+            "line": 302,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1233,7 +1235,7 @@
       "type": "ammunition_type",
       "registrations": [
         {
-          "registration_order": 51,
+          "registration_order": 53,
           "type": "ammunition_type",
           "handler_kind": "direct_function",
           "handler_symbol": "ammunition_type::load_ammunition_type",
@@ -1241,7 +1243,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 334,
+            "line": 338,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1292,7 +1294,7 @@
       "type": "anatomy",
       "registrations": [
         {
-          "registration_order": 169,
+          "registration_order": 171,
           "type": "anatomy",
           "handler_kind": "direct_function",
           "handler_symbol": "anatomy::load_anatomy",
@@ -1300,7 +1302,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 509,
+            "line": 513,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1351,7 +1353,7 @@
       "type": "ascii_art",
       "registrations": [
         {
-          "registration_order": 62,
+          "registration_order": 64,
           "type": "ascii_art",
           "handler_kind": "direct_function",
           "handler_symbol": "ascii_art::load_ascii_art",
@@ -1359,7 +1361,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 345,
+            "line": 349,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1410,7 +1412,7 @@
       "type": "attack_vector",
       "registrations": [
         {
-          "registration_order": 103,
+          "registration_order": 105,
           "type": "attack_vector",
           "handler_kind": "direct_function",
           "handler_symbol": "attack_vector::load_attack_vectors",
@@ -1418,7 +1420,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 414,
+            "line": 418,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1477,7 +1479,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 309,
+            "line": 311,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1528,7 +1530,7 @@
       "type": "behavior",
       "registrations": [
         {
-          "registration_order": 150,
+          "registration_order": 152,
           "type": "behavior",
           "handler_kind": "direct_function",
           "handler_symbol": "behavior::load_behavior",
@@ -1536,7 +1538,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 483,
+            "line": 487,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1595,7 +1597,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 310,
+            "line": 312,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1654,7 +1656,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 311,
+            "line": 313,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1705,7 +1707,7 @@
       "type": "body_graph",
       "registrations": [
         {
-          "registration_order": 168,
+          "registration_order": 170,
           "type": "body_graph",
           "handler_kind": "direct_function",
           "handler_symbol": "bodygraph::load_bodygraphs",
@@ -1713,7 +1715,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 508,
+            "line": 512,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1764,7 +1766,7 @@
       "type": "body_part",
       "registrations": [
         {
-          "registration_order": 166,
+          "registration_order": 168,
           "type": "body_part",
           "handler_kind": "direct_function",
           "handler_symbol": "body_part_type::load_bp",
@@ -1772,7 +1774,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 506,
+            "line": 510,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1823,7 +1825,7 @@
       "type": "butchery_requirement",
       "registrations": [
         {
-          "registration_order": 158,
+          "registration_order": 160,
           "type": "butchery_requirement",
           "handler_kind": "direct_function",
           "handler_symbol": "butchery_requirements::load_butchery_req",
@@ -1831,7 +1833,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 496,
+            "line": 500,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1877,7 +1879,7 @@
       "type": "camp_migration",
       "registrations": [
         {
-          "registration_order": 107,
+          "registration_order": 109,
           "type": "camp_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap::load_oter_id_camp_migration",
@@ -1885,7 +1887,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 418,
+            "line": 422,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1931,7 +1933,7 @@
       "type": "character_mod",
       "registrations": [
         {
-          "registration_order": 165,
+          "registration_order": 167,
           "type": "character_mod",
           "handler_kind": "direct_function",
           "handler_symbol": "character_modifier::load_character_modifiers",
@@ -1939,7 +1941,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 505,
+            "line": 509,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1990,7 +1992,7 @@
       "type": "charge_removal_blacklist",
       "registrations": [
         {
-          "registration_order": 84,
+          "registration_order": 86,
           "type": "charge_removal_blacklist",
           "handler_kind": "callable",
           "handler_symbol": "load_charge_removal_blacklist",
@@ -1998,7 +2000,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 388,
+            "line": 392,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2049,7 +2051,7 @@
       "type": "city",
       "registrations": [
         {
-          "registration_order": 117,
+          "registration_order": 119,
           "type": "city",
           "handler_kind": "direct_function",
           "handler_symbol": "city::load_city",
@@ -2057,7 +2059,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 428,
+            "line": 432,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2108,7 +2110,7 @@
       "type": "city_building",
       "registrations": [
         {
-          "registration_order": 120,
+          "registration_order": 122,
           "type": "city_building",
           "handler_kind": "direct_function",
           "handler_symbol": "city_buildings::load",
@@ -2116,7 +2118,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 431,
+            "line": 435,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2167,7 +2169,7 @@
       "type": "climbing_aid",
       "registrations": [
         {
-          "registration_order": 102,
+          "registration_order": 104,
           "type": "climbing_aid",
           "handler_kind": "direct_function",
           "handler_symbol": "climbing_aid::load_climbing_aid",
@@ -2175,7 +2177,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 413,
+            "line": 417,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2226,7 +2228,7 @@
       "type": "clothing_mod",
       "registrations": [
         {
-          "registration_order": 174,
+          "registration_order": 176,
           "type": "clothing_mod",
           "handler_kind": "direct_function",
           "handler_symbol": "clothing_mods::load",
@@ -2234,7 +2236,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 514,
+            "line": 518,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2285,7 +2287,7 @@
       "type": "colordef",
       "registrations": [
         {
-          "registration_order": 144,
+          "registration_order": 146,
           "type": "colordef",
           "handler_kind": "direct_function",
           "handler_symbol": "load_ignored_type",
@@ -2293,7 +2295,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 475,
+            "line": 479,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2334,7 +2336,7 @@
       "type": "conduct",
       "registrations": [
         {
-          "registration_order": 180,
+          "registration_order": 182,
           "type": "conduct",
           "handler_kind": "direct_function",
           "handler_symbol": "achievement::load_achievement",
@@ -2342,7 +2344,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 520,
+            "line": 524,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2401,7 +2403,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 289,
+            "line": 291,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2452,7 +2454,7 @@
       "type": "construction",
       "registrations": [
         {
-          "registration_order": 112,
+          "registration_order": 114,
           "type": "construction",
           "handler_kind": "direct_function",
           "handler_symbol": "load_construction",
@@ -2460,7 +2462,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 423,
+            "line": 427,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2511,7 +2513,7 @@
       "type": "construction_category",
       "registrations": [
         {
-          "registration_order": 110,
+          "registration_order": 112,
           "type": "construction_category",
           "handler_kind": "direct_function",
           "handler_symbol": "construction_categories::load",
@@ -2519,7 +2521,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 421,
+            "line": 425,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2565,7 +2567,7 @@
       "type": "construction_group",
       "registrations": [
         {
-          "registration_order": 111,
+          "registration_order": 113,
           "type": "construction_group",
           "handler_kind": "direct_function",
           "handler_symbol": "construction_groups::load",
@@ -2573,7 +2575,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 422,
+            "line": 426,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2619,7 +2621,7 @@
       "type": "damage_info_order",
       "registrations": [
         {
-          "registration_order": 184,
+          "registration_order": 186,
           "type": "damage_info_order",
           "handler_kind": "direct_function",
           "handler_symbol": "damage_info_order::load_damage_info_orders",
@@ -2627,7 +2629,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 524,
+            "line": 528,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2678,7 +2680,7 @@
       "type": "damage_type",
       "registrations": [
         {
-          "registration_order": 183,
+          "registration_order": 185,
           "type": "damage_type",
           "handler_kind": "direct_function",
           "handler_symbol": "damage_type::load_damage_types",
@@ -2686,7 +2688,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 523,
+            "line": 527,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2737,7 +2739,7 @@
       "type": "dimension",
       "registrations": [
         {
-          "registration_order": 139,
+          "registration_order": 141,
           "type": "dimension",
           "handler_kind": "direct_function",
           "handler_symbol": "dimension_world::load_dimensions",
@@ -2745,7 +2747,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 460,
+            "line": 464,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2796,7 +2798,7 @@
       "type": "dimension_region_layout",
       "registrations": [
         {
-          "registration_order": 140,
+          "registration_order": 142,
           "type": "dimension_region_layout",
           "handler_kind": "direct_function",
           "handler_symbol": "dimension_region_layout::load_dimension_regions",
@@ -2804,7 +2806,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 461,
+            "line": 465,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2855,7 +2857,7 @@
       "type": "disease_type",
       "registrations": [
         {
-          "registration_order": 61,
+          "registration_order": 63,
           "type": "disease_type",
           "handler_kind": "direct_function",
           "handler_symbol": "disease_type::load_disease_type",
@@ -2863,7 +2865,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 344,
+            "line": 348,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2914,7 +2916,7 @@
       "type": "dream",
       "registrations": [
         {
-          "registration_order": 40,
+          "registration_order": 42,
           "type": "dream",
           "handler_kind": "direct_function",
           "handler_symbol": "dream::load",
@@ -2922,7 +2924,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 323,
+            "line": 327,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2973,7 +2975,7 @@
       "type": "effect_migration",
       "registrations": [
         {
-          "registration_order": 105,
+          "registration_order": 107,
           "type": "effect_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "effect_migration::load",
@@ -2981,7 +2983,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 416,
+            "line": 420,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3040,7 +3042,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 295,
+            "line": 297,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3201,7 +3203,7 @@
       "type": "effect_type",
       "registrations": [
         {
-          "registration_order": 104,
+          "registration_order": 106,
           "type": "effect_type",
           "handler_kind": "direct_function",
           "handler_symbol": "load_effect_type",
@@ -3209,7 +3211,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 415,
+            "line": 419,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3268,7 +3270,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 302,
+            "line": 304,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3319,7 +3321,7 @@
       "type": "enchantment",
       "registrations": [
         {
-          "registration_order": 58,
+          "registration_order": 60,
           "type": "enchantment",
           "handler_kind": "direct_function",
           "handler_symbol": "enchantment::load_enchantment",
@@ -3327,7 +3329,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 341,
+            "line": 345,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3378,7 +3380,7 @@
       "type": "end_screen",
       "registrations": [
         {
-          "registration_order": 63,
+          "registration_order": 65,
           "type": "end_screen",
           "handler_kind": "direct_function",
           "handler_symbol": "end_screen::load_end_screen",
@@ -3386,7 +3388,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 346,
+            "line": 350,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3437,7 +3439,7 @@
       "type": "event_statistic",
       "registrations": [
         {
-          "registration_order": 177,
+          "registration_order": 179,
           "type": "event_statistic",
           "handler_kind": "direct_function",
           "handler_symbol": "event_statistic::load_statistic",
@@ -3445,7 +3447,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 517,
+            "line": 521,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3496,7 +3498,7 @@
       "type": "event_transformation",
       "registrations": [
         {
-          "registration_order": 176,
+          "registration_order": 178,
           "type": "event_transformation",
           "handler_kind": "direct_function",
           "handler_symbol": "event_transformation::load_transformation",
@@ -3504,7 +3506,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 516,
+            "line": 520,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3563,7 +3565,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 301,
+            "line": 303,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3609,7 +3611,7 @@
       "type": "faction",
       "registrations": [
         {
-          "registration_order": 146,
+          "registration_order": 148,
           "type": "faction",
           "handler_kind": "direct_function",
           "handler_symbol": "faction_template::load",
@@ -3617,7 +3619,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 479,
+            "line": 483,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3668,7 +3670,7 @@
       "type": "faction_mission",
       "registrations": [
         {
-          "registration_order": 188,
+          "registration_order": 190,
           "type": "faction_mission",
           "handler_kind": "direct_function",
           "handler_symbol": "faction_mission::load_faction_missions",
@@ -3676,7 +3678,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 528,
+            "line": 532,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3735,7 +3737,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 290,
+            "line": 292,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3794,7 +3796,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 292,
+            "line": 294,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3853,7 +3855,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 293,
+            "line": 295,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3912,7 +3914,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 296,
+            "line": 298,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3971,7 +3973,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 297,
+            "line": 299,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4022,7 +4024,7 @@
       "type": "forest_biome_component",
       "registrations": [
         {
-          "registration_order": 135,
+          "registration_order": 137,
           "type": "forest_biome_component",
           "handler_kind": "direct_function",
           "handler_symbol": "forest_biome_component::load_forest_biome_feature",
@@ -4030,7 +4032,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 453,
+            "line": 457,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4081,7 +4083,7 @@
       "type": "forest_biome_mapgen",
       "registrations": [
         {
-          "registration_order": 136,
+          "registration_order": 138,
           "type": "forest_biome_mapgen",
           "handler_kind": "direct_function",
           "handler_symbol": "forest_biome_mapgen::load_forest_biome_mapgen",
@@ -4089,7 +4091,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 455,
+            "line": 459,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4140,7 +4142,7 @@
       "type": "furniture",
       "registrations": [
         {
-          "registration_order": 44,
+          "registration_order": 46,
           "type": "furniture",
           "handler_kind": "direct_function",
           "handler_symbol": "load_furniture",
@@ -4148,7 +4150,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 327,
+            "line": 331,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4199,7 +4201,7 @@
       "type": "gate",
       "registrations": [
         {
-          "registration_order": 155,
+          "registration_order": 157,
           "type": "gate",
           "handler_kind": "direct_function",
           "handler_symbol": "gates::load",
@@ -4207,7 +4209,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 491,
+            "line": 495,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4258,7 +4260,7 @@
       "type": "harvest",
       "registrations": [
         {
-          "registration_order": 160,
+          "registration_order": 162,
           "type": "harvest",
           "handler_kind": "direct_function",
           "handler_symbol": "harvest_list::load_harvest_list",
@@ -4266,7 +4268,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 498,
+            "line": 502,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4317,7 +4319,7 @@
       "type": "harvest_drop_type",
       "registrations": [
         {
-          "registration_order": 159,
+          "registration_order": 161,
           "type": "harvest_drop_type",
           "handler_kind": "direct_function",
           "handler_symbol": "harvest_drop_type::load_harvest_drop_types",
@@ -4325,7 +4327,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 497,
+            "line": 501,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4384,7 +4386,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 303,
+            "line": 305,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4435,7 +4437,7 @@
       "type": "hit_range",
       "registrations": [
         {
-          "registration_order": 59,
+          "registration_order": 61,
           "type": "hit_range",
           "handler_kind": "direct_function",
           "handler_symbol": "Creature::load_hit_range",
@@ -4443,7 +4445,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 342,
+            "line": 346,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4489,7 +4491,7 @@
       "type": "item_action",
       "registrations": [
         {
-          "registration_order": 67,
+          "registration_order": 69,
           "type": "item_action",
           "handler_kind": "lambda",
           "handler_symbol": "item_action_generator::generator",
@@ -4497,7 +4499,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 359,
+            "line": 363,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4543,7 +4545,7 @@
       "type": "item_group",
       "registrations": [
         {
-          "registration_order": 65,
+          "registration_order": 67,
           "type": "item_group",
           "handler_kind": "lambda",
           "handler_symbol": "load_item_group",
@@ -4551,7 +4553,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 353,
+            "line": 357,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4610,7 +4612,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 287,
+            "line": 289,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4669,14 +4671,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 286,
+            "line": 288,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 918,
+        "occurrences": 920,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -4720,7 +4722,7 @@
       "type": "limb_score",
       "registrations": [
         {
-          "registration_order": 164,
+          "registration_order": 166,
           "type": "limb_score",
           "handler_kind": "direct_function",
           "handler_symbol": "limb_score::load_limb_scores",
@@ -4728,7 +4730,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 504,
+            "line": 508,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4779,7 +4781,7 @@
       "type": "magic_type",
       "registrations": [
         {
-          "registration_order": 173,
+          "registration_order": 175,
           "type": "magic_type",
           "handler_kind": "direct_function",
           "handler_symbol": "magic_type::load_magic_type",
@@ -4787,7 +4789,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 513,
+            "line": 517,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4838,7 +4840,7 @@
       "type": "map_extra",
       "registrations": [
         {
-          "registration_order": 121,
+          "registration_order": 123,
           "type": "map_extra",
           "handler_kind": "direct_function",
           "handler_symbol": "MapExtras::load",
@@ -4846,7 +4848,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 432,
+            "line": 436,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4897,7 +4899,7 @@
       "type": "map_extra_collection",
       "registrations": [
         {
-          "registration_order": 137,
+          "registration_order": 139,
           "type": "map_extra_collection",
           "handler_kind": "direct_function",
           "handler_symbol": "map_extra_collection::load_map_extra_collection",
@@ -4905,7 +4907,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 457,
+            "line": 461,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4956,7 +4958,7 @@
       "type": "mapgen",
       "registrations": [
         {
-          "registration_order": 113,
+          "registration_order": 115,
           "type": "mapgen",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mapgen",
@@ -4964,7 +4966,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 424,
+            "line": 428,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5015,7 +5017,7 @@
       "type": "martial_art",
       "registrations": [
         {
-          "registration_order": 101,
+          "registration_order": 103,
           "type": "martial_art",
           "handler_kind": "direct_function",
           "handler_symbol": "load_martial_art",
@@ -5023,7 +5025,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 412,
+            "line": 416,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5082,7 +5084,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 308,
+            "line": 310,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5133,7 +5135,7 @@
       "type": "mission_definition",
       "registrations": [
         {
-          "registration_order": 157,
+          "registration_order": 159,
           "type": "mission_definition",
           "handler_kind": "lambda",
           "handler_symbol": "mission_type::load_mission_type",
@@ -5141,7 +5143,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 493,
+            "line": 497,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5192,7 +5194,7 @@
       "type": "mod_migration",
       "registrations": [
         {
-          "registration_order": 187,
+          "registration_order": 189,
           "type": "mod_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "mod_migrations::load",
@@ -5200,7 +5202,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 527,
+            "line": 531,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5251,7 +5253,7 @@
       "type": "mod_tileset",
       "registrations": [
         {
-          "registration_order": 189,
+          "registration_order": 191,
           "type": "mod_tileset",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mod_tileset",
@@ -5261,12 +5263,12 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 530,
+            "line": 534,
             "symbol": "DynamicDataLoader::initialize"
           }
         },
         {
-          "registration_order": 190,
+          "registration_order": 192,
           "type": "mod_tileset",
           "handler_kind": "callable",
           "handler_symbol": "load_ignored_type",
@@ -5276,7 +5278,7 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 533,
+            "line": 537,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5327,7 +5329,7 @@
       "type": "monster_adjustment",
       "registrations": [
         {
-          "registration_order": 91,
+          "registration_order": 93,
           "type": "monster_adjustment",
           "handler_kind": "direct_function",
           "handler_symbol": "load_monster_adjustment",
@@ -5335,7 +5337,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 401,
+            "line": 405,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5381,7 +5383,7 @@
       "type": "monster_attack",
       "registrations": [
         {
-          "registration_order": 161,
+          "registration_order": 163,
           "type": "monster_attack",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -5389,7 +5391,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 499,
+            "line": 503,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5440,7 +5442,7 @@
       "type": "monster_flag",
       "registrations": [
         {
-          "registration_order": 89,
+          "registration_order": 91,
           "type": "monster_flag",
           "handler_kind": "direct_function",
           "handler_symbol": "mon_flag::load_mon_flags",
@@ -5448,7 +5450,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 398,
+            "line": 402,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5499,7 +5501,7 @@
       "type": "monstergroup",
       "registrations": [
         {
-          "registration_order": 47,
+          "registration_order": 49,
           "type": "monstergroup",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterGroup",
@@ -5507,7 +5509,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 330,
+            "line": 334,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5558,7 +5560,7 @@
       "type": "mood_face",
       "registrations": [
         {
-          "registration_order": 37,
+          "registration_order": 39,
           "type": "mood_face",
           "handler_kind": "direct_function",
           "handler_symbol": "mood_face::load_mood_faces",
@@ -5566,7 +5568,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 320,
+            "line": 324,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5617,7 +5619,7 @@
       "type": "morale_type",
       "registrations": [
         {
-          "registration_order": 170,
+          "registration_order": 172,
           "type": "morale_type",
           "handler_kind": "direct_function",
           "handler_symbol": "morale_type_data::load_type",
@@ -5625,7 +5627,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 510,
+            "line": 514,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5684,7 +5686,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 306,
+            "line": 308,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5735,7 +5737,7 @@
       "type": "mutation",
       "registrations": [
         {
-          "registration_order": 43,
+          "registration_order": 45,
           "type": "mutation",
           "handler_kind": "direct_function",
           "handler_symbol": "mutation_branch::load_trait",
@@ -5743,7 +5745,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 326,
+            "line": 330,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5794,7 +5796,7 @@
       "type": "mutation_category",
       "registrations": [
         {
-          "registration_order": 41,
+          "registration_order": 43,
           "type": "mutation_category",
           "handler_kind": "direct_function",
           "handler_symbol": "mutation_category_trait::load",
@@ -5802,7 +5804,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 324,
+            "line": 328,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5853,7 +5855,7 @@
       "type": "mutation_type",
       "registrations": [
         {
-          "registration_order": 42,
+          "registration_order": 44,
           "type": "mutation_type",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mutation_type",
@@ -5861,7 +5863,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 325,
+            "line": 329,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5907,7 +5909,7 @@
       "type": "named_color",
       "registrations": [
         {
-          "registration_order": 77,
+          "registration_order": 79,
           "type": "named_color",
           "handler_kind": "direct_function",
           "handler_symbol": "RGBColor::load_named_color",
@@ -5915,7 +5917,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 373,
+            "line": 377,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5961,7 +5963,7 @@
       "type": "nested_category",
       "registrations": [
         {
-          "registration_order": 96,
+          "registration_order": 98,
           "type": "nested_category",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_nested_category",
@@ -5969,7 +5971,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 406,
+            "line": 410,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6020,7 +6022,7 @@
       "type": "npc",
       "registrations": [
         {
-          "registration_order": 147,
+          "registration_order": 149,
           "type": "npc",
           "handler_kind": "direct_function",
           "handler_symbol": "npc_template::load",
@@ -6028,7 +6030,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 480,
+            "line": 484,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6079,7 +6081,7 @@
       "type": "npc_class",
       "registrations": [
         {
-          "registration_order": 148,
+          "registration_order": 150,
           "type": "npc_class",
           "handler_kind": "direct_function",
           "handler_symbol": "npc_class::load_npc_class",
@@ -6087,7 +6089,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 481,
+            "line": 485,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6138,7 +6140,7 @@
       "type": "omt_placeholder",
       "registrations": [
         {
-          "registration_order": 122,
+          "registration_order": 124,
           "type": "omt_placeholder",
           "handler_kind": "direct_function",
           "handler_symbol": "map_data_placeholders::load",
@@ -6146,7 +6148,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 433,
+            "line": 437,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6200,7 +6202,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 285,
+            "line": 287,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6251,7 +6253,7 @@
       "type": "oter_id_migration",
       "registrations": [
         {
-          "registration_order": 106,
+          "registration_order": 108,
           "type": "oter_id_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap::load_oter_id_migration",
@@ -6259,7 +6261,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 417,
+            "line": 421,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6310,7 +6312,7 @@
       "type": "oter_vision",
       "registrations": [
         {
-          "registration_order": 109,
+          "registration_order": 111,
           "type": "oter_vision",
           "handler_kind": "direct_function",
           "handler_symbol": "oter_vision::load_oter_vision",
@@ -6318,7 +6320,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 420,
+            "line": 424,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6369,7 +6371,7 @@
       "type": "overlay_order",
       "registrations": [
         {
-          "registration_order": 156,
+          "registration_order": 158,
           "type": "overlay_order",
           "handler_kind": "direct_function",
           "handler_symbol": "load_overlay_ordering",
@@ -6377,7 +6379,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 492,
+            "line": 496,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6428,7 +6430,7 @@
       "type": "overmap_connection",
       "registrations": [
         {
-          "registration_order": 115,
+          "registration_order": 117,
           "type": "overmap_connection",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_connections::load",
@@ -6436,7 +6438,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 426,
+            "line": 430,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6487,7 +6489,7 @@
       "type": "overmap_land_use_code",
       "registrations": [
         {
-          "registration_order": 114,
+          "registration_order": 116,
           "type": "overmap_land_use_code",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_land_use_codes::load",
@@ -6495,7 +6497,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 425,
+            "line": 429,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6541,7 +6543,7 @@
       "type": "overmap_location",
       "registrations": [
         {
-          "registration_order": 116,
+          "registration_order": 118,
           "type": "overmap_location",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_locations::load",
@@ -6549,7 +6551,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 427,
+            "line": 431,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6600,7 +6602,7 @@
       "type": "overmap_special",
       "registrations": [
         {
-          "registration_order": 118,
+          "registration_order": 120,
           "type": "overmap_special",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_specials::load",
@@ -6608,7 +6610,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 429,
+            "line": 433,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6659,7 +6661,7 @@
       "type": "overmap_special_migration",
       "registrations": [
         {
-          "registration_order": 119,
+          "registration_order": 121,
           "type": "overmap_special_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_special_migration::load_migrations",
@@ -6667,7 +6669,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 430,
+            "line": 434,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6718,7 +6720,7 @@
       "type": "overmap_terrain",
       "registrations": [
         {
-          "registration_order": 108,
+          "registration_order": 110,
           "type": "overmap_terrain",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_terrains::load",
@@ -6726,7 +6728,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 419,
+            "line": 423,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6777,7 +6779,7 @@
       "type": "palette",
       "registrations": [
         {
-          "registration_order": 162,
+          "registration_order": 164,
           "type": "palette",
           "handler_kind": "callable",
           "handler_symbol": "mapgen_palette::load",
@@ -6785,7 +6787,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 502,
+            "line": 506,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6833,10 +6835,59 @@
       "contract_status": "partial"
     },
     {
+      "type": "pet_slot",
+      "registrations": [
+        {
+          "registration_order": 36,
+          "type": "pet_slot",
+          "handler_kind": "direct_function",
+          "handler_symbol": "load_pet_slots",
+          "handler_expression": "&load_pet_slots",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 321,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 0,
+        "examples": [],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
       "type": "playlist",
       "registrations": [
         {
-          "registration_order": 154,
+          "registration_order": 156,
           "type": "playlist",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_playlist",
@@ -6844,7 +6895,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 489,
+            "line": 493,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6898,7 +6949,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 291,
+            "line": 293,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6949,7 +7000,7 @@
       "type": "practice",
       "registrations": [
         {
-          "registration_order": 95,
+          "registration_order": 97,
           "type": "practice",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_practice",
@@ -6957,7 +7008,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 405,
+            "line": 409,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7016,7 +7067,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 312,
+            "line": 314,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7075,7 +7126,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 313,
+            "line": 315,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7129,7 +7180,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 314,
+            "line": 316,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7188,7 +7239,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 315,
+            "line": 317,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7247,7 +7298,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 316,
+            "line": 318,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7306,7 +7357,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 317,
+            "line": 319,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7365,7 +7416,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 318,
+            "line": 320,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7416,7 +7467,7 @@
       "type": "recipe",
       "registrations": [
         {
-          "registration_order": 93,
+          "registration_order": 95,
           "type": "recipe",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_recipe",
@@ -7424,7 +7475,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 403,
+            "line": 407,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7475,7 +7526,7 @@
       "type": "recipe_category",
       "registrations": [
         {
-          "registration_order": 92,
+          "registration_order": 94,
           "type": "recipe_category",
           "handler_kind": "direct_function",
           "handler_symbol": "load_recipe_category",
@@ -7483,7 +7534,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 402,
+            "line": 406,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7529,7 +7580,7 @@
       "type": "recipe_group",
       "registrations": [
         {
-          "registration_order": 97,
+          "registration_order": 99,
           "type": "recipe_group",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_group::load",
@@ -7537,7 +7588,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 407,
+            "line": 411,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7588,7 +7639,7 @@
       "type": "region_settings",
       "registrations": [
         {
-          "registration_order": 138,
+          "registration_order": 140,
           "type": "region_settings",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings::load_region_settings",
@@ -7596,7 +7647,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 459,
+            "line": 463,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7647,7 +7698,7 @@
       "type": "region_settings_city",
       "registrations": [
         {
-          "registration_order": 130,
+          "registration_order": 132,
           "type": "region_settings_city",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_city::load_region_settings_city",
@@ -7655,7 +7706,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 443,
+            "line": 447,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7706,7 +7757,7 @@
       "type": "region_settings_forest",
       "registrations": [
         {
-          "registration_order": 127,
+          "registration_order": 129,
           "type": "region_settings_forest",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_forest::load_region_settings_forest",
@@ -7714,7 +7765,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 439,
+            "line": 443,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7765,7 +7816,7 @@
       "type": "region_settings_forest_mapgen",
       "registrations": [
         {
-          "registration_order": 133,
+          "registration_order": 135,
           "type": "region_settings_forest_mapgen",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_forest_mapgen::load_region_settings_forest_mapgen",
@@ -7773,7 +7824,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 449,
+            "line": 453,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7824,7 +7875,7 @@
       "type": "region_settings_forest_trail",
       "registrations": [
         {
-          "registration_order": 129,
+          "registration_order": 131,
           "type": "region_settings_forest_trail",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_forest_trail::load_region_settings_forest_trail",
@@ -7832,7 +7883,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 441,
+            "line": 445,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7883,7 +7934,7 @@
       "type": "region_settings_highway",
       "registrations": [
         {
-          "registration_order": 128,
+          "registration_order": 130,
           "type": "region_settings_highway",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_highway::load_region_settings_highway",
@@ -7891,7 +7942,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 440,
+            "line": 444,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7942,7 +7993,7 @@
       "type": "region_settings_lake",
       "registrations": [
         {
-          "registration_order": 124,
+          "registration_order": 126,
           "type": "region_settings_lake",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_lake::load_region_settings_lake",
@@ -7950,7 +8001,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 436,
+            "line": 440,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8001,7 +8052,7 @@
       "type": "region_settings_map_extras",
       "registrations": [
         {
-          "registration_order": 134,
+          "registration_order": 136,
           "type": "region_settings_map_extras",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_map_extras::load_region_settings_map_extras",
@@ -8009,7 +8060,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 451,
+            "line": 455,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8060,7 +8111,7 @@
       "type": "region_settings_ocean",
       "registrations": [
         {
-          "registration_order": 125,
+          "registration_order": 127,
           "type": "region_settings_ocean",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_ocean::load_region_settings_ocean",
@@ -8068,7 +8119,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 437,
+            "line": 441,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8119,7 +8170,7 @@
       "type": "region_settings_ravine",
       "registrations": [
         {
-          "registration_order": 126,
+          "registration_order": 128,
           "type": "region_settings_ravine",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_ravine::load_region_settings_ravine",
@@ -8127,7 +8178,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 438,
+            "line": 442,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8178,7 +8229,7 @@
       "type": "region_settings_river",
       "registrations": [
         {
-          "registration_order": 123,
+          "registration_order": 125,
           "type": "region_settings_river",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_river::load_region_settings_river",
@@ -8186,7 +8237,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 435,
+            "line": 439,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8237,7 +8288,7 @@
       "type": "region_settings_terrain_furniture",
       "registrations": [
         {
-          "registration_order": 131,
+          "registration_order": 133,
           "type": "region_settings_terrain_furniture",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_terrain_furniture::load_region_settings_terrain_furniture",
@@ -8245,7 +8296,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 445,
+            "line": 449,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8296,7 +8347,7 @@
       "type": "region_terrain_furniture",
       "registrations": [
         {
-          "registration_order": 132,
+          "registration_order": 134,
           "type": "region_terrain_furniture",
           "handler_kind": "direct_function",
           "handler_symbol": "region_terrain_furniture::load_region_terrain_furniture",
@@ -8304,7 +8355,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 447,
+            "line": 451,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8363,7 +8414,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 294,
+            "line": 296,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8414,7 +8465,7 @@
       "type": "requirement",
       "registrations": [
         {
-          "registration_order": 78,
+          "registration_order": 80,
           "type": "requirement",
           "handler_kind": "lambda",
           "handler_symbol": "requirement_data::load_requirement",
@@ -8422,7 +8473,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 375,
+            "line": 379,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8470,10 +8521,59 @@
       "contract_status": "partial"
     },
     {
+      "type": "riding_config",
+      "registrations": [
+        {
+          "registration_order": 37,
+          "type": "riding_config",
+          "handler_kind": "direct_function",
+          "handler_symbol": "load_riding_config",
+          "handler_expression": "&load_riding_config",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 322,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 0,
+        "examples": [],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
       "type": "rotatable_symbol",
       "registrations": [
         {
-          "registration_order": 163,
+          "registration_order": 165,
           "type": "rotatable_symbol",
           "handler_kind": "direct_function",
           "handler_symbol": "rotatable_symbols::load",
@@ -8481,7 +8581,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 503,
+            "line": 507,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8527,7 +8627,7 @@
       "type": "scenario",
       "registrations": [
         {
-          "registration_order": 53,
+          "registration_order": 55,
           "type": "scenario",
           "handler_kind": "direct_function",
           "handler_symbol": "scenario::load_scenario",
@@ -8535,7 +8635,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 336,
+            "line": 340,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8586,7 +8686,7 @@
       "type": "scent_type",
       "registrations": [
         {
-          "registration_order": 60,
+          "registration_order": 62,
           "type": "scent_type",
           "handler_kind": "direct_function",
           "handler_symbol": "scent_type::load_scent_type",
@@ -8594,7 +8694,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 343,
+            "line": 347,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8645,7 +8745,7 @@
       "type": "score",
       "registrations": [
         {
-          "registration_order": 178,
+          "registration_order": 180,
           "type": "score",
           "handler_kind": "direct_function",
           "handler_symbol": "score::load_score",
@@ -8653,7 +8753,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 518,
+            "line": 522,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8704,7 +8804,7 @@
       "type": "shopkeeper_blacklist",
       "registrations": [
         {
-          "registration_order": 55,
+          "registration_order": 57,
           "type": "shopkeeper_blacklist",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_blacklist::load_blacklist",
@@ -8712,7 +8812,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 338,
+            "line": 342,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8763,7 +8863,7 @@
       "type": "shopkeeper_consumption_rates",
       "registrations": [
         {
-          "registration_order": 57,
+          "registration_order": 59,
           "type": "shopkeeper_consumption_rates",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_cons_rates::load_rate",
@@ -8771,7 +8871,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 340,
+            "line": 344,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8822,7 +8922,7 @@
       "type": "shopkeeper_whitelist",
       "registrations": [
         {
-          "registration_order": 56,
+          "registration_order": 58,
           "type": "shopkeeper_whitelist",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_whitelist::load_whitelist",
@@ -8830,7 +8930,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 339,
+            "line": 343,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8881,7 +8981,7 @@
       "type": "skill",
       "registrations": [
         {
-          "registration_order": 38,
+          "registration_order": 40,
           "type": "skill",
           "handler_kind": "direct_function",
           "handler_symbol": "Skill::load_skill",
@@ -8889,7 +8989,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 321,
+            "line": 325,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8940,7 +9040,7 @@
       "type": "skill_display_type",
       "registrations": [
         {
-          "registration_order": 39,
+          "registration_order": 41,
           "type": "skill_display_type",
           "handler_kind": "direct_function",
           "handler_symbol": "SkillDisplayType::load",
@@ -8948,7 +9048,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 322,
+            "line": 326,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8994,7 +9094,7 @@
       "type": "snippet",
       "registrations": [
         {
-          "registration_order": 64,
+          "registration_order": 66,
           "type": "snippet",
           "handler_kind": "lambda",
           "handler_symbol": "load_snippet",
@@ -9002,7 +9102,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 350,
+            "line": 354,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9053,7 +9153,7 @@
       "type": "sound_effect",
       "registrations": [
         {
-          "registration_order": 152,
+          "registration_order": 154,
           "type": "sound_effect",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_sound_effects",
@@ -9061,7 +9161,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 487,
+            "line": 491,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9112,7 +9212,7 @@
       "type": "sound_effect_preload",
       "registrations": [
         {
-          "registration_order": 153,
+          "registration_order": 155,
           "type": "sound_effect_preload",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_sound_effect_preload",
@@ -9120,7 +9220,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 488,
+            "line": 492,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9161,7 +9261,7 @@
       "type": "speech",
       "registrations": [
         {
-          "registration_order": 50,
+          "registration_order": 52,
           "type": "speech",
           "handler_kind": "direct_function",
           "handler_symbol": "load_speech",
@@ -9169,7 +9269,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 333,
+            "line": 337,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9220,7 +9320,7 @@
       "type": "speed_description",
       "registrations": [
         {
-          "registration_order": 36,
+          "registration_order": 38,
           "type": "speed_description",
           "handler_kind": "direct_function",
           "handler_symbol": "speed_description::load_speed_descriptions",
@@ -9228,7 +9328,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 319,
+            "line": 323,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9279,7 +9379,7 @@
       "type": "spell_migration",
       "registrations": [
         {
-          "registration_order": 172,
+          "registration_order": 174,
           "type": "spell_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "spell_migration::load",
@@ -9287,7 +9387,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 512,
+            "line": 516,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9333,7 +9433,7 @@
       "type": "start_location",
       "registrations": [
         {
-          "registration_order": 52,
+          "registration_order": 54,
           "type": "start_location",
           "handler_kind": "direct_function",
           "handler_symbol": "start_locations::load",
@@ -9341,7 +9441,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 335,
+            "line": 339,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9392,7 +9492,7 @@
       "type": "sub_body_part",
       "registrations": [
         {
-          "registration_order": 167,
+          "registration_order": 169,
           "type": "sub_body_part",
           "handler_kind": "direct_function",
           "handler_symbol": "sub_body_part_type::load_bp",
@@ -9400,7 +9500,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 507,
+            "line": 511,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9451,7 +9551,7 @@
       "type": "talk_topic",
       "registrations": [
         {
-          "registration_order": 149,
+          "registration_order": 151,
           "type": "talk_topic",
           "handler_kind": "direct_function",
           "handler_symbol": "load_talk_topic",
@@ -9459,7 +9559,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 482,
+            "line": 486,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9510,7 +9610,7 @@
       "type": "technique",
       "registrations": [
         {
-          "registration_order": 99,
+          "registration_order": 101,
           "type": "technique",
           "handler_kind": "direct_function",
           "handler_symbol": "load_technique",
@@ -9518,7 +9618,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 410,
+            "line": 414,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9569,7 +9669,7 @@
       "type": "temperature_removal_blacklist",
       "registrations": [
         {
-          "registration_order": 85,
+          "registration_order": 87,
           "type": "temperature_removal_blacklist",
           "handler_kind": "callable",
           "handler_symbol": "load_temperature_removal_blacklist",
@@ -9577,7 +9677,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 389,
+            "line": 393,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9628,7 +9728,7 @@
       "type": "ter_furn_migration",
       "registrations": [
         {
-          "registration_order": 46,
+          "registration_order": 48,
           "type": "ter_furn_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "ter_furn_migrations::load",
@@ -9636,7 +9736,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 329,
+            "line": 333,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9687,7 +9787,7 @@
       "type": "ter_furn_transform",
       "registrations": [
         {
-          "registration_order": 175,
+          "registration_order": 177,
           "type": "ter_furn_transform",
           "handler_kind": "direct_function",
           "handler_symbol": "ter_furn_transform::load_transform",
@@ -9695,7 +9795,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 515,
+            "line": 519,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9746,7 +9846,7 @@
       "type": "terrain",
       "registrations": [
         {
-          "registration_order": 45,
+          "registration_order": 47,
           "type": "terrain",
           "handler_kind": "direct_function",
           "handler_symbol": "load_terrain",
@@ -9754,7 +9854,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 328,
+            "line": 332,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9805,7 +9905,7 @@
       "type": "test_data",
       "registrations": [
         {
-          "registration_order": 86,
+          "registration_order": 88,
           "type": "test_data",
           "handler_kind": "direct_function",
           "handler_symbol": "test_data::load",
@@ -9813,7 +9913,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 390,
+            "line": 394,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9859,7 +9959,7 @@
       "type": "tool_quality",
       "registrations": [
         {
-          "registration_order": 98,
+          "registration_order": 100,
           "type": "tool_quality",
           "handler_kind": "direct_function",
           "handler_symbol": "quality::load_static",
@@ -9867,7 +9967,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 409,
+            "line": 413,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9918,7 +10018,7 @@
       "type": "trait_group",
       "registrations": [
         {
-          "registration_order": 66,
+          "registration_order": 68,
           "type": "trait_group",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_group",
@@ -9926,7 +10026,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 356,
+            "line": 360,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9972,7 +10072,7 @@
       "type": "trap",
       "registrations": [
         {
-          "registration_order": 79,
+          "registration_order": 81,
           "type": "trap",
           "handler_kind": "direct_function",
           "handler_symbol": "trap::load_trap",
@@ -9980,7 +10080,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 378,
+            "line": 382,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10031,7 +10131,7 @@
       "type": "trap_migration",
       "registrations": [
         {
-          "registration_order": 80,
+          "registration_order": 82,
           "type": "trap_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "trap_migrations::load",
@@ -10039,7 +10139,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 379,
+            "line": 383,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10090,7 +10190,7 @@
       "type": "uncraft",
       "registrations": [
         {
-          "registration_order": 94,
+          "registration_order": 96,
           "type": "uncraft",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_uncraft",
@@ -10098,7 +10198,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 404,
+            "line": 408,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10157,7 +10257,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 288,
+            "line": 290,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10208,7 +10308,7 @@
       "type": "vehicle",
       "registrations": [
         {
-          "registration_order": 72,
+          "registration_order": 74,
           "type": "vehicle",
           "handler_kind": "direct_function",
           "handler_symbol": "vehicles::load_prototype",
@@ -10216,7 +10316,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 367,
+            "line": 371,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10267,7 +10367,7 @@
       "type": "vehicle_color_palette",
       "registrations": [
         {
-          "registration_order": 76,
+          "registration_order": 78,
           "type": "vehicle_color_palette",
           "handler_kind": "direct_function",
           "handler_symbol": "VehiclePalette::load",
@@ -10275,7 +10375,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 372,
+            "line": 376,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10321,7 +10421,7 @@
       "type": "vehicle_group",
       "registrations": [
         {
-          "registration_order": 73,
+          "registration_order": 75,
           "type": "vehicle_group",
           "handler_kind": "direct_function",
           "handler_symbol": "VehicleGroup::load",
@@ -10329,7 +10429,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 368,
+            "line": 372,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10380,7 +10480,7 @@
       "type": "vehicle_part",
       "registrations": [
         {
-          "registration_order": 68,
+          "registration_order": 70,
           "type": "vehicle_part",
           "handler_kind": "direct_function",
           "handler_symbol": "vehicles::parts::load",
@@ -10388,7 +10488,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 363,
+            "line": 367,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10439,7 +10539,7 @@
       "type": "vehicle_part_category",
       "registrations": [
         {
-          "registration_order": 69,
+          "registration_order": 71,
           "type": "vehicle_part_category",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_category::load_all",
@@ -10447,7 +10547,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 364,
+            "line": 368,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10493,7 +10593,7 @@
       "type": "vehicle_part_location",
       "registrations": [
         {
-          "registration_order": 70,
+          "registration_order": 72,
           "type": "vehicle_part_location",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_location::load_vehicle_part_locations",
@@ -10501,7 +10601,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 365,
+            "line": 369,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10552,7 +10652,7 @@
       "type": "vehicle_part_migration",
       "registrations": [
         {
-          "registration_order": 71,
+          "registration_order": 73,
           "type": "vehicle_part_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_migration::load",
@@ -10560,7 +10660,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 366,
+            "line": 370,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10611,7 +10711,7 @@
       "type": "vehicle_placement",
       "registrations": [
         {
-          "registration_order": 74,
+          "registration_order": 76,
           "type": "vehicle_placement",
           "handler_kind": "direct_function",
           "handler_symbol": "VehiclePlacement::load",
@@ -10619,7 +10719,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 369,
+            "line": 373,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10670,7 +10770,7 @@
       "type": "vehicle_spawn",
       "registrations": [
         {
-          "registration_order": 75,
+          "registration_order": 77,
           "type": "vehicle_spawn",
           "handler_kind": "direct_function",
           "handler_symbol": "VehicleSpawn::load",
@@ -10678,7 +10778,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 370,
+            "line": 374,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10737,7 +10837,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 307,
+            "line": 309,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10788,7 +10888,7 @@
       "type": "weakpoint_set",
       "registrations": [
         {
-          "registration_order": 182,
+          "registration_order": 184,
           "type": "weakpoint_set",
           "handler_kind": "direct_function",
           "handler_symbol": "weakpoints::load_weakpoint_sets",
@@ -10796,7 +10896,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 522,
+            "line": 526,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10847,7 +10947,7 @@
       "type": "weapon_category",
       "registrations": [
         {
-          "registration_order": 100,
+          "registration_order": 102,
           "type": "weapon_category",
           "handler_kind": "direct_function",
           "handler_symbol": "weapon_category::load_weapon_categories",
@@ -10855,7 +10955,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 411,
+            "line": 415,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10914,7 +11014,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 299,
+            "line": 301,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10973,7 +11073,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 298,
+            "line": 300,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11024,7 +11124,7 @@
       "type": "widget",
       "registrations": [
         {
-          "registration_order": 181,
+          "registration_order": 183,
           "type": "widget",
           "handler_kind": "direct_function",
           "handler_symbol": "widget::load_widget",
@@ -11032,7 +11132,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 521,
+            "line": 525,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11078,7 +11178,7 @@
       "type": "wound",
       "registrations": [
         {
-          "registration_order": 185,
+          "registration_order": 187,
           "type": "wound",
           "handler_kind": "direct_function",
           "handler_symbol": "wound_type::load_wounds",
@@ -11086,7 +11186,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 525,
+            "line": 529,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11132,7 +11232,7 @@
       "type": "wound_fix",
       "registrations": [
         {
-          "registration_order": 186,
+          "registration_order": 188,
           "type": "wound_fix",
           "handler_kind": "direct_function",
           "handler_symbol": "wound_fix::load_wound_fixes",
@@ -11140,7 +11240,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 526,
+            "line": 530,
             "symbol": "DynamicDataLoader::initialize"
           }
         }

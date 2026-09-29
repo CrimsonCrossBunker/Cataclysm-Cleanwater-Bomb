@@ -2057,6 +2057,10 @@
     "type": "json_flag"
   },
   {
+    "id": "SADDLE_BAG",
+    "type": "json_flag"
+  },
+  {
     "id": "SAFECRACK",
     "type": "json_flag"
   },
@@ -2090,6 +2094,10 @@
   },
   {
     "id": "SPLINT",
+    "type": "json_flag"
+  },
+  {
+    "id": "STIRRUP",
     "type": "json_flag"
   },
   {

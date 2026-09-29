@@ -65,7 +65,7 @@ INVENTORIES = {
     ),
 }
 INVENTORY_PATHS = {
-    inventory: str(path.relative_to(ROOT))
+    inventory: path.relative_to(ROOT).as_posix()
     for inventory, (path, _selector) in INVENTORIES.items()
 }
 
@@ -4713,7 +4713,7 @@ def build_ledger() -> dict:
         sources.append(
             {
                 "id": inventory,
-                "path": str(path.relative_to(ROOT)),
+                "path": path.relative_to(ROOT).as_posix(),
                 "selector": selector_field,
                 "source_fingerprint": document["source"][
                     "source_fingerprint"
