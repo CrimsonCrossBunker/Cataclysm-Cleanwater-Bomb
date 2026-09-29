@@ -58,7 +58,8 @@ TEST_CASE( "lua_platform_persistent_coordinates_preserve_integer_bounds",
 TEST_CASE( "lua_platform_persistent_coordinates_reject_integer_overflow",
            "[lua][platform][semantic][state]" )
 {
-    const std::string component = GENERATE( "2147483648", "-2147483649" );
+    const std::string component = GENERATE( "2147483648", "-2147483649",
+                                            "18446744073709551615" );
     const std::string input = R"({"type":"tripoint_abs_ms","value":[)" + component + ",0,0]}";
     CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
                       json_loader::from_string( input ).get_object() ) );
