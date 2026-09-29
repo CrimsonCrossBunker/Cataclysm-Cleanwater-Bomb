@@ -19356,6 +19356,30 @@ assert(not available())
         self.assertEqual(len(effect_todos), 2)
         self.assertTrue(all(todo.category == "manual_rewrite" for todo in effect_todos))
 
+    def test_plain_json_talk_texts_keep_deferred_translation_markers(self) -> None:
+        # Native dynamic_line_t and talk_response read these JSON strings as
+        # translations; Platform-authored plain Lua strings are literal.
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "talk_topic", "id": "localized_direct_topic",
+                "dynamic_line": "Hello there.",
+                "responses": [{"text": "Goodbye.", "topic": "TALK_DONE"}],
+                "repeat_responses": [{
+                    "for_item": "rock",
+                    "response": {"text": "I have a rock.", "topic": "TALK_DONE"},
+                }],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn("dynamic_line_translation = {  }", rendered)
+        self.assertEqual(rendered.count("text_translation = {  }"), 2)
+        self.assertIn('text = "Goodbye."', rendered)
+        self.assertIn('text = "I have a rock."', rendered)
+        self.assertFalse(result.todos)
+
     def test_signal_hordes_lowers_only_proven_context_and_bounded_power(self) -> None:
         for case_index, (power, expected) in enumerate(((12.75, 12), (-0.75, 0))):
             source = migrate_lua_first.SourceObject(
@@ -24120,7 +24144,16 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertIn("services.tileset.register", main)
             self.assertIn('file = "sample.png"', main)
             self.assertIn("ccb.dialogue.register_topic", main)
-            self.assertIn('dynamic_line = "Hello world"', main)
+            self.assertIn(
+                'dynamic_line = "[Lua-first dialogue line requires manual conversion]"',
+                main,
+            )
+            self.assertTrue(any(
+                "dynamic_line concatenate needs per-piece native translation" in todo.message
+                for todo in result.todos
+            ))
+            self.assertNotIn('dynamic_line = "Hello world"', main)
+            self.assertIn("text_translation = {  }", main)
             self.assertIn('topic = "TALK_DONE"', main)
             self.assertNotIn("speaker_effects = { function(context)", main)
             self.assertNotIn("on_select = function(context)", main)
@@ -24131,7 +24164,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("has no native Platform registrar", result.files[Path("MIGRATION_REPORT.md")])
             self.assertTrue(result.todos)
             self.assertIn(
-                "response effect needs a native callback",
+                "response effect native u_bulk_trade_accept selects by dialogue cur_item type",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
 

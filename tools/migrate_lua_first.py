@@ -6496,10 +6496,8 @@ def render_mod_tileset(source: SourceObject, result: MigrationResult) -> str | N
 def _talk_text(value: Any) -> str | None:
     if isinstance(value, str):
         return value
-    if isinstance(value, dict) and isinstance(value.get("concatenate"), list):
-        pieces = value["concatenate"]
-        if all(isinstance(piece, str) for piece in pieces):
-            return "".join(pieces)
+    # Native dynamic_line_t translates each concatenate entry separately.
+    # Joining raw pieces changes both lookup keys and language-switch behavior.
     return None
 
 
@@ -7292,9 +7290,16 @@ def render_talk_topic(
         result.add_todo("manual_rewrite", f"{source.location}: talk topic needs a stable id")
         return None
     todo_count = len(result.todos)
-    dynamic_line = _talk_text(value.get("dynamic_line"))
+    raw_dynamic_line = value.get("dynamic_line")
+    dynamic_line = _talk_text(raw_dynamic_line)
     if dynamic_line is None:
-        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} dynamic_line needs a static string")
+        reason = (
+            "dynamic_line concatenate needs per-piece native translation "
+            "and source-order Lua conversion"
+            if isinstance(raw_dynamic_line, dict) and "concatenate" in raw_dynamic_line
+            else "dynamic_line needs a static string"
+        )
+        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} {reason}")
         dynamic_line = "[Lua-first dialogue line requires manual conversion]"
     responses: list[dict[str, Any]] = []
     raw_responses = value.get("responses", [])
@@ -7328,7 +7333,12 @@ def render_talk_topic(
         if not isinstance(entry.get("text"), str):
             result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
             continue
-        response: dict[str, Any] = {"text": entry["text"]}
+        response: dict[str, Any] = {
+            "text": entry["text"],
+            # JSON talk_response::talk_response reads this as a translation;
+            # authored Lua strings remain literal unless marked explicitly.
+            "text_translation": {},
+        }
         converted_condition = None
         converted_opinion = False
         if isinstance(entry.get("topic"), str) and entry["topic"]:
@@ -7409,9 +7419,6 @@ def render_talk_topic(
                 if action_callback is not None:
                     response["success_opinion"] = entry["opinion"]
                     response["success_consequence"] = "helpless"
-                    # Native JSON text is a deferred translation, whereas
-                    # hand-written Platform strings remain literal by default.
-                    response["text_translation"] = {}
                     converted_opinion = True
             if action_callback is None:
                 action_callback = render_talk_topic_npc_lose_morale_action(
@@ -7480,6 +7487,8 @@ def render_talk_topic(
         "dynamic_line": dynamic_line,
         "responses": responses,
     }
+    if isinstance(raw_dynamic_line, str):
+        descriptor["dynamic_line_translation"] = {}
     if isinstance(value.get("insert_before_standard_exits"), bool):
         descriptor["insert_before_standard_exits"] = value["insert_before_standard_exits"]
     if isinstance(value.get("replace_built_in_responses"), bool):
@@ -7495,6 +7504,7 @@ def render_talk_topic(
                         "item": entry["for_item"],
                         "response": {
                             "text": response["text"],
+                            "text_translation": {},
                             **({"topic": response["topic"]} if isinstance(response.get("topic"), str) else {}),
                         },
                     })
