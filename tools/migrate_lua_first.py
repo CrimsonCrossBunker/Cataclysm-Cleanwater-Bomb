@@ -3530,10 +3530,11 @@ def _legacy_trade_action_todo(key: str) -> str | None:
         ),
         "u_sell_item": (
             "native u_sell_item consumes alpha inventory by item type/count or "
-            "charges, assigns each fragment to beta's faction, and requires a "
-            "proven live alpha/beta Character call pair; it also applies cost and "
-            "delegates nested EOCs. Unbound phase callbacks, dynamic/fractional "
-            "counts, nonzero cost, and nested EOCs remain TODO"
+            "charges, assigns each fragment to beta's faction, then applies cost "
+            "and ordered EOCs. Lua lowering requires a source-proven participant "
+            "pair and action phase plus supported static arguments/conditions; "
+            "dynamic or fractional counts, nonzero cost, nested EOCs, unbound "
+            "phases, and unsupported response conditions remain TODO"
         ),
         "u_bulk_donate": (
             "native u_bulk_donate selects by dialogue cur_item type, visits alpha "
@@ -7796,6 +7797,13 @@ def render_talk_topic(
                 action_callback = render_talk_topic_item_offer_effect(entry)
             if action_callback is None:
                 action_callback = render_talk_topic_pet_purchase_action(entry)
+            if action_callback is None:
+                action_callback = render_dialogue_sell_item_action_effect(
+                    entry, converted_condition,
+                )
+                if action_callback is not None and "opinion" in entry:
+                    response["success_opinion"] = entry["opinion"]
+                    converted_opinion = True
             if action_callback is not None:
                 response["on_action"] = action_callback
             else:
@@ -21786,6 +21794,54 @@ def render_dialogue_spend_cash_action_effect(effect: Any) -> LuaRaw | None:
         "    local buyer = services.characters.avatar()",
         "    if buyer == nil or not buyer:is_valid() then return end",
         f"    service_value(services.trade.pay(seller, buyer, {amount}))",
+        "end",
+    ]))
+
+
+def render_dialogue_sell_item_action_effect(
+    response: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Transfer one bounded static item in the native direct-TALK action phase.
+
+    The typed transfer service preserves charge-first selection, beta faction
+    ownership, recipient insertion, and the native popup text. Keep EOC vectors,
+    nonzero debt, dynamic/fractional counts, unconverted conditions, and other
+    response fields for manual conversion because they need additional native
+    phase or actor context.
+    """
+    if not isinstance(response, dict):
+        return None
+    allowed_fields = {"text", "topic", "condition", "effect"}
+    opinion = response.get("opinion")
+    if "opinion" in response:
+        allowed_fields.add("opinion")
+        if (
+            not isinstance(opinion, dict) or not opinion or
+            set(opinion) - {"trust", "fear", "value", "anger", "owed", "sold"} or
+            any(type(value) is not int or not NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+                for value in opinion.values())
+        ):
+            return None
+    if (
+        set(response) - allowed_fields or
+        not isinstance(response.get("text"), str) or
+        "condition" in response and converted_condition is None
+    ):
+        return None
+    action = render_static_sell_item_effect(
+        response.get("effect"), "buyer", "seller",
+    )
+    if action is None:
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local seller = context:interlocutor()",
+        '    if seller == nil or seller.kind ~= "creature" or seller.subtype ~= "npc" then return end',
+        "    if not seller:is_valid() then return end",
+        "    local buyer = services.characters.avatar()",
+        "    if buyer == nil or not buyer:is_valid() then return end",
+        *action,
         "end",
     ]))
 

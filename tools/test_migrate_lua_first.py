@@ -312,6 +312,86 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
         )
 
+    def test_real_direct_talk_sell_item_uses_native_action_phase(self) -> None:
+        source_path = Path("data/json/npcs/island_prison/prisoners.json")
+        topics = json.loads(
+            (REPOSITORY_ROOT / source_path).read_text(encoding="utf-8")
+        )
+        topic = next(
+            entry for entry in topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_PRISONER_LEADER_SHOW_MILITARY_ID"
+        )
+        response = next(
+            entry for entry in topic["responses"]
+            if isinstance(entry.get("effect"), dict) and
+            "u_sell_item" in entry["effect"]
+        )
+        self.assertEqual(response["effect"], {"u_sell_item": "id_military"})
+
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, topic), result,
+        )
+        self.assertIsNotNone(rendered)
+        self.assertEqual(
+            (rendered or "").count("services.inventory.transfer_by_type("), 1
+        )
+        self.assertIn("on_action = function(context, trial_success)", rendered or "")
+        self.assertIn("local seller = context:interlocutor()", rendered or "")
+        self.assertIn("services.characters.avatar()", rendered or "")
+        self.assertEqual(
+            (rendered or "").count("ccb.presentation.notice(transfer.notice)"), 1
+        )
+        self.assertNotIn("on_select =", rendered or "")
+        self.assertIn('topic = "TALK_DONE"', rendered or "")
+        self.assertFalse(any("u_sell_item" in todo.message for todo in result.todos))
+
+        # This real response has a condition the direct-TALK condition
+        # renderer does not yet support, so it must stay a TODO.
+        gunsmith_path = Path(
+            "data/json/npcs/isolated_road/isolated_road_jay_dialogue.json"
+        )
+        gunsmith_topics = json.loads(
+            (REPOSITORY_ROOT / gunsmith_path).read_text(encoding="utf-8")
+        )
+        gunsmith = next(
+            entry for entry in gunsmith_topics
+            if entry.get("type") == "talk_topic" and
+            entry.get("id") == "TALK_GUNSMITH_SERVICES"
+        )
+        gunsmith_result = migrate_lua_first.MigrationResult()
+        gunsmith_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(gunsmith_path, 0, gunsmith),
+            gunsmith_result,
+        )
+        self.assertNotIn("services.inventory.transfer_by_type(", gunsmith_lua or "")
+        self.assertTrue(any(
+            "unsupported response conditions remain TODO" in todo.message
+            for todo in gunsmith_result.todos
+        ))
+
+        # Native talk_effect_t::apply runs its effect vector before opinion
+        # and returns the topic only after hostility handling. Lua's response
+        # contract applies success_opinion after this on_action callback.
+        with_opinion = dict(topic)
+        with_opinion["responses"] = [{
+            "text": "Give the item.",
+            "topic": "TALK_DONE",
+            "effect": {"u_sell_item": "id_military"},
+            "opinion": {"trust": 2, "value": 1},
+        }]
+        opinion_result = migrate_lua_first.MigrationResult()
+        opinion_lua = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, with_opinion),
+            opinion_result,
+        )
+        self.assertIn("on_action = function(context, trial_success)", opinion_lua or "")
+        self.assertIn(
+            "success_opinion = { trust = 2, value = 1 }", opinion_lua or ""
+        )
+        self.assertFalse(any("u_sell_item" in todo.message for todo in opinion_result.todos))
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_queries_preserve_short_circuit_and_only_guard_id_errors(self) -> None:
         any_effect = migrate_lua_first.render_eoc_condition_expression(
