@@ -176,7 +176,6 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
     const sol::protected_function_result installed = lua.safe_script( R"(
 local progression = ccb.services.progression
 local random = ccb.services.random
-local actor = make_actor_handle()
 local function typed_ids(kind, values)
     local result = {}
     for index, value in ipairs(values) do
@@ -184,10 +183,12 @@ local function typed_ids(kind, values)
     end
     return result
 end
+ccb.runtime.handler("check_progression", function()
+local actor = make_actor_handle()
 local function grant(kind, values)
     local result = progression.grant_random_missing(actor, kind, typed_ids(kind, values))
     assert(result.ok, result.error and result.error.message or "progression grant failed")
-    return result.value
+    return result
 end
 local too_many_ids = {}
 for index = 1, 65 do
@@ -214,6 +215,8 @@ seed_native_rng(native_seed)
 book_recipe_result = grant("recipe", { "brew_mead" })
 book_recipe_following_draw = random.native_int(-100, 100)
 done = true
+end)
+ccb.runtime.on("world_ready", "check_progression")
 )" );
     REQUIRE( installed.valid() );
     runtime_world_ready( true );
