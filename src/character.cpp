@@ -3750,15 +3750,18 @@ bool Character::is_immune_field( const field_type_id &fid ) const
         return has_flag( json_flag_HEATSINK ) || is_wearing( itype_rm13_armor_on );
     }
     if( ft.has_acid ) {
-        return !is_on_ground() && get_env_resist( body_part_foot_l ) >= 15 &&
-               get_env_resist( body_part_foot_r ) >= 15 &&
-               get_env_resist( body_part_leg_l ) >= 15 &&
-               get_env_resist( body_part_leg_r ) >= 15 &&
-               // FIXME: Hardcoded damage type
-               get_armor_type( damage_acid, body_part_foot_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_foot_r ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_r ) >= 5;
+        if( is_on_ground() ) {
+            return false;
+        }
+        // Use the same contact parts as map::creature_in_field, including
+        // hands for quadrupeds.  Standing humans do not immerse their legs.
+        const std::vector<bodypart_id> contact_parts = get_ground_contact_bodyparts();
+        return std::all_of( contact_parts.begin(), contact_parts.end(),
+        [&]( const bodypart_id & bp ) {
+            // Preserve the conservative corrosion resistance requirement:
+            // low direct damage alone does not guarantee safety from seeping acid.
+            return get_env_resist( bp ) >= 15 && get_armor_type( damage_acid, bp ) >= 5;
+        } );
     }
     // If we haven't found immunity yet fall up to the next level
     return Creature::is_immune_field( fid );
