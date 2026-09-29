@@ -517,8 +517,9 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     selector["match"] = cata::lua_platform::script_enum_value::from(
                              "OtMatchType", "exact" );
     sol::table options = fixture.lua.create_table();
-    options["search_range"] = 1;
-    options["min_distance"] = 0;
+    options["search_range"] = lua_Integer{ 3 };
+    options["min_distance"] = lua_Integer{ 0 };
+    options["z"] = lua_Integer{ 0 };
     const sol::protected_function_result platform_result = find_target(
                 fixture.abs_omt_position( remote_origin ), selector, options );
     REQUIRE( platform_result.valid() );
@@ -539,8 +540,9 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     native_params.overmap_terrain_match_type = ot_match_type::exact;
     native_params.origin_u = false;
     native_params.guy = &native_origin;
-    native_params.search_range = 1.0;
+    native_params.search_range = 3.0;
     native_params.min_distance = 0.0;
+    native_params.z = dbl_or_var( 0.0 );
     const tripoint_abs_omt native_target =
         mission_util::get_om_terrain_pos( native_params, conversation );
     CHECK( native_target == platform_target );

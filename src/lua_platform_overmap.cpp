@@ -535,6 +535,16 @@ int require_native_int(
     const std::string &api_name,
     const std::string &option_name )
 {
+    if( requested.is<lua_Integer>() ) {
+        const lua_Integer value = requested.as<lua_Integer>();
+        if( value < std::numeric_limits<int>::min() ||
+            value > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                api_name + " option '" + option_name +
+                "' must truncate to a native int" );
+        }
+        return static_cast<int>( value );
+    }
     if( !requested.is<double>() ) {
         throw std::invalid_argument(
             api_name + " option '" + option_name + "' must be a number" );
