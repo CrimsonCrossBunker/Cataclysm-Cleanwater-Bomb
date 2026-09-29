@@ -611,6 +611,28 @@ TEST_CASE( "shearing", "[activity][shearing][animals]" )
     }
 }
 
+TEST_CASE( "canceling_milking_removes_only_its_temporary_tie", "[activity][milking][animals]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+
+    avatar &player = get_avatar();
+    monster &cow = spawn_test_monster( "mon_cow", player.pos_bub() + tripoint::north );
+    liquid_dest_opt destination;
+    player_activity activity;
+
+    cow.add_effect( effect_tied, 1_turns, true );
+    milk_activity_actor temporary_tie( 3000, 3000, cow.pos_abs(), destination, true );
+    temporary_tie.canceled( activity, player );
+    CHECK_FALSE( cow.has_effect( effect_tied ) );
+
+    cow.add_effect( effect_tied, 1_turns, true );
+    milk_activity_actor existing_tie( 3000, 3000, cow.pos_abs(), destination, false );
+    existing_tie.canceled( activity, player );
+    CHECK( cow.has_effect( effect_tied ) );
+}
+
 TEST_CASE( "boltcut", "[activity][boltcut]" )
 {
     map &mp = get_map();
