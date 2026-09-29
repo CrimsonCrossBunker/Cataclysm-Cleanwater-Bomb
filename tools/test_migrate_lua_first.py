@@ -19267,27 +19267,26 @@ assert(not available())
                         if "response effect" in todo.message
                         and selector in todo.message
                     ]
-                    self.assertEqual(len(effect_todos), len(matching))
                     if selector == "goto_location":
+                        self.assertEqual(len(effect_todos), len(matching))
                         self.assertTrue(
                             all(todo.category == "platform_gap" for todo in effect_todos)
                         )
                         self.assertNotIn("services.npcs.destinations(", rendered)
                         self.assertNotIn("services.npcs.set_goal(", rendered)
                     else:
-                        self.assertTrue(
-                            all(todo.category == "manual_rewrite" for todo in effect_todos)
-                        )
-                        self.assertNotIn(
+                        self.assertFalse(effect_todos)
+                        self.assertIn(
                             "services.equipment.stow_current_weapon(", rendered
                         )
                         self.assertIn(
                             "services.inventory.weapon_state(avatar)", rendered
                         )
+                        self.assertIn('success_consequence = "helpless"', rendered)
                         self.assertIn(
-                            "Platform on_action before opinion and hostility handling",
-                            effect_todos[0].message,
+                            "success_opinion = { fear = -2, trust = 2 }", rendered
                         )
+                        self.assertIn("text_translation = {  }", rendered)
                         self.assertEqual(
                             matching[0].get("opinion"),
                             {"trust": 2, "fear": -2},
@@ -19325,6 +19324,37 @@ assert(not available())
         )
         self.assertNotIn("services.npcs.destinations(", invalid_output)
         self.assertNotIn("services.inventory.weapon_state(", invalid_output)
+
+    def test_weapon_away_talk_response_keeps_unsupported_shapes_as_todos(self) -> None:
+        direct = {
+            "text": "[Put away weapon.]", "topic": "TALK_STRANGER_NEUTRAL",
+            "effect": "player_weapon_away", "condition": "u_can_stow_weapon",
+            "opinion": {"trust": 2, "fear": -2},
+        }
+        topic = migrate_lua_first.SourceObject(
+            Path("source.json"), 0, {
+                "type": "talk_topic", "id": "stow_response_shapes",
+                "dynamic_line": "Please put that away.",
+                "responses": [
+                    direct,
+                    {**direct, "trial": {"type": "PERSUADE", "difficulty": 50}},
+                    {**direct, "opinion": {"trust": 2**40}},
+                ],
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(topic, result)
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertEqual(
+            rendered.count("services.equipment.stow_current_weapon("), 1
+        )
+        self.assertEqual(rendered.count('success_consequence = "helpless"'), 1)
+        effect_todos = [
+            todo for todo in result.todos if "response effect" in todo.message
+        ]
+        self.assertEqual(len(effect_todos), 2)
+        self.assertTrue(all(todo.category == "manual_rewrite" for todo in effect_todos))
 
     def test_signal_hordes_lowers_only_proven_context_and_bounded_power(self) -> None:
         for case_index, (power, expected) in enumerate(((12.75, 12), (-0.75, 0))):

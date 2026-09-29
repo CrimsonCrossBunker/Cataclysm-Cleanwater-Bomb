@@ -7245,6 +7245,36 @@ def render_talk_topic_pet_purchase_action(response: Any) -> LuaRaw | None:
     ]))
 
 
+def render_talk_topic_weapon_away_action(
+    response: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Keep the exact native response action, opinion, and consequence order."""
+    if (
+        not isinstance(response, dict) or
+        set(response) != {"text", "topic", "condition", "effect", "opinion"} or
+        not isinstance(response.get("text"), str) or
+        not safe_platform_id(response.get("topic")) or
+        converted_condition is None or
+        response.get("effect") != "player_weapon_away"
+    ):
+        return None
+    opinion = response.get("opinion")
+    if (
+        not isinstance(opinion, dict) or not opinion or
+        set(opinion) - {"trust", "fear", "value", "anger", "owed", "sold"} or
+        any(type(value) is not int or not NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+            for value in opinion.values())
+    ):
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    service_value(services.equipment.stow_current_weapon(",
+        "        services.characters.avatar()))",
+        "end",
+    ]))
+
+
 def render_talk_topic(
     source: SourceObject,
     result: MigrationResult,
@@ -7371,6 +7401,17 @@ def render_talk_topic(
                 )
                 if action_callback is not None:
                     response["success_opinion"] = entry["opinion"]
+                    converted_opinion = True
+            if action_callback is None:
+                action_callback = render_talk_topic_weapon_away_action(
+                    entry, converted_condition,
+                )
+                if action_callback is not None:
+                    response["success_opinion"] = entry["opinion"]
+                    response["success_consequence"] = "helpless"
+                    # Native JSON text is a deferred translation, whereas
+                    # hand-written Platform strings remain literal by default.
+                    response["text_translation"] = {}
                     converted_opinion = True
             if action_callback is None:
                 action_callback = render_talk_topic_npc_lose_morale_action(
