@@ -75,14 +75,10 @@ CONTROL_FLOW = {
     "or",
     "not",
     "if",
-    "foreach",
     "nothing",
-    "run_eoc_selector",
-    "run_eocs",
     "set_condition",
     "switch",
     "test_eoc",
-    "weighted_list_eocs",
 }
 
 # JSON object types remain unverified. Promote exact selectors only after
@@ -4134,7 +4130,29 @@ for _prefix in ("u_", "npc_"):
             "tools/test_lua_mutation_migration.py",
         ]
 
+# Named predicates carry dialogue-local state and dynamic lookup semantics.
+# Existing Lua lowering is bounded (for example, test_eoc only inlines static
+# known IDs); ordinary Lua control flow does not exempt these from acceptance.
+for _inventory, _selector in (
+    ("eoc-effects", "set_condition"),
+    ("eoc-conditions", "get_condition"),
+    ("eoc-conditions", "test_eoc"),
+):
+    _key = (_inventory, _selector)
+    BOUNDED_IMPLEMENTED_EOC[_key] = "native-lua-predicate-context"
+    BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE[_key] = [
+        "src/condition.cpp", "src/npctalk.cpp", "src/dialogue.h",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ]
+
 EXPLICIT_PRIMITIVE_EOC = {
+    # These also require engine behavior: persisted scheduling and actor
+    # context, player presentation, or weighted random selection.
+    # is not evidence that their complete native semantics have been accepted.
+    ("eoc-effects", "foreach"): "services.registry-and-variables",
+    ("eoc-effects", "run_eocs"): "ccb.tasks-and-actor-context",
+    ("eoc-effects", "run_eoc_selector"): "ccb.presentation.choose",
+    ("eoc-effects", "weighted_list_eocs"): "services.random",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -4162,6 +4180,17 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    **{
+        ("eoc-effects", selector): [
+            "src/npctalk.cpp",
+            "src/lua_platform_runtime_services.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+        ]
+        for selector in (
+            "foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"
+        )
+    },
     ("eoc-effects", "u_add_trait"): [
         "src/lua_platform_mutations.cpp",
         "tests/lua_platform_mutations_test.cpp",

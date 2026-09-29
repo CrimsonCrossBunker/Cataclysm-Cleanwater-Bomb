@@ -22,6 +22,7 @@ on:
       - 'tools/migrate_lua_first.py'
       - 'tools/test_migrate_lua_first.py'
       - 'tools/test_lua_mutation_migration.py'
+      - 'tools/test_lua_named_predicate_migration.py'
   push:
     branches: [ master ]
     paths:
@@ -44,6 +45,7 @@ on:
       - 'tools/migrate_lua_first.py'
       - 'tools/test_migrate_lua_first.py'
       - 'tools/test_lua_mutation_migration.py'
+      - 'tools/test_lua_named_predicate_migration.py'
   workflow_dispatch:
 
 permissions:

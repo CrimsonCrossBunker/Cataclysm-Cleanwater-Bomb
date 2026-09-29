@@ -12,19 +12,24 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_mutations.h"
 #include "lua_platform_sol.h"
+#include "lua_platform_variables.h"
 #include "mutation.h"
 #include "npc.h"
+#include "omdata.h"
+#include "overmapbuffer.h"
 #include "options_helpers.h"
 #include "rng.h"
 #include "type_id.h"
@@ -64,6 +69,18 @@ struct mutation_fixture {
                 throw std::runtime_error( "test: mutation outside write phase" );
             }
         } );
+        cata::lua_platform::install_variable_api(
+        services, [this]() {
+            return runtime;
+        }, [this]() {
+            return world;
+        }, []() {}, [this]() {
+            if( !writable ) {
+                throw std::runtime_error( "test: variable write outside write phase" );
+            }
+        }, []() {
+            return true;
+        } );
     }
 
     ~mutation_fixture() {
@@ -91,8 +108,16 @@ struct mutation_fixture {
         return condition( context );
     }
 
-    void legacy_effect( const std::string &source ) {
-        dialogue context( get_talker_for( player ), get_talker_for( other ) );
+    void legacy_effect( const std::string &source, const bool alpha_is_npc = false,
+                        const std::string &context_key = {}, const std::string &context_value = {} ) {
+        Character &alpha = alpha_is_npc ? static_cast<Character &>( other ) :
+                           static_cast<Character &>( player );
+        Character &beta = alpha_is_npc ? static_cast<Character &>( player ) :
+                          static_cast<Character &>( other );
+        dialogue context( get_talker_for( alpha ), get_talker_for( beta ) );
+        if( !context_key.empty() ) {
+            context.set_value( context_key, context_value );
+        }
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(), "mutation_acceptance" );
         for( const talk_effect_fun_t &operation : effect.effects ) {
@@ -360,6 +385,11 @@ TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
         old_target.set_mutation( trait_QUICK );
         new_target.set_mutation( trait_QUICK );
     }
+    Character &legacy_untouched = legacy.target( !npc_target );
+    Character &platform_untouched = platform.target( !npc_target );
+    legacy_untouched.set_mutation( trait_QUICK );
+    platform_untouched.set_mutation( trait_QUICK );
+    const bool untouched_base = platform_untouched.has_base_trait( trait_QUICK );
     const std::string effect = std::string( R"({")" ) +
                                ( npc_target ? "npc_" : "u_" ) + R"(lose_trait":"QUICK"})";
     for( int attempt = 0; attempt < 2; ++attempt ) {
@@ -371,7 +401,262 @@ TEST_CASE( "lua_platform_mutation_erase_matches_native_base_trait_and_absence",
         CHECK( old_target.has_trait( trait_QUICK ) == new_target.has_trait( trait_QUICK ) );
         CHECK( old_target.has_base_trait( trait_QUICK ) == new_target.has_base_trait( trait_QUICK ) );
         CHECK( new_target.has_base_trait( trait_QUICK ) == base );
+        CHECK( legacy_untouched.has_trait( trait_QUICK ) );
+        CHECK( platform_untouched.has_trait( trait_QUICK ) );
+        CHECK( legacy_untouched.has_trait( trait_QUICK ) == platform_untouched.has_trait( trait_QUICK ) );
+        CHECK( legacy_untouched.has_base_trait( trait_QUICK ) == platform_untouched.has_base_trait(
+                   trait_QUICK ) );
+        CHECK( platform_untouched.has_base_trait( trait_QUICK ) == untouched_base );
     }
+}
+
+TEST_CASE( "lua_platform_mutation_erase_matches_dynamic_u_val_effect",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3500 );
+    mutation_fixture platform( 3600 );
+    const std::string key = "chronomancer_menu_learn_id";
+    const std::string effect =
+        R"({"u_lose_trait":{"u_val":"chronomancer_menu_learn_id"}})";
+    legacy.other.set_mutation( trait_QUICK );
+    platform.other.set_mutation( trait_QUICK );
+    legacy.other.set_value( key, trait_QUICK.str() );
+    platform.other.set_value( key, trait_QUICK.str() );
+    legacy.player.set_mutation( trait_QUICK );
+    platform.player.set_mutation( trait_QUICK );
+
+    // This is the live Xedra_Evolved u_val shape; place the NPC in the alpha
+    // position to verify that u_ selects the talker, not a fixed avatar type.
+    legacy.legacy_effect( effect, true );
+
+    sol::protected_function resolve = platform.services["variables"]["resolve"];
+    const sol::table context = platform.lua.create_table();
+    sol::protected_function_result resolved = resolve( context, platform.handle( true ),
+            "u", key );
+    REQUIRE( resolved.valid() );
+    sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["erase"](
+                platform.handle( true ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK_FALSE( legacy.other.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.other.has_trait( trait_QUICK ) );
+    CHECK( legacy.player.has_trait( trait_QUICK ) );
+    CHECK( platform.player.has_trait( trait_QUICK ) );
+}
+
+TEST_CASE( "lua_platform_mutation_replace_matches_native_global_val_effect",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3700 );
+    mutation_fixture platform( 3800 );
+    const std::string key = "lua_mutation_acceptance_global_trait";
+    struct global_cleanup {
+        const std::string &key;
+        ~global_cleanup() {
+            get_globals().remove_global_value( key );
+        }
+    } cleanup{ key };
+    get_globals().set_global_value( key, trait_QUICK.str() );
+
+    const std::string effect =
+        R"({"u_add_trait":{"global_val":"lua_mutation_acceptance_global_trait"}})";
+    legacy.legacy_effect( effect );
+
+    const sol::table context = platform.lua.create_table();
+    const sol::protected_function_result resolved = platform.services["variables"]["resolve"](
+                context, platform.handle( false ), "global", key );
+    REQUIRE( resolved.valid() );
+    const sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( legacy.player.has_permanent_trait( trait_QUICK ) );
+    CHECK( platform.player.has_permanent_trait( trait_QUICK ) );
+    CHECK_FALSE( legacy.other.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.other.has_trait( trait_QUICK ) );
+}
+
+TEST_CASE( "lua_platform_mutation_replace_matches_native_u_val_effect_for_alpha_npc",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 4100 );
+    mutation_fixture platform( 4200 );
+    const std::string key = "xe_werewolf_power_to_gain";
+    legacy.other.set_value( key, trait_QUICK.str() );
+    platform.other.set_value( key, trait_QUICK.str() );
+
+    const std::string effect = R"({"u_add_trait":{"u_val":"xe_werewolf_power_to_gain"}})";
+    legacy.legacy_effect( effect, true );
+
+    const sol::table context = platform.lua.create_table();
+    const sol::protected_function_result resolved = platform.services["variables"]["resolve"](
+                context, platform.handle( true ), "u", key );
+    REQUIRE( resolved.valid() );
+    const sol::table resolved_result = resolved;
+    REQUIRE( resolved_result["ok"].get<bool>() );
+    REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+    const std::string id = resolved_result["value"]["value"].get<std::string>();
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( true ), cata::lua_platform::script_game_id( "mutation", id ) );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( legacy.other.has_permanent_trait( trait_QUICK ) );
+    CHECK( platform.other.has_permanent_trait( trait_QUICK ) );
+    CHECK_FALSE( legacy.player.has_trait( trait_QUICK ) );
+    CHECK_FALSE( platform.player.has_trait( trait_QUICK ) );
+}
+
+TEST_CASE( "lua_platform_mutation_activation_rejects_non_wooded_tree_communion_like_native",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3900 );
+    mutation_fixture platform( 4000 );
+    const trait_id trait( "TREE_COMMUNION" );
+    REQUIRE( trait.is_valid() );
+    const tripoint_abs_omt omt = legacy.player.pos_abs_omt();
+    REQUIRE( platform.player.pos_abs_omt() == omt );
+    const oter_id field( "field" );
+    REQUIRE( field.is_valid() );
+    const oter_id previous_terrain = overmap_buffer.ter( omt );
+    on_out_of_scope restore_terrain( [omt, previous_terrain]() {
+        overmap_buffer.ter_set( omt, previous_terrain );
+    } );
+    overmap_buffer.ter_set( omt, field );
+    REQUIRE_FALSE( overmap_buffer.ter( omt ).obj().is_wooded() );
+    legacy.player.set_mutation( trait );
+    platform.player.set_mutation( trait );
+    REQUIRE_FALSE( legacy.player.has_active_mutation( trait ) );
+    REQUIRE_FALSE( platform.player.has_active_mutation( trait ) );
+
+    legacy.legacy_effect( R"({"u_activate_trait":"TREE_COMMUNION"})" );
+    const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", trait.str() ), true );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK_FALSE( legacy.player.has_active_mutation( trait ) );
+    CHECK_FALSE( platform.player.has_active_mutation( trait ) );
+    CHECK( legacy.player.has_active_mutation( trait ) ==
+           platform.player.has_active_mutation( trait ) );
+    const activity_id tree_communion_activity( "ACT_TREE_COMMUNION" );
+    CHECK( legacy.player.activity.id() != tree_communion_activity );
+    CHECK( platform.player.activity.id() != tree_communion_activity );
+    CHECK( legacy.player.activity.id() == platform.player.activity.id() );
+    CHECK_FALSE( legacy.other.has_trait( trait ) );
+    CHECK_FALSE( platform.other.has_trait( trait ) );
+}
+
+TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alpha_npc",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 3300 );
+    mutation_fixture platform( 3400 );
+    const trait_id hair( "artificial_hair_buzzcut" );
+    REQUIRE( hair.is_valid() );
+    const mutation_variant *red_variant = hair->variant( "red" );
+    const mutation_variant *black_variant = hair->variant( "black" );
+    const mutation_variant *white_variant = hair->variant( "white" );
+    REQUIRE( red_variant != nullptr );
+    REQUIRE( black_variant != nullptr );
+    REQUIRE( white_variant != nullptr );
+    const cata::lua_platform::game_handle alpha_npc = platform.handle( true );
+
+    SECTION( "dynamic_trait_id_and_static_variant" ) {
+        const std::string source =
+            R"({"u_add_trait":{"context_val":"trait_id"},"variant":"red"})";
+        legacy.legacy_effect( source, true, "trait_id", hair.str() );
+
+        sol::table context = platform.lua.create_table();
+        context["trait_id"] = hair.str();
+        sol::protected_function resolve = platform.services["variables"]["resolve"];
+        sol::protected_function_result resolved = resolve( context, sol::nil, "context", "trait_id" );
+        REQUIRE( resolved.valid() );
+        sol::table resolved_result = resolved;
+        REQUIRE( resolved_result["ok"].get<bool>() );
+        REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+        const std::string id = resolved_result["value"]["value"].get<std::string>();
+        sol::protected_function replace = platform.services["mutations"]["replace"];
+        sol::protected_function_result call = replace( alpha_npc,
+                                              cata::lua_platform::script_game_id( "mutation", id ), "red" );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( legacy.other.has_trait( hair ) == platform.other.has_trait( hair ) );
+        CHECK( legacy.other.get_mutations_variants() == platform.other.get_mutations_variants() );
+        CHECK( legacy.other.has_trait( hair ) );
+        REQUIRE( legacy.other.get_mutations_variants().size() == 1 );
+        REQUIRE( platform.other.get_mutations_variants().size() == 1 );
+        CHECK( legacy.other.get_mutations_variants().front().variant == "red" );
+        CHECK( platform.other.get_mutations_variants().front().variant == "red" );
+        CHECK_FALSE( platform.player.has_trait( hair ) );
+    }
+
+    SECTION( "bionic_color_id_context_variant" ) {
+        legacy.other.set_mutation( hair, black_variant );
+        platform.other.set_mutation( hair, black_variant );
+        const std::string source =
+            R"({"u_add_trait":"artificial_hair_buzzcut","variant":{"context_val":"color_id"}})";
+        legacy.legacy_effect( source, true, "color_id", "white" );
+
+        sol::table context = platform.lua.create_table();
+        context["color_id"] = "white";
+        sol::protected_function resolve = platform.services["variables"]["resolve"];
+        sol::protected_function_result resolved = resolve( context, sol::nil, "context", "color_id" );
+        REQUIRE( resolved.valid() );
+        sol::table resolved_result = resolved;
+        REQUIRE( resolved_result["ok"].get<bool>() );
+        REQUIRE( resolved_result["value"]["exists"].get<bool>() );
+        const std::string variant = resolved_result["value"]["value"].get<std::string>();
+        CHECK( variant == white_variant->id );
+        sol::protected_function replace = platform.services["mutations"]["replace"];
+        sol::protected_function_result call = replace( alpha_npc,
+                                              cata::lua_platform::script_game_id( "mutation", hair.str() ), variant );
+        REQUIRE( call.valid() );
+        REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        CHECK( legacy.other.get_mutations_variants() == platform.other.get_mutations_variants() );
+        REQUIRE( platform.other.get_mutations_variants().size() == 1 );
+        CHECK( platform.other.get_mutations_variants().front().trait == hair );
+        CHECK( platform.other.get_mutations_variants().front().variant == "white" );
+        CHECK_FALSE( platform.player.has_trait( hair ) );
+    }
+}
+
+TEST_CASE( "lua_platform_mutation_replace_matches_empty_eoc_topic_item_variant",
+           "[lua][platform][mutations][semantic]" )
+{
+    mutation_fixture legacy( 4300 );
+    mutation_fixture platform( 4400 );
+    const trait_id hair( "artificial_hair_buzzcut" );
+    REQUIRE( hair.is_valid() );
+    const std::string effect =
+        R"({"u_add_trait":"artificial_hair_buzzcut","variant":{"mutator":"topic_item"}})";
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } restore;
+
+    // The copied EOC has no current topic item, so native topic_item resolves
+    // to an empty variant ID and lets set_mutation choose a weighted variant.
+    rng_set_engine_seed( 4903 );
+    legacy.legacy_effect( effect );
+    const auto native_variants = legacy.player.get_mutations_variants();
+
+    rng_set_engine_seed( 4903 );
+    const sol::protected_function_result call = platform.services["mutations"]["replace"](
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", hair.str() ), "" );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( platform.player.get_mutations_variants() == native_variants );
+    REQUIRE( native_variants.size() == 1 );
+    CHECK( native_variants.front().trait == hair );
 }
 
 TEST_CASE( "lua_platform_mutation_replace_matches_native_conflicts_and_repeat",
@@ -531,23 +816,31 @@ TEST_CASE( "lua_platform_mutation_action_matches_native_without_permanent_trait"
     const bool present = GENERATE( false, true );
     Character &old_target = legacy.target( npc_target );
     Character &new_target = platform.target( npc_target );
+    const trait_id &trait = trait_SNAIL_TRAIL;
+    old_target.set_thirst( 0 );
+    new_target.set_thirst( 0 );
+    old_target.set_stored_kcal( old_target.get_healthy_kcal() );
+    new_target.set_stored_kcal( new_target.get_healthy_kcal() );
     if( present ) {
-        old_target.set_mutation( trait_QUICK );
-        new_target.set_mutation( trait_QUICK );
+        old_target.set_mutation( trait );
+        new_target.set_mutation( trait );
+        if( !active ) {
+            old_target.activate_mutation( trait );
+            new_target.activate_mutation( trait );
+        }
     }
     const std::string effect = std::string( R"({")" ) + ( npc_target ? "npc_" : "u_" ) +
-                               ( active ? "activate_trait" : "deactivate_trait" ) + R"(":"QUICK"})";
+                               ( active ? "activate_trait" : "deactivate_trait" ) + R"(":"SNAIL_TRAIL"})";
     for( int attempt = 0; attempt < 2; ++attempt ) {
         legacy.legacy_effect( effect );
         const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
                     platform.handle( npc_target ),
-                    cata::lua_platform::script_game_id( "mutation", "QUICK" ), active );
+                    cata::lua_platform::script_game_id( "mutation", trait.str() ), active );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
-        CHECK( old_target.has_active_mutation( trait_QUICK ) == new_target.has_active_mutation(
-                   trait_QUICK ) );
-        CHECK( old_target.has_permanent_trait( trait_QUICK ) == new_target.has_permanent_trait(
-                   trait_QUICK ) );
+        CHECK( old_target.has_active_mutation( trait ) == new_target.has_active_mutation( trait ) );
+        CHECK( new_target.has_active_mutation( trait ) == ( active && present ) );
+        CHECK( old_target.has_permanent_trait( trait ) == new_target.has_permanent_trait( trait ) );
     }
 }
 

@@ -877,7 +877,9 @@ bool game::start_game()
         gamemode = std::make_unique<special_game>();
     }
 
-    seed = rng_bits();
+    // The world seed is rolled by the new-game flow before character
+    // creation (see main_menu::new_character_tab); loading restores it
+    // from the master save.
 #ifdef MP_ENABLED
     cata_mp::mp_client_prepare_spawn();
 #endif
@@ -2347,7 +2349,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 } );
 
                 action_menu.additional_actions = {
-                    { "RIGHT", translation() }
+                    { "RIGHT", translation() },
+                    { "SCROLL_ITEM_INFO_UP", translation() },
+                    { "SCROLL_ITEM_INFO_DOWN", translation() }
                 };
 
                 lang_version = detail::get_current_language_version();
@@ -2368,6 +2372,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 // could be instructed to ignore these two keys instead of scrolling.
                 action_menu.selected = prev_selected;
                 action_menu.fselected = prev_selected;
+            } else if( action_menu.ret_act == "SCROLL_ITEM_INFO_UP" ||
+                       action_menu.ret_act == "SCROLL_ITEM_INFO_DOWN" ) {
+                cMenu = action_menu.ret_act == "SCROLL_ITEM_INFO_UP" ? KEY_PPAGE : KEY_NPAGE;
             } else {
                 cMenu = 0;
             }
@@ -10315,6 +10322,9 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
                                 vehicle *veh )
 {
+    // Keep the last complete save before this trip writes source maps.  The
+    // later safety checkpoint must not replace the player's quickload target.
+    ensure_dimension_rollback_snapshot();
     map &here = get_map();
     avatar &player = get_avatar();
     std::vector<npc_ptr> moving_npcs;
@@ -10381,6 +10391,8 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // so i'm using 'default' as empty/main dimension
     dimension_id previous_dimension = dimension_prefix;
     dimension_prefix = dimension_destination;
+    // Clear the previous dimension before loading the destination's global state.
+    overmap_buffer.clear();
     // Load in data specific to the dimension (like weather)
     load_dimension_data();
 
@@ -10389,8 +10401,6 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // hack to prevent crashes from temperature checks
     // This returns to false in 'on_turn()' so it should be fine?
     swapping_dimensions = true;
-    // Clear the overmap
-    overmap_buffer.clear();
     overmap_buffer.init_region_layout();
     // load/create new overmap
     overmap &new_om = overmap_buffer.get( project_to<coords::om>( player.pos_abs().xy() ) );

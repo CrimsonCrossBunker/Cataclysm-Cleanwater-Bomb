@@ -72,7 +72,7 @@ entries:
     workdir: .
     cost: fast
   - id: lua-migration
-    paths: [tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tools/test_lua_mutation_migration.py]
+    paths: [tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tools/test_lua_mutation_migration.py, tools/test_lua_named_predicate_migration.py]
     command: python3 tools/test_migrate_lua_first.py
     workdir: .
     cost: fast

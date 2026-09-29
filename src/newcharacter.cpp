@@ -686,13 +686,15 @@ void Character::randomize( const bool random_scenario, bool play_now )
     randomize_height();
     randomize_blood();
     randomize_heartrate();
-    bool cities_enabled = overmap_buffer.get_settings(
-                              this->pos_abs_omt() ).get_settings_city().city_size != 0;
+    // NOTE: do not query overmap settings here: the overmap must only be
+    // generated after the world seed is set (see main_menu::new_character_tab).
+    // Use the same world-option check as the rest of the character UI.
+    bool cities_on = cities_enabled();
     if( random_scenario ) {
         std::vector<const scenario *> scenarios;
         for( const scenario &scen : scenario::get_all() ) {
             if( !scen.has_flag( flag_CHALLENGE ) && !scen.scen_is_blacklisted() &&
-                ( !scen.has_flag( flag_CITY_START ) || cities_enabled ) && scen.can_pick().success() ) {
+                ( !scen.has_flag( flag_CITY_START ) || cities_on ) && scen.can_pick().success() ) {
                 scenarios.emplace_back( &scen );
             }
         }

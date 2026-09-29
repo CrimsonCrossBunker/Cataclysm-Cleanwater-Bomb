@@ -3367,10 +3367,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 }
                 std::string value =
                     entry.second.as<std::string>();
-                if( value.size() > 1024 ) {
-                    throw std::invalid_argument(
-                        "services.native_events.emit args cannot exceed 1024 bytes" );
-                }
                 indexed_args.emplace(
                     static_cast<std::size_t>( raw_index ),
                     std::move( value ) );

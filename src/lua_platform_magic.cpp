@@ -31,12 +31,15 @@ extern "C" {
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "mod_manager.h"
 #include "player_activity.h"
 #include "type_id.h"
+
+static const trait_id trait_NONE( "NONE" );
 
 namespace cata::lua_platform
 {
@@ -55,8 +58,6 @@ constexpr int maximum_spell_level = 10000;
 constexpr int maximum_spell_gain = 1000000;
 constexpr int maximum_mana_value = 1000000000;
 constexpr double maximum_spell_adjustment = 1000000000.0;
-const trait_id trait_none( "NONE" );
-
 void require_spell_id(
     const script_game_id &id, const std::string &api_name )
 {
@@ -104,58 +105,6 @@ void require_finite_spell_adjustment(
         throw std::invalid_argument(
             api_name + " amount is outside its finite limit" );
     }
-}
-
-template<typename Range>
-sol::table typed_id_page(
-    sol::state_view lua, const Range &ids,
-    const std::string &kind )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = script_game_id(
-                               kind, id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_page(
-    sol::state_view lua, const Range &values )
-{
-    const std::size_t total = values.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &value : values ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = value;
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
 }
 
 template<typename Id>
@@ -218,13 +167,8 @@ sol::table additional_spell_page(
     sol::state_view lua,
     const std::vector<fake_spell> &spells )
 {
-    const std::size_t total = spells.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    for( std::size_t index = 0; index < returned; ++index ) {
-        const fake_spell &entry = spells[index];
+    return detail::make_bounded_relation_page( lua, spells, maximum_relation_values,
+    [&lua]( const fake_spell & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "spell", entry.id.str() );
@@ -237,43 +181,22 @@ sol::table additional_spell_page(
         } else {
             item["maximum_level"] = sol::nil;
         }
-        items[index + 1] = std::move( item );
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table learned_spell_page(
     sol::state_view lua,
     const std::map<std::string, int> &spells )
 {
-    const std::size_t total = spells.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : spells ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, spells, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "spell", entry.first );
         item["level"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table valid_target_page(
@@ -291,34 +214,25 @@ sol::table valid_target_page(
                 io::enum_to_string( target ) );
         }
     }
-    return string_page( lua, values );
+    return detail::make_string_page(
+               std::move( lua ), maximum_relation_values, values );
 }
 
 sol::table source_page(
     sol::state_view lua,
     const std::vector<std::pair<spell_id, mod_id>> &sources )
 {
-    const std::size_t total = sources.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    for( std::size_t index = 0; index < returned; ++index ) {
+    return detail::make_bounded_relation_page( lua, sources, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["spell"] = script_game_id(
                             "spell",
-                            sources[index].first.str() );
+                            entry.first.str() );
         item["mod"] = script_game_id(
                           "mod",
-                          sources[index].second.str() );
-        items[index + 1] = std::move( item );
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+                          entry.second.str() );
+        return item;
+    } );
 }
 
 sol::table snapshot_definition(
@@ -495,19 +409,16 @@ sol::table snapshot_definition(
     result["valid_targets"] = valid_target_page(
                                   lua,
                                   definition.valid_targets );
-    result["flags"] = string_page(
-                          lua, definition.flags );
-    result["targeted_monsters"] = typed_id_page(
-                                      lua,
-                                      definition.targeted_monster_ids,
+    result["flags"] = detail::make_string_page(
+                          lua, maximum_relation_values, definition.flags );
+    result["targeted_monsters"] = detail::make_typed_id_page(
+                                      lua, maximum_relation_values, definition.targeted_monster_ids,
                                       "monster" );
-    result["targeted_species"] = typed_id_page(
-                                     lua,
-                                     definition.targeted_species_ids,
+    result["targeted_species"] = detail::make_typed_id_page(
+                                     lua, maximum_relation_values, definition.targeted_species_ids,
                                      "species" );
-    result["ignored_species"] = typed_id_page(
-                                    lua,
-                                    definition.ignored_species_ids,
+    result["ignored_species"] = detail::make_typed_id_page(
+                                    lua, maximum_relation_values, definition.ignored_species_ids,
                                     "species" );
     result["additional_spells"] = additional_spell_page(
                                       lua,
@@ -561,9 +472,11 @@ page_options read_page_options(
                                std::min<lua_Integer>(
                                    number, maximum_limit ) );
         } else {
-            throw std::invalid_argument(
-                api_name + " received unknown option '" +
-                key + "'" );
+            std::string message = api_name;
+            message += " received unknown option '";
+            message += key;
+            message += "'";
+            throw std::invalid_argument( message );
         }
     }
     return result;
@@ -588,6 +501,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const spell_type * lhs, const spell_type * rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -709,6 +624,8 @@ sol::table list_known(
     std::sort(
         spells.begin(), spells.end(),
     []( const spell_id & lhs, const spell_id & rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs.str() < rhs.str();
     } );
     const std::size_t offset = std::min(
@@ -915,7 +832,7 @@ sol::table learn_spell(
         } );
     }
     const trait_id spell_class = id->spell_class;
-    if( !options.force && spell_class != trait_none &&
+    if( !options.force && spell_class != trait_NONE &&
         !character->has_trait( spell_class ) ) {
         return make_game_error_result(
         state, game_handle_error{
@@ -1383,7 +1300,7 @@ spellcasting_adjustment_options read_spellcasting_adjustment_options(
                 throw std::invalid_argument(
                     "services.spells.adjust_casting filters must be typed GameIds" );
             }
-            const script_game_id id = value.as<script_game_id>();
+            const script_game_id &id = value.as<script_game_id>();
             if( key == "spell" ) {
                 require_spell_id( id, "services.spells.adjust_casting" );
                 result.scope = spell_filter_scope::spell;
@@ -1763,10 +1680,10 @@ sol::table queue_cast(
 
 void install_magic_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table spells = lua.create_table();
