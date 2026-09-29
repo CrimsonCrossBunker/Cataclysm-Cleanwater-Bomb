@@ -25520,43 +25520,8 @@ def _render_explicit_map_edit(
     return lines
 
 
-def render_static_set_trap(effect: dict[str, Any]) -> list[str] | None:
-    """Lower one radius-zero trap write at an explicit absolute map square."""
-    if not isinstance(effect, dict) or "set_trap" not in effect:
-        return None
-    comment_keys = {
-        name for name in effect
-        if isinstance(name, str) and name.startswith("//")
-    }
-    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
-        return None
-    trap_id = effect.get("set_trap")
-    coordinate = _explicit_abs_ms_expression(effect.get("location"))
-    # Native f_set_trap defaults its radius to one; only an explicit zero
-    # proves that the effect targets one tile and can use the typed token API.
-    radius = _literal_nonnegative_integer(
-        effect.get("radius", 1), NATIVE_INT_MAX
-    )
-    square = effect.get("square", False)
-    if (
-        not bounded_platform_id(trap_id) or coordinate is None or
-        radius != 0 or not isinstance(square, bool)
-    ):
-        return None
-    return [
-        f"    local trap_tile_result = services.map.tile({coordinate})",
-        "    if trap_tile_result.ok then",
-        "        local trap_tile = trap_tile_result.value",
-        "        local trap_snapshot = service_value(services.map.snapshot(trap_tile))",
-        "        service_value(services.map.trap_set(",
-        "            trap_tile, trap_snapshot.revision,",
-        '            services.types.id("trap", ' + lua_quote(trap_id) + ")))",
-        "    end",
-    ]
-
-
 def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
-    """Classify an unlowered set_trap by its actual missing boundary."""
+    """Classify a native set_trap shape without inventing a coordinate."""
     radius = _literal_nonnegative_integer(
         effect.get("radius", 1), NATIVE_INT_MAX
     )
@@ -25571,15 +25536,10 @@ def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
             "manual_rewrite",
             "set_trap needs a literal trap id or an explicit typed Lua lookup",
         )
-    if _explicit_abs_ms_expression(effect.get("location")) is None:
-        return (
-            "manual_rewrite",
-            "set_trap location needs an explicit absolute map-square coordinate; "
-            "legacy var_info/context values need a direct Lua coordinate rewrite",
-        )
     return (
         "manual_rewrite",
-        "set_trap has additional native options that need an explicit Lua rewrite",
+        "set_trap location needs a proven absolute map-square value from native "
+        "var_info; literal abs_ms is not valid native EOC location syntax",
     )
 
 
@@ -33561,18 +33521,13 @@ def render_eoc(
             elif (
                 isinstance(effect, dict) and "set_trap" in effect
             ):
-                rendered = render_static_set_trap( effect )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    todo_category, trap_gap = set_trap_migration_todo( effect )
-                    lines.append(f"    -- TODO: {trap_gap}.")
-                    result.add_todo(
-                        todo_category,
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
-                    )
-                    all_effects_converted = False
+                todo_category, trap_gap = set_trap_migration_todo( effect )
+                lines.append(f"    -- TODO: {trap_gap}.")
+                result.add_todo(
+                    todo_category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
+                )
+                all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
                 rendered_signal = render_static_horde_signal_broadcast(
                     effect,
