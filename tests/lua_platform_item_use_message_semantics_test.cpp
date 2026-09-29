@@ -17,6 +17,7 @@
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "itype.h"
 #include "json_loader.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -98,6 +99,40 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
     REQUIRE( result.has_value() );
     CHECK( *result == 0 );
     CHECK( Messages::recent_messages_with_formatting( 2 ) == expected );
+}
+
+TEST_CASE( "native_fidget_spinner_inline_eoc_returns_zero_for_avatar_and_null_alpha",
+           "[items][eoc][messages][semantic]" )
+{
+    REQUIRE( g != nullptr );
+    clear_map();
+    Messages::clear_messages();
+    const on_out_of_scope cleanup( []() {
+        clear_map();
+        Messages::clear_messages();
+    } );
+
+    avatar user;
+    user.normalize();
+    item &avatar_spinner = user.inv->add_item(
+                               item( itype_id( "fidget_spinner" ) ), false, false, false );
+    REQUIRE( avatar_spinner.type->has_use() );
+
+    map &here = get_map();
+    const tripoint_bub_ms use_position( 60, 60, 0 );
+    const std::optional<int> avatar_result = avatar_spinner.type->invoke(
+                &user, avatar_spinner, &here, use_position );
+    REQUIRE( avatar_result.has_value() );
+    CHECK( *avatar_result == 0 );
+    CHECK( Messages::recent_messages_with_formatting( 1 ).size() == 1 );
+
+    Messages::clear_messages();
+    item local_spinner( itype_id( "fidget_spinner" ) );
+    const std::optional<int> null_alpha_result = local_spinner.type->invoke(
+                nullptr, local_spinner, &here, use_position );
+    REQUIRE( null_alpha_result.has_value() );
+    CHECK( *null_alpha_result == 0 );
+    CHECK( Messages::recent_messages_with_formatting( 1 ).empty() );
 }
 
 TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
@@ -304,6 +339,21 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
                 map_used_item, nullptr, map_use_position );
     CHECK_FALSE( null_character_without_map.has_value() );
     CHECK( lua["callback_count"].get<int>() == 7 );
+
+    // Ranged-hit use can pass a local item while retaining a map-cursor hint.
+    item local_item( itype_id( "efile_map" ) );
+    lua["expected_item_uid"] = local_item.uid().get_value();
+    lua["expected_item_x"] = map_use_position.x();
+    lua["expected_item_y"] = map_use_position.y();
+    lua["expected_item_z"] = map_use_position.z();
+    Messages::clear_messages();
+    const std::optional<int> local_item_result = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                local_item, &here, map_use_position );
+    REQUIRE( local_item_result.has_value() );
+    CHECK( *local_item_result == 0 );
+    CHECK( lua["callback_count"].get<int>() == 8 );
+    CHECK( Messages::recent_messages_with_formatting( 1 ).empty() );
 }
 
 #endif

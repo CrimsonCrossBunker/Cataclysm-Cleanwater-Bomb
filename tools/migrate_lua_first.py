@@ -2018,8 +2018,16 @@ class SourceObject:
 @dataclass(frozen=True)
 class ItemUseActionPlan:
     eoc_id: str | None
-    todo_category: TodoCategory
-    todo_message: str
+    todo_category: TodoCategory | None = None
+    todo_message: str | None = None
+    handler_id: str | None = None
+    menu_text: str | None = None
+    message: str | None = None
+    message_type: str | None = None
+
+    @property
+    def migrated(self) -> bool:
+        return self.handler_id is not None
 
 
 def _item_use_comments(value: dict[str, Any]) -> set[str]:
@@ -2083,7 +2091,7 @@ def classify_item_use_actions(
     objects: list[SourceObject],
     eoc_definition_counts: Counter[str],
 ) -> dict[tuple[Path, int], ItemUseActionPlan]:
-    """Classify direct item EOCs without treating a nullable actor as proven."""
+    """Classify only source-proven direct item EOCs for typed item callbacks."""
     inline_eocs = {
         stable_id(source.value, f"anonymous_{source.index}"): source
         for source in objects
@@ -2103,7 +2111,8 @@ def classify_item_use_actions(
         category: TodoCategory = "manual_rewrite",
     ) -> ItemUseActionPlan:
         return ItemUseActionPlan(
-            eoc_id, category,
+            eoc_id,
+            category,
             f"{source.location}: item {item_id} use_action needs manual review: {reason}",
         )
 
@@ -2186,15 +2195,20 @@ def classify_item_use_actions(
                     not any(character in message for character in ("%", "<", ">", "\0"))
                 )
                 menu_text = action.get("menu_text")
+                raw_id = value.get("id")
+                handler_id = (
+                    f"migrated.item_use.{raw_id}"
+                    if isinstance(raw_id, str) else ""
+                )
                 valid_label = (
                     isinstance(menu_text, str) and
                     bounded_utf8_string(menu_text, 256) and bool(menu_text.strip())
                 )
-                raw_id = value.get("id")
                 simple_message = (
                     value.get("type") in {"ITEM", "GENERIC"} and
                     isinstance(raw_id, str) and bounded_platform_id(raw_id) and
                     item_id_counts[raw_id] == 1 and
+                    bounded_utf8_string(handler_id, PLATFORM_ID_MAX_BYTES) and
                     "copy-from" not in value and "abstract" not in value and
                     "comestible" not in value and
                     action_fields == {"type", "menu_text", "effect_on_conditions"} and
@@ -2215,20 +2229,12 @@ def classify_item_use_actions(
                     }
                 )
                 if simple_message:
-                    plan = unsupported(
-                        source, item_id, eoc_id,
-                        f"inline EOC {eoc_id} has one literal u_message, but native "
-                        "effect_on_conditions_actor can be invoked with a null Character: "
-                        "it still runs with alpha=null and this item as beta, then "
-                        "consume=false returns 0. Platform ItemUseContext requires a "
-                        "Character and fails closed before the callback, returning "
-                        "nullopt; a static item definition cannot guarantee non-null "
-                        "callers. Keep this as a platform_gap TODO until that path has "
-                        "parity. For Character-backed calls, alpha must remain the "
-                        "actual user (possibly an NPC), beta this exact item, u_message "
-                        "must translate at callback time with services.translate, and "
-                        "menu_text must use content.text for deferred translation.",
-                        "platform_gap",
+                    plan = ItemUseActionPlan(
+                        eoc_id=eoc_id,
+                        handler_id=handler_id,
+                        menu_text=menu_text,
+                        message=message,
+                        message_type=message_type or "neutral",
                     )
                 else:
                     plan = unsupported(
@@ -2807,6 +2813,11 @@ def render_item(
                 "manual_rewrite",
                 f"{source.location}: item {item_id} use_action is outside the bounded typed item-use migration pass",
             )
+        elif item_use_plan.migrated:
+            lines.append(
+                f"definition:on_use({lua_quote(item_use_plan.handler_id)}, "
+                f"content.text({lua_quote(item_use_plan.menu_text)}))"
+            )
         else:
             result.add_todo(
                 item_use_plan.todo_category,
@@ -2824,6 +2835,28 @@ def render_item(
         result.converted.append(f"{source.location}: item {item_id}")
     lines.extend((content_submit_expression(), ""))
     return "\n".join(lines)
+
+
+def render_item_use_handler(plan: ItemUseActionPlan) -> str:
+    """Render the bounded literal-message item callback after native early returns."""
+    if (
+        not plan.migrated or plan.handler_id is None or
+        plan.message is None or plan.message_type is None
+    ):
+        raise ValueError("item-use callback plan is incomplete")
+    return "\n".join((
+        f"runtime.handler({lua_quote(plan.handler_id)}, function(context)",
+        "    local actor = context.character",
+        '    if actor == nil or actor.subtype == "npc" then',
+        "        return 0",
+        "    end",
+        "    context:message(",
+        f"        services.translate({lua_quote(plan.message)}),",
+        f"        {lua_quote(plan.message_type)})",
+        "    return 0",
+        "end)",
+        "",
+    ))
 
 
 def requirement_choices(raw: Any, *, tools: bool = False) -> list[tuple[str, int]] | None:
@@ -36929,6 +36962,10 @@ def migrate(objects: list[SourceObject], mod_id: str,
             not _item_use_has_other_eoc_reference(objects, eoc_id, source)
         ):
             item_use_eoc_ids.add(eoc_id)
+    migrated_item_use_eoc_ids = {
+        plan.eoc_id for plan in item_use_plans.values()
+        if plan.migrated and plan.eoc_id in item_use_eoc_ids
+    }
     global_eoc_ids = frozenset(
         stable_id(source.value, f"anonymous_{source.index}")
         for source in objects
@@ -37166,12 +37203,15 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 f"{source.location}: additional MOD_INFO cannot be represented by one Platform ModDefinition"
             )
         elif kind in ITEM_TYPES:
+            item_use_plan = item_use_plans.get((source.path, source.index))
             rendered = render_item(
                 source, result,
-                item_use_plans.get((source.path, source.index)),
+                item_use_plan,
             )
             if rendered:
                 item_chunks.append(rendered)
+                if item_use_plan is not None and item_use_plan.migrated:
+                    behaviour_chunks.append(render_item_use_handler(item_use_plan))
         elif kind in RECIPE_TYPES:
             rendered = render_recipe(source, result)
             if rendered:
@@ -37179,10 +37219,16 @@ def migrate(objects: list[SourceObject], mod_id: str,
         elif kind in EOC_TYPES:
             eoc_id = stable_id(source.value, f"anonymous_{source.index}")
             if eoc_id in item_use_eoc_ids:
-                result.partial.append(
-                    f"{source.location}: inline item-use EOC {eoc_id} "
-                    "is retained as a source-level item-use TODO"
-                )
+                if eoc_id in migrated_item_use_eoc_ids:
+                    result.converted.append(
+                        f"{source.location}: inline item-use EOC {eoc_id} "
+                        "is lowered to its typed item callback"
+                    )
+                else:
+                    result.partial.append(
+                        f"{source.location}: inline item-use EOC {eoc_id} "
+                        "is retained as a source-level item-use TODO"
+                    )
                 continue
             behaviour_chunks.append(
                 render_eoc(

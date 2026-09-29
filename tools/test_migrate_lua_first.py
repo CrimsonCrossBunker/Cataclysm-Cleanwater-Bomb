@@ -41527,71 +41527,114 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             for todo in result.todos
         ))
 
-    def test_real_fidget_spinner_inline_item_eoc_keeps_null_character_gap(self) -> None:
+    def test_real_fidget_spinner_inline_item_eoc_uses_typed_item_callback(self) -> None:
         source_path = REPOSITORY_ROOT / "data/json/items/toy.json"
-        normalized, *_ = migrate_lua_first.normalize_inline_eocs(
-            migrate_lua_first.load_objects([source_path]), False
+
+        def classified_plan(change):
+            normalized, *_ = migrate_lua_first.normalize_inline_eocs(
+                migrate_lua_first.load_objects([source_path]), False
+            )
+            spinner_item = next(
+                entry for entry in normalized
+                if entry.value.get("type") in migrate_lua_first.ITEM_TYPES and
+                entry.value.get("id") == "fidget_spinner"
+            )
+            spinner_eoc = next(
+                entry for entry in normalized
+                if entry.value.get("id") == "EOC_spinner_spinning"
+            )
+            change(spinner_item, spinner_eoc)
+            eoc_counts = Counter(
+                migrate_lua_first.stable_id(entry.value, f"anonymous_{entry.index}")
+                for entry in normalized
+                if entry.value.get("type") in migrate_lua_first.EOC_TYPES
+            )
+            return migrate_lua_first.classify_item_use_actions(
+                normalized, eoc_counts
+            )[(spinner_item.path, spinner_item.index)]
+
+        baseline = classified_plan(lambda item, eoc: None)
+        self.assertTrue(baseline.migrated)
+        self.assertEqual(baseline.message_type, "neutral")
+        self.assertEqual(baseline.message, "You spin your fidget spinner.")
+        self.assertLessEqual(
+            len(baseline.handler_id.encode("utf-8")),
+            migrate_lua_first.PLATFORM_ID_MAX_BYTES,
         )
-        spinner_eoc = next(
-            entry for entry in normalized
-            if entry.value.get("id") == "EOC_spinner_spinning"
+
+        exact_native_scope_variants = (
+            lambda item, eoc: eoc.value.update({"eoc_type": "EVENT"}),
+            lambda item, eoc: eoc.value.update({"condition": {"u_has_item": "fidget_spinner"}}),
+            lambda item, eoc: eoc.value.update({"false_effect": {"u_message": "No."}}),
+            lambda item, eoc: item.value["use_action"].update({"consume": True}),
+            lambda item, eoc: item.value["use_action"].update({"need_worn": True}),
+            lambda item, eoc: item.value.update({
+                "id": "x" * migrate_lua_first.PLATFORM_ID_MAX_BYTES,
+            }),
         )
-        self.assertNotIn("eoc_type", spinner_eoc.value)
-        spinner_item = next(
-            entry for entry in normalized
-            if entry.value.get("type") in migrate_lua_first.ITEM_TYPES and
-            entry.value.get("id") == "fidget_spinner"
-        )
-        spinner_eoc.value["eoc_type"] = "EVENT"
-        eoc_counts = Counter(
-            migrate_lua_first.stable_id(entry.value, f"anonymous_{entry.index}")
-            for entry in normalized
-            if entry.value.get("type") in migrate_lua_first.EOC_TYPES
-        )
-        changed_type = migrate_lua_first.classify_item_use_actions(
-            normalized, eoc_counts
-        )[
-            (spinner_item.path, spinner_item.index)
-        ]
-        self.assertEqual(changed_type.todo_category, "manual_rewrite")
-        self.assertIsNotNone(changed_type.todo_message)
-        self.assertNotIn("null Character", changed_type.todo_message)
+        for change in exact_native_scope_variants:
+            with self.subTest(change=change):
+                changed = classified_plan(change)
+                self.assertFalse(changed.migrated)
+                self.assertEqual(changed.todo_category, "manual_rewrite")
+                self.assertIsNotNone(changed.todo_message)
 
         result = migrate_lua_first.migrate(
             migrate_lua_first.load_objects([source_path]), "toy_item_use"
         )
         main = result.files[Path("main.lua")]
-        self.assertNotIn('runtime.handler("migrated.item_use.fidget_spinner"', main)
-        self.assertNotIn('definition:on_use("migrated.item_use.fidget_spinner"', main)
+        self.assertEqual(main.count('runtime.handler("migrated.item_use.fidget_spinner"'), 1)
+        self.assertIn(
+            'definition:on_use("migrated.item_use.fidget_spinner", content.text("Spin"))',
+            main,
+        )
         self.assertNotIn("services.characters.avatar()", main)
         self.assertNotIn("activate_activation_only", main)
-        item_use_todos = [
-            todo for todo in result.todos
-            if "EOC_spinner_spinning" in todo.message
-        ]
-        self.assertEqual(len(item_use_todos), 1)
-        self.assertEqual(item_use_todos[0].category, "platform_gap")
-        for text in (
-            "native effect_on_conditions_actor can be invoked with a null Character",
-            "alpha=null and this item as beta",
-            "consume=false returns 0",
-            "requires a Character and fails closed",
-            "returning nullopt",
-            "static item definition cannot guarantee non-null callers",
-            "actual user (possibly an NPC)",
-            "services.translate",
-            "content.text",
-        ):
-            self.assertIn(text, item_use_todos[0].message)
+        callback_start = main.index('runtime.handler("migrated.item_use.fidget_spinner"')
+        callback_end = main.index("end)", callback_start)
+        callback = main[callback_start:callback_end]
+        actor_guard = callback.index('if actor == nil or actor.subtype == "npc" then')
+        self.assertIn(
+            'if actor == nil or actor.subtype == "npc" then\n'
+            "        return 0\n"
+            "    end",
+            callback,
+        )
+        translation = callback.index(
+            'services.translate("You spin your fidget spinner.")'
+        )
+        message = callback.index('"neutral")')
+        native_return = callback.rindex("return 0")
+        self.assertLess(actor_guard, translation)
+        self.assertLess(translation, message)
+        self.assertLess(message, native_return)
+        self.assertIn("local actor = context.character", callback)
+        self.assertIn("context:message(", callback)
+        self.assertNotIn('actor.subtype ~= "avatar"', callback)
+        self.assertTrue(any(
+            "item fidget_spinner price needs unit review" in todo.message
+            for todo in result.todos
+        ))
         self.assertFalse(any(
-            "EOC_spinner_spinning" in entry for entry in result.converted
+            "EOC_spinner_spinning" in todo.message for todo in result.todos
+        ))
+        self.assertFalse(any(
+            ": item fidget_spinner" in entry for entry in result.converted
         ))
         self.assertTrue(any(
+            ": item fidget_spinner" in entry for entry in result.partial
+        ))
+        self.assertTrue(any(
+            "inline item-use EOC EOC_spinner_spinning is lowered to its typed item callback"
+            in entry
+            for entry in result.converted
+        ))
+        self.assertFalse(any(
             "inline item-use EOC EOC_spinner_spinning is retained as a source-level item-use TODO" in entry
             for entry in result.partial
         ))
 
-        # Another callback on the same item must keep the EOC definition.
+        # Another callback on the same item must keep the separate EOC definition.
         shared = migrate_lua_first.load_objects([source_path])
         shared_item = next(
             entry for entry in shared
@@ -41602,6 +41645,8 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             "EOC_spinner_spinning"
         ]
         shared_result = migrate_lua_first.migrate(shared, "toy_item_use_shared")
+        shared_main = shared_result.files[Path("main.lua")]
+        self.assertIn('definition:on_use("migrated.item_use.fidget_spinner"', shared_main)
         self.assertFalse(any(
             "inline item-use EOC EOC_spinner_spinning is retained as a source-level item-use TODO" in entry
             for entry in shared_result.partial
