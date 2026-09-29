@@ -22278,10 +22278,15 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "drop_stolen_item's native wrapper requires a dialogue beta NPC", main
             )
             self.assertNotIn("services.npcs.drop_stolen_items(", main)
-            self.assertIn("services.trade.quote(provider, recipient", main)
-            self.assertIn("services.trade.commit(quote.token", main)
             self.assertIn(
-                "native u_buy_monster requires an alpha avatar and beta NPC", report
+                "translate the equipment allowance through exact offers and both original talkers' modifiers",
+                main,
+            )
+            self.assertNotIn("services.trade.quote(provider, recipient", main)
+            self.assertNotIn("services.trade.commit(quote.token", main)
+            self.assertIn(
+                "native u_buy_monster pays the beta NPC before placing monsters around the alpha avatar",
+                report,
             )
             self.assertIn(
                 "native u_spend_cash calls dialogue actor(true).buy_from", report
@@ -22310,17 +22315,17 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("actor, spell.id, 2", main)
             self.assertIn("actor, spell.id, 1", main)
             self.assertNotIn("services.mutations.grant(actor, remainder)", main)
-            self.assertIn("services.spells.learn(actor, remainder, { force = true })", main)
+            self.assertIn('services.progression.grant_random_missing(actor, "mutation"', main)
+            self.assertIn('services.progression.grant_random_missing(actor, "spell"', main)
+            self.assertIn('services.progression.grant_random_missing(actor, "recipe"', main)
             self.assertNotIn("services.recipes.learn(actor, remainder, true)", main)
             self.assertNotIn("services.npcs.missions.add_assigned(", main)
             self.assertIn(
                 "NPC mission assignment through the typed mission provider service",
                 main,
             )
-            self.assertIn(
-                'services.npcs.medical.provide_aid(provider, services.characters.avatar(), "advanced", false)',
-                main,
-            )
+            self.assertIn("medical aid requires an explicit NPC provider", main)
+            self.assertNotIn("services.npcs.medical.provide_aid(", main)
             self.assertIn(
                 'services.creatures.snapshot(actor)).kind == "npc" then',
                 main,
@@ -22339,11 +22344,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'services.npcs.open_companion_missions(actor, "SCAVENGER")',
                 main,
             )
-            self.assertIn('provider, "install", services.characters.avatar())', main)
-            self.assertIn('provider, "remove", services.characters.avatar())', main)
-            self.assertIn("services.npcs.medical.repair_bionic_limbs(provider, services.characters.avatar())", main)
-            self.assertEqual(main.count("services.characters.avatar()"), 5)
-            self.assertNotIn("domain-service conversion", report)
+            self.assertNotIn('provider, "install", services.characters.avatar())', main)
+            self.assertNotIn('provider, "remove", services.characters.avatar())', main)
+            self.assertNotIn("services.npcs.medical.repair_bionic_limbs(", main)
+            self.assertEqual(main.count("services.characters.avatar()"), 0)
+            self.assertIn("domain-service conversion", report)
 
     def test_roll_remainder_grants_and_player_messages_with_proven_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
