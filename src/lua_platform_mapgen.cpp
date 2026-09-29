@@ -437,7 +437,8 @@ sol::table run_mapgen_update(
     require_write();
     // This is the native immediate update path.  Unlike apply(), it does not
     // preflight or roll back external mapgen side effects; the native EOC path
-    // also runs this operation without collision cancellation or a transaction.
+    // also runs this operation with the runner's default collision policy and
+    // without a transaction.
     const ret_val<void> outcome = run_mapgen_update_func(
                                       update.native_id(), target.native_position(), {}, nullptr );
     set_queued_points();
