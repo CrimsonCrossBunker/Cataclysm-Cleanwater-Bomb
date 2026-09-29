@@ -736,6 +736,80 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
     return accepted_tiles;
 }
 
+int set_platform_terrain( const tripoint_abs_ms &absolute,
+                          const std::string &terrain_id,
+                          const double requested_radius, const bool square,
+                          const bool avoid_creatures )
+{
+    if( g == nullptr ) {
+        throw std::runtime_error(
+            "services.gameplay.environment.set_terrain requires an active game" );
+    }
+    if( terrain_id.empty() || terrain_id.size() > 256 ||
+        terrain_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain requires a 1 to 256 byte terrain id" );
+    }
+    const ter_str_id source_terrain( terrain_id );
+    if( !source_terrain.is_valid() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain requires a registered terrain id" );
+    }
+    const ter_id target_terrain = source_terrain.id();
+
+    // This bound keeps the native trig_dist integer squares and their sum
+    // representable, while preventing pathological ranges from doing unbounded work.
+    constexpr int maximum_safe_radius = 32767;
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    map &here = get_map();
+    if( absolute.z() != here.get_abs_sub().z() ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int changed_tiles = 0;
+    // Match the native neighborhood on the active map z-level, without loading
+    // another map. ter_set handles bounds and the avoid_creatures option.
+    for( const tripoint_bub_ms &destination : here.points_on_zlevel() ) {
+        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
+        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
+        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
+            continue;
+        }
+        const std::int64_t squared_distance = dx * dx + dy * dy;
+        const float distance = static_cast<float>(
+                                  std::sqrt( static_cast<double>( squared_distance ) ) );
+        if( !square && distance >= circle_radius ) {
+            continue;
+        }
+        if( here.ter_set( destination, target_terrain, avoid_creatures ) ) {
+            ++changed_tiles;
+        }
+    }
+    return changed_tiles;
+}
+
 } // namespace
 
 std::optional<int> invoke_use_handler( std::string_view mod_id,
@@ -3815,6 +3889,21 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                        requested_radius.value_or( 1.0 ),
                                        requested_square.value_or( false ),
                                        requested_avoid_creatures.value_or( false ) );
+    } );
+    environment.set_function( "set_terrain", [require_write,
+    require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & terrain_id,
+    const sol::optional<double> & requested_radius,
+    const sol::optional<bool> & requested_square,
+    const sol::optional<bool> & requested_avoid_creatures ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_terrain" );
+        return set_platform_terrain( absolute, terrain_id,
+                                     requested_radius.value_or( 1.0 ),
+                                     requested_square.value_or( false ),
+                                     requested_avoid_creatures.value_or( false ) );
     } );
     environment.set_function( "field_exists", [require_read](
     const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {

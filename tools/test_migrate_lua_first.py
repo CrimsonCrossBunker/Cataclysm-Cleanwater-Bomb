@@ -40479,28 +40479,22 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             migrate_lua_first._coordinate_variable_handle("u", False, True)
         )
 
-    def test_map_migration_uses_typed_tokens_and_one_atomic_edit(self) -> None:
+    def test_eoc_map_writes_reject_abs_ms_objects_for_native_var_info(self) -> None:
         coordinate = {"abs_ms": [12, -7, 0]}
-        mutation = {
-            "set_terrain": "t_floor",
-            "u_set_field": "fd_fire",
-            "location": coordinate,
-            "target_var": coordinate,
-            "radius": 0,
-            "hit_player": False,
-            "intensity": 3,
-        }
-        rendered = migrate_lua_first.render_static_set_field(
-            mutation, "u_set_field", True, False
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {
+                    "u_set_field": "fd_fire",
+                    "target_var": coordinate,
+                    "radius": 0,
+                    "hit_player": False,
+                    "intensity": 3,
+                },
+                "u_set_field",
+                True,
+                False,
+            )
         )
-        self.assertIsNotNone(rendered)
-        main = "\n".join(rendered or [])
-        self.assertEqual(main.count("services.map.tile("), 1)
-        self.assertEqual(main.count("services.map.snapshot("), 1)
-        self.assertEqual(main.count("services.map.edit("), 1)
-        self.assertIn("map_tile_snapshot.revision", main)
-        self.assertIn('services.types.id("terrain", "t_floor")', main)
-        self.assertIn('services.types.id("field", "fd_fire")', main)
 
         omitted_radius = {"set_trap": "tr_beartrap", "location": coordinate}
         todo_category, todo_message = migrate_lua_first.set_trap_migration_todo(
@@ -40534,10 +40528,30 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
             "set_terrain",
         )
-        self.assertIsNotNone(terrain)
-        terrain_main = "\n".join(terrain or [])
-        self.assertIn("services.map.edit(", terrain_main)
-        self.assertNotIn("services.world.set_", terrain_main)
+        self.assertIsNone(terrain)
+
+        eoc_source = migrate_lua_first.SourceObject(Path("map_var_info.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "map_var_info",
+            "required_event": "game_start",
+            "effect": [
+                {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
+                {
+                    "u_set_field": "fd_fire",
+                    "target_var": coordinate,
+                    "radius": 0,
+                    "hit_player": False,
+                },
+            ],
+            "eoc_type": "EVENT",
+        })
+        result = migrate_lua_first.MigrationResult()
+        main = migrate_lua_first.render_eoc(eoc_source, result)
+        self.assertNotIn("services.map.edit(", main)
+        self.assertEqual(
+            main.count("TODO: map mutation requires one explicitly typed"), 2
+        )
+        self.assertEqual(len(result.todos), 2)
 
         for furniture_effect in (
             {"set_furniture": "f_null", "location": coordinate},

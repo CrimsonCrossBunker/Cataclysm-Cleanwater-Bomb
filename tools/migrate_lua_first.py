@@ -25739,111 +25739,17 @@ def _render_static_map_state_edit(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Render one atomic map.edit for supported edits at a typed abs_ms target.
+    """Keep EOC map-state writes as TODO until their native var_info is proven.
 
-    This helper accepts a deliberately small legacy shape.  Supported
-    terrain/field members in one descriptor are collected into one changes
-    table, so edits for the same tile share one revision check and native
-    atomic operation.  Furniture remains fail-closed because its native
-    placement behavior is not represented by map.edit.
+    Native set_terrain.location and set_field.target_var are parsed as
+    ``var_info`` (u/npc/global/var/context_val), not literal coordinates.
+    An ``abs_ms`` object is therefore not legal input to these EOC fields, and
+    there is no source-proven preceding write here that yields a typed Lua
+    coordinate. Direct Lua callers can still use the typed map services.
     """
     del avatar_actor_proven, npc_event_character_actor_proven
-    if not isinstance(effect, dict):
-        return None
-    mutation_keys = (
-        "set_terrain", "set_furniture",
-        "u_set_field", "npc_set_field",
-    )
-    present = [key for key in mutation_keys if key in effect]
-    if not present:
-        return None
-    # Native set_furniture calls furn_set(dest, id, false, avoid_creatures)
-    # for every point in its runtime-centered radius (default 1, circular
-    # unless square=true).  Even radius=0 cannot prove the point is in the
-    # loaded bubble, and furn_set's bounds, creature, and failed-placement
-    # behavior differs from map.edit's loaded-token validation and rollback.
-    if "set_furniture" in present:
-        return None
-    comment_keys = {
-        name for name in effect
-        if isinstance(name, str) and name.startswith("//")
-    }
-    allowed = comment_keys | {
-        "set_terrain", "set_furniture", "u_set_field",
-        "npc_set_field", "location", "loc", "target_var", "radius",
-        "avoid_creatures", "square", "intensity", "age", "outdoor_only",
-        "indoor_only", "hit_player",
-    }
-    if set(effect) - allowed:
-        return None
-
-    coordinate_values: list[Any] = []
-    if any(key in present for key in ("set_terrain", "set_furniture")):
-        if "location" not in effect:
-            return None
-        coordinate_values.append(effect["location"])
-    if any(key in present for key in ("u_set_field", "npc_set_field")):
-        if "target_var" not in effect:
-            return None
-        coordinate_values.append(effect["target_var"])
-    coordinates = [_explicit_abs_ms_expression(value) for value in coordinate_values]
-    if not coordinates or any(value is None for value in coordinates):
-        return None
-    if any(value != coordinates[0] for value in coordinates[1:]):
-        return None
-
-    radius_default = 1
-    radius = _literal_nonnegative_integer(effect.get("radius", radius_default), 0)
-    if radius != 0:
-        return None
-    if any(key in present for key in ("set_terrain", "set_furniture")):
-        if effect.get("avoid_creatures", False) is not False:
-            return None
-    if effect.get("square", False) is not False:
-        return None
-    for name in ("avoid_creatures", "outdoor_only", "indoor_only"):
-        if name in effect and not isinstance(effect[name], bool):
-            return None
-    if effect.get("outdoor_only", False) or effect.get("indoor_only", False):
-        return None
-
-    changes: list[str] = []
-    if "set_terrain" in present:
-        if not bounded_platform_id(effect["set_terrain"]):
-            return None
-        changes.append(
-            "terrain = services.types.id(\"terrain\", " +
-            lua_quote(effect["set_terrain"]) + "),"
-        )
-    if "set_furniture" in present:
-        if not bounded_platform_id(effect["set_furniture"]):
-            return None
-        changes.append(
-            "furniture = services.types.id(\"furniture\", " +
-            lua_quote(effect["set_furniture"]) + "),"
-        )
-    field_keys = [key for key in ("u_set_field", "npc_set_field") if key in effect]
-    if len(field_keys) > 1:
-        return None
-    if field_keys:
-        field_key = field_keys[0]
-        if not bounded_platform_id(effect[field_key]):
-            return None
-        hit_player = effect.get("hit_player", True)
-        if hit_player is not False:
-            return None
-        intensity = _literal_nonnegative_integer(effect.get("intensity", 1), 100)
-        if intensity is None or intensity < 1:
-            return None
-        age = _duration_expression(effect.get("age", "1 turn"))
-        if age is None:
-            return None
-        changes.append(
-            "field = { id = services.types.id(\"field\", " +
-            lua_quote(effect[field_key]) + f"), intensity = {intensity}, " +
-            f"age = {age}, hit_player = false }},"
-        )
-    return _render_explicit_map_edit(coordinate_values[0], changes)
+    del effect
+    return None
 
 
 def render_static_set_terrain_or_furniture(

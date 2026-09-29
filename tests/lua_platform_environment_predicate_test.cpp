@@ -18,14 +18,17 @@
 #include "dialogue.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "line.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_scale_constants.h"
+#include "npctalk.h"
 #include "worldfactory.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
@@ -37,6 +40,7 @@
 
 static const field_type_str_id field_fd_web( "fd_web" );
 static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
 static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
 
 namespace cata::lua_platform
@@ -389,6 +393,156 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
         REQUIRE( result.valid() );
     }
     CHECK( here.furn( actor_position ) == furn_str_id::NULL_ID().id() );
+}
+
+TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semantics",
+           "[lua][platform][environment_mutation][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    clear_map_without_vision();
+    clear_avatar();
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "environment_set_terrain", 4905, lua );
+    on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+        runtime_world_ready( false );
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    map &here = get_map();
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_wall.is_valid() );
+    const int map_width = here.getmapsize() * SEEX;
+    const int map_height = here.getmapsize() * SEEY;
+    const tripoint_bub_ms actor_center = here.get_bub( get_avatar().pos_abs() );
+    REQUIRE( here.inbounds( actor_center ) );
+    REQUIRE( here.inbounds( actor_center + tripoint_rel_ms( -2, -2, 0 ) ) );
+    REQUIRE( here.inbounds( actor_center + tripoint_rel_ms( 2, 2, 0 ) ) );
+    tripoint_bub_ms center( map_width / 2, map_height / 2, actor_center.z() );
+    if( trig_dist( center, actor_center ) < 3.0f ) {
+        center = actor_center + tripoint_rel_ms( 7, 7, 0 );
+        if( !here.inbounds( center + tripoint_rel_ms( 2, 2, 0 ) ) ) {
+            center = actor_center + tripoint_rel_ms( -7, -7, 0 );
+        }
+    }
+    REQUIRE( here.inbounds( center + tripoint_rel_ms( -2, -2, 0 ) ) );
+    REQUIRE( here.inbounds( center + tripoint_rel_ms( 2, 2, 0 ) ) );
+
+    const std::string location_key = "lua_platform_set_terrain_semantics_center";
+    REQUIRE( get_globals().maybe_get_global_value( location_key ) == nullptr );
+    on_out_of_scope clear_location( [&]() {
+        get_globals().remove_global_value( location_key );
+    } );
+    const std::string terrain_id = ter_t_wall.id().str();
+    lua["terrain_position"] = script_tripoint_coord::from_native(
+                                  coords::origin::abs, coords::scale::map_square,
+                                  here.get_abs( center ).raw() );
+    lua["terrain_id"] = terrain_id;
+
+    struct terrain_area_case {
+        tripoint_bub_ms center;
+        double radius;
+        bool square;
+        bool avoid_creatures;
+        int expected_changed;
+    };
+    const std::array<terrain_area_case, 4> cases = {{
+            { center, 2.0, false, false, 21 },
+            { center, 2.0, true, false, 25 },
+            { center, 1.9, false, false, 9 },
+            { actor_center, 1.0, false, true, -1 },
+        }
+    };
+
+    for( const terrain_area_case &test_case : cases ) {
+        lua["terrain_position"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs, coords::scale::map_square,
+                                      here.get_abs( test_case.center ).raw() );
+        std::array<ter_id, 25> original;
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const tripoint_bub_ms position = test_case.center + tripoint_rel_ms( dx, dy, 0 );
+                REQUIRE( here.inbounds( position ) );
+                const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                original[index] = here.ter( position );
+                here.ter_set( position, ter_t_floor );
+            }
+        }
+        on_out_of_scope restore_terrain( [&]() {
+            for( int dy = -2; dy <= 2; ++dy ) {
+                for( int dx = -2; dx <= 2; ++dx ) {
+                    const tripoint_bub_ms position = test_case.center + tripoint_rel_ms( dx, dy, 0 );
+                    const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                    here.ter_set( position, original[index] );
+                }
+            }
+        } );
+
+        get_globals().set_global_value( location_key, here.get_abs( test_case.center ) );
+        std::string effect_json =
+            R"({"set_terrain":"t_wall","location":{"global_val":"lua_platform_set_terrain_semantics_center"},"radius":)"
+            +
+            std::to_string( test_case.radius ) +
+        ",\"square\":" + ( test_case.square ? "true" : "false" ) +
+        ",\"avoid_creatures\":" + ( test_case.avoid_creatures ? "true" : "false" ) + "}";
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect( json_loader::from_string( effect_json ).get_object(),
+                                        "lua_platform_set_terrain_semantics" );
+        dialogue native_context;
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( native_context );
+        }
+        get_globals().remove_global_value( location_key );
+
+        std::array<ter_id, 25> native_result;
+        int native_changed = 0;
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const tripoint_bub_ms position = test_case.center + tripoint_rel_ms( dx, dy, 0 );
+                const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                native_result[index] = here.ter( position );
+                native_changed += native_result[index] == ter_t_wall.id() ? 1 : 0;
+            }
+        }
+        if( test_case.expected_changed >= 0 ) {
+            CHECK( native_changed == test_case.expected_changed );
+        }
+
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const tripoint_bub_ms position = test_case.center + tripoint_rel_ms( dx, dy, 0 );
+                here.ter_set( position, ter_t_floor );
+            }
+        }
+        const std::string call =
+            "return services.gameplay.environment.set_terrain(terrain_position, terrain_id, " +
+            std::to_string( test_case.radius ) + ", " +
+            ( test_case.square ? "true" : "false" ) + ", " +
+            ( test_case.avoid_creatures ? "true" : "false" ) + ")";
+        sol::protected_function_result lua_result;
+        {
+            detail::callback_scope active_callback( *owner );
+            lua_result = lua.safe_script( call, sol::script_pass_on_error );
+        }
+        if( !lua_result.valid() ) {
+            const sol::error error = lua_result;
+            INFO( error.what() );
+        }
+        REQUIRE( lua_result.valid() );
+        CHECK( lua_result.get<int>() == native_changed );
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const tripoint_bub_ms position = test_case.center + tripoint_rel_ms( dx, dy, 0 );
+                const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                CHECK( here.ter( position ) == native_result[index] );
+            }
+        }
+    }
 }
 
 TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
