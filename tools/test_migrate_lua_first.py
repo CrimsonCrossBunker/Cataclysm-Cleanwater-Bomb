@@ -18693,18 +18693,23 @@ assert(not available())
             "services.characters.training_offers(beta, alpha)",
             mission_callback.source,
         )
-        unsupported_mission_response = next(
+        payment_response = next(
             response for response in mission_topic.value["responses"]
             if isinstance(response, dict) and
             response.get("text", "").startswith(
                 "How about some items as payment?"
             )
         )
-        self.assertIsNone(
-            migrate_lua_first.render_talk_topic_response_condition(
-                unsupported_mission_response["condition"]
-            ),
-            "the real reward choice still depends on unsupported npc_friend semantics",
+        payment_callback = migrate_lua_first.render_talk_topic_response_condition(
+            payment_response["condition"]
+        )
+        self.assertIsNotNone(payment_callback)
+        assert payment_callback is not None
+        self.assertIn("services.npcs.get(beta)", payment_callback.source)
+        self.assertIn("snapshot.value.friendly == true", payment_callback.source)
+        self.assertIn(
+            "services.npcs.missions.selected_has_generic_rewards(beta)",
+            payment_callback.source,
         )
         mission_result = migrate_lua_first.MigrationResult()
         mission_rendered = migrate_lua_first.render_talk_topic(
@@ -18716,11 +18721,11 @@ assert(not available())
             'condition = false, text = "Maybe you can teach me something as payment?"',
             mission_rendered,
         )
-        self.assertIn(
+        self.assertNotIn(
             'condition = false, text = "How about some items as payment?"',
             mission_rendered,
         )
-        self.assertTrue(any(
+        self.assertFalse(any(
             "response condition needs Lua conversion" in todo.text
             for todo in mission_result.todos
         ))
