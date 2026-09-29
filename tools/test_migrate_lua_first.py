@@ -21997,10 +21997,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 '"You learned %s.", roll_result.name)', main,
             )
             self.assertIn(
-                "native remainder setters, typed Platform grants, and copied-dialogue callbacks",
+                "remainder roll needs a proven Character, bounded literal parameters, and resolvable callbacks",
                 main,
             )
-            self.assertIn("native-equivalent remainder setters and callbacks", report)
+            self.assertIn(
+                "needs a proven actor or exact literal remainder parameters and callbacks",
+                report,
+            )
 
     def test_real_xedra_roll_remainder_recurrence_and_avatar_event(self) -> None:
         source = REPOSITORY_ROOT / "data/mods/Xedra_Evolved/eocs/initialization.json"

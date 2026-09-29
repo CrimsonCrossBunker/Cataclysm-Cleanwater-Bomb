@@ -34262,13 +34262,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: native remainder setters, typed Platform "
-                        "grants, and copied-dialogue callbacks need an exact adapter."
+                        "    -- TODO: remainder roll needs a proven Character, "
+                        "bounded literal parameters, and resolvable callbacks."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs native-equivalent remainder setters and callbacks"
+                        "needs a proven actor or exact literal remainder parameters and callbacks"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_guard_pos" in effect or "npc_set_guard_pos" in effect):
