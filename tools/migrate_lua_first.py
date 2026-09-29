@@ -84,6 +84,7 @@ COMMON_ITEM_FIELDS = {
     "material",
     "qualities",
     "flags",
+    "use_action",
 }
 COMMON_RECIPE_FIELDS = {
     "type",
@@ -2015,6 +2016,225 @@ class SourceObject:
 
 
 @dataclass(frozen=True)
+class ItemUseActionPlan:
+    eoc_id: str | None
+    todo_category: TodoCategory
+    todo_message: str
+
+
+def _item_use_comments(value: dict[str, Any]) -> set[str]:
+    return {
+        key for key in value
+        if isinstance(key, str) and key.startswith("//")
+    }
+
+
+def _item_use_has_other_eoc_reference(
+    objects: list[SourceObject], eoc_id: str, owner: SourceObject,
+) -> bool:
+    other_sources = [
+        source for source in objects
+        if (source.path, source.index) != (owner.path, owner.index) and not (
+            source.value.get("type") in EOC_TYPES and
+            source.value.get("__inline_eoc") is True and
+            stable_id(source.value, f"anonymous_{source.index}") == eoc_id
+        )
+    ]
+    return eoc_id in _collect_eoc_references( other_sources, { eoc_id } )
+
+
+def _location_variable_target_params(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return [
+            target
+            for entry in value
+            for target in _location_variable_target_params(entry)
+        ]
+    if not isinstance(value, dict):
+        return []
+    targets = []
+    if "u_location_variable" in value or "npc_location_variable" in value:
+        targets.append(value.get("target_params"))
+    targets.extend(
+        target
+        for entry in value.values()
+        for target in _location_variable_target_params(entry)
+    )
+    return targets
+
+
+def classify_item_use_actions(
+    objects: list[SourceObject],
+    eoc_definition_counts: Counter[str],
+) -> dict[tuple[Path, int], ItemUseActionPlan]:
+    """Classify direct item EOCs without treating a nullable actor as proven."""
+    inline_eocs = {
+        stable_id(source.value, f"anonymous_{source.index}"): source
+        for source in objects
+        if source.value.get("type") in EOC_TYPES and
+        source.value.get("__inline_eoc") is True
+    }
+    item_id_counts = Counter(
+        source.value.get("id") for source in objects
+        if source.value.get("type") in ITEM_TYPES and
+        isinstance(source.value.get("id"), str)
+    )
+    plans: dict[tuple[Path, int], ItemUseActionPlan] = {}
+
+    def unsupported(
+        source: SourceObject, item_id: str, eoc_id: str | None,
+        reason: str,
+        category: TodoCategory = "manual_rewrite",
+    ) -> ItemUseActionPlan:
+        return ItemUseActionPlan(
+            eoc_id, category,
+            f"{source.location}: item {item_id} use_action needs manual review: {reason}",
+        )
+
+    for source in objects:
+        value = source.value
+        if value.get("type") not in ITEM_TYPES or "use_action" not in value:
+            continue
+        item_id = stable_id(value, f"todo_item_{source.index}")
+        action = value.get("use_action")
+        action_fields = (
+            set(action) - _item_use_comments(action)
+            if isinstance(action, dict) else set()
+        )
+        eoc_ids = (
+            action.get("effect_on_conditions")
+            if isinstance(action, dict) else None
+        )
+        eoc_id = (
+            eoc_ids[0] if isinstance(eoc_ids, list) and len(eoc_ids) == 1 and
+            isinstance(eoc_ids[0], str) else None
+        )
+        if not isinstance(action, dict) or action.get("type") != "effect_on_conditions":
+            plan = unsupported(
+                source, item_id, None,
+                "this batch only covers effect_on_conditions use actions",
+            )
+        elif eoc_id is None or eoc_id not in inline_eocs:
+            plan = unsupported(
+                source, item_id, None,
+                "the action must own exactly one inline EOC definition; named/reused EOCs stay ordinary manual rewrites",
+            )
+        else:
+            eoc = inline_eocs[eoc_id].value
+            effect = eoc.get("effect")
+            eoc_keys = _nested_object_keys(eoc)
+            route_keys = {"u_location_variable", "reveal_map", "reveal_route"} & eoc_keys
+            has_condition_or_false_branch = (
+                "condition" in eoc or "false_effect" in eoc
+            )
+            if route_keys and has_condition_or_false_branch:
+                flow_keys = sorted(eoc_keys & (route_keys | {"u_message"}))
+                target_params = _location_variable_target_params(eoc.get("effect"))
+                omits_origin_npc = bool(target_params) and all(
+                    isinstance(params, dict) and "origin_npc" not in params
+                    for params in target_params
+                )
+                condition_flow = sorted(
+                    _nested_object_keys(eoc.get("condition"))
+                )
+                origin_note = (
+                    f"Every location-variable target_params entry ({len(target_params)}) "
+                    "omits origin_npc, so "
+                    "parse_mission_om_target leaves origin_u enabled and "
+                    "mission_util::get_om_terrain_pos searches from the player Avatar "
+                    "while EOC alpha remains the actual using Character. "
+                    if omits_origin_npc else
+                    "The target origin and fallback still need source-specific review "
+                    "against mission_util::get_om_terrain_pos while EOC alpha remains "
+                    "the actual using Character. "
+                )
+                plan = unsupported(
+                    source, item_id, eoc_id,
+                    f"inline EOC {eoc_id} branches through conditions/false_effect and "
+                    f"uses {', '.join(flow_keys)} "
+                    f"with condition fields {', '.join(condition_flow)}. "
+                    "Native alpha is the actual using Character (possibly an NPC) and beta is this item. "
+                    "A null Character still executes the native EOC, while Platform ItemUseContext fails closed before Lua. "
+                    "For non-null calls the typed callback preserves the actual Character and exact item. " + origin_note +
+                    "The migration still lacks ordered context writes, search-miss status/debug behavior, and distant-map loading. "
+                    "Keep this as a platform_gap TODO; do not replace alpha with services.characters.avatar().",
+                    "platform_gap",
+                )
+            else:
+                descriptor_fields = set(eoc) - _item_use_comments(eoc)
+                effect_fields = set(effect) - _item_use_comments(effect) if isinstance(effect, dict) else set()
+                message = effect.get("u_message") if isinstance(effect, dict) else None
+                message_type = effect.get("type") if isinstance(effect, dict) else None
+                valid_message = (
+                    bounded_utf8_string(message, 512) and bool(message.strip()) and
+                    not any(character in message for character in ("%", "<", ">", "\0"))
+                )
+                menu_text = action.get("menu_text")
+                valid_label = (
+                    isinstance(menu_text, str) and
+                    bounded_utf8_string(menu_text, 256) and bool(menu_text.strip())
+                )
+                raw_id = value.get("id")
+                simple_message = (
+                    value.get("type") in {"ITEM", "GENERIC"} and
+                    isinstance(raw_id, str) and bounded_platform_id(raw_id) and
+                    item_id_counts[raw_id] == 1 and
+                    "copy-from" not in value and "abstract" not in value and
+                    "comestible" not in value and
+                    action_fields == {"type", "menu_text", "effect_on_conditions"} and
+                    valid_label and
+                    descriptor_fields <= {
+                        "type", "id", "effect", "eoc_type", "__inline_eoc", "__inline_actor_kind",
+                    } and
+                    eoc.get("__inline_actor_kind") == "item" and
+                    eoc.get("__inline_eoc") is True and
+                    eoc.get("eoc_type", "ACTIVATION") == "ACTIVATION" and
+                    "condition" not in eoc and "false_effect" not in eoc and
+                    eoc_definition_counts.get(eoc_id, 0) == 1 and
+                    isinstance(effect, dict) and
+                    effect_fields in ({"u_message"}, {"u_message", "type"}) and
+                    valid_message and message_type in {
+                        None, "neutral", "good", "bad", "mixed", "warning", "info",
+                        "debug", "headshot", "critical", "grazing",
+                    }
+                )
+                if simple_message:
+                    plan = unsupported(
+                        source, item_id, eoc_id,
+                        f"inline EOC {eoc_id} has one literal u_message, but native "
+                        "effect_on_conditions_actor can be invoked with a null Character: "
+                        "it still runs with alpha=null and this item as beta, then "
+                        "consume=false returns 0. Platform ItemUseContext requires a "
+                        "Character and fails closed before the callback, returning "
+                        "nullopt; a static item definition cannot guarantee non-null "
+                        "callers. Keep this as a platform_gap TODO until that path has "
+                        "parity. For Character-backed calls, alpha must remain the "
+                        "actual user (possibly an NPC), beta this exact item, u_message "
+                        "must translate at callback time with services.translate, and "
+                        "menu_text must use content.text for deferred translation.",
+                        "platform_gap",
+                    )
+                else:
+                    plan = unsupported(
+                        source, item_id, eoc_id,
+                        f"inline EOC {eoc_id} needs manual review; this batch does not migrate non-message or branched item actions",
+                    )
+        plans[(source.path, source.index)] = plan
+    return plans
+
+
+def _nested_object_keys(value: Any) -> set[str]:
+    if isinstance(value, list):
+        return set().union(*(_nested_object_keys(entry) for entry in value)) if value else set()
+    if isinstance(value, dict):
+        result = {key for key in value if isinstance(key, str)}
+        for entry in value.values():
+            result.update(_nested_object_keys(entry))
+        return result
+    return set()
+
+
+@dataclass(frozen=True)
 class LuaRaw:
     """A deliberately bounded Lua expression emitted by the migrator.
 
@@ -2443,7 +2663,11 @@ def render_pairs(
             )
 
 
-def render_item(source: SourceObject, result: MigrationResult) -> str | None:
+def render_item(
+    source: SourceObject,
+    result: MigrationResult,
+    item_use_plan: ItemUseActionPlan | None = None,
+) -> str | None:
     value = source.value
     item_id = stable_id(value, f"todo_item_{source.index}")
     if not isinstance(value.get("id"), str) or not value["id"]:
@@ -2561,6 +2785,17 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"definition:flag({lua_quote(flag_name)})")
     elif "flags" in value:
         result.add_todo("manual_rewrite", f"{source.location}: item {item_id} flags need manual conversion")
+    if "use_action" in value:
+        if item_use_plan is None:
+            result.add_todo(
+                "manual_rewrite",
+                f"{source.location}: item {item_id} use_action is outside the bounded typed item-use migration pass",
+            )
+        else:
+            result.add_todo(
+                item_use_plan.todo_category,
+                item_use_plan.todo_message,
+            )
     unresolved = sorted(set(value) - COMMON_ITEM_FIELDS)
     if unresolved or forced_partial or len(result.todos) != todo_count:
         result.partial.append(f"{source.location}: item {item_id}")
@@ -36566,6 +36801,25 @@ def migrate(objects: list[SourceObject], mod_id: str,
         {identifier for identifier, count in eoc_definition_counts.items()
          if count > 1}
     )
+    item_use_plans = classify_item_use_actions(
+        objects, eoc_definition_counts
+    )
+    source_by_key = {
+        (source.path, source.index): source for source in objects
+        if source.value.get("type") in ITEM_TYPES and
+        "use_action" in source.value
+    }
+    item_use_eoc_ids: set[str] = set()
+    for key, plan in item_use_plans.items():
+        eoc_id = plan.eoc_id
+        if eoc_id is None:
+            continue
+        source = source_by_key[key]
+        if (
+            eoc_definition_counts.get(eoc_id, 0) == 1 and
+            not _item_use_has_other_eoc_reference(objects, eoc_id, source)
+        ):
+            item_use_eoc_ids.add(eoc_id)
     global_eoc_ids = frozenset(
         stable_id(source.value, f"anonymous_{source.index}")
         for source in objects
@@ -36803,7 +37057,10 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 f"{source.location}: additional MOD_INFO cannot be represented by one Platform ModDefinition"
             )
         elif kind in ITEM_TYPES:
-            rendered = render_item(source, result)
+            rendered = render_item(
+                source, result,
+                item_use_plans.get((source.path, source.index)),
+            )
             if rendered:
                 item_chunks.append(rendered)
         elif kind in RECIPE_TYPES:
@@ -36811,6 +37068,13 @@ def migrate(objects: list[SourceObject], mod_id: str,
             if rendered:
                 recipe_chunks.append(rendered)
         elif kind in EOC_TYPES:
+            eoc_id = stable_id(source.value, f"anonymous_{source.index}")
+            if eoc_id in item_use_eoc_ids:
+                result.partial.append(
+                    f"{source.location}: inline item-use EOC {eoc_id} "
+                    "is retained as a source-level item-use TODO"
+                )
+                continue
             behaviour_chunks.append(
                 render_eoc(
                     source,

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -41394,6 +41395,124 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             "does not prove the exact live alpha" in todo.message
             for todo in result.todos
         ))
+
+    def test_real_fidget_spinner_inline_item_eoc_keeps_null_character_gap(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/json/items/toy.json"
+        normalized, *_ = migrate_lua_first.normalize_inline_eocs(
+            migrate_lua_first.load_objects([source_path]), False
+        )
+        spinner_eoc = next(
+            entry for entry in normalized
+            if entry.value.get("id") == "EOC_spinner_spinning"
+        )
+        self.assertNotIn("eoc_type", spinner_eoc.value)
+        spinner_item = next(
+            entry for entry in normalized
+            if entry.value.get("type") in migrate_lua_first.ITEM_TYPES and
+            entry.value.get("id") == "fidget_spinner"
+        )
+        spinner_eoc.value["eoc_type"] = "EVENT"
+        eoc_counts = Counter(
+            migrate_lua_first.stable_id(entry.value, f"anonymous_{entry.index}")
+            for entry in normalized
+            if entry.value.get("type") in migrate_lua_first.EOC_TYPES
+        )
+        changed_type = migrate_lua_first.classify_item_use_actions(
+            normalized, eoc_counts
+        )[
+            (spinner_item.path, spinner_item.index)
+        ]
+        self.assertEqual(changed_type.todo_category, "manual_rewrite")
+        self.assertIsNotNone(changed_type.todo_message)
+        self.assertNotIn("null Character", changed_type.todo_message)
+
+        result = migrate_lua_first.migrate(
+            migrate_lua_first.load_objects([source_path]), "toy_item_use"
+        )
+        main = result.files[Path("main.lua")]
+        self.assertNotIn('runtime.handler("migrated.item_use.fidget_spinner"', main)
+        self.assertNotIn('definition:on_use("migrated.item_use.fidget_spinner"', main)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("activate_activation_only", main)
+        item_use_todos = [
+            todo for todo in result.todos
+            if "EOC_spinner_spinning" in todo.message
+        ]
+        self.assertEqual(len(item_use_todos), 1)
+        self.assertEqual(item_use_todos[0].category, "platform_gap")
+        for text in (
+            "native effect_on_conditions_actor can be invoked with a null Character",
+            "alpha=null and this item as beta",
+            "consume=false returns 0",
+            "requires a Character and fails closed",
+            "returning nullopt",
+            "static item definition cannot guarantee non-null callers",
+            "actual user (possibly an NPC)",
+            "services.translate",
+            "content.text",
+        ):
+            self.assertIn(text, item_use_todos[0].message)
+        self.assertFalse(any(
+            "EOC_spinner_spinning" in entry for entry in result.converted
+        ))
+        self.assertTrue(any(
+            "inline item-use EOC EOC_spinner_spinning is retained as a source-level item-use TODO" in entry
+            for entry in result.partial
+        ))
+
+    def test_real_magiclysm_currency_keeps_npc_safe_route_gap(self) -> None:
+        source_path = REPOSITORY_ROOT / "data/mods/Magiclysm/items/currency.json"
+        result = migrate_lua_first.migrate(
+            migrate_lua_first.load_objects([source_path]), "magiclysm_currency"
+        )
+        main = result.files[Path("main.lua")]
+        self.assertNotIn('runtime.handler("migrated.item_use.denarius"', main)
+        self.assertNotIn('definition:on_use("migrated.item_use.denarius"', main)
+        route_todos = [
+            todo for todo in result.todos
+            if todo.category == "platform_gap" and
+            "EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS" in todo.message
+        ]
+        self.assertEqual(len(route_todos), 1)
+        for text in (
+            "actual using Character (possibly an NPC)",
+            "null Character still executes the native EOC",
+            "beta is this item",
+            "u_location_variable",
+            "origin_npc",
+            "Every location-variable target_params entry (2) omits origin_npc",
+            "player Avatar",
+            "search-miss status/debug behavior",
+            "do not replace alpha with services.characters.avatar()",
+        ):
+            self.assertIn(text, route_todos[0].message)
+        self.assertTrue(any(
+            "inline item-use EOC EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS is retained as a source-level item-use TODO" in entry
+            for entry in result.partial
+        ))
+        self.assertFalse(any(
+            "does not prove the exact live alpha" in todo.message
+            for todo in result.todos
+        ))
+
+        with_origin_npc = migrate_lua_first.load_objects([source_path])
+        route = with_origin_npc[0].value["use_action"]["effect_on_conditions"][0]
+        for operation in route["effect"]:
+            if "u_location_variable" in operation:
+                operation["target_params"]["origin_npc"] = False
+        changed = migrate_lua_first.migrate(
+            with_origin_npc, "magiclysm_currency_origin_npc"
+        )
+        changed_route_todo = next(
+            todo for todo in changed.todos
+            if todo.category == "platform_gap" and
+            "EOC_REVEAL_ROUTE_TO_FORGE_OF_WONDERS" in todo.message
+        )
+        self.assertNotIn("player Avatar", changed_route_todo.message)
+        self.assertIn(
+            "target origin and fallback still need source-specific review",
+            changed_route_todo.message,
+        )
 
 
 def load_tests(loader, tests, pattern):
