@@ -20901,49 +20901,21 @@ def render_static_teleport_effect(
     npc_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render only exclusive Avatar-event, global-coordinate teleport calls.
+    """Keep EOC teleport migration fail-closed without a proven target write.
 
-    The typed service delegates to native ``teleport_to_point`` and carries its
-    force policies and linked-item translation.  Talker selection, NPC/item/
-    vehicle/zone dispatch, non-global variable scopes, and translated messages
-    remain fail-closed.
+    Native ``u_teleport`` reads a legacy variable as a tripoint, defaulting a
+    missing value to the origin and allowing legacy conversions.  The typed
+    Lua resolver represents a missing value with ``exists = false`` instead,
+    so a global variable reference alone cannot be lowered equivalently.  A
+    future migration needs a source-proven write with an exact coordinate
+    type; the typed Platform service remains available to hand-written Lua.
     """
     del (
+        effect,
         monster_actor_proven, vehicle_actor_proven, npc_actor_proven,
-        npc_actor_expression,
+        npc_actor_expression, avatar_actor_proven,
     )
-    key = "u_teleport" if "u_teleport" in effect else "npc_teleport"
-    if key != "u_teleport" or not avatar_actor_proven:
-        return None
-    if set(effect) - {key, "force", "force_safe"}:
-        return None
-    for option in ("force", "force_safe"):
-        if option in effect and not isinstance(effect[option], bool):
-            return None
-    target = effect.get(key)
-    if (
-        not isinstance(target, dict) or set(target) != {"global_val"} or
-        not bounded_utf8_string(target.get("global_val"), 256)
-    ):
-        return None
-
-    options = []
-    for option in ("force", "force_safe"):
-        if effect.get(option, False):
-            options.append(f"{option} = true")
-    arguments = f"actor, destination.value"
-    if options:
-        arguments += ", { " + ", ".join(options) + " }"
-    return [
-        "    do",
-        "        local destination = services.variables.resolve(",
-        f"            context.data, actor, \"global\", {lua_quote(target['global_val'])})",
-        "        if destination.exists then",
-        "            service_value(services.relocation.teleport_avatar("
-        f"{arguments}))",
-        "        end",
-        "    end",
-    ]
+    return None
 
 
 def render_static_npc_goal_effect(
@@ -33963,19 +33935,20 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: preserve native teleport_to_point map "
-                        "loading/recentering for unproven/non-Avatar talkers; "
-                        "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
-                        "scopes, and translated success/failure messages."
+                        "loading/recentering and target default/conversion; require a "
+                        "source-proven global coordinate write, and retain "
+                        "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                        "translated messages."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "teleport needs native teleport_to_point map loading/recentering "
-                        "for unproven/non-Avatar talkers; services.relocation.teleport_avatar "
-                        "only covers an exclusive avatar_moves u_teleport with global_val "
-                        "and no messages. NPC/Item/Vehicle/Zone dispatch, other target "
-                        "scopes, and translation_or_var success/failure messages remain "
-                        "unsupported"
+                        "and target default/conversion; a global_val target needs a "
+                        "source-proven write with exact coordinate type because missing "
+                        "native values default to the origin while Lua resolve skips them. "
+                        "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                        "translated success/failure messages remain unsupported"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):

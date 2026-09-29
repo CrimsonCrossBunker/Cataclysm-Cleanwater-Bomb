@@ -22486,7 +22486,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main,
         )
 
-    def test_exclusive_avatar_moves_global_teleport_uses_typed_native_service(self) -> None:
+    def test_exclusive_avatar_moves_global_teleport_stays_todo_without_target_proof(self) -> None:
         result = self._migrate_teleport_source(
             [{
                 "type": "effect_on_condition",
@@ -22500,20 +22500,19 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             }]
         )
         main = result.files[Path("main.lua")]
-        handler = main[
-            main.index("migrated_eoc_exclusive_avatar_teleport = function"):
-            main.index('migrated_eoc_functions["exclusive_avatar_teleport"]')
-        ]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+        self.assertNotIn("services.relocation.teleport_avatar(", main)
         self.assertIn(
-            'services.variables.resolve(\n            context.data, actor, "global", "return_position")',
-            handler,
+            "TODO: preserve native teleport_to_point map "
+            "loading/recentering and target default/conversion",
+            main,
         )
         self.assertIn(
-            "services.relocation.teleport_avatar(actor, destination.value, { force = true })",
-            handler,
+            "global_val target needs a source-proven write with exact coordinate type",
+            report,
         )
-        self.assertNotIn("services.relocation.move(", handler)
-        self.assertNotIn("TODO: preserve native teleport_to_point", handler)
+        # Native global-variable reads default missing values to the origin and
+        # can convert legacy values; Lua resolve.exists would skip the move.
 
         unsafe_cases = [
             (
@@ -22608,9 +22607,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             },
         )
         avatar_result = migrate_lua_first.MigrationResult()
-        # Exercise the conservative branch used whenever the full migration
-        # input contains dynamic dispatch; this does not claim corpus-wide
-        # exclusivity for the real EOC.
+        # The real event shape remains TODO because there is no source proof
+        # that the referenced global is present and exactly a tripoint.
         avatar_rendered = migrate_lua_first.render_eoc(
             avatar_eoc, avatar_result,
             dynamic_eoc_dispatch_present=True,
@@ -32659,9 +32657,10 @@ assert(context.data.picked==selected)
             self.assertIn("services.effects.remove", main)
             self.assertIn(
                 "TODO: preserve native teleport_to_point map "
-                "loading/recentering for unproven/non-Avatar talkers; "
-                "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
-                "scopes, and translated success/failure messages.",
+                "loading/recentering and target default/conversion; require a "
+                "source-proven global coordinate write, and retain "
+                "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                "translated messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -38656,9 +38655,10 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertNotIn("services.variables.get_global(\"target\")", main)
             self.assertIn(
                 "TODO: preserve native teleport_to_point map "
-                "loading/recentering for unproven/non-Avatar talkers; "
-                "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
-                "scopes, and translated success/failure messages.",
+                "loading/recentering and target default/conversion; require a "
+                "source-proven global coordinate write, and retain "
+                "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                "translated messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -38672,11 +38672,11 @@ assert(calls==3 and context.data.entry=='zombie')
             )
             self.assertIn(
                 "dynamic_world_targets effect #1 teleport needs native teleport_to_point map "
-                "loading/recentering for unproven/non-Avatar talkers; "
-                "services.relocation.teleport_avatar only covers an exclusive "
-                "avatar_moves u_teleport with global_val and no messages. "
+                "loading/recentering and target default/conversion; a global_val target "
+                "needs a source-proven write with exact coordinate type because missing "
+                "native values default to the origin while Lua resolve skips them. "
                 "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
-                "translation_or_var success/failure messages remain unsupported",
+                "translated success/failure messages remain unsupported",
                 report,
             )
 
