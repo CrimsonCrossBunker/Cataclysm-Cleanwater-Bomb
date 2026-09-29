@@ -32865,17 +32865,32 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif effect == "player_weapon_away":
-                reason = (
-                    "player_weapon_away is registered as a native TALK response "
-                    "action, not an EOC effect; do not infer EOC semantics from "
-                    "the shared label"
-                )
-                lines.append( f"    -- TODO: {reason}." )
-                result.add_todo(
-                    "semantic_choice",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
-                )
-                all_effects_converted = False
+                # EOC and TALK both load this string through talk_effect_t.
+                # Its native static wrapper first requires dialogue beta to
+                # be an NPC, then acts on the global player Character.  Never
+                # infer that beta from a game_start or NPC event actor.
+                if wrapped_npc_beta_expression is not None:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.equipment.stow_current_weapon(services.characters.avatar()))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: player_weapon_away's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "player_weapon_away needs a proven live beta NPC pair"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and "player_weapon_away" in effect:
                 reason = (
                     "native WRAP player_weapon_away accepts only a string; this "

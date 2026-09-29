@@ -18137,18 +18137,15 @@ assert(not available())
             self.assertIn("off-screen tinymaps", main)
             self.assertIn("EOC u_spawn_item remains TODO", report)
             self.assertIn("loc is a legacy var_info lookup", report)
-            self.assertIn(
-                "player_weapon_away is registered as a native TALK response action",
-                main,
-            )
+            self.assertIn("player_weapon_away's native wrapper requires a dialogue beta NPC", main)
             self.assertNotIn("services.items.transfer", main)
             weapon_todos = [
                 todo for todo in result.todos
-                if "player_weapon_away is registered as a native TALK response action"
+                if "player_weapon_away needs a proven live beta NPC pair"
                 in todo.message
             ]
             self.assertEqual(len(weapon_todos), 1)
-            self.assertEqual(weapon_todos[0].category, "semantic_choice")
+            self.assertEqual(weapon_todos[0].category, "manual_rewrite")
             self.assertIn(
                 "native WRAP player_weapon_away accepts only a string",
                 main,
@@ -18169,7 +18166,7 @@ assert(not available())
                 "services.world.remove_field(",
             ):
                 self.assertNotIn(legacy_map_write, main)
-            self.assertIn("explicitly typed abs_ms coordinate", main)
+            self.assertIn("set_trap needs native radius-based trap_set semantics", main)
             self.assertNotIn("services.hordes.signal", main)
             self.assertEqual(
                 main.count("signal_hordes needs an immediately preceding proven"),
@@ -18196,7 +18193,7 @@ assert(not available())
                 2,
             )
             self.assertNotIn("services.hordes.advance", main)
-            self.assertNotIn("services.overmap.reveal_route", main)
+            self.assertNotIn("service_value(services.overmap.reveal_route(", main)
             self.assertIn(
                 "native reveal_route resolves two var_info abs_ms endpoints "
                 "and projects them to OMT",
@@ -24487,7 +24484,55 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 "TODO: translate this legacy effect through a typed native service",
                 main,
             )
-            self.assertIn("direct talk-topic beta NPC proof", report)
+            self.assertIn("proven live beta NPC pair", report)
+
+    def test_player_weapon_away_eoc_uses_native_wrapper_beta_and_avatar_action(self) -> None:
+        # Both EOCs and TALK load string actions through talk_effect_t.  Its
+        # static wrapper checks dialogue beta before player_weapon_away acts
+        # on the global player Character.  An unrelated NPC event supplies no
+        # such beta even if an NPC happens to be the event's alpha actor.
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps([
+                    {
+                        "type": "talk_topic", "id": "stow_weapon_topic",
+                        "dynamic_line": "Please put that away.",
+                        "responses": [{
+                            "text": "Okay.", "true_eocs": "stow_weapon_pair",
+                        }],
+                    },
+                    {
+                        "type": "effect_on_condition", "id": "stow_weapon_pair",
+                        "effect": "player_weapon_away",
+                    },
+                    {
+                        "type": "effect_on_condition", "id": "stow_weapon_npc_event",
+                        "eoc_type": "EVENT", "required_event": "npc_becomes_hostile",
+                        "effect": "player_weapon_away",
+                    },
+                ]),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "stow_weapon_pair_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            # The topic itself still has an unrelated true_eocs response TODO.
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(
+                main.count(
+                    "services.equipment.stow_current_weapon(services.characters.avatar())"
+                ), 1,
+            )
+            self.assertIn(
+                'beta.kind == "creature" and beta.subtype == "npc"', main
+            )
+            self.assertIn("native wrapper requires a dialogue beta NPC", main)
+            self.assertIn("proven live beta NPC pair", report)
 
     def test_player_weapon_drop_requires_direct_talk_topic_beta_npc(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -24522,7 +24567,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.partial), 2)
             self.assertEqual(
                 main.count(
                     "services.characters.drop_weapon(services.characters.avatar())"
@@ -24533,7 +24578,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'beta.kind == "creature" and beta.subtype == "npc"', main
             )
             self.assertIn("native wrapper requires a dialogue beta NPC", main)
-            self.assertIn("direct talk-topic beta NPC proof", report)
+            self.assertIn("proven live beta NPC pair", report)
+
     def test_stolen_item_conditions_require_proven_alpha_beta_pair(self) -> None:
         expected = (
             '(function() local alpha = actor; local beta = context and '
