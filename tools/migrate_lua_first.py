@@ -25297,9 +25297,10 @@ def render_static_mapgen_update(
 ) -> list[str] | None:
     # Native target_var is a var_info lookup yielding an absolute map-square
     # tripoint, while the other branch performs a mission target search.  The
-    # typed Platform run_update now has immediate native runner semantics for
-    # an explicit OMT token, but no EOC callsite yet proves both its target and
-    # selected-mission argument.  Delayed updates also need a timed-event path.
+    # typed Platform run_update/schedule_update cover explicit OMT targets,
+    # but no true corpus EOC currently proves a complete target and
+    # mission-independent update path.  Source-specific delayed key/time
+    # semantics remain unrepresented by the migrator.
     del effect, avatar_actor_proven, npc_actor_proven
     return None
 
@@ -33297,10 +33298,14 @@ def render_eoc(
                 else:
                     mapgen_gap = (
                         "mapgen_update needs a proven native target (var_info abs_ms "
-                        "or mission search) and typed OMT token. "
-                        "services.mapgen.run_update covers immediate mission-free "
-                        "native execution, while timed events and selected-mission "
-                        "arguments remain unrepresented"
+                        "or mission search) and typed OMT token; var_info abs_ms "
+                        "lookup or mission target search remains unrepresented. "
+                        "No complete real-source callsite currently proves an "
+                        "immediate target and mission-independent update. "
+                        "mission_util terrain searches, selected-mission mapgen targets "
+                        "(the native path passes the selected mission to updates, which "
+                        "this adapter cannot), and source-specific delayed key/time/target "
+                        "provenance remain unrepresented"
                     )
                     lines.append(f"    -- TODO: {mapgen_gap}.")
                     result.add_todo(

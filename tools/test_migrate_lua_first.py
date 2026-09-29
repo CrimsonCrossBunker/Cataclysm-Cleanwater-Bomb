@@ -25933,6 +25933,135 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("var_info abs_ms lookup or mission target search", main)
             self.assertNotIn("services.mapgen.apply(", main)
 
+    def test_real_sky_island_uninitialized_global_mapgen_target_stays_todo(self) -> None:
+        eoc_path = REPOSITORY_ROOT / "data/mods/Sky_Island/effectoncondition/island_upgrades.json"
+        mapgen_path = REPOSITORY_ROOT / "data/mods/Sky_Island/mapgen/island_upgrades.json"
+        talk_path = REPOSITORY_ROOT / "data/mods/Sky_Island/dialog_statue.json"
+        mission_path = REPOSITORY_ROOT / "data/mods/Sky_Island/missions/island_upgrades/center_rooms.json"
+        objects = migrate_lua_first.load_objects(
+            [eoc_path, mapgen_path, talk_path, mission_path]
+        )
+        eoc = next(
+            entry.value for entry in objects
+            if entry.value.get("id") == "EOC_skyisland_build_centralskylight2"
+        )
+        initializer = next(
+            entry.value for entry in objects
+            if entry.value.get("id") == "EOC_memorize_island"
+        )
+        update = next(
+            entry.value for entry in objects
+            if entry.value.get("update_mapgen_id") == "mx_skyisland_skylight2"
+        )
+        self.assertEqual(
+            eoc["effect"],
+            [{
+                "mapgen_update": "mx_skyisland_skylight2",
+                "target_var": {"global_val": "OM_island_center"},
+            }],
+        )
+        self.assertTrue(any(
+            effect.get("u_location_variable") == {"global_val": "OM_island_center"}
+            for effect in initializer["effect"]
+        ))
+        self.assertTrue(any(
+            effect.get("target_params", {}).get("om_terrain") == "sky_island_core"
+            for effect in initializer["effect"]
+            if isinstance(effect, dict)
+        ))
+        self.assertEqual(set(update["object"]), {"rows", "flags", "terrain"})
+        self.assertTrue(any(
+            "EOC_skyisland_build_centralskylight2" in json.dumps(entry.value)
+            for entry in objects if entry.path == talk_path
+        ))
+        self.assertTrue(any(
+            "EOC_skyisland_build_centralskylight2" in json.dumps(entry.value)
+            for entry in objects if entry.path == mission_path
+        ))
+
+        result = migrate_lua_first.migrate(objects, "sky_island_mapgen_probe")
+        main = result.files[Path("main.lua")]
+        start = main.index(
+            "migrated_eoc_EOC_skyisland_build_centralskylight2 = function"
+        )
+        end = main.index(
+            'migrated_eoc_functions["EOC_skyisland_build_centralskylight2"]',
+            start,
+        )
+        generated = main[start:end]
+        self.assertIn("TODO: mapgen_update needs a proven native target", generated)
+        self.assertIn("var_info abs_ms lookup or mission target search", generated)
+        self.assertNotIn("services.mapgen.run_update(", generated)
+        self.assertNotIn("services.mapgen.apply(", generated)
+
+    def test_real_safehouse_same_eoc_location_search_mapgen_stays_todo(self) -> None:
+        eoc_path = REPOSITORY_ROOT / "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json"
+        mapgen_path = REPOSITORY_ROOT / "data/json/mapgen/netherum/labyrinth_safehouse_mapgen.json"
+        objects = migrate_lua_first.load_objects([eoc_path, mapgen_path])
+        eoc = next(
+            entry.value for entry in objects
+            if entry.value.get("id") == "EOC_LS_SAFEHOUSE_UPDATE_LIVING_SPACE_1"
+        )
+        update = next(
+            entry.value for entry in objects
+            if entry.value.get("update_mapgen_id") == "labyrinth_safehouse_living_space_1"
+        )
+        self.assertEqual(
+            eoc["effect"][0]["u_location_variable"],
+            {"global_val": "LS_SAFEHOUSE_1"},
+        )
+        self.assertEqual(
+            eoc["effect"][0]["target_params"],
+            {"om_terrain": "labyrinth_safehouse"},
+        )
+        self.assertEqual(
+            eoc["effect"][1],
+            {
+                "mapgen_update": "labyrinth_safehouse_living_space_1",
+                "target_var": {"global_val": "LS_SAFEHOUSE_1"},
+            },
+        )
+        self.assertIn("palettes", update["object"])
+
+        result = migrate_lua_first.migrate(objects, "labyrinth_safehouse_mapgen_probe")
+        main = result.files[Path("main.lua")]
+        start = main.index(
+            "migrated_eoc_EOC_LS_SAFEHOUSE_UPDATE_LIVING_SPACE_1 = function"
+        )
+        end = main.index(
+            'migrated_eoc_functions["EOC_LS_SAFEHOUSE_UPDATE_LIVING_SPACE_1"]',
+            start,
+        )
+        generated = main[start:end]
+        self.assertIn("TODO: translate location-variable search", generated)
+        self.assertIn("TODO: mapgen_update needs a proven native target", generated)
+        self.assertNotIn("services.mapgen.run_update(", generated)
+        self.assertNotIn("services.mapgen.apply(", generated)
+
+    def test_real_lab_mapgen_update_search_stays_fail_closed(self) -> None:
+        eoc_path = REPOSITORY_ROOT / "data/json/effects_on_condition/mapgen_eocs/lab_mapgen_eocs.json"
+        updates_path = REPOSITORY_ROOT / "data/json/mapgen/lab/lab_modular/lab_nests_modular/lab_nested_mapgen_updates.json"
+        objects = migrate_lua_first.load_objects([eoc_path, updates_path])
+        eoc = next(
+            entry.value for entry in objects
+            if entry.value.get("id") == "lab_security_check"
+        )
+        self.assertEqual(eoc["required_event"], "avatar_enters_omt")
+        self.assertEqual(
+            eoc["effect"],
+            {"mapgen_update": "release_the_bots", "om_terrain": "lab_health_z-3_A"},
+        )
+
+        result = migrate_lua_first.migrate(objects, "lab_mapgen_probe")
+        main = result.files[Path("main.lua")]
+        start = main.index("migrated_eoc_lab_security_check = function")
+        end = main.index('migrated_eoc_functions["lab_security_check"]', start)
+        generated = main[start:end]
+        self.assertIn("mapgen_update needs a proven native target", generated)
+        self.assertIn("mission_util terrain searches", generated)
+        self.assertNotIn("services.mapgen.run_update(", generated)
+        self.assertNotIn("services.mapgen.apply(", generated)
+
     def test_mapgen_update_literal_omt_migrator_shape_stays_fail_closed(self) -> None:
         # This static object was accepted by the old lowerer; it is not a native
         # var_info descriptor and exists here only as a migration regression.
