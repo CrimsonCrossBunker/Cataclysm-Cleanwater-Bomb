@@ -3116,7 +3116,12 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
         quantities.pop_back();
 
         if( !target ) {
-            debugmsg( "Lost target item of ACT_MOVE_ITEMS" );
+            // A haul target can disappear when stacks merge or another action
+            // moves it after this activity was queued.  Skip it and continue
+            // hauling the remaining items without interrupting the player.
+            if( !hauling_mode ) {
+                debugmsg( "Lost target item of ACT_MOVE_ITEMS" );
+            }
             continue;
         }
 
@@ -8559,6 +8564,11 @@ void milk_activity_actor::finish( player_activity &act, Character &who )
         debugmsg( "could not find source creature for liquid transfer" );
         return;
     }
+    // The temporary tie belongs to this activity, even if the milk source or
+    // liquid destination became invalid before completion.
+    if( milking_tie ) {
+        source_mon->remove_effect( effect_tied );
+    }
     auto milked_item = source_mon->ammo.find( source_mon->type->starting_ammo.begin()->first );
     if( milked_item == source_mon->ammo.end() ) {
         debugmsg( "animal has no milkable ammo type" );
@@ -8579,9 +8589,16 @@ void milk_activity_actor::finish( player_activity &act, Character &who )
             who.add_msg_if_player( _( "The %s's udders run dry." ), source_mon->get_name() );
         }
     }
-    // if the monster was not manually tied up, but needed to be fixed in place temporarily then
-    // remove that now.
-    if( milking_tie ) {
+}
+
+void milk_activity_actor::canceled( player_activity &, Character & )
+{
+    if( !milking_tie ) {
+        return;
+    }
+    const tripoint_bub_ms source_pos = get_map().get_bub( monster_coords );
+    monster *source_mon = get_creature_tracker().creature_at<monster>( source_pos );
+    if( source_mon ) {
         source_mon->remove_effect( effect_tied );
     }
 }

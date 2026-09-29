@@ -3429,8 +3429,14 @@ void basecamp::start_crafting( const mission_id &miss_id )
     if( comp != nullptr ) {
         components.consume_components();
         item_components used = components.consumed_components();
-        for( const item &results : making->create_results( num_to_make, &used ) ) {
-            comp->companion_mission_inv.add_item( results );
+        // Practice recipes train a skill but have no physical result.  Their
+        // null result must not become an item in the companion's return cargo.
+        if( !making->is_practice() ) {
+            for( const item &results : making->create_results( num_to_make, &used ) ) {
+                if( !results.is_null() ) {
+                    comp->companion_mission_inv.add_item( results );
+                }
+            }
         }
         for( const item &byproducts : making->create_byproducts( num_to_make ) ) {
             comp->companion_mission_inv.add_item( byproducts );
@@ -3770,7 +3776,7 @@ void basecamp::finish_return( npc &comp, const bool fixed_time, const std::strin
     if( !cancel ) {
         for( size_t i = 0; i < comp.companion_mission_inv.size(); i++ ) {
             for( const item &it : comp.companion_mission_inv.const_stack( i ) ) {
-                if( !it.count_by_charges() || it.charges > 0 ) {
+                if( !it.is_null() && ( !it.count_by_charges() || it.charges > 0 ) ) {
                     place_results( it );
                 }
             }
@@ -6179,6 +6185,9 @@ int basecamp::camp_morale( int change ) const
 
 void basecamp::place_results( const item &result )
 {
+    if( result.is_null() ) {
+        return;
+    }
     map &target_bay = get_camp_map();
     form_storage_zones( target_bay, bb_pos );
     tripoint_bub_ms new_spot = target_bay.get_bub( get_dumping_spot() );
