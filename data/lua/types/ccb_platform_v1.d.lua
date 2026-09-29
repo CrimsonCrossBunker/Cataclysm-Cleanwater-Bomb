@@ -457,6 +457,23 @@ function CcbOvermapApi.snapshot(token) end
 ---@return CcbResult result `value` is a CcbOvermapEditResult.
 function CcbOvermapApi.edit(token, expected_revision, changes) end
 
+---@class CcbOvermapTargetSelector
+---@field terrain string|GameId Static overmap terrain text or GameId<overmap_terrain>; the empty string skips searching.
+---@field match? GameEnum GameEnum<OtMatchType>; defaults to the native mission target match type, `type`.
+
+---@class CcbOvermapTargetOptions
+---@field random? boolean Use native random selection instead of closest selection; defaults to false.
+---@field search_range? number Raw native search range; defaults to three OMAPX. Values truncate toward zero. Zero uses the native mode-specific default.
+---@field min_distance? number Native minimum distance; defaults to zero. Values truncate toward zero.
+---@field z? number Replace the search origin z before searching; native matching still considers every legal overmap z level. Values truncate toward zero.
+---@field offset? TripointCoord Relative overmap-terrain offset applied after selection, including when no match returns the origin.
+
+---@param origin TripointCoord Explicit absolute overmap-terrain (`abs_omt`) search origin.
+---@param selector CcbOvermapTargetSelector|string|GameId Static terrain selector; string and GameId forms default to native match type `type`.
+---@param options? CcbOvermapTargetOptions
+---@return TripointCoord Selected absolute OMT, or the search origin when no terrain matched, with `offset` applied. The retry may generate overmaps and needs an active runtime callback after the existing-overmap search misses.
+function CcbOvermapApi.find_target(origin, selector, options) end
+
 ---@class CcbOvermapRevealResult
 ---@field scanned integer Number of positions inspected inside the square radius.
 ---@field existing integer Number of existing overmap tiles found.

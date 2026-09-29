@@ -420,4 +420,130 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
     CHECK_FALSE( reveal_native( fixture.abs_omt_position( overflow_center ), 1 ).valid() );
 }
 
+TEST_CASE( "lua_platform_overmap_target_search_matches_native_mission_target",
+           "[lua][platform][overmap][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 826, 56 );
+    REQUIRE( fixture.edit_ready );
+
+    constexpr int target_z = 1;
+    const oter_id field( "field" );
+    const oter_id camp( "faction_base_camp_0" );
+    REQUIRE( field.is_valid() );
+    REQUIRE( camp.is_valid() );
+
+    struct terrain_preimage {
+        tripoint_om_omt local;
+        oter_id terrain;
+    };
+    std::vector<terrain_preimage> preimage;
+    preimage.reserve( OVERMAP_DEPTH + OVERMAP_HEIGHT + 1 );
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        const tripoint_om_omt local( fixture.source_local.xy(), z );
+        preimage.push_back( { local, fixture.source_overmap->ter( local ) } );
+        fixture.source_overmap->ter_set( local, field );
+    }
+    const on_out_of_scope restore_terrain( [&]() {
+        for( const terrain_preimage &tile : preimage ) {
+            if( fixture.source_overmap->ter( tile.local ) != tile.terrain ) {
+                fixture.source_overmap->ter_set( tile.local, tile.terrain );
+            }
+        }
+    } );
+    const tripoint_om_omt target_local( fixture.source_local.xy(), target_z );
+    fixture.source_overmap->ter_set( target_local, camp );
+
+    avatar &player = get_avatar();
+    dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
+    mission_target_params native_params;
+    native_params.overmap_terrain = "faction_base";
+    native_params.overmap_terrain_match_type = ot_match_type::prefix;
+    native_params.random = true;
+    native_params.search_range = 1.9;
+    native_params.min_distance = 0.9;
+    native_params.z = dbl_or_var( 1.9 );
+    native_params.offset = tripoint_rel_omt( 1, 0, 0 );
+    const tripoint_abs_omt native_target =
+        mission_util::get_om_terrain_pos( native_params, conversation );
+
+    const sol::protected_function find_target =
+        fixture.overmap_api()["find_target"];
+    sol::table selector = fixture.lua.create_table();
+    selector["terrain"] = "faction_base";
+    selector["match"] = cata::lua_platform::script_enum_value::from(
+                             "OtMatchType", "prefix" );
+    sol::table options = fixture.lua.create_table();
+    options["random"] = true;
+    options["search_range"] = 1.9;
+    options["min_distance"] = 0.9;
+    options["z"] = 1.9;
+    options["offset"] = cata::lua_platform::script_tripoint_coord::from_native(
+                            coords::origin::rel,
+                            coords::scale::overmap_terrain,
+                            tripoint{ 1, 0, 0 } );
+    const sol::protected_function_result platform_result = find_target(
+                fixture.abs_omt_position( fixture.source_omt ), selector, options );
+    REQUIRE( platform_result.valid() );
+    const tripoint_abs_omt platform_target(
+        platform_result.get<cata::lua_platform::script_tripoint_coord>().to_native() );
+
+    const tripoint_abs_omt expected( fixture.source_omt.xy(), target_z );
+    const tripoint_abs_omt expected_with_offset = expected + tripoint::east;
+    CHECK( native_target == expected_with_offset );
+    CHECK( platform_target == native_target );
+    CHECK_FALSE( fixture.write_called );
+}
+
+TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_returns_origin",
+           "[lua][platform][overmap][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 827, 57 );
+    REQUIRE( fixture.edit_ready );
+
+    tripoint_abs_omt remote_origin( 1000000, 1000000, 0 );
+    for( int attempt = 0; attempt < 100 &&
+         overmap_buffer.has( project_to<coords::om>( remote_origin.xy() ) );
+         ++attempt ) {
+        remote_origin.x() += OMAPX * 10;
+    }
+    const point_abs_om remote_overmap =
+        project_to<coords::om>( remote_origin.xy() );
+    REQUIRE_FALSE( overmap_buffer.has( remote_overmap ) );
+
+    const sol::protected_function find_target =
+        fixture.overmap_api()["find_target"];
+    sol::table selector = fixture.lua.create_table();
+    selector["terrain"] = "__missing_platform_test_terrain__";
+    selector["match"] = cata::lua_platform::script_enum_value::from(
+                             "OtMatchType", "exact" );
+    sol::table options = fixture.lua.create_table();
+    options["search_range"] = 1;
+    options["min_distance"] = 0;
+    const sol::protected_function_result platform_result = find_target(
+                fixture.abs_omt_position( remote_origin ), selector, options );
+    REQUIRE( platform_result.valid() );
+    const tripoint_abs_omt platform_target(
+        platform_result.get<cata::lua_platform::script_tripoint_coord>().to_native() );
+    CHECK( platform_target == remote_origin );
+    CHECK( fixture.write_called );
+    CHECK( overmap_buffer.has( remote_overmap ) );
+
+    npc native_origin;
+    native_origin.normalize();
+    native_origin.setID( character_id( 8271 ), true );
+    native_origin.setpos( project_to<coords::ms>( remote_origin ), false );
+    avatar &player = get_avatar();
+    dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
+    mission_target_params native_params;
+    native_params.overmap_terrain = "__missing_platform_test_terrain__";
+    native_params.overmap_terrain_match_type = ot_match_type::exact;
+    native_params.origin_u = false;
+    native_params.guy = &native_origin;
+    native_params.search_range = 1.0;
+    native_params.min_distance = 0.0;
+    const tripoint_abs_omt native_target =
+        mission_util::get_om_terrain_pos( native_params, conversation );
+    CHECK( native_target == platform_target );
+}
+
 #endif // CATA_ENABLE_LUA_PLATFORM
