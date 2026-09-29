@@ -27,6 +27,7 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "item.h"
+#include "itype.h"
 #include "line.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -710,6 +711,21 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
     const pet_slot_id saddle_slot( "saddle" );
     const pet_slot_id saddlebag_slot( "saddlebag" );
     const pet_slot_id stirrup_slot( "stirrup" );
+
+    const item tack( itype_horse_tack );
+    const item stirrups( itype_horse_stirrups );
+    const item saddlebags( itype_saddlebag );
+    REQUIRE( tack.type->pet_equipment );
+    REQUIRE( stirrups.type->pet_equipment );
+    REQUIRE( saddlebags.type->pet_equipment );
+    CHECK( tack.type->pet_equipment->slots == std::vector<std::string> { "saddle" } );
+    CHECK( stirrups.type->pet_equipment->slots == std::vector<std::string> { "stirrup" } );
+    CHECK( saddlebags.type->pet_equipment->slots == std::vector<std::string> { "saddlebag" } );
+    CHECK( stirrup_slot.obj().mount_threshold_delta == 0 );
+    CHECK( stirrup_slot.obj().melee_hit_multiplier == Approx( 1.0 ) );
+    CHECK( stirrups.type->pet_equipment->mount_threshold_delta == -2 );
+    CHECK( stirrups.type->pet_equipment->melee_hit_multiplier == Approx( 1.1 ) );
+    CHECK( stirrups.type->pet_equipment->fear_multiplier == Approx( 0.75 ) );
 
     REQUIRE_FALSE( horse.pet_slot_available( stirrup_slot ) );
     REQUIRE( horse.equip_pet_equipment( saddle_slot, item( itype_horse_tack ) ) );

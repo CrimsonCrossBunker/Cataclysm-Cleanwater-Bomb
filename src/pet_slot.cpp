@@ -13,6 +13,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "itype.h"
 #include "json.h"
 #include "monster.h"
 #include "mtype.h"
@@ -161,7 +162,12 @@ bool pet_slot::accepts( const item &candidate, const monster &pet,
     if( mount_only && !pet.has_flag( mon_flag_PET_MOUNTABLE ) ) {
         return reject( "slot is restricted to mountable creatures" );
     }
-    if( !required_flags.empty() && std::none_of( required_flags.begin(), required_flags.end(),
+    if( candidate.type->pet_equipment ) {
+        const std::vector<std::string> &item_slots = candidate.type->pet_equipment->slots;
+        if( std::find( item_slots.begin(), item_slots.end(), id.str() ) == item_slots.end() ) {
+            return reject( "item does not declare compatibility with this equipment slot" );
+        }
+    } else if( !required_flags.empty() && std::none_of( required_flags.begin(), required_flags.end(),
     [&candidate]( const flag_id & flag ) {
     return candidate.has_flag( flag );
     } ) ) {

@@ -6,7 +6,6 @@
     "description": "Holds tack used to control and ride a mount.",
     "required_flags": [ "TACK" ],
     "mount_only": true,
-    "passive_effects": [ "monster_saddled" ],
     "sub_slots": [ "saddlebag", "stirrup" ]
   },
   {
@@ -16,8 +15,7 @@
     "description": "Holds a storage bag attached to an equipped saddle.",
     "required_flags": [ "SADDLE_BAG" ],
     "min_storage": "250 ml",
-    "mount_only": true,
-    "passive_effects": [ "has_bag" ]
+    "mount_only": true
   },
   {
     "type": "pet_slot",
@@ -25,10 +23,7 @@
     "name": { "str": "stirrups" },
     "description": "Holds stirrups that make mounting and mounted combat easier.",
     "required_flags": [ "STIRRUP" ],
-    "mount_only": true,
-    "mount_threshold_delta": -2,
-    "melee_hit_multiplier": 1.1,
-    "fear_multiplier": 0.75
+    "mount_only": true
   },
   {
     "type": "pet_slot",

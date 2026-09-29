@@ -115,7 +115,7 @@
   {
     "id": "horse_tack",
     "type": "ITEM",
-    "subtypes": [ "TOOL" ],
+    "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
     "name": { "str": "horse tack" },
     "description": "A saddle, bridle, and associated tack that can be placed on a tamed animal that is capable of being ridden.",
     "weight": "2 kg",
@@ -125,12 +125,14 @@
     "material": [ "leather", "steel" ],
     "symbol": "M",
     "color": "yellow",
-    "flags": [ "TACK" ]
+    "flags": [ "TACK" ],
+    "pet_slots": [ "saddle" ],
+    "pet_passive_effects": [ "monster_saddled" ]
   },
   {
     "id": "horse_stirrups",
     "type": "ITEM",
-    "subtypes": [ "TOOL" ],
+    "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
     "name": { "str_sp": "horse stirrups (pair)" },
     "description": "A matched pair of metal stirrups with leather straps.  Attached to a saddle, they give a rider a more stable seat and better control in combat.",
     "weight": "1500 g",
@@ -140,7 +142,11 @@
     "material": [ "steel", "leather" ],
     "symbol": "[",
     "color": "light_gray",
-    "flags": [ "STIRRUP" ]
+    "flags": [ "STIRRUP" ],
+    "pet_slots": [ "stirrup" ],
+    "pet_mount_threshold_delta": -2,
+    "pet_melee_hit_multiplier": 1.1,
+    "pet_fear_multiplier": 0.75
   },
   {
     "//": "https://primeusascales.com/product/sls-single-animal-livestock-scales/",

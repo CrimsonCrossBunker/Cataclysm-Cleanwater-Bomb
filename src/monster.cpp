@@ -14,6 +14,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -2934,7 +2935,13 @@ bool monster::equip_pet_equipment( const pet_slot_id &slot, const item &equipmen
         custom_pet_equipment[slot] = std::move( equipped );
     }
 
-    for( const efftype_id &effect : slot.obj().passive_effects ) {
+    std::set<efftype_id> passive_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( equipment.type->pet_equipment ) {
+        passive_effects.insert( equipment.type->pet_equipment->passive_effects.begin(),
+                                equipment.type->pet_equipment->passive_effects.end() );
+    }
+    for( const efftype_id &effect : passive_effects ) {
         add_effect( effect, 1_turns, true );
     }
     return true;
@@ -2951,6 +2958,14 @@ cata::value_ptr<item> monster::remove_pet_equipment( const pet_slot_id &slot )
         }
     }
 
+    const item *installed = get_pet_equipment( slot );
+    std::set<efftype_id> removed_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( installed->type->pet_equipment ) {
+        removed_effects.insert( installed->type->pet_equipment->passive_effects.begin(),
+                                installed->type->pet_equipment->passive_effects.end() );
+    }
+
     cata::value_ptr<item> removed;
     if( slot == pet_slot_saddle ) {
         removed = std::move( tack_item );
@@ -2965,13 +2980,25 @@ cata::value_ptr<item> monster::remove_pet_equipment( const pet_slot_id &slot )
         custom_pet_equipment.erase( iter );
     }
 
-    for( const efftype_id &effect : slot.obj().passive_effects ) {
+    for( const efftype_id &effect : removed_effects ) {
         const bool supplied_elsewhere = std::any_of(
                                             get_all_pet_slots().begin(), get_all_pet_slots().end(),
         [this, &slot, &effect]( const pet_slot & other ) {
-            return other.id != slot && has_pet_equipment( other.id ) &&
-                   std::find( other.passive_effects.begin(), other.passive_effects.end(), effect ) !=
-                   other.passive_effects.end();
+            if( other.id == slot ) {
+                return false;
+            }
+            const item *other_equipment = get_pet_equipment( other.id );
+            if( other_equipment == nullptr ) {
+                return false;
+            }
+            if( std::find( other.passive_effects.begin(), other.passive_effects.end(), effect ) !=
+                other.passive_effects.end() ) {
+                return true;
+            }
+            const islot_pet_equipment *item_data = other_equipment->type->pet_equipment.get();
+            return item_data != nullptr &&
+                   std::find( item_data->passive_effects.begin(), item_data->passive_effects.end(),
+                              effect ) != item_data->passive_effects.end();
         } );
         if( !supplied_elsewhere ) {
             remove_effect( effect );
@@ -2984,8 +3011,11 @@ int monster::pet_equipment_mount_threshold_delta() const
 {
     int result = 0;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( has_pet_equipment( slot.id ) ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
             result += slot.mount_threshold_delta;
+            if( equipment->type->pet_equipment ) {
+                result += equipment->type->pet_equipment->mount_threshold_delta;
+            }
         }
     }
     return result;
@@ -2995,8 +3025,11 @@ double monster::pet_equipment_melee_hit_multiplier() const
 {
     double result = 1.0;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( has_pet_equipment( slot.id ) ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
             result *= slot.melee_hit_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_hit_multiplier;
+            }
         }
     }
     return result;
@@ -3006,8 +3039,11 @@ double monster::pet_equipment_melee_damage_multiplier() const
 {
     double result = 1.0;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( has_pet_equipment( slot.id ) ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
             result *= slot.melee_damage_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_damage_multiplier;
+            }
         }
     }
     return result;
@@ -3017,8 +3053,11 @@ double monster::pet_equipment_fear_multiplier() const
 {
     double result = 1.0;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( has_pet_equipment( slot.id ) ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
             result *= slot.fear_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->fear_multiplier;
+            }
         }
     }
     return result;

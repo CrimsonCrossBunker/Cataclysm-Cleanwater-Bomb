@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
+#include <list>
 #include <set>
 #include <string>
 #include <utility>
@@ -16,6 +18,7 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_pocket.h"
 #include "item_location.h"
 #include "messages.h"
 #include "monster.h"
@@ -87,7 +90,8 @@ void append_character_item_location( Character &who, item_location location,
     }
 
     item *candidate = location.get_item();
-    if( candidate == nullptr || !seen.insert( candidate ).second ||
+    if( candidate == nullptr || candidate->typeId().is_empty() ||
+        candidate->typeId().is_null() || !seen.insert( candidate ).second ||
         candidate->has_flag( flag_INTEGRATED ) || candidate->made_of( phase_id::LIQUID ) ||
         !who.can_drop( *candidate ).success() ) {
         return;
@@ -106,7 +110,8 @@ std::vector<item_location> character_transfer_items( Character &who )
     for( item_location location : who.all_items_loc() ) {
         if( location ) {
             item *candidate = location.get_item();
-            if( candidate != nullptr && seen.insert( candidate ).second &&
+            if( candidate != nullptr && !candidate->typeId().is_empty() &&
+                !candidate->typeId().is_null() && seen.insert( candidate ).second &&
                 !candidate->has_flag( flag_INTEGRATED ) &&
                 !candidate->made_of( phase_id::LIQUID ) &&
                 who.can_drop( *candidate ).success() ) {
@@ -139,7 +144,7 @@ std::vector<equipment_candidate> equipment_candidates( Character &who, const mon
 {
     std::vector<equipment_candidate> result;
     for( item_location &candidate : character_transfer_items( who ) ) {
-        if( !candidate ) {
+        if( !candidate || candidate->typeId().is_empty() || candidate->typeId().is_null() ) {
             continue;
         }
         equipment_candidate entry;
@@ -175,12 +180,96 @@ std::string candidate_slot_names( const equipment_candidate &candidate )
     return result;
 }
 
-std::vector<std::size_t> transferable_pet_items( const monster &pet )
+struct pet_cargo_entry {
+    item *value = nullptr;
+    item_pocket *pocket = nullptr;
+    std::size_t pocket_index = 0;
+    bool legacy_inventory = false;
+};
+
+std::string pet_pocket_name( const item_pocket &pocket, const std::size_t index )
 {
-    std::vector<std::size_t> result;
-    for( std::size_t index = 0; index < pet.inv.size(); ++index ) {
-        if( !pet.inv[index].has_var( "DESTROY_ITEM_ON_MON_DEATH" ) ) {
-            result.push_back( index );
+    std::string name = pocket.get_name().translated();
+    if( name.empty() ) {
+        name = string_format( _( "Pocket %d" ), index + 1 );
+    }
+    return name;
+}
+
+bool is_transferable_cargo( const item &candidate )
+{
+    return !candidate.typeId().is_empty() && !candidate.typeId().is_null() &&
+           !candidate.has_var( "DESTROY_ITEM_ON_MON_DEATH" );
+}
+
+void migrate_legacy_pet_cargo( monster &pet )
+{
+    item *storage = pet.get_pet_storage();
+    if( storage == nullptr ) {
+        return;
+    }
+
+    auto iter = pet.inv.begin();
+    while( iter != pet.inv.end() ) {
+        if( iter->typeId().is_empty() || iter->typeId().is_null() ) {
+            iter = pet.inv.erase( iter );
+            continue;
+        }
+        if( iter->has_var( "DESTROY_ITEM_ON_MON_DEATH" ) ) {
+            ++iter;
+            continue;
+        }
+        if( storage->put_in( *iter, pocket_type::CONTAINER, false, nullptr, true ).success() ) {
+            iter = pet.inv.erase( iter );
+        } else {
+            ++iter;
+        }
+    }
+}
+
+std::vector<pet_cargo_entry> transferable_pet_items( monster &pet )
+{
+    std::vector<pet_cargo_entry> result;
+    item *storage = pet.get_pet_storage();
+    if( storage != nullptr ) {
+        const std::vector<item_pocket *> pockets = storage->get_container_pockets();
+        for( std::size_t pocket_index = 0; pocket_index < pockets.size(); ++pocket_index ) {
+            item_pocket *pocket = pockets[pocket_index];
+            if( pocket == nullptr ) {
+                continue;
+            }
+            for( item *stored : pocket->all_items_top() ) {
+                if( stored != nullptr && is_transferable_cargo( *stored ) ) {
+                    result.push_back( { stored, pocket, pocket_index, false } );
+                }
+            }
+        }
+    }
+    for( item &legacy : pet.inv ) {
+        if( is_transferable_cargo( legacy ) ) {
+            result.push_back( { &legacy, nullptr, 0, true } );
+        }
+    }
+    return result;
+}
+
+units::volume pet_cargo_volume( const std::vector<pet_cargo_entry> &cargo )
+{
+    units::volume result = 0_ml;
+    for( const pet_cargo_entry &entry : cargo ) {
+        if( entry.value != nullptr ) {
+            result += entry.value->volume();
+        }
+    }
+    return result;
+}
+
+units::mass pet_cargo_weight( const std::vector<pet_cargo_entry> &cargo )
+{
+    units::mass result = 0_gram;
+    for( const pet_cargo_entry &entry : cargo ) {
+        if( entry.value != nullptr ) {
+            result += entry.value->weight();
         }
     }
     return result;
@@ -307,12 +396,8 @@ bool can_pet_carry( const monster &pet, const item &candidate, std::string &reas
         reason = _( "The animal cannot carry that much additional weight." );
         return false;
     }
-    if( candidate.volume() > storage->get_volume_capacity() - pet.get_carried_volume() ) {
-        reason = _( "The item does not fit in the animal's storage." );
-        return false;
-    }
-    if( candidate.length() > storage->max_containable_length() ) {
-        reason = _( "The item is too long for the animal's storage." );
+    if( !storage->can_contain_directly( candidate ).success() ) {
+        reason = _( "The equipped storage has no pocket that can contain this item." );
         return false;
     }
     return true;
@@ -331,20 +416,55 @@ bool move_character_item_to_pet( Character &who, monster &pet, item_location sou
         }
         return false;
     }
-    pet.add_item( *source );
+    item *storage = pet.get_pet_storage();
+    if( storage == nullptr ) {
+        return false;
+    }
+    const item payload( *source );
+    if( !storage->put_in( payload, pocket_type::CONTAINER, false, &who, true ).success() ) {
+        if( show_failure ) {
+            popup( _( "The item could not be inserted into the animal's storage pocket." ) );
+        }
+        return false;
+    }
     source.remove_item();
     who.flag_encumbrance();
     who.mod_moves( -100 );
     return true;
 }
 
-bool move_pet_item_to_character( Character &who, monster &pet, std::size_t inventory_index )
+bool move_pet_item_to_character( Character &who, monster &pet, const pet_cargo_entry &entry )
 {
-    if( inventory_index >= pet.inv.size() ) {
+    if( entry.value == nullptr || entry.value->typeId().is_empty() ||
+        entry.value->typeId().is_null() ) {
         return false;
     }
-    item moved = pet.inv[inventory_index];
-    pet.inv.erase( pet.inv.begin() + inventory_index );
+
+    std::optional<item> extracted;
+    if( entry.legacy_inventory ) {
+        const auto found = std::find_if( pet.inv.begin(), pet.inv.end(),
+        [&entry]( const item & candidate ) {
+            return &candidate == entry.value;
+        } );
+        if( found == pet.inv.end() ) {
+            return false;
+        }
+        extracted = *found;
+        pet.inv.erase( found );
+    } else {
+        if( entry.pocket == nullptr ) {
+            return false;
+        }
+        extracted = entry.pocket->remove_item( *entry.value );
+        if( !extracted ) {
+            return false;
+        }
+    }
+
+    if( !extracted || extracted->typeId().is_empty() || extracted->typeId().is_null() ) {
+        return false;
+    }
+    item moved = std::move( *extracted );
     who.i_add( moved );
     who.flag_encumbrance();
     who.mod_moves( -100 );
@@ -356,11 +476,35 @@ bool move_pet_item_to_character( Character &who, monster &pet, std::size_t inven
 void show_equipment( monster &pet )
 {
     avatar &player = get_avatar();
-    std::vector<pet_slot_id> slots;
+    std::set<pet_slot_id> eligible_slots;
     for( const pet_slot &slot : get_all_pet_slots() ) {
         if( !slot.mount_only || pet.has_flag( mon_flag_PET_MOUNTABLE ) ) {
-            slots.push_back( slot.id );
+            eligible_slots.insert( slot.id );
         }
+    }
+
+    // Build a stable grouped order: each root slot is followed by its child slots.
+    std::vector<pet_slot_id> slots;
+    std::set<pet_slot_id> added_slots;
+    std::function<void( const pet_slot_id & )> append_slot_group;
+    append_slot_group = [&]( const pet_slot_id & slot_id ) {
+        if( eligible_slots.count( slot_id ) == 0 || !added_slots.insert( slot_id ).second ) {
+            return;
+        }
+        slots.push_back( slot_id );
+        for( const pet_slot_id &child : slot_id.obj().sub_slots ) {
+            append_slot_group( child );
+        }
+    };
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        const std::optional<pet_slot_id> parent = get_pet_slot_parent( slot.id );
+        if( eligible_slots.count( slot.id ) > 0 &&
+            ( !parent || eligible_slots.count( *parent ) == 0 ) ) {
+            append_slot_group( slot.id );
+        }
+    }
+    for( const pet_slot_id &slot_id : eligible_slots ) {
+        append_slot_group( slot_id );
     }
 
     pane_side active = pane_side::left;
@@ -489,6 +633,8 @@ void show_equipment( monster &pet )
         draw_border( layout.root );
         center_print( layout.root, 0, c_white,
                       string_format( _( "%s equipment" ), pet.get_name() ) );
+        // Refresh the background before its child windows so it cannot erase their contents.
+        wnoutrefresh( layout.root );
 
         const std::optional<pet_slot_id> current_slot = selected_slot();
         std::vector<pane_row> item_rows;
@@ -510,7 +656,8 @@ void show_equipment( monster &pet )
             const bool available = pet.pet_slot_available( slot_id );
             pane_row row;
             row.name = get_pet_slot_parent( slot_id ) ?
-                       "  " + slot.name.translated() : slot.name.translated();
+                       "  " + slot.name.translated() :
+                       string_format( "[ %s ]", slot.name.translated() );
             if( !available ) {
                 row.status = _( "[locked]" );
                 row.color = c_dark_gray;
@@ -532,13 +679,13 @@ void show_equipment( monster &pet )
                          _( "Compatible slots" ), item_rows, item_cursor,
                          active == pane_side::left,
                          _( "No compatible equipment is available." ) );
-        draw_table_pane( layout.right, _( "Animal equipment" ), _( "Slot" ),
+        draw_table_pane( layout.right, _( "Animal equipment by slot group" ), _( "Slot group" ),
                          _( "Installed item" ), slot_rows, slot_cursor,
                          active == pane_side::right,
                          _( "This animal has no equipment slots." ) );
 
         std::string item_title = _( "Selected item" );
-        std::string item_text = _( "None" );
+        std::string item_text = _( "No item selected." );
         if( !candidates.empty() ) {
             const equipment_candidate &candidate = candidates[item_cursor.selected];
             item_title = candidate.location->display_name();
@@ -546,7 +693,7 @@ void show_equipment( monster &pet )
         }
 
         std::string slot_title = _( "Selected slot" );
-        std::string slot_text = _( "None" );
+        std::string slot_text = _( "No slot selected." );
         if( current_slot ) {
             const pet_slot &slot = current_slot->obj();
             slot_title = slot.name.translated();
@@ -569,7 +716,6 @@ void show_equipment( monster &pet )
                                      context.get_desc( "NEXT_TAB" ),
                                      context.get_desc( "CONFIRM" ),
                                      context.get_desc( "QUIT" ) ) );
-        wnoutrefresh( layout.root );
         wnoutrefresh( layout.controls );
     } );
 
@@ -635,9 +781,10 @@ void show_transfer( monster &pet )
     pane_cursor player_cursor;
     pane_cursor pet_cursor;
     std::vector<item_location> player_items;
-    std::vector<std::size_t> pet_items;
+    std::vector<pet_cargo_entry> pet_items;
 
     const auto rebuild = [&]() {
+        migrate_legacy_pet_cargo( pet );
         player_items = character_transfer_items( player );
         pet_items = transferable_pet_items( pet );
         player_cursor.normalize( static_cast<int>( player_items.size() ), 1 );
@@ -658,6 +805,8 @@ void show_transfer( monster &pet )
         draw_border( layout.root );
         center_print( layout.root, 0, c_white,
                       string_format( _( "Transfer items with %s" ), pet.get_name() ) );
+        // Refresh the background first; both inventory panes must remain visible afterward.
+        wnoutrefresh( layout.root );
 
         std::vector<pane_row> player_rows;
         player_rows.reserve( player_items.size() );
@@ -672,12 +821,17 @@ void show_transfer( monster &pet )
 
         std::vector<pane_row> pet_rows;
         pet_rows.reserve( pet_items.size() );
-        for( const std::size_t index : pet_items ) {
-            const item &entry = pet.inv[index];
+        for( const pet_cargo_entry &cargo : pet_items ) {
+            if( cargo.value == nullptr ) {
+                continue;
+            }
+            const item &entry = *cargo.value;
+            const std::string location = cargo.legacy_inventory ? _( "Legacy cargo" ) :
+                                         pet_pocket_name( *cargo.pocket, cargo.pocket_index );
             pet_rows.push_back( {
-                entry.display_name(),
-                string_format( _( "%1$d g  %2$s %3$s" ), units::to_gram( entry.weight() ),
-                               format_volume( entry.volume() ), volume_units_abbr() ),
+                string_format( _( "%1$s: %2$s" ), location, entry.display_name() ),
+                string_format( _( "%1$s / %2$d g" ), format_volume( entry.volume() ),
+                               units::to_gram( entry.weight() ) ),
                 c_white
             } );
         }
@@ -685,12 +839,12 @@ void show_transfer( monster &pet )
         draw_table_pane( layout.left, _( "Your inventory" ), _( "Item" ),
                          _( "Weight / volume" ), player_rows, player_cursor,
                          active == pane_side::left, _( "Your inventory is empty." ) );
-        draw_table_pane( layout.right, pet.get_name(), _( "Cargo" ),
-                         _( "Weight / volume" ), pet_rows, pet_cursor,
+        draw_table_pane( layout.right, string_format( _( "%s storage pockets" ), pet.get_name() ),
+                         _( "Pocket / item" ), _( "Volume / weight" ), pet_rows, pet_cursor,
                          active == pane_side::right, _( "The animal is carrying no cargo." ) );
 
         std::string left_title = _( "Selected inventory item" );
-        std::string left_text = _( "None" );
+        std::string left_text = _( "No inventory item selected." );
         if( !player_items.empty() ) {
             const item_location &entry = player_items[player_cursor.selected];
             left_title = entry->display_name();
@@ -700,11 +854,22 @@ void show_transfer( monster &pet )
         }
 
         std::string right_title = _( "Selected animal cargo" );
-        std::string right_text = _( "None" );
+        std::string right_text = _( "No cargo selected." );
         if( !pet_items.empty() ) {
-            const item &entry = pet.inv[pet_items[pet_cursor.selected]];
-            right_title = entry.display_name();
-            right_text = _( "Can be moved to your inventory." );
+            const pet_cargo_entry &cargo = pet_items[pet_cursor.selected];
+            if( cargo.value != nullptr ) {
+                right_title = cargo.value->display_name();
+                if( cargo.legacy_inventory ) {
+                    right_text = _( "Legacy cargo awaiting migration to a real pocket." );
+                } else {
+                    right_text = string_format(
+                                     _( "%1$s: %2$s / %3$s %4$s" ),
+                                     pet_pocket_name( *cargo.pocket, cargo.pocket_index ),
+                                     format_volume( cargo.pocket->contents_volume() ),
+                                     format_volume( cargo.pocket->volume_capacity() ),
+                                     volume_units_abbr() );
+                }
+            }
         }
         draw_detail_box( layout.details, left_title, left_text, right_title, right_text );
 
@@ -713,13 +878,12 @@ void show_transfer( monster &pet )
         center_print( layout.controls, 0, c_light_gray,
                       string_format(
                           _( "Cargo %1$s/%2$s %3$s, %4$d/%5$d g   [%6$s] switch  [%7$s] move  [%8$s] move all  [%9$s] exit" ),
-                          format_volume( pet.get_carried_volume() ),
+                          format_volume( pet_cargo_volume( pet_items ) ),
                           format_volume( storage->get_volume_capacity() ), volume_units_abbr(),
-                          units::to_gram( pet.get_carried_weight() ),
+                          units::to_gram( pet_cargo_weight( pet_items ) ),
                           units::to_gram( pet.weight_capacity() ),
                           context.get_desc( "NEXT_TAB" ), context.get_desc( "CONFIRM" ),
                           context.get_desc( "MOVE_ALL_ITEMS" ), context.get_desc( "QUIT" ) ) );
-        wnoutrefresh( layout.root );
         wnoutrefresh( layout.controls );
     } );
 

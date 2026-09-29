@@ -639,6 +639,24 @@ struct islot_pet_armor {
     void deserialize( const JsonObject &jo );
 };
 
+/**
+ * Data authored on an item type that allows the item to occupy animal equipment slots.
+ *
+ * Slot definitions describe the animal-side structure.  Equipment-specific behavior
+ * belongs here so different accessories can target the same slot with different effects.
+ */
+struct islot_pet_equipment {
+    std::vector<std::string> slots;
+    std::vector<efftype_id> passive_effects;
+    int mount_threshold_delta = 0;
+    double melee_hit_multiplier = 1.0;
+    double melee_damage_multiplier = 1.0;
+    double fear_multiplier = 1.0;
+
+    bool was_loaded = false;
+    void deserialize( const JsonObject &jo );
+};
+
 struct islot_book {
     /**
      * Which skill it upgrades, if any. Can be @ref skill_id::NULL_ID.
@@ -1446,6 +1464,7 @@ struct itype {
         cata::value_ptr<islot_compostable> compostable;
         cata::value_ptr<islot_armor> armor;
         cata::value_ptr<islot_pet_armor> pet_armor;
+        cata::value_ptr<islot_pet_equipment> pet_equipment;
         cata::value_ptr<islot_book> book;
         cata::value_ptr<islot_mod> mod;
         cata::value_ptr<islot_engine> engine;
