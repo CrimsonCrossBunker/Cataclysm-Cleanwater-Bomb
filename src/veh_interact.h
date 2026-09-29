@@ -106,6 +106,9 @@ class veh_interact
 
         static void run( map &here,  vehicle &veh, const point_rel_ms &p );
 
+        // Hidden parts must remain selectable even when no visible frame remains.
+        static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );
+
         /** Prompt for a part matching the selector function */
         static std::optional<vpart_reference> select_part( map &here, const vehicle &veh,
                 const part_selector &sel,
