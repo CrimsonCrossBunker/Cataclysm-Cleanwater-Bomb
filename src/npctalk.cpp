@@ -3002,7 +3002,9 @@ talk_data talk_response::create_option_line( dialogue &d, const input_event &hot
         const bool is_computer )
 {
     std::string ftext;
-    text = ( truefalse_condition( d ) ? truetext : falsetext ).translated();
+    const bool use_true_text = deferred_text_condition ? deferred_text_condition( d ) :
+                               truefalse_condition( d );
+    text = ( use_true_text ? truetext : falsetext ).translated();
     if( trial.type == TALK_TRIAL_NONE || trial.type == TALK_TRIAL_CONDITION ) {
         // regular dialogue
         ftext = text;

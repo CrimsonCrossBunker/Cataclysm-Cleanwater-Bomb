@@ -6501,7 +6501,8 @@ function PlatformDialogueContext:remove(key) end
 ---@field text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `text`; an empty table means no context. Without this field, `text` stays literal.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
 ---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
----@field text_condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response text; false displays `false_text`.
+---@field text_condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated during option-line creation after
+---response generation and speaker effects; false displays `false_text`.
 ---@field false_text? string Alternate response text; requires `text_condition` and stays literal unless `false_text_translation` is provided.
 ---@field false_text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `false_text`; requires `false_text` and `text_condition`.
 ---@field success_consequence? 'none'|'hostile'|'helpless'|'action' Native success consequence applied by the response effect.

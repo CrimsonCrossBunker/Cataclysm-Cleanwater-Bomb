@@ -516,7 +516,7 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
     CHECK_FALSE( stale_runtime_result.valid() );
 }
 
-TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
+TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing",
            "[lua][platform][npc][dialogue][translation]" )
 {
     sol::state lua;
@@ -609,13 +609,24 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
         cata::lua_platform::make_runtime( "dialogue_translation", 145, lua );
     cata::lua_platform::install_runtime_api( owner_runtime, lua, ccb );
     lua["ccb"] = ccb;
+    const sol::protected_function_result condition_setup = lua.safe_script( R"(
+        dialogue_text_condition_calls = 0
+        dialogue_text_condition_result = false
+        dialogue_text_condition_invalid = false
+        dialogue_text_condition = function(context)
+            dialogue_text_condition_calls = dialogue_text_condition_calls + 1
+            if dialogue_text_condition_invalid then error("invalid text condition") end
+            return dialogue_text_condition_result
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( condition_setup.valid() );
 
     sol::table runtime_normal_response = lua.create_table();
     runtime_normal_response["text"] = response_text;
     runtime_normal_response["text_translation"] = response_translation;
     sol::table runtime_false_response = lua.create_table();
     runtime_false_response["text"] = "Keep this response.";
-    runtime_false_response["text_condition"] = false;
+    runtime_false_response["text_condition"] = lua["dialogue_text_condition"];
     runtime_false_response["false_text"] = false_response_text;
     runtime_false_response["false_text_translation"] = false_response_translation;
     sol::table runtime_responses = lua.create_table();
@@ -687,7 +698,28 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
     conversation.gen_responses( talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION" ) );
     REQUIRE( conversation.responses.size() == 2 );
     CHECK( conversation.responses[0].truetext == native_response.truetext );
-    CHECK( conversation.responses[1].truetext == native_false_response.falsetext );
+    CHECK( conversation.responses[1].falsetext == native_false_response.falsetext );
+    CHECK( lua["dialogue_text_condition_calls"].get<int>() == 0 );
+    lua["dialogue_text_condition_result"] = true;
+    const talk_data true_option = conversation.responses[1].create_option_line(
+                                      conversation, input_event() );
+    CHECK( true_option.text == "Keep this response." );
+    CHECK( lua["dialogue_text_condition_calls"].get<int>() == 1 );
+    lua["dialogue_text_condition_result"] = false;
+    const talk_data false_option = conversation.responses[1].create_option_line(
+                                       conversation, input_event() );
+    CHECK( false_option.text == false_response_text );
+    CHECK( lua["dialogue_text_condition_calls"].get<int>() == 2 );
+    lua["dialogue_text_condition_invalid"] = true;
+    const talk_data failed_condition_option = conversation.responses[1].create_option_line(
+                conversation, input_event() );
+    CHECK( failed_condition_option.text == false_response_text );
+    CHECK( lua["dialogue_text_condition_calls"].get<int>() == 3 );
+    cata::lua_platform::set_active_runtimes( {} );
+    const talk_data stale_session_option = conversation.responses[1].create_option_line(
+                conversation, input_event() );
+    CHECK( stale_session_option.text == false_response_text );
+    CHECK( lua["dialogue_text_condition_calls"].get<int>() == 3 );
 
     sol::table wrong_context_type = lua.create_table();
     wrong_context_type["context"] = 7;

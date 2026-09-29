@@ -7375,31 +7375,51 @@ def render_talk_topic(
             truefalse = entry["truefalsetext"]
             if (
                 isinstance(truefalse, dict) and
-                set(truefalse) == {"true", "false", "condition"} and
+                set(truefalse) in (
+                    {"true", "false"}, {"true", "false", "condition"},
+                ) and
                 isinstance(truefalse["true"], str) and
                 isinstance(truefalse["false"], str)
             ):
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: talk topic {topic_id} truefalsetext needs "
-                    "translation-aware Lua response text; response skipped",
-                )
+                if "condition" in truefalse:
+                    text_condition = render_talk_topic_response_condition(
+                        truefalse["condition"]
+                    )
+                    if text_condition is None:
+                        result.add_todo(
+                            "manual_rewrite",
+                            f"{source.location}: talk topic {topic_id} truefalsetext "
+                            "condition needs Lua conversion; response skipped",
+                        )
+                        continue
+                else:
+                    # Native read_condition defaults a missing truefalsetext
+                    # condition to true.
+                    text_condition = LuaRaw("true")
+                response = {
+                    "text": truefalse["true"],
+                    "text_translation": {},
+                    "text_condition": text_condition,
+                    "false_text": truefalse["false"],
+                    "false_text_translation": {},
+                }
             else:
                 result.add_todo(
                     "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} truefalsetext needs "
                     "manual shape and translation review; response skipped",
                 )
-            continue
-        if not isinstance(entry.get("text"), str):
-            result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
-            continue
-        response: dict[str, Any] = {
-            "text": entry["text"],
-            # JSON talk_response::talk_response reads this as a translation;
-            # authored Lua strings remain literal unless marked explicitly.
-            "text_translation": {},
-        }
+                continue
+        else:
+            if not isinstance(entry.get("text"), str):
+                result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
+                continue
+            response = {
+                "text": entry["text"],
+                # JSON talk_response::talk_response reads this as a translation;
+                # authored Lua strings remain literal unless marked explicitly.
+                "text_translation": {},
+            }
         converted_condition = None
         converted_opinion = False
         if isinstance(entry.get("topic"), str) and entry["topic"]:
@@ -7533,6 +7553,7 @@ def render_talk_topic(
         responses.append(response)
         supported_fields = {
             "text", "topic", "condition", "effect", "switch", "default",
+            "truefalsetext",
         }
         if converted_opinion:
             supported_fields.add("opinion")

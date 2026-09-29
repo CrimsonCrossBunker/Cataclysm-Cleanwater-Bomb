@@ -1333,9 +1333,64 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         const translation alternate_translation =
             cata::lua_platform::dialogue::deferred_translation_from_descriptor(
                 descriptor, "false_text_translation", alternate_text, "dialogue" );
-        if( !evaluate_platform_dialogue_boolean(
-                owner, d, topic_id, text_condition, "response text_condition" ) ) {
-            generated.response.truetext = alternate_translation;
+        generated.response.falsetext = alternate_translation;
+        // Native truefalsetext conditions run while creating the option line,
+        // after topic response generation and speaker effects.
+        if( text_condition.get_type() == sol::type::boolean ) {
+            const bool result = text_condition.as<bool>();
+            generated.response.deferred_text_condition = [result]( dialogue & ) {
+                return result;
+            };
+        } else if( text_condition.get_type() == sol::type::function ) {
+            const std::string condition_topic_id = topic_id;
+            const cata::lua_platform::dialogue::dialogue_session_ptr text_condition_session =
+                cata::lua_platform::dialogue::session_for(
+                    d, topic_id, owner->handle_runtime(),
+                    detail::runtime_world_generation_storage() );
+            generated.response.deferred_text_condition =
+                [callback_owner = owner, condition_topic_id,
+                 text_condition_session,
+                 text_condition]( dialogue &current_dialogue ) {
+                    if( !callback_owner->world_is_ready || callback_owner->lua == nullptr ) {
+                        return false;
+                    }
+                    const std::vector<std::shared_ptr<runtime>> &active_runtimes =
+                        detail::active_runtime_values();
+                    if( std::find( active_runtimes.begin(), active_runtimes.end(),
+                                   callback_owner ) == active_runtimes.end() ) {
+                        return false;
+                    }
+                    const cata::lua_platform::game_handle_runtime runtime_identity =
+                        callback_owner->handle_runtime();
+                    const std::size_t world_generation =
+                        detail::runtime_world_generation_storage();
+                    if( !text_condition_session ||
+                        text_condition_session->validation_error(
+                            &current_dialogue, runtime_identity, world_generation ) ||
+                        !text_condition_session->active_for(
+                            condition_topic_id, runtime_identity, world_generation,
+                            &current_dialogue ) ) {
+                        return false;
+                    }
+                    try {
+                        return evaluate_platform_dialogue_boolean(
+                                   callback_owner, current_dialogue, condition_topic_id,
+                                   text_condition, "response text_condition" );
+                    } catch( const std::exception &exception ) {
+                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
+                                                    << "' dialogue text_condition '"
+                                                    << condition_topic_id << "': " << exception.what();
+                    } catch( ... ) {
+                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
+                                                    << "' dialogue text_condition '"
+                                                    << condition_topic_id
+                                                    << "' failed with an unknown exception";
+                    }
+                    return false;
+                };
+        } else {
+            throw std::invalid_argument(
+                "dialogue response text_condition must be a boolean or function" );
         }
     } else if( false_text.valid() && false_text.get_type() != sol::type::nil ) {
         throw std::invalid_argument(

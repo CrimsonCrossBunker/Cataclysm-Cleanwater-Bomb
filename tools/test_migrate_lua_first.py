@@ -12007,6 +12007,69 @@ assert(not available())
                 else:
                     self.assertIn("object-shaped forms are not lowered", todo_text)
 
+    def test_talk_topic_truefalsetext_lowers_only_translatable_supported_shapes(self) -> None:
+        source_path = Path("data/json/npcs/common_chat/TALK_COMMON_MISSION.json")
+        topics = json.loads((REPOSITORY_ROOT / source_path).read_text())
+        mission_topic = next(
+            topic for topic in topics
+            if topic.get("type") == "talk_topic" and
+            topic.get("id") == "TALK_MISSION_INQUIRE"
+        )
+        source_response = next(
+            response for response in mission_topic["responses"]
+            if isinstance(response, dict) and "truefalsetext" in response
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(source_path, 0, {
+                **mission_topic, "responses": [source_response],
+            }), result,
+        )
+        self.assertIsNotNone(rendered)
+        assert rendered is not None
+        self.assertIn('text = "I killed him."', rendered)
+        self.assertIn('false_text = "I killed it."', rendered)
+        self.assertRegex(rendered, r"false_text_translation = \{\s*\}")
+        self.assertIn('selected_has_goal(actor, "MGOAL_ASSASSINATE")', rendered)
+        self.assertFalse(any("truefalsetext" in todo.message for todo in result.todos))
+
+        no_condition_result = migrate_lua_first.MigrationResult()
+        no_condition_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(Path("synthetic.json"), 1, {
+                "type": "talk_topic", "id": "truefalsetext_default_true",
+                "dynamic_line": "Choose a response.",
+                "responses": [{
+                    "truefalsetext": {
+                        "true": "Choose this line.", "false": "Unused line.",
+                    },
+                }],
+            }), no_condition_result,
+        )
+        self.assertIsNotNone(no_condition_rendered)
+        assert no_condition_rendered is not None
+        self.assertIn("text_condition = true", no_condition_rendered)
+        self.assertIn('false_text = "Unused line."', no_condition_rendered)
+        self.assertFalse(no_condition_result.todos)
+
+        unsupported_result = migrate_lua_first.MigrationResult()
+        unsupported_rendered = migrate_lua_first.render_talk_topic(
+            migrate_lua_first.SourceObject(Path("synthetic.json"), 1, {
+                "type": "talk_topic", "id": "unsupported_truefalsetext",
+                "dynamic_line": "Choose a response.",
+                "responses": [{
+                    "truefalsetext": {
+                        "true": "Conditional line.", "false": "Fallback line.",
+                        "condition": {"npc_has_trait": "HALLUCINATION"},
+                    },
+                }],
+            }), unsupported_result,
+        )
+        self.assertIsNotNone(unsupported_rendered)
+        assert unsupported_rendered is not None
+        self.assertNotIn('false_text = "Fallback line."', unsupported_rendered)
+        todo_text = "\n".join(todo.message for todo in unsupported_result.todos)
+        self.assertIn("truefalsetext condition needs Lua conversion; response skipped", todo_text)
+
     def test_talk_topic_stolen_item_condition_uses_native_participant_order(self) -> None:
         for selector in ("u_has_stolen_item", "npc_has_stolen_item"):
             with self.subTest(selector=selector):
@@ -12327,22 +12390,18 @@ assert(not available())
                     # The mission effects still need their own action migration.
                     self.assertTrue(result.todos)
                     todo_text = "\n".join(todo.text for todo in result.todos)
-                    self.assertIn(
-                        "truefalsetext needs translation-aware Lua response text",
-                        todo_text,
-                    )
+                    self.assertNotIn("truefalsetext", todo_text)
                 else:
                     self.assertIn("assigned_mission_count()", rendered)
 
-    def test_truefalsetext_is_skipped_when_translation_cannot_be_preserved(self) -> None:
-        # Native TALK response text is a translatable string on each branch.
-        # Platform's current response text fields are plain untranslated Lua
-        # strings, so even a supported typed mission-goal condition is not an
-        # equivalent migration.
+    def test_truefalsetext_with_unsupported_translation_shape_is_skipped(self) -> None:
+        # Plain strings preserve native gettext translation through the
+        # explicit text_translation and false_text_translation descriptors.
+        # Object-shaped translation values still need a migration mapping.
         for truefalsetext in (
             {
-                "true": "The actor is human.",
-                "false": "The actor is not human.",
+                "true": {"ctxt": "response", "str": "Localized branch."},
+                "false": {"ctxt": "response", "str": "Localized fallback."},
                 "condition": {"mission_goal": "MGOAL_ASSASSINATE"},
             },
             {"true": "Incomplete shape"},
@@ -12359,10 +12418,10 @@ assert(not available())
                 rendered = migrate_lua_first.render_talk_topic(source, result)
                 self.assertIsNotNone(rendered)
                 assert rendered is not None
-                self.assertNotIn("The actor is human.", rendered)
+                self.assertNotIn("Localized branch.", rendered)
                 self.assertNotIn("false_text", rendered)
                 todo_text = "\n".join(todo.text for todo in result.todos)
-                self.assertIn("truefalsetext needs", todo_text)
+                self.assertIn("truefalsetext needs manual shape and translation review", todo_text)
                 self.assertTrue(result.todos)
 
     def test_talk_topic_run_eocs_stays_todo_without_action_phase_hook(self) -> None:
