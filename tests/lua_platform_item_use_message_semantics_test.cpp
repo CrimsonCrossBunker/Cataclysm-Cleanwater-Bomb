@@ -10,6 +10,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character_id.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "game.h"
@@ -17,9 +18,11 @@
 #include "item.h"
 #include "item_location.h"
 #include "json_loader.h"
+#include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "messages.h"
+#include "npc.h"
 #include "npctalk.h"
 #include "point.h"
 #include "type_id.h"
@@ -72,9 +75,8 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
     lua["already_noted_message"] = "You already noted everything this map cache can offer.";
     const sol::protected_function_result registered = lua.safe_script( R"(
         ccb.runtime.handler("map_cache_messages", function(context)
-            local translated = ccb.services.translate
-            context:message(translated(useful_data_message), "good")
-            context:message(translated(already_noted_message))
+            context:message(ccb.services.translate(useful_data_message), "good")
+            context:message(ccb.services.translate(already_noted_message))
             local accepted = pcall(context.message, context, "unused", "not_a_message_type")
             assert(not accepted)
             return 0
@@ -94,6 +96,118 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
     REQUIRE( result.has_value() );
     CHECK( *result == 0 );
     CHECK( Messages::recent_messages_with_formatting( 2 ) == expected );
+}
+
+TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
+           "[lua][platform][items][actors][semantic]" )
+{
+    using namespace cata::lua_platform;
+    REQUIRE( g != nullptr );
+
+    npc user;
+    user.normalize();
+    user.setID( character_id( 941721 ), true );
+    register_npc_handle_identity( user );
+    const on_out_of_scope retire_user( [&user]() {
+        retire_npc_handle_identity( user );
+    } );
+    item &used_item = user.inv->add_item(
+                          item( itype_id( "efile_map" ) ), false, false, false );
+    avatar avatar_user;
+    avatar_user.normalize();
+    item &avatar_item = avatar_user.inv->add_item(
+                            item( itype_id( "efile_map" ) ), false, false, false );
+
+    constexpr std::string_view mod_id = "item_use_npc_actor_bridge";
+    clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( std::string( mod_id ), 941722, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+        Messages::clear_messages();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    lua["ccb"] = ccb;
+    lua["expected_character_id"] = user.getID().get_value();
+    lua["expected_item_uid"] = used_item.uid().get_value();
+    lua["expected_character_subtype"] = "npc";
+    lua["callback_count"] = 0;
+    const sol::protected_function_result registered = lua.safe_script( R"(
+        ccb.runtime.handler("npc_item_actor_bridge", function(context)
+            callback_count = callback_count + 1
+            local character = context.character
+            assert(character.kind == "creature")
+            assert(character.subtype == expected_character_subtype)
+            assert(character.locator.stable_id == expected_character_id)
+            assert(character:is_valid())
+            assert(ccb.services.characters.snapshot(character).ok)
+            if character.subtype == "npc" then
+                assert(ccb.services.npcs.get(character).ok)
+            end
+            local snapshot = ccb.services.items.snapshot(context.item, 0)
+            assert(snapshot.ok)
+            assert(snapshot.value.uid == expected_item_uid)
+            assert(snapshot.value.id.kind == "item")
+            assert(snapshot.value.id.value == "efile_map")
+            saved_context = context
+            if fail_callback then
+                error("expected item-use callback failure")
+            end
+            return 0
+        end)
+    )", sol::script_pass_on_error );
+    if( !registered.valid() ) {
+        const sol::error error = registered;
+        INFO( error.what() );
+    }
+    REQUIRE( registered.valid() );
+    runtime_world_ready( true );
+
+    const std::optional<int> result = invoke_use_handler(
+                                          mod_id, "npc_item_actor_bridge", &user,
+                                          used_item, nullptr, tripoint_bub_ms::zero );
+    REQUIRE( result.has_value() );
+    CHECK( *result == 0 );
+    CHECK( lua["callback_count"].get<int>() == 1 );
+    const sol::protected_function_result stale_after_success = lua.safe_script( R"(
+        local character_ok = pcall(function() return saved_context.character end)
+        local item_ok = pcall(function() return saved_context.item end)
+        assert(not character_ok and not item_ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( stale_after_success.valid() );
+
+    lua["fail_callback"] = true;
+    const std::optional<int> failed = invoke_use_handler(
+                                          mod_id, "npc_item_actor_bridge", &user,
+                                          used_item, nullptr, tripoint_bub_ms::zero );
+    CHECK_FALSE( failed.has_value() );
+    CHECK( lua["callback_count"].get<int>() == 2 );
+    const sol::protected_function_result stale_after_failure = lua.safe_script( R"(
+        local character_ok = pcall(function() return saved_context.character end)
+        local item_ok = pcall(function() return saved_context.item end)
+        assert(not character_ok and not item_ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( stale_after_failure.valid() );
+
+    lua["expected_character_id"] = avatar_user.getID().get_value();
+    lua["expected_item_uid"] = avatar_item.uid().get_value();
+    lua["expected_character_subtype"] = "avatar";
+    lua["fail_callback"] = false;
+    const std::optional<int> avatar_result = invoke_use_handler(
+                                                mod_id, "npc_item_actor_bridge", &avatar_user,
+                                                avatar_item, nullptr, tripoint_bub_ms::zero );
+    REQUIRE( avatar_result.has_value() );
+    CHECK( *avatar_result == 0 );
+    CHECK( lua["callback_count"].get<int>() == 3 );
+
+    const std::optional<int> missing_character = invoke_use_handler(
+                mod_id, "npc_item_actor_bridge", nullptr,
+                used_item, nullptr, tripoint_bub_ms::zero );
+    CHECK_FALSE( missing_character.has_value() );
+    CHECK( lua["callback_count"].get<int>() == 3 );
 }
 
 #endif

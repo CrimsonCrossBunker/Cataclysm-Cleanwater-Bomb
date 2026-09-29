@@ -401,8 +401,10 @@ struct use_context_data {
     cata::lua_platform::game_handle character_handle() const {
         require_active();
         const tripoint_abs_ms absolute = character->pos_abs();
+        const std::string scope = character->is_avatar() ? "avatar" :
+                                  character->is_npc() ? "npc" : "character";
         return cata::lua_platform::game_handle::from_creature( *character, {
-            "platform_item_use_character", character->getID().get_value(),
+            scope, character->getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
         }, handle_runtime, world_generation );
     }
