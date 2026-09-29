@@ -12100,12 +12100,12 @@ assert(not available())
                 )
                 self.assertIsNotNone(callback)
                 assert callback is not None
-                self.assertIn("local holder = dialogue_context:speaker()", callback.value)
-                self.assertIn("local owner = dialogue_context:interlocutor()", callback.value)
+                self.assertIn("local holder = dialogue_context:speaker()", callback.source)
+                self.assertIn("local owner = dialogue_context:interlocutor()", callback.source)
                 self.assertIn(
-                    "services.inventory.has_stolen_from(holder, owner)", callback.value
+                    "services.inventory.has_stolen_from(holder, owner)", callback.source
                 )
-                self.assertNotIn("has_stolen_from(owner, holder)", callback.value)
+                self.assertNotIn("has_stolen_from(owner, holder)", callback.source)
 
         source_path = Path("data/json/npcs/common_chat/TALK_COMMON_OTHER.json")
         topics = json.loads((REPOSITORY_ROOT / source_path).read_text())
