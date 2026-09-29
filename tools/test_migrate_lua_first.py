@@ -18200,7 +18200,7 @@ assert(not available())
                 main,
             )
             self.assertIn(
-                "services.overmap.reveal_route now preserves native connection guessing",
+                "services.overmap.reveal_route preserves native connection guessing",
                 report,
             )
             self.assertIn('services.npcs.join_player(wrapped_beta_npc, services.characters.avatar())', main)
