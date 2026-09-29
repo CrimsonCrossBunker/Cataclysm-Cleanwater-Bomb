@@ -244,6 +244,10 @@ unchanged inputs and the same xgettext version. Calls through renamed aliases,
 computed messages, and dynamic contexts cannot be extracted reliably: keep the
 full `ccb.services.translate`/`translate_plural` or `ccb.content.text`/`plural_text`
 spelling and literals. Review the POT after extraction.
+The `text_translation`, `false_text_translation`, and
+`dynamic_line_translation` dialogue descriptor markers defer runtime lookup,
+but this extractor does not discover their table fields. Add that source text
+to a catalog separately until a dialogue-aware extractor exists.
 An immediately preceding `-- TRANSLATORS: ...` comment is retained for translators;
 ordinary implementation comments are not added to the template.
 Formatting is a separate Lua operation; translators must preserve placeholders.
