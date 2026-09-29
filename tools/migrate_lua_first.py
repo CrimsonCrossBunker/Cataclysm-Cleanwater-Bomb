@@ -1137,6 +1137,26 @@ def normalize_inline_eocs(
                 )
                 result[branch_name] = {"run_eocs": child_id}
 
+        roll_vector_actor_kind: str | None = None
+        if (
+            "u_roll_remainder" in result and
+            "npc_roll_remainder" not in result and
+            not _node_has_item_actor(result)
+        ):
+            # f_roll_remainder runs its vectors through run_eoc_vector(d),
+            # preserving the original dialogue alpha.  Its u_ form can pass
+            # that same Character alpha to callbacks only when this owner's
+            # source/inherited shape is Character-capable; it is not a global
+            # avatar lookup.  Leave item-shaped, unproven, and beta-oriented
+            # calls on the ordinary conservative member mapping.
+            owner_actor_kind = (
+                inherited_actor_kind
+                if inherited_actor_kind != "inherit"
+                else actor_kind_for(result)
+            )
+            if owner_actor_kind in {"avatar", "character"}:
+                roll_vector_actor_kind = "character"
+
         for member, raw in list(result.items()):
             # ``switch`` and nested ``if`` branches are effect containers, not
             # ordinary data tables.  Lower each branch to a private callback
@@ -1210,7 +1230,12 @@ def normalize_inline_eocs(
                 )
                 continue
             replacement: list[Any] = []
-            actor_kind = _inline_actor_kind(member)
+            actor_kind = (
+                roll_vector_actor_kind
+                if member in {"true_eocs", "false_eocs"} and
+                roll_vector_actor_kind is not None else
+                _inline_actor_kind(member)
+            )
             if inherited_actor_kind == "unproven":
                 actor_kind = "unproven"
             elif actor_kind == "inherit":
@@ -1283,6 +1308,13 @@ def normalize_inline_eocs(
         )
         normalized.append(SourceObject(source.path, source.index, value))
     normalized.extend(synthetic)
+    # A shared EOC may be reached from both a roll-remainder dialogue and an
+    # item/creature/vehicle traversal.  The roll edge alone cannot globally
+    # change that callback's actor contract; keep the concrete non-Character
+    # source and let its Character-only effects fail closed.
+    character_override_ids.difference_update(
+        item_override_ids | creature_override_ids | vehicle_override_ids
+    )
     return (
         normalized,
         frozenset(character_override_ids),

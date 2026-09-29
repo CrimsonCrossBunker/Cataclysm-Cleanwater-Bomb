@@ -22091,6 +22091,102 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         self.assertIn("local failure_context = copy_context(vector_context)", main)
         self.assertEqual(len(result.todos), 1)  # Unrelated complex condition.
 
+    def test_changeling_roll_vectors_keep_owner_character_alpha(self) -> None:
+        path = REPOSITORY_ROOT / (
+            "data/mods/Xedra_Evolved/mutations/"
+            "playable_changeling_seasonal_magic_research_eocs.json"
+        )
+        objects = migrate_lua_first.load_objects([path])
+        (
+            normalized, character_ids, item_ids,
+            creature_ids, vehicle_ids,
+        ) = migrate_lua_first.normalize_inline_eocs(objects, False)
+        requirements = migrate_lua_first._eoc_actor_requirements(
+            normalized, character_ids, item_ids, creature_ids, vehicle_ids,
+        )
+        result = migrate_lua_first.migrate(objects, "changeling_roll_provenance")
+        main = result.files[Path("main.lua")]
+
+        self.assertEqual(main.count("services.progression.grant_random_missing("), 20)
+        self.assertNotIn("remainder roll needs a proven Character", main)
+        for season in ("SPRING", "SUMMER", "AUTUMN", "WINTER"):
+            for tier in range(2, 6):
+                callback_id = (
+                    "EOC_CHANGELING_RESEARCH_SEASONAL_MAGIC_"
+                    f"{season}_TIER_{tier}"
+                )
+                self.assertEqual(requirements[callback_id], "character")
+                self.assertIn(callback_id, character_ids)
+                self.assertNotIn(callback_id, item_ids)
+                callback = f"migrated_eoc_{callback_id} = function"
+                self.assertIn(callback, main)
+                self.assertIn(
+                    "migrated_eoc_functions["
+                    f"{migrate_lua_first.lua_quote(callback_id)}]",
+                    main,
+                )
+
+        spring_tier_2 = main[
+            main.index(
+                "migrated_eoc_EOC_CHANGELING_RESEARCH_SEASONAL_MAGIC_SPRING_TIER_2 = function"
+            ):main.index(
+                "migrated_eoc_EOC_CHANGELING_RESEARCH_SEASONAL_MAGIC_SPRING_TIER_3 = function"
+            )
+        ]
+        self.assertIn("local actor = actor_override", spring_tier_2)
+        self.assertNotIn("services.characters.avatar()", spring_tier_2)
+        self.assertIn(
+            "migrated_eoc_EOC_CHANGELING_RESEARCH_SEASONAL_MAGIC_DREAMDROSS_COST_UPDATER(failure_context, actor)",
+            spring_tier_2,
+        )
+        self.assertIn(
+            "migrated_eoc_EOC_CHANGELING_RESEARCH_SEASONAL_MAGIC_SPRING_TIER_3(failure_context, actor)",
+            spring_tier_2,
+        )
+
+    def test_shared_roll_callback_keeps_item_provenance_fail_closed(self) -> None:
+        source_path = Path("synthetic_shared_roll_callback.json")
+        sources = [
+            migrate_lua_first.SourceObject(
+                source_path, 0, {
+                    "type": "effect_on_condition",
+                    "id": "roll_owner",
+                    "effect": {
+                        "u_roll_remainder": ["SPELL_A"],
+                        "type": "spell",
+                        "false_eocs": ["shared_callback"],
+                    },
+                },
+            ),
+            migrate_lua_first.SourceObject(
+                source_path, 1, {
+                    "type": "ITEM",
+                    "id": "item_source",
+                    "effect_on_conditions": ["shared_callback"],
+                },
+            ),
+            migrate_lua_first.SourceObject(
+                source_path, 2, {
+                    "type": "effect_on_condition",
+                    "id": "shared_callback",
+                    "effect": {
+                        "u_roll_remainder": ["SPELL_B"],
+                        "type": "spell",
+                    },
+                },
+            ),
+        ]
+
+        result = migrate_lua_first.migrate(sources, "shared_roll_callback")
+        main = result.files[Path("main.lua")]
+        self.assertEqual(main.count("services.progression.grant_random_missing("), 0)
+        shared_callback = main[
+            main.index("migrated_eoc_shared_callback = function"):
+            main.index("migrated_eoc_functions[\"shared_callback\"]")
+        ]
+        self.assertIn("remainder roll needs a proven Character", shared_callback)
+        self.assertNotIn("services.characters.avatar()", shared_callback)
+
     def _migrate_teleport_source(self, objects: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
