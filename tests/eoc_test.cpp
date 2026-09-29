@@ -78,6 +78,12 @@ effect_on_condition_EOC_TEST_TRANSFORM_LINE( "EOC_TEST_TRANSFORM_LINE" );
 static const effect_on_condition_id
 effect_on_condition_EOC_TEST_TRANSFORM_RADIUS( "EOC_TEST_TRANSFORM_RADIUS" );
 static const effect_on_condition_id
+effect_on_condition_EOC_TEST_U_TRANSFORM_RADIUS_ACTOR(
+    "EOC_TEST_U_TRANSFORM_RADIUS_ACTOR" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR(
+    "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
+static const effect_on_condition_id
 effect_on_condition_EOC_activate_mutation_to_start_test( "EOC_activate_mutation_to_start_test" );
 static const effect_on_condition_id effect_on_condition_EOC_alive_test( "EOC_alive_test" );
 static const effect_on_condition_id
@@ -442,6 +448,29 @@ TEST_CASE( "EOC_transform_radius", "[eoc][timed_event]" )
     calendar::turn += 2_seconds;
     get_timed_events().process();
     check_ter_in_radius( start, eoc_range, ter_t_grass );
+}
+
+TEST_CASE( "EOC_transform_radius_selects_the_requested_talker",
+           "[eoc][map][semantic]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const tripoint_bub_ms avatar_position = get_avatar().pos_bub();
+    npc &target = spawn_npc( avatar_position.xy() + point::south, "thug" );
+    const tripoint_bub_ms target_position = target.pos_bub();
+    map &here = get_map();
+    REQUIRE( here.ter_set( avatar_position, ter_t_grass ) );
+    REQUIRE( here.ter_set( target_position, ter_t_grass ) );
+    dialogue d( get_talker_for( get_avatar() ), get_talker_for( target ) );
+
+    effect_on_condition_EOC_TEST_U_TRANSFORM_RADIUS_ACTOR->activate( d );
+    CHECK( here.ter( avatar_position ) == ter_t_dirt );
+    CHECK( here.ter( target_position ) == ter_t_grass );
+
+    REQUIRE( here.ter_set( avatar_position, ter_t_grass ) );
+    effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR->activate( d );
+    CHECK( here.ter( avatar_position ) == ter_t_grass );
+    CHECK( here.ter( target_position ) == ter_t_dirt );
 }
 
 TEST_CASE( "EOC_transform_line", "[eoc][timed_event]" )

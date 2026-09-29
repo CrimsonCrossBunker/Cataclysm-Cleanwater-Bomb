@@ -16,12 +16,14 @@ extern "C" {
 #include <lua_platform_items.h>
 #include <lua_platform_trade.h>
 #include <lua_platform_world.h>
+#include <magic_ter_furn_transform.h>
 #include <map.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <monster.h>
 #include <npc.h>
 #include <point.h>
+#include <rng.h>
 #include <talker_character.h>
 #include <talker_npc.h>
 #include <type_id.h>
@@ -400,6 +402,82 @@ TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
     CHECK_FALSE( fixture.write_called );
     CHECK( get_creature_tracker().size() == 3 );
     CHECK( fixture.get_map().get_abs( fixture.local ) == fixture.absolute );
+}
+
+TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
+           "[lua][platform][world][transform][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 741, 41 );
+    fixture.local = tripoint_bub_ms( 60, 60, 0 );
+    fixture.absolute = fixture.get_map().get_abs( fixture.local );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_world_api(
+        fixture.services, current_runtime, current_world, []() {}, [&]() {
+        fixture.write_called = true;
+    } );
+
+    map &here = fixture.get_map();
+    const tripoint_bub_ms center = fixture.local;
+    const tripoint_bub_ms inside = center + tripoint::east;
+    const tripoint_bub_ms outside = center + tripoint( 1, 1, 0 );
+    const field_type_id web = fd_web.id();
+    REQUIRE( ter_furn_transform_id( "spider_clear_webs" ).is_valid() );
+    REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( outside, web, 1, 0_turns, false ) );
+    const on_out_of_scope remove_test_fields( [&]() {
+        for( const tripoint_bub_ms &position : { center, inside, outside } ) {
+            here.remove_field( position, web );
+        }
+    } );
+
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["origin"] = fixture.position( center );
+
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    constexpr unsigned int seed = 51837;
+    rng_set_engine_seed( seed );
+    const sol::protected_function_result transformed = fixture.lua.safe_script( R"(
+        local transform = services.types.id("terrain_furniture_transform", "spider_clear_webs")
+        assert(transform:is_valid())
+        local wrong_kind = services.types.id("item", "rock")
+        assert(not pcall(services.world.transform_radius, origin, 1, wrong_kind))
+        assert(not pcall(services.world.transform_radius, origin, -1, transform))
+        assert(not pcall(services.world.transform_radius, origin, 61, transform))
+        local result = services.world.transform_radius(origin, 1, transform)
+        assert(result.ok)
+        assert(result.value.position == origin)
+        assert(result.value.radius == 1)
+        assert(result.value.transform == transform)
+        assert(result.value.scheduled == false)
+        return result
+    )", sol::script_pass_on_error );
+    REQUIRE( transformed.valid() );
+    CHECK( fixture.write_called );
+    const cata_default_random_engine platform_rng_after = rng_get_engine();
+    CHECK( here.get_field( center, web ) == nullptr );
+    CHECK( here.get_field( inside, web ) == nullptr );
+    REQUIRE( here.get_field( outside, web ) != nullptr );
+
+    REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
+    rng_set_engine_seed( seed );
+    here.transform_radius( ter_furn_transform_id( "spider_clear_webs" ),
+                           1, fixture.absolute );
+
+    CHECK( rng_get_engine() == platform_rng_after );
+    CHECK( here.get_field( center, web ) == nullptr );
+    CHECK( here.get_field( inside, web ) == nullptr );
+    CHECK( here.get_field( outside, web ) != nullptr );
 }
 
 TEST_CASE( "lua_platform_map_tile_rejects_mixed_coordinate_frames",

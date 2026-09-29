@@ -373,6 +373,26 @@ function CcbWorldApi.points_nearby(origin, options) end
 ---@return CcbWorldFindLocationResult
 function CcbWorldApi.find_location(origin, selector, options) end
 
+---@class CcbWorldTransformRadiusOptions
+---@field delay? TimeDuration Non-negative delay up to 10000 days; zero applies immediately.
+---@field key? string Optional timed-event key, at most 256 UTF-8 bytes.
+
+---@class CcbWorldTransformRadiusResult
+---@field position TripointCoord Explicit absolute map-square center supplied to the operation.
+---@field radius integer Integer trig-distance radius from 0 through 60.
+---@field transform GameId GameId<terrain_furniture_transform> used by the native transform.
+---@field scheduled boolean Whether the operation was queued as a timed event.
+---@field when? TimePoint Scheduled time when `scheduled` is true.
+---@field key? string Timed-event key when `scheduled` is true.
+
+---@param position TripointCoord Explicit absolute map-square center; actor selection is the caller's responsibility.
+---@param radius integer Integer native radius from 0 through 60.
+---@param transform GameId Valid GameId<terrain_furniture_transform>.
+---@param options? CcbWorldTransformRadiusOptions Optional native delay and timed-event key.
+--- Applies the registered native terrain/furniture transform across the radius. Weighted transform outcomes use the native RNG; the Platform call preserves that behavior.
+---@return CcbResult result `value` is a CcbWorldTransformRadiusResult.
+function CcbWorldApi.transform_radius(position, radius, transform, options) end
+
 ---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
 ---@param delay TimeDuration Delay before the scheduled revert.
 ---@param key? string Optional event key of at most 256 UTF-8 bytes.

@@ -26396,7 +26396,8 @@ assert(not pcall(function() return U_EXPRESSION end))
         )
         self.assertIsNotNone(accepted)
         self.assertIn(
-            "        60, services.types.id", "\n".join(accepted or [])
+            ', 60, services.types.id("terrain_furniture_transform", "transform_demo")',
+            "\n".join(accepted or []),
         )
         self.assertIsNone(migrate_lua_first.render_static_transform_radius(
             {"u_transform_radius": 61, **base}, "u_transform_radius", True,
