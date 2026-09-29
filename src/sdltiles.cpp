@@ -3950,6 +3950,9 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const city_reference &city : overmap_buffer.get_cities_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt city_center = project_to<coords::omt>( city.abs_sm_pos );
+            if( !ui::omap::label_visible_at_z( city_center.z(), center_pos.z() ) ) {
+                continue;
+            }
             // Labels are ground-level data; test screen containment in xy by
             // projecting the label position onto the viewed z-level.
             const tripoint_abs_omt city_on_view( city_center.xy(), overmap_area.p_min.z() );
@@ -3962,7 +3965,10 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const camp_reference &camp : overmap_buffer.get_camps_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt camp_center = project_to<coords::omt>( camp.abs_sm_pos );
-            // Same xy-only containment as cities (labels are ground-level).
+            if( !ui::omap::label_visible_at_z( camp_center.z(), center_pos.z() ) ) {
+                continue;
+            }
+            // Project for screen containment only after checking the real level.
             const tripoint_abs_omt camp_on_view( camp_center.xy(), overmap_area.p_min.z() );
             if( overmap_buffer.seen_more_than( camp_center, om_vision_level::outlines ) &&
                 overmap_area.contains( camp_on_view ) ) {

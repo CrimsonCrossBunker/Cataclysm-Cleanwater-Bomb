@@ -714,8 +714,11 @@ static void draw_camp_labels( const catacurses::window &w, const tripoint_abs_om
 
     for( const camp_reference &element : overmap_buffer.get_camps_near(
              project_to<coords::sm>( center ), sm_radius ) ) {
-        const point_abs_omt camp_pos( element.camp->camp_omt_pos().xy() );
-        const point screen_pos( ( camp_pos - center.xy() ).raw() + screen_center_pos );
+        const tripoint_abs_omt camp_pos = element.camp->camp_omt_pos();
+        if( !ui::omap::label_visible_at_z( camp_pos.z(), center.z() ) ) {
+            continue;
+        }
+        const point screen_pos( ( camp_pos.xy() - center.xy() ).raw() + screen_center_pos );
         const int text_width = utf8_width( element.camp->camp_name(), true );
         const int text_x_min = screen_pos.x - text_width / 2;
         const int text_x_max = text_x_min + text_width;
@@ -735,7 +738,7 @@ static void draw_camp_labels( const catacurses::window &w, const tripoint_abs_om
             continue;   // right under the cursor.
         }
 
-        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( camp_pos, 0 ),
+        if( !overmap_buffer.seen_more_than( camp_pos,
                                             om_vision_level::outlines ) ) {
             continue;   // haven't seen it.
         }
@@ -1192,8 +1195,10 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         }
     }
 
-    if( cursor_pos.z() >= 0 && uistate.overmap_show_city_labels ) {
-        draw_city_labels( w, cursor_pos );
+    if( uistate.overmap_show_city_labels ) {
+        if( ui::omap::label_visible_at_z( 0, cursor_pos.z() ) ) {
+            draw_city_labels( w, cursor_pos );
+        }
         draw_camp_labels( w, cursor_pos );
     }
 
