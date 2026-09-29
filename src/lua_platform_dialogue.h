@@ -199,6 +199,10 @@ struct response_descriptor_options {
     std::set<std::string> additional_fields;
 };
 
+translation deferred_translation_from_descriptor(
+    const sol::table &descriptor, std::string_view field_name,
+    const std::string &text, std::string_view api_name );
+
 talk_response response_from_table( const sol::table &descriptor,
                                    const response_descriptor_options &options );
 

@@ -581,7 +581,8 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
             "ccb.dialogue register_topic is only available during Platform bootstrap" );
     }
     validate_platform_dialogue_descriptor_keys( descriptor, {
-        "id", "dynamic_line", "responses", "speaker_effects", "on_enter",
+        "id", "dynamic_line", "dynamic_line_translation", "responses",
+        "speaker_effects", "on_enter",
         "repeat_responses", "replace_built_in_responses",
         "insert_before_standard_exits"
     },
@@ -605,6 +606,20 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
     } else if( dynamic_line.get_type() != sol::type::function ) {
         throw std::invalid_argument(
             "ccb.dialogue register_topic dynamic_line must be a string or function" );
+    }
+    std::optional<translation> dynamic_line_translation;
+    const sol::object raw_dynamic_line_translation =
+        descriptor.raw_get<sol::object>( "dynamic_line_translation" );
+    if( raw_dynamic_line_translation.valid() &&
+        raw_dynamic_line_translation.get_type() != sol::type::nil ) {
+        if( dynamic_line.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "ccb.dialogue register_topic dynamic_line_translation requires a static string dynamic_line" );
+        }
+        dynamic_line_translation =
+            cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+                descriptor, "dynamic_line_translation", dynamic_line.as<std::string>(),
+                "ccb.dialogue register_topic" );
     }
     const sol::object responses = descriptor.raw_get<sol::object>( "responses" );
     if( !responses.valid() ||
@@ -635,6 +650,7 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
 
     runtime::declarative_dialogue_topic replacement;
     replacement.dynamic_line = dynamic_line;
+    replacement.dynamic_line_translation = std::move( dynamic_line_translation );
     replacement.responses = responses;
     replacement.speaker_effects = speaker_effects;
     replacement.repeat_responses = repeat_responses;
@@ -1049,6 +1065,9 @@ std::string evaluate_declarative_platform_dialogue_line(
     if( source.get_type() == sol::type::string ) {
         const std::string line = source.as<std::string>();
         require_platform_dialogue_text( line, "dynamic_line" );
+        if( registration.definition->dynamic_line_translation ) {
+            return registration.definition->dynamic_line_translation->translated();
+        }
         return line;
     }
     const std::shared_ptr<platform_dialogue_context> context =
@@ -1221,7 +1240,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
 {
     std::optional<sol::protected_function> on_select;
     declarative_platform_dialogue_response generated;
-    generated.response = cata::lua_platform::dialogue::response_from_table( descriptor, {
+    const cata::lua_platform::dialogue::response_descriptor_options response_options = {
         "dialogue", "response descriptor", "has", true,
         []( const std::string & text, const std::string_view field )
         {
@@ -1239,7 +1258,8 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         {
             "condition", "show_always", "show_condition", "show_reason",
             "failure_explanation", "failure_topic", "switch", "default",
-            "false_text", "text_condition", "trial", "success_topic",
+            "false_text", "false_text_translation", "text_condition", "trial",
+            "success_topic",
             "on_action", "on_success", "on_failure", "success_consequence",
             "failure_consequence", "success_opinion", "failure_opinion",
             "success_mission_opinion", "failure_mission_opinion",
@@ -1247,7 +1267,9 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             "success_reason", "failure_reason", "skill", "style", "spell",
             "proficiency"
         }
-    } );
+    };
+    generated.response = cata::lua_platform::dialogue::response_from_table(
+                            descriptor, response_options );
     generated.response.lua_response_id.reset();
 
     const sol::object condition = descriptor.raw_get<sol::object>( "condition" );
@@ -1299,20 +1321,29 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
 
     const sol::object text_condition = descriptor.raw_get<sol::object>( "text_condition" );
     const sol::object false_text = descriptor.raw_get<sol::object>( "false_text" );
+    const sol::object false_text_translation =
+        descriptor.raw_get<sol::object>( "false_text_translation" );
     if( text_condition.valid() && text_condition.get_type() != sol::type::nil ) {
         if( !false_text.valid() || false_text.get_type() != sol::type::string ) {
             throw std::invalid_argument(
                 "dialogue text_condition requires string field false_text" );
         }
+        const std::string alternate_text = false_text.as<std::string>();
+        require_platform_dialogue_text( alternate_text, "response false_text" );
+        const translation alternate_translation =
+            cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+                descriptor, "false_text_translation", alternate_text, "dialogue" );
         if( !evaluate_platform_dialogue_boolean(
                 owner, d, topic_id, text_condition, "response text_condition" ) ) {
-            const std::string text = false_text.as<std::string>();
-            require_platform_dialogue_text( text, "response false_text" );
-            generated.response.truetext = no_translation( text );
+            generated.response.truetext = alternate_translation;
         }
     } else if( false_text.valid() && false_text.get_type() != sol::type::nil ) {
         throw std::invalid_argument(
             "dialogue false_text requires text_condition" );
+    } else if( false_text_translation.valid() &&
+               false_text_translation.get_type() != sol::type::nil ) {
+        throw std::invalid_argument(
+            "dialogue false_text_translation requires false_text and text_condition" );
     }
 
     const sol::object trial_object = descriptor.raw_get<sol::object>( "trial" );

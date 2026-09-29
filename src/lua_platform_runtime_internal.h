@@ -26,6 +26,7 @@
 #include "lua_platform_state.h"
 #include "item_location.h"
 #include "mod_tileset.h"
+#include "translation.h"
 
 class avatar;
 class const_talker;
@@ -109,6 +110,7 @@ class runtime : public std::enable_shared_from_this<runtime>
         struct declarative_dialogue_topic {
             std::uint64_t registration_id = 0;
             sol::object dynamic_line;
+            std::optional<translation> dynamic_line_translation;
             sol::object responses;
             sol::object speaker_effects;
             sol::object repeat_responses;

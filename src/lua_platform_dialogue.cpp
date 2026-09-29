@@ -1131,6 +1131,45 @@ void apply_response_action_callback( ::dialogue &d, const std::uint64_t response
     stored.callback( d, trial_success );
 }
 
+translation deferred_translation_from_descriptor(
+    const sol::table &descriptor, const std::string_view field_name,
+    const std::string &text, const std::string_view api_name )
+{
+    const std::string field( field_name );
+    const sol::object raw_translation = descriptor.raw_get<sol::object>( field );
+    if( !raw_translation.valid() || raw_translation.get_type() == sol::type::nil ) {
+        return no_translation( text );
+    }
+    const std::string field_label = std::string( api_name ) + " field '" + field + "'";
+    if( raw_translation.get_type() != sol::type::table ) {
+        throw std::invalid_argument( field_label + " must be a table" );
+    }
+
+    const sol::table translation_options = raw_translation.as<sol::table>();
+    for( const auto &entry : translation_options ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument( field_label + " keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "context" ) {
+            throw std::invalid_argument( field_label + " has unknown field '" + key + "'" );
+        }
+    }
+
+    const sol::object raw_context = translation_options.raw_get<sol::object>( "context" );
+    if( !raw_context.valid() || raw_context.get_type() == sol::type::nil ) {
+        return to_translation( text );
+    }
+    if( raw_context.get_type() != sol::type::string ) {
+        throw std::invalid_argument( field_label + ".context must be a string" );
+    }
+    const std::string context = raw_context.as<std::string>();
+    if( context.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( field_label + ".context must not contain NUL" );
+    }
+    return to_translation( context, text );
+}
+
 talk_response response_from_table( const sol::table &descriptor,
                                    const response_descriptor_options &options )
 {
@@ -1145,7 +1184,7 @@ talk_response response_from_table( const sol::table &descriptor,
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "text" && key != "topic" && key != "on_select" &&
-            options.additional_fields.count( key ) == 0 ) {
+            key != "text_translation" && options.additional_fields.count( key ) == 0 ) {
             throw std::invalid_argument( std::string( options.api_name ) + " " +
                                          std::string( options.descriptor_name ) + " " +
                                          std::string( options.unknown_field_verb ) +
@@ -1176,7 +1215,8 @@ talk_response response_from_table( const sol::table &descriptor,
     }
 
     talk_response response;
-    response.truetext = no_translation( text );
+    response.truetext = deferred_translation_from_descriptor(
+                            descriptor, "text_translation", text, options.api_name );
     response.truefalse_condition = []( const_dialogue const & ) {
         return true;
     };

@@ -6476,12 +6476,18 @@ function PlatformDialogueContext:set(key, value) end
 ---@param key string
 function PlatformDialogueContext:remove(key) end
 
+---@class CcbPlatformDialogueDeferredTranslation
+---@field context? string Optional GNU gettext context for the source text.
+
 ---@class CcbPlatformDialogueResponseDescriptor
 ---@field text string Player response displayed by the native dialogue window.
+---@field text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `text`; an empty table means no context. Without this field, `text` stays literal.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
 ---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
 ---@field text_condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response text; false displays `false_text`.
----@field false_text? string Untranslated alternate response text; requires `text_condition`.
+---@field false_text? string Alternate response text; requires `text_condition` and stays literal unless `false_text_translation` is provided.
+---@field false_text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `false_text`; requires `false_text` and `text_condition`.
+---@field success_consequence? 'none'|'hostile'|'helpless'|'action' Native success consequence applied by the response effect.
 ---@field switch? boolean Stop later switch responses after this response matches.
 ---@field default? boolean This switch response is the fallback when no earlier switch response matched.
 ---@field on_action? fun(context: PlatformDialogueContext, trial_success: boolean): nil Runs in the selected native success/failure effect stage before opinion and hostility checks; return values are ignored.
@@ -6493,6 +6499,7 @@ function PlatformDialogueContext:remove(key) end
 ---@class CcbPlatformDialogueTopicDescriptor
 ---@field id string Native dialogue topic id.
 ---@field dynamic_line string|fun(context: PlatformDialogueContext): string
+---@field dynamic_line_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of a static `dynamic_line`; without this field, static lines and callback results stay literal.
 ---@field responses CcbPlatformDialogueResponses
 
 ---@class CcbPlatformDialogueExtensionDescriptor

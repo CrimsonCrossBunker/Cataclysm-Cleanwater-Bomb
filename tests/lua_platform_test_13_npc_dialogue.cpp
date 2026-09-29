@@ -1,4 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <stdexcept>
+
 #include "lua_platform_test_support.h"
 #include "lua_platform_dialogue.h"
 #include "condition.h"
@@ -512,6 +514,165 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
                 owner_call.target_handle, owner_call.speaker_handle,
                 "TALK_CCB_DECLARATIVE_OWNER" );
     CHECK_FALSE( stale_runtime_result.valid() );
+}
+
+TEST_CASE( "lua_platform_dialogue_deferred_translation_matches_native_json",
+           "[lua][platform][npc][dialogue][translation]" )
+{
+    sol::state lua;
+    const cata::lua_platform::dialogue::response_descriptor_options options = {
+        "dialogue", "response descriptor", "has", true,
+        []( const std::string &text, const std::string_view field ) {
+            cata::lua_platform::dialogue::require_text( text, "dialogue", field );
+        },
+        []( const std::string &id ) {
+            return cata::lua_platform::dialogue::valid_topic_id( id );
+        },
+        []( sol::protected_function ) {
+            return std::uint64_t{ 1 };
+        },
+        { "false_text", "false_text_translation", "text_condition" }
+    };
+
+    const std::string response_text = "Choose this response.";
+    sol::table response_descriptor = lua.create_table();
+    response_descriptor["text"] = response_text;
+    sol::table response_translation = lua.create_table();
+    response_translation["context"] = "player response";
+    response_descriptor["text_translation"] = response_translation;
+    const talk_response platform_response =
+        cata::lua_platform::dialogue::response_from_table(
+            response_descriptor, options );
+    const JsonValue native_response_json = json_loader::from_string(
+            R"({"text":{"ctxt":"player response","str":"Choose this response."}})" );
+    const talk_response native_response( native_response_json.get_object(),
+                                         "dialogue_deferred_translation_test" );
+    CHECK( platform_response.truetext == native_response.truetext );
+
+    sol::table contextless_descriptor = lua.create_table();
+    contextless_descriptor["text"] = response_text;
+    contextless_descriptor["text_translation"] = lua.create_table();
+    const talk_response contextless_response =
+        cata::lua_platform::dialogue::response_from_table(
+            contextless_descriptor, options );
+    const JsonValue native_contextless_json = json_loader::from_string(
+            R"({"text":"Choose this response."})" );
+    const talk_response native_contextless_response(
+        native_contextless_json.get_object(), "dialogue_deferred_translation_test" );
+    CHECK( contextless_response.truetext == native_contextless_response.truetext );
+
+    sol::table literal_descriptor = lua.create_table();
+    literal_descriptor["text"] = "Keep this literal.";
+    const talk_response literal_response =
+        cata::lua_platform::dialogue::response_from_table(
+            literal_descriptor, options );
+    CHECK( literal_response.truetext == no_translation( "Keep this literal." ) );
+
+    sol::table false_response_descriptor = lua.create_table();
+    sol::table false_response_translation = lua.create_table();
+    false_response_translation["context"] = "conditional response";
+    false_response_descriptor["false_text_translation"] = false_response_translation;
+    const std::string false_response_text = "Try a different answer.";
+    const translation platform_false_text =
+        cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+            false_response_descriptor, "false_text_translation",
+            false_response_text, "dialogue" );
+    const JsonValue native_false_response_json = json_loader::from_string(
+            R"({"truefalsetext":{"true":"Keep this response.","false":{"ctxt":"conditional response","str":"Try a different answer."}}})" );
+    const talk_response native_false_response( native_false_response_json.get_object(),
+            "dialogue_deferred_translation_test" );
+    CHECK( platform_false_text == native_false_response.falsetext );
+    CHECK( cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+               lua.create_table(), "false_text_translation", false_response_text,
+               "dialogue" ) == no_translation( false_response_text ) );
+
+    const std::string dynamic_line_text = "A line spoken by the NPC.";
+    sol::table line_descriptor = lua.create_table();
+    sol::table line_translation = lua.create_table();
+    line_translation["context"] = "npc dialogue line";
+    line_descriptor["dynamic_line_translation"] = line_translation;
+    const translation platform_line =
+        cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+            line_descriptor, "dynamic_line_translation", dynamic_line_text, "dialogue" );
+    const JsonValue native_line_json = json_loader::from_string(
+            R"({"dynamic_line":{"ctxt":"npc dialogue line","str":"A line spoken by the NPC."}})" );
+    translation native_line;
+    native_line.deserialize( native_line_json.get_object().get_object( "dynamic_line" ) );
+    CHECK( platform_line == native_line );
+
+    cata::lua_platform::clear_active_runtimes();
+    on_out_of_scope cleanup_runtimes( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
+        cata::lua_platform::make_runtime( "dialogue_translation", 145, lua );
+    cata::lua_platform::install_runtime_api( owner_runtime, lua, ccb );
+
+    sol::table runtime_normal_response = lua.create_table();
+    runtime_normal_response["text"] = response_text;
+    runtime_normal_response["text_translation"] = response_translation;
+    sol::table runtime_false_response = lua.create_table();
+    runtime_false_response["text"] = "Keep this response.";
+    runtime_false_response["text_condition"] = false;
+    runtime_false_response["false_text"] = false_response_text;
+    runtime_false_response["false_text_translation"] = false_response_translation;
+    sol::table runtime_responses = lua.create_table();
+    runtime_responses[1] = runtime_normal_response;
+    runtime_responses[2] = runtime_false_response;
+    sol::table runtime_topic = lua.create_table();
+    runtime_topic["id"] = "TALK_CCB_DIALOGUE_TRANSLATION";
+    runtime_topic["dynamic_line"] = dynamic_line_text;
+    runtime_topic["dynamic_line_translation"] = line_translation;
+    runtime_topic["responses"] = runtime_responses;
+    const sol::protected_function_result registration =
+        ccb["dialogue"]["register_topic"]( runtime_topic );
+    REQUIRE( registration.valid() );
+
+    cata::lua_platform::set_active_runtimes( { owner_runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    npc speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1572 ), true );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1573 ), true );
+    dialogue conversation(
+        get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    const cata::lua_platform::game_handle_runtime runtime_identity =
+        cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+    cata::lua_platform::dialogue::begin_session(
+        conversation, runtime_identity, world_generation );
+    on_out_of_scope cleanup_dialogue( [&conversation]() {
+        cata::lua_platform::dialogue::end_session( conversation );
+    } );
+    const std::optional<std::string> rendered_line =
+        cata::lua_platform::platform_dialogue_dynamic_line(
+            conversation, talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION" ) );
+    REQUIRE( rendered_line );
+    CHECK( *rendered_line == native_line.translated() );
+    conversation.gen_responses( talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION" ) );
+    REQUIRE( conversation.responses.size() == 2 );
+    CHECK( conversation.responses[0].truetext == native_response.truetext );
+    CHECK( conversation.responses[1].truetext == native_false_response.falsetext );
+
+    sol::table wrong_context_type = lua.create_table();
+    wrong_context_type["context"] = 7;
+    sol::table wrong_context_descriptor = lua.create_table();
+    wrong_context_descriptor["text_translation"] = wrong_context_type;
+    CHECK_THROWS_AS( cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+                         wrong_context_descriptor, "text_translation", response_text,
+                         "dialogue" ), std::invalid_argument );
+
+    sol::table nul_context = lua.create_table();
+    nul_context["context"] = std::string( "bad\0context", 11 );
+    sol::table nul_context_descriptor = lua.create_table();
+    nul_context_descriptor["text_translation"] = nul_context;
+    CHECK_THROWS_AS( cata::lua_platform::dialogue::deferred_translation_from_descriptor(
+                         nul_context_descriptor, "text_translation", response_text,
+                         "dialogue" ), std::invalid_argument );
 }
 
 TEST_CASE( "lua_platform_open_dialogue_rejection_is_not_completion",
