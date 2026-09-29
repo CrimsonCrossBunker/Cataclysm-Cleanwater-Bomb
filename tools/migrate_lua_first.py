@@ -25520,6 +25520,69 @@ def _render_explicit_map_edit(
     return lines
 
 
+def render_static_set_trap(effect: dict[str, Any]) -> list[str] | None:
+    """Lower one radius-zero trap write at an explicit absolute map square."""
+    if not isinstance(effect, dict) or "set_trap" not in effect:
+        return None
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
+        return None
+    trap_id = effect.get("set_trap")
+    coordinate = _explicit_abs_ms_expression(effect.get("location"))
+    # Native f_set_trap defaults its radius to one; only an explicit zero
+    # proves that the effect targets one tile and can use the typed token API.
+    radius = _literal_nonnegative_integer(
+        effect.get("radius", 1), NATIVE_INT_MAX
+    )
+    square = effect.get("square", False)
+    if (
+        not bounded_platform_id(trap_id) or coordinate is None or
+        radius != 0 or not isinstance(square, bool)
+    ):
+        return None
+    return [
+        f"    local trap_tile_result = services.map.tile({coordinate})",
+        "    if trap_tile_result.ok then",
+        "        local trap_tile = trap_tile_result.value",
+        "        local trap_snapshot = service_value(services.map.snapshot(trap_tile))",
+        "        service_value(services.map.trap_set(",
+        "            trap_tile, trap_snapshot.revision,",
+        '            services.types.id("trap", ' + lua_quote(trap_id) + ")))",
+        "    end",
+    ]
+
+
+def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
+    """Classify an unlowered set_trap by its actual missing boundary."""
+    radius = _literal_nonnegative_integer(
+        effect.get("radius", 1), NATIVE_INT_MAX
+    )
+    if radius != 0:
+        return (
+            "platform_gap",
+            "set_trap radius neighborhoods need native circle/square map mutation; "
+            "the typed trap_set service currently covers only radius zero",
+        )
+    if not bounded_platform_id(effect.get("set_trap")):
+        return (
+            "manual_rewrite",
+            "set_trap needs a literal trap id or an explicit typed Lua lookup",
+        )
+    if _explicit_abs_ms_expression(effect.get("location")) is None:
+        return (
+            "manual_rewrite",
+            "set_trap location needs an explicit absolute map-square coordinate; "
+            "legacy var_info/context values need a direct Lua coordinate rewrite",
+        )
+    return (
+        "manual_rewrite",
+        "set_trap has additional native options that need an explicit Lua rewrite",
+    )
+
+
 def _map_mutation_todo() -> str:
     """Return the stable fail-closed diagnostic for unresolved map frames."""
     return (
@@ -25718,26 +25781,18 @@ def _render_static_map_state_edit(
     This helper accepts a deliberately small legacy shape.  Supported
     terrain/field members in one descriptor are collected into one changes
     table, so edits for the same tile share one revision check and native
-    atomic operation.  Furniture and trap remain fail-closed because their
-    native placement behavior is not represented by map.edit.
+    atomic operation.  Furniture remains fail-closed because its native
+    placement behavior is not represented by map.edit.
     """
     del avatar_actor_proven, npc_event_character_actor_proven
     if not isinstance(effect, dict):
         return None
     mutation_keys = (
-        "set_terrain", "set_furniture", "set_trap",
+        "set_terrain", "set_furniture",
         "u_set_field", "npc_set_field",
     )
     present = [key for key in mutation_keys if key in effect]
     if not present:
-        return None
-    # Native f_set_trap projects its absolute center into the current bubble,
-    # visits the requested circle/square radius, then calls trap_set for every
-    # point.  trap_set silently ignores out-of-bounds points and logs a debug
-    # message before returning for unloaded submaps or built-in-trap terrain.
-    # map.tile/map.edit require a valid loaded MapTileToken, report refused
-    # edits as errors, and map.edit skips trap_set for an already-present id.
-    if "set_trap" in present:
         return None
     # Native set_furniture calls furn_set(dest, id, false, avoid_creatures)
     # for every point in its runtime-centered radius (default 1, circular
@@ -25751,7 +25806,7 @@ def _render_static_map_state_edit(
         if isinstance(name, str) and name.startswith("//")
     }
     allowed = comment_keys | {
-        "set_terrain", "set_furniture", "set_trap", "u_set_field",
+        "set_terrain", "set_furniture", "u_set_field",
         "npc_set_field", "location", "loc", "target_var", "radius",
         "avoid_creatures", "square", "intensity", "age", "outdoor_only",
         "indoor_only", "hit_player",
@@ -25764,11 +25819,6 @@ def _render_static_map_state_edit(
         if "location" not in effect:
             return None
         coordinate_values.append(effect["location"])
-    if "set_trap" in present:
-        location_key = "loc" if "loc" in effect else "location"
-        if location_key not in effect:
-            return None
-        coordinate_values.append(effect[location_key])
     if any(key in present for key in ("u_set_field", "npc_set_field")):
         if "target_var" not in effect:
             return None
@@ -25779,10 +25829,7 @@ def _render_static_map_state_edit(
     if any(value != coordinates[0] for value in coordinates[1:]):
         return None
 
-    radius_default = 1 if any(
-        key in present for key in ("set_terrain", "set_furniture",
-                                   "u_set_field", "npc_set_field")
-    ) else 0
+    radius_default = 1
     radius = _literal_nonnegative_integer(effect.get("radius", radius_default), 0)
     if radius != 0:
         return None
@@ -25811,13 +25858,6 @@ def _render_static_map_state_edit(
         changes.append(
             "furniture = services.types.id(\"furniture\", " +
             lua_quote(effect["set_furniture"]) + "),"
-        )
-    if "set_trap" in present:
-        if not bounded_platform_id(effect["set_trap"]):
-            return None
-        changes.append(
-            "trap = services.types.id(\"trap\", " +
-            lua_quote(effect["set_trap"]) + "),"
         )
     field_keys = [key for key in ("u_set_field", "npc_set_field") if key in effect]
     if len(field_keys) > 1:
@@ -33521,26 +33561,15 @@ def render_eoc(
             elif (
                 isinstance(effect, dict) and "set_trap" in effect
             ):
-                rendered = _render_static_map_state_edit(
-                    effect, avatar_actor_proven,
-                    npc_event_character_actor_proven,
-                )
+                rendered = render_static_set_trap( effect )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    trap_gap = (
-                        "set_trap needs native radius-based trap_set semantics: "
-                        "trap_set reapplies an already-present same-id trap, "
-                        "silently ignores out-of-bounds points, and logs a debug "
-                        "message before returning for unloaded or built-in-trap "
-                        "tiles; map.tile/map.edit require a loaded MapTileToken, "
-                        "skip same-id writes, and report refused placements "
-                        "as errors"
-                    )
+                    todo_category, trap_gap = set_trap_migration_todo( effect )
                     lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
-                        "platform_gap",
+                        todo_category,
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
                     )
                     all_effects_converted = False

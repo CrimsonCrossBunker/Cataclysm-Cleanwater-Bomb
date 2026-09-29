@@ -24,6 +24,7 @@ extern "C" {
 #include <npc.h>
 #include <point.h>
 #include <rng.h>
+#include <trap.h>
 #include <talker_character.h>
 #include <talker_npc.h>
 #include <type_id.h>
@@ -721,12 +722,102 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
     CHECK( cata::lua_platform::map_mutation_epoch() == revision + 1 );
 }
 
+TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semantics",
+           "[lua][platform][map][traps][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 717, 17 );
+    map &here = fixture.get_map();
+    const ter_str_id floor( "t_floor" );
+    const ter_str_id pit( "t_pit" );
+    const trap_str_id beartrap( "tr_beartrap" );
+    const trap_str_id rollmat( "tr_rollmat" );
+    const trap_str_id pit_trap( "tr_pit" );
+    REQUIRE( floor.is_valid() );
+    REQUIRE( pit.is_valid() );
+    REQUIRE( beartrap.is_valid() );
+    REQUIRE( rollmat.is_valid() );
+    REQUIRE( pit_trap.is_valid() );
+
+    const tripoint_bub_ms local = fixture.local + tripoint::east;
+    REQUIRE( here.ter_set( local, floor.id() ) );
+    here.trap_set( local, beartrap.id() );
+    here.memory_cache_dec_set_dirty( local, false );
+
+    const sol::table map_api = fixture.map_api();
+    const sol::protected_function_result tile_result = map_api["tile"](
+                fixture.position( local ) );
+    REQUIRE( tile_result.valid() );
+    REQUIRE( tile_result.get<sol::table>()["ok"].get<bool>() );
+    const cata::lua_platform::map_tile_token token =
+        tile_result.get<sol::table>()["value"]
+        .get<cata::lua_platform::map_tile_token>();
+    const sol::protected_function_result snapshot_result =
+        map_api["snapshot"]( token );
+    REQUIRE( snapshot_result.valid() );
+    REQUIRE( snapshot_result.get<sol::table>()["ok"].get<bool>() );
+    const std::uint64_t revision = snapshot_result.get<sol::table>()
+                                   ["value"].get<sol::table>()
+                                   ["revision"].get<std::uint64_t>();
+    const std::uint64_t epoch_before = cata::lua_platform::map_mutation_epoch();
+
+    fixture.write_called = false;
+    const sol::protected_function trap_set = map_api["trap_set"];
+    const sol::protected_function_result repeated = trap_set(
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+    REQUIRE( repeated.valid() );
+    REQUIRE( repeated.get<sol::table>()["ok"].get<bool>() );
+    CHECK( fixture.write_called );
+    CHECK( here.tr_at( local ).id == beartrap.id() );
+    // Native map::trap_set marks decoration memory dirty even when asked to
+    // reapply the trap already at this position.
+    CHECK( here.memory_cache_dec_is_dirty( local ) );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
+
+    const sol::protected_function_result stale = trap_set(
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+    REQUIRE( stale.valid() );
+    REQUIRE_FALSE( stale.get<sol::table>()["ok"].get<bool>() );
+    CHECK( stale.get<sol::table>()["error"].get<sol::table>()
+           ["code"].get<std::string>() == "revision_conflict" );
+    CHECK( here.tr_at( local ).id == beartrap.id() );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
+
+    const sol::table repeated_value = repeated.get<sol::table>()
+                                     ["value"].get<sol::table>();
+    const sol::protected_function_result replaced = trap_set(
+                token, repeated_value["revision"].get<std::uint64_t>(),
+                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+    REQUIRE( replaced.valid() );
+    REQUIRE( replaced.get<sol::table>()["ok"].get<bool>() );
+    CHECK( here.tr_at( local ).id == rollmat.id() );
+
+    REQUIRE( here.ter_set( local, floor.id() ) );
+    here.trap_set( local, tr_null );
+    REQUIRE( here.ter_set( local, pit.id() ) );
+    const sol::protected_function_result built_in_snapshot =
+        map_api["snapshot"]( token );
+    REQUIRE( built_in_snapshot.valid() );
+    REQUIRE( built_in_snapshot.get<sol::table>()["ok"].get<bool>() );
+    const sol::protected_function_result built_in = trap_set(
+                token,
+                built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
+                ["revision"].get<std::uint64_t>(),
+                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+    REQUIRE( built_in.valid() );
+    REQUIRE( built_in.get<sol::table>()["ok"].get<bool>() );
+    CHECK( here.tr_at( local ).id == pit_trap.id() );
+}
+
 TEST_CASE( "lua_platform_map_tile_never_uses_avatar_or_nearest_fallback",
            "[lua][platform][map][contract]" )
 {
     platform_map_api_test_fixture fixture( 705, 5 );
     const sol::table map_api = fixture.map_api();
-    const std::set<std::string> expected = { "edit", "snapshot", "tile" };
+    const std::set<std::string> expected = {
+        "edit", "snapshot", "tile", "trap_set"
+    };
     std::set<std::string> exposed;
     for( const auto &entry : map_api ) {
         REQUIRE( entry.first.is<std::string>() );

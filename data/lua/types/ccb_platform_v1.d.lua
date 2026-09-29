@@ -280,6 +280,13 @@ function CcbMapApi.snapshot(tile, options) end
 ---@return CcbResult result `value` is the committed CcbMapTileSnapshot.
 function CcbMapApi.edit(tile, expected_revision, changes) end
 
+---@param tile MapTileToken Exact token for a currently loaded map tile.
+---@param expected_revision integer Map revision captured by a prior snapshot.
+---@param trap GameId GameId<trap> Native trap id to apply through `map::trap_set`.
+---Calls the native setter even when the same trap id is already present; built-in terrain traps keep native no-op behavior.
+---@return CcbResult result `value` is the resulting CcbMapTileSnapshot.
+function CcbMapApi.trap_set(tile, expected_revision, trap) end
+
 ---@class CcbWorldPointsNearbyOptions
 ---@field min_radius? integer Nonnegative map-square radius; native maximum is 1000.
 ---@field max_radius? integer Nonnegative map-square radius; native maximum is 1000.

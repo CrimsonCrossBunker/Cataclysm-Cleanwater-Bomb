@@ -3457,6 +3457,51 @@ sol::table edit_map_tile(
                        map_mutation_epoch() ) ) );
 }
 
+sol::table trap_set_map_tile(
+    sol::this_state lua, const map_tile_token &token,
+    const std::uint64_t expected_revision,
+    const script_game_id &requested_trap,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.map.trap_set";
+    require_id_kind( requested_trap, "trap", std::string( api_name ) );
+    const trap_str_id trap_type( requested_trap.value() );
+    if( !trap_type.is_valid() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " requires a valid trap id" );
+    }
+
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
+                token, runtime_generation, world_generation, error );
+    if( !resolved ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::uint64_t current_revision = map_mutation_epoch();
+    if( current_revision != expected_revision ) {
+        return make_game_error_result( state, {
+            "revision_conflict",
+            "The MapTileToken trap_set expected revision " +
+            std::to_string( expected_revision ) +
+            " but the active map revision is " +
+            std::to_string( current_revision )
+        } );
+    }
+
+    // Preserve map::trap_set behavior, including same-id reapplication and
+    // native no-op placement on terrain with a built-in trap.
+    resolved->value->trap_set( resolved->local, trap_type.id() );
+    bump_map_mutation_epoch();
+    const map_snapshot_options snapshot_options;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_map_tile_value(
+                       state, token, *resolved, snapshot_options,
+                       map_mutation_epoch() ) ) );
+}
+
 } // namespace
 
 std::optional<game_handle_error> validate_map_tile_token(
@@ -3659,6 +3704,23 @@ void install_map_api(
                    static_cast<std::uint64_t>( expected_revision ),
                    changes, current_runtime_generation(),
                    current_world_generation() );
+    } );
+    map_api.set_function(
+        "trap_set",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state,
+            const map_tile_token &token,
+            const lua_Integer expected_revision,
+            const script_game_id &trap ) {
+        if( expected_revision < 0 ) {
+            throw std::invalid_argument(
+                "services.map.trap_set expected_revision cannot be negative" );
+        }
+        require_write();
+        return trap_set_map_tile(
+                   state, token,
+                   static_cast<std::uint64_t>( expected_revision ), trap,
+                   current_runtime_generation(), current_world_generation() );
     } );
     services["map"] = std::move( map_api );
 }

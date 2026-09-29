@@ -18247,7 +18247,7 @@ assert(not available())
                 "services.world.remove_field(",
             ):
                 self.assertNotIn(legacy_map_write, main)
-            self.assertIn("set_trap needs native radius-based trap_set semantics", main)
+            self.assertIn("set_trap radius neighborhoods need native circle/square map mutation", main)
             self.assertNotIn("services.hordes.signal", main)
             self.assertEqual(
                 main.count("signal_hordes needs an immediately preceding proven"),
@@ -40489,15 +40489,23 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         self.assertIn('services.types.id("terrain", "t_floor")', main)
         self.assertIn('services.types.id("field", "fd_fire")', main)
 
-        for trap_effect in (
-            {"set_trap": "tr_beartrap", "location": coordinate},
-            {"set_trap": "tr_beartrap", "location": coordinate, "radius": 0},
-        ):
-            self.assertIsNone(
-                migrate_lua_first._render_static_map_state_edit(
-                    trap_effect, True, False
-                )
-            )
+        omitted_radius = {"set_trap": "tr_beartrap", "location": coordinate}
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_trap(omitted_radius)
+        )
+        todo_category, todo_message = migrate_lua_first.set_trap_migration_todo(
+            omitted_radius
+        )
+        self.assertEqual(todo_category, "platform_gap")
+        self.assertIn("radius neighborhoods", todo_message)
+        trap_lines = migrate_lua_first.render_static_set_trap({
+            "set_trap": "tr_beartrap", "location": coordinate, "radius": 0,
+        })
+        self.assertIsNotNone(trap_lines)
+        trap_code = "\n".join(trap_lines or [])
+        self.assertIn("services.map.trap_set(", trap_code)
+        self.assertIn("if trap_tile_result.ok then", trap_code)
+        self.assertNotIn("services.map.edit(", trap_code)
 
         trap_result = migrate_lua_first.MigrationResult()
         trap_source = migrate_lua_first.SourceObject(Path("trap.json"), 0, {
@@ -40513,10 +40521,8 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         })
         trap_main = migrate_lua_first.render_eoc(trap_source, trap_result)
         self.assertNotIn("services.map.edit(", trap_main)
-        trap_gap = "set_trap needs native radius-based trap_set semantics"
-        self.assertIn(trap_gap, trap_main)
-        trap_todo = next(todo for todo in trap_result.todos if trap_gap in todo.message)
-        self.assertEqual(trap_todo.category, "platform_gap")
+        self.assertIn("services.map.trap_set(", trap_main)
+        self.assertEqual(trap_result.todos, [])
 
         terrain = migrate_lua_first.render_static_set_terrain_or_furniture(
             {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
@@ -40628,11 +40634,10 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         self.assertEqual(last_trap["radius"], 0)
         self.assertEqual(first_trap["set_trap"], last_trap["set_trap"])
 
-        # The final radius-zero write targets the same trap id selected within
-        # the random OMT target.  map.edit skips that same-id write, whereas
-        # native f_set_trap re-applies it through trap_set.  The preceding
-        # random OMT and radius-24 trap search is not lowered to the
-        # loaded-tile API.
+        # Both radius-zero writes use dynamic context coordinates. The
+        # set_trap capability accepts only explicit absolute map-square
+        # coordinates, and the preceding random OMT/trap search also remains
+        # outside the loaded-tile API.
         self.assertIsNone(
             migrate_lua_first.render_static_location_variable(
                 search_variable, "u_location_variable", True, False
@@ -40640,15 +40645,12 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         )
         result = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(source, result)
-        trap_gap = "set_trap needs native radius-based trap_set semantics"
+        trap_gap = "set_trap location needs an explicit absolute map-square coordinate"
         self.assertEqual(main.count(trap_gap), 2)
         self.assertNotIn("services.map.edit(", main)
         trap_todos = [todo for todo in result.todos if trap_gap in todo.message]
         self.assertEqual(len(trap_todos), 2)
-        self.assertTrue(all(todo.category == "platform_gap" for todo in trap_todos))
-        self.assertTrue(
-            all("skip same-id writes" in todo.message for todo in trap_todos)
-        )
+        self.assertTrue(all(todo.category == "manual_rewrite" for todo in trap_todos))
 
     def test_pickup_migration_keeps_unproven_var_info_as_manual_todo(
         self,
@@ -40776,10 +40778,10 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
                 "map mutation requires one explicitly typed abs_ms coordinate; "
                 "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
             )
-            # Both furniture writes and the trap write fail their native
-            # mutation-semantics check before coordinate conversion is tried.
-            # The two terrain writes and the field write reach this guard.
-            trap_gap = "set_trap needs native radius-based trap_set semantics"
+            # Furniture lacks matching placement semantics; the trap write
+            # uses legacy `loc` instead of a typed `location`. The two terrain
+            # writes and field write reach the coordinate-frame guard.
+            trap_gap = "set_trap location needs an explicit absolute map-square coordinate"
             self.assertEqual(main.count(todo), 3)
             self.assertEqual(
                 main.count("set_furniture uses the native radius neighborhood"), 2
@@ -40790,7 +40792,7 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertTrue(any(
-                item.category == "platform_gap" and "set_trap needs" in item.message
+                item.category == "manual_rewrite" and "set_trap location needs" in item.message
                 for item in result.todos
             ))
             for legacy_map_write in (
