@@ -877,7 +877,9 @@ bool game::start_game()
         gamemode = std::make_unique<special_game>();
     }
 
-    seed = rng_bits();
+    // The world seed is rolled by the new-game flow before character
+    // creation (see main_menu::new_character_tab); loading restores it
+    // from the master save.
 #ifdef MP_ENABLED
     cata_mp::mp_client_prepare_spawn();
 #endif
