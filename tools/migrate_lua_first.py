@@ -6909,11 +6909,11 @@ def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
         )
     if effect == "player_weapon_away":
         return (
-            "platform_gap",
-            "native player_weapon_away runs inside talk_effect_t::apply before "
-            "opinion and hostility handling, while Platform on_select runs after "
-            "the native response effect returns; the current callback phase cannot "
-            "preserve that ordering",
+            "manual_rewrite",
+            "native player_weapon_away can use the typed stow_current_weapon "
+            "service in Platform on_action before opinion and hostility handling; "
+            "the response still needs its condition, opinion, helpless "
+            "consequence, and translated text preserved together",
         )
     if isinstance(effect, str) and effect in {
         "mission_success", "mission_failure", "clear_mission",

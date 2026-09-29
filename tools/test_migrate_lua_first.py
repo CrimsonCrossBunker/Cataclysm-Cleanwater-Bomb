@@ -19271,13 +19271,16 @@ assert(not available())
                         and selector in todo.message
                     ]
                     self.assertEqual(len(effect_todos), len(matching))
-                    self.assertTrue(
-                        all(todo.category == "platform_gap" for todo in effect_todos)
-                    )
                     if selector == "goto_location":
+                        self.assertTrue(
+                            all(todo.category == "platform_gap" for todo in effect_todos)
+                        )
                         self.assertNotIn("services.npcs.destinations(", rendered)
                         self.assertNotIn("services.npcs.set_goal(", rendered)
                     else:
+                        self.assertTrue(
+                            all(todo.category == "manual_rewrite" for todo in effect_todos)
+                        )
                         self.assertNotIn(
                             "services.equipment.stow_current_weapon(", rendered
                         )
@@ -19285,7 +19288,7 @@ assert(not available())
                             "services.inventory.weapon_state(avatar)", rendered
                         )
                         self.assertIn(
-                            "on_select runs after the native response effect returns",
+                            "Platform on_action before opinion and hostility handling",
                             effect_todos[0].message,
                         )
                         self.assertEqual(
