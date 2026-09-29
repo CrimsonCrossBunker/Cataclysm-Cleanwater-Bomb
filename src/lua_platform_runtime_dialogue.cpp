@@ -1343,15 +1343,19 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             };
         } else if( text_condition.get_type() == sol::type::function ) {
             const std::string condition_topic_id = topic_id;
+            const std::weak_ptr<runtime> weak_text_condition_owner( owner );
             const cata::lua_platform::dialogue::dialogue_session_ptr text_condition_session =
                 cata::lua_platform::dialogue::session_for(
                     d, topic_id, owner->handle_runtime(),
                     detail::runtime_world_generation_storage() );
             generated.response.deferred_text_condition =
-                [callback_owner = owner, condition_topic_id,
+                [weak_text_condition_owner, condition_topic_id,
                  text_condition_session,
                  text_condition]( dialogue &current_dialogue ) {
-                    if( !callback_owner->world_is_ready || callback_owner->lua == nullptr ) {
+                    const std::shared_ptr<runtime> callback_owner =
+                        weak_text_condition_owner.lock();
+                    if( !callback_owner || !callback_owner->world_is_ready ||
+                        callback_owner->lua == nullptr ) {
                         return false;
                     }
                     const std::vector<std::shared_ptr<runtime>> &active_runtimes =
