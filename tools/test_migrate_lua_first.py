@@ -36084,7 +36084,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertEqual(len(result.partial), 1)
 
-    def test_if_effect_accepts_else_only_and_nested_else_only_branches(self) -> None:
+    def test_if_effect_keeps_unsupported_nested_else_only_branch_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -36112,10 +36112,13 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertEqual(len(result.partial), 1)
             self.assertEqual(len(result.todos), 1)
-            self.assertIn("if seen[value] then return true end", main)
-            self.assertIn("~= first then return false end", main)
+            # Native f_if accepts an absent then branch, but the nested math
+            # effect has no Lua translation.  Do not emit only the predicates
+            # and imply that this whole conditional has been migrated.
+            self.assertIn("translate conditional control flow", main)
+            self.assertNotIn("if seen[value] then return true end", main)
+            self.assertNotIn("~= first then return false end", main)
             self.assertNotIn("services.gameplay.math.apply", main)
-            self.assertIn("translate this math expression into", main)
 
     def test_phase_move_and_global_overmap_point_keep_avatar_context(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -36786,7 +36789,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertNotIn("switch_action_default__switch_default", main)
             self.assertNotIn("switch_nested_default__switch_default", main)
             self.assertTrue(any(
-                "EOC switch_selector_default effect #0" in entry
+                "EOC switch_selector_default__switch__0 effect #0" in entry
                 for entry in result.todos
             ))
             self.assertIn(
