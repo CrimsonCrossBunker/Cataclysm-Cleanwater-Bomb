@@ -9,6 +9,7 @@
 #include "json_loader.h"
 #include "lua_platform_test_map_support.h"
 #include "map_scale_constants.h"
+#include "mission.h"
 #include "npc.h"
 #include "overmap_connection.h"
 #include "overmapbuffer.h"
