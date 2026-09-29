@@ -22448,13 +22448,13 @@ def render_static_roll_remainder_effect(
 
     The progression service preserves the native missing-candidate selection
     and setter semantics.  Static EOC vectors use separate dialogue copies;
-    translated messages still require a dedicated native adapter.
+    plain JSON messages retain their native no_translation text.
     """
     del avatar_actor_proven, npc_actor_proven
     if key not in {"u_roll_remainder", "npc_roll_remainder"}:
         return None
     if actor_expression is None or set(effect) - {
-        key, "type", "true_eocs", "false_eocs"
+        key, "type", "message", "true_eocs", "false_eocs"
     } or "type" not in effect or key not in effect:
         return None
     kind = effect["type"]
@@ -22473,6 +22473,9 @@ def render_static_roll_remainder_effect(
         )
     ):
         return None
+    message = effect.get("message", "")
+    if not bounded_utf8_string(message, 8192, allow_empty=True):
+        return None
     typed_ids = ", ".join(
         f'services.types.id({lua_quote(kind)}, {lua_quote(identifier)})'
         for identifier in ids
@@ -22481,7 +22484,7 @@ def render_static_roll_remainder_effect(
         "services.progression.grant_random_missing("
         f"{actor_expression}, {lua_quote(kind)}, {{ {typed_ids} }})"
     )
-    if not ("true_eocs" in effect or "false_eocs" in effect):
+    if not message and not ("true_eocs" in effect or "false_eocs" in effect):
         return [f"    service_value({grant_call})"]
     vectors = render_ordered_copied_eoc_vectors(
         effect.get("true_eocs", []), effect.get("false_eocs", []),
@@ -22491,6 +22494,12 @@ def render_static_roll_remainder_effect(
     if vectors is None:
         return None
     true_lines, false_lines = vectors
+    if message:
+        true_lines = [
+            "        service_value(services.characters.add_msg_if_player("
+            f"{actor_expression}, {lua_quote(message)}, roll_result.name))",
+            *true_lines,
+        ]
     if not true_lines and not false_lines:
         return [f"    service_value({grant_call})"]
     lines = [f"    local roll_result = service_value({grant_call})"]

@@ -21917,7 +21917,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertEqual(main.count("services.characters.avatar()"), 5)
             self.assertNotIn("domain-service conversion", report)
 
-    def test_roll_remainder_grants_only_literal_unbranched_character_effect(self) -> None:
+    def test_roll_remainder_grants_and_player_messages_with_proven_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -21976,11 +21976,11 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 3)
-            self.assertEqual(len(result.todos), 3)
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
             self.assertEqual(
-                main.count("services.progression.grant_random_missing"), 1
+                main.count("services.progression.grant_random_missing"), 3
             )
             self.assertIn(
                 'services.progression.grant_random_missing(actor, "mutation", '
@@ -21989,6 +21989,13 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             self.assertNotIn("services.mutations.grant", main)
             self.assertNotIn("services.bionics.grant", main)
             self.assertNotIn("services.random.native_int", main)
+            self.assertEqual(
+                main.count("services.characters.add_msg_if_player"), 2
+            )
+            self.assertIn(
+                'services.characters.add_msg_if_player(actor, '
+                '"You learned %s.", roll_result.name)', main,
+            )
             self.assertIn(
                 "native remainder setters, typed Platform grants, and copied-dialogue callbacks",
                 main,
@@ -22028,8 +22035,8 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
         render = migrate_lua_first.render_static_roll_remainder_effect
         self.assertIsNone(render(base, "u_roll_remainder", False, False))
         self.assertIsNone(render(
-            {**base, "message": "You gained %s."}, "u_roll_remainder",
-            True, False, actor_expression="actor",
+            {**base, "message": {"str": "You gained %s."}},
+            "u_roll_remainder", True, False, actor_expression="actor",
         ))
         self.assertIsNone(render(
             {**base, "true_eocs": "EOC_GRANTED"}, "u_roll_remainder",
@@ -22039,6 +22046,7 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             {**base, "type": {"u_val": "kind"}},
             {**base, "u_roll_remainder": ["QUICK"] * 65},
             {**base, "u_roll_remainder": [{"u_val": "candidate"}]},
+            {**base, "message": "x" * 8193},
         ):
             with self.subTest(invalid=invalid):
                 self.assertIsNone(render(
