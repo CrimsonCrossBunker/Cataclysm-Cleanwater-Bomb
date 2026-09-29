@@ -3519,11 +3519,14 @@ def _legacy_trade_action_todo(key: str) -> str | None:
             "returns a QuoteToken instead of those variables"
         ),
         "u_buy_item": (
-            "native u_buy_item requires a live beta NPC for buy_from(cost), then "
-            "creates and initializes alpha's reward with group/container/flags/count, "
-            "default ammo, PRESERVE_SPAWN_LOC, force_equip, suppress_message and "
-            "conditional popup rules before ordered false/true EOCs; "
-            "services.trade.commit transfers an existing exact Item instead"
+            "native u_buy_item calls dialogue beta buy_from(cost), then creates "
+            "alpha's item or item-group reward and runs ordered false/true EOCs; "
+            "services.trade.pay reproduces only payment for an exact NPC and the "
+            "active avatar, while services.inventory.give/give_group do not preserve "
+            "receive_item(_group)'s i_add_or_drop drop/equip behavior, default-ammo "
+            "initialization, suppress_message-controlled popup, or all native "
+            "container/flags/count "
+            "semantics as one transaction"
         ),
         "u_sell_item": (
             "native u_sell_item consumes alpha inventory by item type/count or "

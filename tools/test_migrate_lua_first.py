@@ -8575,7 +8575,8 @@ assert(#events == 9)
         self.assertIn("EOC_BRIBE_20_FALSE_EFFECT", response["effect"]["false_eocs"])
         self.assertNotIn("on_select =", rendered or "")
         self.assertNotIn("on_action =", rendered or "")
-        self.assertIn("native u_buy_item requires a live beta NPC", todo_text)
+        self.assertIn("native u_buy_item calls dialogue beta buy_from(cost)", todo_text)
+        self.assertIn("services.trade.pay reproduces only payment", todo_text)
         self.assertIn("ordered false/true EOCs", todo_text)
 
     def test_morale_game_start_effects_require_event_exclusive_dispatch(self) -> None:
@@ -22298,9 +22299,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
                 'services.inventory.give(\n        services.characters.avatar(), services.types.id("item", "apple"), 2',
                 main,
             )
-            self.assertIn("native u_buy_item requires a live beta NPC for buy_from(cost)", main)
+            self.assertIn("native u_buy_item calls dialogue beta buy_from(cost)", main)
+            self.assertIn("services.trade.pay reproduces only payment", main)
+            self.assertNotIn("services.trade.pay(", main)
             self.assertIn("native u_sell_item consumes alpha inventory by item type/count or charges", main)
-            self.assertIn("native u_buy_item requires a live beta NPC for buy_from(cost)", report)
+            self.assertIn("native u_buy_item calls dialogue beta buy_from(cost)", report)
+            self.assertIn("services.trade.pay reproduces only payment", report)
             self.assertIn("native u_sell_item consumes alpha inventory by item type/count or charges", report)
             self.assertIn("services.spells.gain_levels(", main)
             self.assertNotIn("actor, spell.id, 2", main)
@@ -30537,6 +30541,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             for call in (
                 "services.trade.quote(",
                 "services.trade.commit(",
+                "services.trade.pay(",
                 "services.inventory.give(",
                 "services.inventory.give_group(",
                 "services.inventory.remove_type(",
@@ -30545,7 +30550,8 @@ assert(not pcall(function() return U_EXPRESSION end))
                 self.assertNotIn(call, main)
             for reason in (
                 "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
-                "native u_buy_item requires a live beta NPC for buy_from(cost)",
+                "native u_buy_item calls dialogue beta buy_from(cost)",
+                "services.trade.pay reproduces only payment for an exact NPC",
                 "native u_sell_item consumes alpha inventory by item type/count or charges",
             ):
                 self.assertIn(reason, main)
@@ -30619,18 +30625,20 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("on_select", main)
             self.assertNotIn("services.trade.quote(", main)
             self.assertNotIn("services.trade.commit(", main)
+            self.assertNotIn("services.trade.pay(", main)
             self.assertNotIn("services.inventory.give(", main)
             self.assertNotIn("services.inventory.remove_type(", main)
             self.assertNotIn("services.spawns.monster(", main)
             for reason in (
                 "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
-                "native u_buy_item requires a live beta NPC for buy_from(cost)",
+                "native u_buy_item calls dialogue beta buy_from(cost)",
+                "services.trade.pay reproduces only payment for an exact NPC",
                 "native u_sell_item consumes alpha inventory by item type/count or charges",
                 "native u_bulk_donate selects by dialogue cur_item type",
                 "native npc_bulk_donate selects by dialogue cur_item type",
                 "native u_bulk_trade_accept selects by dialogue cur_item type",
                 "native npc_bulk_trade_accept selects by dialogue cur_item type",
-                "native u_buy_monster requires an alpha avatar and beta NPC",
+                "native u_buy_monster pays the beta NPC before placing monsters around the alpha avatar",
                 "native u_spend_cash calls dialogue actor(true).buy_from",
             ):
                 self.assertIn(reason, report)
