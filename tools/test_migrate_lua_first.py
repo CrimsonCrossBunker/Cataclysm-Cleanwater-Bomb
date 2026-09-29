@@ -22486,6 +22486,103 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             main,
         )
 
+    def test_exclusive_avatar_moves_global_teleport_uses_typed_native_service(self) -> None:
+        result = self._migrate_teleport_source(
+            [{
+                "type": "effect_on_condition",
+                "id": "exclusive_avatar_teleport",
+                "eoc_type": "EVENT",
+                "required_event": "avatar_moves",
+                "effect": {
+                    "u_teleport": {"global_val": "return_position"},
+                    "force": True,
+                },
+            }]
+        )
+        main = result.files[Path("main.lua")]
+        handler = main[
+            main.index("migrated_eoc_exclusive_avatar_teleport = function"):
+            main.index('migrated_eoc_functions["exclusive_avatar_teleport"]')
+        ]
+        self.assertIn(
+            'services.variables.resolve(\n            context.data, actor, "global", "return_position")',
+            handler,
+        )
+        self.assertIn(
+            "services.relocation.teleport_avatar(actor, destination.value, { force = true })",
+            handler,
+        )
+        self.assertNotIn("services.relocation.move(", handler)
+        self.assertNotIn("TODO: preserve native teleport_to_point", handler)
+
+        unsafe_cases = [
+            (
+                "non_avatar_event",
+                "game_start",
+                {"u_teleport": {"global_val": "return_position"}},
+                {},
+            ),
+            (
+                "translated_message",
+                "avatar_moves",
+                {
+                    "u_teleport": {"global_val": "return_position"},
+                    "success_message": "You return.",
+                },
+                {},
+            ),
+            (
+                "npc_talker",
+                "avatar_moves",
+                {"npc_teleport": {"global_val": "return_position"}},
+                {},
+            ),
+        ]
+        for name, event, effect, extra in unsafe_cases:
+            with self.subTest(name=name):
+                unsafe = self._migrate_teleport_source(
+                    [{
+                        "type": "effect_on_condition",
+                        "id": f"unsafe_{name}",
+                        "eoc_type": "EVENT",
+                        "required_event": event,
+                        "effect": effect,
+                        **extra,
+                    }]
+                )
+                unsafe_main = unsafe.files[Path("main.lua")]
+                self.assertNotIn(
+                    "services.relocation.teleport_avatar(", unsafe_main
+                )
+                self.assertIn("TODO: preserve native teleport_to_point", unsafe_main)
+
+        shared = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "shared_avatar_teleport",
+                    "eoc_type": "EVENT",
+                    "required_event": "avatar_moves",
+                    "effect": {
+                        "u_teleport": {"global_val": "return_position"}
+                    },
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "avatar_teleport_caller",
+                    "effect": {"run_eocs": "shared_avatar_teleport"},
+                },
+            ]
+        )
+        self.assertNotIn(
+            "services.relocation.teleport_avatar(",
+            shared.files[Path("main.lua")],
+        )
+        self.assertIn(
+            "TODO: preserve native teleport_to_point",
+            shared.files[Path("main.lua")],
+        )
+
     def test_real_teleport_eoc_and_talk_shapes_remain_fail_closed(self) -> None:
         avatar_eocs = migrate_lua_first.load_objects([
             REPOSITORY_ROOT / (
@@ -22511,8 +22608,12 @@ candidates={};selected=nil;run();assert(menus==4 and calls==SELF_CALLS)
             },
         )
         avatar_result = migrate_lua_first.MigrationResult()
+        # Exercise the conservative branch used whenever the full migration
+        # input contains dynamic dispatch; this does not claim corpus-wide
+        # exclusivity for the real EOC.
         avatar_rendered = migrate_lua_first.render_eoc(
-            avatar_eoc, avatar_result
+            avatar_eoc, avatar_result,
+            dynamic_eoc_dispatch_present=True,
         )
         self.assertIn("TODO: preserve native teleport_to_point", avatar_rendered)
         self.assertNotIn("services.relocation.move(", avatar_rendered)
@@ -32558,9 +32659,9 @@ assert(context.data.picked==selected)
             self.assertIn("services.effects.remove", main)
             self.assertIn(
                 "TODO: preserve native teleport_to_point map "
-                "loading/recentering, safe/force/force_safe behavior, "
-                "Character linked-item translation, Creature/Item/Vehicle/Zone "
-                "dispatch, and translated success/failure messages.",
+                "loading/recentering for unproven/non-Avatar talkers; "
+                "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
+                "scopes, and translated success/failure messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -38555,9 +38656,9 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertNotIn("services.variables.get_global(\"target\")", main)
             self.assertIn(
                 "TODO: preserve native teleport_to_point map "
-                "loading/recentering, safe/force/force_safe behavior, "
-                "Character linked-item translation, Creature/Item/Vehicle/Zone "
-                "dispatch, and translated success/failure messages.",
+                "loading/recentering for unproven/non-Avatar talkers; "
+                "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
+                "scopes, and translated success/failure messages.",
                 main,
             )
             self.assertNotIn("services.relocation.creature_at", main)
@@ -38571,10 +38672,11 @@ assert(calls==3 and context.data.entry=='zombie')
             )
             self.assertIn(
                 "dynamic_world_targets effect #1 teleport needs native teleport_to_point map "
-                "loading/recentering and safe/force/force_safe behavior, Character "
-                "linked-item translation, Creature/Item/Vehicle/Zone talker dispatch, and "
-                "translation_or_var success/failure message evaluation; "
-                "services.relocation.move only performs strict loaded-tile movement",
+                "loading/recentering for unproven/non-Avatar talkers; "
+                "services.relocation.teleport_avatar only covers an exclusive "
+                "avatar_moves u_teleport with global_val and no messages. "
+                "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                "translation_or_var success/failure messages remain unsupported",
                 report,
             )
 

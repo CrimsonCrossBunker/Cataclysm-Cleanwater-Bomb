@@ -12,9 +12,9 @@ namespace cata::lua_platform
 
 class game_handle_runtime;
 
-// Install the source-only relocation move vertical slice into an existing
-// services.relocation table.  The enabled and disabled routes intentionally
-// share this installer boundary while the legacy relocation functions remain
+// Install source-only relocation and native Avatar teleport services into an
+// existing services.relocation table.  The enabled and disabled routes
+// intentionally share this installer boundary while legacy functions remain
 // unchanged.
 void install_relocation_move_api(
     sol::table &relocation,

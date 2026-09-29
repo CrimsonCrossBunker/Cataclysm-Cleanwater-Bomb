@@ -255,6 +255,7 @@ AVATAR_ACTOR_EVENTS = frozenset({
 # services.relocation.travel_to_dimension. Lifecycle and death events prove
 # identity but do not guarantee an active map/world for the native service.
 DIMENSION_TRAVEL_AVATAR_EVENTS = frozenset({"avatar_moves"})
+TELEPORT_AVATAR_EVENTS = frozenset({"avatar_moves"})
 
 # Talker-bearing events can carry a non-Character Creature in the alpha slot.
 # The Platform event bridge exposes that handle as ``context.actors.character``
@@ -20900,19 +20901,49 @@ def render_static_teleport_effect(
     npc_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Keep native teleport fail-closed until a native-equivalent typed path exists.
+    """Render only exclusive Avatar-event, global-coordinate teleport calls.
 
-    ``services.relocation.move`` requires a loaded tile and implements strict
-    movement.  Native ``f_teleport`` instead dispatches a talker to
-    ``teleport_to_point`` (or moves an item, vehicle, or zone), carries
-    force/force_safe behavior, translates linked Character items, and evaluates
-    success/failure ``translation_or_var`` messages.
+    The typed service delegates to native ``teleport_to_point`` and carries its
+    force policies and linked-item translation.  Talker selection, NPC/item/
+    vehicle/zone dispatch, non-global variable scopes, and translated messages
+    remain fail-closed.
     """
     del (
-        effect, monster_actor_proven, avatar_actor_proven,
-        vehicle_actor_proven, npc_actor_proven, npc_actor_expression,
+        monster_actor_proven, vehicle_actor_proven, npc_actor_proven,
+        npc_actor_expression,
     )
-    return None
+    key = "u_teleport" if "u_teleport" in effect else "npc_teleport"
+    if key != "u_teleport" or not avatar_actor_proven:
+        return None
+    if set(effect) - {key, "force", "force_safe"}:
+        return None
+    for option in ("force", "force_safe"):
+        if option in effect and not isinstance(effect[option], bool):
+            return None
+    target = effect.get(key)
+    if (
+        not isinstance(target, dict) or set(target) != {"global_val"} or
+        not bounded_utf8_string(target.get("global_val"), 256)
+    ):
+        return None
+
+    options = []
+    for option in ("force", "force_safe"):
+        if effect.get(option, False):
+            options.append(f"{option} = true")
+    arguments = f"actor, destination.value"
+    if options:
+        arguments += ", { " + ", ".join(options) + " }"
+    return [
+        "    do",
+        "        local destination = services.variables.resolve(",
+        f"            context.data, actor, \"global\", {lua_quote(target['global_val'])})",
+        "        if destination.exists then",
+        "            service_value(services.relocation.teleport_avatar("
+        f"{arguments}))",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_npc_goal_effect(
@@ -30047,6 +30078,16 @@ def render_eoc(
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
     )
+    # Native u_teleport follows the EOC alpha. Restrict the typed Platform
+    # service to an exclusive live avatar_moves handler: lifecycle callbacks,
+    # recurrence, run_eocs references, and dynamic dispatch do not prove the
+    # same Avatar actor and active-map state.
+    teleport_avatar_actor_proven = (
+        stable_handler and value.get("eoc_type") == "EVENT" and
+        required_event in TELEPORT_AVATAR_EVENTS and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     avatar_actor_proven = (
         avatar_fatal_hook or avatar_death_hook or
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
@@ -33911,7 +33952,7 @@ def render_eoc(
                 rendered = render_static_teleport_effect(
                     effect,
                     monster_actor_proven=monster_actor_proven,
-                    avatar_actor_proven=exact_avatar_actor_proven,
+                    avatar_actor_proven=teleport_avatar_actor_proven,
                     vehicle_actor_proven=exact_vehicle_actor_proven,
                     npc_actor_proven=exact_npc_actor_proven,
                     npc_actor_expression=npc_actor_expression,
@@ -33922,19 +33963,19 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: preserve native teleport_to_point map "
-                        "loading/recentering, safe/force/force_safe behavior, "
-                        "Character linked-item translation, Creature/Item/Vehicle/Zone "
-                        "dispatch, and translated success/failure messages."
+                        "loading/recentering for unproven/non-Avatar talkers; "
+                        "retain NPC/Item/Vehicle/Zone dispatch, non-global target "
+                        "scopes, and translated success/failure messages."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "teleport needs native teleport_to_point map "
-                        "loading/recentering and safe/force/force_safe behavior, "
-                        "Character linked-item translation, Creature/Item/Vehicle/Zone "
-                        "talker dispatch, and translation_or_var success/failure "
-                        "message evaluation; services.relocation.move only performs "
-                        "strict loaded-tile movement"
+                        "teleport needs native teleport_to_point map loading/recentering "
+                        "for unproven/non-Avatar talkers; services.relocation.teleport_avatar "
+                        "only covers an exclusive avatar_moves u_teleport with global_val "
+                        "and no messages. NPC/Item/Vehicle/Zone dispatch, other target "
+                        "scopes, and translation_or_var success/failure messages remain "
+                        "unsupported"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):

@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
+#include "teleport.h"
 
 TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
            "[lua][platform][relocation][monster]" )
@@ -949,6 +950,160 @@ TEST_CASE( "lua_platform_relocation_moves_avatar_with_explicit_token",
     CHECK( get_avatar().pos_abs() == fixture.target_abs );
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_after_commit );
     CHECK( token.owner_is_current() );
+}
+
+TEST_CASE( "lua_platform_avatar_teleport_matches_native_success_path",
+           "[lua][platform][relocation][teleport][avatar]" )
+{
+    platform_avatar_relocation_fixture fixture( 739, 38 );
+    map &here = fixture.get_map();
+    const ter_str_id floor_id( "t_floor" );
+    REQUIRE( floor_id.is_valid() );
+    REQUIRE( here.ter_set( fixture.local, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local, floor_id.id() ) );
+
+    const bool native_accepted = teleport::teleport_to_point(
+                                     get_avatar(), here.get_bub( fixture.target_abs ),
+                                     true, false, false, false, false );
+    REQUIRE( native_accepted );
+    const tripoint_abs_ms native_position = get_avatar().pos_abs();
+    REQUIRE( native_position == fixture.target_abs );
+
+    get_avatar().setpos( here, fixture.local );
+    const std::uint64_t epoch_before =
+        cata::lua_platform::map_mutation_epoch();
+    const cata::lua_platform::script_tripoint_coord target =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            fixture.target_abs.raw() );
+    const sol::protected_function teleport_avatar =
+        fixture.relocation_api()["teleport_avatar"];
+    const sol::protected_function_result teleported = teleport_avatar(
+                fixture.avatar_handle, target );
+    REQUIRE( teleported.valid() );
+    const sol::table envelope = teleported.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["accepted"].get<bool>() == native_accepted );
+    CHECK( value["changed"].get<bool>() );
+    CHECK( value["scope"].get<std::string>() == "avatar" );
+    CHECK( get_avatar().pos_abs() == native_position );
+    CHECK( value["position"].get<cata::lua_platform::script_tripoint_coord>()
+           .to_native() == native_position.raw() );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
+}
+
+TEST_CASE( "lua_platform_avatar_teleport_force_fallback_matches_native",
+           "[lua][platform][relocation][teleport][avatar][force]" )
+{
+    platform_avatar_relocation_fixture fixture( 741, 40 );
+    map &here = fixture.get_map();
+    const ter_str_id floor_id( "t_floor" );
+    const ter_str_id wall_id( "t_wall" );
+    REQUIRE( floor_id.is_valid() );
+    REQUIRE( wall_id.is_valid() );
+    REQUIRE( here.ter_set( fixture.local, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local, wall_id.id() ) );
+
+    const bool native_accepted = teleport::teleport_to_point(
+                                     get_avatar(), here.get_bub( fixture.target_abs ),
+                                     true, false, false, true, false );
+    REQUIRE( native_accepted );
+    const tripoint_abs_ms native_position = get_avatar().pos_abs();
+    get_avatar().setpos( here, fixture.local );
+
+    const cata::lua_platform::script_tripoint_coord target =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            fixture.target_abs.raw() );
+    const sol::protected_function teleport_avatar =
+        fixture.relocation_api()["teleport_avatar"];
+    const sol::table options = fixture.lua.create_table_with( "force", true );
+    const sol::protected_function_result teleported = teleport_avatar(
+                fixture.avatar_handle, target, options );
+    REQUIRE( teleported.valid() );
+    const sol::table envelope = teleported.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["accepted"].get<bool>() == native_accepted );
+    CHECK( get_avatar().pos_abs() == native_position );
+    CHECK( value["position"].get<cata::lua_platform::script_tripoint_coord>()
+           .to_native() == native_position.raw() );
+}
+
+TEST_CASE( "lua_platform_avatar_teleport_force_safe_collision_matches_native",
+           "[lua][platform][relocation][teleport][avatar][force_safe]" )
+{
+    platform_avatar_relocation_fixture fixture( 742, 41 );
+    map &here = fixture.get_map();
+    const ter_str_id floor_id( "t_floor" );
+    REQUIRE( floor_id.is_valid() );
+    REQUIRE( here.ter_set( fixture.local, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local + tripoint::north, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local + tripoint::south, floor_id.id() ) );
+    REQUIRE( here.ter_set( fixture.target_local + tripoint::east, floor_id.id() ) );
+    REQUIRE( fixture.add_monster( fixture.target_local ) );
+
+    const bool native_accepted = teleport::teleport_to_point(
+                                     get_avatar(), here.get_bub( fixture.target_abs ),
+                                     true, false, false, false, true );
+    REQUIRE( native_accepted );
+    const tripoint_abs_ms native_position = get_avatar().pos_abs();
+    REQUIRE( native_position != fixture.target_abs );
+    get_avatar().setpos( here, fixture.local );
+
+    const cata::lua_platform::script_tripoint_coord target =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square,
+            fixture.target_abs.raw() );
+    const sol::protected_function teleport_avatar =
+        fixture.relocation_api()["teleport_avatar"];
+    const sol::table options = fixture.lua.create_table_with( "force_safe", true );
+    const sol::protected_function_result teleported = teleport_avatar(
+                fixture.avatar_handle, target, options );
+    REQUIRE( teleported.valid() );
+    const sol::table envelope = teleported.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK( value["accepted"].get<bool>() == native_accepted );
+    CHECK( get_avatar().pos_abs() == native_position );
+    CHECK( value["position"].get<cata::lua_platform::script_tripoint_coord>()
+           .to_native() == native_position.raw() );
+}
+
+TEST_CASE( "lua_platform_avatar_teleport_matches_native_same_position_rejection",
+           "[lua][platform][relocation][teleport][avatar]" )
+{
+    platform_avatar_relocation_fixture fixture( 740, 39 );
+    const tripoint_abs_ms before = get_avatar().pos_abs();
+    const bool native_accepted = teleport::teleport_to_point(
+                                     get_avatar(), fixture.get_map().get_bub( before ),
+                                     true, false, false, false, false );
+    CHECK_FALSE( native_accepted );
+
+    const std::uint64_t epoch_before =
+        cata::lua_platform::map_mutation_epoch();
+    const cata::lua_platform::script_tripoint_coord target =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square, before.raw() );
+    const sol::protected_function teleport_avatar =
+        fixture.relocation_api()["teleport_avatar"];
+    const sol::protected_function_result unchanged = teleport_avatar(
+                fixture.avatar_handle, target );
+    REQUIRE( unchanged.valid() );
+    const sol::table envelope = unchanged.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    const sol::table value = envelope["value"].get<sol::table>();
+    CHECK_FALSE( value["accepted"].get<bool>() );
+    CHECK_FALSE( value["changed"].get<bool>() );
+    CHECK( get_avatar().pos_abs() == before );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before );
+
+    const cata::lua_platform::script_tripoint_coord local_target =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::local, coords::scale::map_square, tripoint::zero );
+    CHECK_FALSE( teleport_avatar( fixture.avatar_handle, local_target ).valid() );
 }
 
 TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",

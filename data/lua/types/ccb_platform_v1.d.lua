@@ -8028,8 +8028,30 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field value? CcbRelocationDimensionTravelValue Present for valid dimensions, including already-there no-ops.
 ---@field error? CcbPlatformResultError Present when the dimension id is invalid or a requested vehicle is missing; malformed options raise a Lua error.
 
+---@class CcbAvatarTeleportOptions
+---@field force? boolean Native `force` policy: select a nearby passable tile for solid destinations and allow telefrag damage.
+---@field force_safe? boolean Native `force_safe` policy: select nearby passable/unoccupied destinations instead of telefragging.
+
+---@class CcbAvatarTeleportValue
+---@field accepted boolean Native `teleport_to_point` return value; false means the teleport was not accepted, though native prechecks can still unboard the Avatar.
+---@field changed boolean True when native accepted the operation or the Avatar position/vehicle-boarded state changed; force fallback can end at the source square.
+---@field scope 'avatar'
+---@field handle GameHandle Current exact Avatar handle after the attempt.
+---@field position TripointCoord Current absolute map-square position after the attempt.
+---@field overmap_terrain TripointCoord Absolute overmap-terrain position derived from the current map-square position.
+
+---@class CcbAvatarTeleportResult: CcbResult
+---@field value? CcbAvatarTeleportValue Present when the request was well-formed and the exact Avatar handle resolved.
+---@field error? CcbPlatformResultError Present for unsupported/invalid handles; malformed options or non-absolute coordinates raise a Lua error.
+
 ---@class CcbRelocationApi
 local CcbRelocationApi = {}
+
+---@param avatar GameHandle Exact live Avatar handle; NPCs, Monsters, generic Characters, Vehicles, Items, and Zones are unsupported.
+---@param position TripointCoord Absolute map-square target; local, relative, and overmap coordinates are rejected.
+---@param options? CcbAvatarTeleportOptions Optional native `force`/`force_safe` policy; omitted means both false.
+---@return CcbAvatarTeleportResult result Uses native `teleport_to_point` with safe=true, no teleglow, and no internal messages. It may load/recenter the active map; requires an active Platform write callback.
+function CcbRelocationApi.teleport_avatar(avatar, position, options) end
 
 ---@param entity GameHandle Exact live Monster, Avatar, NPC, or Vehicle GameHandle; generic Character and other unsupported subtypes return `unsupported`.
 ---@param target MapTileToken Exact token for the target map square; raw coordinates and implicit/fallback target lookup are unsupported.

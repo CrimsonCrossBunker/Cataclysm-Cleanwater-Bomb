@@ -978,6 +978,46 @@ struct relocation_move_options {
     bool strict = true;
 };
 
+struct avatar_teleport_options {
+    bool force = false;
+    bool force_safe = false;
+};
+
+avatar_teleport_options read_avatar_teleport_options(
+    const sol::optional<sol::table> &requested_options )
+{
+    avatar_teleport_options result;
+    if( !requested_options ) {
+        return result;
+    }
+
+    for( const auto &[key_object, value_object] : *requested_options ) {
+        if( !key_object.is<std::string>() ) {
+            throw std::invalid_argument(
+                "services.relocation.teleport_avatar option names must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "force" ) {
+            if( !value_object.is<bool>() ) {
+                throw std::invalid_argument(
+                    "services.relocation.teleport_avatar force must be a boolean" );
+            }
+            result.force = value_object.as<bool>();
+        } else if( key == "force_safe" ) {
+            if( !value_object.is<bool>() ) {
+                throw std::invalid_argument(
+                    "services.relocation.teleport_avatar force_safe must be a boolean" );
+            }
+            result.force_safe = value_object.as<bool>();
+        } else {
+            throw std::invalid_argument(
+                "services.relocation.teleport_avatar received unsupported option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
 relocation_move_options read_relocation_move_options(
     const sol::optional<sol::table> &requested )
 {
@@ -1659,6 +1699,78 @@ sol::table travel_avatar_to_omt(
     return result;
 }
 
+sol::table teleport_avatar_to_position(
+    sol::this_state lua, const game_handle &handle,
+    const script_tripoint_coord &requested_position,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "services.relocation.teleport_avatar";
+    sol::state_view state( lua );
+    const avatar_teleport_options options =
+        read_avatar_teleport_options( requested_options );
+    const tripoint_abs_ms destination = require_absolute_ms(
+                                            requested_position, api_name );
+
+    if( handle.kind() != game_handle_kind::creature ||
+        handle.subtype_name() != "avatar" ) {
+        return make_game_error_result( state, {
+            "unsupported",
+            "services.relocation.teleport_avatar supports only an exact Avatar handle"
+        } );
+    }
+
+    std::optional<game_handle_error> error;
+    avatar *value = resolve_exact_avatar(
+                        handle, runtime_generation, world_generation, error );
+    if( value == nullptr ) {
+        if( error && ( error->code == "wrong_subtype" ||
+                       error->code == "wrong_kind" ) ) {
+            return make_game_error_result( state, {
+                "unsupported",
+                "services.relocation.teleport_avatar supports only an exact Avatar handle"
+            } );
+        }
+        return make_game_error_result( state, error.value_or( game_handle_error{
+            "invalid_handle",
+            "services.relocation.teleport_avatar could not resolve the Avatar handle"
+        } ) );
+    }
+
+    map &here = require_active_map( api_name );
+    const tripoint_abs_ms before = value->pos_abs();
+    const bool was_in_vehicle = value->in_vehicle;
+    const bool accepted = teleport::teleport_to_point(
+                              *value, here.get_bub( destination ), true,
+                              false, false, options.force, options.force_safe );
+    const tripoint_abs_ms after = value->pos_abs();
+    if( accepted ) {
+        translate_relocated_linked_items( *value, after - before );
+    }
+
+    const bool changed = accepted || before != after ||
+                         ( was_in_vehicle && !value->in_vehicle );
+    if( changed ) {
+        bump_map_mutation_epoch();
+    }
+
+    sol::table result = state.create_table();
+    result["accepted"] = accepted;
+    result["changed"] = changed;
+    result["scope"] = "avatar";
+    result["handle"] = make_creature_handle(
+                           *value, runtime_generation, world_generation );
+    result["position"] = absolute_position( *value );
+    result["overmap_terrain"] = script_tripoint_coord::from_native(
+                                    coords::origin::abs,
+                                    coords::scale::overmap_terrain,
+                                    project_to<coords::omt>( after ).raw() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table relocate_npc(
     sol::this_state lua, const game_handle &handle,
     const map_tile_token &target_token,
@@ -1994,7 +2106,7 @@ sol::table relocate_vehicle_move(
     avatar &you = get_avatar();
     if( you.get_grab_type() == object_type::VEHICLE ) {
         const optional_vpart_position grabbed_vehicle = here.veh_at(
-                    you.pos_bub() + you.grab_point );
+                you.pos_bub() + you.grab_point );
         if( grabbed_vehicle && &grabbed_vehicle->vehicle() == &entry ) {
             return make_game_error_result( state, {
                 "unsupported_state",
@@ -2232,7 +2344,7 @@ sol::table travel_to_dimension(
     vehicle *vehicle_to_take = nullptr;
     if( options.take_vehicle ) {
         const optional_vpart_position vehicle_position = here.veh_at(
-                    get_avatar().pos_bub( here ) );
+                get_avatar().pos_bub( here ) );
         if( !vehicle_position ) {
             return make_game_error_result( state, {
                 "no_vehicle",
@@ -2389,9 +2501,25 @@ void install_relocation_move_api(
     std::function<bool()> has_active_callback )
 {
     relocation.set_function(
+        "teleport_avatar",
+        [current_runtime_generation, current_world_generation,
+         require_write, require_dangerous_relocation, has_active_callback](
+            sol::this_state lua, const game_handle & handle,
+            const script_tripoint_coord & position,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        require_dangerous_relocation();
+        require_active_callback(
+            has_active_callback, "services.relocation.teleport_avatar" );
+        return teleport_avatar_to_position(
+                   lua, handle, position, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    relocation.set_function(
         "move",
         [current_runtime_generation, current_world_generation,
-                                     require_write, require_dangerous_relocation, has_active_callback](
+         require_write, require_dangerous_relocation, has_active_callback](
             sol::this_state lua, const game_handle & handle,
             const map_tile_token & target,
     const sol::optional<sol::table> &options ) {
@@ -2594,7 +2722,7 @@ void install_game_world_service_api(
     relocation.set_function(
         "travel_to_omt",
         [authorize_relocation, current_runtime_generation,
-                               current_world_generation, require_write](
+         current_world_generation, require_write](
             sol::this_state lua, const game_handle & handle,
             const overmap_tile_token & target,
     const sol::optional<sol::table> &options ) {
@@ -2609,7 +2737,7 @@ void install_game_world_service_api(
     relocation.set_function(
         "item_at",
         [authorize_relocation, current_runtime_generation,
-                               current_world_generation, require_write](
+         current_world_generation, require_write](
             sol::this_state lua, const game_handle & handle,
     const script_tripoint_coord & position ) {
         require_write();

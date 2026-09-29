@@ -35,8 +35,8 @@ void install_map_api(
 {
 }
 
-// Keep the relocation move entry point linkable in a disabled build without
-// manufacturing a public services.relocation table.
+// Keep the relocation and Avatar teleport installer linkable in a disabled
+// build without manufacturing a public services.relocation table.
 void install_relocation_move_api(
     sol::table &, std::function<game_handle_runtime()>,
     std::function<std::size_t()>, std::function<void()>,
