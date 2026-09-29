@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_map_support.h"
 #include "mapgen.h"
+#include "timed_event.h"
 
 TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
            "[lua][platform][mapgen][transaction]" )
@@ -472,6 +473,74 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
     REQUIRE( platform_southeast != nullptr );
     CHECK( platform_southeast->get_ter( changed_point ) == native_terrain );
     CHECK( platform_southeast->get_furn( changed_point ) == native_furniture );
+}
+
+TEST_CASE( "lua_platform_mapgen_schedule_update_matches_native_timed_event",
+           "[lua][platform][mapgen][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 814, 44 );
+    platform_calendar_turn_scope calendar_scope;
+    calendar::turn = time_point::from_turn( 1000 );
+
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    events = timed_event_manager();
+
+    const tripoint_abs_omt position = fixture.source_omt;
+    const update_mapgen_id native_id( "fbmc_shelter_1_0" );
+    REQUIRE( has_update_mapgen_for( native_id ) );
+    const sol::table mapgen = fixture.services["mapgen"];
+    const sol::protected_function tile_token = fixture.overmap_api()["tile_token"];
+    const sol::protected_function_result target_result =
+        tile_token( fixture.abs_omt_position( position ) );
+    REQUIRE( target_result.valid() );
+    const sol::table target_envelope = target_result.get<sol::table>();
+    REQUIRE( target_envelope["ok"].get<bool>() );
+    const cata::lua_platform::overmap_tile_token target =
+        target_envelope["value"].get<cata::lua_platform::overmap_tile_token>();
+    const sol::protected_function update_token = mapgen["update_token"];
+    const sol::protected_function_result update_result = update_token(
+            cata::lua_platform::script_game_id( "update_mapgen", native_id.str() ) );
+    REQUIRE( update_result.valid() );
+    const sol::table update_envelope = update_result.get<sol::table>();
+    REQUIRE( update_envelope["ok"].get<bool>() );
+    const cata::lua_platform::mapgen_update_token update =
+        update_envelope["value"].get<cata::lua_platform::mapgen_update_token>();
+
+    const sol::protected_function schedule = mapgen["schedule_update"];
+    const cata::lua_platform::script_time_duration delay =
+        cata::lua_platform::script_time_duration::from_native( 1_minutes );
+    const std::string key = "platform_mapgen_schedule_semantic";
+    const sol::protected_function_result zero_delay = schedule(
+                target, update,
+                cata::lua_platform::script_time_duration::from_native( 0_turns ), key );
+    CHECK_FALSE( zero_delay.valid() );
+    CHECK( events.get_all().empty() );
+
+    const time_point when = calendar::turn + 1_minutes + 1_seconds;
+    events.add( timed_event_type::UPDATE_MAPGEN, when, -1,
+                project_to<coords::ms>( position ), 0, native_id.str(), key );
+    fixture.write_called = false;
+    const sol::protected_function_result result = schedule( target, update, delay, key );
+    REQUIRE( result.valid() );
+    const sol::table envelope = result.get<sol::table>();
+    REQUIRE( envelope["ok"].get<bool>() );
+    CHECK( envelope["value"].get<cata::lua_platform::script_time_point>().to_native() == when );
+    CHECK( fixture.write_called );
+
+    const std::list<timed_event> &queued = events.get_all();
+    REQUIRE( queued.size() == 2 );
+    auto native = queued.begin();
+    auto platform = native;
+    ++platform;
+    CHECK( platform->type == native->type );
+    CHECK( platform->when == native->when );
+    CHECK( platform->faction_id == native->faction_id );
+    CHECK( platform->map_square == native->map_square );
+    CHECK( platform->map_point == native->map_point );
+    CHECK( platform->strength == native->strength );
+    CHECK( platform->string_id == native->string_id );
+    CHECK( platform->key == native->key );
 }
 
 TEST_CASE( "lua_platform_mapgen_apply_reports_preflight_rejection_without_mutation",

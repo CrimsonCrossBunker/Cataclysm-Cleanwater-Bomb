@@ -7234,6 +7234,17 @@ function CcbMapgenApi.apply(target, update, options) end
 ---@return CcbResult result `value` is the native runner's success boolean.
 function CcbMapgenApi.run_update(target, update) end
 
+---Queue one registered update through the native UPDATE_MAPGEN timed-event path.
+---The delay must be positive. Native processing occurs one second after the
+---requested delay, matching the EOC update_mapgen delayed branch. The selected
+---mission is nil when the event runs. The optional key identifies the event.
+---@param target OvermapTileToken Exact target absolute OMT token.
+---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@param delay TimeDuration Positive delay from the current game turn.
+---@param key? string Native timed-event key.
+---@return CcbResult result `value` is the scheduled TimePoint.
+function CcbMapgenApi.schedule_update(target, update, delay, key) end
+
 ---Register a primary OMT generator invoked before native missing-mapgen fallback.
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
 ---@param options? CcbPlatformMapgenRegistrationOptions

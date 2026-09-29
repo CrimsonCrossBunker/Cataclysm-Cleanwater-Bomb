@@ -37,6 +37,7 @@ extern "C" {
 #include "omdata.h"
 #include "point.h"
 #include "trap.h"
+#include "timed_event.h"
 #include "type_id.h"
 
 namespace cata::lua_platform
@@ -450,6 +451,62 @@ sol::table run_mapgen_update(
                state, sol::make_object( state, outcome.success() ) );
 }
 
+sol::table schedule_mapgen_update(
+    sol::this_state lua,
+    const sol::object &requested_target,
+    const sol::object &requested_update,
+    const script_time_duration &requested_delay,
+    const sol::optional<std::string> &requested_key,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::function<void()> require_write )
+{
+    sol::state_view state( lua );
+    if( !requested_target.is<overmap_tile_token>() ) {
+        return make_game_error_result( state, {
+            "invalid_target",
+            "services.mapgen.schedule_update requires an OvermapTileToken target"
+        } );
+    }
+    const overmap_tile_token &target =
+        requested_target.as<const overmap_tile_token &>();
+    if( const std::optional<game_handle_error> error =
+            validate_overmap_tile_token(
+                target, runtime_generation, world_generation ) ) {
+        return make_game_error_result( state, *error );
+    }
+    if( !requested_update.is<mapgen_update_token>() ) {
+        return make_game_error_result( state, {
+            "invalid_update",
+            "services.mapgen.schedule_update requires a MapgenUpdateToken update"
+        } );
+    }
+    const mapgen_update_token &update =
+        requested_update.as<const mapgen_update_token &>();
+    if( const std::optional<game_handle_error> error =
+            validate_mapgen_update_token(
+                update, runtime_generation, world_generation ) ) {
+        return make_game_error_result( state, *error );
+    }
+    if( requested_delay.turns() <= 0 ) {
+        throw std::invalid_argument(
+            "services.mapgen.schedule_update delay must be positive" );
+    }
+    const std::string key = requested_key.value_or( "" );
+
+    require_write();
+    // Match the native delayed path's one-second offset: timed events run
+    // before the player turn, while the originating callbacks run during it.
+    const time_point when = calendar::turn + requested_delay.to_native() + 1_seconds;
+    get_timed_events().add(
+        timed_event_type::UPDATE_MAPGEN, when, -1,
+        project_to<coords::ms>( target.native_position() ), 0,
+        update.native_id().str(), key );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, script_time_point::from_native( when ) ) );
+}
+
 } // namespace
 
 void install_mapgen_service_api(
@@ -526,6 +583,17 @@ void install_mapgen_service_api(
             sol::this_state state, sol::object target, sol::object update ) {
         return run_mapgen_update(
                    state, target, update,
+                   current_runtime_generation(),
+                   current_world_generation(), require_write );
+    } );
+    mapgen.set_function(
+        "schedule_update",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, sol::object target, sol::object update,
+            const script_time_duration &delay,
+            const sol::optional<std::string> &key ) {
+        return schedule_mapgen_update(
+                   state, target, update, delay, key,
                    current_runtime_generation(),
                    current_world_generation(), require_write );
     } );
