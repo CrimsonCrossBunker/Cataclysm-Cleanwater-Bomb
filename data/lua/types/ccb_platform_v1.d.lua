@@ -659,7 +659,7 @@ function ItemDefinition:vitamin(vitamin_id, amount) end
 function ItemDefinition:book(options) end
 
 ---@param handler_id string
----@param label? string
+---@param label? string|LocalizedText Action menu label; content.text stays dynamically translated, plain strings remain literal, and omission defaults to handler_id.
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label) end
 
@@ -4540,11 +4540,14 @@ function WeaponCategoryDefinition:proficiency(proficiency_id) end
 ---| 'grazing'
 ---Non-copyable borrowed callback context. Every member becomes stale after the
 ---item-use handler returns or fails; saving the userdata does not extend its lease.
+---The native bridge invokes the handler synchronously with the exact non-null
+---using Character and item instance. A null native Character fails closed
+---before Lua runs; the Character may be an NPC and is never replaced by an avatar.
 ---@class ItemUseContext
 ---@field player_name string
 ---@field item_id string
----@field character GameHandle Runtime-owner- and generation-safe handle for the using character.
----@field item GameHandle Runtime-owner- and generation-safe handle for the used item instance.
+---@field character GameHandle Runtime-owner- and generation-safe handle for the actual using Character (alpha); NPCs are preserved.
+---@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta).
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
 ---@field charges integer
 local ItemUseContext = {}

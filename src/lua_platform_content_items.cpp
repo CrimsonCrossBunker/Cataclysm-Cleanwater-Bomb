@@ -244,7 +244,7 @@ struct item_definition_data {
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
     std::string use_handler;
-    std::string use_label;
+    authored_text use_label;
     std::string consume_handler;
     std::optional<comestible_data> comestible;
     std::optional<book_data> book;
@@ -832,13 +832,16 @@ struct item_definition_handle {
     }
 
     item_definition_handle &on_use( const std::string &handler,
-                                    const sol::optional<std::string> &label ) {
+                                    const sol::optional<sol::object> &label ) {
         require_building_handle( token, *definition, "item" );
         if( handler.empty() ) {
             throw std::runtime_error( "item use handler id cannot be empty" );
         }
+        authored_text parsed_label = label ?
+                                     read_singular_text( *label, handler, "item use label" ) :
+                                     authored_text{ handler, std::nullopt };
         definition->use_handler = handler;
-        definition->use_label = label.value_or( handler );
+        definition->use_label = std::move( parsed_label );
         return *this;
     }
 
@@ -2157,7 +2160,7 @@ class lua_platform_iuse_actor : public iuse_actor
 {
     public:
         lua_platform_iuse_actor( std::string mod_id, std::string handler_id,
-                                 std::string label ) :
+                                 authored_text label ) :
             iuse_actor( "lua_platform" ), mod_id_( std::move( mod_id ) ),
             handler_id_( std::move( handler_id ) ), label_( std::move( label ) ) {}
 
@@ -2174,7 +2177,7 @@ class lua_platform_iuse_actor : public iuse_actor
         }
 
         std::string get_name() const override {
-            return label_;
+            return label_.native().translated();
         }
 
     private:
@@ -6631,7 +6634,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.looks_like );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.use_handler );
-                hash_part( state, v.use_label );
+                hash_part( state, v.use_label.raw );
+                hash_text( v.use_label.translated );
                 hash_part( state, v.consume_handler );
                 if( v.comestible ) {
                     const item_definition_data::comestible_data &food = *v.comestible;

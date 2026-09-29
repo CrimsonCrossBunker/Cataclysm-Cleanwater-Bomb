@@ -1,13 +1,21 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 #include "itype.h"
+#include "iuse.h"
 #include "skill.h"
 #include "translation.h"
+#if defined( LOCALIZE )
+#include "translation_manager.h"
+#include "translations.h"
+#endif
 
 static const itype_id itype_lua_text_literal_child( "lua_text_literal_child" );
 static const itype_id itype_lua_text_same_plural( "lua_text_same_plural" );
 static const itype_id itype_lua_text_translated_child( "lua_text_translated_child" );
 static const itype_id itype_lua_text_translated_parent( "lua_text_translated_parent" );
+static const itype_id itype_lua_text_translated_use_label( "lua_text_translated_use_label" );
+static const itype_id itype_lua_text_literal_use_label( "lua_text_literal_use_label" );
+static const itype_id itype_lua_text_default_use_label( "lua_text_default_use_label" );
 static const skill_displayType_id
 SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
 static const skill_id skill_lua_translated_skill( "lua_translated_skill" );
@@ -78,6 +86,89 @@ ccb.content.add(ccb.content.Item {
     platform::discard_prepared_mods();
     CHECK_FALSE( itype_lua_text_translated_parent.is_valid() );
     CHECK_FALSE( itype_lua_text_translated_child.is_valid() );
+}
+
+TEST_CASE( "lua_platform_item_use_menu_labels_preserve_deferred_translations",
+           "[lua][platform][items][content][translations]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const platform_lua_test_directory files;
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("translated_label", function(context) return 0 end)
+ccb.runtime.handler("literal_label", function(context) return 0 end)
+ccb.runtime.handler("default_label", function(context) return 0 end)
+local translated = ccb.content.Item {
+    id = "lua_text_translated_use_label", name = "translated label test",
+    description = "use menu label translation", mass_grams = 1, volume_ml = 1
+}
+translated:on_use("translated_label", ccb.content.text("battery"))
+assert(not pcall(function()
+    translated:on_use("translated_label", ccb.content.plural_text("battery", "batteries"))
+end))
+local literal = ccb.content.Item {
+    id = "lua_text_literal_use_label", name = "literal label test",
+    description = "literal use menu label", mass_grams = 1, volume_ml = 1
+}
+literal:on_use("literal_label", "battery")
+local default = ccb.content.Item {
+    id = "lua_text_default_use_label", name = "default label test",
+    description = "default use menu label", mass_grams = 1, volume_ml = 1
+}
+default:on_use("default_label")
+ccb.content.add(translated)
+ccb.content.add(literal)
+ccb.content.add(default)
+)lua" );
+    const platform::mod_source source { "item-use-label-text", files.root,
+                                        files.root / std::filesystem::u8path( "main.lua" ) };
+    std::string error;
+    const bool prepared = platform::prepare_mods( { source }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    REQUIRE( platform::apply_prepared_content( error ) );
+
+    const use_function *translated = itype_lua_text_translated_use_label.obj().get_use(
+                                        "lua_platform:item-use-label-text:translated_label" );
+    const use_function *literal = itype_lua_text_literal_use_label.obj().get_use(
+                                      "lua_platform:item-use-label-text:literal_label" );
+    const use_function *default_label = itype_lua_text_default_use_label.obj().get_use(
+                                            "lua_platform:item-use-label-text:default_label" );
+    REQUIRE( translated != nullptr );
+    REQUIRE( literal != nullptr );
+    REQUIRE( default_label != nullptr );
+    CHECK( translated->get_name() == translation::to_translation( "battery" ).translated() );
+    CHECK( literal->get_name() == "battery" );
+    CHECK( default_label->get_name() == "default_label" );
+
+#if defined( LOCALIZE )
+    TranslationManager &translation_manager = TranslationManager::GetInstance();
+    const std::string old_language = translation_manager.GetCurrentLanguage();
+    const on_out_of_scope restore_language( [old_language]() {
+        set_language( old_language );
+    } );
+    set_language( "ru" );
+    translation_manager.LoadDocuments( {
+        "./data/mods/TEST_DATA/lang/mo/ru/LC_MESSAGES/TEST_DATA.mo"
+    } );
+    CHECK( translated->get_name() == "батарейка" );
+    CHECK( literal->get_name() == "battery" );
+    CHECK( default_label->get_name() == "default_label" );
+
+    set_language( "en" );
+    CHECK( translated->get_name() == "battery" );
+    CHECK( literal->get_name() == "battery" );
+    CHECK( default_label->get_name() == "default_label" );
+#endif
+
+    platform::discard_prepared_mods();
+    CHECK_FALSE( itype_lua_text_translated_use_label.is_valid() );
+    CHECK_FALSE( itype_lua_text_literal_use_label.is_valid() );
+    CHECK_FALSE( itype_lua_text_default_use_label.is_valid() );
 }
 
 TEST_CASE( "lua_platform_item_text_fingerprints_translation_semantics",
