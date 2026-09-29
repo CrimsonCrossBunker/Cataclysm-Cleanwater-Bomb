@@ -32262,12 +32262,14 @@ def render_eoc(
             ):
                 lines.append(
                     "    -- TODO: native u_*_flag targets alpha's exact item talker; "
-                    "supported Character and item-target callbacks do not provide an alpha item handle."
+                    "context.actors.item is not proof of alpha. Native flag arguments "
+                    "accept str_or_var, but this lowering requires a literal json_flag."
                 )
                 result.add_todo(
                     "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "requires a proven native alpha item talker"
+                    "requires a proven native alpha item talker and a literal "
+                    "json_flag representation of the native str_or_var"
                 )
                 all_effects_converted = False
             elif (

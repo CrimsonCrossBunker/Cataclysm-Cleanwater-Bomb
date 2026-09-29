@@ -5180,6 +5180,8 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(
                 main.count("native u_*_flag targets alpha's exact item talker"), 4
             )
+            self.assertIn("context.actors.item is not proof of alpha", main)
+            self.assertIn("accept str_or_var", main)
 
     def test_item_traversal_branches_inherit_item_actor_for_npc_flags(self) -> None:
         """Nested item EOCs keep the selected item handle through ``if``."""
@@ -5247,6 +5249,73 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             self.assertEqual(main.count("context.actors.item ~= nil"), 5)
             self.assertNotIn("item_traversal_child__if_then__0 effect #0", report)
             self.assertNotIn("needs domain-service conversion", report)
+
+    def test_real_magiclysm_item_flag_traversal_keeps_beta_item_provenance(self) -> None:
+        source_path = Path(
+            "data/mods/Magiclysm/effect_on_conditions/transformations.json"
+        )
+        objects = migrate_lua_first.load_objects(
+            [REPOSITORY_ROOT / source_path]
+        )
+        eocs = {
+            obj.value.get("id"): obj.value
+            for obj in objects
+            if obj.value.get("type") == "effect_on_condition"
+        }
+        parent = eocs[
+            "EOC_SHAPESHIFTING_ARMOR_CHECK_SUBSUME_INTO_FORM"
+        ]
+        iteration = parent["effect"][0]
+        self.assertEqual(iteration["u_run_inv_eocs"], "all")
+        self.assertEqual(
+            iteration["search_data"],
+            [{"worn_only": True}],
+        )
+        inline = iteration["true_eocs"][0]
+        self.assertEqual(
+            inline["id"],
+            "EOC_SHAPESHIFTING_ARMOR_CHECK_SUBSUME_INTO_FORM_APPLY_FLAGS",
+        )
+        flag_effects = inline["effect"][0]["if"]["and"][-1]["not"]
+        self.assertEqual(flag_effects, {"npc_has_flag": "INTEGRATED"})
+        self.assertEqual(
+            inline["effect"][0]["then"],
+            [
+                {"npc_set_flag": "SHAPESHIFTED_ARMOR"},
+                {"npc_set_flag": "SEMITANGIBLE"},
+                {"npc_set_flag": "UNRESTRICTED"},
+                {"npc_set_flag": "INTANGIBLE_ARMOR"},
+                {"npc_set_flag": "UNBREAKABLE"},
+            ],
+        )
+
+        result = migrate_lua_first.migrate(objects, "magiclysm_item_flags")
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+        child_id = (
+            "EOC_SHAPESHIFTING_ARMOR_CHECK_SUBSUME_INTO_FORM_APPLY_FLAGS"
+            "__if_then__0"
+        )
+        start = main.index(
+            f"migrated_eoc_{child_id} = function(context, actor_override)"
+        )
+        end = main.index(
+            f'migrated_eoc_functions[{migrate_lua_first.lua_quote(child_id)}]',
+            start,
+        )
+        callback = main[start:end]
+        self.assertEqual(callback.count("services.items.set_flag("), 5)
+        self.assertEqual(callback.count("context.actors.item ~= nil"), 5)
+        self.assertEqual(callback.count("context.actors.item,"), 5)
+        self.assertIn('"UNBREAKABLE"), true)', callback)
+        self.assertNotIn("services.items.set_flag(actor", callback)
+
+        # The item-target children have a typed item operation, but their real
+        # native inventory traversal is still TODO; the selected-item handle
+        # does not establish that it occupied Dialogue alpha for u_*_flag.
+        self.assertIn(
+            "native u_run_inv_eocs uses Character::all_items_loc", report
+        )
 
     def test_literal_character_wound_changes_use_typed_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
