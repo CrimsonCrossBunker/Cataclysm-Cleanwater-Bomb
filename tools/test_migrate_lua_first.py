@@ -25465,7 +25465,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             if "effect #4" in todo.message and "Both context_val route endpoints" in todo.message
         ]
         self.assertEqual(len(route_todos), 1)
-        self.assertEqual(route_todos[0].category, "platform_gap")
+        self.assertEqual(route_todos[0].category, "manual_rewrite")
         route_todo = route_todos[0].message
         self.assertIn(
             "preceding target_params-based u/npc_location_variable writes",
@@ -25474,12 +25474,10 @@ assert(not pcall(function() return U_EXPRESSION end))
         self.assertIn(
             "native missing-variable default is not the blocker", route_todo
         )
+        self.assertIn("services.overmap.find_target", route_todo)
         self.assertIn("mission_util::get_om_terrain_pos", route_todo)
-        self.assertIn("retries with generation enabled", route_todo)
-        self.assertIn(
-            "services.overmap.closest and services.overmap.random queries are existing_only",
-            route_todo,
-        )
+        self.assertIn("generation retry, and Avatar OMT fallback", route_todo)
+        self.assertIn("native off-screen map-load step", route_todo)
         self.assertIn("literal radius=0 and road_only=false", route_todo)
         self.assertIn(
             "Keep preceding reveal_map and u_message effects in source order",

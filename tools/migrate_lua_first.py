@@ -33067,15 +33067,17 @@ def render_eoc(
                         "Both context_val route endpoints have preceding "
                         "target_params-based u/npc_location_variable writes, so "
                         "the native missing-variable default is not the blocker. "
-                        "Those writes use mission_util::get_om_terrain_pos, which "
-                        "searches existing overmaps, retries with generation "
-                        "enabled, then leaves the Avatar OMT as the fallback if "
-                        "no terrain matches; current services.overmap.closest and "
-                        "services.overmap.random queries are existing_only. "
+                        "services.overmap.find_target now covers the static "
+                        "mission_util::get_om_terrain_pos terrain search, "
+                        "generation retry, and Avatar OMT fallback. The "
+                        "renderer still needs proven trigger actors, the "
+                        "native off-screen map-load step, typed context writes, "
+                        "and the complete enclosing effect order before it "
+                        "can generate this route. "
                         f"{route_options_note} Keep preceding reveal_map and "
                         "u_message effects in source order"
                     )
-                    reveal_route_category = "platform_gap"
+                    reveal_route_category = "manual_rewrite"
                 else:
                     reveal_route_gap = (
                         "native reveal_route resolves two var_info abs_ms endpoints "
