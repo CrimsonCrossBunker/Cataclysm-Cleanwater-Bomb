@@ -533,8 +533,10 @@ struct computer_access_context {
     cata::lua_platform::game_handle character_handle() const {
         require_active();
         const tripoint_abs_ms absolute = character->pos_abs();
+        const char *subtype = character->is_avatar() ? "avatar" :
+                              character->is_npc() ? "npc" : "character";
         return cata::lua_platform::game_handle::from_creature( *character, {
-            "platform_computer_character", character->getID().get_value(),
+            subtype, character->getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
         }, handle_runtime, world_generation );
     }

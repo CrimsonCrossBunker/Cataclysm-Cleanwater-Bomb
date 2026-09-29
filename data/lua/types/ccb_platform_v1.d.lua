@@ -4839,7 +4839,7 @@ local BionicDefinition = {}
 ---@class ComputerAccessContext
 ---@field access_denied any
 ---@field alerts any
----@field character any
+---@field character GameHandle Exact Character handle; concrete Avatar/NPC subtypes are preserved.
 ---@field message any
 ---@field mission_id any
 ---@field name any
