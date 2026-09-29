@@ -6739,6 +6739,9 @@ def render_talk_topic_response_condition(
         "has_no_assigned_mission": ("assigned", "== 0"),
         "has_assigned_mission": ("assigned", "== 1"),
         "has_many_assigned_missions": ("assigned", ">= 2"),
+        "u_has_no_available_mission": ("available", "== 0"),
+        "u_has_available_mission": ("available", "== 1"),
+        "u_has_many_available_missions": ("available", ">= 2"),
         "npc_has_no_available_mission": ("available", "== 0"),
         "npc_has_available_mission": ("available", "== 1"),
         "npc_has_many_available_missions": ("available", ">= 2"),
@@ -6747,21 +6750,22 @@ def render_talk_topic_response_condition(
         "has_many_available_missions": ("available", ">= 2"),
     }
     # condition_parser's u_* spelling selects is_npc=false; both unprefixed
-    # and npc_* aliases select is_npc=true. Keep the u_* alpha forms out until
-    # a direct TALK callback can prove the same actor.
+    # and npc_* aliases select is_npc=true. The alpha forms query the exact
+    # speaker; NPC talkers expose the same raw chatbin list through the typed
+    # service, while other native talkers inherit the empty list.
     if isinstance( condition, str ) and condition in mission_count_conditions:
         collection, comparison = mission_count_conditions[condition]
         if collection == "available":
+            actor_accessor = "speaker" if condition.startswith( "u_" ) else "interlocutor"
             count_query = (
                 "            local count = 0\n"
-                "            local beta = dialogue_context:interlocutor()\n"
-                "            if beta ~= nil then\n"
-                "                if not beta:is_valid() then return false end\n"
-                '                if beta.kind == "creature" and beta.subtype == "npc" then\n'
-                "                    local available = services.npcs.missions.available_count(beta)\n"
-                "                    if not available.ok then return false end\n"
-                "                    count = available.value\n"
-                "                end\n"
+                f"            local actor = dialogue_context:{actor_accessor}()\n"
+                "            if actor == nil then return false end\n"
+                '            if actor.kind == "creature" and not actor:is_valid() then return false end\n'
+                '            if actor.kind == "creature" and actor.subtype == "npc" then\n'
+                "                local available = services.npcs.missions.available_count(actor)\n"
+                "                if not available.ok then return false end\n"
+                "                count = available.value\n"
                 "            end\n"
             )
         else:
@@ -6776,6 +6780,9 @@ def render_talk_topic_response_condition(
             "        end"
         )
     mission_status_conditions = {
+        "u_mission_complete": "complete",
+        "u_mission_incomplete": "incomplete",
+        "u_mission_failed": "failed",
         "npc_mission_complete": "complete",
         "npc_mission_incomplete": "incomplete",
         "npc_mission_failed": "failed",
@@ -6784,34 +6791,40 @@ def render_talk_topic_response_condition(
         "mission_failed": "failed",
     }
     if isinstance( condition, str ) and condition in mission_status_conditions:
+        # A native talker NPC stores its selected mission in chatbin. Other
+        # talkers inherit the native null selection and therefore return false.
         predicate = mission_status_conditions[condition]
+        actor_accessor = "speaker" if condition.startswith( "u_" ) else "interlocutor"
         return LuaRaw(
             "function(dialogue_context)\n"
             "            if not dialogue_context:valid() then return false end\n"
-            "            local beta = dialogue_context:interlocutor()\n"
-            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
-            "            if not beta:is_valid() then return false end\n"
+            f"            local actor = dialogue_context:{actor_accessor}()\n"
+            '            if actor == nil or actor.kind ~= "creature" or actor.subtype ~= "npc" then return false end\n'
+            "            if not actor:is_valid() then return false end\n"
             "            local owner = services.characters.avatar()\n"
             "            if owner == nil or not owner:is_valid() then return false end\n"
-            "            local selected = services.npcs.missions.selected_condition(beta, owner, "
+            "            local selected = services.npcs.missions.selected_condition(actor, owner, "
             f"{lua_quote(predicate)})\n"
             "            return selected.ok and selected.value == true\n"
             "        end"
         )
     if isinstance(condition, dict) and set(condition) in (
-        {"npc_mission_goal"}, {"mission_goal"}
+        {"u_mission_goal"}, {"npc_mission_goal"}, {"mission_goal"}
     ):
+        # Only NPC talkers override selected_mission(); the other native
+        # talker classes have the same false result as the selected query.
         goal_key = next(iter(condition))
         goal = condition[goal_key]
         if not isinstance( goal, str ) or goal not in NATIVE_MISSION_GOALS:
             return None
+        actor_accessor = "speaker" if goal_key == "u_mission_goal" else "interlocutor"
         return LuaRaw(
             "function(dialogue_context)\n"
             "            if not dialogue_context:valid() then return false end\n"
-            "            local beta = dialogue_context:interlocutor()\n"
-            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
-            "            if not beta:is_valid() then return false end\n"
-            "            local selected = services.npcs.missions.selected_has_goal(beta, "
+            f"            local actor = dialogue_context:{actor_accessor}()\n"
+            '            if actor == nil or actor.kind ~= "creature" or actor.subtype ~= "npc" then return false end\n'
+            "            if not actor:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_has_goal(actor, "
             f"{lua_quote(goal)})\n"
             "            return selected.ok and selected.value == true\n"
             "        end"
@@ -7258,7 +7271,30 @@ def render_talk_topic(
         result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} responses need review")
         raw_responses = []
     for entry in raw_responses:
-        if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
+        if not isinstance(entry, dict):
+            result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
+            continue
+        if "truefalsetext" in entry:
+            truefalse = entry["truefalsetext"]
+            if (
+                isinstance(truefalse, dict) and
+                set(truefalse) == {"true", "false", "condition"} and
+                isinstance(truefalse["true"], str) and
+                isinstance(truefalse["false"], str)
+            ):
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: talk topic {topic_id} truefalsetext needs "
+                    "translation-aware Lua response text; response skipped",
+                )
+            else:
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: talk topic {topic_id} truefalsetext needs "
+                    "manual shape and translation review; response skipped",
+                )
+            continue
+        if not isinstance(entry.get("text"), str):
             result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
             continue
         response: dict[str, Any] = {"text": entry["text"]}

@@ -977,6 +977,69 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         CHECK( npc_mission_goal( selected_mission_dialogue ) == api_goal );
     };
     check_selected_conditions();
+
+    const conditional_t alpha_no_available_mission(
+        "u_has_no_available_mission" );
+    const conditional_t alpha_one_available_mission(
+        "u_has_available_mission" );
+    const conditional_t alpha_many_available_missions(
+        "u_has_many_available_missions" );
+    const conditional_t alpha_mission_complete( "u_mission_complete" );
+    const conditional_t alpha_mission_incomplete( "u_mission_incomplete" );
+    const conditional_t alpha_mission_failed( "u_mission_failed" );
+    const conditional_t alpha_mission_goal( json_loader::from_string(
+            R"({"u_mission_goal":"MGOAL_CONDITION"})" ).get_object() );
+
+    // Alpha is normally the avatar in TALK. The native avatar talker inherits
+    // empty available/selected mission results, even while beta has missions.
+    provider->chatbin.missions = { owned_for_dialogue, second_owned_for_dialogue };
+    CHECK( alpha_no_available_mission( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_one_available_mission( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_many_available_missions( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_mission_complete( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_mission_incomplete( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_mission_failed( selected_mission_dialogue ) );
+    CHECK_FALSE( alpha_mission_goal( selected_mission_dialogue ) );
+    provider->chatbin.missions.clear();
+
+    // The same native alpha selectors inspect the selected NPC when that is
+    // the actual talker. Typed NPC services preserve this actor-slot choice.
+    dialogue npc_alpha_mission_dialogue(
+        get_talker_for( *provider ), get_talker_for( current_avatar ) );
+    const auto check_alpha_available_count = [&]( const std::size_t expected ) {
+        const std::size_t native_count =
+            npc_alpha_mission_dialogue.const_actor( false )->available_missions().size();
+        CHECK( native_count == expected );
+        CHECK( integer_from( available_count( provider_handle ) ) == native_count );
+        CHECK( alpha_no_available_mission( npc_alpha_mission_dialogue ) ==
+               ( native_count == 0 ) );
+        CHECK( alpha_one_available_mission( npc_alpha_mission_dialogue ) ==
+               ( native_count == 1 ) );
+        CHECK( alpha_many_available_missions( npc_alpha_mission_dialogue ) ==
+               ( native_count >= 2 ) );
+    };
+    provider->chatbin.missions.clear();
+    check_alpha_available_count( 0 );
+    provider->chatbin.missions.push_back( owned_for_dialogue );
+    check_alpha_available_count( 1 );
+    provider->chatbin.missions.push_back( second_owned_for_dialogue );
+    check_alpha_available_count( 2 );
+    provider->chatbin.missions.clear();
+
+    const auto compare_alpha_selected_status = [&]( const char *predicate,
+            const conditional_t &native_condition ) {
+        CHECK( native_condition( npc_alpha_mission_dialogue ) ==
+               boolean_from( selected_condition(
+                                 provider_handle, current_avatar_handle,
+                                 predicate ) ) );
+    };
+    compare_alpha_selected_status( "complete", alpha_mission_complete );
+    compare_alpha_selected_status( "incomplete", alpha_mission_incomplete );
+    compare_alpha_selected_status( "failed", alpha_mission_failed );
+    CHECK( alpha_mission_goal( npc_alpha_mission_dialogue ) ==
+           boolean_from( selected_has_goal(
+                             provider_handle, "MGOAL_CONDITION" ) ) );
+
     provider->chatbin.mission_selected = nullptr;
     provider->chatbin.missions_assigned.clear();
 
