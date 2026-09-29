@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -2013,7 +2014,15 @@ bool Character::trim_haul_list( const std::vector<item_location> &valid_items )
         return std::count( valid_items.begin(), valid_items.end(), it ) == 0;
     } ), haul_list.end() );
 
-    return qty_before != haul_list.size();
+    const bool lost_items = qty_before != haul_list.size();
+    // Several charge stacks can merge when dropped on the same tile.  Their
+    // returned locations then all refer to one item, which must only be moved once.
+    std::unordered_set<const item *> seen;
+    haul_list.erase( std::remove_if( haul_list.begin(), haul_list.end(), [&seen]( const item_location & it ) {
+        return !seen.insert( it.get_item() ).second;
+    } ), haul_list.end() );
+
+    return lost_items;
 }
 
 void Character::migrate_items_to_storage( bool disintegrate )

@@ -3116,7 +3116,12 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
         quantities.pop_back();
 
         if( !target ) {
-            debugmsg( "Lost target item of ACT_MOVE_ITEMS" );
+            // A haul target can disappear when stacks merge or another action
+            // moves it after this activity was queued.  Skip it and continue
+            // hauling the remaining items without interrupting the player.
+            if( !hauling_mode ) {
+                debugmsg( "Lost target item of ACT_MOVE_ITEMS" );
+            }
             continue;
         }
 
