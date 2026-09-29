@@ -31,6 +31,15 @@ class source_less_flexbuffer : public parsed_flexbuffer
             return {};
         }
 };
+
+JsonValue parse_without_source( const std::string &input )
+{
+    const std::shared_ptr<parsed_flexbuffer> parsed = flexbuffer_cache::parse_buffer( input );
+    const std::shared_ptr<parsed_flexbuffer> source_less =
+        std::make_shared<source_less_flexbuffer>( parsed->get_storage() );
+    return JsonValue( source_less, flexbuffer_root_from_storage( source_less->get_storage() ),
+                      nullptr, 0 );
+}
 } // namespace
 
 TEST_CASE( "lua_platform_persistent_coordinates_preserve_integer_bounds",
@@ -58,12 +67,8 @@ TEST_CASE( "lua_platform_persistent_coordinates_reject_integer_overflow",
 TEST_CASE( "lua_platform_persistent_coordinates_read_source_less_flexbuffers",
            "[lua][platform][semantic][state]" )
 {
-    const std::shared_ptr<parsed_flexbuffer> parsed = flexbuffer_cache::parse_buffer(
-            R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" );
-    const std::shared_ptr<parsed_flexbuffer> source_less =
-        std::make_shared<source_less_flexbuffer>( parsed->get_storage() );
-    const JsonValue root( source_less, flexbuffer_root_from_storage( source_less->get_storage() ),
-                          nullptr, 0 );
+    const JsonValue root = parse_without_source(
+                               R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" );
     const cata::lua_platform::script_persistent_value value =
         cata::lua_platform::detail::read_persistent_value( root.get_object() );
     const cata::lua_platform::script_persistent_tripoint &coordinate =
@@ -71,6 +76,15 @@ TEST_CASE( "lua_platform_persistent_coordinates_read_source_less_flexbuffers",
     CHECK( coordinate.x == std::numeric_limits<int>::max() );
     CHECK( coordinate.y == std::numeric_limits<int>::min() );
     CHECK( coordinate.z == 0 );
+}
+
+TEST_CASE( "lua_platform_persistent_coordinates_reject_source_less_overflow",
+           "[lua][platform][semantic][state]" )
+{
+    const std::string component = GENERATE( "2147483648", "-2147483649" );
+    const JsonValue root = parse_without_source(
+                               R"({"type":"tripoint_abs_ms","value":[)" + component + ",0,0]}" );
+    CHECK_THROWS( cata::lua_platform::detail::read_persistent_value( root.get_object() ) );
 }
 
 #endif
