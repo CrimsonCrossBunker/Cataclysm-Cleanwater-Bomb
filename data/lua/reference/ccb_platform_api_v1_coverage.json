@@ -1090,7 +1090,7 @@
     "native_export_root_count": 180,
     "native_export_roots_declared": 180,
     "native_export_roots_in_public_contract": 180,
-    "native_registration_file_count": 120,
+    "native_registration_file_count": 121,
     "public_contract_export_root_count": 180,
     "synchronized": true,
     "unmatched_native_export_roots": []

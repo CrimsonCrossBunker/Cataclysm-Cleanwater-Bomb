@@ -18,9 +18,9 @@
 
 #include "character.h"
 #include "character_martial_arts.h"
-#include "creature.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "martialarts.h"
 
 static const matype_id style_kicks( "style_kicks" );
@@ -102,55 +102,6 @@ void require_style_id(
     }
 }
 
-template<typename Range>
-sol::table id_page(
-    sol::state_view lua, const std::string_view kind,
-    const Range &ids )
-{
-    const std::size_t returned = std::min(
-                                     ids.size(), maximum_nested_ids );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] =
-            script_game_id( std::string( kind ), id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = ids.size();
-    result["returned"] = returned;
-    result["truncated"] = returned < ids.size();
-    return result;
-}
-
-template<typename Range>
-sol::table string_page( sol::state_view lua, const Range &values )
-{
-    const std::size_t returned = std::min(
-                                     values.size(), maximum_nested_ids );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &value : values ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = value;
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = values.size();
-    result["returned"] = returned;
-    result["truncated"] = returned < values.size();
-    return result;
-}
-
 sol::table snapshot_technique_definition(
     sol::state_view lua, const ma_technique &definition )
 {
@@ -187,12 +138,12 @@ sol::table snapshot_technique_definition(
     result["knockback_spread"] = definition.knockback_spread;
     result["knockback_follow"] = definition.knockback_follow;
     result["area"] = definition.aoe;
-    result["flags"] = string_page( lua, definition.flags );
-    result["attack_vectors"] = id_page(
-                                   lua, "attack_vector",
-                                   definition.attack_vectors );
-    result["eocs"] = id_page(
-                         lua, "effect_on_condition", definition.eocs );
+    result["flags"] = detail::make_string_page(
+                          lua, maximum_nested_ids, definition.flags );
+    result["attack_vectors"] = detail::make_typed_id_page(
+                                   lua, maximum_nested_ids, definition.attack_vectors, "attack_vector" );
+    result["eocs"] = detail::make_typed_id_page(
+                         lua, maximum_nested_ids, definition.eocs, "effect_on_condition" );
     return result;
 }
 
@@ -230,14 +181,12 @@ sol::table snapshot_definition(
         definition.force_unarmed;
     result["prevent_weapon_blocking"] =
         definition.prevent_weapon_blocking;
-    result["techniques"] = id_page(
-                               lua, "martial_art_technique",
-                               definition.techniques );
-    result["weapons"] = id_page(
-                            lua, "item", definition.weapons );
-    result["weapon_categories"] = id_page(
-                                      lua, "weapon_category",
-                                      definition.weapon_category );
+    result["techniques"] = detail::make_typed_id_page(
+                               lua, maximum_nested_ids, definition.techniques, "martial_art_technique" );
+    result["weapons"] = detail::make_typed_id_page(
+                            lua, maximum_nested_ids, definition.weapons, "item" );
+    result["weapon_categories"] = detail::make_typed_id_page(
+                                      lua, maximum_nested_ids, definition.weapon_category, "weapon_category" );
     return result;
 }
 
