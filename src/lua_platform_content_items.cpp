@@ -2183,7 +2183,7 @@ class lua_platform_iuse_actor : public iuse_actor
     private:
         std::string mod_id_;
         std::string handler_id_;
-        std::string label_;
+        authored_text label_;
 };
 
 void hash_part( std::uint64_t &state, const std::string_view value )
