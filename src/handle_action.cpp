@@ -1724,7 +1724,7 @@ static void sleep()
     }
 
     if( save_before_sleep ) {
-        g->quicksave();
+        g->quicksave( true );
     }
 
     player_character.set_moves( 0 );
@@ -4197,6 +4197,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 if( query_yn(
                         _( "Save and disconnect?  Your character will be saved locally so you can load it on rejoin." ) ) ) {
                     if( save() ) {
+                        discard_dimension_rollback_snapshot();
                         cata_mp::mp_notify_session_ending();
                         player_character.set_moves( 0 );
                         uquit = QUIT_SAVED;
@@ -4204,6 +4205,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             } else if( query_yn( _( "Save and quit?" ) ) ) {
                 if( save() ) {
+                    discard_dimension_rollback_snapshot();
                     cata_mp::mp_notify_session_ending();
                     player_character.set_moves( 0 );
                     uquit = QUIT_SAVED;
@@ -4213,6 +4215,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 #else
             if( query_yn( _( "Save and quit?" ) ) ) {
                 if( save() ) {
+                    discard_dimension_rollback_snapshot();
                     player_character.set_moves( 0 );
                     uquit = QUIT_SAVED;
                 }
