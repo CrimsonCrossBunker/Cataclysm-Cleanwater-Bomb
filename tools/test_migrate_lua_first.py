@@ -28028,7 +28028,10 @@ assert(not pcall(function() return U_EXPRESSION end))
             "EOC unbound_npc_message effect #0" in entry
             for entry in result.todos
         ))
-        self.assertIn("needs domain-service conversion", report)
+        self.assertIn(
+            "EOC unbound_npc_message effect #0 requires an exact beta Character",
+            report,
+        )
         self.assertNotIn('services.message("role unknown")', main)
         self.assertIn('message_target = context.actors.interlocutor', main)
         self.assertIn(
@@ -28252,7 +28255,10 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertLess(guard, expansion)
         for text in ("no beta", "dead avatar", "avatar death", "dead NPC"):
             self.assertNotIn(f"services.translate({json.dumps(text)})", main)
-        self.assertIn("needs domain-service conversion", report)
+        self.assertIn(
+            "EOC npc_death_u_message effect #0 requires an exact avatar participant",
+            report,
+        )
 
     def test_preserves_native_explosion_shrapnel_shapes_and_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -36460,14 +36466,19 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertNotIn("domain-service conversion", report)
-            self.assertIn("context.actors.beta", main)
+            # Native npc_add_var consumes a global RNG draw even for one
+            # literal value; the Platform beta variable path remains TODO.
+            self.assertIn(
+                "EOC attack_beta_mutations effect #1 needs domain-service conversion",
+                report,
+            )
+            self.assertNotIn("context.actors.beta", main)
             self.assertIn("context.actors.interlocutor", main)
             self.assertIn("services.effects.add", main)
-            self.assertIn("services.variables.set", main)
-            # Each ID now has ALL per-part/unqualified calls and a normal
-            # branch; the dynamic-part execution tests check runtime counts.
-            self.assertEqual(main.count("services.effects.remove"), 6)
+            self.assertNotIn("services.variables.set", main)
+            # Each ID has an unqualified ALL branch and a dynamic-part branch;
+            # the dynamic-part execution tests check runtime counts.
+            self.assertEqual(main.count("services.effects.remove"), 4)
             self.assertIn('if part == "bp_null" then return nil', main)
             self.assertIn('context.data["part"]', main)
 
