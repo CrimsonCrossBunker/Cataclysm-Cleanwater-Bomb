@@ -3730,13 +3730,13 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             if( vision != om_vision_level::unseen ) {
                 const int horde_size = showhordes && los ?
                                        overmap_buffer.get_horde_size( ground_omp,
-                                           horde_map_flavors::active | horde_map_flavors::idle ) : 0;
+                                               horde_map_flavors::active | horde_map_flavors::idle ) : 0;
                 // The normal horde marker already represents this group.  Debug
                 // overlays should not add a second zombie sprite beneath it.
                 if( draw_overlays && uistate.overmap_debug_mongroup &&
                     horde_size < HORDE_VISIBILITY_SIZE ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                            ground_omp );
+                                ground_omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
