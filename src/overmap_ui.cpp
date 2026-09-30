@@ -1589,12 +1589,12 @@ static bool search( const ui_adaptor &om_ui, overmap_sidebar &sidebar, tripoint_
     sidebar.draw_search_controls = [&]() {
         cataimgui::TextColoredParagraph( c_light_blue, string_format( "%s %s", _( "Search:" ), term ) );
         cataimgui::TextColoredParagraph( c_light_red, string_format( "%s %d/%d",
-                locations.size() == 1 ? _( "Result:" ) : _( "Results:" ),
-                i + 1, locations.size() ) );
+                                         locations.size() == 1 ? _( "Result:" ) : _( "Results:" ),
+                                         i + 1, locations.size() ) );
         const tripoint_abs_omt result( locations[i], orig.z() );
         cataimgui::TextColoredParagraph( c_white, string_format( "%s %d %s", _( "Direction:" ),
-                static_cast<int>( trig_dist( orig, result ) ),
-                direction_name_short( direction_from( orig, result ) ) ) );
+                                         static_cast<int>( trig_dist( orig, result ) ),
+                                         direction_name_short( direction_from( orig, result ) ) ) );
         ImGui::Separator();
         const auto action_button = [&]( const std::string & action, const std::string & label ) {
             const std::string text = string_format( "%s [%s]", label, ctxt.get_desc( action ) );
