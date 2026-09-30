@@ -120,7 +120,7 @@ void character_martial_arts::auto_select_style( Character &owner )
     };
     matype_id chosen = style_none;
     const auto preferred = preferred_weapon_styles.find( weapon ? weapon->typeId() :
-        itype_id::NULL_ID() );
+                           itype_id::NULL_ID() );
     if( preferred != preferred_weapon_styles.end() && usable( preferred->second ) ) {
         chosen = preferred->second;
     } else if( style_selected != style_none && usable( style_selected ) ) {
