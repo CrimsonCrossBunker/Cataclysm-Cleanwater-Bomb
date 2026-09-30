@@ -985,6 +985,7 @@ item_location Character::get_wielded_item()
 void Character::set_wielded_item( const item &to_wield )
 {
     weapon = to_wield;
+    martial_arts_data->auto_select_style( *this );
 }
 
 bool Character::has_alarm_clock() const
@@ -1224,6 +1225,7 @@ item Character::remove_weapon()
 {
     item tmp = weapon;
     weapon = item();
+    martial_arts_data->auto_select_style( *this );
     get_event_bus().send<event_type::character_wields_item>( getID(), weapon.typeId() );
     cached_info.erase( "weapon_value" );
     invalidate_weight_carried_cache();
@@ -3181,6 +3183,7 @@ bool Character::wield_contents( item &container, item *internal_item, bool penal
 
     mod_moves( -mv );
 
+    martial_arts_data->auto_select_style( *this );
     weapon.on_wield( *this );
 
     item_location loc( *this, &weapon );

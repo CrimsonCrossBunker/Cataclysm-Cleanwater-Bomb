@@ -8824,6 +8824,7 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
 {
     enum style_selection {
         KEEP_HANDS_FREE = 0,
+        AUTO_STYLE,
         STYLE_OFFSET
     };
 
@@ -8865,6 +8866,11 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
                          keep_hands_free ? _( "Keep hands free (on)" ) : _( "Keep hands free (off)" ),
                          wrap60( _( "When this is enabled, player won't wield things unless explicitly told to." ) ) );
 
+    kmenu.addentry_desc( AUTO_STYLE, true, 'a',
+                         auto_style ? _( "Switch style with weapon (on)" ) :
+                         _( "Switch style with weapon (off)" ),
+                         wrap60( _( "Automatically select a learned style for your weapon.  While enabled, selecting a style remembers it as the preference for this weapon type (or for empty hands)." ) ) );
+
     kmenu.selected = STYLE_OFFSET;
 
     // +1 to keep "No Style" at top
@@ -8896,8 +8902,14 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
         Character &u = const_cast<Character &>( you );
         clear_all_effects( u );
         set_style( selectable_styles[selection - STYLE_OFFSET], true );
+        if( auto_style ) {
+            remember_weapon_style( you );
+        }
         ma_static_effects( u );
         martialart_use_message( you );
+    } else if( selection == AUTO_STYLE ) {
+        auto_style = !auto_style;
+        auto_select_style( const_cast<Character &>( you ) );
     } else if( selection == KEEP_HANDS_FREE ) {
         keep_hands_free = !keep_hands_free;
     } else {
