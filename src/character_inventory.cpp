@@ -2020,7 +2020,8 @@ bool Character::trim_haul_list( const std::vector<item_location> &valid_items )
     // Several charge stacks can merge when dropped on the same tile.  Their
     // returned locations then all refer to one item, which must only be moved once.
     std::unordered_set<const item *> seen;
-    haul_list.erase( std::remove_if( haul_list.begin(), haul_list.end(), [&seen]( const item_location & it ) {
+    haul_list.erase( std::remove_if( haul_list.begin(),
+    haul_list.end(), [&seen]( const item_location & it ) {
         return !seen.insert( it.get_item() ).second;
     } ), haul_list.end() );
 

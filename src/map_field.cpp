@@ -307,8 +307,8 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
     weather_manager &weather = get_weather();
     const int winddirection = weather.winddirection;
     const int windpower = get_local_windpower( weather.windspeed, om_ter, get_abs( p ),
-        winddirection,
-        sheltered );
+                          winddirection,
+                          sheltered );
 
     if( rng( 1, 100 - windpower ) > percent_spread ) {
         return;
