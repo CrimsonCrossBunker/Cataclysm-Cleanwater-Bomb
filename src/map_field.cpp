@@ -278,13 +278,6 @@ void map::gas_spread_to( field_entry &cur, maptile &dst, const tripoint_bub_ms &
 void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_spread,
                       const time_duration &outdoor_age_speedup, scent_block &sblk, const oter_id &om_ter )
 {
-    const bool sheltered = g->is_sheltered( p );
-    weather_manager &weather = get_weather();
-    const int winddirection = weather.winddirection;
-    const int windpower = get_local_windpower( weather.windspeed, om_ter, get_abs( p ),
-                          winddirection,
-                          sheltered );
-
     const int current_intensity = cur.get_field_intensity();
     const field_type_id ft_id = cur.get_field_type();
 
@@ -304,8 +297,20 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
         cur.set_field_age( current_age + outdoor_age_speedup );
     }
 
-    // Bail out if we don't meet the spread chance or required intensity.
-    if( current_intensity <= 1 || rng( 1, 100 - windpower ) > percent_spread ) {
+    // Thin gas still ages and affects scent, but cannot spread.  Avoid the
+    // local weather/terrain queries for every tile of a dissipating plume.
+    if( current_intensity <= 1 ) {
+        return;
+    }
+
+    const bool sheltered = g->is_sheltered( p );
+    weather_manager &weather = get_weather();
+    const int winddirection = weather.winddirection;
+    const int windpower = get_local_windpower( weather.windspeed, om_ter, get_abs( p ),
+        winddirection,
+        sheltered );
+
+    if( rng( 1, 100 - windpower ) > percent_spread ) {
         return;
     }
 
