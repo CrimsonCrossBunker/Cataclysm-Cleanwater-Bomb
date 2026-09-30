@@ -14,6 +14,7 @@
 #include "pixel_minimap_geometry.h"
 #include "sdl_wrappers.h"
 #include "sdl_geometry.h"
+#include "sdl_quad_batch.h"
 
 class pixel_minimap_projector;
 
@@ -155,7 +156,7 @@ class pixel_minimap
 
         std::unordered_map<tripoint_abs_sm, submap_cache> cache;
 
-        minimap_vertex_batch geometry_batch_;
+        quad_batch geometry_batch_;
         bool has_blinking_beacons_ = false;
 
         // State of the last main_tex paint, used to skip re-rendering when the

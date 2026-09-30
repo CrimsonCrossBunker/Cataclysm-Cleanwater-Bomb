@@ -313,7 +313,7 @@ bool pixel_minimap::flush_cache_updates()
             geometry_batch_.append_quad( tile_pos.x, tile_pos.y, pixel_size.x, pixel_size.y,
                                          to_fcolor( mcp.second.color_at( p ) ) );
         }
-        render_batch( renderer, geometry_batch_ );
+        render_quad_batch( renderer, geometry_batch_ );
 
         mcp.second.update_list.clear();
     }
@@ -533,7 +533,7 @@ void pixel_minimap::render( const tripoint_bub_ms &center, const bool chunks_rep
     for( const beacon &b : beacons ) {
         append_beacon( geometry_batch_, b.rect, b.color, 3 );
     }
-    render_batch( renderer, geometry_batch_ );
+    render_quad_batch( renderer, geometry_batch_ );
 
     // Restore so the compositing RenderCopy below lands on the caller's prior
     // target, not main_tex.
