@@ -1390,6 +1390,7 @@ bool main_menu::opening_screen()
 #endif
 
     while( !start ) {
+        input_context::scoped_activation active_menu_context( ctxt );
 #if defined(__ANDROID__)
         if( imgui_menu ) {
             imgui_menu->set_snapshot( make_main_menu_snapshot() );

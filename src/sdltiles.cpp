@@ -4917,6 +4917,7 @@ input_context touch_input_context;
 // separately so those mutations are not mistaken for opening a different screen.
 static const input_context *touch_input_context_owner = nullptr;
 static bool android_has_active_world();
+static void android_sync_touch_input_context();
 static void android_request_repaint();
 static void android_service_display_refresh_requests();
 
@@ -5600,6 +5601,7 @@ static bool android_keyboard_occludes_shortcuts()
 // Draw quick shortcuts on top of the game view
 void draw_quick_shortcuts()
 {
+    android_sync_touch_input_context();
 
     if( !android_legacy_shortcuts_enabled() || !quick_shortcuts_enabled ||
         android_keyboard_occludes_shortcuts() ||
@@ -6149,6 +6151,42 @@ static void focus_aware_stop_text_input()
 }
 
 #if defined(__ANDROID__)
+// Rendering can happen before the next input poll, especially while loading.
+static void android_sync_touch_input_context()
+{
+    // Copy the current input context
+    input_context *new_input_context = input_context::input_context_stack.back();
+    if( new_input_context ) {
+        const bool owner_changed = new_input_context != touch_input_context_owner;
+        const bool category_changed = new_input_context->get_category() !=
+                                      touch_input_context.get_category();
+
+        // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
+        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
+            !android_wants_text_input( *new_input_context ) &&
+            IsTextInputActive( ::window.get() ) &&
+            get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
+            focus_aware_stop_text_input();
+        }
+
+        touch_input_context = *new_input_context;
+        touch_input_context_owner = new_input_context;
+        if( owner_changed || category_changed ) {
+            if( android_ui_mode::is_new_ui_build() ) {
+                android_cancel_imgui_touch();
+            }
+            // A tap that opened a new screen must not become the first half of a
+            // double-tap gesture inside that new input context.
+            last_tap_time = 0;
+            // The HUD action snapshot and the terrain both belong to the input
+            // context being entered.  Merely asking redraw_invalidated() did
+            // nothing when the gameplay adaptor itself was still clean, leaving
+            // the previous Lua scene over a black/stale map until movement.
+            android_force_full_redraw();
+        }
+    }
+}
+
 static bool pop_extra_button_input( input_event &event )
 {
     std::scoped_lock lock( extra_button_input_mutex );
@@ -6203,37 +6241,7 @@ static void CheckMessages()
         env->DeleteLocalRef( clazz );
     }
 
-    // Copy the current input context
-    input_context *new_input_context = input_context::input_context_stack.back();
-    if( new_input_context ) {
-        const bool owner_changed = new_input_context != touch_input_context_owner;
-        const bool category_changed = new_input_context->get_category() !=
-                                      touch_input_context.get_category();
-
-        // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
-        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
-            !android_wants_text_input( *new_input_context ) &&
-            IsTextInputActive( ::window.get() ) &&
-            get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
-            focus_aware_stop_text_input();
-        }
-
-        touch_input_context = *new_input_context;
-        touch_input_context_owner = new_input_context;
-        if( owner_changed || category_changed ) {
-            if( android_ui_mode::is_new_ui_build() ) {
-                android_cancel_imgui_touch();
-            }
-            // A tap that opened a new screen must not become the first half of a
-            // double-tap gesture inside that new input context.
-            last_tap_time = 0;
-            // The HUD action snapshot and the terrain both belong to the input
-            // context being entered.  Merely asking redraw_invalidated() did
-            // nothing when the gameplay adaptor itself was still clean, leaving
-            // the previous Lua scene over a black/stale map until movement.
-            android_force_full_redraw();
-        }
-    }
+    android_sync_touch_input_context();
 
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
                            android_has_active_world();
@@ -7132,7 +7140,8 @@ static void CheckMessages()
                         } else {
                             if( is_two_finger_touch ) {
                                 // handle zoom in/out
-                                if( !pinch_zoom_handled && is_default_mode ) {
+                                if( !pinch_zoom_handled && ( is_default_mode ||
+                                                             touch_input_context.get_category() == "OVERMAP" ) ) {
                                     float x1 = ( finger_curr_x - finger_down_x );
                                     float y1 = ( finger_curr_y - finger_down_y );
                                     float d1 = std::sqrt( x1 * x1 + y1 * y1 );
