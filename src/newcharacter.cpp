@@ -13,7 +13,6 @@
 #include <memory>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string_view>
 #include <tuple>
 #include <unordered_map>
@@ -25,13 +24,15 @@
     #include "adaptive_character_creator.h"
     #include "adaptive_imgui_dialog.h"
     #include "android_ui_mode.h"
+    #include "try_parse_integer.h"
 #endif
 #include "addiction.h"
 #include "bionics.h"
+#include "bodypart.h"
+#include "calendar.h"
 #include "calendar_ui.h"
 #include "cata_imgui.h"
 #include "cata_path.h"
-#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -39,9 +40,10 @@
 #include "character_martial_arts.h"
 #include "city.h"
 #include "color.h"
+#include "coordinates.h"
 #include "debug.h"
-#include "enum_conversions.h"
 #include "enum_traits.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "imgui/imgui.h"
@@ -49,6 +51,7 @@
 #include "input_enums.h"
 #include "input_popup.h"
 #include "item.h"
+#include "item_location.h"
 #include "json.h"
 #include "loading_ui.h"
 #include "localized_comparator.h"
@@ -64,16 +67,15 @@
 #include "options.h"
 #include "output.h"
 #include "overmap_ui.h"
-#include "overmapbuffer.h"
 #include "path_info.h"
 #include "pimpl.h"
 #include "player_difficulty.h"
+#include "point.h"
 #include "profession.h"
 #include "profession_group.h"
 #include "proficiency.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
-#include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -84,10 +86,10 @@
 #include "trait_group.h"
 #include "translation.h"
 #include "translations.h"
-#include "try_parse_integer.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
+#include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
 #include "worldfactory.h"
@@ -95,7 +97,9 @@
 #if defined(TILES)
     // For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
     // the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
+    #include <sstream>
     #include "cached_options.h"
+    #include "cata_scope_helpers.h"
     #include "cata_tiles.h"
     #include "sdltiles.h"
 #endif
