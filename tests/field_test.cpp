@@ -21,6 +21,8 @@
 #include "type_id.h"
 #include "weather_type.h"
 
+static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_quadruped_full( "quadruped_full" );
 static const efftype_id effect_test_rash( "test_rash" );
 
 static const field_type_str_id field_fd_acid( "fd_acid" );
@@ -28,6 +30,7 @@ static const field_type_str_id field_fd_test( "fd_test" );
 static const field_type_str_id field_fd_test_fire_reaction( "fd_test_fire_reaction" );
 static const field_type_str_id field_fd_test_fire_reaction_source( "fd_test_fire_reaction_source" );
 
+static const itype_id itype_test_acid_contact_boots( "test_acid_contact_boots" );
 static const itype_id itype_test_2x4( "test_2x4" );
 static const itype_id itype_test_hazmat_hat( "test_hazmat_hat" );
 static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
@@ -618,4 +621,23 @@ TEST_CASE( "player_single_effect_field_test_all", "[field][player]" )
 
     clear_avatar();
     fields_test_cleanup();
+}
+
+TEST_CASE( "acid_immunity_uses_ground_contact_parts", "[field][player]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    REQUIRE_FALSE( you.is_immune_field( fd_acid ) );
+    REQUIRE( you.wear_item( item( itype_test_acid_contact_boots ), false ) );
+    CHECK( you.is_immune_field( fd_acid ) );
+
+    SECTION( "lying_down_exposes_unprotected_body_parts" ) {
+        you.add_effect( effect_downed, 1_minutes );
+        CHECK_FALSE( you.is_immune_field( fd_acid ) );
+    }
+    SECTION( "quadrupeds_also_need_protected_hands" ) {
+        you.add_effect( effect_quadruped_full, 1_minutes );
+        CHECK_FALSE( you.is_immune_field( fd_acid ) );
+    }
+    clear_avatar();
 }
