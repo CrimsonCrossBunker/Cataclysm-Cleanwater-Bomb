@@ -106,6 +106,17 @@ sol::table require_value( const sol::protected_function_result &call )
     return response["value"];
 }
 
+sol::table require_error( const sol::protected_function_result &call,
+                          const std::string &expected_code )
+{
+    REQUIRE( call.valid() );
+    const sol::table response = call;
+    REQUIRE_FALSE( response["ok"].get<bool>() );
+    const sol::table error = response["error"];
+    CHECK( error["code"].get<std::string>() == expected_code );
+    return error;
+}
+
 std::vector<std::string> native_boundary_keys()
 {
     std::string multibyte;
@@ -167,6 +178,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
     };
 
     const sol::protected_function get = fixture.variables["get"];
+    const sol::protected_function get_string = fixture.variables["get_string"];
     const sol::protected_function set = fixture.variables["set"];
     const sol::protected_function remove = fixture.variables["remove"];
     const sol::protected_function get_global = fixture.variables["get_global"];
@@ -193,6 +205,15 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             CHECK( owner.get( key )->str() == owner_value );
             CHECK( require_value( get( owner.handle, key ) )["value"].get<std::string>() ==
                    owner_value );
+            CHECK( require_value( get_string( owner.handle, key ) )["value"].get<std::string>() ==
+                   owner_value );
+
+            const std::string long_value = std::string( "native\0string", 13 ) +
+                                           std::string( 10000, 'v' );
+            require_success( set( owner.handle, key, long_value ) );
+            CHECK( require_value( get_string( owner.handle, key ) )["value"].get<std::string>() ==
+                   long_value );
+            require_success( set( owner.handle, key, owner_value ) );
 
             CHECK( require_value( resolve( context, owner.handle, "u", key ) )[
             "value"].get<std::string>() == owner_value );
@@ -219,11 +240,44 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             const sol::table removed_owner = require_value( remove( owner.handle, key ) );
             CHECK( removed_owner["removed"].get<bool>() );
             CHECK( owner.get( key ) == nullptr );
+            const sol::table missing_owner = require_value( get_string( owner.handle, key ) );
+            CHECK_FALSE( missing_owner["exists"].get<bool>() );
+            CHECK( missing_owner["value"].get<sol::object>().get_type() == sol::type::nil );
             const sol::table removed_global = require_value( remove_global( key ) );
             CHECK( removed_global["removed"].get<bool>() );
             CHECK( get_globals().maybe_get_global_value( key ) == nullptr );
         }
     }
+}
+
+TEST_CASE( "lua_platform_variable_string_reads_preserve_handle_errors",
+           "[lua][platform][semantic][variables]" )
+{
+    avatar player;
+    player.normalize();
+    player.setID( character_id( 4913 ), true );
+    variable_api_fixture fixture;
+    const sol::protected_function get_string = fixture.variables["get_string"];
+    const game_handle current = cata::lua_platform::game_handle::from_creature(
+                                    player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
+                                    fixture.runtime, 1 );
+    const game_handle wrong_kind;
+    require_error( get_string( wrong_kind, "key" ), "wrong_kind" );
+
+    const game_handle_runtime stale_runtime( fixture.runtime_owner, 2 );
+    const game_handle stale = cata::lua_platform::game_handle::from_creature(
+                                  player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
+                                  stale_runtime, 1 );
+    require_error( get_string( stale, "key" ), "stale_runtime" );
+
+    item item_value( itype_id( "rock" ) );
+    item_identity_cleanup retire_item{ item_value };
+    const game_handle item_handle = cata::lua_platform::game_handle::from_item(
+                                        item_value, { "character_inventory", item_value.uid().get_value(), 0, 0, 0, {} },
+                                        fixture.runtime, 1 );
+    cata::lua_platform::retire_item_handle_identity( item_value );
+    require_error( get_string( item_handle, "key" ), "stale_item" );
+    CHECK_FALSE( current.validation_error( fixture.runtime, 1 ) );
 }
 
 TEST_CASE( "lua_platform_native_variable_long_keys_survive_var_indirection",

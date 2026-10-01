@@ -11014,6 +11014,13 @@ function CcbVariablesApi.get_global_string(key) end
 ---@return CcbVariableStringReadResult
 function CcbVariablesApi.get_context_string(context, key) end
 
+---Read an actor, item, or vehicle variable as the native string type without converting the full stored value through Lua.
+---Preserves native legacy-string conversion and type-mismatch diagnostics; array snapshot limits do not apply.
+---@param owner GameHandle Creature, item, or vehicle variable owner.
+---@param key string Native storage key; full byte sequences are preserved.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_string(owner, key) end
+
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.

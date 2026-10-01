@@ -197,6 +197,32 @@ sol::table get_variable(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table get_variable_string(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation,
+                                            world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    const diag_value *stored = resolved_variable_get( resolved, key );
+    sol::table value = state.create_table();
+    value["exists"] = stored != nullptr;
+    // Match native value_or_var<std::string>::evaluate directly.  This avoids
+    // snapshotting unrelated array contents and retains diag_value::str's
+    // native conversion and type-mismatch diagnostic.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, stored->str() ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table set_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key, const sol::object &requested,
@@ -656,6 +682,17 @@ void install_variable_api(
     const std::string & key ) {
         require_read();
         return get_variable(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    variables.set_function(
+        "get_string",
+        [current_runtime_generation, current_world_generation,
+         require_read]( sol::this_state lua_state, const game_handle &handle,
+                        const std::string &key ) {
+        require_read();
+        return get_variable_string(
                    lua_state, handle, key,
                    current_runtime_generation(),
                    current_world_generation() );

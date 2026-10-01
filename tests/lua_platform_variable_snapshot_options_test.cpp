@@ -233,39 +233,72 @@ TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
     variable_snapshot_fixture fixture;
     const sol::protected_function get_string = fixture.variables["get_global_string"];
     const sol::protected_function get_snapshot = fixture.variables["get_global"];
+    const sol::protected_function get_owner_string = fixture.variables["get_string"];
+    const sol::protected_function get_owner_snapshot = fixture.variables["get"];
+    avatar player;
+    player.normalize();
+    player.setID( character_id( 5920 ), true );
+    const game_handle owner = fixture.owner( player );
     REQUIRE( get_string.valid() );
     REQUIRE( get_snapshot.valid() );
+    REQUIRE( get_owner_string.valid() );
+    REQUIRE( get_owner_snapshot.valid() );
     const std::string key = std::string( 1, '\0' ) + "变量" + std::string( 300, 'k' );
     get_globals().remove_global_value( key );
+    player.remove_value( key );
     const sol::table missing = require_result_value( get_string( key ) );
     CHECK_FALSE( missing["exists"].get<bool>() );
     CHECK( missing["value"].get<sol::object>().get_type() == sol::type::nil );
+    const sol::table missing_owner = require_result_value( get_owner_string( owner, key ) );
+    CHECK_FALSE( missing_owner["exists"].get<bool>() );
+    CHECK( missing_owner["value"].get<sol::object>().get_type() == sol::type::nil );
 
     const auto compare = [&]( const diag_value &stored, const bool type_mismatch ) {
         get_globals().set_global_value( key, stored );
+        player.set_value( key, stored );
         const diag_value *native = get_globals().maybe_get_global_value( key );
+        const diag_value *native_owner = player.maybe_get_value( key );
         REQUIRE( native != nullptr );
+        REQUIRE( native_owner != nullptr );
         std::string native_string;
         std::string native_diagnostic;
         sol::table value;
+        std::string owner_native_string;
+        std::string owner_native_diagnostic;
+        sol::table owner_value;
         std::string platform_diagnostic;
+        std::string owner_platform_diagnostic;
         if( type_mismatch ) {
             native_diagnostic = capture_debugmsg_during( [&]() {
                 native_string = native->str();
+            } );
+            owner_native_diagnostic = capture_debugmsg_during( [&]() {
+                owner_native_string = native_owner->str();
             } );
             get_globals().set_global_value( key, stored );
             platform_diagnostic = capture_debugmsg_during( [&]() {
                 value = require_result_value( get_string( key ) );
             } );
+            player.set_value( key, stored );
+            owner_platform_diagnostic = capture_debugmsg_during( [&]() {
+                owner_value = require_result_value( get_owner_string( owner, key ) );
+            } );
             CHECK( native_diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
             CHECK( platform_diagnostic == native_diagnostic );
+            CHECK( owner_native_diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            CHECK( owner_platform_diagnostic == owner_native_diagnostic );
         } else {
             native_string = native->str();
+            owner_native_string = native_owner->str();
             get_globals().set_global_value( key, stored );
             value = require_result_value( get_string( key ) );
+            player.set_value( key, stored );
+            owner_value = require_result_value( get_owner_string( owner, key ) );
         }
         CHECK( value["exists"].get<bool>() );
         CHECK( value["value"].get<std::string>() == native_string );
+        CHECK( owner_value["exists"].get<bool>() );
+        CHECK( owner_value["value"].get<std::string>() == owner_native_string );
     };
     compare( diag_value( "" ), false );
     compare( diag_value( std::string( 10000, 'x' ) + std::string( 1, '\0' ) + "熟练度" ), false );
@@ -277,12 +310,14 @@ TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
     // A full-value snapshot still rejects this native array; the string query
     // has already matched native behavior without traversing its elements.
     CHECK_FALSE( get_snapshot( key ).valid() );
+    CHECK_FALSE( get_owner_snapshot( owner, key ).valid() );
     diag_value nested( "leaf" );
     for( int depth = 0; depth < 12; ++depth ) {
         nested = diag_value( diag_array{ nested } );
     }
     compare( nested, true );
     CHECK_FALSE( get_snapshot( key ).valid() );
+    CHECK_FALSE( get_owner_snapshot( owner, key ).valid() );
 }
 
 TEST_CASE( "lua_platform_variable_mutations_can_skip_before_snapshots",

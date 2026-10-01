@@ -3360,7 +3360,6 @@ assert(observed[#observed] == 'KNOWN')
             f"not ({expression})",
         )
         for raw_id in (
-            {"u_val": "proficiency_id"},
             {"str": "prof_knapping", "i18n": True},
         ):
             self.assertIsNone(
@@ -3370,6 +3369,37 @@ assert(observed[#observed] == 'KNOWN')
                     proficiency_alpha_actor_proven=True,
                 )
             )
+        alpha_variable_id = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_proficiency": {"u_val": "proficiency_id"}},
+            proficiency_alpha_actor_proven=True,
+        )
+        self.assertIn("services.variables.get_string(actor, \"proficiency_id\")",
+                      alpha_variable_id or "")
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_proficiency": {"npc_val": "proficiency_id"}},
+            proficiency_alpha_actor_proven=True,
+        ))
+        beta_variable_id = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_proficiency": {"npc_val": "proficiency_id"}},
+            proficiency_alpha_actor_proven=True,
+            npc_melee_beta_actor_proven=True,
+        )
+        self.assertIn("services.variables.get_string(context.actors.interlocutor",
+                      beta_variable_id or "")
+        generic_beta_pair = {
+            "npc_actor_proven": True,
+            "npc_actor_expression": "context.actors.beta",
+            "npc_dialogue_pair_proven": True,
+        }
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_proficiency": {"npc_val": "proficiency_id"}},
+            proficiency_alpha_actor_proven=True, **generic_beta_pair,
+        ))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_proficiency": {"u_val": "proficiency_id"}},
+            proficiency_character_alpha_actor_proven=True,
+            **generic_beta_pair,
+        ))
         for proof in (
             {"npc_actor_proven": True, "npc_actor_expression": "actor"},
             {
@@ -3498,6 +3528,129 @@ end
                     run = subprocess.run(["lua", "-"], input=script, text=True,
                                          capture_output=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_owner_variable_ids_execute_receiver_source_matrix(self) -> None:
+        alpha_key = "\0alpha_" + "界" * 90 + "x" * 257
+        beta_key = "\0beta_" + "界" * 90 + "y" * 257
+        conditions = {
+            "and": [
+                {"u_has_proficiency": {"u_val": alpha_key, "default": "missing-id"}},
+                {"u_has_proficiency": {"npc_val": beta_key, "default": "missing-id"}},
+                {"npc_has_proficiency": {"u_val": alpha_key, "default": "missing-id"}},
+                {"npc_has_proficiency": {"npc_val": beta_key, "default": "missing-id"}},
+            ],
+        }
+        sources = [
+            migrate_lua_first.SourceObject(Path("melee_owner_matrix.json"), 0, {
+                "type": "effect_on_condition", "id": "melee_owner_matrix",
+                "eoc_type": "EVENT",
+                "required_event": "character_melee_attacks_character",
+                "condition": conditions, "effect": "nothing",
+            }),
+        ]
+        for scope, key in (("u_val", alpha_key), ("npc_val", beta_key)):
+            sources.append(migrate_lua_first.SourceObject(
+                Path(f"melee_monster_{scope}.json"), 0, {
+                    "type": "effect_on_condition",
+                    "id": f"melee_monster_{scope}",
+                    "eoc_type": "EVENT",
+                    "required_event": "character_melee_attacks_monster",
+                    "condition": {"npc_has_proficiency": {
+                        scope: key, "default": "monster-default",
+                    }},
+                    "effect": "nothing",
+                },
+            ))
+        generated: list[str] = []
+        for source in sources:
+            result = migrate_lua_first.MigrationResult()
+            generated.append(migrate_lua_first.render_eoc(source, result))
+            self.assertFalse(result.todos, [todo.message for todo in result.todos])
+
+        script = r"""
+local handlers = {}
+local alpha = {kind='creature', subtype='character', is_valid=function() return true end}
+local beta = {kind='creature', subtype='npc', is_valid=function() return true end}
+local values = {[alpha]={}, [beta]={}}
+local reads, queries = {}, {}
+local function put(owner, key, value) values[owner][key]={value=value} end
+local function get_string(owner, key)
+ assert(owner == alpha or owner == beta)
+ local entry = values[owner][key]
+ reads[#reads+1] = {owner=owner, key=key, exists=entry ~= nil}
+ local value = nil
+ if entry ~= nil then
+  value = type(entry.value) == 'string' and entry.value or ''
+ end
+ return {ok=true, value={exists=entry ~= nil, value=value}}
+end
+function service_value(result) assert(result.ok); return result.value end
+local services = {
+ variables={get_string=get_string},
+ proficiencies={has_id_text=function(target, id)
+  queries[#queries+1] = {target=target, id=id}
+  return {ok=true, value=true}
+ end},
+}
+runtime = {
+ handler=function(id, callback) handlers[id]=callback end,
+ on=function() end,
+}
+migrated_eoc_functions = {}
+GENERATED
+local context = {actors={attacker=alpha, interlocutor=beta}, data={}}
+local function run_matrix_case(alpha_value, beta_value, exists,
+                               expected_alpha_id, expected_beta_id)
+ values[alpha], values[beta] = {}, {}
+ if exists then
+  put(alpha, ALPHA_KEY, alpha_value)
+  put(beta, BETA_KEY, beta_value)
+ end
+ reads, queries = {}, {}
+ handlers['migrated.melee_owner_matrix'](context)
+ assert(#reads == 4 and #queries == 4)
+ local expected = {
+  {owner=alpha, key=ALPHA_KEY}, {owner=beta, key=BETA_KEY},
+  {owner=alpha, key=ALPHA_KEY}, {owner=beta, key=BETA_KEY},
+ }
+ local targets = {alpha, alpha, beta, beta}
+ for index=1,4 do
+  assert(reads[index].owner == expected[index].owner)
+  assert(reads[index].key == expected[index].key)
+  assert(reads[index].exists == exists)
+  assert(queries[index].target == targets[index])
+  assert(queries[index].id == (index % 2 == 1 and expected_alpha_id or expected_beta_id))
+ end
+end
+run_matrix_case('alpha-id', 'beta-id', true, 'alpha-id', 'beta-id')
+for index=1,4 do
+ -- The two ID sources remain distinct under the same owner/key read shape.
+ assert(queries[index].id == (index % 2 == 1 and 'alpha-id' or 'beta-id'))
+end
+run_matrix_case(nil, nil, false, 'missing-id', 'missing-id')
+run_matrix_case('', '', true, '', '')
+run_matrix_case(73, false, true, '', '')
+
+for _, scope_case in ipairs({
+ {scope='u_val', id='melee_monster_u_val', owner=alpha, key=ALPHA_KEY},
+ {scope='npc_val', id='melee_monster_npc_val', owner=beta, key=BETA_KEY},
+}) do
+ beta.subtype = 'monster'
+ values[alpha], values[beta] = {}, {}
+ put(scope_case.owner, scope_case.key, 'read-before-false')
+ reads, queries = {}, {}
+ handlers['migrated.' .. scope_case.id](context)
+ assert(#reads == 1 and reads[1].owner == scope_case.owner)
+ assert(reads[1].key == scope_case.key and reads[1].exists)
+ assert(#queries == 0)
+end
+""".replace("GENERATED", "\n".join(generated)).replace(
+            "ALPHA_KEY", migrate_lua_first.lua_quote(alpha_key)).replace(
+            "BETA_KEY", migrate_lua_first.lua_quote(beta_key))
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_event_eoc_context_matches_native_diag_value_types(self) -> None:
@@ -3916,15 +4069,23 @@ assert(observed_effects[3].id == 'effect:bite' and observed_effects[3].intensity
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     {prefix + "has_proficiency": descriptor}))
             for descriptor in (
-                {"u_val": "id"}, {"npc_val": "id"}, {"var_val": "id"},
+                {"var_val": "id"},
                 {"global_val": "id", "context_val": "id"},
                 {"global_val": "id", "default": 3},
                 {"global_val": "id", "type": "legacy_prefix"},
             ):
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     {prefix + "has_proficiency": descriptor},
-                    proficiency_character_alpha_actor_proven=True,
-                    npc_melee_beta_actor_proven=True))
+                    proficiency_character_alpha_actor_proven=True))
+            for scope in ("u_val", "npc_val"):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {scope: "id"}}))
+        for proof in (
+            {"npc_actor_proven": True, "npc_actor_expression": "context.actors.beta"},
+            {"npc_actor_proven": True, "npc_actor_expression": "context.actors.interlocutor"},
+        ):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                {"npc_has_proficiency": {"npc_val": "id"}}, **proof))
 
     def test_live_character_proficiency_proof_keeps_avatar_only_queries_separate(self) -> None:
         expected = 'services.proficiencies.has_id_text(actor, "prof_knapping")'

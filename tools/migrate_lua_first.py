@@ -868,13 +868,16 @@ def safe_native_proficiency_id_literal(value: Any) -> bool:
     return lua_quotable_native_variable_string(value)
 
 
-def render_proficiency_id_expression(value: Any) -> str | None:
-    """Keep native raw text and owner-independent variable lookup semantics."""
+def render_proficiency_id_expression(
+    value: Any, *, alpha_owner: str | None = None,
+    beta_owner: str | None = None,
+) -> str | None:
+    """Keep native ID text and resolve each variable from its proven talker."""
     if safe_native_proficiency_id_literal(value):
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
-    scopes = {"global_val", "context_val"} & set(value)
+    scopes = {"global_val", "context_val", "u_val", "npc_val"} & set(value)
     if len(scopes) != 1 or set(value) - scopes - {"default"}:
         return None
     scope = next(iter(scopes))
@@ -884,18 +887,27 @@ def render_proficiency_id_expression(value: Any) -> str | None:
             lua_quotable_native_variable_string(fallback)):
         return None
     if scope == "context_val":
-        snapshot = (
+        read = (
             'service_value(services.variables.get_context_string('
             'context and context.data, ' + lua_quote(name) + '))'
         )
+    elif scope == "global_val":
+        read = (
+            'service_value(services.variables.get_global_string(' +
+            lua_quote(name) + '))'
+        )
     else:
-        snapshot = (
-            'service_value(services.variables.get_global_string(' + lua_quote(name) + '))'
+        owner = alpha_owner if scope == "u_val" else beta_owner
+        if owner is None:
+            return None
+        read = (
+            'service_value(services.variables.get_string(' + owner + ', ' +
+            lua_quote(name) + '))'
         )
     return (
         '(function(result) if result.exists == false then return ' + lua_quote(fallback) +
         ' end; return type(result.value) == "string" and result.value or "" end)'
-        '(' + snapshot + ')'
+        '(' + read + ')'
     )
 
 
@@ -28801,6 +28813,16 @@ def render_eoc_condition_expression(
         avatar_actor_proven or weapon_actor_proven or
         generic_character_actor_proven
     )
+    proficiency_alpha_variable_owner = (
+        "actor" if (
+            proficiency_alpha_actor_proven or
+            proficiency_character_alpha_actor_proven or
+            npc_melee_beta_actor_proven
+        ) else None
+    )
+    proficiency_beta_variable_owner = (
+        "context.actors.interlocutor" if npc_melee_beta_actor_proven else None
+    )
     npc_query_actor = (
         (npc_actor_expression or "actor") if npc_actor_proven else None
     )
@@ -30496,21 +30518,30 @@ def render_eoc_condition_expression(
         )
     if set(condition) == {"u_has_proficiency"}:
         raw_id = condition.get("u_has_proficiency")
-        proficiency_id = render_proficiency_id_expression(raw_id)
+        proficiency_id = render_proficiency_id_expression(
+            raw_id, alpha_owner=proficiency_alpha_variable_owner,
+            beta_owner=proficiency_beta_variable_owner,
+        )
         if (
-            (proficiency_alpha_actor_proven or proficiency_character_alpha_actor_proven) and
+            (proficiency_alpha_actor_proven or
+             proficiency_character_alpha_actor_proven or
+             npc_melee_beta_actor_proven) and
             proficiency_id is not None
         ):
             # Native checks raw proficiency_id text against the learned set;
-            # it does not require a registered definition. Character/indirect
-            # variable owners and mutators still need their own source proof.
+            # it does not require a registered definition. ID variable owners
+            # are proved independently from this alpha receiver. The narrow
+            # melee event proves both alpha (attacker) and beta (interlocutor).
             return (
                 "service_value(services.proficiencies.has_id_text("
                 f"actor, {proficiency_id}))"
             )
     if isinstance(condition, dict) and "npc_has_proficiency" in condition:
         raw_id = condition.get("npc_has_proficiency")
-        proficiency_id = render_proficiency_id_expression(raw_id)
+        proficiency_id = render_proficiency_id_expression(
+            raw_id, alpha_owner=proficiency_alpha_variable_owner,
+            beta_owner=proficiency_beta_variable_owner,
+        )
         if (
             npc_melee_beta_actor_proven and
             set(condition) == {"npc_has_proficiency"} and
