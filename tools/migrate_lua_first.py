@@ -104,6 +104,9 @@ COMMON_RECIPE_FIELDS = {
 }
 NATIVE_INT_MIN = -(1 << 31)
 NATIVE_INT_MAX = (1 << 31) - 1
+# time_duration::deserialize("infinite") uses calendar::INDEFINITELY_LONG
+# (calendar.cpp), not INDEFINITELY_LONG_DURATION's full signed-int maximum.
+NATIVE_JSON_INFINITE_DURATION_TURNS = NATIVE_INT_MAX // 100
 PLATFORM_CHARACTER_ADJUSTMENT_LIMIT = 1_000_000
 NATIVE_INT64_MAX = (1 << 63) - 1
 NATIVE_MASS_GRAMS_MAX = NATIVE_INT64_MAX // 1000
@@ -112,7 +115,6 @@ PLATFORM_ID_MAX_BYTES = 256
 WOUND_NAME_MAX_BYTES = 1024
 WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
-MAX_WORLD_CHANGE_DELAY_TURNS = 10000 * 24 * 60 * 60
 MAX_RUN_EOC_ITERATIONS = 10000
 MAX_TEST_EOC_INLINE_DEPTH = 32
 NATIVE_MAX_EFFECT_INTENSITY = 1000000
@@ -765,6 +767,8 @@ def parse_native_duration_turns(value: Any) -> int | None:
         return value if NATIVE_INT_MIN <= value <= NATIVE_INT_MAX else None
     if not isinstance(value, str):
         return None
+    if value == "infinite":
+        return NATIVE_JSON_INFINITE_DURATION_TURNS
     # Keep this list aligned with time_duration::units; parse_turns also accepts
     # legacy spellings that the native JSON duration parser rejects.
     units = {
@@ -26499,7 +26503,7 @@ def render_static_location_revert(
     if raw_delay == "infinite":
         delay = (
             "services.time.duration("
-            f"{MAX_WORLD_CHANGE_DELAY_TURNS}, \"turn\")"
+            f"{NATIVE_JSON_INFINITE_DURATION_TURNS}, \"turn\")"
         )
     else:
         delay = _duration_expression(
@@ -28106,11 +28110,7 @@ def render_static_timed_event_reschedule(
     raw_delay = effect.get("time_in_future", 0)
     minimum_delay = -(1 << 31)
     maximum_delay = (1 << 31) - 1
-    duration = (
-        maximum_delay
-        if raw_delay == "infinite"
-        else parse_native_duration_turns(raw_delay)
-    )
+    duration = parse_native_duration_turns(raw_delay)
     if duration is None or not minimum_delay <= duration <= maximum_delay:
         return None
     return [

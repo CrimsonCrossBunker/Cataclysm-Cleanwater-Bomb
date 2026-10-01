@@ -28517,6 +28517,40 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
+    def test_native_duration_infinite_uses_json_sentinel_without_changing_explicit_maximum(self) -> None:
+        self.assertEqual(migrate_lua_first.parse_native_duration_turns("infinite"), 21474836)
+        for value in (2147483647, "2147483647 turns"):
+            self.assertEqual(migrate_lua_first.parse_native_duration_turns(value), 2147483647)
+        for value in ("Infinite", "infinite ", "infinite 1 turn"):
+            self.assertIsNone(migrate_lua_first.parse_native_duration_turns(value))
+        lines = migrate_lua_first.render_static_location_revert(
+            {"revert_location": {"context_val": "loc"}, "time_in_future": "infinite"},
+            "revert_location", True, False,
+        )
+        self.assertIsNotNone(lines)
+        self.assertIn('services.time.duration(21474836, "turn")', "\n".join(lines or []))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_infinite_retime_emitted_lua_uses_native_json_duration(self) -> None:
+        for duration, expected in (("infinite", 21474836), (2147483647, 2147483647)):
+            lines = migrate_lua_first.render_static_timed_event_reschedule({
+                "alter_timed_events": "key\0raw", "time_in_future": duration,
+            })
+            self.assertIsNotNone(lines)
+            script = r"""
+local calls=0
+local services={time={duration=function(turns,unit)
+ assert(turns==EXPECTED and unit=='turn');return {turns=turns}
+end},world={reschedule_events=function(key,delay)
+ assert(key=='key\0raw' and delay.turns==EXPECTED);calls=calls+1
+end}}
+BODY
+assert(calls==1)
+""".replace("EXPECTED", str(expected)).replace("BODY", "\n".join(lines or []))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_static_timed_event_retime_accepts_native_keys_and_delay_range(self) -> None:
         for raw_delay, expected in (
             ("1t", 1),
@@ -28566,7 +28600,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             ),
             [
                 "    services.world.reschedule_events(",
-                '        "", services.time.duration(2147483647, "turn"))',
+                '        "", services.time.duration(21474836, "turn"))',
             ],
         )
         self.assertIsNone(
@@ -32476,7 +32510,9 @@ assert(not pcall(function() return U_EXPRESSION end))
             mirror_result,
         )
         self.assertIn("missing/legacy-string conversion or variable scopes", mirror_main)
-        self.assertNotIn("services.coords", mirror_main)
+        # EVENT payload normalization may convert typed tripoints; only the
+        # effect body must avoid an unproven mirror implementation.
+        self.assertNotIn("services.coords", mirror_main.split("runtime.handler(", 1)[0])
         self.assertTrue(any(todo.category == "platform_gap" for todo in mirror_result.todos))
 
         transform_path = (

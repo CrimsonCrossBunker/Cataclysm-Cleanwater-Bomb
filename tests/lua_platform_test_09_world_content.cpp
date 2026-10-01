@@ -192,6 +192,21 @@ TEST_CASE( "timed_event_due_time_matches_native_range_and_offset",
            time_point::from_turn( std::numeric_limits<int>::max() ) );
 }
 
+TEST_CASE( "native_json_infinite_duration_is_distinct_from_int_max_duration",
+           "[lua][platform][world][semantic]" )
+{
+    time_duration json_infinite;
+    json_infinite.deserialize( json_loader::from_string( "\"infinite\"" ) );
+    CHECK( to_turns<int>( json_infinite ) == calendar::INDEFINITELY_LONG );
+    CHECK( to_turns<int>( json_infinite ) == std::numeric_limits<int>::max() / 100 );
+    CHECK( json_infinite != calendar::INDEFINITELY_LONG_DURATION );
+
+    time_duration explicit_maximum;
+    explicit_maximum.deserialize( json_loader::from_string(
+                                     std::to_string( std::numeric_limits<int>::max() ) ) );
+    CHECK( explicit_maximum == calendar::INDEFINITELY_LONG_DURATION );
+}
+
 TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
            "[lua][platform][world][semantic]" )
 {
@@ -276,12 +291,12 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
             { "", "1 turn", 1_turns, "0 turns", 0_turns },
             { std::string( 300, 'k' ), "0 turns", 0_turns, "-3 turns", -3_turns },
             { "任务\"quoted", "-3 turns", -3_turns, "infinite",
-              calendar::INDEFINITELY_LONG_DURATION },
+              time_duration::from_turns( calendar::INDEFINITELY_LONG ) },
             { std::string( "nul\0key", 7 ), "infinite",
-              calendar::INDEFINITELY_LONG_DURATION,
+              time_duration::from_turns( calendar::INDEFINITELY_LONG ),
               std::to_string( std::numeric_limits<int>::max() ) + " turns",
               time_duration::from_turns( std::numeric_limits<int>::max() ) },
-            { "tp_key", "infinite", calendar::INDEFINITELY_LONG_DURATION,
+            { "tp_key", "infinite", time_duration::from_turns( calendar::INDEFINITELY_LONG ),
               "0 turns", 0_turns },
             { "copy-int-min",
               std::to_string( std::numeric_limits<int>::min() ) + " turns",
