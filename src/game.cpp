@@ -7507,10 +7507,15 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
                 if( bt.has_value() ) {
                     std::vector<butchery_data> bd;
                     for( map_stack::iterator &it : corpses ) {
+                        if( !butcher_action_applicable( u, *it, bt.value() ) ) {
+                            continue;
+                        }
                         item_location corpse_loc = item_location( map_cursor( pos ), &*it );
                         bd.emplace_back( corpse_loc, bt.value() );
                     }
-                    u.assign_activity( butchery_activity_actor( bd ) );
+                    if( !bd.empty() ) {
+                        u.assign_activity( butchery_activity_actor( bd ) );
+                    }
                 }
             } else if( indexer_index == MULTIDISASSEMBLE_ONE ) {
                 u.disassemble_all( true );
