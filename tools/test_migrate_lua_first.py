@@ -36868,21 +36868,25 @@ assert(table.concat(visits, ',') == 'first:1,second:2')
             main = result.files[Path("main.lua")]
 
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
-            self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
+            # The whole conjunction needs a proven lowering; do not emit
+            # isolated successful children as if the condition had passed.
+            self.assertEqual(len(result.todos), 4)
+            self.assertNotIn('context.data["item_id"]', main)
             self.assertIn('services.types.id("effect", tostring(', main)
-            self.assertIn('services.registry.monster_default_faction(', main)
+            self.assertNotIn('services.registry.monster_default_faction(', main)
             self.assertNotIn("services.overmap.search", main)
             self.assertNotIn("services.overmap.matches_location", main)
             self.assertIn(
                 "dynamic_character_shapes condition TODO: translate the legacy condition into a Lua predicate",
                 result.files[Path("MIGRATION_REPORT.md")],
             )
-            self.assertIn("services.inventory.resources", main)
-            self.assertIn('services.types.id("body_part", "torso")', main)
+            self.assertNotIn("services.inventory.resources", main)
+            self.assertNotIn('services.types.id("body_part", "torso")', main)
             self.assertIn("services.effects.add", main)
             self.assertNotIn("services.morale.add", main)
-            self.assertIn("services.wounds.add", main)
+            self.assertNotIn("services.wounds.add", main)
+            self.assertIn("preserve the native morale alpha/beta target", main)
+            self.assertIn("prove the live native wound target and registered static ids", main)
             self.assertIn("TODO: manually translate dynamic or non-native-range", main)
             self.assertNotIn("services.weather.append_light_event(", main)
 
@@ -42554,12 +42558,16 @@ assert(calls==3 and context.data.entry=='zombie')
                 {"manual_rewrite", "platform_gap"} <=
                 {todo.category for todo in result.todos}
             )
-            self.assertIn(
-                'services.text.expand_for(services.translate("A translated message")',
-                main,
-            )
-            self.assertIn('services.messages.add(message_text, "good")', main)
-            self.assertIn("services.recipes.forget", main)
+            # Comments do not prove the absent dialogue beta, a recipe catalog
+            # entry, or dynamic variable conversion. Preserve these TODOs.
+            self.assertNotIn('services.translate("A translated message")', main)
+            self.assertNotIn('services.messages.add(message_text, "good")', main)
+            self.assertNotIn("services.recipes.forget", main)
+            reasons = [todo.message for todo in result.todos]
+            self.assertTrue(any("requires exact dialogue participants for u_message" in reason
+                                for reason in reasons))
+            self.assertTrue(any("direct recipe mutation needs a static recipe ID literal" in reason
+                                for reason in reasons))
             self.assertIn('context.data["effect_to_remove"]', main)
             self.assertNotIn('services.variables.get_global("trait_to_gain")', main)
             self.assertIn("intensity = 50000", main)
@@ -42572,17 +42580,17 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn("services.world.emit(", main)
             self.assertNotIn("services.world.transform_line(", main)
             self.assertNotIn('context.data["mirrored"] =', main)
-            self.assertIn("TODO: transform_line", main)
-            self.assertIn("TODO: mirror_coordinates reads and writes native", main)
+            self.assertTrue(any("transform_line can load a distant map" in reason for reason in reasons))
+            self.assertTrue(any("native missing/legacy-value conversion and exact input/output var_info" in reason
+                                for reason in reasons))
             self.assertIn(
                 'context.data["raised_position"] = location', main
             )
-            self.assertIn('services.gameplay.options.get_string("USE_LANG")', main)
-            self.assertIn(
-                "services.martial_arts.technique_name(", main
-            )
+            self.assertNotIn('services.gameplay.options.get_string("USE_LANG")', main)
+            self.assertNotIn("services.martial_arts.technique_name(", main)
             self.assertNotIn("services.characters.choose_technique(", main)
-            self.assertIn("services.text.expand_for(", main)
+            self.assertNotIn("services.text.expand_for(", main)
+            self.assertEqual(sum("needs domain-service conversion" in reason for reason in reasons), 4)
 
     def test_dialogue_item_popup_with_ordered_give_notice_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
