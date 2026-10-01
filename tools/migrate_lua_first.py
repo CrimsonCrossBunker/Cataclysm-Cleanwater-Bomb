@@ -930,10 +930,7 @@ def lua_quotable_native_variable_string(value: Any) -> bool:
 
 def bounded_platform_context_variable_key(value: Any) -> bool:
     """Match the context/var key contract used by the Platform variable service."""
-    return (
-        bounded_utf8_string(value, 128) and
-        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
-    )
+    return lua_quotable_native_variable_string(value)
 
 
 def bounded_platform_id(value: Any) -> bool:

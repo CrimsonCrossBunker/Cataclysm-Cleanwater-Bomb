@@ -1546,10 +1546,11 @@ assert(participant_calls==#participant_expected)
                                 capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-        valid_context_keys = ("x" * 128, "雪" * 42 + "xx")
-        invalid_resolve_keys = (
-            "", "x" * 129, "雪" * 43, "control\x01", "delete\x7f", "nul\x00", "bad\ud800",
+        valid_context_keys = (
+            "", "x" * 129, "雪" * 43, "control\x01", "delete\x7f", "nul\x00",
+            "x" * 128, "雪" * 42 + "xx",
         )
+        invalid_resolve_keys = ("bad\ud800",)
         for key in valid_context_keys:
             self.assertIsNotNone(migrate_lua_first.render_eoc_value_expression(
                 {"var_val": key}, "nil", "actor"))
@@ -1575,6 +1576,45 @@ assert(participant_calls==#participant_expected)
                         {"context_val": key}, "nil", "actor"))
                     self.assertIsNotNone(migrate_lua_first.render_participant_string(
                         {"context_val": key}, "actor", "actor", "partner"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_indirect_variable_expressions_preserve_raw_context_lookup_keys(self) -> None:
+        for key in ("", "雪" * 200, "pointer\x00control\x01", "k" * 9000):
+            with self.subTest(key=repr(key)):
+                value = migrate_lua_first.render_eoc_value_expression(
+                    {"var_val": key}, "nil", "actor")
+                text = migrate_lua_first.render_participant_string(
+                    {"var_val": key, "default": "fallback"}, "actor", "actor", "partner")
+                self.assertIsNotNone(value)
+                self.assertIsNotNone(text)
+                script = r"""
+local pointer_key = POINTER_KEY
+local target_key = 'target\0name'
+local context = {data = {[pointer_key] = '_' .. target_key}}
+local actor, partner = {}, {}
+local calls = 0
+local services = {variables = {resolve = function(data, owner, scope, key, participants)
+    assert(data == context.data and scope == 'var' and key == pointer_key)
+    assert(string.sub(data[key], 1, 1) == '_')
+    if participants then assert(participants.alpha == actor and participants.beta == partner) end
+    calls = calls + 1
+    local stored = data[string.sub(data[key], 2)]
+    return {ok = true, value = {exists = stored ~= nil, value = stored}}
+end}}
+local function service_value(result) assert(result.ok); return result.value end
+context.data[target_key] = 'native-value\0tail'
+assert((VALUE_EXPRESSION) == 'native-value\0tail')
+assert((TEXT_EXPRESSION) == 'native-value\0tail')
+context.data[target_key] = ''
+assert((TEXT_EXPRESSION) == '')
+context.data[target_key] = nil
+assert((TEXT_EXPRESSION) == 'fallback')
+assert(calls == 4)
+""".replace("POINTER_KEY", migrate_lua_first.lua_quote(key)).replace(
+                    "VALUE_EXPRESSION", value).replace("TEXT_EXPRESSION", text)
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_participant_context_string_reference_preserves_native_missing_and_string_semantics(self) -> None:
