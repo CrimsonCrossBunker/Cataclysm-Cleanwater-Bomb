@@ -12389,6 +12389,123 @@ assert(not available())
         # migration; this only proves the direct response condition.
         self.assertTrue(result.todos)
 
+    def test_talk_topic_kind_and_presence_conditions_use_native_slots(self) -> None:
+        expected_accessors = {
+            "u_is_avatar": "speaker",
+            "u_is_npc": "speaker",
+            "u_is_character": "speaker",
+            "u_is_monster": "speaker",
+            "u_is_item": "speaker",
+            "u_is_furniture": "speaker",
+            "u_is_vehicle": "speaker",
+            "npc_is_avatar": "interlocutor",
+            "npc_is_npc": "interlocutor",
+            "npc_is_character": "interlocutor",
+            "npc_is_monster": "interlocutor",
+            "npc_is_item": "interlocutor",
+            "npc_is_furniture": "interlocutor",
+            "npc_is_vehicle": "interlocutor",
+        }
+        for condition, accessor in expected_accessors.items():
+            with self.subTest(condition=condition):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    condition
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn("dialogue_context:valid()", callback.source)
+                self.assertIn(
+                    f"dialogue_context:{accessor}()", callback.source
+                )
+                self.assertIn("actor.kind ==", callback.source)
+                if condition.endswith(("avatar", "npc", "character", "monster")):
+                    self.assertIn('actor.kind == "creature"', callback.source)
+                    self.assertIn("actor.subtype ==", callback.source)
+                else:
+                    self.assertNotIn("actor.subtype", callback.source)
+                self.assertNotIn("services.characters.snapshot", callback.source)
+                self.assertNotIn("actor:is_valid()", callback.source)
+
+        expected_presence = {
+            "u_exists": "has_speaker",
+            "has_alpha": "has_speaker",
+            "npc_exists": "has_interlocutor",
+            "has_beta": "has_interlocutor",
+        }
+        for condition, method in expected_presence.items():
+            with self.subTest(condition=condition):
+                callback = migrate_lua_first.render_talk_topic_response_condition(
+                    condition
+                )
+                self.assertIsNotNone(callback)
+                assert callback is not None
+                self.assertIn(
+                    f"dialogue_context:{method}()", callback.source
+                )
+                self.assertNotIn("dialogue_context:speaker()", callback.source)
+                self.assertNotIn(
+                    "dialogue_context:interlocutor()", callback.source
+                )
+
+        self.assertIsNone(
+            migrate_lua_first.render_talk_topic_response_condition(
+                "npc_is_unregistered_kind"
+            )
+        )
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_topic_kind_callbacks_match_native_lua_actor_shapes(self) -> None:
+        predicates = {
+            condition: migrate_lua_first.render_talk_topic_response_condition(
+                condition
+            )
+            for condition in (
+                "u_is_avatar", "u_is_npc", "u_is_character", "u_is_monster",
+                "u_is_item", "u_is_furniture", "u_is_vehicle",
+                "npc_is_avatar", "npc_is_npc", "npc_is_character",
+                "npc_is_monster", "npc_is_item", "npc_is_furniture",
+                "npc_is_vehicle", "u_exists", "npc_exists", "has_alpha",
+                "has_beta",
+            )
+        }
+        self.assertTrue(all(callback is not None for callback in predicates.values()))
+        lines = [
+            "local alpha, beta",
+            "local context = {",
+            "  valid=function() return true end,",
+            "  speaker=function() return alpha end,",
+            "  interlocutor=function() return beta end,",
+            "  has_speaker=function() return alpha ~= nil end,",
+            "  has_interlocutor=function() return beta ~= nil end,",
+            "}",
+        ]
+        for index, (condition, callback) in enumerate(predicates.items()):
+            assert callback is not None
+            lines.append(f"local check_{index} = {callback.source}")
+        lines.extend([
+            'alpha={kind="creature",subtype="avatar"}; beta={kind="creature",subtype="npc"}',
+            "assert(check_0(context)); assert(not check_1(context)); assert(check_2(context));",
+            "assert(not check_3(context)); assert(not check_4(context)); assert(not check_5(context)); assert(not check_6(context));",
+            "assert(not check_7(context)); assert(check_8(context)); assert(check_9(context));",
+            "assert(not check_10(context)); assert(not check_11(context)); assert(not check_12(context)); assert(not check_13(context));",
+            'alpha={kind="creature",subtype="monster"}; beta={kind="item",subtype="item"}',
+            "assert(not check_2(context)); assert(check_3(context)); assert(check_11(context));",
+            'alpha={kind="item",subtype="item"}; beta={kind="computer"}',
+            "assert(check_4(context)); assert(not check_5(context)); assert(check_12(context));",
+            'alpha={kind="computer"}; beta={kind="vehicle",subtype="vehicle"}',
+            "assert(check_5(context)); assert(not check_6(context)); assert(check_13(context));",
+            'alpha={kind="vehicle",subtype="vehicle"}; beta=nil',
+            "assert(check_6(context)); assert(not check_15(context)); assert(not check_17(context));",
+            "assert(check_14(context)); assert(check_16(context));",
+            'alpha={kind="creature",subtype="character"}; beta={kind="creature",subtype="character"}',
+            "assert(check_2(context)); assert(check_9(context)); assert(not check_0(context)); assert(not check_1(context));",
+        ])
+        result = subprocess.run(
+            [shutil.which("lua"), "-"], input="\n".join(lines), text=True,
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_talk_topic_response_condition_supports_only_live_speaker_intelligence(self) -> None:
         topic = migrate_lua_first.SourceObject(
             Path("source.json"), 1, {
@@ -36610,17 +36727,44 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn('actor.kind == "creature"', main)
             self.assertIn('actor.kind == "item"', main)
             self.assertIn('actor.kind == "vehicle"', main)
+            self.assertNotIn('actor.kind == "computer"', main)
             self.assertNotIn("__ccb_talker_kind", main)
             self.assertIn("needs an explicit Platform trigger", report)
 
-    def test_u_is_furniture_requires_a_live_computer_talker(self) -> None:
+    def test_u_is_furniture_uses_proven_actor_kind_and_fails_closed(self) -> None:
         self.assertEqual(
             migrate_lua_first.render_eoc_condition_expression(
                 "u_is_furniture", avatar_actor_proven=True
             ),
             "false",
         )
-        for kwargs in ({}, {"creature_actor_proven": True}):
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_is_furniture", generic_character_actor_proven=True
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_is_furniture", creature_actor_proven=True
+            )
+        )
+        for condition in (
+            "u_is_monster", "u_is_item", "u_is_vehicle",
+        ):
+            with self.subTest(condition=condition):
+                self.assertEqual(
+                    migrate_lua_first.render_eoc_condition_expression(
+                        condition, generic_character_actor_proven=True
+                    ),
+                    "false",
+                )
+        self.assertEqual(
+            migrate_lua_first.render_eoc_condition_expression(
+                "u_is_npc", generic_character_actor_proven=True
+            ),
+            'service_value(services.creatures.snapshot(actor)).kind == "npc"',
+        )
+        for kwargs in ({}, {"npc_actor_proven": True}):
             with self.subTest(kwargs=kwargs):
                 self.assertIsNone(
                     migrate_lua_first.render_eoc_condition_expression(
@@ -36648,13 +36792,10 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
+            self.assertNotIn('actor.kind == "computer"', main)
             self.assertNotIn("__ccb_talker_kind", main)
-            self.assertIn(
-                "requires a proven primary computer talker", report
-            )
-            self.assertIn(
-                "detached kind=computer snapshot without a handle", report
-            )
+            self.assertIn("requires an exact native alpha talker kind", report)
+            self.assertIn("needs an explicit Platform trigger", report)
 
     def test_eoc_meta_talker_type_furniture_condition_remains_manual(self) -> None:
         source_path = REPOSITORY_ROOT / "data/mods/TEST_DATA/EOC.json"
@@ -36676,27 +36817,7 @@ assert(#queue==2 and queue[2].payload.data=="user field")
         self.assertNotIn("required_event", source.value)
         self.assertNotIn("recurrence", source.value)
         self.assertNotIn('kind == "computer"', main)
-        self.assertIn(
-            f"{source_entry} furniture talker introspection requires a proven "
-            "primary computer talker",
-            report,
-        )
-        self.assertIn(
-            "native computer use places the terminal in the secondary dialogue slot",
-            report,
-        )
-        self.assertIn(
-            "Current Lua callbacks have no bound computer actor",
-            report,
-        )
-        self.assertIn(
-            "detached kind=computer snapshot without a handle",
-            report,
-        )
-        self.assertIn(
-            "computer access exposes a scoped terminal context plus character handle",
-            report,
-        )
+        self.assertIn("requires an exact native alpha talker kind", report)
         self.assertIn(
             f"{source_entry} needs an explicit Platform trigger",
             report,

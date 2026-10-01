@@ -3,9 +3,11 @@
 
 #include "lua_platform_test_support.h"
 #include "lua_platform_dialogue.h"
+#include "lua_platform_runtime_internal.h"
 #include "condition.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "computer.h"
 #include "dialogue.h"
 #include "faction.h"
 #include "item.h"
@@ -13,8 +15,13 @@
 #include "mission.h"
 #include "map.h"
 #include "npctalk.h"
+#include "item_location.h"
 #include "talker.h"
 #include "talker_avatar.h"
+#include "talker_furniture.h"
+#include "talker_item.h"
+#include "talker_monster.h"
+#include "talker_vehicle.h"
 #include "translation.h"
 #include "type_id.h"
 
@@ -1596,6 +1603,240 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
         CHECK( context.has_interlocutor_effect( bleed_id ) == expected );
     }
     cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_dialogue_kind_conditions_match_native_context_identities",
+           "[lua][platform][dialogue][conditions][semantic]" )
+{
+    clear_map_without_vision();
+    cata::lua_platform::clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<cata::lua_platform::runtime> runtime_owner =
+        cata::lua_platform::make_runtime( "dialogue_kind_conditions", 95, lua );
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+        cata::lua_platform::dialogue::retire_all_sessions();
+        clear_map_without_vision();
+    } );
+    cata::lua_platform::install_runtime_api( runtime_owner, lua, ccb );
+    lua["ccb"] = ccb;
+    cata::lua_platform::set_active_runtimes( { runtime_owner } );
+    cata::lua_platform::runtime_world_ready( true );
+    const cata::lua_platform::game_handle_runtime runtime =
+        cata::lua_platform::detail::runtime_handle_identity( runtime_owner );
+    const std::size_t world_generation =
+        cata::lua_platform::runtime_world_generation();
+
+    const sol::protected_function_result predicate_setup = lua.safe_script( R"(
+        local identity = {
+            u_is_avatar = { "speaker", "creature", { "avatar" } },
+            u_is_npc = { "speaker", "creature", { "npc" } },
+            u_is_character = { "speaker", "creature", { "avatar", "character", "npc" } },
+            u_is_monster = { "speaker", "creature", { "monster" } },
+            u_is_item = { "speaker", "item", {} },
+            u_is_furniture = { "speaker", "computer", {} },
+            u_is_vehicle = { "speaker", "vehicle", {} },
+            npc_is_avatar = { "interlocutor", "creature", { "avatar" } },
+            npc_is_npc = { "interlocutor", "creature", { "npc" } },
+            npc_is_character = { "interlocutor", "creature", { "avatar", "character", "npc" } },
+            npc_is_monster = { "interlocutor", "creature", { "monster" } },
+            npc_is_item = { "interlocutor", "item", {} },
+            npc_is_furniture = { "interlocutor", "computer", {} },
+            npc_is_vehicle = { "interlocutor", "vehicle", {} },
+        }
+        return function(context, condition)
+            if not context:valid() then return false end
+            local expected = identity[condition]
+            if expected == nil then return false end
+            local actor = context[expected[1]](context)
+            if actor == nil or actor.kind ~= expected[2] then return false end
+            if #expected[3] == 0 then return true end
+            for _, subtype in ipairs(expected[3]) do
+                if actor.subtype == subtype then return true end
+            end
+            return false
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( predicate_setup.valid() );
+    const sol::protected_function lua_identity_matches =
+        predicate_setup.get<sol::protected_function>();
+
+    map &here = get_map();
+    avatar speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 1580 ), true );
+    speaker.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    npc interlocutor;
+    interlocutor.normalize();
+    interlocutor.setID( character_id( 1581 ), true );
+    interlocutor.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    monster creature( mtype_id( "mon_zombie" ) );
+    creature.set_hp( 1 );
+    avatar item_owner;
+    item_owner.normalize();
+    item_owner.setID( character_id( 1582 ), true );
+    item_owner.setpos( here, tripoint_bub_ms( 62, 60, 0 ) );
+    item &native_item = item_owner.inv->add_item(
+                            item( itype_id( "rock" ), calendar::turn_zero ),
+                            false, false, false );
+    item_location native_item_location( item_owner, &native_item );
+    REQUIRE( native_item_location );
+    computer terminal( "Platform identity test", 0, here,
+                       tripoint_bub_ms( 63, 60, 0 ) );
+    const tripoint_bub_ms vehicle_pos( 64, 60, 0 );
+    here.ter_set( vehicle_pos, ter_str_id( "t_floor" ).id() );
+    vehicle *native_vehicle = here.add_vehicle(
+                                  vehicle_prototype_test_shopping_cart, vehicle_pos,
+                                  0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( native_vehicle != nullptr );
+
+    const std::string topic = "TALK_CCB_NATIVE_KIND_TEST";
+    using dialogue_context = cata::lua_platform::dialogue::context;
+    const dialogue_context::actor_converter convert_actor =
+    [&runtime_owner]( const cata::lua_platform::native_callback_talker & actor ) {
+        return cata::lua_platform::detail::platform_callback_talker_to_lua(
+                   *runtime_owner, actor );
+    };
+    const auto check_slot = [&]( dialogue & conversation, const bool interlocutor_slot,
+    const std::string & expected_kind ) {
+        cata::lua_platform::dialogue::dialogue_session_ptr session =
+            cata::lua_platform::dialogue::begin_session(
+                conversation, runtime, world_generation );
+        REQUIRE( session );
+        session =
+            cata::lua_platform::dialogue::session_for(
+                conversation, topic, runtime, world_generation );
+        REQUIRE( session );
+        dialogue_context context( lua.lua_state(), conversation, topic, false,
+                                  "dialogue context is stale", convert_actor, session,
+                                  runtime, world_generation );
+        REQUIRE( context.valid() );
+        cata::lua_platform::detail::callback_scope callback( *runtime_owner );
+        CHECK( context.has_speaker() == conversation.has_alpha );
+        CHECK( context.has_interlocutor() == conversation.has_beta );
+        CHECK( conditional_t( interlocutor_slot ? "npc_exists" : "u_exists" )(
+                   conversation ) );
+        CHECK( conditional_t( interlocutor_slot ? "has_beta" : "has_alpha" )(
+                   conversation ) );
+        const cata::lua_platform::native_callback_talker &snapshot =
+            interlocutor_slot ? session->interlocutor_snapshot() :
+            session->speaker_snapshot();
+        REQUIRE( snapshot.present );
+        CHECK( snapshot.kind == expected_kind );
+
+        const sol::object lua_actor = interlocutor_slot ?
+                                      context.interlocutor() : context.speaker();
+        REQUIRE( lua_actor.get_type() != sol::type::nil );
+        if( expected_kind == "computer" ) {
+            REQUIRE( lua_actor.is<sol::table>() );
+            CHECK( lua_actor.as<sol::table>()["kind"].get<std::string>() == "computer" );
+        } else {
+            REQUIRE( lua_actor.is<cata::lua_platform::game_handle>() );
+            const cata::lua_platform::game_handle handle =
+                lua_actor.as<cata::lua_platform::game_handle>();
+            const std::string expected_handle_kind =
+                expected_kind == "avatar" || expected_kind == "npc" ||
+                expected_kind == "monster" ? "creature" : expected_kind;
+            CHECK( handle.kind_name() == expected_handle_kind );
+            CHECK( handle.subtype_name() == expected_kind );
+        }
+
+        const std::string prefix = interlocutor_slot ? "npc_is_" : "u_is_";
+        const auto native_matches = [&]( const std::string & kind_name,
+        const bool expected ) {
+            const conditional_t native_condition( prefix + kind_name );
+            const bool native_result = native_condition( conversation );
+            const sol::protected_function_result lua_result =
+                lua_identity_matches( &context, prefix + kind_name );
+            REQUIRE( lua_result.valid() );
+            CHECK( lua_result.get<bool>() == native_result );
+            CHECK( native_result == expected );
+        };
+        native_matches( "avatar", expected_kind == "avatar" );
+        native_matches( "npc", expected_kind == "npc" );
+        native_matches( "character",
+                        expected_kind == "avatar" || expected_kind == "npc" );
+        native_matches( "monster", expected_kind == "monster" );
+        native_matches( "item", expected_kind == "item" );
+        native_matches( "furniture", expected_kind == "computer" );
+        native_matches( "vehicle", expected_kind == "vehicle" );
+        cata::lua_platform::dialogue::end_session( conversation );
+    };
+
+    dialogue avatar_npc( get_talker_for( speaker ), get_talker_for( interlocutor ) );
+    check_slot( avatar_npc, false, "avatar" );
+    check_slot( avatar_npc, true, "npc" );
+
+    dialogue npc_avatar( get_talker_for( interlocutor ), get_talker_for( speaker ) );
+    check_slot( npc_avatar, false, "npc" );
+    check_slot( npc_avatar, true, "avatar" );
+
+    dialogue monster_computer(
+        std::make_unique<talker_monster>( &creature ),
+        std::make_unique<talker_furniture>( &terminal ) );
+    check_slot( monster_computer, false, "monster" );
+    check_slot( monster_computer, true, "computer" );
+
+    dialogue avatar_monster(
+        get_talker_for( speaker ),
+        std::make_unique<talker_monster>( &creature ) );
+    check_slot( avatar_monster, false, "avatar" );
+    check_slot( avatar_monster, true, "monster" );
+
+    dialogue computer_npc(
+        std::make_unique<talker_furniture>( &terminal ),
+        get_talker_for( interlocutor ) );
+    check_slot( computer_npc, false, "computer" );
+    check_slot( computer_npc, true, "npc" );
+
+    dialogue item_avatar(
+        std::make_unique<talker_item>( &native_item_location ),
+        get_talker_for( speaker ) );
+    check_slot( item_avatar, false, "item" );
+    check_slot( item_avatar, true, "avatar" );
+
+    dialogue avatar_item(
+        get_talker_for( speaker ),
+        std::make_unique<talker_item>( &native_item_location ) );
+    check_slot( avatar_item, false, "avatar" );
+    check_slot( avatar_item, true, "item" );
+
+    dialogue vehicle_avatar(
+        std::make_unique<talker_vehicle>( native_vehicle ),
+        get_talker_for( speaker ) );
+    check_slot( vehicle_avatar, false, "vehicle" );
+    check_slot( vehicle_avatar, true, "avatar" );
+
+    dialogue avatar_vehicle(
+        get_talker_for( speaker ),
+        std::make_unique<talker_vehicle>( native_vehicle ) );
+    check_slot( avatar_vehicle, false, "avatar" );
+    check_slot( avatar_vehicle, true, "vehicle" );
+
+    dialogue missing_interlocutor(
+        get_talker_for( speaker ), std::unique_ptr<talker>() );
+    cata::lua_platform::dialogue::dialogue_session_ptr missing_session =
+        cata::lua_platform::dialogue::begin_session(
+            missing_interlocutor, runtime, world_generation );
+    REQUIRE( missing_session );
+    missing_session =
+        cata::lua_platform::dialogue::session_for(
+            missing_interlocutor, topic, runtime, world_generation );
+    REQUIRE( missing_session );
+    dialogue_context missing_context(
+        lua.lua_state(), missing_interlocutor, topic, false,
+        "dialogue context is stale", convert_actor, missing_session, runtime,
+        world_generation );
+    REQUIRE( missing_context.valid() );
+    CHECK( missing_context.has_speaker() );
+    CHECK_FALSE( missing_context.has_interlocutor() );
+    CHECK_FALSE( conditional_t( "has_beta" )( missing_interlocutor ) );
+    CHECK_FALSE( conditional_t( "npc_exists" )( missing_interlocutor ) );
+    CHECK( conditional_t( "has_alpha" )( missing_interlocutor ) );
+    CHECK( conditional_t( "u_exists" )( missing_interlocutor ) );
+    cata::lua_platform::dialogue::end_session( missing_interlocutor );
 }
 
 TEST_CASE( "lua_platform_dialogue_pet_purchase_requires_interlocutor",

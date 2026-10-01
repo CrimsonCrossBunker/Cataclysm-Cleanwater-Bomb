@@ -6977,6 +6977,11 @@ def render_talk_topic_response_condition(
     """
     if _depth > 16:
         return None
+    identity_condition = _render_talk_topic_participant_identity_condition(
+        condition
+    )
+    if identity_condition is not None:
+        return identity_condition
     if isinstance(condition, dict) and set(condition) == {"math"}:
         # Native u_skill reads dialogue alpha even when the named skill ID is
         # unregistered (Exodii says 'social', while the registered ID is
@@ -27712,6 +27717,64 @@ NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS = frozenset(
     NPC_BETA_CHARACTER_SNAPSHOT_FIELDS
 )
 
+TALK_TOPIC_PARTICIPANT_KIND_CONDITIONS = {
+    "avatar": ("creature", ("avatar",)),
+    "npc": ("creature", ("npc",)),
+    "character": ("creature", ("avatar", "character", "npc")),
+    "monster": ("creature", ("monster",)),
+    "item": ("item", ()),
+    "furniture": ("computer", ()),
+    "vehicle": ("vehicle", ()),
+}
+TALK_TOPIC_PARTICIPANT_PRESENCE_CONDITIONS = {
+    "u_exists": "has_speaker",
+    "has_alpha": "has_speaker",
+    "npc_exists": "has_interlocutor",
+    "has_beta": "has_interlocutor",
+}
+
+
+def _render_talk_topic_participant_identity_condition(
+    condition: Any,
+) -> LuaRaw | None:
+    """Render only kind and presence checks backed by the native dialogue slots."""
+    if not isinstance(condition, str):
+        return None
+    presence_method = TALK_TOPIC_PARTICIPANT_PRESENCE_CONDITIONS.get(condition)
+    if presence_method is not None:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            return dialogue_context:{presence_method}()\n"
+            "        end"
+        )
+
+    if condition.startswith("u_is_"):
+        actor_accessor = "speaker"
+        kind_name = condition.removeprefix("u_is_")
+    elif condition.startswith("npc_is_"):
+        actor_accessor = "interlocutor"
+        kind_name = condition.removeprefix("npc_is_")
+    else:
+        return None
+    expected = TALK_TOPIC_PARTICIPANT_KIND_CONDITIONS.get(kind_name)
+    if expected is None:
+        return None
+    actor_kind, actor_subtypes = expected
+    predicate = f'actor.kind == {lua_quote(actor_kind)}'
+    if actor_subtypes:
+        predicate += " and (" + " or ".join(
+            f"actor.subtype == {lua_quote(subtype)}"
+            for subtype in actor_subtypes
+        ) + ")"
+    return LuaRaw(
+        "function(dialogue_context)\n"
+        "            if not dialogue_context:valid() then return false end\n"
+        f"            local actor = dialogue_context:{actor_accessor}()\n"
+        f"            return actor ~= nil and {predicate}\n"
+        "        end"
+    )
+
 
 def contains_safe_space_beta_condition(condition: Any) -> bool:
     if isinstance(condition, str):
@@ -28645,6 +28708,10 @@ def render_eoc_condition_expression(
     # not authorize Character/NPC services.
     character_actor_proven = avatar_actor_proven or weapon_actor_proven or \
         npc_actor_proven or generic_character_actor_proven
+    primary_character_actor_proven = (
+        avatar_actor_proven or weapon_actor_proven or
+        generic_character_actor_proven
+    )
     npc_query_actor = (
         (npc_actor_expression or "actor") if npc_actor_proven else None
     )
@@ -29130,10 +29197,7 @@ def render_eoc_condition_expression(
             return "service_value(services.characters.is_alive(actor))"
         if npc_query_actor is not None and condition == "npc_is_alive":
             return f"service_value(services.characters.is_alive({npc_query_actor}))"
-        if (
-            (avatar_actor_proven or generic_character_actor_proven) and
-            condition == "u_is_avatar"
-        ):
+        if primary_character_actor_proven and condition == "u_is_avatar":
             # Actor provenance proves a Character handle, not that the
             # callback is necessarily running for the avatar.  Keep the
             # legacy predicate as a runtime kind check so an unbound EOC can
@@ -29154,14 +29218,22 @@ def render_eoc_condition_expression(
         if npc_query_actor is not None and condition == "npc_female":
             return (f"not service_value(services.characters.snapshot({npc_query_actor}))"
                     ".male")
-        if (
-            (avatar_actor_proven or generic_character_actor_proven) and
-            condition == "u_is_character"
-        ):
+        if primary_character_actor_proven and condition == "u_is_npc":
+            return (
+                "service_value(services.creatures.snapshot(actor)).kind == "
+                "\"npc\""
+            )
+        if primary_character_actor_proven and condition == "u_is_character":
             return (
                 "service_value(services.creatures.snapshot(actor)).kind ~= "
                 "\"monster\""
             )
+        if primary_character_actor_proven and condition in (
+            "u_is_monster", "u_is_item", "u_is_vehicle",
+        ):
+            return "false"
+        if avatar_actor_proven and condition == "u_is_furniture":
+            return "false"
         if npc_query_actor is not None and condition == "npc_is_avatar":
             return (
                 "service_value(services.creatures.snapshot("
@@ -29190,12 +29262,7 @@ def render_eoc_condition_expression(
             return None
         if isinstance(condition, dict) and "math" in condition:
             return None
-        if avatar_actor_proven and condition in (
-            "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
-            "u_is_vehicle",
-        ):
-            return "false"
-        if avatar_actor_proven and condition in (
+        if primary_character_actor_proven and condition in (
             "u_exists", "has_alpha",
         ):
             return "true"
@@ -36913,11 +36980,10 @@ def render_eoc(
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} furniture talker introspection "
-            "requires a proven primary computer talker; native computer use "
-            "places the terminal in the secondary dialogue slot. Current Lua "
-            "callbacks have no bound computer actor: dialogue talkers expose a "
-            "detached kind=computer snapshot without a handle, and computer "
-            "access exposes a scoped terminal context plus character handle"
+            "requires an exact native alpha talker kind at this EOC call site; "
+            "direct TALK condition callbacks have callback-scoped participant "
+            "snapshots, but standalone EOC context does not prove that "
+            "const_actor(false) is a computer"
         )
     if (
         stable_handler and
@@ -36995,7 +37061,6 @@ def classify_non_actionable_boundaries(result: MigrationResult) -> None:
         "has an invalid empty math condition and was rejected",
         "false_effect is unreachable under a literal true condition",
         "unresolved fields: copy-from",
-        "furniture talker introspection requires callback context",
         "require non-finite values rejected by the Platform safety contract",
         "references missing test_eoc definitions",
     )
