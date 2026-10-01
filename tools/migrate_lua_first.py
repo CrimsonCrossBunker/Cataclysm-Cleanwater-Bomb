@@ -4767,21 +4767,14 @@ def render_static_eoc_selector(
 
 
 _WEIGHTED_LIST_EOC_TODO = (
-    "native weighted_list_eocs reads source-ordered [EOC, dbl_or_var] pairs, "
-    "narrows each dialogue-evaluated double weight to int, and drops nonpositive "
-    "results. services.random.weighted_index now reproduces weighted_int_list "
-    "selection for dense source-ordered native-int weights: it drops nonpositive "
-    "rows, returns the original 1-based row, and consumes one global "
-    "rng_bits() draw even for a single survivor; pick_ent returns index 0 "
-    "without using that value for one survivor, while multiple survivors use "
-    "raw_draw % total_weight and cumulative source-order weights. It is bounded to "
-    "1024 rows and a positive total no greater than INT_MAX; an all-nonpositive "
-    "list returns nil after the draw, while native weighted_list_eocs "
-    "dereferences its null pick. The native int total itself is unchecked. "
-    "This primitive does not evaluate dbl_or_var through the native Dialogue "
-    "or synchronously activate the chosen EOC: native activation uses a copied "
-    "dialogue, which activate() copies again, and Platform EOC callbacks lack "
-    "the copied alpha/beta Dialogue"
+    "weighted_list_eocs lowers only static named EOCs with literal scalar or "
+    "two-number range weights; dynamic dbl_or_var providers and inline EOC bodies "
+    "need an explicit ordinary-Lua rewrite, as do children requiring exact-avatar, "
+    "Item/Vehicle, or unproven actor lifetimes. Empty or all-nonpositive lists "
+    "dereference the native null pick, and signed-int total overflow is undefined; "
+    "those inputs are refused rather than assigned new behavior. The native "
+    "callback uses a copied Dialogue and activate() copies it again, so a selected "
+    "callback must preserve the caller context and its proven participants"
 )
 
 
@@ -4789,10 +4782,134 @@ def render_static_weighted_list_eocs(
     effect: dict[str, Any],
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
+    eoc_actor_requirements: dict[str, str] | None = None,
+    *,
+    character_actor_proven: bool = False,
+    avatar_actor_proven: bool = False,
+    creature_actor_proven: bool = False,
 ) -> list[str] | None:
-    """Keep fail-closed until the native modulo RNG and copied dialogue can match."""
-    del effect, eoc_function_names, actor_expression
-    return None
+    """Lower static named weighted activations without inventing actor proof."""
+    if (
+        set(effect) - {"weighted_list_eocs", "//"} or
+        eoc_actor_requirements is None
+    ):
+        return None
+    raw_entries = effect.get("weighted_list_eocs")
+    if not isinstance(raw_entries, list) or not raw_entries:
+        return None
+
+    entries: list[tuple[str, int | tuple[int, int]]] = []
+    guaranteed_positive = False
+    maximum_total = 0
+    for raw_entry in raw_entries:
+        if (
+            not isinstance(raw_entry, list) or len(raw_entry) != 2 or
+            not isinstance(raw_entry[0], str) or
+            raw_entry[0] not in eoc_function_names or
+            raw_entry[0] not in eoc_actor_requirements
+        ):
+            return None
+        reference = raw_entry[0]
+        requirement = eoc_actor_requirements[reference]
+        if requirement not in {"none", "avatar", "character", "creature"}:
+            return None
+        if requirement == "avatar" and not (
+            ( character_actor_proven or avatar_actor_proven ) and
+            actor_expression is not None
+        ):
+            # ``avatar`` means a current Character alpha may be propagated; it
+            # does not prove that this alpha is the player's Avatar.
+            return None
+        if requirement == "character" and not (
+            ( character_actor_proven or avatar_actor_proven ) and
+            actor_expression is not None
+        ):
+            return None
+        if requirement == "creature" and not (
+            creature_actor_proven and actor_expression is not None
+        ):
+            return None
+
+        raw_weight = raw_entry[1]
+        if isinstance(raw_weight, list):
+            # Native value_or_var_pair::deserialize reads both array elements;
+            # zero/one-element arrays fail loading and >2 is explicitly rejected.
+            if len(raw_weight) != 2:
+                return None
+            converted: list[int] = []
+            for value in raw_weight:
+                literal = finite_number_literal(value)
+                if literal is None:
+                    return None
+                try:
+                    narrowed = math.trunc(float(literal))
+                except (OverflowError, ValueError):
+                    return None
+                if not NATIVE_INT_MIN <= narrowed <= NATIVE_INT_MAX:
+                    return None
+                converted.append(narrowed)
+            low, high = sorted(converted)
+            weight: int | tuple[int, int] = (low, high)
+            guaranteed_positive = guaranteed_positive or low > 0
+            maximum_total += max(0, high)
+        else:
+            literal = finite_number_literal(raw_weight)
+            if literal is None:
+                return None
+            try:
+                narrowed = math.trunc(float(literal))
+            except (OverflowError, ValueError):
+                return None
+            if not NATIVE_INT_MIN <= narrowed <= NATIVE_INT_MAX:
+                return None
+            weight = narrowed
+            guaranteed_positive = guaranteed_positive or narrowed > 0
+            maximum_total += max(0, narrowed)
+        if maximum_total > NATIVE_INT_MAX:
+            return None
+        entries.append((reference, weight))
+
+    # A variable numeric range is still a literal weight family, but its
+    # endpoints can draw independently.  Require every possible native draw
+    # to leave a nonempty list and a representable signed-int total.
+    if not guaranteed_positive:
+        return None
+
+    lines = [
+        "    do",
+        "        local weighted_weights = {}",
+    ]
+    for index, (_, weight) in enumerate(entries, 1):
+        if isinstance(weight, tuple):
+            low, high = weight
+            lines.append(
+                f"        weighted_weights[{index}] = "
+                f"services.random.native_int({low}, {high})"
+            )
+        else:
+            lines.append(f"        weighted_weights[{index}] = {weight}")
+    lines.extend([
+        "        local selected_weighted_row = "
+        "services.random.weighted_index(weighted_weights)",
+    ])
+    callback_actor = actor_expression or "nil"
+    for index, (reference, _) in enumerate(entries, 1):
+        callbacks = render_copied_eoc_callbacks(
+            reference, eoc_function_names, callback_actor,
+            alpha_actor_expression=actor_expression,
+        )
+        if callbacks is None:
+            return None
+        lines.append(
+            f"        {'if' if index == 1 else 'elseif'} "
+            f"selected_weighted_row == {index} then"
+        )
+        lines.extend("    " + line for line in callbacks)
+    lines.extend([
+        "        end",
+        "    end",
+    ])
+    return lines
 
 
 def render_static_spawn_item_effect(
@@ -5173,6 +5290,8 @@ def render_static_false_effect(
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
     field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Render source-proven effects inside ordinary Lua control flow.
 
@@ -5190,6 +5309,8 @@ def render_static_false_effect(
             known_body_part_ids=known_body_part_ids,
             known_wound_ids=known_wound_ids,
             field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
     activation = render_mutation_action(
         effect, (actor_expression or "actor") if avatar_actor_proven else None,
@@ -5369,7 +5490,12 @@ def render_static_false_effect(
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
         rendered = render_static_weighted_list_eocs(
-            effect, eoc_function_names, actor_expression
+            effect, eoc_function_names,
+            weighted_actor_expression or actor_expression,
+            eoc_actor_requirements,
+            character_actor_proven=character_actor_proven,
+            avatar_actor_proven=avatar_actor_proven,
+            creature_actor_proven=creature_actor_proven,
         )
         if rendered is None:
             return None
@@ -5842,6 +5968,8 @@ def render_static_false_effect(
                 known_body_part_ids=known_body_part_ids,
                 known_wound_ids=known_wound_ids,
                 field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5856,6 +5984,8 @@ def render_static_false_effect(
                 known_body_part_ids=known_body_part_ids,
                 known_wound_ids=known_wound_ids,
                 field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -6126,6 +6256,8 @@ def render_static_foreach(
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
     field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
@@ -6180,6 +6312,8 @@ def render_static_foreach(
                 known_body_part_ids=known_body_part_ids,
                 known_wound_ids=known_wound_ids,
                 field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is None:
                 return False
@@ -6333,6 +6467,8 @@ def render_static_if_effect(
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
     field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower an ``if/then/else`` made solely of simple Lua-native effects."""
     if (
@@ -6364,6 +6500,8 @@ def render_static_if_effect(
             known_body_part_ids=known_body_part_ids,
             known_wound_ids=known_wound_ids,
             field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
         if chunk is None:
             return None
@@ -6380,6 +6518,8 @@ def render_static_if_effect(
             known_body_part_ids=known_body_part_ids,
             known_wound_ids=known_wound_ids,
             field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
         if chunk is None:
             return None
@@ -6407,6 +6547,8 @@ def render_static_switch_effect(
     known_body_part_ids: frozenset[str] = frozenset(),
     known_wound_ids: frozenset[str] = frozenset(),
     field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower a legacy ``switch`` into ordinary Lua comparisons.
 
@@ -25144,6 +25286,7 @@ def render_static_query_omt(
 
 def render_copied_eoc_callbacks(
     value: Any, function_names: dict[str, str], actor_expression: str = "actor",
+    *, alpha_actor_expression: str | None = None,
 ) -> list[str] | None:
     references = _validated_eoc_references(value, function_names, allow_empty=True)
     if references is None:
@@ -25170,6 +25313,15 @@ def render_copied_eoc_callbacks(
         "        end",
         "        local vector_context = copy_context(context)",
     ]
+    if alpha_actor_expression is not None:
+        # Character-recurring EOCs receive their dialogue alpha as the
+        # explicit callback actor, while the Platform task context starts
+        # without an actors table. Add that proven alpha only to the copied
+        # native-dialogue snapshot; never mutate the caller's context.
+        lines.append(
+            "        vector_context.actors.alpha = "
+            f"vector_context.actors.alpha or {alpha_actor_expression}"
+        )
     for reference in references:
         lines.extend([
             "        local failure_context = copy_context(vector_context)",
@@ -31164,6 +31316,15 @@ def render_eoc(
     actor_expression = (
         "actor" if (character_actor_proven or creature_actor_proven) else None
     )
+    # Character recurrence supplies the current EOC alpha through its
+    # ``actor_override`` parameter.  Keep this proof local to weighted child
+    # activation so a selected static ID never upgrades the caller's actor.
+    weighted_actor_expression = actor_expression or (
+        "actor_override" if character_recurrence else None
+    )
+    weighted_character_actor_proven = (
+        character_actor_proven or character_recurrence
+    )
     # Mutation ``u_`` selectors consume alpha, not any Character from the
     # event.  Only promote event fields that the native event bridge defines
     # as alpha's primary Character.
@@ -31912,6 +32073,8 @@ def render_eoc(
                     known_body_part_ids=known_body_part_ids,
                     known_wound_ids=known_wound_ids,
                     field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
@@ -31980,7 +32143,7 @@ def render_eoc(
                         "weighted_list_eocs" in false_value
                     ):
                         false_todo = _WEIGHTED_LIST_EOC_TODO
-                        false_todo_category = "platform_gap"
+                        false_todo_category = "manual_rewrite"
                     semantic_choice = mutation_migration_gap(false_value)
                     if semantic_choice is not None:
                         false_todo = semantic_choice
@@ -32038,7 +32201,11 @@ def render_eoc(
                 rendered = render_static_weighted_list_eocs(
                     effect,
                     eoc_function_names or {},
-                    actor_expression,
+                    weighted_actor_expression,
+                    eoc_actor_requirements,
+                    character_actor_proven=weighted_character_actor_proven,
+                    avatar_actor_proven=avatar_actor_proven,
+                    creature_actor_proven=creature_actor_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32046,7 +32213,7 @@ def render_eoc(
                 else:
                     lines.append(f"    -- TODO: {_WEIGHTED_LIST_EOC_TODO}.")
                     result.add_todo(
-                        "platform_gap",
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         f"{_WEIGHTED_LIST_EOC_TODO}"
                     )
@@ -32067,6 +32234,8 @@ def render_eoc(
                     known_body_part_ids=known_body_part_ids,
                     known_wound_ids=known_wound_ids,
                     field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32097,6 +32266,8 @@ def render_eoc(
                     known_body_part_ids=known_body_part_ids,
                     known_wound_ids=known_wound_ids,
                     field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32272,6 +32443,8 @@ def render_eoc(
                     known_body_part_ids=known_body_part_ids,
                     known_wound_ids=known_wound_ids,
                     field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)

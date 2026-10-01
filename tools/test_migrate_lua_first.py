@@ -34934,7 +34934,7 @@ assert(context.data.picked==selected)
             self.assertIn("strength = 1", main)
             self.assertNotIn("needs review", report)
 
-    def test_weighted_list_eocs_fails_closed_for_direct_and_nested_shapes(self) -> None:
+    def test_weighted_list_eocs_lowers_literal_rows_and_refuses_undefined_totals(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -34990,6 +34990,34 @@ assert(context.data.picked==selected)
                     },
                     {
                         "type": "effect_on_condition",
+                        "id": "weighted_literal_ranges",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", [2.9, 4.9]],
+                            ["weighted_option_b", -0.9],
+                            ["weighted_option_a", [0.5, 1.9]],
+                        ]},
+                        "eoc_type": "EVENT",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_total_overflow",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": [
+                            ["weighted_option_a", 2147483647],
+                            ["weighted_option_b", 1],
+                        ]},
+                        "eoc_type": "EVENT",
+                    },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_empty",
+                        "required_event": "game_start",
+                        "effect": {"weighted_list_eocs": []},
+                        "eoc_type": "EVENT",
+                    },
+                    {
+                        "type": "effect_on_condition",
                         "id": "weighted_in_if",
                         "required_event": "game_start",
                         "effect": {
@@ -35028,6 +35056,21 @@ assert(context.data.picked==selected)
                         "effect": "nothing",
                         "eoc_type": "EVENT",
                     },
+                    {
+                        "type": "effect_on_condition",
+                        "id": "weighted_in_foreach",
+                        "required_event": "game_start",
+                        "effect": {
+                            "foreach": "array",
+                            "target": ["first", "second"],
+                            "var": {"context_val": "weighted_choice"},
+                            "effect": {"weighted_list_eocs": [
+                                ["weighted_option_a", 2],
+                                ["weighted_option_b", 1],
+                            ]},
+                        },
+                        "eoc_type": "EVENT",
+                    },
                 ]),
                 encoding="utf-8",
             )
@@ -35039,30 +35082,301 @@ assert(context.data.picked==selected)
 
         self.assertNotIn("weighted_cursor", main)
         self.assertNotIn("services.random.int(", main)
-        self.assertNotIn("services.random.native_int(", main)
+        self.assertIn("weighted_weights[1] = 0", main)
+        self.assertIn("weighted_weights[3] = 1", main)
+        self.assertIn("services.random.native_int(2, 4)", main)
+        self.assertIn("services.random.native_int(0, 1)", main)
         self.assertIn("services.random.weighted_index", main)
-        self.assertIn("raw_draw % total_weight", main)
-        self.assertIn("copied alpha/beta Dialogue", main)
+        self.assertNotIn("raw_draw % total_weight", main)
+        self.assertIn("vector_context = copy_context(context)", main)
+        self.assertIn("failure_context = copy_context(vector_context)", main)
         for owner in (
             "weighted_direct", "weighted_single_entry",
-            "weighted_nonpositive_and_fractional", "weighted_all_nonpositive",
-            "weighted_in_if",
-            "weighted_in_switch", "weighted_in_false_effect",
+            "weighted_nonpositive_and_fractional", "weighted_literal_ranges",
+            "weighted_in_if", "weighted_in_switch", "weighted_in_false_effect",
+            "weighted_in_foreach",
+        ):
+            self.assertNotIn(f"EOC {owner}", todos)
+        for owner in (
+            "weighted_all_nonpositive", "weighted_total_overflow", "weighted_empty",
         ):
             self.assertIn(f"EOC {owner}", todos)
         weighted_todos = [
             todo for todo in result.todos
-            if "native weighted_list_eocs reads source-ordered" in todo.message
+            if "weighted_list_eocs lowers only static named EOCs" in todo.message
         ]
-        self.assertTrue(weighted_todos)
-        self.assertTrue(all(todo.category == "platform_gap" for todo in weighted_todos))
-        false_weighted_todo = next(
-            todo for todo in result.todos
-            if "EOC weighted_in_false_effect false_effect #0" in todo.message
-        )
-        self.assertEqual(false_weighted_todo.category, "platform_gap")
+        self.assertEqual(len(weighted_todos), 3)
+        self.assertTrue(all(todo.category == "manual_rewrite" for todo in weighted_todos))
 
-    def test_real_weighted_list_eocs_keep_rng_and_inline_dialogue_todos(self) -> None:
+        # A numeric range may draw independently at every row. Refuse shapes
+        # whose legal draws can leave native pick() empty or overflow its int
+        # total, even if one particular sample would be defined.
+        names = {"weighted_option_a": "weighted_option_a_fn"}
+        requirements = {"weighted_option_a": "none"}
+        for invalid_range in ([], [1], [1, 2, 3]):
+            with self.subTest(invalid_range=invalid_range):
+                self.assertIsNone(migrate_lua_first.render_static_weighted_list_eocs(
+                    {"weighted_list_eocs": [["weighted_option_a", invalid_range]]},
+                    names, None, requirements,
+                ))
+        self.assertIsNone(migrate_lua_first.render_static_weighted_list_eocs(
+            {"weighted_list_eocs": [["weighted_option_a", [0, 1]],
+                                    ["weighted_option_a", [0, 1]]]},
+            names, None, requirements,
+        ))
+        self.assertIsNone(migrate_lua_first.render_static_weighted_list_eocs(
+            {"weighted_list_eocs": [["weighted_option_a", [1, 2147483647]],
+                                    ["weighted_option_a", 1]]},
+            names, None, requirements,
+        ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_weighted_defense_mode_rows_activate_child_eocs_in_copied_frames(self) -> None:
+        source_path = Path(
+            "data/mods/Defense_Mode/effects_on_condition/random_event_eocs.json"
+        )
+        objects = migrate_lua_first.load_objects([REPOSITORY_ROOT / source_path])
+        original_parent = next(
+            entry for entry in objects
+            if entry.value.get("id") == "DEFENSE_MODE_RANDOM_EVENT"
+        )
+        original_rows = original_parent.value["effect"][0]["weighted_list_eocs"]
+        self.assertEqual(original_rows, [
+            ["EOC_DEFENSE_MODE_RANDOM_NPC", 10],
+            ["EOC_DEFENSE_MODE_RANDOM_NPC_ROBBER", 6],
+            ["EOC_DEFENSE_MODE_BANDIT_ATTACK", 1],
+        ])
+        real_requirements = migrate_lua_first._eoc_actor_requirements(
+            objects, frozenset(), frozenset(), frozenset(), frozenset()
+        )
+        self.assertEqual(
+            [real_requirements[eoc_id] for eoc_id, _ in original_rows],
+            ["avatar", "avatar", "avatar"],
+        )
+
+        # Keep the checked-in weighted rows and EOC identifiers. Compact child
+        # bodies exercise the real generated callback/condition/false-effect
+        # path without pulling the Defense_Mode NPC-spawn domain into this test.
+        child_ids = [entry[0] for entry in original_rows]
+        function_names = {
+            "DEFENSE_MODE_RANDOM_EVENT": "weighted_defense_parent",
+            **{
+                eoc_id: f"weighted_defense_child_{index}"
+                for index, eoc_id in enumerate(child_ids, 1)
+            },
+        }
+        actor_requirements = {eoc_id: "character" for eoc_id in child_ids}
+        self.assertIsNotNone(migrate_lua_first.render_static_weighted_list_eocs(
+            {"weighted_list_eocs": original_rows}, function_names,
+            "actor_override", real_requirements,
+            character_actor_proven=True,
+        ))
+        referenced_ids = frozenset(child_ids)
+        parent_value = dict(original_parent.value)
+        parent_value.pop("condition", None)
+        parent_source = migrate_lua_first.SourceObject(
+            original_parent.path, original_parent.index, parent_value
+        )
+        rendered_parent = migrate_lua_first.render_eoc(
+            parent_source, migrate_lua_first.MigrationResult(), function_names,
+            actor_requirements, eoc_referenced_ids=referenced_ids,
+        )
+        rendered_children = []
+        for index, eoc_id in enumerate(child_ids, 1):
+            child = migrate_lua_first.SourceObject(
+                original_parent.path, original_parent.index + index, {
+                    "type": "effect_on_condition",
+                    "id": eoc_id,
+                    "condition": {"get_condition": "gate"},
+                    "false_effect": {
+                        "u_add_effect": f"weighted_false_{index}",
+                        "duration": "1 turn",
+                    },
+                    "effect": {
+                        "u_add_effect": f"weighted_true_{index}",
+                        "duration": "2 turns",
+                    },
+                }
+            )
+            rendered_children.append(migrate_lua_first.render_eoc(
+                child, migrate_lua_first.MigrationResult(), function_names,
+                actor_requirements, eoc_referenced_ids=referenced_ids,
+            ))
+
+        # A child's own requirement cannot supply the parent's missing
+        # Character proof. Character recurrence is the caller's independent
+        # native source of alpha for the successful lowering above.
+        unwired_parent_value = dict(parent_value)
+        unwired_parent_value.pop("recurrence", None)
+        unwired_parent = migrate_lua_first.SourceObject(
+            parent_source.path, parent_source.index, unwired_parent_value
+        )
+        unwired_result = migrate_lua_first.MigrationResult()
+        unwired_rendered = migrate_lua_first.render_eoc(
+            unwired_parent, unwired_result, function_names,
+            actor_requirements, eoc_referenced_ids=referenced_ids,
+        )
+        self.assertNotIn("services.random.weighted_index", unwired_rendered)
+        self.assertTrue(any(
+            "weighted_list_eocs" in todo.message and
+            todo.category == "manual_rewrite"
+            for todo in unwired_result.todos
+        ))
+
+        declarations = ", ".join(function_names.values())
+        script = f"""
+local {declarations}
+local migrated_eoc_functions = {{}}
+local runtime = {{
+    handler = function() end,
+    character_recurring = function() end,
+}}
+local selections = {{ 1, 3, 2 }}
+local selected_rows, observed_weights, effect_calls = {{}}, {{}}, {{}}
+local services = {{
+    random = {{ weighted_index = function(weights)
+        assert(#weights == 3)
+        assert(weights[1] == 10 and weights[2] == 6 and weights[3] == 1)
+        observed_weights[#observed_weights + 1] = {{ weights[1], weights[2], weights[3] }}
+        local selected = selections[#observed_weights]
+        selected_rows[#selected_rows + 1] = selected
+        return selected
+    end }},
+    types = {{ id = function(kind, id) assert(kind == "effect"); return id end }},
+    time = {{ duration = function(amount, unit)
+        return {{ amount = amount, unit = unit }}
+    end }},
+    effects = {{ add = function(actor, id, duration)
+        effect_calls[#effect_calls + 1] = {{ actor = actor, id = id, duration = duration }}
+        if id == "weighted_true_2" then error("selected child callback exploded") end
+        return {{ ok = true }}
+    end }},
+}}
+local function make_context(alpha, beta, gate_result)
+    local context = {{
+        data = {{ state = {{ calls = 0, gate_result = gate_result }} }},
+        conditions = {{}},
+        actors = {{ beta = beta }},
+    }}
+    local original_data = context.data
+    local original_state = context.data.state
+    local original_conditions = context.conditions
+    local original_actors = context.actors
+    context.conditions.gate = function(copy, callback_actor, callback_beta)
+        assert(copy ~= context and copy.data ~= original_data)
+        assert(copy.data.state ~= original_state)
+        assert(copy.conditions ~= original_conditions and copy.actors ~= original_actors)
+        assert(copy.actors.alpha == alpha and copy.actors.beta == beta)
+        assert(callback_actor == alpha and callback_beta == nil)
+        copy.data.state.calls = copy.data.state.calls + 1
+        return copy.data.state.gate_result
+    end
+    return context
+end
+{rendered_parent}
+{''.join(rendered_children)}
+local alpha_a, alpha_b, alpha_c = {{}}, {{}}, {{}}
+local beta_a, beta_b, beta_c = {{}}, {{}}, {{}}
+local contexts = {{
+    make_context(alpha_a, beta_a, true),
+    make_context(alpha_b, beta_b, false),
+    make_context(alpha_c, beta_c, true),
+}}
+local snapshots = {{}}
+for index, context in ipairs(contexts) do
+    snapshots[index] = {{
+        data = context.data, state = context.data.state,
+        conditions = context.conditions, actors = context.actors,
+        gate = context.conditions.gate,
+    }}
+end
+weighted_defense_parent(contexts[1], alpha_a)
+weighted_defense_parent(contexts[2], alpha_b)
+local ok, err = pcall(weighted_defense_parent, contexts[3], alpha_c)
+assert(not ok and string.find(err, "selected child callback exploded", 1, true))
+assert(#selected_rows == 3 and selected_rows[1] == 1 and
+       selected_rows[2] == 3 and selected_rows[3] == 2)
+for index, context in ipairs(contexts) do
+    local saved = snapshots[index]
+    assert(context.data == saved.data and context.data.state == saved.state)
+    assert(context.data.state.calls == 0 and context.conditions == saved.conditions)
+    assert(context.conditions.gate == saved.gate and context.actors == saved.actors)
+    assert(context.actors.alpha == nil)
+end
+assert(#effect_calls == 3)
+assert(effect_calls[1].actor == alpha_a and effect_calls[1].id == "weighted_true_1")
+assert(effect_calls[2].actor == alpha_b and effect_calls[2].id == "weighted_false_3")
+assert(effect_calls[3].actor == alpha_c and effect_calls[3].id == "weighted_true_2")
+"""
+        executed = subprocess.run(
+            [shutil.which("lua"), "-"], input=script, text=True,
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_weighted_literal_ranges_keep_native_weight_and_activation_order(self) -> None:
+        function_names = {
+            "zero": "weighted_zero",
+            "negative": "weighted_negative",
+            "fractional": "weighted_fractional",
+            "first_range": "weighted_first_range",
+            "last_range": "weighted_last_range",
+        }
+        lines = migrate_lua_first.render_static_weighted_list_eocs(
+            {"weighted_list_eocs": [
+                ["zero", 0.9], ["negative", -1.9], ["fractional", 2.9],
+                ["first_range", [2.9, 4.9]], ["last_range", [0.5, 1.9]],
+            ]},
+            function_names, None,
+            {key: "none" for key in function_names},
+        )
+        self.assertIsNotNone(lines)
+        declarations = ", ".join(function_names.values())
+        function_definitions = "\n".join(
+            f"{function_name} = function(context, actor) "
+            f"assert(actor == nil); assert(context ~= original_context); "
+            f"picked = {migrate_lua_first.lua_quote(key)}; "
+            "context.data.nested.count = context.data.nested.count + 1 end"
+            for key, function_name in function_names.items()
+        )
+        script = f"""
+local {declarations}
+local original_context = {{ data = {{ nested = {{ count = 0 }} }}, conditions = {{}}, actors = {{}} }}
+local context = original_context
+local actor = nil
+local calls, picked = {{}}, nil
+local services = {{ random = {{
+    native_int = function(low, high)
+        calls[#calls + 1] = "range:" .. low .. ":" .. high
+        if low == 2 and high == 4 then return 3 end
+        assert(low == 0 and high == 1)
+        return 1
+    end,
+    weighted_index = function(weights)
+        assert(#weights == 5)
+        assert(weights[1] == 0 and weights[2] == -1 and weights[3] == 2)
+        assert(weights[4] == 3 and weights[5] == 1)
+        calls[#calls + 1] = "weighted_index"
+        return 5
+    end,
+}} }}
+{function_definitions}
+local function choose()
+{chr(10).join(lines or [])}
+end
+choose()
+assert(table.concat(calls, ",") == "range:2:4,range:0:1,weighted_index")
+assert(picked == "last_range")
+assert(original_context.data.selected == nil and original_context.data.nested.count == 0)
+"""
+        executed = subprocess.run(
+            [shutil.which("lua"), "-"], input=script, text=True,
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+
+    def test_dynamic_and_inline_weighted_list_eocs_remain_manual_rewrites(self) -> None:
         corpus_cases = (
             (
                 Path("data/json/effects_on_condition/npc_eocs/generic_npc_eocs.json"),
@@ -35100,15 +35414,14 @@ assert(context.data.picked==selected)
                 rendered = migrate_lua_first.render_eoc(
                     migrate_lua_first.SourceObject(source_path, 0, eoc), result
                 )
-                self.assertIn("raw_draw % total_weight", rendered)
-                self.assertIn("copied alpha/beta Dialogue", rendered)
+                self.assertNotIn("services.random.weighted_index", rendered)
                 self.assertNotIn("services.random.native_int(", rendered)
                 self.assertTrue(any(
-                    todo.category == "platform_gap" and eoc_id in todo.message
+                    todo.category == "manual_rewrite" and eoc_id in todo.message
                     for todo in result.todos
                 ))
 
-    def test_real_single_entry_weighted_list_keeps_native_rng_todo(self) -> None:
+    def test_real_single_entry_weighted_list_refuses_exact_avatar_child(self) -> None:
         source_path = Path(
             "data/mods/MindOverMatter/effectoncondition/eoc_observed.json"
         )
@@ -35137,22 +35450,32 @@ assert(context.data.picked==selected)
         )
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_eoc(leaf_source, result)
-        self.assertIn(
-            "one global rng_bits() draw even for a single survivor", rendered
-        )
-        self.assertIn("services.random.weighted_index", rendered)
-        self.assertIn(
-            "pick_ent returns index 0 without using that value for one survivor",
-            rendered,
-        )
-        self.assertIn("copied alpha/beta Dialogue", rendered)
+        self.assertNotIn("services.random.weighted_index", rendered)
         self.assertNotIn("services.random.int(", rendered)
         self.assertNotIn("services.random.native_int(", rendered)
         weighted_todo = next(
             todo for todo in result.todos
-            if "native weighted_list_eocs reads source-ordered" in todo.message
+            if "weighted_list_eocs lowers only static named EOCs" in todo.message
         )
-        self.assertEqual(weighted_todo.category, "platform_gap")
+        self.assertEqual(weighted_todo.category, "manual_rewrite")
+        all_objects = migrate_lua_first.load_objects(
+            [REPOSITORY_ROOT / source_path]
+        )
+        requirements = migrate_lua_first._eoc_actor_requirements(
+            all_objects, frozenset(), frozenset(), frozenset(), frozenset()
+        )
+        self.assertEqual(
+            requirements["EOC_OBSERVED_EFFECT_HEARING_SOUNDS"],
+            "exact_avatar",
+        )
+        self.assertIsNone(migrate_lua_first.render_static_weighted_list_eocs(
+            {"weighted_list_eocs": weighted},
+            {"EOC_OBSERVED_EFFECT_HEARING_SOUNDS": "observed_child"},
+            "caller_actor",
+            requirements,
+            character_actor_proven=True,
+            avatar_actor_proven=True,
+        ))
 
     def test_global_u_sound_false_effect_uses_proven_talker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

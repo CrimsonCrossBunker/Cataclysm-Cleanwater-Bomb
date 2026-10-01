@@ -11564,8 +11564,8 @@ function CcbPlatformRandomApi.int(minimum, maximum) end
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
 ---Pick an original 1-based row using native weighted_int_list semantics and the shared game RNG.
----Rows with nonpositive weights are ignored. The dense array may contain up to 1024 native-range integers,
----and its positive total must not exceed 2147483647.
+---Rows with nonpositive weights are ignored. Dense rows are limited only by the
+---native Lua integer index range, and the positive total must not exceed 2147483647.
 ---A zero-total list returns nil after one global RNG draw; a single positive row also consumes one draw.
 ---@param weights integer[] Dense ordered array of native signed integers.
 ---@return integer|nil index Original 1-based row selected, or nil when no row has positive weight.

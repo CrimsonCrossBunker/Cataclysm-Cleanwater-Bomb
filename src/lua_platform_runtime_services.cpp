@@ -283,7 +283,10 @@ std::string grant_progression_candidate( talker &target,
 
 std::vector<int> platform_random_weights( const sol::table &weights )
 {
-    constexpr std::size_t maximum_entries = 1024;
+    // The native weighted list has no row-count limit.  The selected row is
+    // returned as int64, so retain only that representational boundary.
+    constexpr std::size_t maximum_entries = static_cast<std::size_t>(
+            std::numeric_limits<std::int64_t>::max() );
     const std::size_t count = require_dense_array(
                                   weights, "services.random.weighted_index weights",
                                   0, maximum_entries );

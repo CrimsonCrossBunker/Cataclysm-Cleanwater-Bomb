@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -151,9 +152,12 @@ TEST_CASE( "lua_platform_weighted_index_matches_native_weighted_list_draws",
         }
     } rng_scope;
 
-    const std::vector<std::vector<int>> weight_cases = {
+    std::vector<std::vector<int>> weight_cases = {
         { 2, 0, 3, -1, 1 }, { 0, 7, -1 }, { 0, -2 }, {}
     };
+    std::vector<int> long_weights( 1025, 0 );
+    long_weights.back() = 1;
+    weight_cases.push_back( long_weights );
     constexpr unsigned int seed = 58165;
     std::vector<std::int64_t> expected_picks;
     std::vector<int> expected_next_draws;
@@ -183,6 +187,10 @@ TEST_CASE( "lua_platform_weighted_index_matches_native_weighted_list_draws",
     const sol::protected_function_result installed = lua.safe_script( R"(
 local random = ccb.services.random
 local cases = { { 2, 0, 3, -1, 1 }, { 0, 7, -1 }, { 0, -2 }, {} }
+local long_weights = {}
+for index = 1, 1025 do long_weights[index] = 0 end
+long_weights[1025] = 1
+cases[#cases + 1] = long_weights
 picks, following_draws = {}, {}
 ccb.runtime.handler("check_weighted_index", function()
     for index, weights in ipairs(cases) do
@@ -211,6 +219,68 @@ ccb.runtime.on("world_ready", "check_weighted_index")
             "return pcall(ccb.services.random.weighted_index, {1})" );
     REQUIRE( outside_callback.valid() );
     CHECK_FALSE( outside_callback.get<bool>() );
+}
+
+TEST_CASE( "lua_platform_weighted_range_rows_keep_native_random_call_order",
+           "[lua][platform][random_range][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } rng_scope;
+
+    const std::vector<std::pair<int, int>> ranges = {
+        { 2, 5 }, { -3, -1 }, { 8, 6 }
+    };
+    constexpr unsigned int seed = 37791;
+    rng_set_engine_seed( seed );
+    std::vector<int> expected_weights;
+    for( const std::pair<int, int> &range : ranges ) {
+        expected_weights.push_back( rng( range.first, range.second ) );
+    }
+    weighted_int_list<std::size_t> native_entries;
+    for( std::size_t index = 0; index < expected_weights.size(); ++index ) {
+        native_entries.add( index + 1, expected_weights[index] );
+    }
+    const std::size_t *picked = native_entries.pick();
+    const std::int64_t expected_pick = picked == nullptr ? -1 :
+                                       static_cast<std::int64_t>( *picked );
+    const int expected_following_draw = rng( -100, 100 );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "weighted_ranges", 4906, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    lua["ccb"] = ccb;
+    const sol::protected_function_result installed = lua.safe_script( R"(
+local random = ccb.services.random
+ccb.runtime.handler("check_weighted_ranges", function()
+    local weights = {
+        random.native_int(2, 5),
+        random.native_int(-3, -1),
+        random.native_int(6, 8),
+    }
+    range_pick = random.weighted_index(weights) or -1
+    range_following_draw = random.native_int(-100, 100)
+    done = true
+end)
+ccb.runtime.on("world_ready", "check_weighted_ranges")
+)" );
+    REQUIRE( installed.valid() );
+    rng_set_engine_seed( seed );
+    runtime_world_ready( true );
+    CHECK( lua["done"].get_or( false ) );
+    CHECK( lua["range_pick"].get<std::int64_t>() == expected_pick );
+    CHECK( lua["range_following_draw"].get<int>() == expected_following_draw );
 }
 
 TEST_CASE( "lua_platform_sample_range_matches_native_draw_order_and_state",
