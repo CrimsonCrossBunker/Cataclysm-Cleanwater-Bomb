@@ -12,9 +12,10 @@ TEST_CASE( "lua_platform_audible_sound_reports_the_native_hearing_gate",
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-                "lua_platform_sound_test", 6107, lua );
+            "lua_platform_sound_test", 6107, lua );
     const on_out_of_scope clear_runtimes( []() {
         platform::clear_active_runtimes();
     } );
