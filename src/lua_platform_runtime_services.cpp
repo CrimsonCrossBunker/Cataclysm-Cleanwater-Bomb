@@ -661,6 +661,34 @@ class use_context_lease
         use_context_data &context_;
 };
 
+std::optional<tripoint_range<tripoint_bub_ms>> clipped_area_range(
+    const map &here, const tripoint_bub_ms &center, const int radius )
+{
+    const std::int64_t radius_wide = radius;
+    const std::int64_t max_x = static_cast<std::int64_t>( here.getmapsize() ) * SEEX - 1;
+    const std::int64_t max_y = static_cast<std::int64_t>( here.getmapsize() ) * SEEY - 1;
+    const std::int64_t min_x = std::max<std::int64_t>( 0,
+        static_cast<std::int64_t>( center.x() ) - radius_wide );
+    const std::int64_t clipped_max_x = std::min( max_x,
+        static_cast<std::int64_t>( center.x() ) + radius_wide );
+    const std::int64_t min_y = std::max<std::int64_t>( 0,
+        static_cast<std::int64_t>( center.y() ) - radius_wide );
+    const std::int64_t clipped_max_y = std::min( max_y,
+        static_cast<std::int64_t>( center.y() ) + radius_wide );
+    if( min_x > clipped_max_x || min_y > clipped_max_y ) {
+        return std::nullopt;
+    }
+
+    // tripoint_range advances x first, then y, then z. Clipping away only
+    // out-of-map XY candidates preserves the native order of every inbounds
+    // square. Keep the requested z so native non-zlevel storage semantics and
+    // loaded-submap checks remain with the map mutation operation.
+    return tripoint_range<tripoint_bub_ms>(
+               tripoint_bub_ms( static_cast<int>( min_x ), static_cast<int>( min_y ), center.z() ),
+               tripoint_bub_ms( static_cast<int>( clipped_max_x ), static_cast<int>( clipped_max_y ),
+                                center.z() ) );
+}
+
 int set_platform_furniture( const tripoint_abs_ms &absolute,
                             const std::string &furniture_id,
                             const double requested_radius, const bool square,
@@ -714,19 +742,13 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
                                   static_cast<int>( local_y ), absolute.z() );
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int accepted_tiles = 0;
-    // The legacy effect enumerates the requested XY range on the target z-level,
-    // then lets the map reject out-of-bounds squares. Iterate only that map plane
-    // to avoid radius-squared work and never load another map or z-level.
-    for( const tripoint_bub_ms &destination : here.points_on_zlevel( absolute.z() ) ) {
-        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
-        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
-        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
-            continue;
-        }
-        const std::int64_t squared_distance = dx * dx + dy * dy;
-        const float distance = static_cast<float>(
-                                  std::sqrt( static_cast<double>( squared_distance ) ) );
-        if( !square && distance >= circle_radius ) {
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+        clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
             continue;
         }
         if( here.furn_set( destination, target_furniture, false, avoid_creatures ) ) {
@@ -789,18 +811,13 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
                                   static_cast<int>( local_y ), absolute.z() );
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int changed_tiles = 0;
-    // Match the native neighborhood on the target map z-level, without loading
-    // another map. ter_set handles bounds and the avoid_creatures option.
-    for( const tripoint_bub_ms &destination : here.points_on_zlevel( absolute.z() ) ) {
-        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
-        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
-        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
-            continue;
-        }
-        const std::int64_t squared_distance = dx * dx + dy * dy;
-        const float distance = static_cast<float>(
-                                  std::sqrt( static_cast<double>( squared_distance ) ) );
-        if( !square && distance >= circle_radius ) {
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+        clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
             continue;
         }
         if( here.ter_set( destination, target_terrain, avoid_creatures ) ) {
@@ -921,16 +938,13 @@ int add_platform_field_area( const tripoint_abs_ms &absolute,
                                   static_cast<int>( local_y ), absolute.z() );
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int accepted_tiles = 0;
-    // Native f_field visits exactly the target z-level and delegates bounds,
-    // loaded-submap, terrain, and player-hit behavior to map::add_field. This
-    // map-bounded iteration avoids radius-squared work and never loads a map.
-    for( const tripoint_bub_ms &destination : here.points_on_zlevel( center.z() ) ) {
-        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
-        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
-        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
-            continue;
-        }
-        if( !square && trig_dist( destination, center ) >= circle_radius ) {
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+        clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
             continue;
         }
         if( outdoor_only && !here.is_outside( destination ) ) {

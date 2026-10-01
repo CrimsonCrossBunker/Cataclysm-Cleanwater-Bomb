@@ -43,6 +43,7 @@
 #include "weather_type.h"
 
 static const field_type_str_id field_fd_web( "fd_web" );
+static const efftype_id effect_webbed_for_test( "webbed" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
 static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
@@ -294,6 +295,108 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( corner, furn_test_f_eoc.id() ) );
+
+    const tripoint_bub_ms edge_center( 1, 1, center.z() );
+    REQUIRE( here.inbounds( edge_center ) );
+    const tripoint_abs_ms edge_center_abs = here.get_abs( edge_center );
+    lua["edge_center_position"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs, coords::scale::map_square,
+                                      edge_center_abs.raw() );
+    std::array<ter_id, 25> edge_original_terrain;
+    std::array<furn_id, 25> edge_original_furniture;
+    std::array<bool, 25> edge_inbounds{};
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            edge_inbounds[index] = here.inbounds( position );
+            if( edge_inbounds[index] ) {
+                edge_original_terrain[index] = here.ter( position );
+                edge_original_furniture[index] = here.furn( position );
+            }
+        }
+    }
+    on_out_of_scope restore_edge_area( [&]() {
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                if( edge_inbounds[index] ) {
+                    const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                    here.ter_set( position, edge_original_terrain[index] );
+                    here.furn_set( position, edge_original_furniture[index] );
+                }
+            }
+        }
+    } );
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                here.ter_set( position, ter_t_floor );
+                here.furn_set( position, furn_test_f_eoc.id() );
+                REQUIRE( here.ter( position ) == ter_t_floor.id() );
+                REQUIRE( here.furn( position ) == furn_test_f_eoc.id() );
+            }
+        }
+    }
+    const std::string edge_location_key = "lua_platform_set_furniture_edge_semantics_center";
+    REQUIRE( get_globals().maybe_get_global_value( edge_location_key ) == nullptr );
+    on_out_of_scope clear_edge_location( [&]() {
+        get_globals().remove_global_value( edge_location_key );
+    } );
+    get_globals().set_global_value( edge_location_key, edge_center_abs );
+    const std::string edge_effect_json =
+        R"({"set_furniture":")" + clear_furniture_id +
+        R"(","location":{"global_val":"lua_platform_set_furniture_edge_semantics_center"},"radius":2})";
+    talk_effect_t edge_native_effect;
+    edge_native_effect.parse_sub_effect( json_loader::from_string( edge_effect_json ).get_object(),
+                                         "lua_platform_set_furniture_edge_semantics" );
+    dialogue edge_native_context;
+    for( const talk_effect_fun_t &operation : edge_native_effect.effects ) {
+        operation( edge_native_context );
+    }
+    get_globals().remove_global_value( edge_location_key );
+    std::array<bool, 25> native_edge_furniture_cleared{};
+    int native_edge_furniture_count = 0;
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                native_edge_furniture_cleared[index] = here.furn( position ) == furn_str_id::NULL_ID().id();
+                native_edge_furniture_count += native_edge_furniture_cleared[index] ? 1 : 0;
+                here.furn_set( position, furn_test_f_eoc.id() );
+                REQUIRE( here.furn( position ) == furn_test_f_eoc.id() );
+            }
+        }
+    }
+    lua["clear_furniture_id"] = clear_furniture_id;
+    sol::protected_function_result edge_furniture_result;
+    {
+        detail::callback_scope active_callback( *owner );
+        edge_furniture_result = lua.safe_script(
+                                    "return services.gameplay.environment.set_furniture("
+                                    "edge_center_position, clear_furniture_id, 2, false, false)",
+                                    sol::script_pass_on_error );
+    }
+    if( !edge_furniture_result.valid() ) {
+        const sol::error error = edge_furniture_result;
+        INFO( error.what() );
+    }
+    REQUIRE( edge_furniture_result.valid() );
+    CHECK( edge_furniture_result.get<int>() == native_edge_furniture_count );
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                CHECK( ( here.furn( position ) == furn_str_id::NULL_ID().id() ) ==
+                       native_edge_furniture_cleared[index] );
+            }
+        }
+    }
+
     if( !here.supports_zlevels() ) {
         const std::string location_key = "lua_platform_set_furniture_z_semantics_center";
         REQUIRE( get_globals().maybe_get_global_value( location_key ) == nullptr );
@@ -669,6 +772,94 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
         }
     }
 
+    const tripoint_bub_ms edge_center( 1, 1, center.z() );
+    REQUIRE( here.inbounds( edge_center ) );
+    const tripoint_abs_ms edge_center_abs = here.get_abs( edge_center );
+    lua["terrain_position"] = script_tripoint_coord::from_native(
+                                  coords::origin::abs, coords::scale::map_square,
+                                  edge_center_abs.raw() );
+    std::array<ter_id, 25> edge_original;
+    std::array<bool, 25> edge_inbounds{};
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            edge_inbounds[index] = here.inbounds( position );
+            if( edge_inbounds[index] ) {
+                edge_original[index] = here.ter( position );
+            }
+        }
+    }
+    on_out_of_scope restore_edge_terrain( [&]() {
+        for( int dy = -2; dy <= 2; ++dy ) {
+            for( int dx = -2; dx <= 2; ++dx ) {
+                const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+                if( edge_inbounds[index] ) {
+                    const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                    here.ter_set( position, edge_original[index] );
+                }
+            }
+        }
+    } );
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                here.ter_set( position, ter_t_floor );
+                REQUIRE( here.ter( position ) == ter_t_floor.id() );
+            }
+        }
+    }
+    get_globals().set_global_value( location_key, edge_center_abs );
+    const std::string edge_effect_json =
+        R"({"set_terrain":"t_wall","location":{"global_val":"lua_platform_set_terrain_semantics_center"},"radius":2})";
+    talk_effect_t edge_native_effect;
+    edge_native_effect.parse_sub_effect( json_loader::from_string( edge_effect_json ).get_object(),
+                                         "lua_platform_set_terrain_edge_semantics" );
+    dialogue edge_native_context;
+    for( const talk_effect_fun_t &operation : edge_native_effect.effects ) {
+        operation( edge_native_context );
+    }
+    get_globals().remove_global_value( location_key );
+    std::array<bool, 25> native_edge_coverage{};
+    int native_edge_changed = 0;
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                native_edge_coverage[index] = here.ter( position ) == ter_t_wall.id();
+                native_edge_changed += native_edge_coverage[index] ? 1 : 0;
+                here.ter_set( position, ter_t_floor );
+                REQUIRE( here.ter( position ) == ter_t_floor.id() );
+            }
+        }
+    }
+    sol::protected_function_result edge_terrain_result;
+    {
+        detail::callback_scope active_callback( *owner );
+        edge_terrain_result = lua.safe_script(
+                                  "return services.gameplay.environment.set_terrain("
+                                  "terrain_position, terrain_id, 2, false, false)",
+                                  sol::script_pass_on_error );
+    }
+    if( !edge_terrain_result.valid() ) {
+        const sol::error error = edge_terrain_result;
+        INFO( error.what() );
+    }
+    REQUIRE( edge_terrain_result.valid() );
+    CHECK( edge_terrain_result.get<int>() == native_edge_changed );
+    for( int dy = -2; dy <= 2; ++dy ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
+            if( edge_inbounds[index] ) {
+                const tripoint_bub_ms position = edge_center + tripoint_rel_ms( dx, dy, 0 );
+                CHECK( ( here.ter( position ) == ter_t_wall.id() ) == native_edge_coverage[index] );
+            }
+        }
+    }
+
     sol::protected_function_result out_of_bounds_z_result;
     {
         detail::callback_scope active_callback( *owner );
@@ -1020,6 +1211,135 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
         CHECK( here.unsafe_get_submap_at( target_center ) == target_submap );
         here.remove_field( target_center, field_fd_smoke.id() );
     }
+
+    center = tripoint_bub_ms( 1, 1, center.z() );
+    REQUIRE( here.inbounds( center ) );
+    const tripoint_abs_ms edge_center_abs = here.get_abs( center );
+    lua["center_position"] = script_tripoint_coord::from_native(
+                                 coords::origin::abs, coords::scale::map_square,
+                                 edge_center_abs.raw() );
+    native_target_position = edge_center_abs;
+    clear_test_field( field_fd_smoke.id() );
+    run_native_field_effect(
+        R"({"u_set_field":"fd_smoke", "target_var":{"context_val":"field_center"}, "radius":2, "hit_player":false})" );
+    const std::array<bool, 25> native_edge_coverage = field_coverage( field_fd_smoke.id() );
+    const int native_edge_count = static_cast<int>( std::count(
+            native_edge_coverage.begin(), native_edge_coverage.end(), true ) );
+    REQUIRE( native_edge_count > 0 );
+    clear_test_field( field_fd_smoke.id() );
+    lua["expected_edge_count"] = native_edge_count;
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            assert(services.gameplay.environment.add_field_area(
+                center_position, "fd_smoke", {
+                    radius=2, hit_player=false
+                }) == expected_edge_count)
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( field_coverage( field_fd_smoke.id() ) == native_edge_coverage );
+    clear_test_field( field_fd_smoke.id() );
+
+    const tripoint_bub_ms far_center( -32767, -32767, center.z() );
+    const tripoint_abs_ms far_center_abs = here.get_abs( far_center );
+    lua["far_center_position"] = script_tripoint_coord::from_native(
+                                     coords::origin::abs, coords::scale::map_square,
+                                     far_center_abs.raw() );
+    native_target_position = far_center_abs;
+    run_native_field_effect(
+        R"({"u_set_field":"fd_smoke", "target_var":{"context_val":"field_center"}, "radius":0, "hit_player":false})" );
+    const std::array<bool, 25> native_far_coverage = field_coverage( field_fd_smoke.id() );
+    CHECK( std::count( native_far_coverage.begin(), native_far_coverage.end(), true ) == 0 );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                "assert(services.gameplay.environment.add_field_area("
+                "far_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 0)",
+                sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( field_coverage( field_fd_smoke.id() ) == native_far_coverage );
+
+    const ter_id original_avatar_terrain = here.ter( avatar_position );
+    on_out_of_scope restore_avatar_field_fixture( [&]() {
+        here.remove_field( avatar_position, field_fd_web.id() );
+        get_avatar().remove_effect( effect_webbed_for_test );
+        here.ter_set( avatar_position, original_avatar_terrain );
+    } );
+    here.ter_set( avatar_position, ter_t_floor );
+    lua["field_avatar_position"] = script_tripoint_coord::from_native(
+                                       coords::origin::abs, coords::scale::map_square,
+                                       here.get_abs( avatar_position ).raw() );
+
+    run_native_field_effect(
+        R"({"u_set_field":"fd_web", "radius":0, "intensity":3, "age":"17 turns"})" );
+    const field_entry *native_default_hit = here.get_field( avatar_position, field_fd_web.id() );
+    REQUIRE( native_default_hit != nullptr );
+    const int native_default_intensity = native_default_hit->get_field_intensity();
+    CHECK( native_default_intensity == 2 );
+    CHECK( get_avatar().has_effect( effect_webbed_for_test ) );
+    here.remove_field( avatar_position, field_fd_web.id() );
+    get_avatar().remove_effect( effect_webbed_for_test );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            assert(services.gameplay.environment.add_field_area(
+                field_avatar_position, "fd_web", {
+                    radius=0, intensity=3, age=services.time.duration(17, "turn")
+                }) == 1)
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    const field_entry *platform_default_hit = here.get_field( avatar_position, field_fd_web.id() );
+    REQUIRE( platform_default_hit != nullptr );
+    const int platform_default_intensity = platform_default_hit->get_field_intensity();
+    CHECK( platform_default_intensity == native_default_intensity );
+    CHECK( get_avatar().has_effect( effect_webbed_for_test ) );
+    here.remove_field( avatar_position, field_fd_web.id() );
+    get_avatar().remove_effect( effect_webbed_for_test );
+
+    run_native_field_effect(
+        R"({"u_set_field":"fd_web", "radius":0, "intensity":3, "age":"17 turns", "hit_player":false})" );
+    const field_entry *native_no_hit = here.get_field( avatar_position, field_fd_web.id() );
+    REQUIRE( native_no_hit != nullptr );
+    const int native_no_hit_intensity = native_no_hit->get_field_intensity();
+    CHECK( native_no_hit_intensity == 3 );
+    CHECK_FALSE( get_avatar().has_effect( effect_webbed_for_test ) );
+    here.remove_field( avatar_position, field_fd_web.id() );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            assert(services.gameplay.environment.add_field_area(
+                field_avatar_position, "fd_web", {
+                    radius=0, intensity=3, age=services.time.duration(17, "turn"),
+                    hit_player=false
+                }) == 1)
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    const field_entry *platform_no_hit = here.get_field( avatar_position, field_fd_web.id() );
+    REQUIRE( platform_no_hit != nullptr );
+    const int platform_no_hit_intensity = platform_no_hit->get_field_intensity();
+    CHECK( platform_no_hit_intensity == native_no_hit_intensity );
+    CHECK_FALSE( get_avatar().has_effect( effect_webbed_for_test ) );
+    CHECK( platform_default_intensity < platform_no_hit_intensity );
 }
 
 TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
