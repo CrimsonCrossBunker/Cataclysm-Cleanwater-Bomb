@@ -47,6 +47,12 @@ on:
       - 'tools/test_lua_mutation_migration.py'
       - 'tools/test_lua_named_predicate_migration.py'
   workflow_dispatch:
+    inputs:
+      native_test_filter:
+        description: Optional Catch2 filter for one native Lua batch; empty runs contract checks
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -57,6 +63,7 @@ concurrency:
 
 jobs:
   validate:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.native_test_filter == '' }}
     name: Lua public contract
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -95,3 +102,50 @@ jobs:
           tar -xzf "${RUNNER_TEMP}/ccb-luals.tar.gz" -C "${RUNNER_TEMP}/ccb-luals"
           python3 tools/test_create_lua_mod.py
           python3 -m unittest discover -s tools/lua_api -p 'test_mod_sdk.py' -k LuaLanguageServerIntegrationTest
+
+  native-acceptance:
+    name: Native Lua batch acceptance
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.native_test_filter != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      NATIVE_TEST_FILTER: ${{ inputs.native_test_filter }}
+      CCACHE_DIR: ${{ github.workspace }}/.ci-native-ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 3G
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install native test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-14 libncursesw5-dev gettext cmake ninja-build ccache
+
+      - name: Restore compiler cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: lua-native-gcc14-v1-${{ github.sha }}
+          restore-keys: lua-native-gcc14-v1-
+
+      - name: Configure native Lua tests
+        run: |
+          cmake -S . -B .ci-lua-native -G Ninja \
+            -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=Release \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O0 -DNDEBUG' \
+            -DCURSES=ON -DTILES=OFF -DSOUND=OFF -DLOCALIZE=OFF \
+            -DUSE_PREFIX_DATA_DIR=OFF -DUSE_HOME_DIR=OFF \
+            -DTESTS=ON -DBUILD_TESTING=ON -DCATA_ENABLE_LUA_PLATFORM=ON
+
+      - name: Build native test binary
+        run: cmake --build .ci-lua-native --target cata_test --parallel 1
+
+      - name: Run requested native batch
+        run: |
+          ./.ci-lua-native/tests/cata_test "$NATIVE_TEST_FILTER" \
+            --rng-seed 4902 --order lex --error-format=github-action \
+            --warn NoTests \
+            --user-dir="${RUNNER_TEMP}/ccb-native-test-user"
